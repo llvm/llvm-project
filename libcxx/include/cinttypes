@@ -244,14 +244,11 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 // [cinttypes.syn]
 #  include <cstdint>
 
-#  include <inttypes.h>
-
-#  ifndef _LIBCPP_INTTYPES_H
-#   error <cinttypes> tried including <inttypes.h> but didn't find libc++'s <inttypes.h> header. \
-          This usually means that your header search paths are not configured properly. \
-          The header search paths should contain the C++ Standard Library headers before \
-          any C Standard Library, and you are probably using compiler flags that make that \
-          not be the case.
+#  if __has_include(<inttypes.h>)
+#    include <inttypes.h>
+#    ifdef _LIBCPP_INTTYPES_H
+#      error "If libc++ starts defining <inttypes.h>, the __has_include check should move to libc++'s <float.h>"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

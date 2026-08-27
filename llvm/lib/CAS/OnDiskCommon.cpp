@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OnDiskCommon.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -74,7 +75,9 @@ void cas::ondisk::setMaxMappingSize(uint64_t Size) {
 std::error_code cas::ondisk::lockFileThreadSafe(int FD,
                                                 sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
-  if (flock(FD, Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
+  if (sys::RetryAfterSignal(
+          -1, flock, FD,
+          Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
@@ -87,7 +90,7 @@ std::error_code cas::ondisk::lockFileThreadSafe(int FD,
 
 std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
 #if HAVE_FLOCK
-  if (flock(FD, LOCK_UN) == 0)
+  if (sys::RetryAfterSignal(-1, flock, FD, LOCK_UN) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
@@ -105,8 +108,10 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
-    if (flock(FD, (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
-                      LOCK_NB) == 0)
+    if (sys::RetryAfterSignal(
+            -1, flock, FD,
+            (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
+                LOCK_NB) == 0)
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
@@ -146,7 +151,11 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   };
 #if defined(HAVE_POSIX_FALLOCATE)
   // Note: posix_fallocate returns its error directly, not via errno.
-  if (int Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
+  int Err;
+  do {
+    Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize);
+  } while (Err == EINTR);
+  if (Err)
     return CreateError(std::error_code(Err, std::generic_category()));
   return NewSize;
 #elif defined(__APPLE__)
@@ -162,7 +171,7 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   FAlloc.fst_offset = 0;
   FAlloc.fst_length = NewSize - CurrentSize;
   FAlloc.fst_bytesalloc = 0;
-  if (fcntl(FD, F_PREALLOCATE, &FAlloc))
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_PREALLOCATE, &FAlloc) == -1)
     return CreateError(errnoAsErrorCode());
   assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
   return CurrentSize + FAlloc.fst_bytesalloc;

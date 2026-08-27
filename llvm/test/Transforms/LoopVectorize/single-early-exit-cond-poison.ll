@@ -28,7 +28,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
 ; VF4IC2-NEXT:    br label %[[MIDDLE_BLOCK1:.*]]
 ; VF4IC2:       [[MIDDLE_BLOCK1]]:
-; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
+; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 ; VF4IC2-NEXT:    br label %[[RETURN:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
@@ -60,7 +60,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1:       [[MIDDLE_BLOCK]]:
 ; VF8IC1-NEXT:    br label %[[MIDDLE_BLOCK1:.*]]
 ; VF8IC1:       [[MIDDLE_BLOCK1]]:
-; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
+; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 false)

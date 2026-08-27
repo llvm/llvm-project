@@ -99,6 +99,20 @@ else:
   ret i32 %6
 }
 
+define i32 @test_branch_zero_i1(i32 %a0, i32 %a1, i32 %a2) SLHATTR {
+; CHECK-LABEL: test_branch_zero_i1
+  %tmp0 = trunc i32 %a2 to i1
+  br i1 %tmp0, label %then, label %else
+;SLH-NOT:   tb{{n?}}z
+;NOSLH:     tb{{n?}}z
+then:
+  %tmp1 = sdiv i32 5, %a1
+  ret i32 %tmp1
+else:
+  %tmp2 = sdiv i32 %a1, %a0
+  ret i32 %tmp2
+}
+
 define i32 @landingpad(i32 %l0, i32 %l1) SLHATTR personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: landingpad
 entry:

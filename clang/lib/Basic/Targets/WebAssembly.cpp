@@ -123,6 +123,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasLibcallThreadContext)
+    Builder.defineMacro("__wasm_libcall_thread_context__");
   // Note that not all wasm features appear here.   For example,
   // HasCompatctImports
 
@@ -422,7 +424,7 @@ void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
   // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
   // because they are unsupported.
-  if (!HasAtomics || !HasBulkMemory) {
+  if ((!HasCooperativeThreading && !HasAtomics) || !HasBulkMemory) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;

@@ -15,8 +15,14 @@
 
 namespace llvm::omp::target::plugin {
 
+L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
+                         int32_t DriverId)
+    : Plugin(Plugin), zeDriver(zeDriver) {}
+
+L0ContextTy::~L0ContextTy() = default;
+
 Error L0ContextTy::init() {
-  auto cleanupOnError = [&]() {
+  auto CleanupOnError = [&]() {
     if (zeContext) {
       zeContextDestroy(zeContext);
       zeContext = nullptr;
@@ -28,20 +34,60 @@ Error L0ContextTy::init() {
 
   ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
   CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
-  if (auto Err = EventPool.init(zeContext, 0)) {
-    cleanupOnError();
+
+  const auto &Options = Plugin.getOptions();
+  bool UseCounterBasedEvents = Options.CommandMode == CommandModeTy::InOrder ||
+                               Options.CommandMode == CommandModeTy::Sync;
+  if (UseCounterBasedEvents)
+    ODBG(OLDT_Init) << "Using counter-based events for "
+                    << (Options.CommandMode == CommandModeTy::InOrder
+                            ? "InOrder"
+                            : "Sync")
+                    << " command mode";
+
+  if (auto Err = EventPool.init(zeContext, UseCounterBasedEvents,
+                                /* Flags */ 0)) {
+    CleanupOnError();
     return Err;
   }
   if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
     if (auto DeinitErr = EventPool.deinit())
       Err = joinErrors(std::move(Err), std::move(DeinitErr));
-    cleanupOnError();
+    CleanupOnError();
     return Err;
   }
+
+  ze_result_t RC;
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zexKernelGetArgumentSize", (void **)&zexKernelGetArgumentSize);
+  if (RC != ZE_RESULT_SUCCESS)
+    zexKernelGetArgumentSize = nullptr;
+
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeCommandListAppendHostFunction",
+          (void **)&zeCommandListAppendHostFunction);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeCommandListAppendHostFunction = nullptr;
+
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeDriverGetDefaultContext", (void **)&zeDriverGetDefaultContext);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeDriverGetDefaultContext = nullptr;
+
+  DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
+      Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
+      zeContext, /*OwnsZeContext=*/false);
+
   return Plugin::success();
 }
 
 Error L0ContextTy::deinit() {
+  // Release the default context (drains its queue cache) before zeContext.
+  if (DefaultUserCtx) {
+    if (auto Err = DefaultUserCtx->deinit())
+      return Err;
+    DefaultUserCtx.reset();
+  }
   if (auto Err = EventPool.deinit())
     return Err;
   if (auto Err = HostMemAllocator.deinit())

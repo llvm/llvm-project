@@ -27,9 +27,8 @@ public:
                        lldb::ThreadSP thread_sp) override;
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
-                     lldb::StackFrameListSP input_frames,
-                     StructuredData::DictionarySP args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::StackFrameListSP input_frames) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {

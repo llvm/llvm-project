@@ -205,45 +205,10 @@ namespace llvm {
 // Provide DenseMapInfo for TypeRange.
 template <>
 struct DenseMapInfo<mlir::TypeRange> {
-  static mlir::TypeRange getEmptyKey() {
-    return mlir::TypeRange(getEmptyKeyPointer(), 0);
-  }
-
-  static mlir::TypeRange getTombstoneKey() {
-    return mlir::TypeRange(getTombstoneKeyPointer(), 0);
-  }
-
   static unsigned getHashValue(mlir::TypeRange val) { return hash_value(val); }
 
   static bool isEqual(mlir::TypeRange lhs, mlir::TypeRange rhs) {
-    if (isEmptyKey(rhs))
-      return isEmptyKey(lhs);
-    if (isTombstoneKey(rhs))
-      return isTombstoneKey(lhs);
     return lhs == rhs;
-  }
-
-private:
-  static const mlir::Type *getEmptyKeyPointer() {
-    return DenseMapInfo<mlir::Type *>::getEmptyKey();
-  }
-
-  static const mlir::Type *getTombstoneKeyPointer() {
-    return DenseMapInfo<mlir::Type *>::getTombstoneKey();
-  }
-
-  static bool isEmptyKey(mlir::TypeRange range) {
-    if (const auto *type =
-            llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
-      return type == getEmptyKeyPointer();
-    return false;
-  }
-
-  static bool isTombstoneKey(mlir::TypeRange range) {
-    if (const auto *type =
-            llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
-      return type == getTombstoneKeyPointer();
-    return false;
   }
 };
 

@@ -51,7 +51,7 @@ inline void h(auto x) { adl(x); }   // OK, but certain specializations are expos
 // 
 // constexpr auto ctx = std::meta::access_context::current();
 // constexpr std::meta::info r4 =
-//   std::meta::members_of(^^N2, ctx)[0];              // error: r4 is an exposure of N2​::​r2
+//   std::meta::members_of(^^N2, ctx)[0];              // error: r4 is an exposure of N2::r2
 
 //--- A.cpp
 module A;
@@ -59,9 +59,9 @@ void other() {
   g<0>();                           // OK, specialization is explicitly instantiated
   g<1>();                           // expected-warning {{instantiation of 'g<1>' triggers reference to TU-local entity 'its' from other TU 'A'}}
   // Developers Note: To check use of TU-local entity when overload resolution made.
-  h(N::A{});                        // error: overload set contains TU-local N​::​adl(int)
+  h(N::A{});                        // error: overload set contains TU-local N::adl(int)
   h(0);                             // OK, calls adl(double)
-  adl(N::A{});                      // OK; N​::​adl(int) not found, calls N​::​adl(N​::​A)
+  adl(N::A{});                      // OK; N::adl(int) not found, calls N::adl(N::A)
   fr();                             // OK, calls f
   // Developers Note: To check use of TU-local entity when we're able to detect the TUlocalness
   // across variables.

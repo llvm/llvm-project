@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LoadUnloadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -98,7 +99,7 @@ class LoadUnloadTestCase(TestBase):
     # dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @skipIfRemote
-    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @requirePOSIX  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
         if self.platformIsDarwin():
@@ -155,7 +156,7 @@ class LoadUnloadTestCase(TestBase):
     # dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @expectedFailureAndroid  # wrong source file shows up for hidden library
-    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @requirePOSIX  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @skipIfDarwinEmbedded
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""

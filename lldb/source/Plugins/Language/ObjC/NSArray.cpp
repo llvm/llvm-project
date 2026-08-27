@@ -351,35 +351,38 @@ bool lldb_private::formatters::NSArraySummaryProvider(
   uint64_t value = 0;
 
   ConstString class_name(descriptor->GetClassName());
+  llvm::StringRef class_name_ref(class_name.GetStringRef());
 
-  static const ConstString g_NSArrayI("__NSArrayI");
-  static const ConstString g_NSArrayM("__NSArrayM");
-  static const ConstString g_NSArrayI_Transfer("__NSArrayI_Transfer");
-  static const ConstString g_NSFrozenArrayM("__NSFrozenArrayM");
-  static const ConstString g_NSArray0("__NSArray0");
-  static const ConstString g_NSArray1("__NSSingleObjectArrayI");
-  static const ConstString g_NSArrayCF("__NSCFArray");
-  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
-  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
-  static const ConstString g_NSCallStackArray("_NSCallStackArray");
-  static const ConstString g_NSConstantArray("NSConstantArray");
+  static constexpr llvm::StringLiteral g_NSArrayI("__NSArrayI");
+  static constexpr llvm::StringLiteral g_NSArrayM("__NSArrayM");
+  static constexpr llvm::StringLiteral g_NSArrayI_Transfer(
+      "__NSArrayI_Transfer");
+  static constexpr llvm::StringLiteral g_NSFrozenArrayM("__NSFrozenArrayM");
+  static constexpr llvm::StringLiteral g_NSArray0("__NSArray0");
+  static constexpr llvm::StringLiteral g_NSArray1("__NSSingleObjectArrayI");
+  static constexpr llvm::StringLiteral g_NSArrayCF("__NSCFArray");
+  static constexpr llvm::StringLiteral g_NSArrayMLegacy("__NSArrayM_Legacy");
+  static constexpr llvm::StringLiteral g_NSArrayMImmutable(
+      "__NSArrayM_Immutable");
+  static constexpr llvm::StringLiteral g_NSCallStackArray("_NSCallStackArray");
+  static constexpr llvm::StringLiteral g_NSConstantArray("NSConstantArray");
 
-  if (class_name.IsEmpty())
+  if (class_name_ref.empty())
     return false;
 
-  if (class_name == g_NSArrayI) {
+  if (class_name_ref == g_NSArrayI) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSConstantArray) {
+  } else if (class_name_ref == g_NSConstantArray) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size, 8,
                                                       0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArrayM) {
+  } else if (class_name_ref == g_NSArrayM) {
     AppleObjCRuntime *apple_runtime =
     llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -391,34 +394,35 @@ bool lldb_private::formatters::NSArraySummaryProvider(
     }
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArrayI_Transfer) {
+  } else if (class_name_ref == g_NSArrayI_Transfer) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSFrozenArrayM) {
+  } else if (class_name_ref == g_NSFrozenArrayM) {
     Status error;
     value = Foundation1436::__NSFrozenArrayMSize(*process_sp, valobj_addr, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArrayMLegacy) {
+  } else if (class_name_ref == g_NSArrayMLegacy) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArrayMImmutable) {
+  } else if (class_name_ref == g_NSArrayMImmutable) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArray0) {
+  } else if (class_name_ref == g_NSArray0) {
     value = 0;
-  } else if (class_name == g_NSArray1) {
+  } else if (class_name_ref == g_NSArray1) {
     value = 1;
-  } else if (class_name == g_NSArrayCF || class_name == g_NSCallStackArray) {
+  } else if (class_name_ref == g_NSArrayCF ||
+             class_name_ref == g_NSCallStackArray) {
     // __NSCFArray and _NSCallStackArray store the number of elements as a
     // pointer-sized value at offset `2 * ptr_size`.
     Status error;
@@ -485,8 +489,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
   object_at_idx += (pyhs_idx * m_ptr_size);
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 template <typename D32, typename D64>
@@ -662,8 +666,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     return lldb::ValueObjectSP();
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(
@@ -703,7 +707,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::NSArray1SyntheticFrontEnd(
 llvm::Expected<size_t>
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  static const ConstString g_zero("[0]");
+  static constexpr llvm::StringLiteral g_zero("[0]");
 
   if (name == g_zero)
     return 0;
@@ -770,45 +774,45 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
     return nullptr;
 
   ConstString class_name(descriptor->GetClassName());
+  llvm::StringRef class_name_ref(class_name.GetStringRef());
 
-  static const ConstString g_NSArrayI("__NSArrayI");
-  static const ConstString g_NSConstantArray("NSConstantArray");
-  static const ConstString g_NSArrayI_Transfer("__NSArrayI_Transfer");
-  static const ConstString g_NSFrozenArrayM("__NSFrozenArrayM");
-  static const ConstString g_NSArrayM("__NSArrayM");
-  static const ConstString g_NSArray0("__NSArray0");
-  static const ConstString g_NSArray1("__NSSingleObjectArrayI");
-  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
-  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
-  static const ConstString g_NSCallStackArray("_NSCallStackArray");
+  static constexpr llvm::StringLiteral g_NSArrayI("__NSArrayI");
+  static constexpr llvm::StringLiteral g_NSConstantArray("NSConstantArray");
+  static constexpr llvm::StringLiteral g_NSArrayI_Transfer(
+      "__NSArrayI_Transfer");
+  static constexpr llvm::StringLiteral g_NSFrozenArrayM("__NSFrozenArrayM");
+  static constexpr llvm::StringLiteral g_NSArrayM("__NSArrayM");
+  static constexpr llvm::StringLiteral g_NSArray0("__NSArray0");
+  static constexpr llvm::StringLiteral g_NSArray1("__NSSingleObjectArrayI");
+  static constexpr llvm::StringLiteral g_NSCallStackArray("_NSCallStackArray");
 
-  if (class_name.IsEmpty())
+  if (class_name_ref.empty())
     return nullptr;
 
-  if (class_name == g_NSArrayI) {
+  if (class_name_ref == g_NSArrayI) {
     if (runtime->GetFoundationVersion() >= 1436)
       return (new Foundation1436::NSArrayISyntheticFrontEnd(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1430)
       return (new Foundation1430::NSArrayISyntheticFrontEnd(valobj_sp));
     return (new Foundation1300::NSArrayISyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSArrayI_Transfer) {
-      return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSConstantArray) {
+  } else if (class_name_ref == g_NSArrayI_Transfer) {
+    return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
+  } else if (class_name_ref == g_NSConstantArray) {
     return new ConstantArray::NSConstantArraySyntheticFrontEnd(valobj_sp);
-  } else if (class_name == g_NSFrozenArrayM) {
+  } else if (class_name_ref == g_NSFrozenArrayM) {
     return (new Foundation1436::NSFrozenArrayMSyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSArray0) {
+  } else if (class_name_ref == g_NSArray0) {
     return (new NSArray0SyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSArray1) {
+  } else if (class_name_ref == g_NSArray1) {
     return (new NSArray1SyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSArrayM) {
+  } else if (class_name_ref == g_NSArrayM) {
     if (runtime->GetFoundationVersion() >= 1437)
       return (new Foundation1437::NSArrayMSyntheticFrontEnd(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1428)
       return (new Foundation1428::NSArrayMSyntheticFrontEnd(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1100)
       return (new Foundation1010::NSArrayMSyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_NSCallStackArray) {
+  } else if (class_name_ref == g_NSCallStackArray) {
     return (new CallStackArray::NSCallStackArraySyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSArray_Additionals::GetAdditionalSynthetics());

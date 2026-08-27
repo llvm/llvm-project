@@ -37,7 +37,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   // Make sure the implicitly created empty .text section has the
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
   // present.
-  if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
+  if (TM.getMCSubtargetInfo().hasFeature(AArch64::FeatureExecuteOnly)) {
     auto *Text = static_cast<MCSectionELF *>(TextSection);
     Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }

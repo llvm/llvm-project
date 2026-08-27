@@ -169,3 +169,32 @@ func.func @duplicate_memref(%arg0: memref<5xf32>, %arg1: memref<6xf32>, %c: i1) 
 // CHECK-LABEL: func @duplicate_memref(
 //       CHECK:   %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<5xf32>) if (%{{.*}}) retain (%{{.*}} : memref<6xf32>)
 //       CHECK:   return %[[r]]
+
+// -----
+
+module {
+  func.func @memref_cast_folding(%arg0: memref<4x4xf32>) -> memref<4x4xf32, 1> {
+    %cfalse = arith.constant false
+    %ctrue = arith.constant true
+
+    %memspacecast = memref.memory_space_cast %arg0 : memref<4x4xf32> to memref<4x4xf32, 1>
+    %cast = memref.cast %memspacecast : memref<4x4xf32, 1> to memref<?x?xf32, 1>
+    %cast_1 = memref.cast %cast : memref<?x?xf32, 1> to memref<4x4xf32, 1>
+
+    %5 = scf.if %cfalse -> (memref<4x4xf32, 1>) {
+      scf.yield %cast_1 : memref<4x4xf32, 1>
+    } else {
+      %7 = bufferization.clone %cast_1 : memref<4x4xf32, 1> to memref<4x4xf32, 1>
+      scf.yield %7 : memref<4x4xf32, 1>
+    }
+
+    %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<4x4xf32> -> memref<f32>, index, index, index, index, index
+    %base_buffer_5, %offset_6, %sizes_7:2, %strides_8:2 = memref.extract_strided_metadata %memspacecast : memref<4x4xf32, 1> -> memref<f32, 1>, index, index, index, index, index
+
+    %6 = bufferization.dealloc (%base_buffer, %base_buffer_5 : memref<f32>, memref<f32, 1>) if (%cfalse, %ctrue) retain (%5 : memref<4x4xf32, 1>)
+    return %memspacecast : memref<4x4xf32, 1>
+  }
+}
+
+// CHECK-LABEL: func @memref_cast_folding
+//       CHECK: %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<f32, 1>) if (%{{.*}}) retain (%{{.*}} : memref<4x4xf32, 1>)

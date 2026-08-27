@@ -95,6 +95,10 @@ public:
                      Expr *ExprToVisit, ArrayRef<Expr *> Args,
                      Expr *ArrayFiller);
 
+  void EmitComparisonResult(const Expr *E,
+                            const ComparisonCategoryInfo &CmpInfo,
+                            llvm::Value *ResultValue);
+
   AggValueSlot::NeedsGCBarriers_t needsGC(QualType T) {
     if (CGF.getLangOpts().getGC() && TypeRequiresGCollection(T))
       return AggValueSlot::NeedsGCBarriers;
@@ -164,6 +168,7 @@ public:
   void VisitBinAssign(const BinaryOperator *E);
   void VisitBinComma(const BinaryOperator *E);
   void VisitBinCmp(const BinaryOperator *E);
+  void VisitTypeTraitExpr(const TypeTraitExpr *E);
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
     Visit(E->getSemanticForm());
   }
@@ -246,13 +251,17 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitLValue(E);
+  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
     CGF.EmitAtomicLoad(LV, E->getExprLoc(), Dest);
     return;
   }
+
+  if (E->getType().getAddressSpace() == LangAS::hlsl_constant)
+    if (CGF.CGM.getHLSLRuntime().emitBufferCopy(CGF, E, LV, Dest))
+      return;
 
   EmitFinalDestCopy(E->getType(), LV);
 }
@@ -288,13 +297,18 @@ void AggExprEmitter::withReturnValueSlot(
   // its lifetime before we have the chance to emit a proper destructor call.
   //
   // We also need a temporary if the destination is in a different address space
-  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
-  // Look through addrspacecasts to avoid unnecessary temps when the
-  // destination is already in the alloca AS.
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
-      CGF.CGM.getASTAllocaAddressSpace());
-  bool DestASMismatch = !Dest.isIgnored() &&
-                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+  // from the sret AS. Use the target hook to get the actual sret AS for this
+  // return type.
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
+  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
+  bool CanAggregateCopy =
+      RD ? (RD->hasTrivialCopyConstructor() ||
+            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
+            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
+            RD->isUnion())
+         : RetTy.isTriviallyCopyableType(CGF.getContext());
+  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
                         Dest.getAddress()
                                 .getBasePointer()
                                 ->stripPointerCasts()
@@ -647,9 +661,15 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     llvm::Value *element = begin;
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, begin,
-          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
+      if (CGF.getLangOpts().EmitLogicalPointer)
+        element = Builder.CreateStructuredGEP(
+            AType, begin, llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
+      else
+        element = Builder.CreateInBoundsGEP(
+            llvmElementType, begin,
+            llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -715,6 +735,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
         Builder.CreatePHI(element->getType(), 2, "arrayinit.cur");
     currentElement->addIncoming(element, entryBB);
 
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
     // Emit the actual filler expression.
     {
       // C++1z [class.temporary]p5:
@@ -745,6 +768,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
     Builder.CreateCondBr(done, endBB, bodyBB);
     currentElement->addIncoming(nextElement, Builder.GetInsertBlock());
+
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.pop_back();
 
     CGF.EmitBlock(endBB);
   }
@@ -857,7 +883,44 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
-  case CK_DerivedToBase:
+  case CK_DerivedToBase: {
+    assert(CGF.getLangOpts().HLSL &&
+           "Derived/Base casts in EmitAggExpr are only supported in HLSL");
+
+    // Create a temporary for the derived record, switch it out with the current
+    // Dest slot, and emit the derived value.
+    QualType DerivedTy = E->getSubExpr()->getType();
+    RawAddress DerivedAddr = CGF.CreateMemTempWithoutCast(DerivedTy);
+    AggValueSlot DerivedTmpSlot = AggValueSlot::forAddr(
+        DerivedAddr, DerivedTy.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+
+    AggValueSlot DestBaseSlot = Dest;
+    Dest = DerivedTmpSlot;
+
+    Visit(E->getSubExpr());
+
+    // Perform derived-to-base address conversion to get the address
+    // of the base record within the derived record. In HLSL this should
+    // always be same as the derived because of single inheritance, but let's
+    // do it properly.
+    Address BaseAddrInDerived = CGF.GetAddressOfBaseClass(
+        DerivedTmpSlot.getAddress(), DerivedTy->castAsCXXRecordDecl(),
+        E->path_begin(), E->path_end(),
+        /*NullCheckValue=*/false, E->getExprLoc());
+
+    AggValueSlot SrcBaseSlot = AggValueSlot::forAddr(
+        BaseAddrInDerived, E->getType().getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+
+    // Copy the base class to the original destination slot and restore it.
+    EmitCopy(E->getType(), DestBaseSlot, SrcBaseSlot);
+    Dest = DestBaseSlot;
+    break;
+  }
+
   case CK_BaseToDerived:
   case CK_UncheckedDerivedToBase: {
     llvm_unreachable("cannot perform hierarchy conversion in EmitAggExpr: "
@@ -955,6 +1018,10 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     [[fallthrough]];
 
   case CK_HLSLArrayRValue:
+    if (CGF.getLangOpts().HLSL &&
+        E->getSubExpr()->getType()->isHLSLResourceRecordArray())
+      if (CGF.CGM.getHLSLRuntime().emitGlobalResourceArray(CGF, E, Dest))
+        break;
     Visit(E->getSubExpr());
     break;
   case CK_HLSLAggregateSplatCast: {
@@ -1142,6 +1209,21 @@ static llvm::Value *EmitCompare(CGBuilderTy &Builder, CodeGenFunction &CGF,
                    "already been handled");
 }
 
+void AggExprEmitter::EmitComparisonResult(const Expr *E,
+                                          const ComparisonCategoryInfo &CmpInfo,
+                                          llvm::Value *ResultValue) {
+  // Create the return value in the destination slot.
+  EnsureDest(E->getType());
+  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
+
+  // Emit the address of the first (and only) field in the comparison category
+  // type, and initialize it from the constant integer value selected above.
+  LValue FieldLV = CGF.EmitLValueForFieldInitialization(
+      DestLV, *CmpInfo.Record->field_begin());
+  CGF.EmitStoreThroughLValue(RValue::get(ResultValue), FieldLV,
+                             /*IsInit=*/true);
+}
+
 void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
   using llvm::BasicBlock;
   using llvm::PHINode;
@@ -1209,17 +1291,22 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
     Select = Builder.CreateSelect(
         EmitCmp(CK_Less), EmitCmpRes(CmpInfo.getLess()), SelectGT, "sel.lt");
   }
-  // Create the return value in the destination slot.
-  EnsureDest(E->getType());
-  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
 
-  // Emit the address of the first (and only) field in the comparison category
-  // type, and initialize it from the constant integer value selected above.
-  LValue FieldLV = CGF.EmitLValueForFieldInitialization(
-      DestLV, *CmpInfo.Record->field_begin());
-  CGF.EmitStoreThroughLValue(RValue::get(Select), FieldLV, /*IsInit*/ true);
+  EmitComparisonResult(E, CmpInfo, Select);
+}
 
-  // All done! The result is in the Dest slot.
+void AggExprEmitter::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
+
+  const ComparisonCategoryInfo &CmpInfo =
+      CGF.getContext().CompCategories.getInfoForType(E->getType());
+  const auto Result =
+      ComparisonCategoryResult(E->getAPValue().getInt().getZExtValue());
+  llvm::Value *ResultValue =
+      Builder.getInt(CmpInfo.getValueInfo(Result)->getIntValue());
+
+  EmitComparisonResult(E, CmpInfo, ResultValue);
 }
 
 void AggExprEmitter::VisitBinaryOperator(const BinaryOperator *E) {
@@ -1337,7 +1424,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.
@@ -1987,6 +2074,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
   llvm::Value *element =
       Builder.CreateInBoundsGEP(llvmElementType, begin, index);
 
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
   // Prepare for a cleanup.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   EHScopeStack::stable_iterator cleanup;
@@ -2033,6 +2123,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
       "arrayinit.done");
   llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
   Builder.CreateCondBr(done, endBB, bodyBB);
+
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.pop_back();
 
   CGF.EmitBlock(endBB);
 
@@ -2176,7 +2269,7 @@ void CodeGenFunction::EmitAggExpr(const Expr *E, AggValueSlot Slot) {
 
 LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
   assert(hasAggregateEvaluationKind(E->getType()) && "Invalid argument!");
-  Address Temp = CreateMemTemp(E->getType());
+  Address Temp = CreateMemTempWithoutCast(E->getType());
   LValue LV = MakeAddrLValue(Temp, E->getType());
   EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
                                          AggValueSlot::DoesNotNeedGCBarriers,
@@ -2254,7 +2347,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              // HLSL uses aggregate-copy for user-defined record types.
+              (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "
              "constructor or assignment operator");
       // Ignore empty classes in C++.
@@ -2275,9 +2370,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
-    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
-      return;
+  assert(Ty.getAddressSpace() != LangAS::hlsl_constant &&
+         "copies of aggregates in hlsl_constant address space should be "
+         "handled earlier by the HLSL runtime");
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is

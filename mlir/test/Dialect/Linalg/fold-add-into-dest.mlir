@@ -267,12 +267,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-memref.global "private" constant @big_const : memref<2048x2048xf32> = dense<1.11111104> {alignment = 64 : i64}
+memref.global "private" constant @big_const : memref<2048x2048xf32> = dense<1.11111104> alignment = 64
 func.func @expect_no_fold_due_to_no_memref_support(%arg0: memref<2048x2048xf32>, %arg1: memref<2048x2048xf32>) -> memref<2048x2048xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.get_global @big_const  : memref<2048x2048xf32>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<2048x2048xf32>
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<2048x2048xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<2048x2048xf32>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<2048x2048xf32>
   linalg.fill ins(%cst : f32) outs(%alloc_0 : memref<2048x2048xf32>)
   linalg.matmul ins(%arg0, %0 : memref<2048x2048xf32>, memref<2048x2048xf32>) outs(%alloc_0 : memref<2048x2048xf32>)
   linalg.fill ins(%cst : f32) outs(%alloc : memref<2048x2048xf32>)
@@ -287,6 +287,33 @@ func.func @expect_no_fold_due_to_no_memref_support(%arg0: memref<2048x2048xf32>,
 // CHECK: linalg.matmul
 // CHECK: linalg.add
 // CHECK: return
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.linalg.fold_add_into_dest
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!type = tensor<2048x2048xf32>
+func.func @expect_no_fold_when_dominated_dest_is_block_arg(
+    %lhs: !type, %rhs: !type, %dest: !type, %other: !type) -> !type {
+  %0 = linalg.matmul ins(%lhs, %rhs : !type, !type) outs(%dest : !type) -> !type
+  %1 = tensor.empty() : !type
+  %2 = linalg.add ins(%0, %other : !type, !type) outs(%1 : !type) -> !type
+  return %2 : !type
+}
+
+// CHECK-LABEL: func.func @expect_no_fold_when_dominated_dest_is_block_arg
+// CHECK: linalg.matmul
+// CHECK-NEXT: tensor.empty
+// CHECK-NEXT: linalg.add
+// CHECK-NEXT: return
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

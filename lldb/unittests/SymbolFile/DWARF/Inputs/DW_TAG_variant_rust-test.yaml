@@ -1,0 +1,871 @@
+# Below code compiled with rustc src/main.rs --target=x86_64-unknown-linux-gnu -g -C panic=abort
+#
+# #![no_std]
+# #![no_main]
+#
+# #[allow(unused)]
+# #[repr(u128)]
+# enum BigDiscr {
+#     Value(u64),
+#     None = 0x16151413121110090807060504030201,
+# }
+#
+# fn use_it(_: &BigDiscr) {}
+#
+# #[panic_handler]
+# fn panic(_info: &core::panic::PanicInfo) -> ! {
+#     loop {}
+# }
+#
+# #[unsafe(no_mangle)]
+# extern "C" fn main() {
+#     let none = BigDiscr::None;
+#     let some = BigDiscr::Value(31);
+#
+#     use_it(&none);
+#     use_it(&some);
+# }
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+  - Name:            .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         48897C24F8EBFE
+  - Name:            .text._ZN4main6use_it17h7beb6f96865c87acE
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         48897C24F8C3
+  - Name:            .text.main
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         4883EC4848B80910111213141516488944240848B801020304050607084889042448C74424301F00000048C74424280000000048C7442420000000004889E7E800000000488D7C2420E8000000004883C448C3
+  - Name:            .debug_gdb_scripts
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         016764625F6C6F61645F727573745F7072657474795F7072696E746572732E707900
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E1305030E10171B0E110155170000023901030E0000032E011101120640186E0E030E3A0B3B0B87011900000405000218030E3A0B3B0B49130000052E011101120640186E0E030E3A0B3B0B000006050002183A0B3B0B49130000072E01110112064018030E3A0B3B0B3F190000080B011101120600000934000218030E88010F3A0B3B0B491300000A1301030E0B0B320B88010F00000B3301151300000C0D00491388010F380B341900000D1901160A00000E0D00030E491388010F380B00000F0D00030E491388010F380B320B0000101300030E0B0B320B88010F0000110F004913030E330600001219010000131901160B0000142F004913030E0000152400030E3E0B0B0B00001615014913000017050049130000181301030E0B0B88010F0000190F004913330600001A1300030E0B0B88010F00001B0101491300001C21004913220D370B00001D2400030E0B0B3E0B000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5F0500000400000000000801000000001C0000000000000000000000000000000000000000000000000002000000000300000000000000000700000001570000000000000000010E0402917800000000010E3B010000000500000000000000000600000001570000000000000000010B06029178010B4E050000000700000000000000005300000001570000000001130800000000000000002D0000000902910000000000100114CB000000080000000000000000120000000902912000000000100115CB0000000000000A000000002003100BD80000000C5B05000010000D10000000000000000000000000000000000E000000001C0100001000000D10010203040506070809101112131415160E0000000031010000100000000A000000002003100F00000000320400000810030010000000002003100000115701000000000000000000000200000000020000000002000000000A000000001801080F00000000110400000800030F00000000F50400000808030F00000000470500000110030F0000000047050000011103000002000000000A000000001801080F00000000400300000800030F00000000770400000410030F00000000770400000414030F00000000FD03000001180300000002000000000A000000001001080F00000000E60200000800030F00000000040300000808030002000000000A000000001001080F0000000011020000080003000A000000001003080B1E0200000C320400000800120E000000004102000008000013000E000000006E020000080000000A000000001003080F00000000220300000800030F000000004D0400000808030F00000000EB030000011003000A000000001003080F000000007E04000002080300000010000000000001010A000000001801080F00000000AE0200000410030F0000000085040000080003000A000000000801040F00000000770400000400030F000000007E0400000204030F000000007E0400000206030000020000000002000000000A00000000080108141E040000000000000F0000000025040000080003000A0000000008010814FC010000000000000F00000000E8040000080003000A000000000801081439040000000000000F0000000040040000080003000A00000000100108141E040000000000000F000000000205000008000300000002000000000A000000000101010B720300000C1E040000010013000E000000009603000001000013010E00000000BD030000010000000A000000000101011439040000000000001485020000000000000F0000000039040000010101000A000000000101011439040000000000001485020000000000000F000000008502000001010100000002000000000A0000000000010114DB04000000000000000A0000000000010114290500000000000000000011D6010000000000000000000015000000000701111E0400000000000000000000150000000007081500000000070011390400000000000000000000115A040000000000000000000016650300001722030000176A04000000118D02000000000000000000001500000000070415000000000702180000000010080E00000000A304000008000E00000000B304000008080019AC040000000000001A00000000000111C004000000000000000000001BCD0400001CD4040000000600150000000007081D0000000008071139040000000000000000000011FC010000000000000000000011960100000000000000000000180000000010080E000000002005000008000E00000000CD040000080800191E04000000000000180000000010080E000000002005000008000E00000000CD0400000808001500000000020111CB00000000000000000000001500000000071000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         0072757374632076657273696F6E20312E39332E30202832353462353936303720323032362D30312D31392900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000100000001C00000000000000070000000000000010000000300000000000000006000000000000001400000044000000000000005300000000440E50024E0E08
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         79000000040023000000010101FB0E0D00010101010000000100000173726300006D61696E2E727300010000000009020000000000000000030D0105050A5902020001010009020000000000000000030A01051B0A580201000101000902000000000000000003120105100AD7082F050508A08305020B9F0205000101
+  - Name:            .rela.text.main
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text.main
+    Relocations:
+      - Offset:          0x40
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4A
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0x12
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          57
+      - Offset:          0x16
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x1A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          99
+      - Offset:          0x26
+        Symbol:          .debug_ranges
+        Type:            R_X86_64_32
+      - Offset:          0x2B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          147
+      - Offset:          0x30
+        Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_64
+      - Offset:          0x3E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          152
+      - Offset:          0x42
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          199
+      - Offset:          0x4C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          248
+      - Offset:          0x58
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_64
+      - Offset:          0x66
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          205
+      - Offset:          0x6A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          241
+      - Offset:          0x7C
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+      - Offset:          0x8A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          147
+      - Offset:          0x91
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+        Addend:          33
+      - Offset:          0xA1
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1193
+      - Offset:          0xAD
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+        Addend:          60
+      - Offset:          0xBD
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1198
+      - Offset:          0xCC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1168
+      - Offset:          0xF2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1157
+      - Offset:          0x110
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1163
+      - Offset:          0x11D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1157
+      - Offset:          0x125
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          425
+      - Offset:          0x132
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1163
+      - Offset:          0x140
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1116
+      - Offset:          0x149
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          254
+      - Offset:          0x14E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          199
+      - Offset:          0x153
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          259
+      - Offset:          0x158
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1106
+      - Offset:          0x160
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          270
+      - Offset:          0x16C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          929
+      - Offset:          0x178
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1071
+      - Offset:          0x184
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1087
+      - Offset:          0x192
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          929
+      - Offset:          0x197
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1029
+      - Offset:          0x19F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          938
+      - Offset:          0x1AB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          987
+      - Offset:          0x1B7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          992
+      - Offset:          0x1C3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          996
+      - Offset:          0x1D2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          278
+      - Offset:          0x1D7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          897
+      - Offset:          0x1DF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          282
+      - Offset:          0x1EB
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          339
+      - Offset:          0x1F8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          344
+      - Offset:          0x1FD
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          824
+      - Offset:          0x205
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          347
+      - Offset:          0x212
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          811
+      - Offset:          0x227
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          354
+      - Offset:          0x235
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          805
+      - Offset:          0x242
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          354
+      - Offset:          0x24A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          366
+      - Offset:          0x256
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          397
+      - Offset:          0x262
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          767
+      - Offset:          0x26F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          805
+      - Offset:          0x277
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          425
+      - Offset:          0x286
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          417
+      - Offset:          0x28E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          614
+      - Offset:          0x296
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          462
+      - Offset:          0x2A2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          518
+      - Offset:          0x2AF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          500
+      - Offset:          0x2B7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          470
+      - Offset:          0x2C3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          480
+      - Offset:          0x2CF
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          490
+      - Offset:          0x2DD
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          291
+      - Offset:          0x2E2
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          295
+      - Offset:          0x2E7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          327
+      - Offset:          0x2F3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x2F8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          309
+      - Offset:          0x305
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          864
+      - Offset:          0x311
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x316
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          309
+      - Offset:          0x323
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          385
+      - Offset:          0x32F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x334
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          309
+      - Offset:          0x341
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          974
+      - Offset:          0x34D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x352
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          309
+      - Offset:          0x361
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          407
+      - Offset:          0x366
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          433
+      - Offset:          0x37C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          414
+      - Offset:          0x38A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          429
+      - Offset:          0x397
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          414
+      - Offset:          0x3A3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x3AC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          423
+      - Offset:          0x3B1
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          425
+      - Offset:          0x3BE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          429
+      - Offset:          0x3CA
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x3D3
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          423
+      - Offset:          0x3D8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          425
+      - Offset:          0x3E7
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          777
+      - Offset:          0x3EC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          788
+      - Offset:          0x3F8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x3FE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1011
+      - Offset:          0x40A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          307
+      - Offset:          0x416
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          907
+      - Offset:          0x41F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          304
+      - Offset:          0x42A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          317
+      - Offset:          0x433
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          350
+      - Offset:          0x43A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          372
+      - Offset:          0x445
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          375
+      - Offset:          0x452
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          650
+      - Offset:          0x46F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          624
+      - Offset:          0x478
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          476
+      - Offset:          0x47F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          486
+      - Offset:          0x486
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          588
+      - Offset:          0x48D
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          309
+      - Offset:          0x498
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          543
+      - Offset:          0x4AD
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          522
+      - Offset:          0x4B8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          576
+      - Offset:          0x4CE
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          550
+      - Offset:          0x4D5
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          556
+      - Offset:          0x4E0
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          784
+      - Offset:          0x4ED
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          833
+      - Offset:          0x4FA
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1038
+      - Offset:          0x503
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          963
+      - Offset:          0x50A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          947
+      - Offset:          0x515
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          956
+      - Offset:          0x52A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1006
+      - Offset:          0x531
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          947
+      - Offset:          0x53C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          956
+      - Offset:          0x548
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1082
+      - Offset:          0x553
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1177
+      - Offset:          0x55C
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          1152
+  - Name:            .rela.debug_aranges
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_aranges
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_info
+        Type:            R_X86_64_32
+      - Offset:          0x10
+        Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_64
+      - Offset:          0x20
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_64
+      - Offset:          0x30
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+  - Name:            .rela.debug_ranges
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_ranges
+    Relocations:
+      - Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_64
+      - Offset:          0x8
+        Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_64
+        Addend:          7
+      - Offset:          0x10
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_64
+      - Offset:          0x18
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_64
+        Addend:          6
+      - Offset:          0x20
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+      - Offset:          0x28
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+        Addend:          83
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x20
+        Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_PC32
+      - Offset:          0x34
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_PC32
+      - Offset:          0x48
+        Symbol:          .text.main
+        Type:            R_X86_64_PC32
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x30
+        Symbol:          .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+        Type:            R_X86_64_64
+      - Offset:          0x47
+        Symbol:          .text._ZN4main6use_it17h7beb6f96865c87acE
+        Type:            R_X86_64_64
+      - Offset:          0x5E
+        Symbol:          .text.main
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+      - Name:            .text._ZN4main6use_it17h7beb6f96865c87acE
+      - Name:            .text.main
+      - Name:            .rela.text.main
+      - Name:            .debug_gdb_scripts
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_aranges
+      - Name:            .rela.debug_aranges
+      - Name:            .debug_ranges
+      - Name:            .rela.debug_ranges
+      - Name:            .debug_str
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .symtab
+Symbols:
+  - Name:            main.9b5cc465332d101d-cgu.0
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+    Type:            STT_SECTION
+    Section:         .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+  - Name:            .text._ZN4main6use_it17h7beb6f96865c87acE
+    Type:            STT_SECTION
+    Section:         .text._ZN4main6use_it17h7beb6f96865c87acE
+  - Name:            _ZN4main6use_it17h7beb6f96865c87acE
+    Type:            STT_FUNC
+    Section:         .text._ZN4main6use_it17h7beb6f96865c87acE
+    Size:            0x6
+  - Name:            .text.main
+    Type:            STT_SECTION
+    Section:         .text.main
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_ranges
+    Type:            STT_SECTION
+    Section:         .debug_ranges
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            _RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+    Type:            STT_FUNC
+    Section:         .text._RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+    Binding:         STB_GLOBAL
+    Size:            0x7
+    Other:           [ STV_HIDDEN ]
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text.main
+    Binding:         STB_GLOBAL
+    Size:            0x53
+  - Name:            __rustc_debug_gdb_scripts_section__
+    Type:            STT_OBJECT
+    Section:         .debug_gdb_scripts
+    Binding:         STB_WEAK
+    Size:            0x22
+DWARF:
+  debug_str:
+    - 'clang LLVM (rustc version 1.93.0 (254b59607 2026-01-19))'
+    - 'src/main.rs\@\main.9b5cc465332d101d-cgu.0'
+    - 'C:\Coding\NotMyCode\llvm_patches\llvm-project\z'
+    - main
+    - _RNvCshXwFllX56pT_7___rustc17rust_begin_unwind
+    - panic
+    - _ZN4main6use_it17h7beb6f96865c87acE
+    - use_it
+    - _info
+    - core
+    - panic_info
+    - message
+    - fmt
+    - template
+    - ptr
+    - non_null
+    - u8
+    - T
+    - pointer
+    - '*const u8'
+    - 'NonNull<u8>'
+    - args
+    - rt
+    - ty
+    - u64
+    - Placeholder
+    - value
+    - '()'
+    - '*const ()'
+    - 'NonNull<()>'
+    - formatter
+    - result
+    - Ok
+    - Error
+    - E
+    - __0
+    - Err
+    - 'Result<(), core::fmt::Error>'
+    - options
+    - flags
+    - u32
+    - width
+    - u16
+    - precision
+    - FormattingOptions
+    - buf
+    - 'dyn core::fmt::Write'
+    - vtable
+    - usize
+    - __ARRAY_SIZE_TYPE__
+    - '&[usize; 6]'
+    - '&mut dyn core::fmt::Write'
+    - Formatter
+    - '&mut core::fmt::Formatter'
+    - 'unsafe fn(core::ptr::non_null::NonNull<()>, &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error>'
+    - _lifetime
+    - marker
+    - '&()'
+    - 'PhantomData<&()>'
+    - Count
+    - ArgumentType
+    - Argument
+    - '*const core::fmt::rt::Argument'
+    - 'NonNull<core::fmt::rt::Argument>'
+    - Arguments
+    - '&core::fmt::Arguments'
+    - location
+    - filename
+    - data_ptr
+    - length
+    - '*const str'
+    - 'NonNull<str>'
+    - line
+    - col
+    - _filename
+    - '&str'
+    - 'PhantomData<&str>'
+    - Location
+    - '&core::panic::location::Location'
+    - can_unwind
+    - bool
+    - force_no_backtrace
+    - PanicInfo
+    - '&core::panic::panic_info::PanicInfo'
+    - u128
+    - Value
+    - None
+    - BigDiscr
+    - '&main::BigDiscr'
+    - none
+    - some
+  debug_aranges:
+    - Length:          0x4C
+      Version:         2
+      CuOffset:        0x0
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x0
+          Length:          0x7
+        - Address:         0x0
+          Length:          0x6
+        - Address:         0x0
+          Length:          0x53
+  debug_ranges:
+    - Offset:          0x0
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x10
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x20
+      AddrSize:        0x8
+      Entries:         []
+    - Offset:          0x30
+      AddrSize:        0x8
+      Entries:         []
+...

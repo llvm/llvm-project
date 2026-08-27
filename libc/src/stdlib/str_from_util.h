@@ -19,10 +19,10 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/printf_core/converter_atlas.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/__support/str_to_integer.h"
-#include "src/stdio/printf_core/converter_atlas.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 

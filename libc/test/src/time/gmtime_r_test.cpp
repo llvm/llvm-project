@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/gmtime_r.h"
 #include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -38,8 +39,6 @@ TEST_F(LlvmLibcGmTimeR, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Test for Tue Jan 1 12:50:50 in 2,147,483,647th year.
   time_t seconds = 67767976202043050;
   struct tm tm_data;
@@ -57,4 +56,15 @@ TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
           0}),
       *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);
+}
+
+TEST_F(LlvmLibcGmTimeR, NullPtr) {
+  struct tm tm_data;
+  time_t seconds = 0;
+  EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime_r(nullptr, nullptr); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::gmtime_r(nullptr, &tm_data); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::gmtime_r(&seconds, nullptr); },
+               WITH_SIGNAL(-1));
 }

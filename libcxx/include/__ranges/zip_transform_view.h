@@ -17,6 +17,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__concepts/invocable.h>
+#include <__concepts/referenceable.h>
 #include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -33,7 +34,6 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -79,15 +79,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit zip_transform_view(_Fn __fun, _Views... __views)
       : __zip_(std::move(__views)...), __fun_(in_place, std::move(__fun)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator<false>(*this, __zip_.begin()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator<false>(*this, __zip_.begin()); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _InnerView> && regular_invocable<const _Fn&, range_reference_t<const _Views>...>
   {
     return __iterator<true>(*this, __zip_.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_InnerView>) {
       return __iterator<false>(*this, __zip_.end());
     } else {
@@ -95,7 +95,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _InnerView> && regular_invocable<const _Fn&, range_reference_t<const _Views>...>
   {
     if constexpr (common_range<const _InnerView>) {
@@ -105,13 +105,13 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_InnerView>
   {
     return __zip_.size();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _InnerView>
   {
     return __zip_.size();
@@ -184,7 +184,7 @@ public:
     requires _Const && convertible_to<__ziperator<false>, __ziperator<_Const>>
       : __parent_(__i.__parent_), __inner_(std::move(__i.__inner_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
       noexcept(noexcept(std::apply(__get_deref_and_invoke(), __zip_view_iterator_access::__get_underlying(__inner_)))) {
     return std::apply(__get_deref_and_invoke(), __zip_view_iterator_access::__get_underlying(__inner_));
   }
@@ -233,7 +233,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
     return std::apply(
@@ -255,25 +255,26 @@ public:
     return __x.__inner_ <=> __y.__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, const __iterator& __i)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, const __iterator& __i)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __i, difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ - __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const __iterator& __x, const __iterator& __y)
     requires sized_sentinel_for<__ziperator<_Const>, __ziperator<_Const>>
   {
     return __x.__inner_ - __y.__inner_;
@@ -307,14 +308,14 @@ public:
 
   template <bool _OtherConst>
     requires sized_sentinel_for<__zentinel<_Const>, __ziperator<_OtherConst>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
   operator-(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__inner_ - __y.__inner_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<__zentinel<_Const>, __ziperator<_OtherConst>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
   operator-(const __sentinel& __x, const __iterator<_OtherConst>& __y) {
     return __x.__inner_ - __y.__inner_;
   }
@@ -327,14 +328,14 @@ struct __fn {
   template <class _Fn>
     requires(move_constructible<decay_t<_Fn>> && regular_invocable<decay_t<_Fn>&> &&
              is_object_v<invoke_result_t<decay_t<_Fn>&>>)
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&&) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&&) const
       noexcept(noexcept(auto(views::empty<decay_t<invoke_result_t<decay_t<_Fn>&>>>))) {
     return views::empty<decay_t<invoke_result_t<decay_t<_Fn>&>>>;
   }
 
   template <class _Fn, class... _Ranges>
     requires(sizeof...(_Ranges) > 0)
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __fun, _Ranges&&... __rs) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __fun, _Ranges&&... __rs) const
       noexcept(noexcept(zip_transform_view(std::forward<_Fn>(__fun), std::forward<_Ranges>(__rs)...)))
           -> decltype(zip_transform_view(std::forward<_Fn>(__fun), std::forward<_Ranges>(__rs)...)) {
     return zip_transform_view(std::forward<_Fn>(__fun), std::forward<_Ranges>(__rs)...);

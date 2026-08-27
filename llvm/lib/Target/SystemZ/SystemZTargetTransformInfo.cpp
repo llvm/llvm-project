@@ -478,6 +478,12 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
 }
 
+unsigned
+SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
+  return VF.isVector() ? 8 : 1;
+}
+
 bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   EVT VT = TLI->getValueType(DL, DataType);
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
@@ -550,10 +556,32 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
   switch (Opcode) {
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
-    if (BitWidth != 8)
+  case Instruction::Xor: {
+    if (BitWidth == 8)
+      break;
+    if (BitWidth != 16 && BitWidth != 32 && BitWidth != 64)
       return false;
+
+    auto *CI = dyn_cast<ConstantInt>(I->getOperand(1));
+    if (!CI)
+      return false;
+
+    uint64_t Val = CI->getZExtValue();
+    if (Opcode == Instruction::And) {
+      if (BitWidth == 16 && (Val & 0xff00ULL) != 0xff00ULL)
+        return false;
+      if (BitWidth == 32 && (Val & 0xffffff00ULL) != 0xffffff00ULL)
+        return false;
+      if (BitWidth == 64 &&
+          (Val & 0xffffffffffffff00ULL) != 0xffffffffffffff00ULL)
+        return false;
+    } else {
+      if (CI->getValue().getActiveBits() > 8) {
+        return false;
+      }
+    }
     break;
+  }
   case Instruction::Add:
   case Instruction::Sub:
     if (BitWidth != 32 && BitWidth != 64)
@@ -768,9 +796,9 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
 InstructionCost
 SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
+                               ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {
@@ -805,14 +833,14 @@ SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 
 // Return the log2 difference of the element sizes of the two vector types.
 static unsigned getElSizeLog2Diff(Type *Ty0, Type *Ty1) {
-  unsigned Bits0 = Ty0->getScalarSizeInBits();
-  unsigned Bits1 = Ty1->getScalarSizeInBits();
+  unsigned Bits0 = getScalarSizeInBits(Ty0);
+  unsigned Bits1 = getScalarSizeInBits(Ty1);
 
   if (Bits1 >  Bits0)
     return (Log2_32(Bits1) - Log2_32(Bits0));
@@ -823,8 +851,7 @@ static unsigned getElSizeLog2Diff(Type *Ty0, Type *Ty1) {
 // Return the number of instructions needed to truncate SrcTy to DstTy.
 unsigned SystemZTTIImpl::getVectorTruncCost(Type *SrcTy, Type *DstTy) const {
   assert (SrcTy->isVectorTy() && DstTy->isVectorTy());
-  assert(SrcTy->getPrimitiveSizeInBits().getFixedValue() >
-             DstTy->getPrimitiveSizeInBits().getFixedValue() &&
+  assert(getScalarSizeInBits(SrcTy) > getScalarSizeInBits(DstTy) &&
          "Packing must reduce size of vector type.");
   assert(cast<FixedVectorType>(SrcTy)->getNumElements() ==
              cast<FixedVectorType>(DstTy)->getNumElements() &&
@@ -868,8 +895,8 @@ unsigned SystemZTTIImpl::getVectorBitmaskConversionCost(Type *SrcTy,
           "Should only be called with vector types.");
 
   unsigned PackCost = 0;
-  unsigned SrcScalarBits = SrcTy->getScalarSizeInBits();
-  unsigned DstScalarBits = DstTy->getScalarSizeInBits();
+  unsigned SrcScalarBits = getScalarSizeInBits(SrcTy);
+  unsigned DstScalarBits = getScalarSizeInBits(DstTy);
   unsigned Log2Diff = getElSizeLog2Diff(SrcTy, DstTy);
   if (SrcScalarBits > DstScalarBits)
     // The bitmask will be truncated.
@@ -1128,6 +1155,15 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
   return ExtCost;
 }
 
+InstructionCost SystemZTTIImpl::getCFInstrCost(unsigned Opcode,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) const {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
+  // Branches are assumed to be predicted.
+  return TTI::TCC_Free;
+}
+
 InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -1347,6 +1383,11 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   assert(!Src->isVoidTy() && "Invalid type");
+
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
 
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)

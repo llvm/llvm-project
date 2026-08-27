@@ -27,9 +27,25 @@ NativeRegisterContextAIX::WriteRegisterRaw(uint32_t reg_index,
   return Status("unimplemented");
 }
 
-Status NativeRegisterContextAIX::ReadGPR() { return Status("unimplemented"); }
+Status NativeRegisterContextAIX::ReadGPR() {
+  auto result = NativeProcessAIX::PtraceWrapper(
+      PTT_READ_GPRS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
 
-Status NativeRegisterContextAIX::WriteGPR() { return Status("unimplemented"); }
+  if (!result)
+    return Status::FromError(result.takeError());
+
+  return Status();
+}
+
+Status NativeRegisterContextAIX::WriteGPR() {
+  auto result = NativeProcessAIX::PtraceWrapper(
+      PTT_WRITE_GPRS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
+
+  if (!result)
+    return Status::FromError(result.takeError());
+
+  return Status();
+}
 
 Status NativeRegisterContextAIX::ReadFPR() { return Status("unimplemented"); }
 

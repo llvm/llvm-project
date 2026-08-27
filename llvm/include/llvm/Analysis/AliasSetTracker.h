@@ -26,6 +26,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <vector>
 
@@ -41,7 +42,6 @@ class Function;
 class Instruction;
 class StoreInst;
 class LoadInst;
-enum class ModRefInfo : uint8_t;
 class raw_ostream;
 class VAArgInst;
 class Value;
@@ -60,25 +60,11 @@ class AliasSet : public ilist_node<AliasSet> {
 
   /// Number of nodes pointing to this AliasSet plus the number of AliasSets
   /// forwarding to it.
-  unsigned RefCount : 27;
+  unsigned RefCount : 30;
 
   // Signifies that this set should be considered to alias any pointer.
   // Use when the tracker holding this set is saturated.
   unsigned AliasAny : 1;
-
-  /// The kinds of access this alias set models.
-  ///
-  /// We keep track of whether this alias set merely refers to the locations of
-  /// memory (and not any particular access), whether it modifies or references
-  /// the memory, or whether it does both. The lattice goes from "NoAccess" to
-  /// either RefAccess or ModAccess, then to ModRefAccess as necessary.
-  enum AccessLattice {
-    NoAccess = 0,
-    RefAccess = 1,
-    ModAccess = 2,
-    ModRefAccess = RefAccess | ModAccess
-  };
-  unsigned Access : 2;
 
   /// The kind of alias relationship between pointers of the set.
   ///
@@ -90,6 +76,9 @@ class AliasSet : public ilist_node<AliasSet> {
     SetMustAlias = 0, SetMayAlias = 1
   };
   unsigned Alias : 1;
+
+  // The kinds of access this alias set models.
+  ModRefInfo Access;
 
   void addRef() { ++RefCount; }
 
@@ -104,8 +93,8 @@ public:
   AliasSet &operator=(const AliasSet &) = delete;
 
   /// Accessors...
-  bool isRef() const { return Access & RefAccess; }
-  bool isMod() const { return Access & ModAccess; }
+  bool isRef() const { return isRefSet(Access); }
+  bool isMod() const { return isModSet(Access); }
   bool isMustAlias() const { return Alias == SetMustAlias; }
   bool isMayAlias()  const { return Alias == SetMayAlias; }
 
@@ -137,7 +126,8 @@ public:
 private:
   // Can only be created by AliasSetTracker.
   AliasSet()
-      : RefCount(0), AliasAny(false), Access(NoAccess), Alias(SetMustAlias) {}
+      : RefCount(0), AliasAny(false), Alias(SetMustAlias),
+        Access(ModRefInfo::NoModRef) {}
 
   LLVM_ABI void removeFromTracker(AliasSetTracker &AST);
 
@@ -188,6 +178,7 @@ public:
   LLVM_ABI void add(const MemoryLocation &Loc);
   LLVM_ABI void add(LoadInst *LI);
   LLVM_ABI void add(StoreInst *SI);
+  LLVM_ABI void addWithoutAATags(StoreInst *SI);
   LLVM_ABI void add(VAArgInst *VAAI);
   LLVM_ABI void add(AnyMemSetInst *MSI);
   LLVM_ABI void add(AnyMemTransferInst *MTI);
@@ -253,7 +244,7 @@ private:
     }
   }
 
-  AliasSet &addMemoryLocation(MemoryLocation Loc, AliasSet::AccessLattice E);
+  AliasSet &addMemoryLocation(MemoryLocation Loc, ModRefInfo MR);
   AliasSet *mergeAliasSetsForMemoryLocation(const MemoryLocation &MemLoc,
                                             AliasSet *PtrAS,
                                             bool &MustAliasAll);
@@ -270,13 +261,13 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
   return OS;
 }
 
-class AliasSetsPrinterPass : public PassInfoMixin<AliasSetsPrinterPass> {
+class AliasSetsPrinterPass
+    : public RequiredPassInfoMixin<AliasSetsPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit AliasSetsPrinterPass(raw_ostream &OS);
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_resource_macros.h"
+#include "hdr/sys_stat_macros.h"
+#include "hdr/types/struct_rlimit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/fcntl/open.h"
 #include "src/sys/resource/getrlimit.h"
@@ -15,9 +18,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/resource.h>
-#include <sys/stat.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcResourceLimitsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

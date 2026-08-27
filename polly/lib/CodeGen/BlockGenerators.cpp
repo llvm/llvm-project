@@ -388,10 +388,7 @@ void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
     if (!isInstructionTriviallyDead(NewInst))
       continue;
 
-    for (auto Pair : BBMap)
-      if (Pair.second == NewInst) {
-        BBMap.erase(Pair.first);
-      }
+    BBMap.remove_if([&](const auto &Pair) { return Pair.second == NewInst; });
 
     NewInst->eraseFromParent();
     I = NewBB->rbegin();
@@ -558,6 +555,11 @@ void BlockGenerator::generateScalarLoads(
 #ifndef NDEBUG
     auto StmtDom =
         Stmt.getDomain().intersect_params(Stmt.getParent()->getContext());
+    // Restrict to defined behavior context to match DeLICM's contract:
+    // new read accesses are only required to cover the defined-behavior
+    // subset of the domain.
+    StmtDom = StmtDom.intersect_params(
+        Stmt.getParent()->getBestKnownDefinedBehaviorContext());
     auto AccDom = MA->getAccessRelation().domain();
     assert(!StmtDom.is_subset(AccDom).is_false() &&
            "Scalar must be loaded in all statement instances");

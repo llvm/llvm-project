@@ -4,6 +4,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 
@@ -188,12 +189,17 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
   return hotnessToStr(getConstantHotnessUsingProfileCount(C, PSI, *Count));
 }
 
-bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+static std::unique_ptr<StaticDataProfileInfo>
+computeStaticDataProfileInfo(Module &M) {
   bool EnableDataAccessProf = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableDataAccessProf")))
     EnableDataAccessProf = MD->getZExtValue();
-  Info.reset(new StaticDataProfileInfo(EnableDataAccessProf));
+  return std::make_unique<StaticDataProfileInfo>(EnableDataAccessProf);
+}
+
+bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
+  Info = computeStaticDataProfileInfo(M);
   return false;
 }
 
@@ -209,3 +215,10 @@ StaticDataProfileInfoWrapperPass::StaticDataProfileInfoWrapperPass()
     : ImmutablePass(ID) {}
 
 char StaticDataProfileInfoWrapperPass::ID = 0;
+
+StaticDataProfileInfoAnalysis::Result
+StaticDataProfileInfoAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  return StaticDataProfileInfoAnalysis::Result(computeStaticDataProfileInfo(M));
+}
+
+AnalysisKey llvm::StaticDataProfileInfoAnalysis::Key;

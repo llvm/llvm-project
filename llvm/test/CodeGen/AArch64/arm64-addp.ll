@@ -27,9 +27,8 @@ define i64 @foo0(<2 x i64> %a) nounwind {
 define i64 @foo0_or(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: foo0_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov.d x8, v0[1]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %lane0.i = extractelement <2 x i64> %a, i32 0
   %lane1.i = extractelement <2 x i64> %a, i32 1
@@ -40,7 +39,6 @@ define i64 @foo0_or(<2 x i64> %a) nounwind {
 define float @foo1(<2 x float> %a) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp.2s s0, v0
 ; CHECK-NEXT:    ret
   %lane0.i = extractelement <2 x float> %a, i32 0

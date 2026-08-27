@@ -208,7 +208,7 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
-; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
 ; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    str q2, [x1, x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
@@ -824,7 +824,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
 ; CHECK-SD-NEXT:    mov w11, w1
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-SD-NEXT:    movi d3, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    sxtb x11, w11
 ; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    dup v1.2s, w11
@@ -838,14 +838,11 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    adds x8, x8, #4
 ; CHECK-SD-NEXT:    ushll v4.8h, v4.8b, #0
 ; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
-; CHECK-SD-NEXT:    ushll v5.2d, v4.2s, #0
-; CHECK-SD-NEXT:    ushll2 v4.2d, v4.4s, #0
-; CHECK-SD-NEXT:    and v5.16b, v5.16b, v3.16b
-; CHECK-SD-NEXT:    and v4.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v4.2s
-; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v5.2s
+; CHECK-SD-NEXT:    mov d5, v4.d[1]
+; CHECK-SD-NEXT:    and v4.8b, v4.8b, v3.8b
+; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v4.2s
+; CHECK-SD-NEXT:    and v5.8b, v5.8b, v3.8b
+; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v5.2s
 ; CHECK-SD-NEXT:    b.ne .LBB6_11
 ; CHECK-SD-NEXT:  // %bb.12: // %vec.epilog.middle.block
 ; CHECK-SD-NEXT:    add v0.2d, v2.2d, v0.2d
@@ -1766,6 +1763,46 @@ entry:
   %1 = bitcast <4 x i32> %vqdmlal_v3.i to <8 x i16>
   %shuffle.i35 = shufflevector <8 x i16> %0, <8 x i16> %1, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret <8 x i16> %shuffle.i35
+}
+
+define <2 x i64> @mul_mask33(i64 %x, i64 %y, <2 x i32> %z) {
+; CHECK-SD-LABEL: mul_mask33:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    and x9, x0, #0x1ffffffff
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    mul x9, x9, x10
+; CHECK-SD-NEXT:    and x10, x1, #0x1ffffffff
+; CHECK-SD-NEXT:    mul x8, x10, x8
+; CHECK-SD-NEXT:    fmov d0, x9
+; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mul_mask33:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and x8, x0, #0x1ffffffff
+; CHECK-GI-NEXT:    and x9, x1, #0x1ffffffff
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmov x11, d0
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    mov x8, v1.d[1]
+; CHECK-GI-NEXT:    mul x10, x10, x11
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d0, x10
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    ret
+entry:
+  %ax = and i64 %x, 8589934591 ; 0x1ffffffff
+  %ay = and i64 %y, 8589934591 ; 0x1ffffffff
+  %v0 = insertelement <2 x i64> poison, i64 %ax, i32 0
+  %v = insertelement <2 x i64> %v0, i64 %ay, i32 1
+  %e = zext <2 x i32> %z to <2 x i64>
+  %m = mul <2 x i64> %v, %e
+  ret <2 x i64> %m
 }
 
 

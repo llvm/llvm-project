@@ -85,7 +85,6 @@ if not "%version_7z%"=="" (
 REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
-REM   NSIS with the strlen_8192 patch,
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -186,8 +185,9 @@ set common_cmake_flags=^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  -DLLVM_ENABLE_PROJECTS="clang;lld" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" ^
+  -DCPACK_GENERATOR="WIX" ^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
 if "%force-msvc%" == "" (
@@ -256,7 +256,6 @@ REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
-REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -264,6 +263,7 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
@@ -332,8 +332,6 @@ ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
   ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
-ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -356,6 +354,7 @@ cd build_%arch%
 call :do_generate_profile || exit /b 1
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
@@ -477,7 +476,7 @@ exit /b 0
 mkdir zstdbuild
 cd zstdbuild
 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
-  -DZSTD_BUILD_PROGRAMS=OFF -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
+  -DZSTD_BUILD_PROGRAMS=ON -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
   -DZSTD_BUILD_SHARED=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../zstd-%zstd_version%/build/cmake || exit /b 1
 ninja install || exit /b 1

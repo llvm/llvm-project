@@ -8,7 +8,8 @@
 ; CHECK-DAG: %[[#NullInt:]] = OpConstantNull %[[#Int]]
 ; CHECK-DAG: %[[#V2Int:]] = OpTypeVector %[[#Int]] 2
 ; CHECK-DAG: %[[#V2Bool:]] = OpTypeVector %[[#Bool]] 2
-; CHECK-DAG: %[[#NullV2Int:]] = OpConstantComposite %[[#V2Int]]
+; CHECK-DAG: %[[#NullV2Int:]] = OpConstantNull %[[#V2Int]]
+; CHECK-DAG: %[[#Arr2Int:]] = OpTypeArray %[[#Int]] %[[#]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#Int]]
@@ -33,9 +34,9 @@ entry:
 ; CHECK: %[[#A2:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#B2:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#Res2:]] = OpISub %[[#Int]] %[[#A2]] %[[#B2]]
-; CHECK: %[[#ResLtA2:]] = OpSLessThan %[[#Bool]] %[[#Res2]] %[[#A2]]
-; CHECK: %[[#BGt0:]] = OpSGreaterThan %[[#Bool]] %[[#B2]] %[[#NullInt]]
-; CHECK: %[[#Overflow2:]] = OpLogicalNotEqual %[[#Bool]] %[[#BGt0]] %[[#ResLtA2]]
+; CHECK: %[[#CmpAB2:]] = OpSLessThan %[[#Bool]] %[[#A2]] %[[#B2]]
+; CHECK: %[[#ResLt02:]] = OpSLessThan %[[#Bool]] %[[#Res2]] %[[#NullInt]]
+; CHECK: %[[#Overflow2:]] = OpLogicalNotEqual %[[#Bool]] %[[#CmpAB2]] %[[#ResLt02]]
 ; CHECK: OpReturn
 define spir_func void @test_ssub_overflow(ptr %out_result, ptr %out_overflow, i32 %a, i32 %b) {
 entry:
@@ -71,9 +72,9 @@ entry:
 ; CHECK: %[[#A4:]] = OpFunctionParameter %[[#V2Int]]
 ; CHECK: %[[#B4:]] = OpFunctionParameter %[[#V2Int]]
 ; CHECK: %[[#Res4:]] = OpISub %[[#V2Int]] %[[#A4]] %[[#B4]]
-; CHECK: %[[#ResLtA4:]] = OpSLessThan %[[#V2Bool]] %[[#Res4]] %[[#A4]]
-; CHECK: %[[#BGt04:]] = OpSGreaterThan %[[#V2Bool]] %[[#B4]] %[[#NullV2Int]]
-; CHECK: %[[#Overflow4:]] = OpLogicalNotEqual %[[#V2Bool]] %[[#BGt04]] %[[#ResLtA4]]
+; CHECK: %[[#CmpAB4:]] = OpSLessThan %[[#V2Bool]] %[[#A4]] %[[#B4]]
+; CHECK: %[[#ResLt04:]] = OpSLessThan %[[#V2Bool]] %[[#Res4]] %[[#NullV2Int]]
+; CHECK: %[[#Overflow4:]] = OpLogicalNotEqual %[[#V2Bool]] %[[#CmpAB4]] %[[#ResLt04]]
 ; CHECK: OpReturn
 define spir_func void @test_ssub_overflow_v2i32(ptr %out_result, ptr %out_overflow, <2 x i32> %a, <2 x i32> %b) {
 entry:
@@ -84,4 +85,33 @@ entry:
   %zext_ofl = zext <2 x i1> %ofl to <2 x i8>
   store <2 x i8> %zext_ofl, ptr %out_overflow
   ret void
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#AR:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#BR:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#ResR:]] = OpIAdd %[[#Int]] %[[#AR]] %[[#BR]]
+; CHECK: %[[#Ins0:]] = OpCompositeInsert %[[#StructR:]] %[[#ResR]] %[[#]] 0
+; CHECK: %[[#Ins1:]] = OpCompositeInsert %[[#StructR]] %[[#]] %[[#Ins0]] 1
+; CHECK: OpReturnValue %[[#Ins1]]
+define spir_func { i32, i1 } @test_sadd_overflow_ret(i32 %a, i32 %b) {
+entry:
+  %res = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  ret { i32, i1 } %res
+}
+
+; Verify that a function returning an array-typed call result compiles without
+; crash. No standard intrinsic returns an array type, so this uses a regular
+; declared function. The array path in reconstructAggregateReturns is not
+; triggered here (regular calls are not rewritten by SPIRVPrepareFunctions);
+; the test ensures no crash and correct OpReturnValue emission for this case.
+; CHECK: OpFunction
+; CHECK: %[[#ResA:]] = OpFunctionCall %[[#Arr2Int]]
+; CHECK: OpReturnValue %[[#ResA]]
+declare [2 x i32] @get_pair()
+
+define spir_func [2 x i32] @test_array_ret() {
+entry:
+  %res = call [2 x i32] @get_pair()
+  ret [2 x i32] %res
 }

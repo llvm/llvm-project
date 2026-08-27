@@ -110,11 +110,18 @@ static bool isInsideACCComputeConstruct(Operation *op) {
   return false;
 }
 
+/// Return true if an enclosing compute construct or capture must be removed
+/// before converting an atomic operation.
+static bool isAtomicConversionDeferred(Operation *op) {
+  return isInsideACCComputeConstruct(op) ||
+         op->getParentOfType<acc::AtomicCaptureOp>();
+}
+
 namespace {
 
 // Lower orphan acc.atomic.update by: load from addr, clone region expr with
 // the loaded value, then store the computed result back to addr.
-// Only matches if NOT inside a compute region.
+// Only matches outside compute regions and atomic captures.
 class ACCOrphanAtomicUpdateOpConversion
     : public OpRewritePattern<acc::AtomicUpdateOp> {
 public:
@@ -123,8 +130,7 @@ public:
 
   LogicalResult matchAndRewrite(acc::AtomicUpdateOp atomicUpdateOp,
                                 PatternRewriter &rewriter) const override {
-    // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(atomicUpdateOp))
+    if (isAtomicConversionDeferred(atomicUpdateOp))
       return failure();
 
     Value x = atomicUpdateOp.getX();
@@ -142,9 +148,13 @@ public:
       }
       IRMapping mapping;
       mapping.map(atomicUpdateOp.getRegion().front().getArgument(0), loadOp);
-      Operation *expr = rewriter.clone(*atomicUpdateOp.getFirstOp(), mapping);
-      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(),
-                                expr->getResult(0), xTyped)) {
+      Block &block = atomicUpdateOp.getRegion().front();
+      for (Operation &op : block.without_terminator())
+        rewriter.clone(op, mapping);
+      auto yieldOp = cast<acc::YieldOp>(block.getTerminator());
+      Value result = mapping.lookup(yieldOp.getOperand(0));
+      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(), result,
+                                xTyped)) {
         accSupport.emitNYI(atomicUpdateOp.getLoc(),
                            "failed to generate store for atomic update");
         return failure();
@@ -163,7 +173,7 @@ private:
 };
 
 // Lower orphan acc.atomic.read by: load from src, then store into dst.
-// Only matches if NOT inside an ACC compute construct.
+// Only matches outside compute regions and atomic captures.
 class ACCOrphanAtomicReadOpConversion
     : public OpRewritePattern<acc::AtomicReadOp> {
 public:
@@ -172,8 +182,7 @@ public:
 
   LogicalResult matchAndRewrite(acc::AtomicReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(readOp))
+    if (isAtomicConversionDeferred(readOp))
       return failure();
 
     Value x = readOp.getX();
@@ -204,7 +213,7 @@ private:
 };
 
 // Lower orphan acc.atomic.write by: store value into addr.
-// Only matches if NOT inside an ACC compute construct.
+// Only matches outside compute regions and atomic captures.
 class ACCOrphanAtomicWriteOpConversion
     : public OpRewritePattern<acc::AtomicWriteOp> {
 public:
@@ -213,8 +222,7 @@ public:
 
   LogicalResult matchAndRewrite(acc::AtomicWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
-    // Only convert if this op is not inside an ACC compute construct
-    if (isInsideACCComputeConstruct(writeOp))
+    if (isAtomicConversionDeferred(writeOp))
       return failure();
 
     Value x = writeOp.getX();
@@ -344,6 +352,9 @@ public:
         populateACCOrphanToHostPatterns(patterns, accSupport);
       GreedyRewriteConfig config;
       config.setUseTopDownTraversal(true);
+      // Deeply nested orphan acc.loops can need more than the default
+      // iteration cap to converge; lift it to avoid spurious pass failure.
+      config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
       if (failed(applyPatternsGreedily(funcOp, std::move(patterns), config)))
         signalPassFailure();
     }
@@ -461,8 +472,8 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
   // Runtime operations - erase them
   patterns.insert<
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
-      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>,
-      ACCOpEraseConversion<acc::TerminatorOp>>(context);
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
+      context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,

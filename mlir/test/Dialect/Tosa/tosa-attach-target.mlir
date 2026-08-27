@@ -1,11 +1,26 @@
-// RUN: mlir-opt %s -split-input-file -tosa-attach-target="profiles=pro_int,pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround,dynamic level=none" | FileCheck %s --check-prefix=CHECK-ALL
+// DEFINE: %{core_extensions} = int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable
+// DEFINE: %{rounding_extensions} = controlflow,doubleround,inexactround,dynamic
+// DEFINE: %{mx_float_extensions} = mx_common,mx_fp4e2m1,mx_fp6e2m3,mx_fp6e3m2
+// DEFINE: %{mx_int_extensions} = mx_fp8e4m3,mx_fp8e5m2,mx_int8
+// DEFINE: %{all_extensions} = %{core_extensions},%{rounding_extensions},%{mx_float_extensions},%{mx_int_extensions}
+// DEFINE: %{all_target} = specification_version=1.1.draft level=none \
+// DEFINE:    profiles=pro_int,pro_fp extensions=%{all_extensions}
+
+// RUN: mlir-opt %s -split-input-file -tosa-attach-target="%{all_target}" | FileCheck %s --check-prefix=CHECK-ALL
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target="level=8k" | FileCheck %s --check-prefix=CHECK-LVL-8K
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target | FileCheck %s --check-prefix=CHECK-DEFAULT
 // RUN: mlir-opt %s -split-input-file -tosa-attach-target="specification_version=1.1.draft" | FileCheck %s --check-prefix=CHECK-VERSION-1P1
 
 // -----
 
-// CHECK-ALL: module attributes {tosa.target_env = #tosa.target_env<specification_version = "1.0", level = none, profiles = [pro_int, pro_fp], extensions = [int16, int4, bf16, fp8e4m3, fp8e5m2, fft, variable, controlflow, doubleround, inexactround, dynamic]>}
+// CHECK-ALL: module attributes {
+// CHECK-ALL-SAME: tosa.target_env = #tosa.target_env<specification_version = "1.1.draft",
+// CHECK-ALL-SAME: level = none,
+// CHECK-ALL-SAME: profiles = [pro_int, pro_fp],
+// CHECK-ALL-SAME: extensions = [int16, int4, bf16, fp8e4m3, fp8e5m2, fft,
+// CHECK-ALL-SAME: variable, controlflow, doubleround, inexactround, dynamic,
+// CHECK-ALL-SAME: mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2,
+// CHECK-ALL-SAME: mx_fp8e4m3, mx_fp8e5m2, mx_int8]>}
 // CHECK-LVL-8K: module attributes {tosa.target_env = #tosa.target_env<specification_version = "1.0", level = "8k", profiles = [], extensions = []>}
 // CHECK-DEFAULT: module attributes {tosa.target_env = #tosa.target_env<specification_version = "1.0", level = "8k", profiles = [], extensions = []>}
 // CHECK-VERSION-1P1: module attributes {tosa.target_env = #tosa.target_env<specification_version = "1.1.draft", level = "8k", profiles = [], extensions = []>}

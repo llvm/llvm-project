@@ -8,22 +8,10 @@
 
 #include "NativeProcessLinux.h"
 
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <unistd.h>
-
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-
-#include "NativeThreadLinux.h"
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
-#include "Procfs.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
@@ -32,7 +20,6 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -49,12 +36,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
+#include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
 #include <linux/unistd.h>
+#include <sys/ptrace.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #ifdef __aarch64__
 #include <asm/hwcap.h>
@@ -68,6 +64,22 @@
 
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
 #endif
 
 using namespace lldb;
@@ -138,7 +150,8 @@ static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
 
 static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
-  const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+  constexpr uint32_t kDebugPTraceMaxBytes = 20;
+  const uint32_t loop_count = std::min<uint32_t>(kDebugPTraceMaxBytes, count);
   for (uint32_t i = 0; i < loop_count; i++) {
     s.Printf("[%x]", *ptr);
     ptr++;
@@ -285,7 +298,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -1093,7 +1106,7 @@ Status NativeProcessLinux::Signal(int signo) {
   Status error;
 
   Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "sending signal {0} ({1}) to pid {1}", signo,
+  LLDB_LOG(log, "sending signal {0} ({1}) to pid {2}", signo,
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
@@ -1313,14 +1326,6 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
   return Status();
 }
 
-void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
-  Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "newBumpId={0}", newBumpId);
-  LLDB_LOG(log, "clearing {0} entries from memory region cache",
-           m_mem_region_cache.size());
-  m_mem_region_cache.clear();
-}
-
 llvm::Expected<uint64_t>
 NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
@@ -1355,8 +1360,9 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   }
 
-  llvm::scope_exit restore_mem(
-      [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
+  llvm::scope_exit restore_mem([&] {
+    DoWriteMemory(exe_addr, memory.data(), memory.size(), bytes_read);
+  });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())
     return std::move(Err);
@@ -1369,8 +1375,8 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
       return std::move(Err);
     }
   }
-  if (llvm::Error Err = WriteMemory(exe_addr, syscall_data.Insn.data(),
-                                    syscall_data.Insn.size(), bytes_read)
+  if (llvm::Error Err = DoWriteMemory(exe_addr, syscall_data.Insn.data(),
+                                      syscall_data.Insn.size(), bytes_read)
                             .ToError())
     return std::move(Err);
 
@@ -1622,8 +1628,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
@@ -1673,8 +1681,8 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status();
 }
 
-Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
-                                       size_t size, size_t &bytes_written) {
+Status NativeProcessLinux::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                         size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;
   Status error;
@@ -1705,7 +1713,7 @@ Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
       memcpy(buff, src, remainder);
 
       size_t bytes_written_rec;
-      error = WriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
+      error = DoWriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
       if (error.Fail())
         return error;
 
@@ -1939,14 +1947,13 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
 
   // Clear any temporary breakpoints we used to implement software single
   // stepping.
-  for (const auto &thread_info : m_threads_stepping_with_breakpoint) {
-    for (auto &&bp_addr : thread_info.second) {
-      Status error = RemoveBreakpoint(bp_addr);
-      if (error.Fail())
-        LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                 thread_info.first, error);
-    }
+  for (addr_t bp_addr : m_step_breakpoints) {
+    Status error = RemoveBreakpoint(bp_addr);
+    if (error.Fail())
+      LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}", bp_addr,
+               error);
   }
+  m_step_breakpoints.clear();
   m_threads_stepping_with_breakpoint.clear();
 
   // Notify the delegate about the stop

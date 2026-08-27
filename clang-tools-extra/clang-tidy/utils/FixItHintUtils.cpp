@@ -52,7 +52,7 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   if (locDangerous(Start))
     return std::nullopt;
 
-  auto PreviousTokenLParen = [&Start, &Context]() {
+  const auto PreviousTokenLParen = [&Start, &Context]() {
     const std::optional<Token> T = lexer::getPreviousToken(
         Start, Context.getSourceManager(), Context.getLangOpts());
     return T && T->is(tok::l_paren);
@@ -280,13 +280,13 @@ static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
 // Format a pointer to an expression: prefix with '*' but simplify
 // when it already begins with '&'.  Return empty string on failure.
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
-  if (const auto *Op = dyn_cast<UnaryOperator>(&ExprNode)) {
-    if (Op->getOpcode() == UO_AddrOf) {
-      // Strip leading '&'.
-      return std::string(
-          tooling::fixit::getText(*Op->getSubExpr()->IgnoreParens(), Context));
-    }
+  if (const auto *Op = dyn_cast<UnaryOperator>(&ExprNode);
+      Op && Op->getOpcode() == UO_AddrOf) {
+    // Strip leading '&'.
+    return std::string(
+        tooling::fixit::getText(*Op->getSubExpr()->IgnoreParens(), Context));
   }
+
   StringRef Text = tooling::fixit::getText(ExprNode, Context);
 
   if (Text.empty())

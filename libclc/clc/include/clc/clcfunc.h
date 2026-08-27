@@ -14,7 +14,7 @@
 #define _CLC_INLINE inline
 #define _CLC_CONST __attribute__((const))
 
-#if defined(CLC_CLSPV)
+#if defined(__VULKAN__)
 #define _CLC_DEF __attribute__((noinline)) __attribute__((clspv_libclc_builtin))
 #else
 #define _CLC_DEF

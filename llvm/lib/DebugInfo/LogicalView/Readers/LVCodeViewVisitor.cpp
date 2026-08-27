@@ -70,11 +70,6 @@ static TypeIndex getTrueType(TypeIndex &TI) {
   return TI;
 }
 
-static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-};
-
 // Return the type name pointed by the type index. It uses the kind to query
 // the associated name for the record type.
 static StringRef getRecordName(LazyRandomTypeCollection &Types, TypeIndex TI) {
@@ -1800,7 +1795,7 @@ void LVLogicalVisitor::printTypeBegin(CVType &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.kind()), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.kind()), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";
@@ -1819,7 +1814,7 @@ void LVLogicalVisitor::printMemberBegin(CVMemberRecord &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.Kind), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.Kind), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";

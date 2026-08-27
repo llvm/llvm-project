@@ -7,14 +7,14 @@
 ; CHECK-EXT: OpCapability MemoryAccessAliasingINTEL
 ; CHECK-EXT: OpExtension "SPV_INTEL_memory_access_aliasing"
 ; CHECK-EXT: %[[#Domain1:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope1:]] = OpAliasScopeDeclINTEL %[[#Domain1]]
-; CHECK-EXT: %[[#List1:]] = OpAliasScopeListDeclINTEL %[[#Scope1]]
 ; CHECK-EXT: %[[#Domain2:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain2]]
-; CHECK-EXT: %[[#List2:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
 ; CHECK-EXT: %[[#Domain3:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain3]]
-; CHECK-EXT: %[[#List3:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
+; CHECK-EXT: %[[#Scope1:]] = OpAliasScopeDeclINTEL %[[#Domain1]]
+; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain2]]
+; CHECK-EXT: %[[#Scope3:]] = OpAliasScopeDeclINTEL %[[#Domain3]]
+; CHECK-EXT: %[[#List1:]] = OpAliasScopeListDeclINTEL %[[#Scope1]]
+; CHECK-EXT: %[[#List2:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
+; CHECK-EXT: %[[#List3:]] = OpAliasScopeListDeclINTEL %[[#Scope3]]
 ; CHECK-EXT: OpDecorateId %[[#Fun1:]] AliasScopeINTEL %[[#List1]]
 ; CHECK-EXT: OpDecorateId %[[#Fun2:]] AliasScopeINTEL %[[#List1]]
 ; CHECK-EXT: OpDecorateId %[[#Fun2]] NoAliasINTEL %[[#List2]]

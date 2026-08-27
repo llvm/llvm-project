@@ -1,5 +1,6 @@
 ## Disallow (de)compression for sections within a segment as they are
 ## effectively immutable.
+# REQUIRES: zlib
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: yaml2obj %s -o a
 # RUN: not llvm-objcopy a /dev/null --compress-sections .text=zlib 2>&1 | FileCheck %s --implicit-check-not=error:

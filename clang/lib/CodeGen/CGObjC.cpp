@@ -869,19 +869,9 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
                callee, ReturnValueSlot(), args);
 }
 
-/// Determine whether the given architecture supports unaligned atomic
-/// accesses.  They don't have to be fast, just faster than a function
-/// call and a mutex.
-static bool hasUnalignedAtomics(llvm::Triple::ArchType arch) {
-  // FIXME: Allow unaligned atomic load/store on x86.  (It is not
-  // currently supported by the backend.)
-  return false;
-}
-
 /// Return the maximum size that permits atomic accesses for the given
 /// architecture.
-static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM,
-                                        llvm::Triple::ArchType arch) {
+static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM) {
   // ARM has 8-byte atomic accesses, but it's not clear whether we
   // want to rely on them here.
 
@@ -1047,20 +1037,17 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
     return;
   }
 
-  llvm::Triple::ArchType arch =
-    CGM.getTarget().getTriple().getArch();
-
   // Most architectures require memory to fit within a single cache
   // line, so the alignment has to be at least the size of the access.
   // Otherwise we have to grab a lock.
-  if (IvarAlignment < IvarSize && !hasUnalignedAtomics(arch)) {
+  if (IvarAlignment < IvarSize) {
     Kind = CopyStruct;
     return;
   }
 
   // If the ivar's size exceeds the architecture's maximum atomic
   // access size, we have to use CopyStruct.
-  if (IvarSize > getMaxAtomicAccessSize(CGM, arch)) {
+  if (IvarSize > getMaxAtomicAccessSize(CGM)) {
     Kind = CopyStruct;
     return;
   }
@@ -1236,7 +1223,12 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
     if (ivarSize > retTySize) {
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
+      if (getterMethod->getReturnType()->hasBooleanRepresentation() &&
+          CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
+        ivarVal = Builder.CreateICmpNE(
+            ivarVal, llvm::Constant::getNullValue(ivarVal->getType()));
+      else
+        ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 

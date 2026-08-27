@@ -13,8 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// This check implements the rule 5.6.1 of the HICPP Standard, which disallows
-/// bitwise operations on signed integer types.
+/// Disallows bitwise operations on signed integer types.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/signed-bitwise.html

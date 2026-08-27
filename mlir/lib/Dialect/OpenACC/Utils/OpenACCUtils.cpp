@@ -25,7 +25,7 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
       .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
-mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
   auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
   if (!barg)
     return nullptr;
@@ -33,10 +33,15 @@ mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
   mlir::Block *block = barg.getOwner();
   auto computeReg =
       mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
-  if (!computeReg || block != computeReg.getBody())
+  if (!computeReg)
     return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
 
-  mlir::Value orig = computeReg.getOperand(barg);
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
   if (!orig)
     return nullptr;
   mlir::Operation *def = orig.getDefiningOp();
@@ -101,6 +106,10 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
   return typeCategory;
 }
 
+llvm::StringLiteral mlir::acc::getVarNamePlaceholder() {
+  return llvm::StringLiteral("<acc.varname.placeholder>");
+}
+
 std::string mlir::acc::getVariableName(mlir::Value v) {
   Value current = v;
 
@@ -111,8 +120,8 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return std::to_string(*constVal);
 
     // Check for `acc.var_name` attribute
-    if (auto varNameAttr =
-            definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
+    if (auto varNameAttr = definingOp->getDiscardableAttrOfType<VarNameAttr>(
+            getVarNameAttrName()))
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
@@ -211,9 +220,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-    // If this symbol is actually an acc routine - then it is expected for it
-    // to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    // If this symbol is actually an acc routine or a specialized acc routine -
+    // then it is expected for it to be offloaded - therefore it is valid.
+    if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
@@ -230,7 +240,8 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   }
 
   // A declare attribute is needed for symbol references.
-  bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
+  bool hasDeclare =
+      definingOp->hasDiscardableAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
 }
 
@@ -245,23 +256,34 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     if (pointerLikeTy.isDeviceData(val))
       return true;
 
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
-  if (auto *defOp = val.getDefiningOp()) {
-    if (auto partialAccess =
-            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
-      if (mlir::Value base = partialAccess.getBaseEntity())
-        return isDeviceValue(base);
-    }
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceValue(base);
+  }
 
-    // Handle address_of - check if the referenced global is device data.
-    if (auto addrOfIface =
-            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
-      auto symbol = addrOfIface.getSymbol();
-      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-        return global.isDeviceData();
-    }
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
   }
 
   return false;

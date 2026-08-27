@@ -5,16 +5,16 @@ flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following
 fadd.s fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
 
 # Invalid instructions
-fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.w s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: register must be a FPR
+fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 fadd.d t1, t3, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 
 # Invalid register names
-fadd.s a100, a2, a3 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
-fsgnjn.s a100, a2, a3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+fadd.s a100, a2, a3 # CHECK: :[[@LINE]]:8: error: register must be a GPR when used as an FP operand
+fsgnjn.s a100, a2, a3 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as an FP operand
 
 # Rounding mode when a register is expected
-fmadd.s x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: invalid operand for instruction
+fmadd.s x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: register must be a GPR when used as an FP operand
 
 # Invalid rounding modes
 fmadd.s x10, x11, x12, x13, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic

@@ -22,10 +22,9 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT:       preheader:
 ; DEFAULT-NEXT:    [[I15:%.*]] = shl i32 [[B]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = mul i32 [[PHI2]], -1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], -1
-; DEFAULT-NEXT:    [[TMP3:%.*]] = sub i32 [[PHI4]], [[TMP2]]
+; DEFAULT-NEXT:    [[TMP3:%.*]] = sub i32 [[PHI4]], [[PHI2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = add i32 [[B]], [[PHI4]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[TMP2]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[PHI2]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i32 14, [[TMP5]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; DEFAULT-NEXT:    br label [[INNER_LOOP:%.*]]
@@ -87,10 +86,9 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT:       preheader:
 ; LIMIT-NEXT:    [[I15:%.*]] = shl i32 [[B]], 1
 ; LIMIT-NEXT:    [[TMP1:%.*]] = mul i32 [[PHI2]], -1
-; LIMIT-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], -1
-; LIMIT-NEXT:    [[TMP3:%.*]] = sub i32 [[PHI4]], [[TMP2]]
+; LIMIT-NEXT:    [[TMP3:%.*]] = sub i32 [[PHI4]], [[PHI2]]
 ; LIMIT-NEXT:    [[TMP4:%.*]] = add i32 [[B]], [[PHI4]]
-; LIMIT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[TMP2]]
+; LIMIT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[PHI2]]
 ; LIMIT-NEXT:    [[TMP6:%.*]] = sub i32 14, [[TMP5]]
 ; LIMIT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; LIMIT-NEXT:    br label [[INNER_LOOP:%.*]]

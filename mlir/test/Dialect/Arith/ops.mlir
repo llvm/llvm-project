@@ -49,6 +49,30 @@ func.func @test_addui_extended_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : 
   return %0#0 : vector<[8]xi64>
 }
 
+// CHECK-LABEL: test_subui_extended
+func.func @test_subui_extended(%arg0 : i64, %arg1 : i64) -> i64 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i64, i1
+  return %diff : i64
+}
+
+// CHECK-LABEL: test_subui_extended_tensor
+func.func @test_subui_extended_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : tensor<8x8xi64>, tensor<8x8xi1>
+  return %diff : tensor<8x8xi64>
+}
+
+// CHECK-LABEL: test_subui_extended_vector
+func.func @test_subui_extended_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
+  %0:2 = arith.subui_extended %arg0, %arg1 : vector<8xi64>, vector<8xi1>
+  return %0#0 : vector<8xi64>
+}
+
+// CHECK-LABEL: test_subui_extended_scalable_vector
+func.func @test_subui_extended_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]xi64>) -> vector<[8]xi64> {
+  %0:2 = arith.subui_extended %arg0, %arg1 : vector<[8]xi64>, vector<[8]xi1>
+  return %0#0 : vector<[8]xi64>
+}
+
 // CHECK-LABEL: test_subi
 func.func @test_subi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.subi %arg0, %arg1 : i64

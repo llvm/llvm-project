@@ -191,8 +191,8 @@ bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
     if (show_module) {
       ModuleSP module_sp(GetBaseAddress().GetModule());
       if (module_sp)
-        s->Printf("%s", module_sp->GetFileSpec().GetFilename().AsCString(
-                            "<Unknown>"));
+        s->Format("{0}", module_sp->GetFileSpec().GetFilename().nonEmptyOr(
+                             "<Unknown>"));
     }
     DumpAddressRange(s->AsRawOstream(), vmaddr, vmaddr + GetByteSize(),
                      addr_size);
@@ -225,17 +225,17 @@ bool AddressRange::GetDescription(Stream *s, Target *target) const {
 
   // Either no target or the address wasn't resolved, print as
   // <module>[<file-addr>-<file-addr>)
-  const char *file_name = "";
+  llvm::StringRef file_name;
   const auto section_sp = m_base_addr.GetSection();
   if (section_sp) {
     if (const auto object_file = section_sp->GetObjectFile())
-      file_name = object_file->GetFileSpec().GetFilename().AsCString(nullptr);
+      file_name = object_file->GetFileSpec().GetFilename();
   }
   start_addr = m_base_addr.GetFileAddress();
   const addr_t end_addr = (start_addr == LLDB_INVALID_ADDRESS)
                               ? LLDB_INVALID_ADDRESS
                               : start_addr + GetByteSize();
-  s->Printf("%s[0x%" PRIx64 "-0x%" PRIx64 ")", file_name, start_addr, end_addr);
+  s->Format("{0}[{1:x}-{2:x})", file_name, start_addr, end_addr);
   return true;
 }
 

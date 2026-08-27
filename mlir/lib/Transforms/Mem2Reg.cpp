@@ -37,13 +37,14 @@ using namespace mlir;
 /// This pass turns unnecessary uses of automatically allocated memory slots
 /// into direct Value-based operations. For example, it will simplify storing a
 /// constant in a memory slot to immediately load it to a direct use of that
-/// constant. In other words, given a memory slot addressed by a non-aliased
-/// "pointer" Value, mem2reg removes all the uses of that pointer.
+/// constant. In other words, given a memory slot addressed by a "pointer" Value
+/// (which may be exposed through aliases), mem2reg removes all the uses of
+/// that pointer and its aliases.
 ///
 /// Within a block, this is done by following the chain of stores and loads of
-/// the slot and replacing the results of loads with the values previously
-/// stored. If a load happens before any other store, a poison value is used
-/// instead.
+/// the slot (or its aliases) and replacing the results of loads with the values
+/// previously stored. If a load happens before any other store, a poison value
+/// is used instead.
 ///
 /// Control flow can create situations where a load could be replaced by
 /// multiple possible stores depending on the control flow path taken. As a
@@ -71,14 +72,14 @@ using namespace mlir;
 /// - A first step computes the list of operations that transitively use the
 /// memory slot we would like to promote. The purpose of this phase is to
 /// identify which uses must be removed to promote the slot, either by rewiring
-/// the user or deleting it. Naturally, direct uses of the slot must be removed.
-/// Sometimes additional uses must also be removed: this is notably the case
-/// when a direct user of the slot cannot rewire its use and must delete itself,
-/// and thus must make its users no longer use it. If the allocation is used in
-/// nested regions, it is also ensured the region operations provide the right
-/// interface to analyze the values of the allocation at the edges of its
-/// regions. If any of those constraints cannot be satisfied, promotion cannot
-/// continue: this is decided at this step.
+/// the user or deleting it. Naturally, direct uses of the slot and its aliases
+/// must be removed. Sometimes additional uses must also be removed: this is
+/// notably the case when a direct user of the slot cannot rewire its use and
+/// must delete itself, and thus must make its users no longer use it. If the
+/// allocation is used in nested regions, it is also ensured the region
+/// operations provide the right interface to analyze the values of the
+/// allocation at the edges of its regions. If any of those constraints cannot
+/// be satisfied, promotion cannot continue: this is decided at this step.
 /// - A second step computes the list of blocks where a block argument will be
 /// needed ("merge points") without mutating the IR. These blocks are the blocks
 /// leading to a definition clash between two predecessors. Such blocks happen
@@ -89,35 +90,37 @@ using namespace mlir;
 /// do so aborts promotion at this step).
 ///
 /// At this point, promotion is guaranteed to happen, and the transformation
-/// phase can begin. For each region of the program, a two step process is
-/// carried out.
-/// - The first step of the per-region process computes the reaching definition
-/// of the memory slot at each blocking user. This is the core of the mem2reg
-/// algorithm, also known as load-store forwarding. This analyses loads and
-/// stores and propagates which value must be stored in the slot at each
-/// blocking user. This is achieved by doing a depth-first walk of the dominator
-/// tree of the function. This is sufficient because the reaching definition at
-/// the beginning of a block is either its new block argument if it is a merge
-/// block, or the definition reaching the end of its immediate dominator (parent
-/// in the dominator tree). We can therefore propagate this information down the
+/// phase can begin. The transformation is a three-step process.
+/// - The first step computes the reaching definition of the memory slot at
+/// each blocking user. This is the core of the mem2reg algorithm, also known
+/// as load-store forwarding. This analyses loads and stores and propagates
+/// which value must be stored in the slot at each blocking user. This is
+/// achieved by doing a depth-first walk of the dominator tree of the function.
+/// This is sufficient because the reaching definition at the beginning of a
+/// block is either its new block argument if it is a merge block, or the
+/// definition reaching the end of its immediate dominator (parent in the
+/// dominator tree). We can therefore propagate this information down the
 /// dominator tree to proceed with renaming within blocks. If at any point a
 /// region operation that contains a use of the allocation is encountered, the
-/// transformation process is triggered on the child regions of the encountered
-/// operation, to obtain the reaching definition at its end and carry on with
-/// the value forwarding.
-/// - The second step of the per-region process uses the reaching definition to
-/// remove blocking uses in topological order. Some reaching definitions may
-/// be values that will be removed or modified during the blocking use removal
-/// step (typically, in the case of a store that stores the result of a load).
-/// To properly handle such values, this step traverses the operations to modify
-/// in reverse topological order. This way, if a value that will disappear is
-/// used in place of reaching definition, the logic to make it disappear will be
-/// executed after the value has been used to replace an operation. For regions
-/// within a PromotableRegionOpInterface, in order to correctly handle cases
-/// where the finalization logic would use a reaching definition that will be
-/// replaced, the finalization logic must be called before the blocking use
-/// removal step, so that any use of a value that will be removed gets properly
-/// replaced.
+/// reaching definition computation is recursively triggered on the child
+/// regions of the encountered operation, to obtain the reaching definition at
+/// its end and carry on with the value forwarding.
+/// - The second step visits the values that will replace the memory slot for
+/// operations that requested it. This must happen before the removal of
+/// blocking uses, so that operations can safely inspect reaching definitions
+/// before they may be removed or modified.
+/// - The third step uses the reaching definition to remove blocking uses. Some
+/// reaching definitions may be values that will be removed or modified during
+/// the blocking use removal step (typically, in the case of a store that stores
+/// the result of a load). To properly handle such values, this step traverses
+/// the regions in post-order, and the operations to modify in reverse
+/// topological order. This way, if a value that will disappear is used in place
+/// of a reaching definition, the logic to make it disappear will be executed
+/// after the value has been used to replace an operation. For regions within a
+/// PromotableRegionOpInterface, this ensures that the finalization logic (run
+/// during the first step) and visitReplacedValues (run during the second step)
+/// happen before the blocking use removal step, so that any use of a value that
+/// will be removed gets properly replaced.
 ///
 /// For further reading, chapter three of SSA-based Compiler Design [1]
 /// showcases SSA construction for control-flow graphs, where mem2reg is an
@@ -158,6 +161,11 @@ struct MemorySlotPromotionInfo {
   /// are guaranteed to be held by a PromotableRegionOpInterface, and to be
   /// nested within the parent region of the slot pointer.
   DenseMap<Region *, RegionPromotionInfo> regionsToPromote;
+  /// Transitive aliases of `slot.ptr` via `PromotableAliaserInterface`,
+  /// mapping alias values to their exposed slot and aliased operand.
+  PromotableAliasMap aliasMap;
+  /// True if at least one blocking use requires visiting the replaced values.
+  bool needsAnyReplacedValuesVisit = false;
 };
 
 /// Computes information for basic slot promotion. This will check that direct
@@ -184,9 +192,11 @@ private:
   /// Resulting blocking uses are grouped by region.
   /// This also ensures all the uses are within promotable regions, adding
   /// information about regions to be promoted to the `regionsToPromote` map.
-  LogicalResult computeBlockingUses(
-      RegionBlockingUsesMap &userToBlockingUses,
-      DenseMap<Region *, RegionPromotionInfo> &regionsToPromote);
+  LogicalResult
+  computeBlockingUses(RegionBlockingUsesMap &userToBlockingUses,
+                      DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
+                      PromotableAliasMap &aliasMap,
+                      bool &needsAnyReplacedValuesVisit);
 
   /// Computes the points in the provided region where multiple re-definitions
   /// of the slot's value (stores) may conflict.
@@ -238,9 +248,8 @@ private:
   /// promotion, including within nested regions needing promotion.
   /// `reachingDef` is the value the slot contains at the beginning of the
   /// block. This member function returns the reached definition at the end of
-  /// the block. If the block contains a region that needs promotion, the
-  /// blocking uses of that region will have been removed. This member function
-  /// will not remove the blocking uses contained directly in the block.
+  /// the block. Blocking uses are not removed and `visitReplacedValues` is
+  /// not called here; both are deferred to `promoteSlot`.
   ///
   /// The `reachingDef` may be a null value. In that case, a lazily-created
   /// default value will be used.
@@ -249,16 +258,23 @@ private:
   Value promoteInBlock(Block *block, Value reachingDef);
 
   /// Computes the reaching definition for all the operations that require
-  /// promotion, including within nested regions needing promotion, and removes
-  /// the blocking uses of the slot within the region.
+  /// promotion, including within nested regions needing promotion. Records
+  /// `region` in `regionsInPostOrder` after the DFS completes.
   /// `reachingDef` is the value the slot contains at the beginning of the
-  /// region.
+  /// region. Blocking uses are not removed here; that is deferred to
+  /// `promoteSlot`.
   ///
   /// The `reachingDef` may be a null value. In that case, a lazily-created
   /// default value will be used.
   ///
   /// This member function must only be called at most once per region.
   void promoteInRegion(Region *region, Value reachingDef);
+
+  /// Calls `visitReplacedValues` on ops in `region` that requested it.
+  /// Must run before `removeBlockingUses` so that replacedValues are still
+  /// valid (`removeBlockingUses` can later replace them).
+  void visitReplacedValuesForRegion(
+      Region *region, ArrayRef<std::pair<Operation *, Value>> replacedValues);
 
   /// Removes the blocking uses of the slot within the given region, in
   /// reverse topological order. If the content of the region was moved out
@@ -287,13 +303,10 @@ private:
   /// Contains the reaching definition at the end of the blocks visited so far.
   DenseMap<Block *, Value> reachingAtBlockEnd;
 
-  /// Lists all the values that have been set by a memory operation as a
-  /// reaching definition at one point during the promotion. The accompanying
-  /// operation is the memory operation that originally stored the value.
-  llvm::SmallVector<std::pair<Operation *, Value>> replacedValues;
-  /// Operations to visit with the `visitReplacedValues` method at the end of
-  /// the promotion.
-  llvm::SmallVector<PromotableOpInterface> toVisitReplacedValues;
+  /// Regions visited by `promoteInRegion`, recorded in DFS post-order.
+  /// Inner regions appear before their enclosing regions.
+  llvm::SmallVector<Region *> regionsInPostOrder;
+
   /// Operations to be erased at the end of the promotion.
   llvm::SmallSetVector<Operation *, 8> toErase;
 
@@ -338,13 +351,14 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
     return defaultValue;
 
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
+  builder.setInsertionPointToStart(&slot.ptr.getParentRegion()->front());
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     RegionBlockingUsesMap &userToBlockingUses,
-    DenseMap<Region *, RegionPromotionInfo> &regionsToPromote) {
+    DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
+    PromotableAliasMap &aliasMap, bool &needsAnyReplacedValuesVisit) {
   // The promotion of an operation may require the promotion of further
   // operations (typically, removing operations that use an operation that must
   // delete itself). We thus need to start from the use of the slot pointer and
@@ -389,6 +403,10 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     if (it == blockingUsesMap.end())
       continue;
 
+    // Populate the alias map for alias-exposing ops.
+    if (auto aliaser = dyn_cast<PromotableAliaserInterface>(user))
+      populatePromotableAliasMap(aliaser, slot, aliasMap);
+
     SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
 
     SmallVector<OpOperand *> newBlockingUses;
@@ -399,15 +417,25 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
                                        dataLayout))
         return failure();
       regionsWithDirectUse.insert(user->getParentRegion());
+      if (promotable.requiresReplacedValues())
+        needsAnyReplacedValuesVisit = true;
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
-      if (!promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+      // If the memop reaches the root slot through multiple distinct alias
+      // operands, promotion fails. `PromotableMemOpInterface` expects a
+      // single slot per call. Supporting multiple aliases would require
+      // extending the interface.
+      if (!referencesAtMostOneAliasOfSlot(user, slot, aliasMap))
+        return failure();
+      MemorySlot aliasSlot =
+          getOpAliasSlot(user, slot, aliasMap).value_or(slot);
+      if (!promotable.canUsesBeRemoved(aliasSlot, blockingUses, newBlockingUses,
                                        dataLayout))
         return failure();
 
       // Operations that interact with the slot's memory will be promoted using
       // a reaching definition. Therefore, the operation must be within a region
       // where the reaching definition can be computed.
-      if (promotable.storesTo(slot))
+      if (promotable.storesTo(aliasSlot))
         regionsWithDirectStore.insert(user->getParentRegion());
       else
         regionsWithDirectUse.insert(user->getParentRegion());
@@ -421,8 +449,9 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
+      Operation *useOwner = blockingUse->getOwner();
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          blockingUsesMap[blockingUse->getOwner()];
+          userToBlockingUses[useOwner->getParentRegion()][useOwner];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }
@@ -508,18 +537,31 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   // cannot find a way to resolve their blocking uses, we abort the promotion.
   // We also compute at this stage the regions that will be analyzed for
   // reaching definition information.
-  if (failed(
-          computeBlockingUses(info.userToBlockingUses, info.regionsToPromote)))
+  if (failed(computeBlockingUses(info.userToBlockingUses, info.regionsToPromote,
+                                 info.aliasMap,
+                                 info.needsAnyReplacedValuesVisit)))
     return {};
 
   // Compute the blocks containing a store for each region, either directly or
   // inherited from a nested region. As a side effect, `definingBlocks` contains
   // all regions with at least one store.
+  //
+  // Iterate over direct users of the slot pointer and all alias pointers in
+  // `info.aliasMap`. This assumes `PromotableMemOpInterface` operations storing
+  // to the slot use the slot pointer or its aliases directly. Dialects must
+  // implement `PromotableAliaserInterface` for views/aliasing.
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
-  for (Operation *user : slot.ptr.getUsers())
-    if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
-      if (storeOp.storesTo(slot))
-        definingBlocks[user->getParentRegion()].insert(user->getBlock());
+  auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
+    for (OpOperand &use : ptr.getUses()) {
+      Operation *user = use.getOwner();
+      if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
+        if (storeOp.storesTo(ptrSlot))
+          definingBlocks[user->getParentRegion()].insert(user->getBlock());
+    }
+  };
+  collectStoringBlocks(slot.ptr, slot);
+  for (auto &[aliasPtr, aliasInfo] : info.aliasMap)
+    collectStoringBlocks(aliasPtr, aliasInfo.slot);
   for (auto &[region, regionInfo] : info.regionsToPromote)
     if (regionInfo.hasValueStores)
       definingBlocks[region->getParentRegion()].insert(
@@ -550,18 +592,43 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
       if (info.userToBlockingUses[memOp->getParentRegion()].contains(memOp))
         reachingDefs.insert({memOp, reachingDef});
 
-      if (memOp.storesTo(slot)) {
-        builder.setInsertionPointAfter(memOp);
+      MemorySlot aliasSlot =
+          getOpAliasSlot(memOp, slot, info.aliasMap).value_or(slot);
+      if (memOp.storesTo(aliasSlot)) {
+        // Ensures helper IR introduced by `getStored` is created before the
+        // storing op. This ensures the provided stored value dominates the
+        // store, allowing `visitReplacedValues` to safely create new uses
+        // after the store.
+        builder.setInsertionPoint(memOp);
         // To not expose default value creation to the interfaces, if we have
         // no reaching definition by now, we set it to the default value.
         // This is slightly too eager as `getStored` may not need it.
         if (!reachingDef)
           reachingDef = getOrCreateDefaultValue();
-        Value stored = memOp.getStored(slot, builder, reachingDef, dataLayout);
+        Value reachingDefAtStore = reachingDef;
+        if (slot.ptr != aliasSlot.ptr) {
+          // The store sees the slot at `aliasSlot.elemType`; project the
+          // reaching definition (at root elem type) before handing it to
+          // `getStored`.
+          reachingDefAtStore = convertSlotValueToAliasValue(
+              reachingDef, aliasSlot, slot, info.aliasMap, builder);
+          assert(reachingDefAtStore &&
+                 "projectSlotValueToAliasValue contract violation");
+        }
+        Value stored =
+            memOp.getStored(aliasSlot, builder, reachingDefAtStore, dataLayout);
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
-        reachingDef = stored;
+        // `replacedValuesMap` keeps `stored` at `aliasSlot.elemType` for
+        // `visitReplacedValues`; the new reaching definition is tracked at
+        // the root slot's elem type, so project `stored` back.
         replacedValuesMap[memOp] = stored;
+        if (aliasSlot.ptr != slot.ptr) {
+          stored = convertAliasValueToSlotValue(stored, aliasSlot, reachingDef,
+                                                slot, info.aliasMap, builder);
+          assert(stored && "projectAliasValueToSlotValue contract violation");
+        }
+        reachingDef = stored;
       }
     }
 
@@ -620,13 +687,6 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
-
-        // Blocking uses can then be removed for the regions that were promoted.
-        // Even though `finalizePromotion` may have moved regions to a new
-        // operation, `removeBlockingUses` handles this case and will redirect
-        // processing to the correct region.
-        for (auto &[region, reachingDef] : regionsToProcess)
-          removeBlockingUses(region);
       }
     }
   }
@@ -638,6 +698,7 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
 void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
   if (region->hasOneBlock()) {
     promoteInBlock(&region->front(), reachingDef);
+    regionsInPostOrder.push_back(region);
     return;
   }
 
@@ -680,6 +741,11 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
     for (auto *child : job.block->children())
       dfsStack.emplace_back<DfsJob>({child, job.reachingDef});
   }
+
+  // Record this region after its (and any nested) promotion has completed,
+  // so that `regionsInPostOrder` lists inner regions before their enclosing
+  // regions.
+  regionsInPostOrder.push_back(region);
 }
 
 /// Gets or creates a block index mapping for the region of which the entry
@@ -763,13 +829,21 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
         reachingDef = getOrCreateDefaultValue();
 
       builder.setInsertionPointAfter(toPromote);
-      if (toPromoteMemOp.removeBlockingUses(slot, blockingUsesMap[toPromote],
-                                            builder, reachingDef,
-                                            dataLayout) == DeletionKind::Delete)
+      MemorySlot aliasSlot =
+          getOpAliasSlot(toPromote, slot, info.aliasMap).value_or(slot);
+      Value reachingDefAtBlockingUse = reachingDef;
+      if (aliasSlot.ptr != slot.ptr) {
+        // Project the reaching definition to `aliasSlot.elemType` to match
+        // what `toPromoteMemOp` sees.
+        reachingDefAtBlockingUse = convertSlotValueToAliasValue(
+            reachingDef, aliasSlot, slot, info.aliasMap, builder);
+        assert(reachingDefAtBlockingUse &&
+               "projectSlotValueToAliasValue contract violation");
+      }
+      if (toPromoteMemOp.removeBlockingUses(
+              aliasSlot, blockingUsesMap[toPromote], builder,
+              reachingDefAtBlockingUse, dataLayout) == DeletionKind::Delete)
         toErase.insert(toPromote);
-      if (toPromoteMemOp.storesTo(slot))
-        if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
-          replacedValues.push_back({toPromoteMemOp, replacedValue});
       continue;
     }
 
@@ -778,8 +852,24 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
     if (toPromoteBasic.removeBlockingUses(blockingUsesMap[toPromote],
                                           builder) == DeletionKind::Delete)
       toErase.insert(toPromote);
-    if (toPromoteBasic.requiresReplacedValues())
-      toVisitReplacedValues.push_back(toPromoteBasic);
+  }
+}
+
+void MemorySlotPromoter::visitReplacedValuesForRegion(
+    Region *region, ArrayRef<std::pair<Operation *, Value>> replacedValues) {
+  auto *blockingUsesMapIt = info.userToBlockingUses.find(region);
+  if (blockingUsesMapIt == info.userToBlockingUses.end())
+    return;
+  BlockingUsesMap &blockingUsesMap = blockingUsesMapIt->second;
+  if (blockingUsesMap.empty())
+    return;
+
+  for (auto &[op, _] : blockingUsesMap) {
+    auto toVisit = dyn_cast<PromotableOpInterface>(op);
+    if (!toVisit || !toVisit.requiresReplacedValues())
+      continue;
+    builder.setInsertionPointAfter(op);
+    toVisit.visitReplacedValues(replacedValues, builder);
   }
 }
 
@@ -905,25 +995,28 @@ void MemorySlotPromoter::removeUnusedItems() {
 
 std::optional<PromotableAllocationOpInterface>
 MemorySlotPromoter::promoteSlot() {
-  // Perform the promotion recursively through nested regions. The reaching
-  // definition starts with a null value that will be replaced by a
+  // Step 1: perform the promotion recursively through nested regions. The
+  // reaching definition starts with a null value that will be replaced by a
   // lazily-created default value if the value must be passed to a promotion
   // interface while no store has been encountered yet.
-  // Innermost regions will see their blocking uses be removed, but not the
-  // outermost region which we have to remove manually afterwards. This is
-  // because PromotableRegionOpInterface::finalizePromotion must be called
-  // before removeBlockingUses.
+  // Blocking uses are not removed yet.
   promoteInRegion(slot.ptr.getParentRegion(), nullptr);
 
-  // Blocking uses can then be removed for the outermost region.
-  removeBlockingUses(slot.ptr.getParentRegion());
-
-  // Notify operations that requested it of the reaching definitions set by
-  // storing memory operations.
-  for (PromotableOpInterface op : toVisitReplacedValues) {
-    builder.setInsertionPointAfter(op);
-    op.visitReplacedValues(replacedValues, builder);
+  // Step 2: call `visitReplacedValues` on operations that requested it.
+  if (info.needsAnyReplacedValuesVisit) {
+    SmallVector<std::pair<Operation *, Value>> replacedValues;
+    replacedValues.reserve(replacedValuesMap.size());
+    for (const auto &[memOp, value] : replacedValuesMap)
+      if (value)
+        replacedValues.push_back({memOp, value});
+    for (Region *region : regionsInPostOrder)
+      visitReplacedValuesForRegion(region, replacedValues);
   }
+
+  // Step 3: remove the slot's blocking uses across all regions. Iterating
+  // in through the regions in same order as promoteInRegion.
+  for (Region *region : regionsInPostOrder)
+    removeBlockingUses(region);
 
   // Finally, remove unused operations and merge point block arguments.
   removeUnusedItems();

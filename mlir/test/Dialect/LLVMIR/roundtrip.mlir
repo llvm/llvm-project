@@ -402,6 +402,20 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %10 = llvm.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
 // CHECK:  = llvm.bitcast %[[I64]] : i64 to f64
   %11 = llvm.bitcast %arg1 : i64 to f64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<64>
+  %12 = llvm.bitcast %arg1 : i64 to !llvm.byte<64>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i64
+  %13 = llvm.bitcast %12 : !llvm.byte<64> to i64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<8>
+  %14 = llvm.bitcast %arg1 : i64 to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i32
+  %15 = llvm.bitcast %12 : !llvm.byte<64> to i32
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+  %16 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+  %17 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+// CHECK:  = llvm.bitcast %[[PTR]] : !llvm.ptr to !llvm.byte<8>
+  %18 = llvm.bitcast %arg4 : !llvm.ptr to !llvm.byte<8>
   llvm.return
 }
 
@@ -1128,6 +1142,40 @@ llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: constrained_fp_metadata
+llvm.func @constrained_fp_metadata(%a: f32, %b: f32) -> f32 {
+  // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  %eb = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  %r = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%a, %b, %rm, %eb)
+      : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  llvm.return %r : f32
+}
+
+// CHECK-LABEL: metadata_as_value_shapes
+llvm.func @metadata_as_value_shapes() {
+  // Exercise each of the LLVM metadata-attribute kinds the op accepts.
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  %0 = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_global_value<@md_kernel>
+  %2 = llvm.mlir.metadata_as_value #llvm.md_global_value<@md_kernel>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  %4 = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  %5 = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  %6 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
+  %7 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
+  llvm.return
+}
+
 llvm.mlir.global private @blockaddr_global() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
   %0 = llvm.blockaddress <function = @blockaddr_fn, tag = <id = 0>> : !llvm.ptr
   llvm.return %0 : !llvm.ptr
@@ -1160,6 +1208,14 @@ llvm.func @llvm.aarch64.neon.st3.v8i8.p0(vector<8xi8>, vector<8xi8>, vector<8xi8
 
 llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
 // CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(generaldynamic) unnamed_addr @myglobal_gd(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal_gd(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(localdynamic) unnamed_addr @myglobal_ld(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(localdynamic) unnamed_addr @myglobal_ld(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(initialexec) unnamed_addr @myglobal_ie(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(initialexec) unnamed_addr @myglobal_ie(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+llvm.mlir.global internal thread_local(localexec) unnamed_addr @myglobal_le(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local(localexec) unnamed_addr @myglobal_le(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
 
 // CHECK-LABEL: llvm.func @escapedtypename
 llvm.func @escapedtypename() {
@@ -1193,10 +1249,10 @@ llvm.named_metadata "foo.language" [
   >
 ]
 
-// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_global_value<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
 llvm.named_metadata "foo.kernel" [
   #llvm.md_node<
-    #llvm.md_func<@md_kernel>,
+    #llvm.md_global_value<@md_kernel>,
     #llvm.md_node<>,
     #llvm.md_node<
       #llvm.md_const<0 : i32>,
@@ -1204,3 +1260,25 @@ llvm.named_metadata "foo.kernel" [
     >
   >
 ]
+
+// CHECK-LABEL: llvm.func @generic_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"annotation", <#llvm.md_string<"function annotation">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+llvm.func @generic_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"annotation", #llvm.md_node<#llvm.md_string<"function annotation">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+  ]
+}
+
+// CHECK-LABEL: llvm.func @repeated_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+llvm.func @repeated_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+  ]
+}

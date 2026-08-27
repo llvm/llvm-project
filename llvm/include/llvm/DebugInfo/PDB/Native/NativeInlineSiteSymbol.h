@@ -19,7 +19,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeInlineSiteSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeInlineSiteSymbol : public NativeRawSymbol {
 public:
   NativeInlineSiteSymbol(NativeSession &Session, SymIndexId Id,
                          const codeview::InlineSiteSym &Sym,

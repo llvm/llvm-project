@@ -27,23 +27,23 @@ void test() {
 
 // CIR: module
 // CIR: cir.func{{.*}} @_Z4testv()
-// CIR:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-// CIR:    %[[L_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["l", init] {alignment = 8 : i64}
-// CIR:    %[[F_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init] {alignment = 4 : i64}
-// CIR:    %[[D_PTR:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["d", init] {alignment = 8 : i64}
-// CIR:    %[[B1_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b1", init] {alignment = 1 : i64}
-// CIR:    %[[B2_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b2", init] {alignment = 1 : i64}
-// CIR:    %[[CI_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ci", init, const] {alignment = 4 : i64}
-// CIR:    %[[CL_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["cl", init, const] {alignment = 8 : i64}
-// CIR:    %[[CF_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["cf", init, const] {alignment = 4 : i64}
-// CIR:    %[[CD_PTR:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["cd", init, const] {alignment = 8 : i64}
-// CIR:    %[[CB1_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cb1", init, const] {alignment = 1 : i64}
-// CIR:    %[[CB2_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cb2", init, const] {alignment = 1 : i64}
-// CIR:    %[[UII_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["uii"] {alignment = 4 : i64}
-// CIR:    %[[UIL_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["uil"] {alignment = 8 : i64}
-// CIR:    %[[UIF_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["uif"] {alignment = 4 : i64}
-// CIR:    %[[UID_PTR:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["uid"] {alignment = 8 : i64}
-// CIR:    %[[UIB_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["uib"] {alignment = 1 : i64}
+// CIR:    %[[I_PTR:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+// CIR:    %[[L_PTR:.*]] = cir.alloca "l" align(8) init : !cir.ptr<!s64i>
+// CIR:    %[[F_PTR:.*]] = cir.alloca "f" align(4) init : !cir.ptr<!cir.float>
+// CIR:    %[[D_PTR:.*]] = cir.alloca "d" align(8) init : !cir.ptr<!cir.double>
+// CIR:    %[[B1_PTR:.*]] = cir.alloca "b1" align(1) init : !cir.ptr<!cir.bool>
+// CIR:    %[[B2_PTR:.*]] = cir.alloca "b2" align(1) init : !cir.ptr<!cir.bool>
+// CIR:    %[[CI_PTR:.*]] = cir.alloca "ci" align(4) init const : !cir.ptr<!s32i>
+// CIR:    %[[CL_PTR:.*]] = cir.alloca "cl" align(8) init const : !cir.ptr<!s64i>
+// CIR:    %[[CF_PTR:.*]] = cir.alloca "cf" align(4) init const : !cir.ptr<!cir.float>
+// CIR:    %[[CD_PTR:.*]] = cir.alloca "cd" align(8) init const : !cir.ptr<!cir.double>
+// CIR:    %[[CB1_PTR:.*]] = cir.alloca "cb1" align(1) init const : !cir.ptr<!cir.bool>
+// CIR:    %[[CB2_PTR:.*]] = cir.alloca "cb2" align(1) init const : !cir.ptr<!cir.bool>
+// CIR:    %[[UII_PTR:.*]] = cir.alloca "uii" align(4) : !cir.ptr<!s32i>
+// CIR:    %[[UIL_PTR:.*]] = cir.alloca "uil" align(8) : !cir.ptr<!s64i>
+// CIR:    %[[UIF_PTR:.*]] = cir.alloca "uif" align(4) : !cir.ptr<!cir.float>
+// CIR:    %[[UID_PTR:.*]] = cir.alloca "uid" align(8) : !cir.ptr<!cir.double>
+// CIR:    %[[UIB_PTR:.*]] = cir.alloca "uib" align(1) : !cir.ptr<!cir.bool>
 // CIR:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    cir.store align(4) %[[ONE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:    %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
@@ -146,13 +146,13 @@ void value_init() {
 }
 
 // CIR: cir.func{{.*}} @_Z10value_initv()
-// CIR:   %[[F_PTR:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
-// CIR:   %[[B_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
-// CIR:   %[[I_PTR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-// CIR:   %[[F2_PTR:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f2", init]
-// CIR:   %[[B2_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b2", init]
-// CIR:   %[[I2_PTR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i2", init]
-// CIR:   %[[S_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["scalar_value_init_expr", init]
+// CIR:   %[[F_PTR:.+]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.float>
+// CIR:   %[[B_PTR:.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR:   %[[I_PTR:.+]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[F2_PTR:.+]] = cir.alloca "f2" {{.*}} init : !cir.ptr<!cir.float>
+// CIR:   %[[B2_PTR:.+]] = cir.alloca "b2" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR:   %[[I2_PTR:.+]] = cir.alloca "i2" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[S_PTR:.+]] = cir.alloca "scalar_value_init_expr" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR:   %[[ZEROF1:.+]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR:   cir.store{{.*}} %[[ZEROF1]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR:   %[[FALSE1:.+]] = cir.const #false

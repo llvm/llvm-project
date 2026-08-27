@@ -1,9 +1,9 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
+; xUN: llc -global-isel=1 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; xUN: llc -global-isel=1 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
+; xUN: llc -global-isel=1 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=CHECK,WAVE32 %s
 
 ;CHECK-LABEL: {{^}}ret:
 ;CHECK: v_cmp_eq_u32_e32 [[CMP:[^,]+]], v0, v1

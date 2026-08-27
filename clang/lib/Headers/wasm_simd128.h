@@ -2019,6 +2019,14 @@ wasm_f32x4_promote_low_f16x8(v128_t __a) {
       __f32x4);
 }
 
+static __inline__ v128_t __FP16_FN_ATTRS
+wasm_f16x8_demote_f32x4_zero(v128_t __a) {
+  return (v128_t) __builtin_convertvector(
+      __builtin_shufflevector((__f32x4)__a, (__f32x4){0, 0, 0, 0}, 0, 1, 2, 3,
+                              4, 5, 6, 7),
+      __f16x8);
+}
+
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_relaxed_madd(v128_t __a,
                                                                  v128_t __b,
                                                                  v128_t __c) {

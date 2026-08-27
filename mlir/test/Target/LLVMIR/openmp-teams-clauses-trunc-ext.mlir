@@ -20,9 +20,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %4 = llvm.load %arg0 : !llvm.ptr -> i32
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg1, %4 -> %arg2, %0 -> %arg3, %1 -> %arg4 : i32, i32, i32, i64) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg1, %4 -> %arg2, %0 -> %arg3, %1 -> %arg4 : i32, i32, i32, i64) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
       omp.teams num_teams( to %arg4 : i64) {
         omp.distribute private(@_QFnum_teams_const_8Ei_private_i32 %arg5 -> %arg7 : !llvm.ptr) {
           omp.loop_nest (%arg8) : i32 = (%arg1) to (%arg2) inclusive step (%arg3) {
@@ -31,9 +31,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_const_8_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -45,10 +45,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
     %4 = llvm.load %arg1 : !llvm.ptr -> i64
-    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4, %4 -> %arg5 : i32, i32, i32, i64) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4, %4 -> %arg5 : i32, i32, i32, i64) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.teams num_teams( to %arg5 : i64) {
         omp.distribute private(@_QFnum_teams_arg_8Ei_private_i32 %arg7 -> %arg9 : !llvm.ptr) {
           omp.loop_nest (%arg10) : i32 = (%arg2) to (%arg3) inclusive step (%arg4) {
@@ -57,9 +57,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_8_l{{.*}}(i32 %{{.*}}, i64 %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -73,9 +73,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %4 = llvm.load %arg0 : !llvm.ptr -> i32
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg1, %4 -> %arg2, %0 -> %arg3, %1 -> %arg4 : i32, i32, i32, i16) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg1, %4 -> %arg2, %0 -> %arg3, %1 -> %arg4 : i32, i32, i32, i16) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
       omp.teams num_teams( to %arg4 : i16) {
         omp.distribute private(@_QFnum_teams_const_2Ei_private_i32 %arg5 -> %arg7 : !llvm.ptr) {
           omp.loop_nest (%arg8) : i32 = (%arg1) to (%arg2) inclusive step (%arg3) {
@@ -84,9 +84,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_const_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -98,10 +98,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
     %4 = llvm.load %arg1 : !llvm.ptr -> i16
-    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4, %4 -> %arg5 : i32, i32, i32, i16) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4, %4 -> %arg5 : i32, i32, i32, i16) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.teams num_teams( to %arg5 : i16) {
         omp.distribute private(@_QFnum_teams_arg_2Ei_private_i32 %arg7 -> %arg9 : !llvm.ptr) {
           omp.loop_nest (%arg10) : i32 = (%arg2) to (%arg3) inclusive step (%arg4) {
@@ -110,9 +110,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -125,9 +125,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
-    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg1, %3 -> %arg2, %0 -> %arg3 : i32, i32, i32) map_entries(%4 -> %arg4, %5 -> %arg5 : !llvm.ptr, !llvm.ptr) {
+    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg1, %3 -> %arg2, %0 -> %arg3 : i32, i32, i32) map_entries(%4 -> %arg4, %5 -> %arg5 : !llvm.ptr, !llvm.ptr) {
       %6 = llvm.mlir.constant(137 : i64) : i64
       omp.teams thread_limit(%6 : i64) {
         omp.distribute private(@_QFthread_limit_const_8Ei_private_i32 %arg4 -> %arg6 : !llvm.ptr) {
@@ -137,9 +137,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_const_8_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -150,10 +150,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
-    %4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %5 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4 : i32, i32, i32) map_entries(%4 -> %arg5, %5 -> %arg6, %6 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4 : i32, i32, i32) map_entries(%4 -> %arg5, %5 -> %arg6, %6 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %7 = llvm.load %arg5 : !llvm.ptr -> i64
       omp.teams thread_limit(%7 : i64) {
         omp.distribute private(@_QFthread_limit_arg_8Ei_private_i32 %arg6 -> %arg8 : !llvm.ptr) {
@@ -163,9 +163,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_8_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -178,9 +178,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
-    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg1, %3 -> %arg2, %0 -> %arg3 : i32, i32, i32) map_entries(%4 -> %arg4, %5 -> %arg5 : !llvm.ptr, !llvm.ptr) {
+    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg1, %3 -> %arg2, %0 -> %arg3 : i32, i32, i32) map_entries(%4 -> %arg4, %5 -> %arg5 : !llvm.ptr, !llvm.ptr) {
       %6 = llvm.mlir.constant(137 : i16) : i16
       omp.teams thread_limit(%6 : i16) {
         omp.distribute private(@_QFthread_limit_const_2Ei_private_i32 %arg4 -> %arg6 : !llvm.ptr) {
@@ -190,9 +190,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_const_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -203,10 +203,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg0 : !llvm.ptr -> i32
-    %4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %5 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4 : i32, i32, i32) map_entries(%4 -> %arg5, %5 -> %arg6, %6 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %4 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) host_eval(%0 -> %arg2, %3 -> %arg3, %0 -> %arg4 : i32, i32, i32) map_entries(%4 -> %arg5, %5 -> %arg6, %6 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %7 = llvm.load %arg5 : !llvm.ptr -> i16
       omp.teams thread_limit(%7 : i16) {
         omp.distribute private(@_QFthread_limit_arg_2Ei_private_i32 %arg6 -> %arg8 : !llvm.ptr) {
@@ -216,9 +216,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_2_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -232,9 +232,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %4 = llvm.load %arg0 : !llvm.ptr -> i32
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%1 -> %arg1, %4 -> %arg2, %1 -> %arg3, %0 -> %arg4 : i32, i32, i32, i64) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(spmd) host_eval(%1 -> %arg1, %4 -> %arg2, %1 -> %arg3, %0 -> %arg4 : i32, i32, i32, i64) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
       omp.teams {
         omp.parallel num_threads(%arg4 : i64) private(@_QFnum_threads_const_8Ei_private_i32 %arg5 -> %arg7 : !llvm.ptr) {
           omp.distribute {
@@ -248,9 +248,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_const_8_l{{.*}}..omp_par.{{.*}}
@@ -263,10 +263,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %3 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %4 = llvm.load %2 : !llvm.ptr -> i64
     %5 = llvm.load %arg0 : !llvm.ptr -> i32
-    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %7 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %8 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg1, %5 -> %arg2, %0 -> %arg3, %4 -> %arg4 : i32, i32, i32, i64) map_entries(%6 -> %arg5, %7 -> %arg6, %8 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i64) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %7 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %8 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(spmd) host_eval(%0 -> %arg1, %5 -> %arg2, %0 -> %arg3, %4 -> %arg4 : i32, i32, i32, i64) map_entries(%6 -> %arg5, %7 -> %arg6, %8 -> %arg7 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.teams {
         omp.parallel num_threads(%arg4 : i64) private(@_QFnum_threads_arg_8Ei_private_i32 %arg6 -> %arg8 : !llvm.ptr) {
           omp.distribute {
@@ -280,9 +280,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_arg_8_l{{.*}}..omp_par.{{.*}}
@@ -295,9 +295,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %4 = llvm.load %arg0 : !llvm.ptr -> i32
-    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%1 -> %arg1, %4 -> %arg2, %1 -> %arg3, %0 -> %arg4 : i32, i32, i32, i16) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(spmd) host_eval(%1 -> %arg1, %4 -> %arg2, %1 -> %arg3, %0 -> %arg4 : i32, i32, i32, i16) map_entries(%5 -> %arg5, %6 -> %arg6 : !llvm.ptr, !llvm.ptr) {
       omp.teams {
         omp.parallel num_threads(%arg4 : i16) private(@_QFnum_threads_const_2Ei_private_i32 %arg5 -> %arg7 : !llvm.ptr) {
           omp.distribute {
@@ -311,9 +311,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_const_2_l{{.*}}..omp_par.{{.*}}
@@ -325,10 +325,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %2 = llvm.alloca %1 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %3 = llvm.load %arg1 : !llvm.ptr -> i16
     %4 = llvm.load %arg0 : !llvm.ptr -> i32
-    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "t"}
-    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target host_eval(%0 -> %arg2, %4 -> %arg3, %0 -> %arg4, %3 -> %arg5 : i32, i32, i32, i16) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i16) map_clauses(implicit) capture(ByCopy) name("t") -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !llvm.ptr
+    %7 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(spmd) host_eval(%0 -> %arg2, %4 -> %arg3, %0 -> %arg4, %3 -> %arg5 : i32, i32, i32, i16) map_entries(%5 -> %arg6, %6 -> %arg7, %7 -> %arg8 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.teams {
         omp.parallel num_threads(%arg5 : i16) private(@_QFnum_threads_arg_2Ei_private_i32 %arg7 -> %arg9 : !llvm.ptr) {
           omp.distribute {
@@ -342,9 +342,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_arg_2_l{{.*}}..omp_par.{{.*}}

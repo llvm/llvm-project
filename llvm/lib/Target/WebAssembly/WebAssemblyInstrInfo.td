@@ -257,7 +257,7 @@ def bool_node : PatLeaf<(i32 I32:$cond), [{
 
 /// Floating point constants
 def fpimm0    : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 //===----------------------------------------------------------------------===//

@@ -5,7 +5,7 @@
 
 define double @fadd_nan_op0(double %x) {
 ; CHECK-LABEL: @fadd_nan_op0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %r = fadd double 0x7FF8000000000000, %x
   ret double %r
@@ -15,7 +15,7 @@ define double @fadd_nan_op0(double %x) {
 
 define double @fadd_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_nan_op1(
-; CHECK-NEXT:    ret double 0xFFF8000000000000
+; CHECK-NEXT:    ret double -qnan
 ;
   %r = fadd double %x, 0xFFF8000000000000
   ret double %r
@@ -25,7 +25,7 @@ define double @fadd_nan_op1(double %x) {
 
 define float @fsub_nan_op0(float %x) {
 ; CHECK-LABEL: @fsub_nan_op0(
-; CHECK-NEXT:    ret float 0x7FFFFF0000000000
+; CHECK-NEXT:    ret float +nan(0x3FF800)
 ;
   %r = fsub float 0x7FFFFF0000000000, %x
   ret float %r
@@ -35,7 +35,7 @@ define float @fsub_nan_op0(float %x) {
 
 define float @fsub_nan_op1(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1(
-; CHECK-NEXT:    ret float 0x7FF9000000000000
+; CHECK-NEXT:    ret float +nan(0x80000)
 ;
   %r = fsub float %x, 0x7FF1000000000000
   ret float %r
@@ -43,7 +43,7 @@ define float @fsub_nan_op1(float %x) {
 
 define <2 x float> @fsub_nan_op1_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fsub_nan_op1_vec(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF9000000000000, float 0xFFF9000000000000>
+; CHECK-NEXT:    ret <2 x float> <float +nan(0x80000), float -nan(0x80000)>
 ;
   %r = fsub <2 x float> %x, <float 0x7FF1000000000000, float 0xFFF1000000000000>
   ret <2 x float> %r
@@ -51,7 +51,7 @@ define <2 x float> @fsub_nan_op1_vec(<2 x float> %x) {
 
 define <vscale x 1 x float> @fsub_nan_op1_scalable_vec_0(<vscale x 1 x float> %x) {
 ; CHECK-LABEL: @fsub_nan_op1_scalable_vec_0(
-; CHECK-NEXT:    ret <vscale x 1 x float> splat (float 0x7FF9000000000000)
+; CHECK-NEXT:    ret <vscale x 1 x float> splat (float +nan(0x80000))
 ;
   %r = fsub <vscale x 1 x float> %x, splat (float 0x7FF1000000000000)
   ret <vscale x 1 x float> %r
@@ -59,7 +59,7 @@ define <vscale x 1 x float> @fsub_nan_op1_scalable_vec_0(<vscale x 1 x float> %x
 
 define <vscale x 1 x float> @fsub_nan_op1_scalable_vec_1(<vscale x 1 x float> %x) {
 ; CHECK-LABEL: @fsub_nan_op1_scalable_vec_1(
-; CHECK-NEXT:    ret <vscale x 1 x float> splat (float 0xFFF9000000000000)
+; CHECK-NEXT:    ret <vscale x 1 x float> splat (float -nan(0x80000))
 ;
   %r = fsub <vscale x 1 x float> %x, splat (float 0xFFF1000000000000)
   ret <vscale x 1 x float> %r
@@ -69,7 +69,7 @@ define <vscale x 1 x float> @fsub_nan_op1_scalable_vec_1(<vscale x 1 x float> %x
 
 define double @fmul_nan_op0(double %x) {
 ; CHECK-LABEL: @fmul_nan_op0(
-; CHECK-NEXT:    ret double 0xFFF8000000000001
+; CHECK-NEXT:    ret double -nan(0x1)
 ;
   %r = fmul double 0xFFF0000000000001, %x
   ret double %r
@@ -77,7 +77,7 @@ define double @fmul_nan_op0(double %x) {
 
 define <2 x double> @fmul_nan_op0_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fmul_nan_op0_vec(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF8000000000001, double 0xFFF8DEADDEADDEAD>
+; CHECK-NEXT:    ret <2 x double> <double -nan(0x1), double -nan(0xDEADDEADDEAD)>
 ;
   %r = fmul <2 x double> <double 0xFFF0000000000001, double 0xFFF0DEADDEADDEAD>, %x
   ret <2 x double> %r
@@ -85,7 +85,7 @@ define <2 x double> @fmul_nan_op0_vec(<2 x double> %x) {
 
 define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_0(<vscale x 1 x double> %x) {
 ; CHECK-LABEL: @fmul_nan_op0_scalable_vec_0(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0xFFF8000000000001)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double -nan(0x1))
 ;
   %r = fmul <vscale x 1 x double> splat (double 0xFFF0000000000001), %x
   ret <vscale x 1 x double> %r
@@ -93,7 +93,7 @@ define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_0(<vscale x 1 x double> 
 
 define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_1(<vscale x 1 x double> %x) {
 ; CHECK-LABEL: @fmul_nan_op0_scalable_vec_1(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0xFFF8DEADDEADDEAD)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double -nan(0xDEADDEADDEAD))
 ;
   %r = fmul <vscale x 1 x double> splat (double 0xFFF0DEADDEADDEAD), %x
   ret <vscale x 1 x double> %r
@@ -103,7 +103,7 @@ define <vscale x 1 x double> @fmul_nan_op0_scalable_vec_1(<vscale x 1 x double> 
 
 define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_nan_op1(
-; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+; CHECK-NEXT:    ret <2 x float> splat (float +qnan)
 ;
   %r = fmul <2 x float> %x, <float 0x7FF8000000000000, float 0x7FF8000000000000>
   ret <2 x float> %r
@@ -111,7 +111,7 @@ define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 
 define <vscale x 1 x double> @fmul_nan_op1_scalable_vec(<vscale x 1 x double> %x) {
 ; CHECK-LABEL: @fmul_nan_op1_scalable_vec(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0x7FF8000000000000)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double +qnan)
 ;
   %r = fmul <vscale x 1 x double> %x, splat (double 0x7FF8000000000000)
   ret <vscale x 1 x double> %r
@@ -121,7 +121,7 @@ define <vscale x 1 x double> @fmul_nan_op1_scalable_vec(<vscale x 1 x double> %x
 
 define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fdiv_nan_op0(
-; CHECK-NEXT:    ret <2 x double> splat (double 0xFFF800000000000F)
+; CHECK-NEXT:    ret <2 x double> splat (double -nan(0xF))
 ;
   %r = fdiv <2 x double> <double 0xFFF800000000000F, double 0xFFF800000000000F>, %x
   ret <2 x double>  %r
@@ -129,7 +129,7 @@ define <2 x double> @fdiv_nan_op0(<2 x double> %x) {
 
 define <vscale x 1 x double> @fdivl_nan_op0_scalable_vec(<vscale x 1 x double> %x) {
 ; CHECK-LABEL: @fdivl_nan_op0_scalable_vec(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0xFFF800000000000F)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double -nan(0xF))
 ;
   %r = fdiv <vscale x 1 x double> splat (double 0xFFF800000000000F), %x
   ret <vscale x 1 x double> %r
@@ -139,7 +139,7 @@ define <vscale x 1 x double> @fdivl_nan_op0_scalable_vec(<vscale x 1 x double> %
 
 define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
 ; CHECK-LABEL: @fdiv_nan_op1(
-; CHECK-NEXT:    ret <2 x half> <half 0xH7FFF, half 0xHFF00>
+; CHECK-NEXT:    ret <2 x half> <half +nan(0x1FF), half -nan(0x100)>
 ;
   %r = fdiv <2 x half> %x, <half 0xH7FFF, half 0xHFF00>
   ret <2 x half> %r
@@ -147,7 +147,7 @@ define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
 
 define <vscale x 1 x half> @fdiv_nan_op1_scalable_vec(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: @fdiv_nan_op1_scalable_vec(
-; CHECK-NEXT:    ret <vscale x 1 x half> splat (half 0xH7FFF)
+; CHECK-NEXT:    ret <vscale x 1 x half> splat (half +nan(0x1FF))
 ;
   %r = fdiv <vscale x 1 x half> %x, splat (half 0xH7FFF)
   ret <vscale x 1 x half> %r
@@ -157,7 +157,7 @@ define <vscale x 1 x half> @fdiv_nan_op1_scalable_vec(<vscale x 1 x half> %x) {
 
 define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nan_poison_op1(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double poison>
+; CHECK-NEXT:    ret <2 x double> <double -nan(0x700000000DEAD), double poison>
 ;
   %r = fsub <2 x double> %x, <double 0xFFFF00000000DEAD, double poison>
   ret <2 x double> %r
@@ -167,7 +167,7 @@ define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
 
 define <2 x double> @frem_nan_poison_op0(<2 x double> %x) {
 ; CHECK-LABEL: @frem_nan_poison_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double poison>
+; CHECK-NEXT:    ret <2 x double> <double -nan(0x700000000DEAD), double poison>
 ;
   %r = frem <2 x double> <double 0xFFFF00000000DEAD, double poison>, %x
   ret <2 x double> %r
@@ -177,7 +177,7 @@ define <2 x double> @frem_nan_poison_op0(<2 x double> %x) {
 
 define <3 x double> @fadd_nan_poison_undef_op1(<3 x double> %x) {
 ; CHECK-LABEL: @fadd_nan_poison_undef_op1(
-; CHECK-NEXT:    [[R:%.*]] = fadd <3 x double> [[X:%.*]], <double 0xFFFF00000000DEAD, double poison, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fadd <3 x double> [[X:%.*]], <double -nan(0x700000000DEAD), double poison, double undef>
 ; CHECK-NEXT:    ret <3 x double> [[R]]
 ;
   %r = fadd <3 x double> %x, <double 0xFFFF00000000DEAD, double poison, double undef>
@@ -186,7 +186,7 @@ define <3 x double> @fadd_nan_poison_undef_op1(<3 x double> %x) {
 
 define float @frem_nan_op1(float %x) {
 ; CHECK-LABEL: @frem_nan_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = frem float %x, 0x7FF8000000000000
   ret float %r
@@ -196,7 +196,7 @@ define float @frem_nan_op1(float %x) {
 
 define double @fneg_nan_1(double %x) {
 ; CHECK-LABEL: @fneg_nan_1(
-; CHECK-NEXT:    ret double 0x7FFABCDEF0123456
+; CHECK-NEXT:    ret double +nan(0x2BCDEF0123456)
 ;
   %r = fsub double -0.0, 0x7FFABCDEF0123456
   ret double %r
@@ -204,7 +204,7 @@ define double @fneg_nan_1(double %x) {
 
 define double @unary_fneg_nan_1(double %x) {
 ; CHECK-LABEL: @unary_fneg_nan_1(
-; CHECK-NEXT:    ret double 0xFFFABCDEF0123456
+; CHECK-NEXT:    ret double -nan(0x2BCDEF0123456)
 ;
   %r = fneg double 0x7FFABCDEF0123456
   ret double %r
@@ -212,7 +212,7 @@ define double @unary_fneg_nan_1(double %x) {
 
 define <2 x double> @fneg_nan_2(<2 x double> %x) {
 ; CHECK-LABEL: @fneg_nan_2(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF9234567890ABC, double 0x7FF8000000000001>
+; CHECK-NEXT:    ret <2 x double> <double -nan(0x1234567890ABC), double +nan(0x1)>
 ;
   %r = fsub <2 x double> <double -0.0, double -0.0>, <double 0xFFF1234567890ABC, double 0x7FF0000000000001>
   ret <2 x double> %r
@@ -220,7 +220,7 @@ define <2 x double> @fneg_nan_2(<2 x double> %x) {
 
 define <vscale x 1 x double> @fneg_nan_2_scalable_vec() {
 ; CHECK-LABEL: @fneg_nan_2_scalable_vec(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0xFFF9234567890ABC)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double -nan(0x1234567890ABC))
 ;
   %r = fsub <vscale x 1 x double> splat (double -0.0), splat (double 0xFFF1234567890ABC)
   ret <vscale x 1 x double> %r
@@ -228,7 +228,7 @@ define <vscale x 1 x double> @fneg_nan_2_scalable_vec() {
 
 define <2 x double> @unary_fneg_nan_2(<2 x double> %x) {
 ; CHECK-LABEL: @unary_fneg_nan_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF1234567890ABC, double 0xFFF0000000000001>
+; CHECK-NEXT:    ret <2 x double> <double +snan(0x1234567890ABC), double -snan(0x1)>
 ;
   %r = fneg <2 x double> <double 0xFFF1234567890ABC, double 0x7FF0000000000001>
   ret <2 x double> %r
@@ -237,7 +237,7 @@ define <2 x double> @unary_fneg_nan_2(<2 x double> %x) {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_0(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0x7FF1234567890ABC)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double +snan(0x1234567890ABC))
 ;
   %r = fneg <vscale x 1 x double> splat (double 0xFFF1234567890ABC)
   ret <vscale x 1 x double> %r
@@ -246,7 +246,7 @@ define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_0() {
 ; FIXME: This doesn't behave the same way as the fixed-length vectors above
 define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_1() {
 ; CHECK-LABEL: @unary_fneg_nan_2_scalable_vec_1(
-; CHECK-NEXT:    ret <vscale x 1 x double> splat (double 0xFFF0000000000001)
+; CHECK-NEXT:    ret <vscale x 1 x double> splat (double -snan(0x1))
 ;
   %r = fneg <vscale x 1 x double> splat (double 0x7FF0000000000001)
   ret <vscale x 1 x double> %r

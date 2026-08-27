@@ -5,43 +5,98 @@
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
-!rec_C = !cir.record<class "C" incomplete>
-!rec_S = !cir.record<struct "S" incomplete>
-!rec_U = !cir.record<union "U" incomplete>
+!rec_C = !cir.struct<class "C" incomplete>
+!rec_S = !cir.struct<"S" incomplete>
+!rec_U = !cir.union<"U" incomplete>
 
-// CHECK-DAG: !rec_C = !cir.record<class "C" incomplete>
-// CHECK-DAG: !rec_S = !cir.record<struct "S" incomplete>
-// CHECK-DAG: !rec_U = !cir.record<union "U" incomplete>
+// CHECK-DAG: !rec_C = !cir.struct<class "C" incomplete>
+// CHECK-DAG: !rec_S = !cir.struct<"S" incomplete>
+// CHECK-DAG: !rec_U = !cir.union<"U" incomplete>
 
-!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
-!rec_anon_struct1 = !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
-!rec_anon_struct2 = !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
-!rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+!rec_anon_struct = !cir.struct< packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
+!rec_anon_struct1 = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>}>
+!rec_anon_struct2 = !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !cir.ptr<!u8i>}>
+!rec_S1 = !cir.struct<"S1" {data !s32i, data !s32i}>
+!rec_Sc = !cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>
 
-// CHECK-DAG: !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
-// CHECK-DAG: !cir.record<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-// CHECK-DAG: !rec_S1 = !cir.record<struct "S1" {!s32i, !s32i}>
-// CHECK-DAG: !rec_Sc = !cir.record<struct "Sc" {!u8i, !u16i, !u32i}>
+// CHECK-DAG: ![[ARR_TY:rec_anon_struct[0-9]*]] = !cir.struct<packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
+// CHECK-DAG: !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK-DAG: !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !cir.ptr<!u8i>}>
+// CHECK-DAG: !rec_S1 = !cir.struct<"S1" {data !s32i, data !s32i}>
+// CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>
 
-// Packed and padded structs
-!rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
-!rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
-!rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+// A packed struct, and a packed and unpacked pair with the same members
+!rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
+!rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+!rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
 
-// CHECK-DAG: !rec_P1 = !cir.record<struct "P1" packed {!s32i, !s32i}>
-// CHECK-DAG: !rec_P2 = !cir.record<struct "P2" padded {!u8i, !u16i, !u32i}>
-// CHECK-DAG: !rec_P3 = !cir.record<struct "P3" packed padded {!u8i, !u16i, !u32i}>
+// Members marked pad or empty
+!rec_P4 = !cir.struct<"P4" {pad !u8i}>
+!rec_P5 = !cir.struct<"P5" {empty !u8i}>
+!rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+!rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+!rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
+
+// Bit-field access units
+!rec_P9 = !cir.struct<"P9" {bitfield !u8i, empty !u8i}>
+
+// CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
+// CHECK-DAG: !rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
+// CHECK-DAG: !rec_P4 = !cir.struct<"P4" {pad !u8i}>
+// CHECK-DAG: !rec_P5 = !cir.struct<"P5" {empty !u8i}>
+// CHECK-DAG: !rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P9 = !cir.struct<"P9" {bitfield !u8i, empty !u8i}>
+
+// Records with identical member types, spelled apart by their kinds.
+!rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
+!rec_M2 = !cir.struct<"M2" {data !u8i, empty !u8i}>
+!rec_anon_pad = !cir.struct<{data !u8i, pad !u8i}>
+!rec_anon_empty = !cir.struct<{data !u8i, empty !u8i}>
+
+// CHECK-DAG: !rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_M2 = !cir.struct<"M2" {data !u8i, empty !u8i}>
+// CHECK-DAG: !cir.struct<{data !u8i, pad !u8i}>
+// CHECK-DAG: !cir.struct<{data !u8i, empty !u8i}>
+
+!rec_U1 = !cir.union<"U1" {data !s32i, data !u8i}, padding = {!u8i}>
+!rec_U2 = !cir.union<"U2" packed {data !s32i}, padding = {!cir.array<!u8i x 4>}>
+!rec_anon_u_empty = !cir.union<{data !s32i, empty !u8i}>
+!rec_anon_u_plain = !cir.union<{data !s32i, data !u8i}>
+!rec_U3 = !cir.union<"U3" {empty !u8i}>
+!rec_U4 = !cir.union<"U4" {data !s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
+// A unit-marked union with a tail-padding slot, which is the shape CIRGen emits
+// for a union of bit-fields.
+!rec_U5 = !cir.union<"U5" {bitfield !u8i, empty !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+// CHECK-DAG: !rec_U1 = !cir.union<"U1" {data !s32i, data !u8i}, padding = {!u8i}>
+// CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {data !s32i}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !cir.union<{data !s32i, empty !u8i}>
+// CHECK-DAG: !cir.union<{data !s32i, data !u8i}>
+// CHECK-DAG: !rec_U3 = !cir.union<"U3" {empty !u8i}>
+// CHECK-DAG: !rec_U4 = !cir.union<"U4" {data !s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !rec_U5 = !cir.union<"U5" {bitfield !u8i, empty !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 
 // Complete a previously incomplete record
-!rec_A = !cir.record<class "A" incomplete>
-!rec_Ac = !cir.record<class "A" {!u8i, !s32i}>
-// CHECK-DAG: !rec_A = !cir.record<class "A" {!u8i, !s32i}>
+!rec_A = !cir.struct<class "A" incomplete>
+!rec_Ac = !cir.struct<class "A" {data !u8i, data !s32i}>
+// CHECK-DAG: !rec_A = !cir.struct<class "A" {data !u8i, data !s32i}>
+
+// Complete a previously incomplete record whose members carry marks.
+!rec_B = !cir.struct<class "B" incomplete>
+!rec_Bc = !cir.struct<class "B" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
+// CHECK-DAG: !rec_B = !cir.struct<class "B" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
 
 // Test recursive struct parsing/printing.
-!rec_Node = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
-// CHECK-DAG: !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+!rec_Node = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
+// CHECK-DAG: !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
+
+// A mark survives the cyclic-print guard on a self-referential record.
+!rec_PadNode = !cir.struct<"PadNode" {data !cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
+// CHECK-DAG: !cir.struct<"PadNode" {data !cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
 
 
 
@@ -53,7 +108,7 @@ module  {
 // CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
 // CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
 // CHECK: cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
-// CHECK: cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
+// CHECK: cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : ![[ARR_TY]]{{$}}
 
   // Dummy function to use types and force them to be printed.
   cir.func @useTypes(%arg0: !rec_Node,
@@ -63,19 +118,38 @@ module  {
                      %arg4: !rec_Ac,
                      %arg5: !rec_P1,
                      %arg6: !rec_P2,
-                     %arg7: !rec_P3) {
+                     %arg7: !rec_P3,
+                     %arg8: !rec_U1,
+                     %arg9: !rec_U2,
+                     %arg10: !rec_P4,
+                     %arg11: !rec_P5,
+                     %arg12: !rec_P6,
+                     %arg13: !rec_M1,
+                     %arg14: !rec_M2,
+                     %arg15: !rec_anon_pad,
+                     %arg16: !rec_anon_empty,
+                     %arg17: !rec_U3,
+                     %arg18: !rec_U4,
+                     %arg19: !rec_Bc,
+                     %arg20: !rec_PadNode,
+                     %arg21: !rec_P7,
+                     %arg22: !rec_anon_u_empty,
+                     %arg23: !rec_anon_u_plain,
+                     %arg24: !rec_P8,
+                     %arg25: !rec_P9,
+                     %arg26: !rec_U5) {
     cir.return
   }
 
   cir.func @structs() {
-    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init] {alignment = 8 : i64}
-    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init] {alignment = 8 : i64}
+    %0 = cir.alloca "sc" align(8) init : !cir.ptr<!cir.ptr<!cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>>>
+    %1 = cir.alloca "u" align(8) init : !cir.ptr<!cir.ptr<!cir.union<"U" incomplete>>>
     cir.return
   }
 
 // CHECK: cir.func @structs() {
-// CHECK:     %0 = cir.alloca !cir.ptr<!rec_Sc>, !cir.ptr<!cir.ptr<!rec_Sc>>, ["sc", init]
-// CHECK:     %1 = cir.alloca !cir.ptr<!rec_U>, !cir.ptr<!cir.ptr<!rec_U>>, ["u", init]
+// CHECK:     %0 = cir.alloca "sc" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Sc>>
+// CHECK:     %1 = cir.alloca "u" {{.*}} init : !cir.ptr<!cir.ptr<!rec_U>>
 
 cir.func @struct_extract_member_test() {
     %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !u16i, #cir.int<3> : !u32i}> : !rec_Sc

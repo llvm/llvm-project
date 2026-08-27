@@ -286,6 +286,10 @@ public:
     return IsPPC64 ? PPC::X1 : PPC::R1;
   }
 
+  MCRegister getGlueCodeDescriptorRegister() const {
+    return IsPPC64 ? PPC::X11 : PPC::R11;
+  }
+
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }
 
   bool isPredictableSelectIsExpensive() const {

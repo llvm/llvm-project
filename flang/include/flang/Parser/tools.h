@@ -41,6 +41,11 @@ const Name &GetFirstName(const Call &);
 const Name &GetFirstName(const FunctionReference &);
 const Name &GetFirstName(const Variable &);
 const Name &GetFirstName(const EntityDecl &);
+const Name &GetFirstName(const AccObject &);
+
+// Checks whether a scalar-int-constant-expr is a direct BOZ literal constant,
+// rather than an expression that contains one.
+bool IsBOZLiteral(const ScalarIntConstantExpr &);
 
 // When a parse tree node is an instance of a specific type wrapped in
 // layers of packaging, return a pointer to that object.

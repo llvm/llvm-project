@@ -38,12 +38,12 @@ public:
                      const uint8_t *loc) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &sec) override {
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.is64)
-      elf::scanSection1<LoongArch, ELF64LE>(*this, sec);
+      elf::scanSection1<LoongArch, ELF64LE>(*this, sec, shard);
     else
-      elf::scanSection1<LoongArch, ELF32LE>(*this, sec);
+      elf::scanSection1<LoongArch, ELF32LE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -454,6 +454,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_PCREL20_S2:
   case R_LARCH_PCADD_HI20:
     return R_PC;
+  case R_LARCH_TLS_DTPREL32:
+  case R_LARCH_TLS_DTPREL64:
+    return R_DTPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -476,8 +479,9 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                                unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
@@ -871,7 +875,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_GD_PCADD_HI20:
   case R_LARCH_TLS_DESC_PCADD_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(ctx, loc, val, 32, rel);
+    checkInt(ctx, loc, SignExtend64(hi, ctx.arg.wordsize * 8) >> 12, 20, rel);
     write32le(loc, setJ20(read32le(loc), extractBits(hi, 31, 12)));
     return;
   }
@@ -980,12 +984,19 @@ bool LoongArch::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
       }
     }
   } else if (sec->addralign > 4) {
-    // If the alignment is > 4 and the section does not start with an ALIGN
-    // relocation, synthesize one.
-    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
-      return rel.r_offset == 0 && rel.getType(false) == R_LARCH_ALIGN;
+    // If the alignment is > 4, synthesize an ALIGN unless an ALIGN relocation
+    // at offset 0 already guarantees `addralign`. Note: A weaker ALIGN at
+    // offset 0 from older assemblers do not suppress synthesis (e.g.
+    // `.p2align 2; .option norelax; nop; .p2align 3` does not suppress
+    // synthesized `.p2align 3`).
+    bool covered = llvm::any_of(rels, [&](const RelTy &rel) {
+      if (rel.r_offset != 0 || rel.getType(false) != R_LARCH_ALIGN)
+        return false;
+      if constexpr (RelTy::HasAddend)
+        return uint64_t(rel.r_addend) >= sec->addralign - 4;
+      return false;
     });
-    if (!hasAlignRel) {
+    if (!covered) {
       synthesizedAligns.emplace_back(dot - baseSec->getVA(),
                                      sec->addralign - 4);
       dot += sec->addralign - 4;

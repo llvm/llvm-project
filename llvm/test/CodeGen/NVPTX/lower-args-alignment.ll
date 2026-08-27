@@ -4,17 +4,16 @@
 target triple = "nvptx64-nvidia-cuda"
 
 ; ------------------------------------------------------------------------------
-; Test that alignment can be inferred through llvm.nvvm.internal.addrspace.wrap.p101.p0 intrinsics
-; thanks to the alignment attribute on the intrinsic
+; Test that alignment can be inferred for loads from a byval kernel parameter
+; thanks to the alignment attribute on the param-space argument.
 ; ------------------------------------------------------------------------------
 
 %struct.S1 = type { i32, i32, i32, i32 }
 define ptx_kernel i32 @test_align8(ptr noundef readonly byval(%struct.S1) align 8 captures(none) %params) {
 ; CHECK-LABEL: define ptx_kernel i32 @test_align8(
-; CHECK-SAME: ptr noundef readonly byval([[STRUCT_S1:%.*]]) align 8 captures(none) "nvvm.grid_constant" [[PARAMS:%.*]]) {
+; CHECK-SAME: ptr addrspace(101) noundef readonly byval([[STRUCT_S1:%.*]]) align 8 captures(none) [[PARAMS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call align 8 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[PARAMS]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(101) [[TMP0]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(101) [[PARAMS]], align 8
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
 entry:
@@ -24,10 +23,9 @@ entry:
 
 define ptx_kernel i32 @test_align1(ptr noundef readonly byval(%struct.S1) align 4 captures(none) %params) {
 ; CHECK-LABEL: define ptx_kernel i32 @test_align1(
-; CHECK-SAME: ptr noundef readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) "nvvm.grid_constant" [[PARAMS:%.*]]) {
+; CHECK-SAME: ptr addrspace(101) noundef readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) [[PARAMS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call align 4 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[PARAMS]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(101) [[TMP0]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(101) [[PARAMS]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
 entry:

@@ -292,7 +292,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
+      ET, &TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
@@ -323,7 +323,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   // Adding the following passes:
   // - postrapseudos: expands pseudo return instructions used on some targets.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName : {"postrapseudos", "prologepilog"})
+  for (const char *PassName : {"postrapseudos", "prolog-epilog"})
     if (addPass(PM, PassName, *TPC))
       return make_error<Failure>("Unable to add a mandatory pass");
   TPC->setInitialized();

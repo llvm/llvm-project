@@ -187,11 +187,10 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
 
   verifyGoogleFormat("#endif  // HEADER_GUARD");
 
-  verifyFormat("const char *test[] = {\n"
-               "    // A\n"
-               "    \"aaaa\",\n"
-               "    // B\n"
-               "    \"aaaaa\"};");
+  verifyFormat("const char *test[] = {// A\n"
+               "                      \"aaaa\",\n"
+               "                      // B\n"
+               "                      \"aaaaa\"};");
   verifyGoogleFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaa);  // 81_cols_with_this_comment");
@@ -369,6 +368,59 @@ TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
                getLLVMStyleWithColumns(33));
   verifyFormat("// comment\\\n", "// comment\\\n  \t \v   \f   ");
   verifyFormat("// comment    \\\n", "// comment    \\\n  \t \v   \f   ");
+}
+
+TEST_F(FormatTestComments, SpacesInBlockComments) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("/* comment */", "/* comment*/", Style);
+  verifyFormat("/* comment */", "/*comment */", Style);
+  verifyFormat("/* comment */", "/*comment*/", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Leave;
+  verifyFormat("/*comment*/", Style);
+  verifyFormat("/* comment*/", Style);
+  verifyFormat("/*comment */", Style);
+  verifyFormat("/* comment */", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("/*comment*/", "/* comment */", Style);
+  verifyFormat("/*comment*/", "/* comment*/", Style);
+  verifyFormat("/*comment*/", "/*comment */", Style);
+}
+
+TEST_F(FormatTestComments, SpacesInMultilineBlockComments) {
+  FormatStyle Style = getLLVMStyleWithColumns(20);
+  Style.ReflowComments = FormatStyle::RCS_IndentOnly;
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa */",
+               "/*aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("/*aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               "/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa */",
+               Style);
+}
+
+TEST_F(FormatTestComments, SpacesInBlockCommentsIgnoreParamAndDocComments) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("foo(/*Arg=*/value);", Style);
+  verifyFormat("/**doc*/", Style);
+  verifyFormat("/*!doc*/", Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("foo(/*Arg=*/value);", Style);
+  verifyFormat("/** doc */", Style);
+  verifyFormat("/*! doc */", Style);
 }
 
 TEST_F(FormatTestComments, UnderstandsBlockComments) {
@@ -1421,12 +1473,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "       {// Group #3\n"
                "        g, h, i}};");
 
-  verifyFormat("S s = {\n"
-               "    // Some comment\n"
-               "    a,\n"
+  verifyFormat("S s = {// Some comment\n"
+               "       a,\n"
                "\n"
-               "    // Comment after empty line\n"
-               "    b}",
+               "       // Comment after empty line\n"
+               "       b}",
                "S s =    {\n"
                "      // Some comment\n"
                "  a,\n"
@@ -1434,12 +1485,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "     // Comment after empty line\n"
                "      b\n"
                "}");
-  verifyFormat("S s = {\n"
-               "    /* Some comment */\n"
-               "    a,\n"
+  verifyFormat("S s = {/* Some comment */\n"
+               "       a,\n"
                "\n"
-               "    /* Comment after empty line */\n"
-               "    b}",
+               "       /* Comment after empty line */\n"
+               "       b}",
                "S s =    {\n"
                "      /* Some comment */\n"
                "  a,\n"
@@ -3010,6 +3060,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsAcrossEmptyLines) {
                Style);
 }
 
+TEST_F(FormatTestComments, OverEmptyLinesBreaksAlignmentAtBlockBoundaries) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.AlignTrailingComments.Kind, FormatStyle::TCAS_Always);
+  Style.AlignTrailingComments.OverEmptyLines = 3;
+  Style.AllowShortFunctionsOnASingleLine = {};
+
+  verifyNoChange("void f() {\n"
+                 "  int a; /* e */\n"
+                 "}\n"
+                 "/* c */\n"
+                 "void g() {\n"
+                 "  int b;    /* f */\n"
+                 "  int abcd; /* g */\n"
+                 "}",
+                 Style);
+
+  verifyFormat("void f() {\n"
+               "  int a; /* e */\n"
+               "}\n"
+               "void g() {\n"
+               "  int b;    /* f */\n"
+               "  int abcd; /* g */\n"
+               "}",
+               Style);
+
+  verifyFormat("struct A {\n"
+               "  int a; /* e */\n"
+               "};\n"
+               "int i; /* comment */\n"
+               "struct M {\n"
+               "  int b;    /* f */\n"
+               "  int abcd; /* g */\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
@@ -3060,6 +3146,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "namespace ns {\n"
                "int i;\n"
                "int j;\n"
+               "}",
+               Style);
+
+  // Move comments along, when it appears, that the indentation changed when a
+  // scope has been added or removed.
+  verifyFormat("void func() {\n"
+               "  int i;\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "}",
+               "void func() {\n"
+               "    int i;\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "    int i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // non-trailing comment\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "     // non-trailing comment\n"
+               "    int i;\n"
                "}",
                Style);
 

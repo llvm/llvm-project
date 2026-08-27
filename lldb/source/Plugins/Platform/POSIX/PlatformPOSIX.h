@@ -67,7 +67,7 @@ public:
   lldb_private::Status UnloadImage(lldb_private::Process *process,
                                    uint32_t image_token) override;
 
-  lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
 protected:
   std::unique_ptr<lldb_private::OptionGroupPlatformRSync>

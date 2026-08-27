@@ -1,5 +1,4 @@
 #include <atomic>
-#include <chrono>
 #include <pthread.h>
 #include <thread>
 
@@ -15,6 +14,7 @@ static void set_thread_name(const char *name) {
 
 volatile int g_helper_count = 0;
 volatile bool g_stop = false;
+volatile bool g_sync_with_helper = false;
 std::atomic<bool> g_ready{false};
 
 void helper_thread_func() {
@@ -22,15 +22,16 @@ void helper_thread_func() {
   g_ready.store(true);
   while (!g_stop) {
     g_helper_count++;
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
 int step_over_me() {
-  int result = 0;
-  for (int i = 0; i < 1000; i++)
-    result += i;
-  return result;
+  if (g_sync_with_helper) {
+    int count_at_entry = g_helper_count;
+    while (g_helper_count <= count_at_entry)
+      ;
+  }
+  return 42;
 }
 
 int main() {
