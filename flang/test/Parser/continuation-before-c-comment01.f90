@@ -27,6 +27,9 @@ i&
 ! CHECK: i=42
 i&
 /* c */ &= 42
+! CHECK: i=44
+i = 43 &
+/* c */ & + 1
 
 ! Multi-line comment.
 ! CHECK: i=5
