@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
-#include <__support/ibm/xlocale.h>
+#include <__locale_dir/support/zos.h>
 #include <sstream>
 #include <vector>
 
