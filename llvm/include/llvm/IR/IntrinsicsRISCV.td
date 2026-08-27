@@ -2124,6 +2124,7 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.
   class RVPPackedMulPartsIntrinsic

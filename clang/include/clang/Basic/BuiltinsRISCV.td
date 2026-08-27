@@ -318,6 +318,7 @@ def pmulq_i16x4  : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4,
 def pmulqr_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
 def pmulq_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 def pmulqr_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
+
 // Packed Multiply Parts (32-bit)
 def pmul_b00_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, signed char>)">;
 def pmul_b01_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, signed char>)">;

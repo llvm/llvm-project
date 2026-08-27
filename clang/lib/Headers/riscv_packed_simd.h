@@ -851,6 +851,7 @@ __packed_binary_builtin(pmulq_i16x4, int16x4_t, __builtin_riscv_pmulq_i16x4)
 __packed_binary_builtin(pmulqr_i16x4, int16x4_t, __builtin_riscv_pmulqr_i16x4)
 __packed_binary_builtin(pmulq_i32x2, int32x2_t, __builtin_riscv_pmulq_i32x2)
 __packed_binary_builtin(pmulqr_i32x2, int32x2_t, __builtin_riscv_pmulqr_i32x2)
+
 /* Packed Multiply Parts (32-bit) */
 __packed_binary_builtin_mixed(pmul_b00_i16x2, int16x2_t, int8x4_t, int8x4_t, __builtin_riscv_pmul_b00_i16x2)
 __packed_binary_builtin_mixed(pmul_b01_i16x2, int16x2_t, int8x4_t, int8x4_t, __builtin_riscv_pmul_b01_i16x2)

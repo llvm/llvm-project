@@ -2299,15 +2299,31 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
-  // Packed byte multiply-parts patterns.
-  def : PatMulParts<int_riscv_pmul_00, PMUL_H_B00, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmul_01, PMUL_H_B01, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmul_11, PMUL_H_B11, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmulu_00, PMULU_H_B00, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmulu_01, PMULU_H_B01, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmulu_11, PMULU_H_B11, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmulsu_00, PMULSU_H_B00, XLenVecI16VT, XLenVecI8VT>;
-  def : PatMulParts<int_riscv_pmulsu_11, PMULSU_H_B11, XLenVecI16VT, XLenVecI8VT>;
+  // Packed byte multiply halves patterns.
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_00 (XLenVecI8VT GPR:$rs1),
+                                              (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_01 (XLenVecI8VT GPR:$rs1),
+                                              (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_11 (XLenVecI8VT GPR:$rs1),
+                                              (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_00 (XLenVecI8VT GPR:$rs1),
+                                               (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_01 (XLenVecI8VT GPR:$rs1),
+                                               (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_11 (XLenVecI8VT GPR:$rs1),
+                                               (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_00 (XLenVecI8VT GPR:$rs1),
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMULSU_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_11 (XLenVecI8VT GPR:$rs1),
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
   // Scalar halfword multiply-parts patterns.
@@ -2950,16 +2966,6 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
   def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
 
-  // Packed halfword multiply-parts patterns.
-  def : PatMulParts<int_riscv_pmul_00, PMUL_W_H00, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmul_01, PMUL_W_H01, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmul_11, PMUL_W_H11, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmulu_00, PMULU_W_H00, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmulu_01, PMULU_W_H01, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmulu_11, PMULU_W_H11, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmulsu_00, PMULSU_W_H00, v2i32, v4i16>;
-  def : PatMulParts<int_riscv_pmulsu_11, PMULSU_W_H11, v2i32, v4i16>;
-
   // Scalar word multiply-parts patterns.
   def : PatMulParts<int_riscv_mul_00, MUL_W00, i64, v2i32>;
   def : PatMulParts<int_riscv_mul_01, MUL_W01, i64, v2i32>;
@@ -3004,34 +3010,22 @@ let append Predicates = [IsRV64] in {
             (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
 
   // Packed multiply halves patterns.
-  def : Pat<(v4i16 (riscv_pmul_halves_00 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMUL_H_B00 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pmul_halves_01 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMUL_H_B01 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pmul_halves_11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMUL_H_B11 GPR:$rs1, GPR:$rs2)>;
-
+  def : Pat<(v2i32 (riscv_pmul_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pmul_halves_01 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMUL_W_H01 GPR:$rs1, GPR:$rs2)>;
-
-  def : Pat<(v4i16 (riscv_pmulu_halves_00 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMULU_H_B00 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pmulu_halves_01 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMULU_H_B01 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pmulu_halves_11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMULU_H_B11 GPR:$rs1, GPR:$rs2)>;
-
+  def : Pat<(v2i32 (riscv_pmul_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulu_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pmulu_halves_01 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMULU_W_H01 GPR:$rs1, GPR:$rs2)>;
-
-  def : Pat<(v4i16 (riscv_pmulsu_halves_00 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMULSU_H_B00 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_pmulsu_halves_11 (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
-
+  def : Pat<(v2i32 (riscv_pmulu_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pmulsu_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMULSU_W_H00 GPR:$rs1, GPR:$rs2)>;
-
+  def : Pat<(v2i32 (riscv_pmulsu_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULSU_W_H11 GPR:$rs1, GPR:$rs2)>;
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
   def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;
