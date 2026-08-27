@@ -3340,6 +3340,77 @@ void test(int x) {
 }
 ```
 
+(alpha-core-useafterlifetimeend)=
+
+#### alpha.core.UseAfterLifetimeEnd (C, C++)
+
+Check for returned pointers and references that are bound to an object whose
+lifetime ends when the function returns. The checker only analyzes code that
+is annotated with the `[[clang::lifetimebound]]` attribute. The annotation
+tells the checker which object the returned value is bound to.
+
+```cpp
+int *bound(int *p [[clang::lifetimebound]]);
+
+int *direct_return() {
+  int i = 5; // note: 'i' initialized here
+  return bound(&i); // warn: returning value bound to 'i' that will go out of scope
+}
+```
+
+The attribute states that the returned value is dangling after the lifetime
+of the annotated parameter, or of the implicit object argument, has ended.
+Refer to the [documentation](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound)
+of this Clang attribute.
+
+```cpp
+struct Wrapper {
+  int value;
+  int &get() [[clang::lifetimebound]];
+};
+
+int &method_return() {
+  Wrapper w;
+  return w.get(); // warn: returning value bound to 'w' that will go out of scope
+}
+```
+
+**Related Checkers**
+
+{ref}`core-stackaddressescape` reports returning the address of a local object
+directly. This checker extends that detection through functions that are
+annotated with `[[clang::lifetimebound]]`.
+
+{ref}`alpha-core-danglingptrderef` reports use-after-scope errors anywhere in
+the function and does not rely on annotations. This checker reports the value
+that is returned from the function.
+
+{ref}`cplusplus-innerpointer` reports similar errors for inner pointers of C++
+containers that are used after re/deallocation without relying on annotations.
+
+```cpp
+void consume(std::string);
+
+void deref_inner_pointer() {
+  std::string s = "some string";
+  const char *c = s.data();
+  s = "a new string";
+  consume(c); // warn: Inner pointer of container used after re/deallocation
+}
+```
+
+**Limitations**
+
+The checker trusts the annotation, so any incorrect annotation can cause false
+positives.
+
+A dangling pointer that is stored in a compound value is never reported
+regardless of how the value is used. This includes struct fields and arrays of
+pointers.
+
+Only objects whose memory region is on the stack are tracked. A returned value
+that is bound to heap-allocated memory is not reported.
+
 (alpha-core-storetoimmutable)=
 
 #### alpha.core.StoreToImmutable (C, C++)

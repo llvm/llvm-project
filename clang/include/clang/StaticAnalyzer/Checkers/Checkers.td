@@ -298,7 +298,7 @@ def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
   Dependencies<[LifetimeModeling]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
   HelpText<"Check for dereferences of a dangling pointer">,
