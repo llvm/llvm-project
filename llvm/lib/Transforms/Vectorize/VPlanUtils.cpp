@@ -376,16 +376,26 @@ vputils::getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
   TypeSize AllocSz = DL.getTypeAllocSize(AccessTy);
   if (AllocSz.isScalable())
     return std::nullopt;
-  // TODO: ScalarEvolution doesn't have SRem/SDiv expressions yet, so we
-  // resort to matching APInt.
-  const APInt *StepC;
-  if (!match(Step, m_scev_APInt(StepC)) ||
-      StepC->sext(StrideTy->getIntegerBitWidth()).srem(AllocSz) != 0)
+  const SCEV *StepExpr = SE.getNoopOrSignExtend(Step, StrideTy);
+  // TODO: Could extend to add a known-multiple-of predicate, once we have SRem
+  // expressions.
+  if (!SE.isKnownMultipleOf(StepExpr, AllocSz))
     return std::nullopt;
-  return std::make_tuple(
-      Base,
-      SE.getConstant(StepC->sext(StrideTy->getIntegerBitWidth()).sdiv(AllocSz)),
-      NWFlags);
+  // TODO: ScalarEvolution doesn't have SDiv expressions yet, so we resort to
+  // isKnownNonNegative/isKnownNegative, knowing that AllocSz is an unsigned
+  // quantity.
+  const SCEV *AllocSzExpr = SE.getConstant(StrideTy, AllocSz);
+  if (SE.isKnownNonNegative(StepExpr))
+    return std::make_tuple(Base, SE.getUDivExactExpr(StepExpr, AllocSzExpr),
+                           NWFlags);
+  if (SE.isKnownNegative(StepExpr))
+    // SDiv(Negative(StepExpr), NonNegative(AllocSzExpr)) =
+    // -UDiv(-StepExpr, NonNegative(AllocSzExpr)).
+    return std::make_tuple(Base,
+                           SE.getNegativeSCEV(SE.getUDivExactExpr(
+                               SE.getNegativeSCEV(StepExpr), AllocSzExpr)),
+                           NWFlags);
+  return std::nullopt;
 }
 
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
