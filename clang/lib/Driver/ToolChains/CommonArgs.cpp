@@ -1499,6 +1499,11 @@ bool tools::addLLVMOffloadingRuntime(const Compilation &C,
                     options::OPT_fno_offload_via_llvm, false))
     return false;
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fgpu_default_stream_EQ);
+      A && StringRef(A->getValue()) == "per-thread")
+    CmdArgs.push_back(Args.MakeArgString(
+        TC.GetFilePath("LLVMOffloadKernelPerThreadDefaultStream.o")));
+
   CmdArgs.push_back("-lLLVMOffloadKernel");
   return true;
 }
