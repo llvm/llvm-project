@@ -5779,7 +5779,7 @@ Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
         const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
         if (hostSubp && hostSubp->isInterface() &&
             hostUlt.attrs().test(Attr::MODULE)) {
-              context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
+          context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
               context().languageFeatures(), common::UsageWarning::Portability,
               name.source,
               "Subprogram '%s' in this submodule is missing the MODULE prefix "
