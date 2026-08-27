@@ -1326,18 +1326,12 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (OptForSize)
     UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
-  if (UCE.NumInlineCandidates != 0) {
-    LLVM_DEBUG(dbgs().indent(1)
-               << "Not unrolling loop with inlinable calls.\n");
-    if (TM & TM_ForcedByUser) {
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE,
-                                        "InlineCandidatesPreventUnroll",
-                                        L->getStartLoc(), L->getHeader())
-               << "unable to unroll loop: contains inlinable calls";
-      });
+  if (!(TM & TM_ForcedByUser)) {
+    if (UCE.NumInlineCandidates != 0) {
+      LLVM_DEBUG(dbgs().indent(1)
+                 << "Not unrolling loop with inlinable calls.\n");
+      return LoopUnrollResult::Unmodified;
     }
-    return LoopUnrollResult::Unmodified;
   }
 
   // Find the smallest exact trip count for any exit. This is an upper bound
