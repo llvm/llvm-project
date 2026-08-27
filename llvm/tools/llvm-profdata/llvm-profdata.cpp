@@ -54,9 +54,7 @@
 #include <sanitizer/lsan_interface.h>
 static int SkipLeakCheck;
 LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
-static void skipLeakCheck() {
-  SkipLeakCheck = 1;
-}
+static void skipLeakCheck() { SkipLeakCheck = 1; }
 #else
 static void skipLeakCheck() {}
 #endif
