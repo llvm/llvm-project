@@ -106,16 +106,15 @@ inline BinaryOperator::Opcode asOpcode(Comparison C) {
   llvm_unreachable("unhandled Comparison kind");
 }
 
-// Evaluate the comparison \p Value < \p Threshold with the help of the custom
-// simplification algorithm. Return a pair of states, where the first one
-// corresponds to "value below threshold" and the second corresponds to "value
-// at or above threshold". Returns {nullptr, nullptr} in the case when the
-// evaluation fails.
-// If the optional argument \p CmpKind is specified, then that comparison
-// operator is used (instead of the default '<') after the same simplification
+// Evaluates the comparison \p Value \p CmpKind \p Threshold; and splits the
+// state, returning a pair {ComparisonTrueState, ComparisonFalseState}.
+// May return {nullptr, nullptr} when `evalBinOp` fails.
+// This uses a custom simplification algorithm that approximates a mathematical
+// comparison between the two numbers; ignoring overflow and heuristically
+// avoiding the automatic conversions done by the underlying `evalBinOp`.
 std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB, NonLoc Value,
-                        NonLoc Threshold, Comparison CmpKind = Comparison::LT);
+                        NonLoc Threshold, Comparison CmpKind);
 } // namespace clang::ento::bounds
 
 #endif // LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H
