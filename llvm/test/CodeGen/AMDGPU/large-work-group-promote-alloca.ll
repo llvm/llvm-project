@@ -216,7 +216,7 @@ entry:
 ; SI-LABEL: @occupancy_9(
 ; CI-LABEL: @occupancy_9(
 ; SI: alloca
-; CI-NOT: alloca
+; CI: alloca [28 x i8]
 define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
 entry:
   %stack = alloca [28 x i8], align 4, addrspace(5)
