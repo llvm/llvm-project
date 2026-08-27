@@ -234,7 +234,7 @@ func.func @returncomplex8() -> complex<f64> {
 // PPC64-LABEL: func private @paramcomplex4(f32, f32)
 // PPC-LABEL: func private @paramcomplex4(f32, f32)
 // LOONGARCH64-LABEL: func private @paramcomplex4(f32, f32)
-// SYSTEMZ-LABEL: func private @paramcomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>})
+// SYSTEMZ-LABEL: func private @paramcomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func private @paramcomplex4(complex<f32>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<4>.
@@ -369,7 +369,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[TMP:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f32>>
   // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // SYSTEMZ: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}) -> ()
+  // SYSTEMZ: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
   fir.call @paramcomplex4(%1) : (complex<f32>) -> ()
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 {pass_arg_pos = 0 : i32}
@@ -518,7 +518,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
 // PPC64-LABEL: func private @paramcomplex8(f64, f64)
 // PPC-LABEL: func private @paramcomplex8(f64, f64)
 // LOONGARCH64-LABEL: func private @paramcomplex8(f64, f64)
-// SYSTEMZ-LABEL: func private @paramcomplex8(!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.byval = tuple<f64, f64>})
+// SYSTEMZ-LABEL: func private @paramcomplex8(!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32})
 func.func private @paramcomplex8(complex<f64>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<8>.
@@ -646,7 +646,7 @@ func.func @callcomplex8() {
   // SYSTEMZ: [[TMP:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
   // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f64>>
   // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
-  // SYSTEMZ: fir.call @paramcomplex8([[T]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.byval = tuple<f64, f64>}) -> ()
+  // SYSTEMZ: fir.call @paramcomplex8([[T]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32}) -> ()
   
   fir.call @paramcomplex8(%1) : (complex<f64>) -> ()
   return
@@ -664,7 +664,7 @@ func.func @callcomplex8() {
 // PPC64-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // PPC-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // LOONGARCH64-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
-// SYSTEMZ-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>})
+// SYSTEMZ-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, complex<f32>) -> ()
 
 // I32-LABEL: func @multipleparamscomplex4
@@ -690,7 +690,7 @@ func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, comp
 // LOONGARCH64-LABEL: func @multipleparamscomplex4
 // LOONGARCH64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32, [[A3:%[0-9A-Za-z]+]]: f32, [[B3:%[0-9A-Za-z]+]]: f32)
 // SYSTEMZ-LABEL: func @multipleparamscomplex4
-// SYSTEMZ-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>})
+// SYSTEMZ-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : complex<f32>) {
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -942,7 +942,7 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
   // SYSTEMZ-DAG: [[Z3_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // SYSTEMZ-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
   // SYSTEMZ-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // SYSTEMZ: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.byval = tuple<f32, f32>}) -> ()
+  // SYSTEMZ: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
   fir.call @calleemultipleparamscomplex4(%z1, %z2, %z3) : (complex<f32>, complex<f32>, complex<f32>) -> ()
   return
 }

@@ -1939,7 +1939,9 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
     marshal.emplace_back(
         fir::ReferenceType::get(mlir::TupleType::get(
             eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
-        AT{/*align=*/align, /*byval=*/!isResult, /*sret=*/isResult});
+        AT{/*align=*/align, /*byval=*/false, /*sret=*/isResult,
+           /*append=*/false, /*intExt=*/AT::IntegerExtension::None,
+           /*indirect=*/!isResult});
     return marshal;
   }
 

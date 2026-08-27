@@ -136,19 +136,19 @@ func.func @addrof() {
 // SYSTEMZ-LABEL: func.func @returncomplex16(
 // SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}) {
 
-// SYSTEMZ: func.func private @paramcomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>})
+// SYSTEMZ: func.func private @paramcomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32})
 
 // SYSTEMZ-LABEL: func.func @callcomplex16() {
 // SYSTEMZ:         fir.call @returncomplex16(%{{.*}}) : (!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}) -> ()
-// SYSTEMZ:         fir.call @paramcomplex16(%{{.*}}) : (!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}) -> ()
+// SYSTEMZ:         fir.call @paramcomplex16(%{{.*}}) : (!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) -> ()
 
-// SYSTEMZ: func.func private @calleemultipleparamscomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>})
+// SYSTEMZ: func.func private @calleemultipleparamscomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32})
 
 // SYSTEMZ-LABEL: func.func @multipleparamscomplex16(
-// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}) {
+// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) {
 
 // SYSTEMZ-LABEL: func.func private @mlircomplexf128(
-// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.byval = tuple<f128, f128>}) {
+// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) {
 
 // SYSTEMZ-LABEL: func.func @addrof() {
 // SYSTEMZ:         fir.address_of(@returncomplex16) : (!fir.ref<tuple<f128, f128>>) -> ()
