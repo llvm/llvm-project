@@ -204,6 +204,14 @@ bool ProcessProperties::GetDisableMemoryCache() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+#ifndef NDEBUG
+bool ProcessProperties::GetVerifyMemoryReads() const {
+  const uint32_t idx = ePropertyVerifyMemoryReads;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+#endif
+
 uint64_t ProcessProperties::GetMemoryCacheLineSize() const {
   const uint32_t idx = ePropertyMemCacheLineSize;
   return GetPropertyAtIndexAs<uint64_t>(
@@ -2031,9 +2039,40 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   return error;
 }
 
-// Uncomment to verify memory caching works after making changes to caching
-// code
-//#define VERIFY_MEMORY_READS
+#ifndef NDEBUG
+void Process::VerifyMemoryRead(addr_t addr, const void *cache_buf,
+                               size_t cache_bytes_read, size_t size,
+                               const Status &cache_error) {
+  // A failed cache read stopped early, so only the bytes it did return and
+  // the contents can be compared.
+  const bool truncated = cache_error.Fail();
+
+  std::vector<uint8_t> verify_buf(size, 0);
+  Status verify_error;
+  const size_t verify_bytes_read = ReadMemoryFromInferior(
+      addr, verify_buf.data(), verify_buf.size(), verify_error);
+  const size_t comparable = std::min(cache_bytes_read, verify_bytes_read);
+
+  const char *mismatch = nullptr;
+  if (!truncated && cache_bytes_read != verify_bytes_read)
+    mismatch = "byte count";
+  else if (memcmp(cache_buf, verify_buf.data(), comparable) != 0)
+    mismatch = "contents";
+  else if (!truncated && cache_error.Success() != verify_error.Success())
+    mismatch = "status";
+  if (!mismatch)
+    return;
+
+  // Log before the assert, which cannot carry the two results.
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "memory cache verification failed on {0}: read of {1} bytes at "
+           "{2:x} returned {3} bytes ({4}) from the cache and {5} bytes ({6}) "
+           "from the process",
+           mismatch, size, addr, cache_bytes_read, cache_error,
+           verify_bytes_read, verify_error);
+  assert(false && "memory cache returned something the process did not");
+}
+#endif
 
 size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
                            size_t size, Status &error) {
@@ -2042,43 +2081,15 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     addr = abi_sp->FixAnyAddress(addr);
 
   error.Clear();
-  if (!GetDisableMemoryCache()) {
-#if defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, with debug verification
-
-    if (buf && size) {
-      // Uncomment the line below to make sure memory caching is working.
-      // I ran this through the test suite and got no assertions, so I am
-      // pretty confident this is working well. If any changes are made to
-      // memory caching, uncomment the line below and test your changes!
-
-      // Verify all memory reads by using the cache first, then redundantly
-      // reading the same memory from the inferior and comparing to make sure
-      // everything is exactly the same.
-      std::string verify_buf(size, '\0');
-      assert(verify_buf.size() == size);
-      const size_t cache_bytes_read =
-          m_memory_cache.Read(this, addr, buf, size, error);
-      Status verify_error;
-      const size_t verify_bytes_read =
-          ReadMemoryFromInferior(addr, const_cast<char *>(verify_buf.data()),
-                                 verify_buf.size(), verify_error);
-      assert(cache_bytes_read == verify_bytes_read);
-      assert(memcmp(buf, verify_buf.data(), verify_buf.size()) == 0);
-      assert(verify_error.Success() == error.Success());
-      return cache_bytes_read;
-    }
-    return 0;
-#else  // !defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, without debug verification
-
-    return m_memory_cache.Read(addr, buf, size, error);
-#endif // defined (VERIFY_MEMORY_READS)
-  } else {
-    // Memory caching is disabled
-
+  if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
-  }
+
+  const size_t bytes_read = m_memory_cache.Read(addr, buf, size, error);
+#ifndef NDEBUG
+  if (buf && size && GetVerifyMemoryReads())
+    VerifyMemoryRead(addr, buf, bytes_read, size, error);
+#endif
+  return bytes_read;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -2089,9 +2100,23 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   for (const Range<lldb::addr_t, size_t> &range : ranges)
     fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
                               range.GetByteSize());
-  if (!GetDisableMemoryCache())
-    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
-  return DoReadMemoryRanges(fixed_ranges, buffer);
+  if (GetDisableMemoryCache())
+    return DoReadMemoryRanges(fixed_ranges, buffer);
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results =
+      m_memory_cache.ReadRanges(fixed_ranges, buffer);
+#ifndef NDEBUG
+  if (GetVerifyMemoryReads()) {
+    for (auto [range, result] : llvm::zip(fixed_ranges, results)) {
+      if (!result.empty()) {
+        Status error;
+        VerifyMemoryRead(range.GetRangeBase(), result.data(), result.size(),
+                         range.GetByteSize(), error);
+      }
+    }
+  }
+#endif
+  return results;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
