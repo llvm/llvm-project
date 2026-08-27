@@ -33,6 +33,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -2133,6 +2134,131 @@ llvm::LogicalResult fir::ConvertOp::verify() {
     return mlir::success();
   return emitOpError("invalid type conversion")
          << getValue().getType() << " / " << getType();
+}
+
+/// Pointee of a reference to a simple scalar, or null. Both fir.ref and rank-0
+/// memref qualify, since the storage of a scalar is cast between those forms.
+static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
+  mlir::Type eleTy;
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(type)) {
+    eleTy = refTy.getEleTy();
+  } else if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(type)) {
+    // A rank, layout or memory space lets the cast reinterpret the storage.
+    if (memrefTy.getRank() != 0 || !memrefTy.getLayout().isIdentity() ||
+        memrefTy.getMemorySpace())
+      return {};
+    eleTy = memrefTy.getElementType();
+  } else {
+    return {};
+  }
+  if (!mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
+                 fir::LogicalType>(eleTy))
+    return {};
+  return eleTy;
+}
+
+/// The value a cast or declare aliases, or null if `value` is not one of those.
+static mlir::Value getAliasedSlotPointer(mlir::Value value) {
+  mlir::Operation *def = value.getDefiningOp();
+  if (auto convert = mlir::dyn_cast_or_null<fir::ConvertOp>(def))
+    return convert.getValue();
+  if (auto declare = mlir::dyn_cast_or_null<fir::DeclareOp>(def))
+    return declare.getMemref();
+  return {};
+}
+
+/// Checks whether every read of the slot reached through `pointer` has a write
+/// to it earlier in the same block. Otherwise promotion replaces the read with
+/// the allocation's default value, which is fir.undefined for fir.alloca but
+/// poison for a memref allocation, so promoting through a cast would change
+/// what reading an uninitialized variable does.
+static bool everyReadFollowsAWrite(mlir::Value pointer, mlir::Type pointee) {
+  // Start at the root of the chain, to see writes through a sibling alias.
+  while (mlir::Value aliased = getAliasedSlotPointer(pointer)) {
+    if (getScalarSlotPointeeType(aliased.getType()) != pointee)
+      break;
+    pointer = aliased;
+  }
+
+  llvm::SmallVector<mlir::Operation *> reads;
+  llvm::DenseMap<mlir::Block *, mlir::Operation *> firstWrite;
+  llvm::SmallVector<mlir::Value> worklist{pointer};
+  llvm::SmallPtrSet<mlir::Value, 8> visited{pointer};
+  while (!worklist.empty()) {
+    for (mlir::OpOperand &use : worklist.pop_back_val().getUses()) {
+      mlir::Operation *user = use.getOwner();
+      if (mlir::isa<fir::ConvertOp, fir::DeclareOp>(user)) {
+        mlir::Value alias = user->getResult(0);
+        // A different pointee is another slot, which blocks promotion itself.
+        if (getScalarSlotPointeeType(alias.getType()) == pointee &&
+            visited.insert(alias).second)
+          worklist.push_back(alias);
+        continue;
+      }
+      // A user that is not a promotable access blocks promotion itself.
+      if (auto memOp = mlir::dyn_cast<mlir::PromotableMemOpInterface>(user)) {
+        mlir::MemorySlot slot{use.get(), pointee};
+        if (memOp.storesTo(slot)) {
+          mlir::Operation *&earliest = firstWrite[user->getBlock()];
+          if (!earliest || user->isBeforeInBlock(earliest))
+            earliest = user;
+        } else if (memOp.loadsFrom(slot)) {
+          reads.push_back(user);
+        }
+      }
+    }
+  }
+
+  return llvm::all_of(reads, [&firstWrite](mlir::Operation *read) {
+    auto write = firstWrite.find(read->getBlock());
+    return write != firstWrite.end() && write->second->isBeforeInBlock(read);
+  });
+}
+
+/// The pointee a cast carries through unchanged, or null if the cast is not a
+/// transparent alias of the slot.
+static mlir::Type getPointeePreservedByCast(fir::ConvertOp op) {
+  mlir::Type fromTy = op.getValue().getType();
+  mlir::Type toTy = op.getType();
+  // Volatility may be added or dropped, and such accesses must be kept.
+  if (fir::isa_volatile_type(fromTy) || fir::isa_volatile_type(toTy))
+    return {};
+  // A scalar slot on both sides also excludes fir.llvm_ptr and llvm.ptr, which
+  // carry an address space.
+  mlir::Type from = getScalarSlotPointeeType(fromTy);
+  mlir::Type to = getScalarSlotPointeeType(toTy);
+  if (!from || from != to)
+    return {};
+  // A read that no write reaches must keep its access.
+  if (!everyReadFollowsAWrite(op.getValue(), to))
+    return {};
+  return to;
+}
+
+void fir::ConvertOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // The result aliases the slot exactly, so value projections are unchanged.
+  if (mlir::Type pointee = getPointeePreservedByCast(*this))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
+bool fir::ConvertOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (!getPointeePreservedByCast(*this))
+    return false;
+  for (mlir::OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+mlir::DeletionKind fir::ConvertOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
 }
 
 mlir::Speculation::Speculatability fir::ConvertOp::getSpeculatability() {
@@ -6038,23 +6164,39 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
 }
 
+/// Return the pointee of the storage a fir.declare denotes, or null if that
+/// storage must not be promoted.
+static mlir::Type getPromotablePointeeOfDeclare(fir::DeclareOp op) {
+  // Accesses through a volatile reference have to be preserved.
+  if (fir::isa_volatile_type(op.getType()))
+    return {};
+  mlir::Type pointee = fir::unwrapRefType(op.getType());
+  if (!isLegalTypeForValueDeclare(pointee))
+    return {};
+  // Values are not converted between the slot and its alias, so the pointee has
+  // to be the same on both sides.
+  if (fir::unwrapRefType(op.getMemref().getType()) != pointee)
+    return {};
+  return pointee;
+}
+
+void fir::DeclareOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // fir.declare only attaches source information; the storage is the same.
+  if (mlir::Type pointee = getPromotablePointeeOfDeclare(*this))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
 bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
     mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
     const mlir::DataLayout &dataLayout) {
-  if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
+  if (!getPromotablePointeeOfDeclare(*this))
     return false;
-  // MLIR's mem2reg computes defining blocks only from direct users of
-  // the slot pointer. Stores through fir.declare are not direct users,
-  // so they are not registered as defining blocks. This causes missing
-  // phi nodes at join points (e.g., loop headers). Restrict promotion
-  // to the single-block case where no phi nodes are needed.
-  mlir::Block *declBlock = getOperation()->getBlock();
-  for (mlir::OpOperand &use : getResult().getUses()) {
-    if (use.getOwner()->getBlock() != declBlock)
-      return false;
+  for (mlir::OpOperand &use : getResult().getUses())
     newBlockingUses.push_back(&use);
-  }
   return true;
 }
 
