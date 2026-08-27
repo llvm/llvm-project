@@ -270,4 +270,3 @@ defvar X86_32 = DefaultMode;
 def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
 def X86_64_X32 : HwMode<[IsX32Mode]>;
 def HasADX : Predicate<"Subtarget->hasADX()">;
-
