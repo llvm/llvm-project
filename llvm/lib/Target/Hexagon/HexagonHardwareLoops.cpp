@@ -272,6 +272,14 @@ namespace {
     /// value, either directly, or via a register.
     void setImmediate(MachineOperand &MO, int64_t Val);
 
+    /// If DI is a post-increment instruction whose base register is defined
+    /// by Phi and whose incremented address is PhiOpReg (the register feeding
+    /// Phi from the latch), extract the induction register and immediate bump
+    /// into IndReg and IVBump and return true.  Returns false otherwise.
+    bool tryExtractPostIncInduction(MachineInstr *DI, MachineInstr *Phi,
+                                    Register PhiOpReg, Register &IndReg,
+                                    int64_t &IVBump) const;
+
     /// Fix the data flow of the induction variable.
     /// The desired flow is: phi ---> bump -+-> comparison-in-latch.
     ///                                     |
@@ -399,6 +407,35 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool HexagonHardwareLoops::tryExtractPostIncInduction(MachineInstr *DI,
+                                                      MachineInstr *Phi,
+                                                      Register PhiOpReg,
+                                                      Register &IndReg,
+                                                      int64_t &IVBump) const {
+  if (!TII->isPostIncWithImmOffset(*DI))
+    return false;
+
+  unsigned BasePos, OffsetPos;
+  if (!TII->getBaseAndOffsetPosition(*DI, BasePos, OffsetPos))
+    return false;
+
+  if (BasePos >= DI->getNumOperands() || OffsetPos >= DI->getNumOperands())
+    return false;
+
+  // A post-increment load also defines the loaded value, which is unrelated
+  // to the base.  Only the incremented address, tied to the base operand, is
+  // "base + offset", so require that it is what feeds the PHI.
+  const MachineOperand &BaseOp = DI->getOperand(BasePos);
+  if (!BaseOp.isReg() || !BaseOp.isTied())
+    return false;
+  if (DI->getOperand(DI->findTiedOperandIdx(BasePos)).getReg() != PhiOpReg)
+    return false;
+
+  IndReg = BaseOp.getReg();
+  IVBump = DI->getOperand(OffsetPos).getImm();
+  return MRI->getVRegDef(IndReg) == Phi;
+}
+
 bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
                                                  Register &Reg,
                                                  int64_t &IVBump,
@@ -449,6 +486,11 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
           Register UpdReg = DI->getOperand(0).getReg();
           IndMap.insert(std::make_pair(UpdReg, std::make_pair(IndReg, V)));
         }
+      } else {
+        Register IndReg;
+        int64_t V;
+        if (tryExtractPostIncInduction(DI, Phi, PhiOpReg, IndReg, V))
+          IndMap.insert(std::make_pair(PhiOpReg, std::make_pair(IndReg, V)));
       }
     }  // for (i)
   }  // for (instr)
@@ -1713,6 +1755,11 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
           Register UpdReg = DI->getOperand(0).getReg();
           IndRegs.insert(std::make_pair(UpdReg, std::make_pair(IndReg, V)));
         }
+      } else {
+        Register IndReg;
+        int64_t V;
+        if (tryExtractPostIncInduction(DI, Phi, PhiReg, IndReg, V))
+          IndRegs.insert(std::make_pair(PhiReg, std::make_pair(IndReg, V)));
       }
     }  // for (i)
   }  // for (instr)
