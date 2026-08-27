@@ -178,16 +178,16 @@ public:
 
     SmallVector<xegpu::LoadNdOp> loadOps;
     for (Operation *descriptorUser : op.getResult().getUsers()) {
-      auto loadOp = dyn_cast<xegpu::LoadNdOp>(descriptorUser);
-      if (!loadOp) {
-        if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(descriptorUser)) {
-          if (auto layout = prefetchOp.getAnchorLayout();
-              layout && !layout.isDistributable(newShape))
-            return failure();
-          continue;
-        }
-        return failure();
+      if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(descriptorUser)) {
+        if (auto layout = prefetchOp.getAnchorLayout();
+            layout && !layout.isDistributable(newShape))
+          return failure();
+        continue;
       }
+
+      auto loadOp = dyn_cast<xegpu::LoadNdOp>(descriptorUser);
+      if (!loadOp)
+        return failure();
 
       if (auto layout = loadOp.getAnchorLayout();
           layout && !layout.isDistributable(newShape))

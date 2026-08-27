@@ -314,12 +314,12 @@ func.func @test_unsupported_descriptor_user(%arg0: memref<4096x4096xf16>) {
 
 // -----
 
-#layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>
+#layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>
 
 gpu.module @test {
 // CHECK-LABEL: func.func @test_incompatible_descriptor_layout
 // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc
-// CHECK-SAME: -> !xegpu.tensor_desc<32x64xf16, #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>>
+// CHECK-SAME: -> !xegpu.tensor_desc<32x64xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>>
 // CHECK-NOT: array_length
 func.func @test_incompatible_descriptor_layout(
     %arg0: memref<4096x4096xf16>) -> vector<16x16xf16> {
@@ -337,7 +337,7 @@ func.func @test_incompatible_descriptor_layout(
 
 // -----
 
-#layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>
+#layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>
 
 gpu.module @test {
 // CHECK-LABEL: func.func @test_incompatible_load_layout
@@ -345,7 +345,7 @@ gpu.module @test {
 // CHECK-SAME: -> !xegpu.tensor_desc<32x64xf16>
 // CHECK-NOT: array_length
 // CHECK: xegpu.load_nd %[[TDESC]]
-// CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>}>
+// CHECK-SAME: <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
 func.func @test_incompatible_load_layout(%arg0: memref<4096x4096xf16>)
     -> vector<16x16xf16> {
   %c0 = arith.constant 0 : index
@@ -362,7 +362,7 @@ func.func @test_incompatible_load_layout(%arg0: memref<4096x4096xf16>)
 
 // -----
 
-#layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>
+#layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>
 
 gpu.module @test {
 // CHECK-LABEL: func.func @test_incompatible_prefetch_layout
@@ -370,7 +370,7 @@ gpu.module @test {
 // CHECK-SAME: -> !xegpu.tensor_desc<32x64xf16>
 // CHECK-NOT: array_length
 // CHECK: xegpu.prefetch_nd %[[TDESC]]
-// CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [32, 32]>}>
+// CHECK-SAME: <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
 func.func @test_incompatible_prefetch_layout(%arg0: memref<4096x4096xf16>) {
   %c0 = arith.constant 0 : index
   %tdesc = xegpu.create_nd_tdesc %arg0
@@ -383,16 +383,16 @@ func.func @test_incompatible_prefetch_layout(%arg0: memref<4096x4096xf16>) {
 
 // -----
 
-#layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [32, 16]>
+#layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
 
 gpu.module @test {
 // CHECK-LABEL: func.func @test_compatible_layouts
 // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc
-// CHECK-SAME: -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 4 : i64>, #xegpu.layout<sg_layout = [1, 1], sg_data = [32, 16]>>
+// CHECK-SAME: -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 4 : i64>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.prefetch_nd %[[TDESC]]
-// CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [32, 16]>}>
+// CHECK-SAME: <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]]
-// CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [32, 16]>}>
+// CHECK-SAME: <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
 // CHECK-SAME: -> vector<128x16xf16>
 // CHECK: vector.extract_strided_slice %[[LOAD]]
 // CHECK-SAME: offsets = [96, 0], sizes = [16, 16], strides = [1, 1]
