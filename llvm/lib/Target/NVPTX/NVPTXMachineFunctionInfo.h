@@ -16,13 +16,20 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <map>
 
 namespace llvm {
+class CallBase;
+
 class NVPTXMachineFunctionInfo : public MachineFunctionInfo {
 private:
   /// Stores a mapping from index to symbol name for image handles that are
   /// replaced with image references
   SmallVector<std::string, 8> ImageHandleList;
+
+  /// Stores a mapping from a unique call-site id to the call instruction that
+  /// needs an indirect-call prototype emitted.
+  std::map<unsigned, const CallBase *> CallPrototypes;
 
 public:
   NVPTXMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
@@ -51,6 +58,14 @@ public:
   /// replaced with a reference
   bool checkImageHandleSymbol(StringRef Symbol) const {
     return llvm::is_contained(ImageHandleList, Symbol);
+  }
+
+  void addCallPrototype(unsigned Id, const CallBase *CB) {
+    CallPrototypes.try_emplace(Id, CB);
+  }
+
+  const std::map<unsigned, const CallBase *> &getCallPrototypes() const {
+    return CallPrototypes;
   }
 };
 }

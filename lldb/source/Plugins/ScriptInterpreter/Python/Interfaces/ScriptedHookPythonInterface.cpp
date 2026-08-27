@@ -99,7 +99,8 @@ void ScriptedHookPythonInterface::Initialize() {
       GetPluginNameStatic(),
       llvm::StringRef("Perform actions on target lifecycle events (module "
                       "load/unload, process stop)."),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedHook, eScriptLanguagePython,
+      {ci_usages, api_usages});
 }
 
 void ScriptedHookPythonInterface::Terminate() {

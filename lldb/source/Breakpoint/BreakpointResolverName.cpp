@@ -405,12 +405,12 @@ void BreakpointResolverName::GetDescription(Stream *s) {
       s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
       size_t num_names = unique_lookups.size();
-      s->Printf("names = {");
+      s->PutCString("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
                   unique_lookups[i].GetCString());
       }
-      s->Printf("}");
+      s->PutCString("}");
     }
   }
   if (m_language != eLanguageTypeUnknown) {

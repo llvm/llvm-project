@@ -91,7 +91,7 @@ Expected<std::unique_ptr<AnalysisResult>> deserializePointerFlowAnalysisResult(
   auto Ret = std::make_unique<PointerFlowAnalysisResult>();
 
   Ret->Edges = std::move(Edges);
-  return Ret;
+  return std::move(Ret);
 }
 
 JSONFormat::AnalysisResultRegistry::Add<PointerFlowAnalysisResult>

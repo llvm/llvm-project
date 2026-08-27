@@ -95,8 +95,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
@@ -1308,12 +1307,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -2381,9 +2382,11 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
-  // This should already diagnosed in phase 4, just skip unil semicolon.
-  if (!Tok.isOneOf(tok::semi, tok::l_square))
+  if (Tok.isNoneOf(tok::semi, tok::l_square, tok::eof)) {
+    Diag(Tok, diag::err_unexpected_tok_after_module_name)
+        << PP.getSpelling(Tok);
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+  }
 
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
@@ -2506,6 +2509,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
+  // FIXME: If the previous token is tok::header_name like the following:
+  //
+  //  import <%%>
+  //
+  // The diagnostic location is incorrect.
+  //
+  //  <source file>:1:10: error: import directive must end with a ';'
+  //   1 | import <%%>
+  //     |          ^
+  //     |          ;
   bool LexedSemi = false;
   if (getLangOpts().CPlusPlusModules)
     LexedSemi =

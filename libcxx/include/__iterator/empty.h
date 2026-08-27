@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Cont>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto
@@ -37,8 +37,8 @@ template <class _Ep>
   return __il.size() == 0;
 }
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ITERATOR_EMPTY_H

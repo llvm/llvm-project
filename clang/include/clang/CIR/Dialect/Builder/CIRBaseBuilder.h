@@ -11,6 +11,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -67,6 +68,12 @@ public:
   CIRBaseBuilderTy(mlir::MLIRContext &mlirContext)
       : mlir::OpBuilder(&mlirContext) {}
   CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
+
+  bool isFPConstrained = false;
+  clang::LangOptions::FPExceptionModeKind defaultConstrainedExcept =
+      clang::LangOptions::FPE_Ignore;
+  llvm::RoundingMode defaultConstrainedRounding =
+      llvm::RoundingMode::NearestTiesToEven;
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
@@ -203,6 +210,96 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() const { return isFPConstrained; }
+
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(
+      clang::LangOptions::FPExceptionModeKind newExcept) {
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  clang::LangOptions::FPExceptionModeKind getDefaultConstrainedExcept() const {
+    return defaultConstrainedExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() const {
+    return defaultConstrainedRounding;
+  }
+
+  /// Build the `#cir.fenv` attribute describing the constrained floating-point
+  /// environment currently in effect. This is attached to floating-point
+  /// operations that support it to capture the rounding and exception
+  /// behavior. Returns a null attribute when constrained floating-point is not
+  /// enabled, in which case no attribute should be attached.
+  cir::FenvAttr getConstrainedFPAttr() {
+    if (!isFPConstrained)
+      return {};
+
+    cir::FPDynamicRoundingMode roundingMode;
+    switch (defaultConstrainedRounding) {
+    case llvm::RoundingMode::NearestTiesToEven:
+      roundingMode = cir::FPDynamicRoundingMode::ToNearest;
+      break;
+    case llvm::RoundingMode::TowardNegative:
+      roundingMode = cir::FPDynamicRoundingMode::Downward;
+      break;
+    case llvm::RoundingMode::TowardPositive:
+      roundingMode = cir::FPDynamicRoundingMode::Upward;
+      break;
+    case llvm::RoundingMode::TowardZero:
+      roundingMode = cir::FPDynamicRoundingMode::UpwardZero;
+      break;
+    case llvm::RoundingMode::NearestTiesToAway:
+      roundingMode = cir::FPDynamicRoundingMode::ToNearestAway;
+      break;
+    case llvm::RoundingMode::Dynamic:
+      roundingMode = cir::FPDynamicRoundingMode::Unknown;
+      break;
+    default:
+      llvm_unreachable("unexpected constrained rounding mode");
+    }
+
+    cir::FPExceptionMode exceptMode;
+    bool strictExcept;
+    switch (defaultConstrainedExcept) {
+    case clang::LangOptions::FPE_Ignore:
+      exceptMode = cir::FPExceptionMode::Masked;
+      strictExcept = false;
+      break;
+    case clang::LangOptions::FPE_MayTrap:
+      exceptMode = cir::FPExceptionMode::Unknown;
+      strictExcept = false;
+      break;
+    case clang::LangOptions::FPE_Strict:
+      exceptMode = cir::FPExceptionMode::Unknown;
+      strictExcept = true;
+      break;
+    default:
+      llvm_unreachable("unexpected constrained exception mode");
+    }
+
+    return cir::FenvAttr::get(getContext(), roundingMode, exceptMode,
+                              mlir::BoolAttr::get(getContext(), strictExcept));
+  }
+
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
                                   mlir::Value imag) {
     auto resultComplexTy = cir::ComplexType::get(real.getType());
@@ -267,6 +364,18 @@ public:
     return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder);
   }
 
+  /// Create a while operation with a per-iteration cleanup region.
+  cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
+      cir::CleanupKind cleanupKind) {
+    return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder,
+                                cleanupBuilder, cleanupKind);
+  }
+
   /// Create a for operation.
   cir::ForOp createFor(
       mlir::Location loc,
@@ -275,6 +384,19 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder,
                               stepBuilder);
+  }
+
+  /// Create a for operation with a per-iteration cleanup region.
+  cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
+      cir::CleanupKind cleanupKind) {
+    return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder, stepBuilder,
+                              cleanupBuilder, cleanupKind);
   }
 
   /// Create a break operation.
@@ -377,8 +499,9 @@ public:
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false,
                          bool skipTailPadding = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
-                               skipTailPadding);
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src,
+                               /*dst_alignment=*/{}, /*src_alignment=*/{},
+                               isVolatile, skipTailPadding);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
@@ -718,45 +841,41 @@ public:
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FAddOp::create(*this, loc, lhs, rhs);
+    return cir::FAddOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FSubOp::create(*this, loc, lhs, rhs);
+    return cir::FSubOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FMulOp::create(*this, loc, lhs, rhs);
+    return cir::FMulOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FDivOp::create(*this, loc, lhs, rhs);
+    return cir::FDivOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FRemOp::create(*this, loc, lhs, rhs);
+    return cir::FRemOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
     assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
            "expected floating-point or vector-of-float type");
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
+    // fneg does not raise FP exceptions or depend on the rounding mode, so it
+    // never carries an fenv attribute.
     return cir::FNegOp::create(*this, loc, operand);
   }
 
@@ -770,7 +889,10 @@ public:
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
-    return cir::CmpOp::create(*this, loc, kind, lhs, rhs);
+    cir::FenvAttr fenv;
+    if (cir::isAnyFloatingPointType(lhs.getType()))
+      fenv = getConstrainedFPAttr();
+    return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
@@ -780,7 +902,11 @@ public:
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
     VectorType integralVecTy =
         cir::VectorType::get(integralTy, vecCast.getSize());
-    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
+    cir::FenvAttr fenv;
+    if (cir::isFPOrVectorOfFPType(lhs.getType()))
+      fenv = getConstrainedFPAttr();
+    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs,
+                                 fenv);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {

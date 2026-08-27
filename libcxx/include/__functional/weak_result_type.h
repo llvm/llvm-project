@@ -71,13 +71,18 @@ struct __maybe_derive_from_binary_function // bool is true
 template <class _Tp>
 struct __maybe_derive_from_binary_function<_Tp, false> {};
 
-template <class _Tp, bool = __has_result_type_v<_Tp> >
+template <class _Tp,
+          bool =
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+              __has_result_type_v<_Tp>
+#else
+              false
+#endif
+          >
 struct __weak_result_type_imp // bool is true
     : public __maybe_derive_from_unary_function<_Tp>,
       public __maybe_derive_from_binary_function<_Tp> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = typename _Tp::result_type;
-#endif
 };
 
 template <class _Tp>

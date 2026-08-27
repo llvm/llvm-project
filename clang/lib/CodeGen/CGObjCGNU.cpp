@@ -849,8 +849,8 @@ class CGObjCGNUstep : public CGObjCGNU {
         EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy);
         // void __cxa_end_catch(void)
         ExitCatchFn.init(&CGM, "__cxa_end_catch", VoidTy);
-        // void objc_exception_rethrow(void*)
-        ExceptionReThrowFn.init(&CGM, "__cxa_rethrow", PtrTy);
+        // void __cxa_rethrow(void)
+        ExceptionReThrowFn.init(&CGM, "__cxa_rethrow", VoidTy);
       } else if (usesSEHExceptions) {
         // void objc_exception_rethrow(void)
         ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy);
@@ -1885,8 +1885,9 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         ivarBuilder.add(MakeConstantString(TypeStr));
         // int *offset;
         uint64_t BaseOffset = ComputeIvarBaseOffset(CGM, OID, IVD);
-        uint64_t Offset = BaseOffset - superInstanceSize;
-        llvm::Constant *OffsetValue = llvm::ConstantInt::get(IntTy, Offset);
+        int64_t Offset = static_cast<int64_t>(BaseOffset) - superInstanceSize;
+        llvm::Constant *OffsetValue =
+            llvm::ConstantInt::getSigned(IntTy, Offset);
         std::string OffsetName = GetIVarOffsetVariableName(classDecl, IVD);
         llvm::GlobalVariable *OffsetVar = TheModule.getGlobalVariable(OffsetName);
         if (OffsetVar)
@@ -2373,12 +2374,13 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     MetaClassPtrAlias(nullptr), RuntimeVersion(runtimeABIVersion),
     ProtocolVersion(protocolClassVersion), ClassABIVersion(classABI) {
 
+  auto Triple = cgm.getContext().getTargetInfo().getTriple();
+
   msgSendMDKind = VMContext.getMDKindID("GNUObjCMessageSend");
-  usesSEHExceptions =
-      cgm.getContext().getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+  usesSEHExceptions = Triple.isWindowsMSVCEnvironment();
   usesCxxExceptions =
-      cgm.getContext().getTargetInfo().getTriple().isOSCygMing() &&
-      isRuntime(ObjCRuntime::GNUstep, 2);
+      (Triple.isOSCygMing() && isRuntime(ObjCRuntime::GNUstep, 2)) ||
+      Triple.isWasm();
 
   CodeGenTypes &Types = CGM.getTypes();
   IntTy = cast<llvm::IntegerType>(
@@ -2971,6 +2973,15 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     // If there's a consumed argument, we need a nil check.
     if (Method && Method->hasParamDestroyedInCallee()) {
       hasParamDestroyedInCallee = true;
+    }
+
+    // WebAssembly indirect calls require an exact function type match.
+    // Therfore, we cannot use libobjc2's nil-IMP stubs for WebAssembly
+    // and must always emit a null check and optionally zero the result.
+    if (CGM.getTriple().isWasm() && !isDirect) {
+      requiresExplicitZeroResult =
+          !Return.isUnused() && !ResultType->isVoidType();
+      return true;
     }
 
     // If the return value isn't flagged as unused, and the result
@@ -3804,11 +3815,11 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
             Context.getTypeSize(IVD->getType())));
       // Get the offset
       uint64_t BaseOffset = ComputeIvarBaseOffset(CGM, OID, IVD);
-      uint64_t Offset = BaseOffset;
+      int64_t Offset = static_cast<int64_t>(BaseOffset);
       if (CGM.getLangOpts().ObjCRuntime.isNonFragile()) {
-        Offset = BaseOffset - superInstanceSize;
+        Offset = static_cast<int64_t>(BaseOffset) - superInstanceSize;
       }
-      llvm::Constant *OffsetValue = llvm::ConstantInt::get(IntTy, Offset);
+      llvm::Constant *OffsetValue = llvm::ConstantInt::getSigned(IntTy, Offset);
       // Create the direct offset value
       std::string OffsetName = "__objc_ivar_offset_value_" + ClassName +"." +
           IVD->getNameAsString();
@@ -4155,8 +4166,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   if (!ClassAliases.empty()) {
     llvm::Type *ArgTypes[2] = {PtrTy, PtrToInt8Ty};
     llvm::FunctionType *RegisterAliasTy =
-      llvm::FunctionType::get(Builder.getVoidTy(),
-                              ArgTypes, false);
+        llvm::FunctionType::get(Builder.getVoidTy(), ArgTypes, false);
     llvm::Function *RegisterAlias = llvm::Function::Create(
       RegisterAliasTy,
       llvm::GlobalValue::ExternalWeakLinkage, "class_registerAlias_np",
@@ -4338,15 +4348,14 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     // that was passed into the `@catch` block, then this code path is not
     // reached and we will instead call `objc_exception_throw` with an explicit
     // argument.
-    llvm::CallBase *Throw = CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn);
-    Throw->setDoesNotReturn();
+    CGF.EmitNoreturnRuntimeCallOrInvoke(ExceptionReThrowFn, {});
   } else {
     ExceptionAsObject = CGF.Builder.CreateBitCast(ExceptionAsObject, IdTy);
     llvm::CallBase *Throw =
         CGF.EmitRuntimeCallOrInvoke(ExceptionThrowFn, ExceptionAsObject);
     Throw->setDoesNotReturn();
+    CGF.Builder.CreateUnreachable();
   }
-  CGF.Builder.CreateUnreachable();
   if (ClearInsertionPoint)
     CGF.Builder.ClearInsertionPoint();
 }

@@ -628,60 +628,6 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZVZIP-NEXT:    ret
-; ZIP-LABEL: interleave_v32i32:
-; ZIP:       # %bb.0:
-; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 4
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vmv8r.v v24, v8
-; ZIP-NEXT:    addi a0, sp, 16
-; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vslidedown.vi v8, v16, 16
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 3
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vslidedown.vi v8, v24, 16
-; ZIP-NEXT:    lui a0, 699051
-; ZIP-NEXT:    addi a0, a0, -1366
-; ZIP-NEXT:    vmv.s.x v0, a0
-; ZIP-NEXT:    li a0, 32
-; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 3
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v16, v24, v8, v0.t
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 4
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    addi a0, sp, 16
-; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
-; ZIP-NEXT:    vmv.v.v v8, v0
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
-; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
-; ZIP-NEXT:    ret
   %a = shufflevector <32 x i32> %x, <32 x i32> %y, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>
   ret <64 x i32> %a
 }

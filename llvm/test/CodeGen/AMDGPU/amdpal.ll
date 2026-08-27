@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgpu6.00--amdpal | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgpu8.02--amdpal | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
 
 ; PAL-NOT: .AMDGPU.config
 ; PAL-LABEL: {{^}}simple:

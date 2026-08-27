@@ -35,11 +35,11 @@ struct Outer : virtual VBase {
 
 // With virtual bases, only the C1 (complete) constructor is emitted.
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC1ERK10HasPaddingc(
-// CIR:         cir.copy %{{.+}} to %{{.+}} skip_tail_padding : !cir.ptr<!rec_HasPadding>
+// CIR:         cir.copy %{{.+}} align(4) to %{{.+}} align(8) skip_tail_padding : !cir.ptr<!rec_HasPadding>
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC1ERK10HasPaddingc(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 1
-// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 5, i1 false)
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[GEP]], ptr align 4 %{{.+}}, i64 5, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN5OuterC1ERK10HasPaddingc(
 // OGCG:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 1
@@ -58,11 +58,11 @@ struct NonOverlapping {
 };
 
 // CIR-LABEL: cir.func {{.*}} @_ZN14NonOverlappingC2ERK10HasPaddingc(
-// CIR:         cir.copy %{{.+}} to %{{.+}} : !cir.ptr<!rec_HasPadding>
+// CIR:         cir.copy %{{.+}} align(4) to %{{.+}} align(4) : !cir.ptr<!rec_HasPadding>
 
 // LLVM-LABEL: define {{.*}} void @_ZN14NonOverlappingC2ERK10HasPaddingc(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.NonOverlapping, ptr %{{.+}}, i32 0, i32 0
-// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 8, i1 false)
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[GEP]], ptr align 4 %{{.+}}, i64 8, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN14NonOverlappingC2ERK10HasPaddingc(
 // OGCG:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.NonOverlapping, ptr %{{.+}}, i32 0, i32 0

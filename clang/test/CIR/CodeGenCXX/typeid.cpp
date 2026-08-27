@@ -60,8 +60,6 @@ const std::type_info &a_ti = typeid(a);
 // LLVM: @_ZN5Test18A10_c_tiE ={{.*}} constant ptr @_ZTIA10_c, align 8
 const std::type_info &A10_c_ti = typeid(char const[10]);
 
-// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
-
 // CIR-LABEL: cir.func{{.*}} @_ZN5Test11fEPv
 // CIR-SAME:  personality(@__gxx_personality_v0)
 // LLVM-LABEL: define{{.*}} ptr @_ZN5Test11fEPv
@@ -100,5 +98,7 @@ const char *f(void *arg) {
 
   return 0;
 }
+
+// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
 
 }

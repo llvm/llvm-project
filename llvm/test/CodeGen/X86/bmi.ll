@@ -92,7 +92,6 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
 ; EGPR-LABEL: andn_cmp:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %notx = xor i32 %x, -1
@@ -119,7 +118,6 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp1:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %x, %y
@@ -144,7 +142,6 @@ define i1 @and_cmp2(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp2:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %y, %x
@@ -169,7 +166,6 @@ define i1 @and_cmp3(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp3:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %x, %y
@@ -194,7 +190,6 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 ; EGPR-LABEL: and_cmp4:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %y, %x
@@ -372,7 +367,6 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; EGPR-LABEL: andn_cmp_swap_ops:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnq %rsi, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xc0,0xf2,0xc6]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %notx = xor i64 %x, -1
@@ -428,7 +422,6 @@ define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) {
 ; EGPR-LABEL: andn_cmp_i32_overflow:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    andnl %edi, %esi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf2,0xc7]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    setle %al # encoding: [0x0f,0x9e,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %noty = xor i32 %y, -1
@@ -693,7 +686,6 @@ define i32 @blsi32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsi32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -724,7 +716,6 @@ define i32 @blsi32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsil %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xdf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovnel %edx, %eax # encoding: [0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -757,7 +748,6 @@ define i32 @blsi32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsil %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xdf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 0, %a
@@ -830,7 +820,6 @@ define i64 @blsi64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsi64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -872,7 +861,6 @@ define i64 @blsi64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsiq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xdf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovneq %rdx, %rax # encoding: [0x48,0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -915,7 +903,6 @@ define i64 @blsi64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsiq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xdf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 0, %a
@@ -986,7 +973,6 @@ define i32 @blsmsk32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsmsk32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1047,7 +1033,6 @@ define i32 @blsmsk32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsmskl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xd7]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1120,7 +1105,6 @@ define i64 @blsmsk64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsmsk64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsmskq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xd7]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1204,7 +1188,6 @@ define i64 @blsmsk64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsmskq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xd7]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1275,7 +1258,6 @@ define i32 @blsr32_z(i32 %a, i32 %b) nounwind {
 ; EGPR-LABEL: blsr32_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xcf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1306,7 +1288,6 @@ define i32 @blsr32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsrl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xcf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovnel %edx, %eax # encoding: [0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1337,7 +1318,6 @@ define i32 @blsr32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
 ; EGPR-NEXT:    blsrl %edi, %ecx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x70,0xf3,0xcf]
-; EGPR-NEXT:    testl %ecx, %ecx # encoding: [0x85,0xc9]
 ; EGPR-NEXT:    cmovgl %edx, %eax # encoding: [0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i32 %a, 1
@@ -1410,7 +1390,6 @@ define i64 @blsr64_z(i64 %a, i64 %b) nounwind {
 ; EGPR-LABEL: blsr64_z:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xcf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1452,7 +1431,6 @@ define i64 @blsr64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsrq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xcf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovneq %rdx, %rax # encoding: [0x48,0x0f,0x45,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1495,7 +1473,6 @@ define i64 @blsr64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
 ; EGPR-NEXT:    blsrq %rdi, %rcx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf0,0xf3,0xcf]
-; EGPR-NEXT:    testq %rcx, %rcx # encoding: [0x48,0x85,0xc9]
 ; EGPR-NEXT:    cmovgq %rdx, %rax # encoding: [0x48,0x0f,0x4f,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t0 = sub i64 %a, 1
@@ -1875,7 +1852,6 @@ define void @pr42118_i32(i32 %x) {
 ; EGPR-LABEL: pr42118_i32:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xcf]
-; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
@@ -1928,7 +1904,6 @@ define void @pr42118_i64(i64 %x) {
 ; EGPR-LABEL: pr42118_i64:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsrq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xcf]
-; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
@@ -1967,8 +1942,7 @@ define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 ; EGPR-LABEL: blsi_cflag_32:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
-; EGPR-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
+; EGPR-NEXT:    cmovael %esi, %eax # encoding: [0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -2012,8 +1986,7 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; EGPR-LABEL: blsi_cflag_64:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
-; EGPR-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
+; EGPR-NEXT:    cmovaeq %rsi, %rax # encoding: [0x48,0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i64 %x, 0
   %sub = sub nsw i64 0, %x

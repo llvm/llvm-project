@@ -1,16 +1,16 @@
-# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-R-ARM %s
-# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=armv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-R-ARM %s
-# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r5 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-R-THUMB %s
-# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-r4 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-R-THUMB %s
-# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m3 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m3 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
-# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m4 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv7-none-none-eabihf -mcpu=cortex-m4 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
-# RUN: llc -mtriple=thumbv8-none-none-eabihf -mcpu=cortex-m33 -o - %s -run-pass=prologepilog \
+# RUN: llc -mtriple=thumbv8-none-none-eabihf -mcpu=cortex-m33 -o - %s -run-pass=prolog-epilog \
 # RUN: | FileCheck --check-prefix=CHECK-M-THUMB %s
 
 # =============================================================================

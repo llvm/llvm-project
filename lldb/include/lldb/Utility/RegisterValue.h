@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_REGISTERVALUE_H
 
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -24,7 +25,6 @@
 namespace lldb_private {
 class DataExtractor;
 class Stream;
-struct RegisterInfo;
 
 class RegisterValue {
 public:

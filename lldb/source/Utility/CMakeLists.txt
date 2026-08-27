@@ -25,6 +25,7 @@ endif()
 
 add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   AddressableBits.cpp
+  AddressSpace.cpp
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
@@ -53,6 +54,8 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Policy.cpp
   ProcessInfo.cpp
   RealpathPrefixes.cpp
+  RegisterType.cpp
+  RegisterTypeFlags.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Instrumentation.cpp

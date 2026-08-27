@@ -61,8 +61,11 @@ int AsyncInfoTy::synchronize() {
   }
 
   // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
+  if (Result == OFFLOAD_SUCCESS && isQueueEmpty()) {
+    ODBG(ODT_DataTransfer)
+        << "Synchronization complete, running post-processing";
     Result = runPostProcessing();
+  }
 
   return Result;
 }
@@ -211,7 +214,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   void *Rc = NULL;
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     Rc = malloc(Size);
     ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
@@ -236,7 +239,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     return;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     free(DevicePtr);
     ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
@@ -353,6 +356,8 @@ static char *getOrCreateSourceBufferForSubmitData(AsyncInfoTy &AsyncInfo,
   // Create a dynamic buffer for larger data and schedule its deletion.
   char *DataBuffer = new char[Size];
   AsyncInfo.addPostProcessingFunction([DataBuffer]() {
+    ODBG(ODT_DataTransfer) << "Releasing submitData source buffer at "
+                           << static_cast<void *>(DataBuffer);
     delete[] DataBuffer;
     return OFFLOAD_SUCCESS;
   });
@@ -1692,8 +1697,6 @@ class PrivateArgumentManagerTy {
 
   /// A vector of information of all first-private arguments to be packed
   SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
-  /// Host buffer for all arguments to be packed
-  SmallVector<char> FirstPrivateArgBuffer;
   /// The total size of all arguments to be packed
   int64_t FirstPrivateArgSize = 0;
 
@@ -1966,8 +1969,17 @@ public:
     if (!FirstPrivateArgInfo.empty()) {
       assert(FirstPrivateArgSize != 0 &&
              "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
-      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
-      auto *Itr = FirstPrivateArgBuffer.begin();
+      // The packed buffer is the host source of the asynchronous submitData
+      // below, so its lifetime must outlive this object rather than be tied to
+      // it.
+      char *FirstPrivateArgBuffer =
+          getOrCreateSourceBufferForSubmitData(AsyncInfo, FirstPrivateArgSize);
+      // Not strictly necessary: the loop below writes every entry, and the
+      // inter-entry padding gaps it skips are never read by the device. Zero
+      // them anyway to keep the transferred buffer deterministic, which makes
+      // dumps easier to read and avoids tripping memory sanitizers.
+      std::memset(FirstPrivateArgBuffer, 0, FirstPrivateArgSize);
+      auto *Itr = FirstPrivateArgBuffer;
       // Copy all host data to this buffer
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         // First pad the pointer as we (have to) pad it on the device too.
@@ -1983,7 +1995,7 @@ public:
       }
       // Allocate target memory
       void *TgtPtr =
-          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer);
       if (TgtPtr == nullptr) {
         ODBG(ODT_Alloc)
             << "Failed to allocate target memory for private arguments.";
@@ -1993,7 +2005,10 @@ public:
       ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
                       << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
-      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+      ODBG(ODT_DataTransfer)
+          << "Submitting packed firstprivate arguments from host buffer at "
+          << static_cast<void *>(FirstPrivateArgBuffer);
+      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer,
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         ODBG(ODT_DataTransfer) << "Failed to submit data of private arguments.";
@@ -2008,7 +2023,8 @@ public:
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
         TP += Info.Size;
-        ODBG(ODT_Mapping) << "Firstprivate array " << Info.HstPtrBegin
+        ODBG(ODT_Mapping) << "Firstprivate array "
+                          << static_cast<void *>(Info.HstPtrBegin)
                           << " of size " << (Info.HstPtrEnd - Info.HstPtrBegin)
                           << " mapped to " << Ptr;
       }
@@ -2488,13 +2504,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.UserThreadLimit[1] = 1;
   KernelArgs.UserThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
-  KernelArgs.Flags.StrictBlocksAndThreads = true;
-
-  KernelExtraArgsTy KernelExtraArgs{};
-  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
+  KernelArgs.Flags.StrictBlocks = true;
+  KernelArgs.Flags.StrictThreads = true;
 
   int Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets,
-                                KernelArgs, &KernelExtraArgs, AsyncInfo);
+                                KernelArgs, ReplayOutcome, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;

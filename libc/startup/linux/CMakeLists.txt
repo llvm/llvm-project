@@ -27,7 +27,7 @@ function(merge_relocatable_object name)
   # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
   # a relocatable linking and will not pass other irrelevant flags to the linker.
   set(link_opts -r -nostdlib)
-  if (explicit_target_triple AND LLVM_ENABLE_LLD)
+  if(explicit_target_triple AND LLVM_ENABLE_LLD)
     list(APPEND link_opts --target=${explicit_target_triple})
   endif()
   target_link_options(${relocatable_target} PRIVATE ${link_opts})
@@ -54,7 +54,7 @@ function(add_startup_object name)
   cmake_parse_arguments(
     "ADD_STARTUP_OBJECT"
     "" # Option argument
-    "SRC"   # Single value arguments
+    "SRC" # Single value arguments
     "DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
@@ -112,20 +112,27 @@ add_object_library(
     libc.config.app_h
     libc.hdr.elf_proxy
     libc.hdr.link_macros
+    libc.hdr.pthread_macros
     libc.hdr.stdint_proxy
-    libc.include.sys_mman
+    libc.hdr.sys_auxv_macros
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.struct_link_map
+    libc.hdr.types.struct_r_debug
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.__support.macros.config
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
+    libc.src.link._r_debug
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ
+    libc.src.errno.program_invocation_name
+    libc.src.errno.program_invocation_short_name
   COMPILE_OPTIONS
-    -ffreestanding       # To avoid compiler warnings about calling the main function.
-    -fno-builtin         # avoid emit unexpected calls
+    -ffreestanding # To avoid compiler warnings about calling the main function.
+    -fno-builtin # avoid emit unexpected calls
     -fno-stack-protector # stack protect canary is not available yet.
 )
 
@@ -157,7 +164,7 @@ foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.linux.${target})
   add_dependencies(libc-startup ${fq_target_name})
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-          RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          COMPONENT libc)
+    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+    COMPONENT libc)
 endforeach()

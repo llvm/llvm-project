@@ -185,54 +185,6 @@ define i64 @test_llround_f80(x86_fp80 %x) nounwind {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i64 @test_llround_f128(fp128 %x) nounwind {
-; X86-LABEL: test_llround_f128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
-; X86-NEXT:    calll llroundl
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_llround_f128:
-; X64:       # %bb.0:
-; X64-NEXT:    jmp llroundl@PLT # TAILCALL
-;
-; GISEL-X86-LABEL: test_llround_f128:
-; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    pushl %esi
-; GISEL-X86-NEXT:    subl $24, %esp
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    calll llroundf128
-; GISEL-X86-NEXT:    addl $24, %esp
-; GISEL-X86-NEXT:    popl %esi
-; GISEL-X86-NEXT:    retl
-;
-; GISEL-X64-LABEL: test_llround_f128:
-; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    pushq %rax
-; GISEL-X64-NEXT:    callq llroundf128
-; GISEL-X64-NEXT:    popq %rcx
-; GISEL-X64-NEXT:    retq
-  %conv = tail call i64 @llvm.llround.f128(fp128 %x)
-  ret i64 %conv
-}
-
 define i64 @test_llround_i64_f16(half %x) nounwind {
 ; X86-NOSSE-LABEL: test_llround_i64_f16:
 ; X86-NOSSE:       # %bb.0:
@@ -413,54 +365,6 @@ define i64 @test_llround_i64_f80(x86_fp80 %x) nounwind {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i64 @test_llround_i64_f128(fp128 %x) nounwind {
-; X86-LABEL: test_llround_i64_f128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl 8(%ebp)
-; X86-NEXT:    calll llroundl
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_llround_i64_f128:
-; X64:       # %bb.0:
-; X64-NEXT:    jmp llroundl@PLT # TAILCALL
-;
-; GISEL-X86-LABEL: test_llround_i64_f128:
-; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    pushl %esi
-; GISEL-X86-NEXT:    subl $24, %esp
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    calll llroundf128
-; GISEL-X86-NEXT:    addl $24, %esp
-; GISEL-X86-NEXT:    popl %esi
-; GISEL-X86-NEXT:    retl
-;
-; GISEL-X64-LABEL: test_llround_i64_f128:
-; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    pushq %rax
-; GISEL-X64-NEXT:    callq llroundf128
-; GISEL-X64-NEXT:    popq %rcx
-; GISEL-X64-NEXT:    retq
-  %conv = call i64 @llvm.llround.i64.f128(fp128 %x)
-  ret i64 %conv
-}
-
 ; FIXME: not yet implemented for global isel
 ; define i64 @test_llround_i64_f16_strict(half %x) nounwind strictfp {
 ;   %conv = call i64 @llvm.experimental.constrained.llround.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")

@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -filetype=null 2>&1 %s | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdpal -filetype=null 2>&1 %s | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: in function ds_ordered_add_amdgpu_hs void (ptr addrspace(2), ptr addrspace(1)): ds_ordered_count unsupported for this calling conv
 define amdgpu_hs void @ds_ordered_add_amdgpu_hs(ptr addrspace(2) inreg %gds, ptr addrspace(1) %out) {

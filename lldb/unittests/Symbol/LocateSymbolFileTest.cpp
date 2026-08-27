@@ -32,7 +32,7 @@ TEST_F(
   StatisticsMap map;
   FileSpec symbol_file_spec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths, map);
-  EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
+  EXPECT_TRUE(symbol_file_spec.GetFilename().empty());
 }
 
 TEST_F(SymbolsTest,
@@ -45,5 +45,5 @@ TEST_F(SymbolsTest,
   StatisticsMap map;
   FileSpec symbol_file_spec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths, map);
-  EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
+  EXPECT_TRUE(symbol_file_spec.GetFilename().empty());
 }

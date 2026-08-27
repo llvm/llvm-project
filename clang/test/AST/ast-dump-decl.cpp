@@ -201,12 +201,12 @@ void SomeFunction() {
   A = static_cast<TestMemberRanges &&>(B);
   TestMemberRanges C(static_cast<TestMemberRanges &&>(A));
 }
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:30>
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:59>
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:54>
-// CHECK:      CXXDestructorDecl{{.*}} <line:{{.*}}:3, col:31>
-// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:70>
-// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:65>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:24>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:53>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:48>
+// CHECK:      CXXDestructorDecl{{.*}} <line:{{.*}}:3, col:25>
+// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:64>
+// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:59>
 
 class TestCXXConversionDecl {
   operator int() { return 0; }

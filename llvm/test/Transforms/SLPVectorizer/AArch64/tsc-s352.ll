@@ -34,13 +34,13 @@ define i32 @s352() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[DOT_115]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD15:%.*]] = fadd float [[ADD]], [[TMP6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP2]], i64 2
 ; CHECK-NEXT:    [[ADD23:%.*]] = fadd float [[ADD15]], [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD23]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], ptr @global_data, i64 0, i32 0, i64 [[TMP15]]

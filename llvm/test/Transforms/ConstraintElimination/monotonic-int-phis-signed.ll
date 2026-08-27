@@ -289,3 +289,116 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @signed_postinc_iv_step_1(i64 %end) {
+; CHECK-LABEL: define void @signed_postinc_iv_step_1(
+; CHECK-SAME: i64 [[END:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sge i64 [[END]], -9
+; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ -10, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %precond = icmp sge i64 %end, -9
+  br i1 %precond, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop.latch ], [ -10, %entry ]
+  %iv.next = add i64 %iv, 1
+  %cmp.i.not = icmp eq i64 %iv.next, %end
+  br i1 %cmp.i.not, label %exit, label %loop.latch
+
+loop.latch:
+  %cmp2 = icmp slt i64 %iv, %end
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sge i64 %iv, -10
+  call void @use(i1 %cmp3)
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @signed_postinc_iv_step_1_missing_precond(i64 %end) {
+; CHECK-LABEL: define void @signed_postinc_iv_step_1_missing_precond(
+; CHECK-SAME: i64 [[END:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ -10, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[IV]], [[END]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i64 [[IV]], -10
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop.latch ], [ -10, %entry ]
+  %iv.next = add i64 %iv, 1
+  %cmp.i.not = icmp eq i64 %iv.next, %end
+  br i1 %cmp.i.not, label %exit, label %loop.latch
+
+loop.latch:
+  %cmp2 = icmp slt i64 %iv, %end
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sge i64 %iv, -10
+  call void @use(i1 %cmp3)
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @signed_postinc_start_plus_step_overflow(i8 %end) {
+; CHECK-LABEL: define void @signed_postinc_start_plus_step_overflow(
+; CHECK-SAME: i8 [[END:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 127, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i8 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i8 [[IV]], 127
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %iv.next, %loop.latch ], [ 127, %entry ]
+  %iv.next = add i8 %iv, 1
+  %cmp.i.not = icmp eq i8 %iv.next, %end
+  br i1 %cmp.i.not, label %exit, label %loop.latch
+
+loop.latch:
+  %cmp3 = icmp sge i8 %iv, 127
+  call void @use(i1 %cmp3)
+  br label %loop
+
+exit:
+  ret void
+}

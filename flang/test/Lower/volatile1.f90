@@ -76,7 +76,7 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPdeclared_volatile_in_this_scope(
 ! CHECK-SAME:                                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v"},
-! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {{.+}} {
+! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.read_only}) attributes {{.+}} {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope

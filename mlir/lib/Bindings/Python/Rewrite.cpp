@@ -178,15 +178,15 @@ public:
     mlirTypeConverterAddConversion(
         typeConverter,
         [](MlirType type, MlirType *converted,
-           void *userData) -> MlirLogicalResult {
+           void *userData) -> MlirTypeConverterConversionStatus {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           auto ctx = PyMlirContext::forContext(mlirTypeGetContext(type));
           nb::object res = f(PyType(ctx, type).maybeDownCast());
           if (res.is_none())
-            return mlirLogicalResultFailure();
+            return MlirTypeConverterConversionStatusDeclined;
 
           *converted = nb::cast<PyType>(res).get();
-          return mlirLogicalResultSuccess();
+          return MlirTypeConverterConversionStatusSuccess;
         },
         convert.ptr());
   }
@@ -226,7 +226,9 @@ void PyRewritePatternSet::addConversion(nb::handle root,
   std::string opName = operationNameFromObject(root);
   MlirStringRef rootName = mlirStringRefCreate(opName.data(), opName.size());
 
-  MlirConversionPatternCallbacks callbacks;
+  // Value-initialize so optional callbacks (e.g. matchAndRewrite1ToN) default
+  // to null rather than an indeterminate pointer.
+  MlirConversionPatternCallbacks callbacks{};
   callbacks.construct = [](void *userData) {
     nb::handle(static_cast<PyObject *>(userData)).inc_ref();
   };

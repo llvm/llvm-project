@@ -211,9 +211,9 @@ define float @slp_not_profitable_in_loop(float %x, ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[L_4:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float 3.000000e+00, float 3.000000e+00, float poison, float 3.000000e+00>, float [[X:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L_3]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L_4]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float 3.000000e+00, float 3.000000e+00, float poison, float 3.000000e+00>, float [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L_3]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L_4]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

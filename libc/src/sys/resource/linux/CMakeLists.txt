@@ -6,8 +6,21 @@ add_entrypoint_object(
     ../getrlimit.h
   DEPENDS
     libc.hdr.types.struct_rlimit
-    libc.include.sys_resource
     libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getrusage
+  SRCS
+    getrusage.cpp
+  HDRS
+    ../getrusage.h
+  DEPENDS
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrusage
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -19,7 +32,6 @@ add_entrypoint_object(
     ../setrlimit.h
   DEPENDS
     libc.hdr.types.struct_rlimit
-    libc.include.sys_resource
     libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
     libc.src.errno.errno
 )

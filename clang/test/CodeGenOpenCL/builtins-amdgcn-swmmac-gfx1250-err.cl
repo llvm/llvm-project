@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 \
+// RUN: %clang_cc1 -triple amdgpu10.30-unknown-unknown \
 // RUN:   -verify -S -o - %s
 
 typedef float  v8f    __attribute__((ext_vector_type(8)));
