@@ -52,3 +52,70 @@ exit:
   store <16 x float> %res_max, ptr %pMax, align 64
   ret void
 }
+
+; Verify that commuteSelect does not miscompile when the inverted setcc already
+; exists (CSE). Both icmp eq and icmp ne are present so getSetCCInverse must
+; not create an infinite loop or corrupt operands.
+
+define <8 x i32> @commute_select_existing_inverse_cmp(<8 x i32> %src) {
+; CHECK-LABEL: commute_select_existing_inverse_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k1
+; CHECK-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpsubd %ymm1, %ymm2, %ymm1 {%k1} {z}
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
+; CHECK-NEXT:    vpsubd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 {%k1} {z} # 32-byte Folded Reload
+; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %eq = icmp eq <8 x i32> %src, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ne = icmp ne <8 x i32> %src, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ne_ext = sext <8 x i1> %ne to <8 x i32>
+  %sel1 = select <8 x i1> %eq, <8 x i32> zeroinitializer, <8 x i32> %ne_ext
+  %neg1 = sub <8 x i32> zeroinitializer, %sel1
+  %cast = bitcast <8 x i32> %neg1 to <4 x i64>
+  tail call void null(<4 x i64> zeroinitializer, <4 x i64> %cast, ptr null, i32 0)
+  %sel2 = select <8 x i1> %eq, <8 x i32> zeroinitializer, <8 x i32> %src
+  %neg2 = sub <8 x i32> zeroinitializer, %sel2
+  ret <8 x i32> %neg2
+}
+
+; Verify that commuteSelect handles a setcc used both as the condition and as a
+; value operand (double-use). The double-use select stays uncommmuted while the
+; other select still gets the masked-add optimization.
+
+define <16 x i32> @commute_select_cond_used_as_value(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d, <16 x i1> %mask1, <16 x i1> %mask2, ptr %out) {
+; CHECK-LABEL: commute_select_cond_used_as_value:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpcmpnltd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
+; CHECK-NEXT:    vpxor %xmm5, %xmm4, %xmm1
+; CHECK-NEXT:    vpsllw $7, %xmm1, %xmm1
+; CHECK-NEXT:    vpmovb2m %xmm1, %k2
+; CHECK-NEXT:    korw %k2, %k0, %k0
+; CHECK-NEXT:    vpaddd %zmm3, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    kmovw %k0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %cmp = icmp slt <16 x i32> %a, %b
+  %mask_or = xor <16 x i1> %mask1, %mask2
+  %sel_mask = select <16 x i1> %cmp, <16 x i1> %cmp, <16 x i1> %mask_or
+  %add = add <16 x i32> %c, %d
+  %sel_val = select <16 x i1> %cmp, <16 x i32> %a, <16 x i32> %add
+  %bits = bitcast <16 x i1> %sel_mask to i16
+  store i16 %bits, ptr %out
+  ret <16 x i32> %sel_val
+}
