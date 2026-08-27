@@ -53,7 +53,7 @@
 # RUN: llvm-ar -t -Xany archive-any.a | \
 # RUN:   FileCheck %s --check-prefixes=OBJ32_64
 
-## Test envionment "OBJECT_MODE" when creating a new archive.
+## Test environment "OBJECT_MODE" when creating a new archive.
 # RUN: env OBJECT_MODE=32 llvm-ar -q -c archive-env32.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
 # RUN: llvm-ar -t -Xany archive-env32.a | \
