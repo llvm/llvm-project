@@ -4,9 +4,7 @@
 define fastcc i16 @switch_to_btst(i16 %a) nounwind {
 ; CHECK-LABEL: switch_to_btst:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l %d0, %d1
-; CHECK-NEXT:    and.l #65535, %d1
-; CHECK-NEXT:    sub.l #11, %d1
+; CHECK-NEXT:    cmpi.w #11, %d0
 ; CHECK-NEXT:    bhi .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    swap %d0

@@ -9,12 +9,12 @@
 #if defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm64dbreg.h"
-#include "lldb/Host/linux/Ptrace.h"
 
 // System includes - They have to be included after framework includes because
-// they define some macros which collide with variable names in other modules
+// they define some macros which collide with variable names in other modules.
 #include <asm/ptrace.h>
 #include <elf.h>
+#include <sys/ptrace.h>
 #include <sys/uio.h>
 
 #ifndef PTRACE_GETREGSET
