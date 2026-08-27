@@ -5390,28 +5390,16 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  SmallPtrSet<const Value *, 4> WidenedIVs;
-  if (TC == VF && !Plan.hasTailFolded()) {
+  if (TC == VF && !Plan.hasTailFolded())
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
-  } else {
-    // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
-    // computed by the recipe, so collect their phis to skip the legacy
-    // increment cost below.
-    VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-    for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
-      if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        if (PHINode *IVPhi = WideIV->getPHINode())
-          WidenedIVs.insert(IVPhi);
-      }
-  }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    // Integer inductions are always costed via the VPlan-based cost model.
-    // TODO: Also migrate FP and pointer inductions.
-    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction)
-      continue;
-    if (WidenedIVs.contains(IV))
+    // Integer and FP inductions are always costed via the VPlan-based cost
+    // model.
+    // TODO: Also migrate pointer inductions.
+    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
+        IndDesc.getKind() == InductionDescriptor::IK_FpInduction)
       continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
