@@ -1125,9 +1125,9 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
       In, CGF.EmitLoadOfPointerLValue(AddrIn, PtrTy->castAs<PointerType>())
               .getAddress());
   Address AddrOut = CGF.GetAddrOfLocalVar(OmpOutParm);
-  Scope.addPrivate(
-      Out, CGF.EmitLoadOfPointerLValue(AddrOut, PtrTy->castAs<PointerType>())
-               .getAddress());
+  Address OutDerefAddr = CGF.EmitLoadOfPointerLValue(
+      AddrOut, PtrTy->castAs<PointerType>()).getAddress();
+  Scope.addPrivate(Out, OutDerefAddr);
   (void)Scope.Privatize();
   if (!IsCombiner && Out->hasInit() &&
       !CGF.isTrivialInitializer(Out->getInit())) {
@@ -1135,8 +1135,48 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
                          Out->getType().getQualifiers(),
                          /*IsInitializer=*/true);
   }
-  if (CombinerInitializer)
+  if (CombinerInitializer) {
+    // For non-trivial types with user initializers, we must emit default
+    // construction first to properly initialize members (e.g., std::string)
+    // before the user initializer assigns to them. This matches GCC behavior.
+    if (!IsCombiner && Ty.isDestructedType() != QualType::DK_none) {
+      if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+        for (const CXXConstructorDecl *Ctor : RD->ctors()) {
+          if (Ctor->isDefaultConstructor()) {
+            // Synthesize CXXConstructExpr for default construction.
+            // Collect default arguments for parameters with defaults.
+            ASTContext &Ctx = CGM.getContext();
+            SmallVector<Expr*, 4> Args;
+            for (unsigned I = 0; I < Ctor->getNumParams(); ++I) {
+              const ParmVarDecl *Param = Ctor->getParamDecl(I);
+              if (Param->hasDefaultArg()) {
+                Args.push_back(const_cast<Expr*>(Param->getDefaultArg()));
+              }
+            }
+
+            CXXConstructExpr *CtorExpr = CXXConstructExpr::Create(
+                Ctx, Ty, Out->getLocation(),
+                const_cast<CXXConstructorDecl *>(Ctor), /*Elidable=*/false,
+                /*Args=*/Args,
+                /*HadMultipleCandidates=*/false, /*ListInit=*/false,
+                /*StdInitListInit=*/false, /*ZeroInit=*/false,
+                CXXConstructionKind::Complete, SourceRange());
+
+            // Emit the constructor call
+            AggValueSlot Slot = AggValueSlot::forAddr(
+                OutDerefAddr, Ty.getQualifiers(),
+                AggValueSlot::IsDestructed,
+                AggValueSlot::DoesNotNeedGCBarriers,
+                AggValueSlot::IsNotAliased,
+                AggValueSlot::DoesNotOverlap);
+            CGF.EmitCXXConstructExpr(CtorExpr, Slot);
+            break;
+          }
+        }
+      }
+    }
     CGF.EmitIgnoredExpr(CombinerInitializer);
+  }
   Scope.ForceCleanup();
   CGF.FinishFunction();
   return Fn;
