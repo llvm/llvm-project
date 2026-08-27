@@ -550,6 +550,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
+- Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 
 ### OpenACC Specific Changes
 
