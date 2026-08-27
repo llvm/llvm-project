@@ -44,7 +44,7 @@ static_assert(count_entries(cluster::__property::__Prepend) == 27);
 static_assert(count_entries(cluster::__property::__CR) == 1);
 static_assert(count_entries(cluster::__property::__LF) == 1);
 static_assert(count_entries(cluster::__property::__Control) == 3893);
-static_assert(count_entries(cluster::__property::__Extend) == 2276);
+static_assert(count_entries(cluster::__property::__Extend) == 2274);
 static_assert(count_entries(cluster::__property::__Regional_Indicator) == 26);
 static_assert(count_entries(cluster::__property::__SpacingMark) == 381);
 static_assert(count_entries(cluster::__property::__L) == 125);
@@ -68,7 +68,7 @@ constexpr int count_entries(inCB::__property property) {
 
 static_assert(count_entries(inCB::__property::__Linker) == 23);
 static_assert(count_entries(inCB::__property::__Consonant) == 913);
-static_assert(count_entries(inCB::__property::__Extend) == 2256);
+static_assert(count_entries(inCB::__property::__Extend) == 2254);
 
 } // namespace
 
