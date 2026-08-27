@@ -409,6 +409,20 @@ void test_trylock_void_conditional_via_var(void) {
   mutex_unlock(&mu1);
 }
 
+// A switch on an int-typed but provably boolean condition (a comparison in
+// C) derives the default edge the same way as a _Bool condition: case 1 is
+// the success edge, so default implies the try-lock failed.
+void test_trylock_switch_comparison(void) {
+  switch (mutex_exclusive_trylock(&mu1) != 0) { // expected-warning {{switch condition has boolean value}}
+  case 1:
+    work_data = 1;
+    mutex_unlock(&mu1);
+    break;
+  default:
+    break;
+  }
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

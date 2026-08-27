@@ -136,6 +136,17 @@ public:
     }
   }
 
+  void tryLockRebranchOneWarning(bool c) {
+    bool b = mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    if (b)
+      a = 0;
+    if (c && b) {
+      mu.Unlock();
+    } else if (b) {
+      mu.Unlock();
+    }
+  }
+
   // Inside a REQUIRES(!mu) region the declared negative fact satisfies the
   // attempt; the success edge consumes it (no duplicate '!mu' facts, no
   // spurious diagnostics), and the failure path retains it.
@@ -160,6 +171,20 @@ public:
   }
 
   void needsNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu);
+
+
+  // A failed try-acquire proves the negative capability on its failure
+  // edge: the acquire there needs no further evidence.
+  void tryLockFailureProvesNegative() {
+    if (mu.TryLock()) { // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+      a = 0;
+      mu.Unlock();
+    } else {
+      mu.Lock(); // no warning: the failed try-acquire proves '!mu'
+      a = 0;
+      mu.Unlock();
+    }
+  }
 };
 
 }  // end namespace SimpleTest
