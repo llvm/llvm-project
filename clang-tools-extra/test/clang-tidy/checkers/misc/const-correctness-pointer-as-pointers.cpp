@@ -136,6 +136,20 @@ void write_through_add_assign_subscript(int *p) {
   (p_local0 += 1)[0] = 0;
 }
 
+void write_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  *(p_local0 = p_local1) = 0;
+}
+
+void write_through_plain_assign_subscript(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  (p_local0 = p_local1)[0] = 0;
+}
+
 void alias_through_increment(int *p) {
   int *p_local0 = p;
   // CHECK-NOT: warning
@@ -147,6 +161,14 @@ void alias_through_add_assign(int *p) {
   int *p_local0 = p;
   // CHECK-NOT: warning
   int *q = (p_local0 += 1);
+  *q = 0;
+}
+
+void alias_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  int *p_local1 = p;
+  // CHECK-NOT: warning
+  int *q = (p_local0 = p_local1);
   *q = 0;
 }
 
@@ -165,6 +187,19 @@ void instantiate_write_through_pointer_arithmetic() {
   template_write_through_pointer_arithmetic<int>();
 }
 
+template <class T>
+void template_write_through_plain_assign() {
+  T a[] = {1, 2};
+  T *p_local0 = &a[0];
+  T *p_local1 = &a[0];
+  // CHECK-NOT: warning
+  *(p_local0 = p_local1) = 0;
+}
+
+void instantiate_write_through_plain_assign() {
+  template_write_through_plain_assign<int>();
+}
+
 void read_through_increment(int *p) {
   int *p_local0 = p;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
@@ -177,6 +212,14 @@ void read_through_add_assign(int *p) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
   // CHECK-FIXES: int  const*p_local0 = p;
   int i = *(p_local0 += 1);
+}
+
+void read_through_plain_assign(int *p) {
+  int *p_local0 = p;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_local0' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_local0 = p;
+  int *p_local1 = p;
+  int i = *(p_local0 = p_local1);
 }
 
 void function_pointer_basic() {

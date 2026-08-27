@@ -366,9 +366,6 @@ DiagLoader::visitFixitRecord(const serialized_diags::Location &Start,
   CXSourceRange SR;
   if (std::error_code EC = readRange(Start, End, SR))
     return EC;
-  // FIXME: Why do we care about long strings?
-  if (CodeToInsert.size() > 65536)
-    return reportInvalidFile("Out-of-bounds string in FIXIT");
   CurrentDiags.back()->FixIts.push_back(
       std::make_pair(SR, TopDiags->copyString(CodeToInsert)));
   return std::error_code();

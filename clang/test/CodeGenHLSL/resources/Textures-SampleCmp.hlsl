@@ -30,8 +30,8 @@ float test_cmp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK: %[[COORD_VAL1:.*]] = load <[[COORD_DIM]] x float>, ptr %{{.*}}
 // CHECK: %[[CMP_VAL1:.*]] = load float, ptr %{{.*}}
 // CHECK: %[[CMP_CAST1:.*]] = fptrunc {{.*}} double {{.*}} to float
-// DXIL: call {{.*}} float @llvm.dx.resource.samplecmp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[CMP_CAST1]], <2 x i32> zeroinitializer)
-// SPIRV: call {{.*}} float @llvm.spv.resource.samplecmp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[CMP_CAST1]], <2 x i32> zeroinitializer)
+// DXIL: call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.samplecmp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[CMP_CAST1]], <2 x i32> zeroinitializer)
+// SPIRV: call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.samplecmp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[CMP_CAST1]], <2 x i32> zeroinitializer)
 
 // CHECK: @test_offset(float vector[[[COORD_DIM]]], float)
 // CHECK: %[[CALL_OFFSET:.*]] = call {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, int vector[2])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerComparisonState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <2 x i32> noundef <i32 1, i32 2>)
@@ -52,8 +52,8 @@ float test_offset(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK: %[[CMP_VAL2:.*]] = load float, ptr %{{.*}}
 // CHECK: %[[CMP_CAST2:.*]] = fptrunc {{.*}} double {{.*}} to float
 // CHECK: %[[OFFSET_VAL2:.*]] = load <2 x i32>, ptr %{{.*}}
-// DXIL: call {{.*}} float @llvm.dx.resource.samplecmp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[CMP_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
-// SPIRV: call {{.*}} float @llvm.spv.resource.samplecmp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[CMP_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
+// DXIL: call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.samplecmp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[CMP_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
+// SPIRV: call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.samplecmp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[CMP_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
 
 // CHECK: @test_clamp(float vector[[[COORD_DIM]]], float)
 // CHECK: %[[CALL_CLAMP:.*]] = call {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, int vector[2], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerComparisonState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <2 x i32> noundef <i32 1, i32 2>, float {{.*}} 1.000000e+00)
@@ -76,5 +76,5 @@ float test_clamp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK: %[[OFFSET_VAL3:.*]] = load <2 x i32>, ptr %{{.*}}
 // CHECK: %[[CLAMP_VAL3:.*]] = load float, ptr %{{.*}}
 // CHECK: %[[CLAMP_CAST3:.*]] = fptrunc {{.*}} double {{.*}} to float
-// DXIL: call {{.*}} float @llvm.dx.resource.samplecmp.clamp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <2 x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])
-// SPIRV: call {{.*}} float @llvm.spv.resource.samplecmp.clamp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <2 x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])
+// DXIL: call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.samplecmp.clamp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <2 x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])
+// SPIRV: call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.samplecmp.clamp.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <2 x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])

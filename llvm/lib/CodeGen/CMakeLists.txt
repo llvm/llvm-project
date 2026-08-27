@@ -1,4 +1,15 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+if (LLVM_HAVE_MLIR_LOWERING)
+  include(MLGOLower)
+  mlgo_lower_models(
+    "${LLVM_MLGO_MODELS}"
+    "${LLVM_MLGO_MLIR_OPT}"
+    "${LLVM_MLGO_MLIR_TRANSLATE}"
+    regalloc
+    llvm/CodeGen
+    RegAllocEvictModels
+    MLDeps
+  )
+elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
