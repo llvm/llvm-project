@@ -5141,7 +5141,7 @@ private:
             for (const ScheduleBundle *Bundle : Bundles) {
               if (TotalOpCount == 0)
                 break;
-              const TreeEntry *TE = Bundle->getTreeEntry();
+              TreeEntry *TE = Bundle->getTreeEntry();
               if (!TE->hasReassocScalars())
                 continue;
               for (Value *V : TE->getReassocScalars()) {
@@ -5168,8 +5168,22 @@ private:
                       if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
                               .second)
                         DecrUnsched(CD, /*IsControl=*/false);
-                      ReleasedAsCopyable = true;
                     }
+                  }
+                  // The dep is released through copyable data only if this
+                  // very entry models the scalar as a copyable operand on one
+                  // of its edges, mirroring the dependency calculation;
+                  // copyable data on some other entry's edge does not cover
+                  // the dep registered for this entry.
+                  for (auto It = find(TE->Scalars, In);
+                       It != TE->Scalars.end() && !ReleasedAsCopyable;
+                       It = find(make_range(std::next(It), TE->Scalars.end()),
+                                 In)) {
+                    int Lane = std::distance(TE->Scalars.begin(), It);
+                    for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                      ReleasedAsCopyable |=
+                          TE->getOperand(OpIdx)[Lane] == OpI &&
+                          getScheduleCopyableData(EdgeInfo(TE, OpIdx), OpI);
                   }
                 }
                 if (!ReleasedAsCopyable) {
@@ -19531,6 +19545,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -19564,8 +19581,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   PriorityQueue<CostIndicesTy, SmallVector<CostIndicesTy>, FirstGreater>
       Worklist;
-  for (const auto [Idx, P] : enumerate(SubtreeCosts))
+  for (const auto [Idx, P] : enumerate(SubtreeCosts)) {
+    // Combined subnodes are not trimmed on their own, only as a whole combined
+    // node, so only the root nodes are checked and included into the worklist.
+    if (VectorizableTree[Idx]->State == TreeEntry::CombinedVectorize)
+      continue;
     Worklist.emplace(VectorizableTree[Idx].get(), P);
+  }
 
   // Narrow store trees with non-profitable immediate values - exit.
   if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&
@@ -23592,20 +23614,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
       bool Narrowed = MinBWs.contains(getOperandEntry(E, 0)) ||
                       MinBWs.contains(getOperandEntry(E, 1));
-      bool SignFlip = !Narrowed && [&] {
-        CmpInst::Predicate P0 = cast<CmpInst>(E->getMainOp())->getPredicate();
-        return any_of(E->Scalars, [&](Value *Scalar) {
-          auto *LaneCI = dyn_cast<ICmpInst>(Scalar);
-          if (!LaneCI || LaneCI->getPredicate() == P0)
-            return false;
-          auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
-          if (!OrigC)
-            return false;
-          ConstantInt *AdjC =
-              CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
-          return AdjC && AdjC->isNegative() != OrigC->isNegative();
-        });
-      }();
+      CmpInst::Predicate P0 = cast<CmpInst>(E->getMainOp())->getPredicate();
+      bool SignFlip = !Narrowed && any_of(E->Scalars, [&](Value *Scalar) {
+        auto *LaneCI = dyn_cast<ICmpInst>(Scalar);
+        if (!LaneCI)
+          return false;
+        auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
+        if (!OrigC)
+          return false;
+        ConstantInt *AdjC =
+            CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
+        return AdjC && AdjC->isNegative() != OrigC->isNegative();
+      });
       if (Narrowed || SignFlip)
         ICmp->setSameSign(/*B=*/false);
     }

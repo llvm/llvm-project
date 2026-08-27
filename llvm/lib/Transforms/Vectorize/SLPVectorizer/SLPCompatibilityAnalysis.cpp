@@ -332,60 +332,41 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
 static std::optional<std::pair<bool, APInt>>
 getCmpBoundaryFamily(CmpInst::Predicate Pred, const APInt &C) {
   const unsigned BW = C.getBitWidth();
-  const APInt MaxU = APInt::getMaxValue(BW);
-  const APInt MinS = APInt::getSignedMinValue(BW);
-  const APInt MaxS = APInt::getSignedMaxValue(BW);
+  const bool IsSigned = CmpInst::isSigned(Pred);
+  const APInt Min = IsSigned ? APInt::getSignedMinValue(BW) : APInt(BW, 0);
+  const APInt Max =
+      IsSigned ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW);
   switch (Pred) {
   case CmpInst::ICMP_EQ:
     return std::make_pair(false, C);
   case CmpInst::ICMP_NE:
     return std::make_pair(true, C);
   case CmpInst::ICMP_ULT:
-    if (C.isOne())
-      return std::make_pair(false, APInt(BW, 0));
-    if (C == MaxU)
+  case CmpInst::ICMP_SLT:
+    if (C == Min + 1)
+      return std::make_pair(false, Min);
+    if (C == Max)
       return std::make_pair(true, C);
     break;
   case CmpInst::ICMP_ULE:
-    if (C.isZero())
+  case CmpInst::ICMP_SLE:
+    if (C == Min)
       return std::make_pair(false, C);
-    if (C == MaxU - 1)
-      return std::make_pair(true, MaxU);
+    if (C == Max - 1)
+      return std::make_pair(true, Max);
     break;
   case CmpInst::ICMP_UGT:
-    if (C.isZero())
+  case CmpInst::ICMP_SGT:
+    if (C == Min)
       return std::make_pair(true, C);
-    if (C == MaxU - 1)
-      return std::make_pair(false, MaxU);
+    if (C == Max - 1)
+      return std::make_pair(false, Max);
     break;
   case CmpInst::ICMP_UGE:
-    if (C.isOne())
-      return std::make_pair(true, APInt(BW, 0));
-    if (C == MaxU)
-      return std::make_pair(false, C);
-    break;
-  case CmpInst::ICMP_SLT:
-    if (C == MinS + 1)
-      return std::make_pair(false, MinS);
-    if (C == MaxS)
-      return std::make_pair(true, C);
-    break;
-  case CmpInst::ICMP_SLE:
-    if (C == MinS)
-      return std::make_pair(false, C);
-    if (C == MaxS - 1)
-      return std::make_pair(true, MaxS);
-    break;
-  case CmpInst::ICMP_SGT:
-    if (C == MinS)
-      return std::make_pair(true, C);
-    if (C == MaxS - 1)
-      return std::make_pair(false, MaxS);
-    break;
   case CmpInst::ICMP_SGE:
-    if (C == MinS + 1)
-      return std::make_pair(true, MinS);
-    if (C == MaxS)
+    if (C == Min + 1)
+      return std::make_pair(true, Min);
+    if (C == Max)
       return std::make_pair(false, C);
     break;
   default:
@@ -401,51 +382,41 @@ CmpSamePredicateHelper::getFormsMask(CmpInst::Predicate Pred, const APInt &C) {
   if (!Family)
     return M;
   const auto &[IsComplement, K] = *Family;
-  if (!IsComplement) {
-    M |= getBit(CmpInst::ICMP_EQ);
-    if (K.isZero())
-      M |= getBit(CmpInst::ICMP_ULT) | getBit(CmpInst::ICMP_ULE);
-    if (K.isMaxValue())
-      M |= getBit(CmpInst::ICMP_UGT) | getBit(CmpInst::ICMP_UGE);
-    if (K.isMinSignedValue())
-      M |= getBit(CmpInst::ICMP_SLT) | getBit(CmpInst::ICMP_SLE);
-    if (K.isMaxSignedValue())
-      M |= getBit(CmpInst::ICMP_SGT) | getBit(CmpInst::ICMP_SGE);
-    return M;
-  }
-  M |= getBit(CmpInst::ICMP_NE);
+  // At each type boundary the two range checks covering exactly {K}; the
+  // complement family uses their inverses, covering everything but {K}.
+  const MaskType LoU = getBit(CmpInst::ICMP_ULT) | getBit(CmpInst::ICMP_ULE);
+  const MaskType HiU = getBit(CmpInst::ICMP_UGT) | getBit(CmpInst::ICMP_UGE);
+  const MaskType LoS = getBit(CmpInst::ICMP_SLT) | getBit(CmpInst::ICMP_SLE);
+  const MaskType HiS = getBit(CmpInst::ICMP_SGT) | getBit(CmpInst::ICMP_SGE);
   if (K.isZero())
-    M |= getBit(CmpInst::ICMP_UGT) | getBit(CmpInst::ICMP_UGE);
+    M |= IsComplement ? HiU : LoU;
   if (K.isMaxValue())
-    M |= getBit(CmpInst::ICMP_ULT) | getBit(CmpInst::ICMP_ULE);
+    M |= IsComplement ? LoU : HiU;
   if (K.isMinSignedValue())
-    M |= getBit(CmpInst::ICMP_SGT) | getBit(CmpInst::ICMP_SGE);
+    M |= IsComplement ? HiS : LoS;
   if (K.isMaxSignedValue())
-    M |= getBit(CmpInst::ICMP_SLT) | getBit(CmpInst::ICMP_SLE);
-  return M;
+    M |= IsComplement ? LoS : HiS;
+  return M | getBit(IsComplement ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ);
 }
 
 APInt CmpSamePredicateHelper::getFamilyConstant(bool IsComplement,
                                                 const APInt &K,
                                                 CmpInst::Predicate Pred) {
-  switch (Pred) {
-  case CmpInst::ICMP_EQ:
-  case CmpInst::ICMP_NE:
+  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE)
     return K;
+  // The complement form uses the singleton constant of the inverse
+  // predicate.
+  if (IsComplement)
+    Pred = CmpInst::getInversePredicate(Pred);
+  switch (Pred) {
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_SLT:
-    return IsComplement ? K : K + 1;
-  case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_SLE:
-    return IsComplement ? K - 1 : K;
+    return K + 1;
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_SGT:
-    return IsComplement ? K : K - 1;
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_SGE:
-    return IsComplement ? K + 1 : K;
+    return K - 1;
   default:
-    llvm_unreachable("Unexpected predicate.");
+    return K;
   }
 }
 
@@ -483,17 +454,14 @@ CmpSamePredicateHelper::getSharedPredicate(ArrayRef<Value *> VL,
 
 bool CmpSamePredicateHelper::canConvertTo(const CmpInst *CI,
                                           CmpInst::Predicate Pred) {
-  if (!CmpInst::isIntPredicate(Pred))
-    return false;
   auto *ICI = dyn_cast<ICmpInst>(CI);
-  if (!ICI)
+  if (!ICI || !CmpInst::isIntPredicate(Pred))
     return false;
   if (ICI->getPredicate() == Pred)
     return true;
   auto *C = dyn_cast<ConstantInt>(ICI->getOperand(1));
-  if (!C)
-    return false;
-  return getFormsMask(ICI->getPredicate(), C->getValue()) & getBit(Pred);
+  return C &&
+         (getFormsMask(ICI->getPredicate(), C->getValue()) & getBit(Pred)) != 0;
 }
 
 ConstantInt *
@@ -508,8 +476,9 @@ CmpSamePredicateHelper::getAdjustedConstant(const CmpInst *CI,
   std::optional<std::pair<bool, APInt>> Family =
       getCmpBoundaryFamily(ICI->getPredicate(), C->getValue());
   assert(Family && "Expected a boundary family for a convertible compare.");
-  return ConstantInt::get(
-      CI->getContext(), getFamilyConstant(Family->first, Family->second, Pred));
+  const auto &[IsComplement, K] = *Family;
+  return ConstantInt::get(CI->getContext(),
+                          getFamilyConstant(IsComplement, K, Pred));
 }
 
 bool InstructionsState::isSameOperation(const Instruction *I,
@@ -961,15 +930,13 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       InterchangeablePred != BasePred) {
     // Every lane is convertible to the shared predicate, so the alternate
     // operation is never set for such bundles.
-    if (MainOp != AltOp)
-      return InstructionsState::invalid();
-    auto *It = find_if(VL, [&](Value *V) {
+    auto *SharedIt = find_if(VL, [&](Value *V) {
       auto *CI = dyn_cast<ICmpInst>(V);
       return CI && CI->getPredicate() == InterchangeablePred;
     });
-    assert(It != VL.end() &&
+    assert(SharedIt != VL.end() &&
            "Expected an instruction with the shared predicate.");
-    MainOp = AltOp = cast<Instruction>(*It);
+    MainOp = AltOp = cast<Instruction>(*SharedIt);
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
@@ -998,14 +965,11 @@ convertTo(Instruction *I, const InstructionsState &S) {
   // in an x <u C bundle) is emitted with the main predicate and the
   // adjusted constant.
   if (auto *MainCI = dyn_cast<ICmpInst>(SelectedOp);
-      MainCI && !S.isAltShuffle()) {
-    auto *CI = cast<ICmpInst>(I);
-    if (CI->getPredicate() != MainCI->getPredicate())
-      if (ConstantInt *C = CmpSamePredicateHelper::getAdjustedConstant(
-              CI, MainCI->getPredicate()))
-        return std::make_pair(SelectedOp,
-                              SmallVector<Value *>{CI->getOperand(0), C});
-  }
+      MainCI && !S.isAltShuffle())
+    if (ConstantInt *C = CmpSamePredicateHelper::getAdjustedConstant(
+            cast<ICmpInst>(I), MainCI->getPredicate()))
+      return std::make_pair(SelectedOp,
+                            SmallVector<Value *>{I->getOperand(0), C});
   return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));
 }
 

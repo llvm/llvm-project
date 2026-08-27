@@ -25,14 +25,11 @@ define void @f1() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  bb2:
 ; CHECK-NEXT:    EMIT-SCALAR ir<%c.1.0> = phi [ ir<0>, vector.ph ], [ ir<%_tmp9>, bb2 ]
-; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp1> = zext ir<0> to i64
-; CHECK-NEXT:    EMIT ir<%_tmp2> = getelementptr ir<@a>, ir<0>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp6> = sext ir<%c.1.0> to i64
 ; CHECK-NEXT:    EMIT ir<%_tmp7> = getelementptr ir<@b>, ir<0>, ir<%_tmp6>
 ; CHECK-NEXT:    EMIT store ir<@a>, ir<%_tmp7>
 ; CHECK-NEXT:    EMIT ir<%_tmp9> = add nsw ir<%c.1.0>, ir<1>
 ; CHECK-NEXT:    EMIT ir<%_tmp11> = icmp sge ir<%_tmp9>, ir<2>
-; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = not ir<%_tmp11>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%_tmp11>
 ; CHECK-NEXT:  Successor(s): middle.block, bb2
 ;
@@ -75,8 +72,6 @@ define void @redundant_or_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  then.1:
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%iv>, ir<2>
-; CHECK-NEXT:    EMIT ir<%or> = or ir<%cmp>, ir<true>
-; CHECK-NEXT:    EMIT ir<%cond> = select ir<true>, ir<%c.1>, ir<false>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.1>
 ; CHECK-NEXT:  Successor(s): then.2, loop.latch
 ; CHECK-EMPTY:
@@ -137,8 +132,6 @@ define void @redundant_or_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  then.1:
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%iv>, ir<2>
-; CHECK-NEXT:    EMIT ir<%or> = or ir<true>, ir<%cmp>
-; CHECK-NEXT:    EMIT ir<%cond> = select ir<true>, ir<%c.1>, ir<false>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.1>
 ; CHECK-NEXT:  Successor(s): then.2, loop.latch
 ; CHECK-EMPTY:
@@ -199,7 +192,6 @@ define void @redundant_and_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  then.1:
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%iv>, ir<2>
-; CHECK-NEXT:    EMIT ir<%or> = or ir<%cmp>, ir<false>
 ; CHECK-NEXT:    EMIT ir<%cond> = select ir<%cmp>, ir<%c.1>, ir<false>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%cond>
 ; CHECK-NEXT:  Successor(s): then.2, loop.latch
@@ -262,8 +254,6 @@ define void @redundant_and_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  then.1:
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%iv>, ir<2>
-; CHECK-NEXT:    EMIT ir<%or> = and ir<false>, ir<%cmp>
-; CHECK-NEXT:    EMIT ir<%cond> = select ir<false>, ir<%c.1>, ir<false>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<false>
 ; CHECK-NEXT:  Successor(s): then.2, loop.latch
 ; CHECK-EMPTY:
@@ -325,7 +315,6 @@ define void @fold_replicating_umax_equal_live_ins(ptr noalias %dst, ptr %cond, i
 ; CHECK-NEXT:  Successor(s): then, latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  then:
-; CHECK-NEXT:    EMIT ir<%m> = call ir<%x>, ir<%x>, ir<@llvm.umax.i32>
 ; CHECK-NEXT:    EMIT ir<%gep> = getelementptr ir<%dst>, ir<%iv>
 ; CHECK-NEXT:    EMIT store ir<%x>, ir<%gep>
 ; CHECK-NEXT:  Successor(s): latch

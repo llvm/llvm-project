@@ -177,7 +177,8 @@ public:
   /// \p Pred by adjusting its constant operand.
   static bool canConvertTo(const CmpInst *CI, CmpInst::Predicate Pred);
   /// Returns the adjusted constant operand expressing \p CI with the
-  /// predicate \p Pred, or nullptr if not convertible.
+  /// predicate \p Pred, or nullptr if not convertible or if \p CI already
+  /// uses \p Pred.
   static ConstantInt *getAdjustedConstant(const CmpInst *CI,
                                           CmpInst::Predicate Pred);
 };
