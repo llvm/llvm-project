@@ -4,6 +4,8 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
+; TODO: @foo_32_bit_iv is no longer flattened, because its i32 bit IV gets
+; widened and LoopFlatten does not recognize the wide form.
 define void @foo_32_bit_iv(ptr %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: define void @foo_32_bit_iv(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) local_unnamed_addr {
@@ -15,15 +17,25 @@ define void @foo_32_bit_iv(ptr %A, i32 %N, i32 %M) {
 ; CHECK:       [[INNER_HEADER_PREHEADER_LR_PH_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[M]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul nuw nsw i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
 ; CHECK:       [[INNER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER_LR_PH_SPLIT]] ], [ [[INDVAR_NEXT7:%.*]], %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVAR6]]
+; CHECK-NEXT:    [[INDVAR6:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER_LR_PH_SPLIT]] ], [ [[INDVAR_NEXT7:%.*]], %[[INNER_HEADER_OUTER_LATCH_CRIT_EDGE:.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVAR6]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[M]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER]] ], [ [[INDVAR_NEXT:%.*]], %[[INNER_LATCH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[INVARIANT_GEP]], i64 [[INDVAR]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    tail call void @_Z1fi(i32 [[TMP2]])
-; CHECK-NEXT:    [[INDVAR_NEXT7]] = add nuw i64 [[INDVAR6]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR_NEXT7]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add nuw nsw i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT1:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label %[[INNER_HEADER_OUTER_LATCH_CRIT_EDGE]], label %[[INNER_LATCH]]
+; CHECK:       [[INNER_HEADER_OUTER_LATCH_CRIT_EDGE]]:
+; CHECK-NEXT:    [[INDVAR_NEXT7]] = add nuw nsw i64 [[INDVAR6]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR_NEXT7]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[INNER_HEADER_PREHEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
