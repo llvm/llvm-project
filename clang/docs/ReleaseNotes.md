@@ -547,7 +547,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   side, each resolved by the branch on its own result. A try-acquire that
   changes the kind (shared vs. exclusive) of a held or conditionally held
   capability now warns, as a blocking acquisition of the other kind already
-  did, and does so even for a re-entrant capability. Some diagnostics under
+  did, and does so even for a re-entrant capability. A scoped capability whose
+  constructor is a try-acquire (`std::unique_lock lock(mu, std::try_to_lock)`
+  style) now acquires conditionally in the same way: the guard's destructor
+  discharges that silently, while an explicit release member function on the
+  guard warns that the capability may not be held. Some diagnostics under
   `-Wthread-safety` change accordingly.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit

@@ -3462,8 +3462,10 @@ void deferredUnlockOverTryHeld() {
   scope.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
 }
 
-// As for a direct mu.Lock() over a conditional hold: the blocking acquire is
-// diagnosed, and the code after it is verified as if it were live.
+// A blocking acquire over the conditional hold may deadlock exactly when
+// the try-acquire succeeded; if it did not deadlock, the capability is held
+// (as after the same sequence on the mutex itself). The call's result stays
+// tracked as a deeper level.
 void deferredRelockOverTryHeld() {
   RelockableExclusiveMutexLock scope(&mu, DeferTraits{});
   bool ok = tryLockMu(); // expected-note {{mutex acquired here}}
@@ -3782,6 +3784,341 @@ void relockWeird() {
 } // expected-warning {{mutex 'scope.other' is still held at the end of function}}
 
 } // end namespace RelockableScopedLock
+
+
+namespace ScopedTryLock {
+
+// A scoped lockable whose constructor try-acquires holds its underlying
+// capabilities conditionally, managed by the guard: there is no result to
+// branch on, but the destructor's conditional release (unlock only if
+// held) pairs with the conditional acquisition exactly, so guard death
+// disarms the fact silently -- no leak, no unchecked-result warning --
+// and establishes that the capability is no longer held.
+
+class SCOPED_LOCKABLE MutexLockMaybe {
+public:
+  MutexLockMaybe(Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+  ~MutexLockMaybe() UNLOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE ReaderMutexLockMaybe {
+public:
+  ReaderMutexLockMaybe(Mutex *mu) SHARED_TRYLOCK_FUNCTION(true, mu);
+  ~ReaderMutexLockMaybe() UNLOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE RelockableMutexLockMaybe {
+public:
+  RelockableMutexLockMaybe(Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+  ~RelockableMutexLockMaybe() UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+};
+
+// A capability listed under an inverted success value is conditionally
+// acquired all the same: a constructor has no result whose polarity could
+// ever be checked.
+class SCOPED_LOCKABLE MutexLockMaybeInverted {
+public:
+  MutexLockMaybeInverted(Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+  ~MutexLockMaybeInverted() UNLOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE DoubleMutexLockMaybe {
+public:
+  DoubleMutexLockMaybe(Mutex *mu1, Mutex *mu2)
+      EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1, mu2);
+  ~DoubleMutexLockMaybe() UNLOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE MutexLockAndMaybe {
+public:
+  MutexLockAndMaybe(Mutex *m1, Mutex *m2) EXCLUSIVE_LOCK_FUNCTION(m1)
+      EXCLUSIVE_TRYLOCK_FUNCTION(true, m2);
+  ~MutexLockAndMaybe() UNLOCK_FUNCTION();
+};
+
+Mutex mu;
+Mutex mu2;
+int x GUARDED_BY(mu);
+int y GUARDED_BY(mu2);
+
+void print(int);
+
+// The unverifiable hold does not satisfy the guard requirement, but the
+// guard's destructor discharges the acquisition: no leak warning and no
+// unchecked-result beta warning at the end of the function.
+void unchecked() {
+  MutexLockMaybe scope(&mu);
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void sharedUnchecked() {
+  ReaderMutexLockMaybe scope(&mu);
+  print(x); // expected-warning {{reading variable 'x' requires holding mutex 'mu'}}
+}
+
+void invertedSuccessUnchecked() {
+  MutexLockMaybeInverted scope(&mu);
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void doubleUnchecked() {
+  DoubleMutexLockMaybe scope(&mu, &mu2);
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'mu2' exclusively}}
+}
+
+// The guard's death proves the thread no longer holds the capability --
+// whether the try-acquire succeeded (released by the destructor) or failed
+// (never held) -- so a blocking re-acquire is clean.
+void reacquireAfterScope() {
+  {
+    MutexLockMaybe scope(&mu);
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  }
+  mu.Lock();
+  x = 2;
+  mu.Unlock();
+}
+
+// Per-iteration guard: the disarm at the bottom of each iteration keeps
+// the loop's join clean.
+void guardInLoop() {
+  for (int i = 0; i < 10; i++) {
+    MutexLockMaybe scope(&mu);
+    x = i; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  }
+}
+
+void conditionalGuard(bool c) {
+  if (c) {
+    MutexLockMaybe scope(&mu);
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  }
+  mu.Lock();
+  x = 2;
+  mu.Unlock();
+}
+
+// An explicit unlock is an unconditional release demand (releasing an
+// unowned guard is a runtime error), which the conditional acquisition
+// cannot satisfy: diagnosed like the direct call, and the negative fact
+// it establishes makes the relock clean.
+void explicitUnlockUnchecked() {
+  RelockableMutexLockMaybe scope(&mu);
+  scope.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  scope.Lock();
+  x = 1;
+}
+
+// An explicit release spends the guard's own conditional level, not a hold
+// beside it: an outer definite hold the guard merely nests in survives, so
+// the uses after the guard's scope are still guarded.
+void explicitUnlockOverOuterHold() {
+  mu.Lock();
+  {
+    RelockableMutexLockMaybe scope(&mu);
+    scope.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+    x = 1;
+  }
+  x = 2;
+  mu.Unlock();
+}
+
+// Once the guard's own level is gone, a hold acquired afterwards is not the
+// guard's to release: the leak it represents is reported at the end of the
+// function, as it is without the guard.
+void unlockThenLockUnderTryGuard() {
+  MutexLockMaybe scope(&mu);
+  mu.Unlock();  // expected-warning {{releasing mutex 'mu' that may not be held}}
+  mu.Lock();    // expected-note {{mutex acquired here}}
+  x = 3;
+} // expected-warning {{mutex 'mu' is still held at the end of function}}
+
+// A blocking acquire over the guard's own conditional hold may deadlock
+// exactly when the try-acquire succeeded; if it did not deadlock, the
+// capability is held, as after the same sequence on the mutex itself. The
+// guard's own try fact is subsumed (no branch can resolve it, and the
+// destructor releases the definite level in its place).
+void relockOverTryHeld() {
+  RelockableMutexLockMaybe scope(&mu); // expected-note {{mutex acquired here}}
+  scope.Lock(); // expected-warning {{acquiring mutex 'mu' that may already be held}}
+  x = 1;
+}
+
+// A try-acquire over the guard's conditional hold is tracked as its own
+// conditional fact: the guard's destructor disarms only the guard's own
+// acquisition, and the stored result resolves the other after the scope,
+// so the release there is clean.
+void externalTryLockOverGuardTryHeld() {
+  bool ok;
+  {
+    MutexLockMaybe s(&mu);
+    ok = mu.TryLock();
+  }
+  if (ok)
+    mu.Unlock();
+}
+
+// An external try-acquire outliving the guard is not the guard's to
+// release: the destructor's conditional release cannot pair with an
+// acquisition the guard does not own, so the fact is kept, and the stored
+// result still resolves it after the scope.
+void destructorKeepsExternalTryHeld() {
+  bool ok;
+  {
+    ReleasableMutexLock s(&mu);
+    s.Release();
+    ok = mu.TryLock();
+  }
+  if (ok)
+    mu.Unlock();
+}
+
+// One definite and one conditional capability in the same construction:
+// the definite hold satisfies its guard requirement, the conditional one
+// stays unverified, and the destructor releases the one and disarms the
+// other -- no leak, no unchecked-result warning.
+void mixedDefiniteAndMaybe() {
+  MutexLockAndMaybe scope(&mu, &mu2);
+  x = 1;
+  y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'mu2' exclusively}}
+}
+
+void mixedDefiniteAndMaybeReacquire() {
+  {
+    MutexLockAndMaybe scope(&mu, &mu2);
+    x = 1;
+  }
+  mu.Lock();
+  x = 2;
+  mu.Unlock();
+  mu2.Lock();
+  y = 2;
+  mu2.Unlock();
+}
+
+// Asserting the capability upgrades the guard's own conditional hold to
+// held without a warning; the destructor then routes to an ordinary
+// release of the promoted hold.
+void assertPromotesManagedHold() {
+  MutexLockMaybe scope(&mu);
+  mu.AssertHeld();
+  x = 1;
+}
+
+// A direct blocking acquire over the guard's conditional hold is
+// diagnosed and, if the program did not deadlock, the capability is now
+// definitely held: the explicit release pairs with it, and the destructor
+// finds nothing of its own left to release.
+void directRelockOverManagedHold() {
+  MutexLockMaybe scope(&mu); // expected-note {{mutex acquired here}}
+  mu.Lock(); // expected-warning {{acquiring mutex 'mu' that may already be held}}
+  x = 1;
+  mu.Unlock();
+}
+
+// Adoption demands a verified hold: adopting an unchecked try-acquire is
+// diagnosed at the constructor, the guarded write stays unverified, and
+// the destructor keeps the external fact -- the guard never owned the
+// acquisition.
+void adoptTryHeldUnchecked() {
+  bool ok = mu.TryLock();
+  MutexLock scope(&mu, true); // expected-warning {{calling function 'MutexLock' requires holding mutex 'mu' exclusively}}
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+// Checked first, the promoted hold adopts cleanly and the guard releases
+// it at scope end.
+void adoptTryHeldChecked() {
+  bool ok = mu.TryLock();
+  if (ok) {
+    MutexLock scope(&mu, true);
+    x = 1;
+  }
+}
+
+#ifdef __cpp_guaranteed_copy_elision
+// A TRY_ACQUIRE-annotated factory returning the guard by value (guaranteed
+// copy elision) associates the conditional capability with the returned
+// scope: the same managed conditionally held semantics as the annotated
+// constructor.
+MutexLockMaybe tryFactory() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+
+void guardFromFactory() {
+  MutexLockMaybe scope = tryFactory();
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void guardFromFactoryReacquire() {
+  {
+    MutexLockMaybe scope = tryFactory();
+  }
+  mu.Lock();
+  x = 2;
+  mu.Unlock();
+}
+#endif
+
+// A try-guard nesting over a hold that is already definite deepens it
+// conditionally (addLock()), and the guard's destructor releases exactly
+// the level the guard added: the conditional top level goes with it and
+// the outer definite hold survives. Releasing a definite level instead
+// would leave the hold conditional and diagnose the guarded uses below.
+void nested_over_scoped_guard() {
+  MutexLock outer(&mu);
+  {
+    MutexLockMaybe inner(&mu);
+  }
+  x = 3;
+}
+
+void nested_over_bare_lock() {
+  mu.Lock();
+  {
+    MutexLockMaybe inner(&mu);
+  }
+  x = 4;
+  mu.Unlock();
+}
+
+// The mirror: a conditional level some other call contributed is not the
+// guard's to release, so the definite guard drops a definite level and
+// the try-acquire's conditional hold survives at the shallower depth.
+void guard_over_foreign_conditional() {
+  {
+    MutexLock outer(&mu);
+    mu.TryLock();
+  }
+  x = 5;          // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+// A guard-managed conditional hold lost at an interior join is the
+// guard's business, not a leak: the scoped fact is still live and its
+// destructor discharges it, exactly as for the lost-hold diagnostics.
+void not_holding_mu() LOCKS_EXCLUDED(mu);
+void managed_lost_at_interior_join(bool c) {
+  RelockableMutexLockMaybe scope(&mu);
+  if (c)
+    scope.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  print(0);
+}
+
+// The same across a loop body, where the join carries no location: the
+// guard is constructed and destroyed each iteration, so nothing can be
+// held after the loop.
+void managed_guard_per_iteration(int n) {
+  for (int i = 0; i < n; ++i) {
+    MutexLockMaybe scope(&mu);
+    if (i > 2)
+      mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  }
+  not_holding_mu();
+}
+
+} // end namespace ScopedTryLock
 
 
 namespace ScopedUnlock {

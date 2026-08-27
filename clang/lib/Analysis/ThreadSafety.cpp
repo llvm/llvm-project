@@ -94,11 +94,15 @@ namespace {
 /// attributes on a function.
 class CapExprSet : public SmallVector<CapabilityExpr, 4> {
 public:
+  /// Whether M is in the list.
+  bool contains(const CapabilityExpr &CapE) const {
+    return llvm::any_of(
+        *this, [=](const CapabilityExpr &CapE2) { return CapE.equals(CapE2); });
+  }
+
   /// Push M onto list, but discard duplicates.
   void push_back_nodup(const CapabilityExpr &CapE) {
-    if (llvm::none_of(*this, [=](const CapabilityExpr &CapE2) {
-          return CapE.equals(CapE2);
-        }))
+    if (!contains(CapE))
       push_back(CapE);
   }
 };
@@ -573,8 +577,8 @@ public:
                             const Expr *Origin) {
     const size_t Before = FactIDs.size();
     llvm::erase_if(FactIDs, [&](FactID ID) {
-      const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
-      return W && W->conditional() && W->origin() == Origin && W->matches(CapE);
+      return isConditionalOf(FM[ID], CapE) &&
+             cast<TryFactEntry>(FM[ID]).origin() == Origin;
     });
     return FactIDs.size() != Before;
   }
@@ -1499,14 +1503,19 @@ static SourceLocation unmatchedUnlockNoteLoc(const FactSet &FSet,
 
 /// Release the capability \p Cp, which is only conditionally held (conditional
 /// try facts but no definite fact); returns true if the release was handled
-/// here. Diagnose like an unmatched unlock, drop every conditional try fact,
-/// and leave the negative fact behind: the release is an unconditional
-/// demand, and the thread provably does not hold the capability afterwards,
-/// whether the try-acquires succeeded or failed.
-/// With a null \p Handler (a scoped guard's destructor, from
-/// FullyRemove=true) the try facts are kept unchanged: they record
-/// acquisitions the guard does not own, which the destructor's conditional
-/// release cannot pair with.
+/// here. With a \p Handler, diagnose like an unmatched unlock, drop every
+/// conditional try fact, and leave the negative fact behind: the release is
+/// an unconditional demand, and the thread provably does not hold the
+/// capability afterwards, whether the try-acquires succeeded or failed. A
+/// null \p Handler (a scoped guard's destructor, FullyRemove=true) is a
+/// conditional release -- the destructor releases the capability only if
+/// the guard holds it -- so the guard's own conditional try fact, the one
+/// its construction \p OwnOrigin created, is disarmed silently: the
+/// conditional release pairs with it exactly, discharging the obligation to
+/// check the result and, with no other hold of the capability left, leaving
+/// the negative fact. Another call's try fact is kept unchanged: it records
+/// an acquisition the guard does not own, which the destructor's
+/// conditional release cannot pair with.
 static bool handleUncheckedConditionalUnlock(FactSet &FSet,
                                              FactManager &FactMan,
                                              const CapabilityExpr &Cp,
@@ -1514,16 +1523,16 @@ static bool handleUncheckedConditionalUnlock(FactSet &FSet,
                                              ThreadSafetyHandler *Handler) {
   if (!FSet.anyConditional(FactMan, Cp))
     return false;
-  if (Handler) {
-    Handler->handleUnmatchedUnlock(Cp.getKind(), Cp.toString(), UnlockLoc,
-                                   SourceLocation(), true);
-    FSet.removeAllConditional(FactMan, Cp);
-    // A pre-existing negative fact survives a try-acquire (it is consumed
-    // only on the success edge), so do not add a duplicate over it.
-    if (!Cp.negative())
-      installNegativeFact(FSet, FactMan, !Cp, UnlockLoc,
-                          /*KeepExisting=*/true);
-  }
+  if (!Handler)
+    return true;
+  Handler->handleUnmatchedUnlock(Cp.getKind(), Cp.toString(), UnlockLoc,
+                                 SourceLocation(), true);
+  FSet.removeAllConditional(FactMan, Cp);
+  // A pre-existing negative fact survives a try-acquire (it is consumed
+  // only on the success edge), so do not add a duplicate over it.
+  if (!Cp.negative())
+    installNegativeFact(FSet, FactMan, !Cp, UnlockLoc,
+                        /*KeepExisting=*/true);
   return true;
 }
 
@@ -1546,20 +1555,38 @@ struct UnderlyingCapability {
 /// \p Handler diagnoses -- and the code after it is still verified as if
 /// the try-acquire were live, its try fact resolving a deeper level on the
 /// branch on its result (as a try-acquire over a definite hold does), or
-/// diagnosed where it is lost. A conditional try fact of the other lock kind
-/// cannot be a level of this hold and gives way to the definite level.
+/// diagnosed where it is lost. A conditional try fact gives way to the
+/// definite level instead in two cases: when any of them is of the other lock
+/// kind, since none can then be a level of this hold, all of them go; and the
+/// acquiring scoped object's own (\p OwnOrigin, its construction), which no
+/// branch can ever resolve and whose destructor releases the definite level in
+/// its place. The one policy for a blocking acquisition over a conditional
+/// hold, whether the acquisition is a call's (ThreadSafetyAnalyzer::addLock())
+/// or a scoped object's (ScopedLockableFactEntry::lock()).
 static void addLockOverConditional(FactSet &FSet, FactManager &FactMan,
                                    const FactEntry *Entry,
                                    const FactEntry &Cond,
-                                   ThreadSafetyHandler *Handler) {
+                                   ThreadSafetyHandler *Handler,
+                                   const Expr *OwnOrigin = nullptr) {
   const bool SameKind =
       FSet.conditionalsAllOfKind(FactMan, *Entry, Entry->kind());
-  if (Handler &&
-      !(Entry->reentrant() && isa<LockableFactEntry>(Entry) && SameKind))
+  // A reentrant capability nests silently: the acquisition adds a level to a
+  // hold that may already have one, which is exactly what reentrancy means.
+  const bool SilentNest =
+      Entry->reentrant() && isa<LockableFactEntry>(Entry) && SameKind;
+  if (Handler && !SilentNest)
     Handler->handleDoubleLock(Entry->getKind(), Entry->toString(), Cond.loc(),
                               Entry->loc(), /*MaybeHeld=*/true);
   if (!SameKind)
     FSet.removeAllConditional(FactMan, *Entry);
+  else if (OwnOrigin)
+    // The acquiring scope's own conditional level gives way to the definite
+    // one it takes in its place, which its destructor releases instead: the
+    // guard owns one level at a time, so a release of it is unambiguous.
+    FSet.removeConditionalsOf(FactMan, *Entry, OwnOrigin);
+  // The acquisition consumes the negative fact, as a fresh one does: the
+  // capability is held now, whatever the try-acquire beside it did.
+  FSet.removeDefinite(FactMan, !*Entry);
   FSet.addLock(FactMan, Entry);
 }
 
@@ -1572,6 +1599,13 @@ class ScopedLockableFactEntry final
 private:
   const unsigned ManagedCapacity;
   unsigned ManagedSize = 0;
+  /// The construction whose try-acquire attributes acquired the managed
+  /// capabilities conditionally, if any: the origin of the try facts this
+  /// guard created, which are exactly the ones its destructor releases
+  /// (see unlock()). Null for a definite guard, which is what tells the two
+  /// apart: a definite guard's level is a hold it created, while a try-guard
+  /// may merely nest in a hold that is not its own to release.
+  const Expr *CondAcquireExpr = nullptr;
 
   ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc,
                           SourceKind Src, unsigned ManagedCapacity)
@@ -1613,6 +1647,10 @@ public:
   /// There is no reallocation in case the capacity is exceeded!
   /// \{
   void addLock(const CapabilityExpr &M) { addManaged(M, UCK_Acquired); }
+
+  /// Record that this guard's construction \p Exp acquired its managed
+  /// capabilities conditionally.
+  void setCondAcquireExpr(const Expr *Exp) { CondAcquireExpr = Exp; }
 
   void addExclusiveUnlock(const CapabilityExpr &M) {
     addManaged(M, UCK_ReleasedExclusive);
@@ -1701,7 +1739,7 @@ private:
       addLockOverConditional(
           FSet, FactMan,
           FactMan.createFact<LockableFactEntry>(Cp, kind, loc, Managed), *Cond,
-          Handler);
+          Handler, CondAcquireExpr);
       return;
     }
     FSet.removeDefinite(FactMan, !Cp);
@@ -1711,8 +1749,38 @@ private:
 
   void unlock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
+    const FactEntry *Def = FSet.findDefinite(FactMan, Cp);
+    // The level this guard releases is the one it acquired. While its own
+    // acquisition is still conditional -- and it has not since acquired a
+    // definite level of its own, which would be the level to release first --
+    // the try fact is what is spent: the guard's death disarms it silently,
+    // since the destructor releases the capability only if the guard holds
+    // it, which pairs exactly with the conditional acquisition, while an
+    // explicit release member is an unconditional demand and warns that the
+    // capability may not be held. Either way a hold beside it survives: an
+    // outer definite hold the guard did not acquire, and a conditional level
+    // another call contributed, which is left to that call.
+    if (CondAcquireExpr &&
+        FSet.removeConditionalsOf(FactMan, Cp, CondAcquireExpr)) {
+      if (Handler)
+        Handler->handleUnmatchedUnlock(Cp.getKind(), Cp.toString(), loc,
+                                       SourceLocation(), /*MaybeHeld=*/true);
+      if (!Def && !FSet.anyConditional(FactMan, Cp) && !Cp.negative())
+        installNegativeFact(FSet, FactMan, !Cp, loc, /*KeepExisting=*/true);
+      return;
+    }
     if (const auto It = FSet.findDefiniteIter(FactMan, Cp); It != FSet.end()) {
       const auto &Fact = cast<LockableFactEntry>(FactMan[*It]);
+      // A try-guard whose own conditional level is gone -- spent above, or
+      // subsumed by a blocking acquire -- has no claim on a hold it did not
+      // create: releasing one it merely nests in would release another
+      // acquisition's level.
+      if (CondAcquireExpr && !Fact.managed() && !Fact.asserted()) {
+        if (Handler)
+          Handler->handleUnmatchedUnlock(Cp.getKind(), Cp.toString(), loc,
+                                         SourceLocation(), /*MaybeHeld=*/true);
+        return;
+      }
       if (const FactEntry *RFact = Fact.leaveReentrant(FactMan)) {
         // This capability remains reentrantly acquired.
         FSet.replaceFact(FactMan, It, RFact);
@@ -1799,8 +1867,9 @@ public:
   bool inCurrentScope(const CapabilityExpr &CapE);
 
   void addLock(FactSet &FSet, const FactEntry *Entry, bool ReqAttr = false);
-  void addTryLock(FactSet &FSet, const CapabilityExpr &CE, LockKind LK,
-                  SourceLocation Loc, const Expr *Call);
+  bool addTryLock(FactSet &FSet, const CapabilityExpr &CE, LockKind LK,
+                  SourceLocation Loc, const Expr *Call,
+                  FactEntry::SourceKind Src = FactEntry::Acquired);
   void checkAcquiredCapability(FactSet &FSet, const FactEntry &Entry,
                                bool ReqAttr);
   void removeLock(FactSet &FSet, const CapabilityExpr &CapE,
@@ -2106,13 +2175,16 @@ void ThreadSafetyAnalyzer::checkAcquiredCapability(FactSet &FSet,
 /// this call over its own unresolved try fact (one try fact per call and
 /// kind). A hold of a scoped object is not such a case: the call is one of
 /// the guard's own members, and speaks about what the guard manages.
-void ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
+/// \p Src is Managed for a scoped lockable's construction, whose destructor
+/// conditionally releases (disarms) the try fact. Whether a try fact was
+/// installed, so that a scoped object manages what it really acquired.
+bool ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
                                       LockKind LK, SourceLocation Loc,
-                                      const Expr *Call) {
-  auto *Fact =
-      FactMan.createFact<TryFactEntry>(CE, LK, Loc, FactEntry::Acquired, Call);
+                                      const Expr *Call,
+                                      FactEntry::SourceKind Src) {
+  auto *Fact = FactMan.createFact<TryFactEntry>(CE, LK, Loc, Src, Call);
   if (Fact->shouldIgnore())
-    return;
+    return false;
 
   checkAcquiredCapability(FSet, *Fact, /*ReqAttr=*/false);
 
@@ -2123,7 +2195,7 @@ void ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
     if (!isa<ScopedLockableFactEntry>(Cp) && Cp->kind() != LK) {
       Handler.handleDoubleLock(CE.getKind(), CE.toString(), Cp->loc(), Loc,
                                /*MaybeHeld=*/false);
-      return;
+      return false;
     }
   }
   SmallVector<const TryFactEntry *, 2> TryFacts;
@@ -2133,7 +2205,7 @@ void ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
       if (W->kind() != LK || W->origin() == Call) {
         Handler.handleDoubleLock(CE.getKind(), CE.toString(), W->loc(), Loc,
                                  /*MaybeHeld=*/true);
-        return;
+        return false;
       }
     } else if (W->origin() == Call && W->kind() == LK) {
       // A fresh execution of the call overwrites its stored result: a hold
@@ -2143,6 +2215,7 @@ void ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
     }
   }
   FSet.addLock(FactMan, Fact);
+  return true;
 }
 
 /// Remove a lock from the lockset, warning if the lock is not there.
@@ -3160,21 +3233,34 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     Analyzer->addLock(FSet, Analyzer->FactMan.createFact<LockableFactEntry>(
                                 M, LK_Shared, Loc, Source));
 
-  // Add conditional locks.
-  // Note that scoped lockables manage their underlying mutexes themselves and
-  // are not tracked conditionally.
-  if (Exp && Scp.shouldIgnore()) {
+  // Add conditional locks. A scoped lockable's construction acquires its
+  // underlying capabilities conditionally too, as managed try facts: a
+  // constructor has no result to branch on, but the guard's destructor
+  // pairs exactly with the conditional acquisition -- it releases each
+  // capability only if the guard holds it -- so it disarms the try fact
+  // silently (handleUncheckedConditionalUnlock()).
+  CapExprSet TryLocksManaged;
+  if (Exp) {
     if (auto It = Analyzer->TryAcquireCapsMap.find(Exp);
         It != Analyzer->TryAcquireCapsMap.end()) {
       const ThreadSafetyAnalyzer::TryAcquireCaps &Caps = It->second;
-      for (const auto &M : Caps.TruthyExclusive)
-        Analyzer->addTryLock(FSet, M, LK_Exclusive, Loc, Exp);
-      for (const auto &M : Caps.FalsyExclusive)
-        Analyzer->addTryLock(FSet, M, LK_Exclusive, Loc, Exp);
-      for (const auto &M : Caps.TruthyShared)
-        Analyzer->addTryLock(FSet, M, LK_Shared, Loc, Exp);
-      for (const auto &M : Caps.FalsyShared)
-        Analyzer->addTryLock(FSet, M, LK_Shared, Loc, Exp);
+      // A scoped object manages the try facts its construction created, and
+      // only those, each once whatever its kinds: a capability the
+      // construction also acquires definitely is managed by that acquisition,
+      // and one whose try fact addTryLock() declined was never acquired
+      // conditionally, so the destructor has nothing of its to release.
+      auto AddTry = [&](const CapExprSet &CapSet, LockKind LK) {
+        for (const CapabilityExpr &M : CapSet) {
+          if (ExclusiveLocksToAdd.contains(M) || SharedLocksToAdd.contains(M))
+            continue;
+          if (Analyzer->addTryLock(FSet, M, LK, Loc, Exp, Source))
+            TryLocksManaged.push_back_nodup(M);
+        }
+      };
+      AddTry(Caps.TruthyExclusive, LK_Exclusive);
+      AddTry(Caps.FalsyExclusive, LK_Exclusive);
+      AddTry(Caps.TruthyShared, LK_Shared);
+      AddTry(Caps.FalsyShared, LK_Shared);
     }
   }
 
@@ -3183,12 +3269,18 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     auto *ScopedEntry = Analyzer->FactMan.createFact<ScopedLockableFactEntry>(
         Scp, Loc, FactEntry::Acquired,
         ExclusiveLocksToAdd.size() + SharedLocksToAdd.size() +
-            ScopedReqsAndExcludes.size() + ExclusiveLocksToRemove.size() +
-            SharedLocksToRemove.size());
+            TryLocksManaged.size() + ScopedReqsAndExcludes.size() +
+            ExclusiveLocksToRemove.size() + SharedLocksToRemove.size());
     for (const auto &M : ExclusiveLocksToAdd)
       ScopedEntry->addLock(M);
     for (const auto &M : SharedLocksToAdd)
       ScopedEntry->addLock(M);
+    for (const auto &M : TryLocksManaged)
+      ScopedEntry->addLock(M);
+    // The destructor removes the try facts this construction created,
+    // which it finds by their origin (unlock()).
+    if (!TryLocksManaged.empty())
+      ScopedEntry->setCondAcquireExpr(Exp);
     for (const auto &M : ScopedReqsAndExcludes)
       ScopedEntry->addLock(M);
     for (const auto &M : ExclusiveLocksToRemove)
