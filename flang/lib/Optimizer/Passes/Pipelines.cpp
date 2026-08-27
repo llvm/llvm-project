@@ -316,7 +316,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       addNestedPassToAllTopLevelOperations<PassConstructor>(
           pm, hlfir::createInlineHLFIRCopy);
     }
-  } else if (config.EnableOpenMPIsTargetDevice) {
+  } else if (config.EnableOpenMPIsTargetDevice &&
+             enableOpenMP == EnableOpenMP::Full) {
     // At O0, only inline scalar-to-array broadcasts when compiling for an
     // OpenMP target device. This avoids emitting Fortran runtime calls
     // (e.g. _FortranAAssign) that use malloc/free in device code generated
@@ -354,12 +355,17 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP != EnableOpenMP::None) {
+  switch (enableOpenMP) {
+  case EnableOpenMP::Full:
     pm.addPass(flangomp::createLowerWorkshare());
     pm.addPass(flangomp::createLowerWorkdistribute());
-  }
-  if (enableOpenMP == EnableOpenMP::Simd)
+    break;
+  case EnableOpenMP::Simd:
     pm.addPass(flangomp::createSimdOnlyPass());
+    break;
+  case EnableOpenMP::None:
+    break;
+  }
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -375,6 +381,10 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
                                  OpenMPFIRPassPipelineOpts opts) {
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
+  // None of the passes below apply to simd constructs, so skip them.
+  if (opts.isSimdOnly)
+    return;
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
     pm.addPass(flangomp::createDoConcurrentConversionPass(
@@ -454,13 +464,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
        /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
-  if (config.EnableOpenMP) {
-    pm.addNestedPass<mlir::func::FuncOp>(
-        flangomp::createLowerNontemporalPass());
-  }
-
   bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
   if (runOMPNonSimdPasses) {
+    pm.addNestedPass<mlir::func::FuncOp>(
+        flangomp::createLowerNontemporalPass());
+
     // Propagate implicit declare target information early in order to diagnose
     // target device not-yet-implemented cases based on FIR.
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
@@ -518,9 +526,11 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
 
   // Run a pass to prepare for translation of delayed privatization in the
   // context of deferred target tasks.
-  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
-    return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
-  });
+  if (enableOpenMP == EnableOpenMP::Full) {
+    addPassConditionally(pm, disableFirToLlvmIr, [&]() {
+      return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
+    });
+  }
 }
 
 /// Register the passes used in flang's MLIR pass pipeline so that

@@ -166,6 +166,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;
