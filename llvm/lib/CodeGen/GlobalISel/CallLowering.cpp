@@ -858,12 +858,20 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     }
 
     if (NumParts != 1 || NewLLT != OrigTy) {
+      // If we can't directly assign the register, we need one or more
+      // intermediate values.
       Args[i].Regs.resize(NumParts);
+
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg. If we reach an indirect chunk or the
+      // whole value is passed indirectly, we just need a pointer.
       for (unsigned Part = 0; Part < NumParts; Part++) {
-        if (ArgLocs[j + Part].getLocInfo() == CCValAssign::Indirect)
+        if (ArgLocs[j + Part].getLocInfo() == CCValAssign::Indirect) {
           Args[i].Regs[Part] = MRI.createGenericVirtualRegister(PointerTy);
-        else
-          Args[i].Regs[Part] = (MRI.createGenericVirtualRegister(NewLLT));
+          break;
+        }
+        Args[i].Regs[Part] = (MRI.createGenericVirtualRegister(NewLLT));
       }
     }
 
@@ -899,9 +907,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     unsigned IndirectIdx = 0;
     Register IncomingIndirectValuePointer;
     for (unsigned Part = 0; Part < NumParts; ++Part) {
-      Register ArgReg{};
-      if (Part < Args[i].Regs.size())
-        ArgReg = Args[i].Regs[Part];
+      Register ArgReg = Args[i].Regs[Part];
 
       // There should be Regs.size() ArgLocs per argument.
       unsigned Idx = BigEndianPartOrdering ? NumParts - 1 - Part : Part;
