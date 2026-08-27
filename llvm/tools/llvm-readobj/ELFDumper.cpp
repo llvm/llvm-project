@@ -8405,7 +8405,65 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         this->reportUniqueWarning(RelSymOrErr.takeError());
         return;
       }
-      W.printString("Name", RelSymOrErr->Name);
+
+      int64_t Addend = R->Addend.value_or(0);
+      const Elf_Sym *Sym = RelSymOrErr->Sym;
+      uint32_t SymIndex = R->Symbol;
+      SmallVector<std::string> FuncNames;
+
+      if (Sym) {
+        uint64_t SymValue = Sym->st_value + Addend;
+        std::optional<const Elf_Shdr *> Sec;
+        if (Expected<const Elf_Shdr *> SecOrErr = this->Obj.getSection(
+                *Sym, RelocSymTab, this->getShndxTable(RelocSymTab)))
+          Sec = *SecOrErr;
+        else
+          consumeError(SecOrErr.takeError());
+
+        SmallVector<uint32_t> FuncSymIndexes =
+            this->getSymbolIndexesForFunctionAddress(SymValue, Sec);
+        for (uint32_t Index : FuncSymIndexes)
+          FuncNames.push_back(this->getStaticSymbolName(Index));
+
+        if (FuncNames.empty()) {
+          bool IsSectionSym = (Sym->getType() == ELF::STT_SECTION);
+          std::string FormattedName;
+          if (IsSectionSym) {
+            std::string SecName = RelSymOrErr->Name;
+            if (Addend >= 0)
+              FormattedName = "(" + SecName + ")+0x" + utohexstr(Addend);
+            else
+              FormattedName = "(" + SecName + ")-0x" + utohexstr(-Addend);
+          } else {
+            std::string SymName = RelSymOrErr->Name;
+            if (Addend == 0) {
+              FormattedName = SymName;
+            } else if (Addend > 0) {
+              FormattedName = SymName + "+0x" + utohexstr(Addend);
+            } else {
+              FormattedName = SymName + "-0x" + utohexstr(-Addend);
+            }
+          }
+          FuncNames.push_back(FormattedName);
+        }
+      } else {
+        std::string FormattedName;
+        if (Addend >= 0)
+          FormattedName = "0x" + utohexstr(Addend);
+        else
+          FormattedName = "-0x" + utohexstr(-Addend);
+        FuncNames.push_back(FormattedName);
+      }
+
+      if (!FuncNames.empty())
+        W.printList("Names", FuncNames);
+
+      DictScope RelocScope(W, "Reloc");
+      W.printNumber("SymbolIndex", SymIndex);
+      if (Sym && Sym->st_name != 0 && !RelSymOrErr->Name.empty())
+        W.printString("SymbolName", RelSymOrErr->Name);
+      if (R->Addend && *R->Addend != 0)
+        W.printNumber("Addend", *R->Addend);
     };
 
     auto PrintFunc = [&](uint64_t FuncPC) {

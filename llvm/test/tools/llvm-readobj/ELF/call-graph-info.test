@@ -231,7 +231,11 @@ Symbols:
 
 # LLVM-RELOC:   CallGraph [
 # LLVM-RELOC-NEXT:   Function {
-# LLVM-RELOC-NEXT:     Name: foo
+# LLVM-RELOC-NEXT:     Names: [foo]
+# LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       SymbolIndex: 1
+# LLVM-RELOC-NEXT:       SymbolName: foo
+# LLVM-RELOC-NEXT:     }
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
@@ -242,7 +246,11 @@ Symbols:
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
-# LLVM-RELOC-NEXT:     Name: bar
+# LLVM-RELOC-NEXT:     Names: [bar]
+# LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       SymbolIndex: 2
+# LLVM-RELOC-NEXT:       SymbolName: bar
+# LLVM-RELOC-NEXT:     }
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
@@ -253,7 +261,11 @@ Symbols:
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
-# LLVM-RELOC-NEXT:     Name: baz
+# LLVM-RELOC-NEXT:     Names: [baz]
+# LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       SymbolIndex: 3
+# LLVM-RELOC-NEXT:       SymbolName: baz
+# LLVM-RELOC-NEXT:     }
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0x308E4B8159BC8654
@@ -264,20 +276,36 @@ Symbols:
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
-# LLVM-RELOC-NEXT:     Name: caller
+# LLVM-RELOC-NEXT:     Names: [caller]
+# LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       SymbolIndex: 4
+# LLVM-RELOC-NEXT:       SymbolName: caller
+# LLVM-RELOC-NEXT:     }
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xA9494DEF81A01DC
 # LLVM-RELOC-NEXT:     NumDirectCallees: 3
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:       {
-# LLVM-RELOC-NEXT:         Name: foo
+# LLVM-RELOC-NEXT:         Names: [foo]
+# LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           SymbolIndex: 1
+# LLVM-RELOC-NEXT:           SymbolName: foo
+# LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:       {
-# LLVM-RELOC-NEXT:         Name: bar
+# LLVM-RELOC-NEXT:         Names: [bar]
+# LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           SymbolIndex: 2
+# LLVM-RELOC-NEXT:           SymbolName: bar
+# LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:       {
-# LLVM-RELOC-NEXT:         Name: baz
+# LLVM-RELOC-NEXT:         Names: [baz]
+# LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           SymbolIndex: 3
+# LLVM-RELOC-NEXT:           SymbolName: baz
+# LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:     ]
 # LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 2
@@ -288,7 +316,13 @@ Symbols:
 # JSON-RELOC:     "CallGraph": [
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
-# JSON-RELOC-NEXT:          "Name": "foo",
+# JSON-RELOC-NEXT:          "Names": [
+# JSON-RELOC-NEXT:            "foo"
+# JSON-RELOC-NEXT:          ],
+# JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "SymbolIndex": 1,
+# JSON-RELOC-NEXT:            "SymbolName": "foo"
+# JSON-RELOC-NEXT:          },
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
@@ -300,7 +334,13 @@ Symbols:
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
-# JSON-RELOC-NEXT:          "Name": "bar",
+# JSON-RELOC-NEXT:          "Names": [
+# JSON-RELOC-NEXT:            "bar"
+# JSON-RELOC-NEXT:          ],
+# JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "SymbolIndex": 2,
+# JSON-RELOC-NEXT:            "SymbolName": "bar"
+# JSON-RELOC-NEXT:          },
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
@@ -312,7 +352,13 @@ Symbols:
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
-# JSON-RELOC-NEXT:          "Name": "baz",
+# JSON-RELOC-NEXT:          "Names": [
+# JSON-RELOC-NEXT:            "baz"
+# JSON-RELOC-NEXT:          ],
+# JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "SymbolIndex": 3,
+# JSON-RELOC-NEXT:            "SymbolName": "baz"
+# JSON-RELOC-NEXT:          },
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 3498816979441845844,
@@ -324,20 +370,44 @@ Symbols:
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
-# JSON-RELOC-NEXT:          "Name": "caller",
+# JSON-RELOC-NEXT:          "Names": [
+# JSON-RELOC-NEXT:            "caller"
+# JSON-RELOC-NEXT:          ],
+# JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "SymbolIndex": 4,
+# JSON-RELOC-NEXT:            "SymbolName": "caller"
+# JSON-RELOC-NEXT:          },
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 762397922298560988,
 # JSON-RELOC-NEXT:          "NumDirectCallees": 3,
 # JSON-RELOC-NEXT:          "DirectCallees": [
 # JSON-RELOC-NEXT:            {
-# JSON-RELOC-NEXT:              "Name": "foo"
+# JSON-RELOC-NEXT:              "Names": [
+# JSON-RELOC-NEXT:                "foo"
+# JSON-RELOC-NEXT:              ],
+# JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "SymbolIndex": 1,
+# JSON-RELOC-NEXT:                "SymbolName": "foo"
+# JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            {
-# JSON-RELOC-NEXT:              "Name": "bar"
+# JSON-RELOC-NEXT:              "Names": [
+# JSON-RELOC-NEXT:                "bar"
+# JSON-RELOC-NEXT:              ],
+# JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "SymbolIndex": 2,
+# JSON-RELOC-NEXT:                "SymbolName": "bar"
+# JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            {
-# JSON-RELOC-NEXT:              "Name": "baz"
+# JSON-RELOC-NEXT:              "Names": [
+# JSON-RELOC-NEXT:                "baz"
+# JSON-RELOC-NEXT:              ],
+# JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "SymbolIndex": 3,
+# JSON-RELOC-NEXT:                "SymbolName": "baz"
+# JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            }
 # JSON-RELOC-NEXT:          ],
 # JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
@@ -449,7 +519,11 @@ Symbols:
 
 # LLVM-ARM-THUMB:      CallGraph [
 # LLVM-ARM-THUMB-NEXT:   Function {
-# LLVM-ARM-THUMB-NEXT:     Name: foo
+# LLVM-ARM-THUMB-NEXT:     Names: [foo]
+# LLVM-ARM-THUMB-NEXT:     Reloc {
+# LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
+# LLVM-ARM-THUMB-NEXT:       SymbolName: foo
+# LLVM-ARM-THUMB-NEXT:     }
 # LLVM-ARM-THUMB-NEXT:     Version: 0
 # LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
 # LLVM-ARM-THUMB-NEXT:     TypeID: 0x123456789ABCDEF0
@@ -464,7 +538,13 @@ Symbols:
 # JSON-ARM-THUMB:       "CallGraph": [
 # JSON-ARM-THUMB-NEXT:    {
 # JSON-ARM-THUMB-NEXT:      "Function": {
-# JSON-ARM-THUMB-NEXT:        "Name": "foo",
+# JSON-ARM-THUMB-NEXT:        "Names": [
+# JSON-ARM-THUMB-NEXT:          "foo"
+# JSON-ARM-THUMB-NEXT:        ],
+# JSON-ARM-THUMB-NEXT:        "Reloc": {
+# JSON-ARM-THUMB-NEXT:          "SymbolIndex": 1,
+# JSON-ARM-THUMB-NEXT:          "SymbolName": "foo"
+# JSON-ARM-THUMB-NEXT:        },
 # JSON-ARM-THUMB-NEXT:        "Version": 0,
 # JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
 # JSON-ARM-THUMB-NEXT:        "TypeID": 1311768467463790320,
@@ -587,7 +667,11 @@ Symbols:
 
 # LLVM-MULTI-RELOC:      CallGraph [
 # LLVM-MULTI-RELOC-NEXT:   Function {
-# LLVM-MULTI-RELOC-NEXT:     Name: foo
+# LLVM-MULTI-RELOC-NEXT:     Names: [foo]
+# LLVM-MULTI-RELOC-NEXT:     Reloc {
+# LLVM-MULTI-RELOC-NEXT:       SymbolIndex: 1
+# LLVM-MULTI-RELOC-NEXT:       SymbolName: foo
+# LLVM-MULTI-RELOC-NEXT:     }
 # LLVM-MULTI-RELOC-NEXT:     Version: 0
 # LLVM-MULTI-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-MULTI-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
@@ -598,7 +682,11 @@ Symbols:
 # LLVM-MULTI-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-MULTI-RELOC-NEXT:   }
 # LLVM-MULTI-RELOC-NEXT:   Function {
-# LLVM-MULTI-RELOC-NEXT:     Name: bar
+# LLVM-MULTI-RELOC-NEXT:     Names: [bar]
+# LLVM-MULTI-RELOC-NEXT:     Reloc {
+# LLVM-MULTI-RELOC-NEXT:       SymbolIndex: 2
+# LLVM-MULTI-RELOC-NEXT:       SymbolName: bar
+# LLVM-MULTI-RELOC-NEXT:     }
 # LLVM-MULTI-RELOC-NEXT:     Version: 0
 # LLVM-MULTI-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-MULTI-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
@@ -613,7 +701,13 @@ Symbols:
 # JSON-MULTI-RELOC:     "CallGraph": [
 # JSON-MULTI-RELOC-NEXT:      {
 # JSON-MULTI-RELOC-NEXT:        "Function": {
-# JSON-MULTI-RELOC-NEXT:          "Name": "foo",
+# JSON-MULTI-RELOC-NEXT:          "Names": [
+# JSON-MULTI-RELOC-NEXT:            "foo"
+# JSON-MULTI-RELOC-NEXT:          ],
+# JSON-MULTI-RELOC-NEXT:          "Reloc": {
+# JSON-MULTI-RELOC-NEXT:            "SymbolIndex": 1,
+# JSON-MULTI-RELOC-NEXT:            "SymbolName": "foo"
+# JSON-MULTI-RELOC-NEXT:          },
 # JSON-MULTI-RELOC-NEXT:          "Version": 0,
 # JSON-MULTI-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-RELOC-NEXT:          "TypeID": 17896295136807035042,
@@ -625,7 +719,13 @@ Symbols:
 # JSON-MULTI-RELOC-NEXT:      },
 # JSON-MULTI-RELOC-NEXT:      {
 # JSON-MULTI-RELOC-NEXT:        "Function": {
-# JSON-MULTI-RELOC-NEXT:          "Name": "bar",
+# JSON-MULTI-RELOC-NEXT:          "Names": [
+# JSON-MULTI-RELOC-NEXT:            "bar"
+# JSON-MULTI-RELOC-NEXT:          ],
+# JSON-MULTI-RELOC-NEXT:          "Reloc": {
+# JSON-MULTI-RELOC-NEXT:            "SymbolIndex": 2,
+# JSON-MULTI-RELOC-NEXT:            "SymbolName": "bar"
+# JSON-MULTI-RELOC-NEXT:          },
 # JSON-MULTI-RELOC-NEXT:          "Version": 0,
 # JSON-MULTI-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-RELOC-NEXT:          "TypeID": 17896295136807035042,
@@ -788,4 +888,176 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
     Value:    0x17A0
+...
+
+## Check relocatable object file handling with section symbol relocations and addends.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-RELOC-ADDEND -DFILE=%t7
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-RELOC-ADDEND -DFILE=%t7
+
+# LLVM-RELOC-ADDEND:      CallGraph [
+# LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Names: [caller]
+# LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
+# LLVM-RELOC-ADDEND-NEXT:       SymbolName: caller
+# LLVM-RELOC-ADDEND-NEXT:     }
+# LLVM-RELOC-ADDEND-NEXT:     Version: 0
+# LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x1234
+# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 2
+# LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
+# LLVM-RELOC-ADDEND-NEXT:       {
+# LLVM-RELOC-ADDEND-NEXT:         Names: [local_func]
+# LLVM-RELOC-ADDEND-NEXT:         Reloc {
+# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 3
+# LLVM-RELOC-ADDEND-NEXT:           SymbolName: .text
+# LLVM-RELOC-ADDEND-NEXT:           Addend: 16
+# LLVM-RELOC-ADDEND-NEXT:         }
+# LLVM-RELOC-ADDEND-NEXT:       }
+# LLVM-RELOC-ADDEND-NEXT:       {
+# LLVM-RELOC-ADDEND-NEXT:         Names: [(.text)+0x4]
+# LLVM-RELOC-ADDEND-NEXT:         Reloc {
+# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 3
+# LLVM-RELOC-ADDEND-NEXT:           SymbolName: .text
+# LLVM-RELOC-ADDEND-NEXT:           Addend: 4
+# LLVM-RELOC-ADDEND-NEXT:         }
+# LLVM-RELOC-ADDEND-NEXT:       }
+# LLVM-RELOC-ADDEND-NEXT:     ]
+# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-ADDEND-NEXT:   }
+# LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Names: [local_func]
+# LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 3
+# LLVM-RELOC-ADDEND-NEXT:       SymbolName: .text
+# LLVM-RELOC-ADDEND-NEXT:       Addend: 16
+# LLVM-RELOC-ADDEND-NEXT:     }
+# LLVM-RELOC-ADDEND-NEXT:     Version: 0
+# LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x0
+# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
+# LLVM-RELOC-ADDEND-NEXT:     ]
+# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-ADDEND-NEXT:   }
+# LLVM-RELOC-ADDEND-NEXT: ]
+
+# JSON-RELOC-ADDEND:     "CallGraph": [
+# JSON-RELOC-ADDEND-NEXT:       {
+# JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Names": [
+# JSON-RELOC-ADDEND-NEXT:             "caller"
+# JSON-RELOC-ADDEND-NEXT:           ],
+# JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
+# JSON-RELOC-ADDEND-NEXT:             "SymbolName": "caller"
+# JSON-RELOC-ADDEND-NEXT:           },
+# JSON-RELOC-ADDEND-NEXT:           "Version": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": true,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 4660,
+# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 2,
+# JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
+# JSON-RELOC-ADDEND-NEXT:             {
+# JSON-RELOC-ADDEND-NEXT:               "Names": [
+# JSON-RELOC-ADDEND-NEXT:                 "local_func"
+# JSON-RELOC-ADDEND-NEXT:               ],
+# JSON-RELOC-ADDEND-NEXT:               "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 3,
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolName": ".text",
+# JSON-RELOC-ADDEND-NEXT:                 "Addend": 16
+# JSON-RELOC-ADDEND-NEXT:               }
+# JSON-RELOC-ADDEND-NEXT:             },
+# JSON-RELOC-ADDEND-NEXT:             {
+# JSON-RELOC-ADDEND-NEXT:               "Names": [
+# JSON-RELOC-ADDEND-NEXT:                 "(.text)+0x4"
+# JSON-RELOC-ADDEND-NEXT:               ],
+# JSON-RELOC-ADDEND-NEXT:               "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 3,
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolName": ".text",
+# JSON-RELOC-ADDEND-NEXT:                 "Addend": 4
+# JSON-RELOC-ADDEND-NEXT:               }
+# JSON-RELOC-ADDEND-NEXT:             }
+# JSON-RELOC-ADDEND-NEXT:           ],
+# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
+# JSON-RELOC-ADDEND-NEXT:         }
+# JSON-RELOC-ADDEND-NEXT:       },
+# JSON-RELOC-ADDEND-NEXT:       {
+# JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Names": [
+# JSON-RELOC-ADDEND-NEXT:             "local_func"
+# JSON-RELOC-ADDEND-NEXT:           ],
+# JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 3,
+# JSON-RELOC-ADDEND-NEXT:             "SymbolName": ".text",
+# JSON-RELOC-ADDEND-NEXT:             "Addend": 16
+# JSON-RELOC-ADDEND-NEXT:           },
+# JSON-RELOC-ADDEND-NEXT:           "Version": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 0,
+# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 0,
+# JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [],
+# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
+# JSON-RELOC-ADDEND-NEXT:         }
+# JSON-RELOC-ADDEND-NEXT:       }
+# JSON-RELOC-ADDEND-NEXT:     ]
+# JSON-RELOC-ADDEND-NEXT:   }
+# JSON-RELOC-ADDEND-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    16
+    Content:         "9090909090909090909090909090909090"
+  - Name:            .llvm.callgraph
+    Type:            SHT_LLVM_CALL_GRAPH
+    Content:         "0003000000000000000034120000000000000200000000000000000000000000000000000000000000000000000000000000000000"
+  - Name:            .rela.llvm.callgraph
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .llvm.callgraph
+    Relocations:
+      - Offset:          0x2
+        Symbol:          caller
+        Type:            R_X86_64_64
+        Addend:          0
+      - Offset:          0x13
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+      - Offset:          0x1b
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          4
+      - Offset:          0x25
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+Symbols:
+  - Name:            caller
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0
+    Size:            1
+  - Name:            local_func
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x10
+    Size:            1
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
 ...
