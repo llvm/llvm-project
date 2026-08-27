@@ -1612,22 +1612,6 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
       return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
     }
 
-    // For a negative step, we can sign-extend the step iff doing so only
-    // traverses values in the range sext([0,SMAX]). Note that this does not
-    // imply no-self-wrap.
-    if (isKnownNegative(Step)) {
-      unsigned BitWidth = getTypeSizeInBits(AR->getType());
-      const SCEV *N =
-          getConstant(APInt::getMaxValue(BitWidth) - getSignedRangeMin(Step));
-      if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
-          isKnownOnEveryIteration(ICmpInst::ICMP_UGT, AR, N)) {
-        Start =
-            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
-        Step = getSignExtendExpr(Step, Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-      }
-    }
-
     // zext({C,+,Step}) --> (zext(D) + zext({C-D,+,Step}))<nuw><nsw>
     // if D + (C - D + Step * n) could be proven to not unsigned wrap
     // where D maximizes the number of trailing zeros of (C - D + Step * n)
@@ -1642,6 +1626,54 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
         return getAddExpr(SZExtD, SZExtR, SCEV::FlagNSW | SCEV::FlagNUW,
                           Depth + 1);
       }
+    }
+
+    // We can prove nusw directly: for a negative step, we can sign-extend the
+    // step iff doing so only traverses values in the range zext([0,UMAX]).
+    unsigned BitWidth = getTypeSizeInBits(AR->getType());
+    const SCEV *N =
+        getConstant(APInt::getMaxValue(BitWidth) - getSignedRangeMin(Step));
+    bool IsNUSW = isKnownNegative(Step) &&
+                  (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
+                   isKnownOnEveryIteration(ICmpInst::ICMP_UGT, AR, N));
+
+    // We know that when
+    //
+    //   zext(Start + Step * MaxBTC) = zext(Start) + zext(Step) * MaxBTC
+    //
+    // it does not unsigned-wrap, but we haven't been able to prove nuw.
+    //
+    // Instead, prove that it's equal to zext(Start) + sext(Step) * MaxBTC, i.e.
+    // sign-extending the Step instead of zero-extending it, to prove nusw.
+    // TODO: Is there a cheaper way to prove this?
+    const APInt *MaxBECount = nullptr;
+    unsigned BW = getTypeSizeInBits(AR->getType());
+    unsigned WideBW = 2 * BW;
+    if (!IsNUSW &&
+        match(getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBECount)) &&
+        MaxBECount->getActiveBits() <= WideBW) {
+      const APInt WideBTC(MaxBECount->zextOrTrunc(WideBW));
+      Type *WideTy = IntegerType::get(getContext(), WideBW);
+      const SCEV *ZExtStart = getZeroExtendExpr(Start, WideTy, Depth + 1);
+      const SCEV *SExtStep = getSignExtendExpr(Step, WideTy, Depth + 1);
+      IsNUSW =
+          getZeroExtendExpr(
+              getAddExpr(Start,
+                         getMulExpr(getConstant(MaxBECount->zextOrTrunc(BW)),
+                                    Step, SCEV::FlagAnyWrap, Depth + 1),
+                         SCEV::FlagAnyWrap, Depth + 1),
+              WideTy, Depth + 1) ==
+          getAddExpr(ZExtStart,
+                     getMulExpr(getConstant(WideBTC), SExtStep,
+                                SCEV::FlagAnyWrap, Depth + 1),
+                     SCEV::FlagAnyWrap, Depth + 1);
+    }
+    if (IsNUSW) {
+      // We have proved nusw, of which nw is a weaker version.
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
+      Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getSignExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
     }
   }
 
