@@ -5716,6 +5716,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
       // TODO: Transform reverse access into strided access with -1 stride.
+      // TODO: Transform scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
       if (!MemR || MemR->isConsecutive())
@@ -5828,7 +5829,6 @@ void VPlanTransforms::lowerSafeUniformLoads(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-
       auto *UniformGather = dyn_cast<VPWidenLoadRecipe>(&R);
       if (!UniformGather ||
           !vputils::isUniformAcrossVFsAndUFs(UniformGather->getAddr()))
@@ -5838,13 +5838,14 @@ void VPlanTransforms::lowerSafeUniformLoads(VPlan &Plan,
       VPValue *Addr = UniformGather->getAddr();
       Value *Underlying = Addr->getUnderlyingValue();
       if (!Underlying ||
-          !isSafeToLoadUnconditionally(Underlying, LI.getType(), LI.getAlign(),
-                                       Plan.getDataLayout(), &LI,
-                                       /*AC=*/nullptr, /*DT=*/nullptr, &TLI))
+          !isDereferenceableAndAlignedPointer(
+              Underlying, LI.getType(), LI.getAlign(),
+              SimplifyQuery(Plan.getDataLayout(), &TLI, /*DT=*/nullptr,
+                            /*AC=*/nullptr, &LI)))
         continue;
       DebugLoc DbgLoc = UniformGather->getDebugLoc();
       auto *ScalarLoad =
-          new VPReplicateRecipe(&LI, {Addr}, /*IsSingleScalar=*/true,
+          new VPReplicateRecipe(&LI, Addr, /*IsSingleScalar=*/true,
                                 /*Mask=*/nullptr, {}, *UniformGather, DbgLoc);
       ScalarLoad->insertBefore(UniformGather);
       auto *Broadcast =
