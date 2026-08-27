@@ -179,6 +179,7 @@ func.func @last_mod_openacc_loop_dynamic(%arg0: memref<f32>, %n: i32) -> memref<
 // CHECK-LABEL: test_tag: acc_loop_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_empty(%arg0: memref<f32>) -> memref<f32> {
   %zero = arith.constant 0.0 : f32
   %one = arith.constant 1.0 : f32
@@ -230,6 +231,7 @@ func.func @last_mod_openacc_loop_descending(%arg0: memref<f32>) -> memref<f32> {
 // CHECK-LABEL: test_tag: acc_loop_descending_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_descending_empty(%arg0: memref<f32>)
     -> memref<f32> {
   %zero = arith.constant 0.0 : f32
@@ -281,6 +283,7 @@ func.func @last_mod_openacc_loop_inclusive_single(%arg0: memref<f32>)
 // CHECK-LABEL: test_tag: acc_loop_inclusive_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_inclusive_empty(%arg0: memref<f32>)
     -> memref<f32> {
   %zero = arith.constant 0.0 : f32
@@ -335,6 +338,7 @@ func.func @last_mod_openacc_loop_descending_exclusive(%arg0: memref<f32>)
 // CHECK-LABEL: test_tag: acc_loop_descending_exclusive_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_descending_exclusive_empty(%arg0: memref<f32>)
     -> memref<f32> {
   %zero = arith.constant 0.0 : f32
@@ -460,6 +464,7 @@ func.func @last_mod_openacc_loop_collapsed(%arg0: memref<f32>) -> memref<f32> {
 // CHECK-LABEL: test_tag: acc_loop_collapsed_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_collapsed_empty(%arg0: memref<f32>)
     -> memref<f32> {
   %zero = arith.constant 0.0 : f32
@@ -485,6 +490,7 @@ func.func @last_mod_openacc_loop_collapsed_empty(%arg0: memref<f32>)
 // CHECK-LABEL: test_tag: acc_loop_collapsed_unknown_empty_after:
 // CHECK:  operand #0
 // CHECK-NEXT:   - pre
+// CHECK-NOT:   - loop_region
 func.func @last_mod_openacc_loop_collapsed_unknown_empty(%arg0: memref<f32>,
     %n: i32) -> memref<f32> {
   %zero = arith.constant 0.0 : f32
