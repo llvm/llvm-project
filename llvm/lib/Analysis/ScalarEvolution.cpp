@@ -13578,16 +13578,16 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // Let's do a quick case analysis to show these are equivalent under
       // our preconditions that Start - Stride is below both Start and RHS.
       // * For RHS <= Start (End is Start), the backedge-taken count must be
-      //   zero. Together with the preconditions, we have
+      //   zero. Together with the precondition "Start - Stride < RHS", we have
       //   "Start - Stride < RHS <= Start". Subtracting Start - Stride from
       //   all sides we get "0 < RHS - (Start - Stride) <= Stride".
       //   Subtracting 1 we get "0 <= (RHS - 1) - (Start - Stride) < Stride".
       //   So dividing that by Stride gives zero.
       //
       // * For RHS > Start (End is RHS), the backedge count must be
-      //   "RHS-Start /uceil Stride". Together with the preconditions, we have
-      //   "RHS > Start > Start - Stride". As such RHS - (Start - Stride) - 1
-      //   does not overflow.
+      //   "RHS-Start /uceil Stride". Together with the precondition
+      //   "Start - Stride < Start", we have "RHS > Start > Start - Stride".
+      //   As such RHS - (Start - Stride) - 1 does not overflow.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
