@@ -1127,14 +1127,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       if (Subtarget.hasStdExtZvabd()) {
         setOperationAction(ISD::ABS, VT, Legal);
-        // Only SEW=8/16 are supported in Zvabd.
-        if (VT.getVectorElementType() == MVT::i8 ||
-            VT.getVectorElementType() == MVT::i16)
-          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
-        else
-          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
-      } else
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+      } else {
         setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      }
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
@@ -9563,10 +9559,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ABDS:
   case ISD::ABDU: {
     EVT VT = Op->getValueType(0);
-    // Only SEW=8/16 are supported in Zvabd.
-    if (Subtarget.hasStdExtZvabd() && VT.isVector() &&
-        (VT.getVectorElementType() == MVT::i8 ||
-         VT.getVectorElementType() == MVT::i16))
+    if (Subtarget.hasStdExtZvabd() && VT.isVector())
       return lowerToScalableOp(Op, DAG);
 
     SDLoc dl(Op);
@@ -15142,14 +15135,14 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
+  SDValue SplatZero = DAG.getNode(
+      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
   SDValue Result;
   if (Subtarget.hasStdExtZvabd()) {
-    Result = DAG.getNode(RISCVISD::ABS_VL, DL, ContainerVT, X,
+    Result = DAG.getNode(RISCVISD::ABDS_VL, DL, ContainerVT, X, SplatZero,
                          DAG.getUNDEF(ContainerVT), Mask, VL);
   } else {
-    SDValue SplatZero = DAG.getNode(
-        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-        DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
     SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
                                DAG.getUNDEF(ContainerVT), Mask, VL);
     Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
@@ -18483,6 +18476,11 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+// (and (i1) f, (setcc a, b, eq)) -> (czero.nez f, (xor a, b))
+// (and (i1) f, (setcc a, b, ne)) -> (czero.eqz f, (xor a, b))
+// (and (setcc a, b, eq), (i1) g) -> (czero.nez g, (xor a, b))
+// (and (setcc a, b, ne), (i1) g) -> (czero.eqz g, (xor a, b))
+//
 // (and (i1) f, (setcc c, 0, ne)) -> (czero.nez f, c)
 // (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
 // (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
@@ -18495,8 +18493,8 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  auto IsEqualCompZero = [](SDValue &V) -> bool {
-    if (V.getOpcode() == ISD::SETCC && isNullConstant(V.getOperand(1))) {
+  auto IsSetCCEquality = [](SDValue &V) -> bool {
+    if (V.getOpcode() == ISD::SETCC) {
       ISD::CondCode CC = cast<CondCodeSDNode>(V.getOperand(2))->get();
       if (ISD::isIntEqualitySetCC(CC))
         return true;
@@ -18504,23 +18502,34 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
     std::swap(N0, N1);
-  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
     return SDValue();
 
   KnownBits Known = DAG.computeKnownBits(N1);
   if (Known.getMaxValue().ugt(1))
     return SDValue();
 
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   unsigned CzeroOpcode =
       (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
           ? RISCVISD::CZERO_EQZ
           : RISCVISD::CZERO_NEZ;
 
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-  return DAG.getNode(CzeroOpcode, DL, VT, N1, N0.getOperand(0));
+  // From here we have two cases:
+  // Either setcc is a comparision with zero, and we can lower directly to a
+  // czero instruction; Or it's not a constant zero, in which case we can still
+  // use a czero, but we first need to get a zero or one value comparing the two
+  // sides of setcc.
+  SDValue Rhs = N0.getOperand(0);
+  if (!isNullConstant(N0->getOperand(1))) {
+    Rhs = DAG.getNode(ISD::XOR, DL, N0.getValueType(), N0.getOperand(0),
+                      N0.getOperand(1));
+  }
+
+  return DAG.getNode(CzeroOpcode, DL, VT, N1, Rhs);
 }
 
 static SDValue reduceANDOfAtomicLoad(SDNode *N,

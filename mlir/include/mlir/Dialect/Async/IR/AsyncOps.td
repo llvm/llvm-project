@@ -107,7 +107,8 @@ def Async_ExecuteOp :
 }
 
 def Async_FuncOp : Async_Op<"func",
-    [FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
+    [SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+     OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
