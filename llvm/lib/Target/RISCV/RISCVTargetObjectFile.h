@@ -61,6 +61,9 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
 };
 
 } // end namespace llvm
