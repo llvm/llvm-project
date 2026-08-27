@@ -1,0 +1,47 @@
+# A module can be built more than once in one link, under a different .pcm path
+# each time. A unit is created per .pcm but a module is anchored by name, so
+# both units describe module M and only one of them can be the import target.
+# The choice has to follow the link order, not the order the units happen to
+# finish cloning, or the dSYM stops being reproducible.
+
+RUN: rm -rf %t && mkdir -p %t/a %t/b
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/a/M.pcm %p/../Inputs/module-import-canonical/dup-a.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/b/M.pcm %p/../Inputs/module-import-canonical/dup-b.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/dup1.o %p/../Inputs/module-import-canonical/dup1.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/dup2.o %p/../Inputs/module-import-canonical/dup2.ll
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map-duplicate.map \
+RUN:     -oso-prepend-path %t -o %t/parallel.dwarf
+RUN: llvm-dwarfdump --verify %t/parallel.dwarf
+RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf | FileCheck %s
+
+# Threading must not decide which copy wins.
+
+RUN: dsymutil --linker parallel -f --num-threads 1 \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map-duplicate.map \
+RUN:     -oso-prepend-path %t -o %t/serial.dwarf
+RUN: cmp %t/parallel.dwarf %t/serial.dwarf
+
+# The copy reached through the first object file of the link is the one every
+# importer resolves to, because its unit takes the lower priority.
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"M"
+CHECK:      0x0[[MODULE:[0-9a-f]+]]: DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK-NEXT:   DW_AT_LLVM_include_path {{.*}}"/tmp/A.framework"
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"dup1.m"
+CHECK:        DW_TAG_imported_declaration
+CHECK:          DW_AT_import {{.*}}(0x{{0*}}[[MODULE]] "M")
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"dup2.m"
+CHECK:        DW_TAG_imported_declaration
+CHECK:          DW_AT_import {{.*}}(0x{{0*}}[[MODULE]] "M")

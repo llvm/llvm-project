@@ -32,6 +32,8 @@ namespace SDPatternMatch {
 /// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
 /// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
+/// TODO: Remove now that we don't need to match over VP nodes.
+
 class BasicMatchContext {
   const SelectionDAG *DAG;
   const TargetLowering *TLI;

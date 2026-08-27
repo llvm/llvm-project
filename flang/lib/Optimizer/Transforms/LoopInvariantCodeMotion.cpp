@@ -240,6 +240,28 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
   return false;
 }
 
+/// Returns true iff hoisting \p op out of a nested region is expected to be
+/// inexpensive. This is a cost heuristic only; the safety of the hoisting is
+/// established separately.
+///
+/// fir.convert and fir.address_of are at most one instruction and are often
+/// free. A load of a trivial non-vector type is a single access, and a load of
+/// a descriptor of known rank is a fixed-size copy. Vector loads may be large,
+/// an assumed-rank descriptor load lowers to a runtime-sized memcpy, and
+/// CHARACTER, derived types and arrays may be arbitrarily large, so those are
+/// left to the aggressive mode.
+static bool isCheapToHoistFromNestedRegion(Operation *op) {
+  if (isa<fir::ConvertOp, fir::AddrOfOp>(op))
+    return true;
+  if (auto load = dyn_cast<fir::LoadOp>(op)) {
+    Type resultType = load.getType();
+    if (isa<fir::BaseBoxType>(resultType))
+      return !fir::isa_unknown_size_box(resultType);
+    return fir::isa_trivial(resultType) && !fir::isa_vector(resultType);
+  }
+  return false;
+}
+
 /// Recursively collect regions from operations inside \p region, skipping
 /// IsolatedFromAbove operations (whose regions form a separate scope) and
 /// LoopLikeOpInterface operations (which have their own LICM invocation).
@@ -437,14 +459,12 @@ void LoopInvariantCodeMotion::runOnOperation() {
       moveLoopInvariantCode(nestedRegions, isDefinedOutsideRegion,
                             shouldMoveFromNestedRegion, moveOutOfRegion);
     } else {
-      // "cheap" mode: only hoist fir.convert.
-      // TODO: refine the cost model for "cheap" hoisting to include
-      // other inexpensive operations.
+      // "cheap" mode: only hoist operations that are inexpensive to move.
       moveLoopInvariantCode(
           nestedRegions, isDefinedOutsideRegion,
           /*shouldMoveOutOfRegion=*/
           [&](Operation *op, Region *region) {
-            return isa<fir::ConvertOp>(op) &&
+            return isCheapToHoistFromNestedRegion(op) &&
                    shouldMoveFromNestedRegion(op, region);
           },
           moveOutOfRegion);

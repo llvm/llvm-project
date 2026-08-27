@@ -69,6 +69,83 @@ bb:
   store <2 x i1> zeroinitializer, ptr addrspace(5) %strip, align 1
   ret void
 }
+
+; The intrinsics' pointer operand must stay the rewritten GEP, not be replaced
+; with the base of the thread's LDS slice.
+define amdgpu_kernel void @use_invariant_start_and_end_gep() {
+; CHECK-LABEL: define amdgpu_kernel void @use_invariant_start_and_end_gep() {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @use_invariant_start_and_end_gep.alloca, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[TMP14]], i32 0, i32 1
+; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[GEP]], align 4
+; CHECK-NEXT:    [[INVARIANT1:%.*]] = call ptr @llvm.invariant.start.p3(i64 4, ptr addrspace(3) [[GEP]])
+; CHECK-NEXT:    call void @llvm.invariant.end.p3(ptr [[INVARIANT1]], i64 4, ptr addrspace(3) [[GEP]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca [4 x i32], align 4, addrspace(5)
+  %gep = getelementptr inbounds [4 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
+  store i32 0, ptr addrspace(5) %gep, align 4
+  %invariant = call ptr @llvm.invariant.start.p5(i64 4, ptr addrspace(5) %gep)
+  call void @llvm.invariant.end.p5(ptr %invariant, i64 4, ptr addrspace(5) %gep)
+  ret void
+}
+
+define amdgpu_kernel void @use_invariant_group_and_strip_gep(ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @use_invariant_group_and_strip_gep(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @use_invariant_group_and_strip_gep.alloca, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[TMP14]], i32 0, i32 1
+; CHECK-NEXT:    store i32 22, ptr addrspace(3) [[GEP]], align 4
+; CHECK-NEXT:    [[LAUNDER2:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[GEP]])
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(3) [[LAUNDER2]], align 4
+; CHECK-NEXT:    [[STRIP1:%.*]] = call ptr addrspace(3) @llvm.strip.invariant.group.p3(ptr addrspace(3) [[GEP]])
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr addrspace(3) [[STRIP1]], align 4
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V1]], [[V2]]
+; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca [4 x i32], align 4, addrspace(5)
+  %gep = getelementptr inbounds [4 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
+  store i32 22, ptr addrspace(5) %gep, align 4
+  %launder = call ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5) %gep)
+  %v1 = load i32, ptr addrspace(5) %launder, align 4
+  %strip = call ptr addrspace(5) @llvm.strip.invariant.group.p5(ptr addrspace(5) %gep)
+  %v2 = load i32, ptr addrspace(5) %strip, align 4
+  %sum = add i32 %v1, %v2
+  store i32 %sum, ptr addrspace(1) %out, align 4
+  ret void
+}
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[RNG1]] = !{i32 0, i32 1025}

@@ -51,8 +51,8 @@ TEST_F(OpenACCUtilsGPUTest, getOrCreateGPUModuleCreatesWhenMissing) {
   EXPECT_EQ(gpuMod->getName(), kDefaultGPUModuleName);
 
   // Module should now have the container module attribute
-  EXPECT_TRUE(
-      (*module)->hasAttr(gpu::GPUDialect::getContainerModuleAttrName()));
+  EXPECT_TRUE((*module)->hasDiscardableAttr(
+      gpu::GPUDialect::getContainerModuleAttrName()));
 }
 
 TEST_F(OpenACCUtilsGPUTest, getOrCreateGPUModuleReturnsExisting) {

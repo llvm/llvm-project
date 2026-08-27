@@ -900,8 +900,8 @@ Status NativeProcessFreeBSD::ReadMemory(const ProcessAddress &process_addr,
   return Status();
 }
 
-Status NativeProcessFreeBSD::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessFreeBSD::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   Status error;
   struct ptrace_io_desc io;
