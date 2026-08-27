@@ -37,6 +37,12 @@ public:
   ~MutexLock() UNLOCK_FUNCTION();
 };
 
+class SCOPED_LOCKABLE MutexLockMaybe {
+public:
+  MutexLockMaybe(Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+  ~MutexLockMaybe() UNLOCK_FUNCTION();
+};
+
 namespace SimpleTest {
 
 class Bar {
@@ -201,6 +207,37 @@ public:
       a = 0;
       mu.Unlock();
     }
+  }
+};
+
+// A scoped try-acquire constructor attempts the acquisition like the
+// direct call: it requires the negative capability, the guard's death
+// establishes it, and a declared negative satisfies it.
+class ScopedTryLockTest {
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+public:
+  void scopedTryNegativeWarn() {
+    MutexLockMaybe scope(&mu); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+  }
+
+  // The guard's death proves the thread does not hold the capability --
+  // released if the try-acquire succeeded, never held if it failed -- so
+  // a following acquire needs no further evidence.
+  void scopedTryDisarmProvesNegative() {
+    {
+      MutexLockMaybe scope(&mu); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    }
+    mu.Lock(); // no '!mu' warning: the disarmed guard proves it
+    a = 0;
+    mu.Unlock();
+  }
+
+  // Inside a REQUIRES(!mu) region the declared negative fact satisfies the
+  // constructor's attempt, and the disarm restores '!mu' by function end.
+  void scopedTryNegativeSatisfied() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    MutexLockMaybe scope(&mu);
   }
 };
 

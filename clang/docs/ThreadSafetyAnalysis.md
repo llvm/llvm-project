@@ -463,6 +463,9 @@ constructor or function returning them by value (using C++17 guaranteed copy
 elision). Acquire-type attributes on other member functions are treated as
 applying to that set of associated capabilities, while `RELEASE` implies that
 a function releases all associated capabilities in whatever mode they're held.
+A constructor annotated with `TRY_ACQUIRE` acquires the associated
+capabilities conditionally, managed by the scoped object; see
+`TRY_ACQUIRE` below.
 
 ### TRY_ACQUIRE(\<bool>, ...), TRY_ACQUIRE_SHARED(\<bool>, ...)
 
@@ -503,6 +506,21 @@ Under `-Wthread-safety-beta`, a try-acquire whose result is never used to
 determine success additionally warns where the analysis loses track of it --
 at a merge with a path that does not hold the capability, or at the end of
 the function -- since the capability may then be leaked.
+
+On a {ref}`scoped_capability` constructor
+(`std::unique_lock lock(mu, std::try_to_lock)`-style), the named capabilities
+are likewise acquired conditionally, managed by the scoped object. A
+constructor has no return value to branch on, so uses under the guard remain
+diagnosed as unverified; but the destructor's conditional release -- it
+releases each capability only if the guard holds it -- pairs exactly with the
+conditional acquisition, so the guard's death discharges it silently (no
+unchecked-result warning) and establishes that the capability is no longer
+held. An explicit `RELEASE` member function, by contrast, demands an
+unconditional release (releasing a guard that does not hold the capability is
+a runtime error) and warns that the capability may not be held. A try-acquire
+made directly on the underlying capability while the guard is alive is not
+the guard's own: the destructor keeps that conditional hold for its stored
+result to resolve after the scope.
 
 A success value that is a specific integer constant rather than a bool
 (`TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning `int`;
