@@ -22740,6 +22740,106 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static SDValue getPTrueForHalfElementCount(EVT ResultVT, const SDLoc &DL,
+                                           SelectionDAG &DAG) {
+  MVT PredicateVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+  switch (ResultVT.getVectorMinNumElements()) {
+  case 2:
+    PredicateVT = MVT::nxv1i1;
+    break;
+  case 4:
+    PredicateVT = MVT::nxv2i1;
+    break;
+  case 8:
+    PredicateVT = MVT::nxv4i1;
+    break;
+  case 16:
+    PredicateVT = MVT::nxv8i1;
+    break;
+  case 32:
+    PredicateVT = MVT::nxv16i1;
+    break;
+  case 64:
+    PredicateVT = MVT::nxv32i1;
+    break;
+  case 128:
+    PredicateVT = MVT::nxv64i1;
+    break;
+  default:
+    return SDValue();
+  }
+
+  return getSVEPredicateBitCast(
+      ResultVT, getPTrue(DAG, DL, PredicateVT, AArch64SVEPredPattern::all),
+      DAG);
+}
+
+static SDValue simplifyAlternatingMask(SDNode *N, SelectionDAG &DAG) {
+  // Try to match:
+  //    t2: nxv2i1 = splat_vector Constant:i1<0>
+  //    t7: nxv2i1 = splat_vector Constant:i1<-1>
+  //  t8: nxv2i1,nxv2i1 = vector_interleave t2, t7
+  //    t0: ch,glue = EntryToken
+  //    t9: nxv4i1 = concat_vectors t8, t8:1
+
+  // Match the concatenation of an interleave of two vectors.
+  EVT VT = N->getValueType(0);
+  SDValue Interleave = N->getOperand(0);
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1 ||
+      Interleave.getNode() != N->getOperand(1).getNode() ||
+      Interleave.getResNo() != 0 || N->getOperand(1).getResNo() != 1 ||
+      Interleave.getOpcode() != ISD::VECTOR_INTERLEAVE)
+    return SDValue();
+
+  // Match an interleave of all-zero and all-one predicate splats.
+  SDValue LHS = Interleave.getOperand(0);
+  SDValue RHS = Interleave.getOperand(1);
+  ConstantSDNode *C0 = nullptr, *C1 = nullptr;
+  if (LHS.getOpcode() != ISD::SPLAT_VECTOR ||
+      RHS.getOpcode() != ISD::SPLAT_VECTOR ||
+      !(C0 = dyn_cast<ConstantSDNode>(LHS.getOperand(0))) ||
+      !(C1 = dyn_cast<ConstantSDNode>(RHS.getOperand(0))) ||
+      !((C0->isZero() && C1->isAllOnes()) || (C0->isAllOnes() && C1->isZero())))
+    return SDValue();
+
+  // Materialize the alternating predicate directly using PTRUE (or its
+  // complement). Use it with a 2x wider element in order to effectively have
+  // an alternating mask.
+  SDValue PTrue = getPTrueForHalfElementCount(VT, N, DAG);
+  if (!PTrue)
+    return SDValue();
+
+  return C0->isZero() ? DAG.getNOT(N, PTrue, VT) : PTrue;
+}
+
+static SDValue simplifyAlternatingSplat(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue Interleave = N->getOperand(0);
+  if (!VT.isScalableVT() || Interleave.getOpcode() != ISD::VECTOR_INTERLEAVE ||
+      Interleave.getNode() != N->getOperand(1).getNode() ||
+      Interleave.getResNo() != 0 || N->getOperand(1).getResNo() != 1 ||
+      Interleave.getOperand(0).getOpcode() != ISD::SPLAT_VECTOR ||
+      Interleave.getOperand(1).getOpcode() != ISD::SPLAT_VECTOR)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT ScalarTy = VT.getVectorElementType();
+  if (!TLI.isTypeLegal(VT) || ScalarTy == MVT::i8 || ScalarTy == MVT::i16)
+    return SDValue();
+
+  SDValue ActiveVal = Interleave.getOperand(0).getOperand(0);
+  SDValue InactiveVal = Interleave.getOperand(1).getOperand(0);
+  SDValue PTrue = getPTrueForHalfElementCount(
+      MVT::getScalableVectorVT(MVT::i1, VT.getVectorMinNumElements()), N, DAG);
+  if (!PTrue)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue InactiveVector = DAG.getSplatVector(VT, DL, InactiveVal);
+  return DAG.getNode(AArch64ISD::DUP_MERGE_PASSTHRU, DL, VT, PTrue, ActiveVal,
+                     InactiveVector);
+}
+
 static SDValue performConcatVectorsCombine(SDNode *N,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            SelectionDAG &DAG) {
@@ -22764,8 +22864,15 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
   }
 
-  if (VT.isScalableVector())
+  if (VT.isScalableVector()) {
+    if (SDValue V = simplifyAlternatingMask(N, DAG))
+      return V;
+
+    if (SDValue V = simplifyAlternatingSplat(N, DAG))
+      return V;
+
     return SDValue();
+  }
 
   if (N->getNumOperands() == 2 && N0Opc == ISD::TRUNCATE &&
       N1Opc == ISD::TRUNCATE) {
