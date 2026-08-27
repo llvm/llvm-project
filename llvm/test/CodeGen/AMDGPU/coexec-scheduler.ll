@@ -303,21 +303,21 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[64:67], v80 offset:128
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[68:71], v80 offset:192
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[114:117], v80 offset:384
+; COEXEC-NEXT:    s_wait_dscnt 0xf
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[16:23], v[24:31], v[90:97]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[118:121], v80 offset:448
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[72:75], v80 offset:640
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[76:79], v80 offset:704
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[122:125], v80 offset:896
-; COEXEC-NEXT:    s_wait_dscnt 0x13
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[16:23], v[24:31], v[90:97]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[126:129], v80 offset:960
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[130:133], v81 offset:128
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[134:137], v81 offset:192
+; COEXEC-NEXT:    s_wait_dscnt 0x12
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[98:105], v[32:39], v[8:15]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[138:141], v81 offset:384
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[142:145], v81 offset:448
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[146:149], v81 offset:640
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[150:153], v81 offset:704
-; COEXEC-NEXT:    s_wait_dscnt 0x16
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[98:105], v[32:39], v[8:15]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[154:157], v81 offset:896
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[158:161], v81 offset:960
 ; COEXEC-NEXT:    s_wait_dscnt 0x14
