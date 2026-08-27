@@ -7630,6 +7630,10 @@ instruction's `!alias.scope` list. This makes it unnecessary to spell out the
 complement of each scope when a group of N pointers is known to be mutually
 non-aliasing.
 
+String names should not be used with disjoint-scope domains, as they will be
+uniqued accross different invocations of the same function, and this is unlikely
+to be desirable behavior.
+
 The metadata identifying each scope is also itself a list containing two or
 three entries. The first entry is the name of the scope. Note that if the name
 is a string then it can be combined across functions and translation units. A
