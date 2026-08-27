@@ -261,12 +261,15 @@ void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
 
   auto [FirstDefault, Defaults] =
       Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
+  assert(Args.size() >= FirstDefault &&
+         "fewer arguments than the intrinsic's required parameters");
   for (unsigned I = Args.size(), E = FTy->getNumParams(); I != E; ++I) {
     unsigned DefaultIdx = I - FirstDefault;
-    if (DefaultIdx < 0 || DefaultIdx >= Defaults.size())
-      break;
-    Args.push_back(
-        llvm::ConstantInt::get(FTy->getParamType(I), Defaults[DefaultIdx]));
+    llvm::Type *ParamTy = FTy->getParamType(I);
+    assert(ParamTy->isIntOrIntVectorTy() &&
+           "intrinsic default arguments must be integer-typed, as enforced "
+           "by TableGen");
+    Args.push_back(llvm::ConstantInt::get(ParamTy, Defaults[DefaultIdx]));
   }
 }
 
