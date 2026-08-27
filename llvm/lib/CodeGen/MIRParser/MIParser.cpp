@@ -2024,6 +2024,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
             .Case("ZR", InlineAsm::ConstraintCode::ZR)
             .Case("ZS", InlineAsm::ConstraintCode::ZS)
             .Case("ZT", InlineAsm::ConstraintCode::ZT)
+            .Case("RF", InlineAsm::ConstraintCode::RF)
             .Default(InlineAsm::ConstraintCode::Unknown);
     if (CC == InlineAsm::ConstraintCode::Unknown)
       return error("unknown memory constraint '" + ConstraintStr + "'");

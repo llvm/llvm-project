@@ -4816,6 +4816,27 @@ bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::m:
     OutOps.push_back(Op);
     return false;
+  case InlineAsm::ConstraintCode::RF: {
+    // flat_load/flat_store require the address in a VGPR. If the operand is
+    // non-divergent it will be SGPR-allocated, so copy it to the right VGPR
+    // class before handing it to the inline asm.
+    if (!Op.getNode()->isDivergent()) {
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+      MVT VT = Op.getSimpleValueType();
+      const TargetRegisterClass *VRC =
+          TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
+      if (VRC) {
+        SDLoc DL(Op);
+        SDValue RC = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+        SDNode *Copy =
+            CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RC});
+        OutOps.push_back(SDValue(Copy, 0));
+        return false;
+      }
+    }
+    OutOps.push_back(Op);
+    return false;
+  }
   default:
     return true;
   }

@@ -19932,7 +19932,7 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
 InlineAsm::ConstraintCode
 SITargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
   if (ConstraintCode == "RF")
-    return InlineAsm::ConstraintCode::m;
+    return InlineAsm::ConstraintCode::RF;
 
   return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }

@@ -476,3 +476,35 @@ define void @flat_store_m_constraint_as5(ptr %in, ptr %in2) {
   ret void
 }
 
+
+; Kernel args are loaded from the argument buffer into SGPRs.
+; The RF constraint must insert a SGPR->VGPR copy for the address.
+define amdgpu_kernel void @flat_load_RF_sgpr_addr(ptr %in) {
+; VI-LABEL: flat_load_RF_sgpr_addr:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+  %a = call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr elementtype(i32) %in)
+  ret void
+}
+
+define amdgpu_kernel void @flat_load_RF_sgpr_addr_as1(ptr addrspace(1) %in) {
+; VI-LABEL: flat_load_RF_sgpr_addr_as1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+  %a = call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(1) elementtype(i32) %in)
+  ret void
+}
