@@ -29,7 +29,7 @@
 #include <cstdint>
 #include <optional>
 
-#define LLDB_DAP_INVALID_SRC_REF int32_t(0U)
+#define LLDB_DAP_INVALID_SRC_REF int32_t(0)
 #define LLDB_DAP_INVALID_VALUE_LOC 0
 #define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
 
