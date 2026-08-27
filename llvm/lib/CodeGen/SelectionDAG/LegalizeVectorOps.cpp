@@ -2193,16 +2193,13 @@ bool VectorLegalizer::tryExpandVecMathCall(
       assert(cast<VectorType>(ParamTy)->getElementType()->isIntegerTy(1) &&
              "unexpected vector mask type");
       EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CallVT);
-      SDValue Mask;
-      if (CallVT == VT) {
-        Mask = DAG.getBoolConstant(true, DL, MaskVT, CallVT);
-      } else {
-        // Only the lanes holding the node's elements need to be active.
-        EVT SubMaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
+      EVT SubMaskVT =
+          MaskVT.changeVectorElementCount(Ctx, VT.getVectorElementCount());
+      SDValue Mask = DAG.getBoolConstant(true, DL, SubMaskVT, VT);
+      // Only the lanes holding the node's elements need to be active.
+      if (CallVT != VT)
         Mask = DAG.getInsertSubvector(
-            DL, DAG.getBoolConstant(false, DL, MaskVT, CallVT),
-            DAG.getBoolConstant(true, DL, SubMaskVT, VT), 0);
-      }
+            DL, DAG.getBoolConstant(false, DL, MaskVT, CallVT), Mask, 0);
       Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
     } else {
       SDValue Op = Node->getOperand(I);
