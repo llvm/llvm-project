@@ -5,6 +5,7 @@
 # RUN: diff -u %t.ll %S/Inputs/dot_value_in_metadata_string.ll.expected
 # Verify that the generated check lines match the input they were taken from.
 # RUN: opt < %t.ll -passes=instsimplify -S | FileCheck %t.ll
-# RUN: cp -f %t.ll %t.first.ll && %update_test_checks %t.ll --check-globals all
+# RUN: %update_test_checks %t.ll --check-globals all
 # Verify script is idempotent
-# RUN: diff -u %t.ll %t.first.ll
+# RUN: diff -u %t.ll %S/Inputs/dot_value_in_metadata_string.ll.expected
+
