@@ -1018,8 +1018,9 @@ public:
   }
 
   virtual InstructionCost getMinMaxReductionCost(Intrinsic::ID IID,
-                                                 VectorType *, FastMathFlags,
-                                                 TTI::TargetCostKind) const {
+                                                 VectorType *,
+                                                 TTI::TargetCostKind,
+                                                 FastMathFlags) const {
     return 1;
   }
 

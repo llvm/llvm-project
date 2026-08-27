@@ -285,9 +285,9 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
-  InstructionCost
-  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
-                         TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         TTI::TargetCostKind CostKind,
+                                         FastMathFlags FMF) const override;
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
   unsigned getCacheLineSize() const override;

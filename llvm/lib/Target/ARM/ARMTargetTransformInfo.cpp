@@ -1963,10 +1963,10 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
                                        CostKind);
 }
 
-InstructionCost
-ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                   FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) const {
+InstructionCost ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID,
+                                                   VectorType *Ty,
+                                                   TTI::TargetCostKind CostKind,
+                                                   FastMathFlags FMF) const {
   EVT ValVT = TLI->getValueType(DL, Ty);
 
   // In general floating point reductions are a series of elementwise
@@ -2020,7 +2020,7 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
       return Entry->Cost * ST->getMVEVectorCostFactor(CostKind) * LT.first;
   }
 
-  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
+  return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
 }
 
 InstructionCost

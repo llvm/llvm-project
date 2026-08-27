@@ -4831,7 +4831,7 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
                                        VecTy, std::nullopt, CostKind);
     InstructionCost MinMaxCost =
         TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(MinMax), VecTy,
-                                   FastMathFlags(), CostKind);
+                                   CostKind, FastMathFlags());
     return ArithCost <= MinMaxCost ? std::make_pair(Arith, ArithCost)
                                    : std::make_pair(MinMax, MinMaxCost);
   };
@@ -5102,9 +5102,9 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_smax:
       OldReduceCost = TTI.getMinMaxReductionCost(
-          getMinMaxReductionIntrinsicOp(IID), FXTy, FastMathFlags(), CostKind);
+          getMinMaxReductionIntrinsicOp(IID), FXTy, CostKind, FastMathFlags());
       NewReduceCost = TTI.getMinMaxReductionCost(
-          getMinMaxReductionIntrinsicOp(IID), XTy, FastMathFlags(), CostKind);
+          getMinMaxReductionIntrinsicOp(IID), XTy, CostKind, FastMathFlags());
       break;
     default:
       llvm_unreachable("Unexpected reduction");
@@ -5256,7 +5256,7 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
       return TTI.getArithmeticReductionCost(ReductionOpc, VecTy, std::nullopt,
                                             CostKind);
     return TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID), VecTy,
-                                      FastMathFlags(), CostKind);
+                                      CostKind, FastMathFlags());
   };
 
   InstructionCost OrigCost = GetReductionCost(OriginalIID);
@@ -5377,7 +5377,7 @@ bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
   InstructionCost OrCost = TTI.getArithmeticReductionCost(
       Instruction::Or, VecTy, std::nullopt, CostKind);
   InstructionCost UmaxCost = TTI.getMinMaxReductionCost(
-      Intrinsic::umax, VecTy, FastMathFlags(), CostKind);
+      Intrinsic::umax, VecTy, CostKind, FastMathFlags());
   if (!OrCost.isValid() && !UmaxCost.isValid())
     return false;
   bool UseOr = OrCost.isValid() && (!UmaxCost.isValid() || OrCost <= UmaxCost);

@@ -6384,8 +6384,8 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 
 InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                       FastMathFlags FMF,
-                                       TTI::TargetCostKind CostKind) const {
+                                       TTI::TargetCostKind CostKind,
+                                       FastMathFlags FMF) const {
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
@@ -6397,7 +6397,7 @@ AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   if (LT.second.getScalarType() == MVT::f16 && !ST->hasFullFP16())
-    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
+    return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
 
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {

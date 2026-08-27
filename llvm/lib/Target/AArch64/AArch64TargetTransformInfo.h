@@ -235,9 +235,9 @@ public:
                                    TTI::TargetCostKind CostKind,
                                    unsigned Index) const override;
 
-  InstructionCost
-  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
-                         TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         TTI::TargetCostKind CostKind,
+                                         FastMathFlags FMF) const override;
 
   InstructionCost
   getArithmeticReductionCostSVE(unsigned Opcode, VectorType *ValTy,
