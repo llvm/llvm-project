@@ -31,7 +31,7 @@ add_llvm_unittest(OrcJITTests
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp
-  LookupAndRecordAddrsTest.cpp
+  LookupAndApplyTest.cpp
   MachOBuilderTest.cpp
   MangleAndInternerTest.cpp
   MachOPlatformTest.cpp

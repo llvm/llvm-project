@@ -12,6 +12,7 @@ add_lldb_unittest(TargetTests
   RegisterTypeBuilderClangTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp
+  StackFrameListTest.cpp
   StackFrameRecognizerTest.cpp
   SummaryStatisticsTest.cpp
   TargetAPIMutexTest.cpp
@@ -28,8 +29,11 @@ add_lldb_unittest(TargetTests
       lldbPluginPlatformLinux
       lldbPluginPlatformMacOSX
       lldbPluginPlatformAndroid
+      lldbPluginProcessUtility
       lldbPluginRegisterTypeBuilderClang
+      lldbPluginScriptInterpreterNone
       lldbPluginSymbolFileBreakpad
+      lldbPluginSymbolFileDWARF
       lldbPluginSymbolFileSymtab
       lldbPluginTypeSystemClang
       lldbTarget
@@ -44,5 +48,6 @@ set(test_inputs
   AndroidModule.so.sym
   AndroidModule.unstripped.so
   TestModule.so
+  inlined-function.yaml
   )
 add_unittest_inputs(TargetTests "${test_inputs}")

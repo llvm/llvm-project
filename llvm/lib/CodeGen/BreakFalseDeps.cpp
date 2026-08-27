@@ -165,7 +165,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   // Go over all registers in the register class and find the register with
   // max clearance or clearance higher than Pref.
   unsigned MaxClearance = 0;
-  unsigned MaxClearanceReg = OriginalReg;
+  MCRegister MaxClearanceReg = OriginalReg;
   ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(OpRC);
   for (MCPhysReg Reg : Order) {
     unsigned Clearance = RDI->getClearance(MI, Reg);

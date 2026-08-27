@@ -29,7 +29,7 @@ unittest("OrcJITTests") {
     "LazyCallThroughAndReexportsTest.cpp",
     "LibraryResolverTest.cpp",
     "LinkGraphLinkingLayerTest.cpp",
-    "LookupAndRecordAddrsTest.cpp",
+    "LookupAndApplyTest.cpp",
     "MachOBuilderTest.cpp",
     "MachOPlatformTest.cpp",
     "MangleAndInternerTest.cpp",

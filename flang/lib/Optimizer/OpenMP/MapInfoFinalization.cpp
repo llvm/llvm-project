@@ -855,11 +855,6 @@ class MapInfoFinalizationPass
                  ? MapFlags::close
                  : MapFlags::always;
 
-    // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
-    // to ensure device-local placement where required by tests relying on USM +
-    // close semantics.
-    if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
-      flags |= MapFlags::close;
     return flags;
   }
 
