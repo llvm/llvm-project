@@ -1,5 +1,9 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=50 -Wno-openmp-usage
 
+! OpenMP 5.0 allows map list items to share original storage when they are the
+! same variable or array section. A named COMMON block has the same meaning as
+! its explicit members, so repeating its map clauses is valid.
+
 subroutine valid_map_use_device_addr
   integer :: x, y
   common /valid/ x, y
@@ -11,6 +15,28 @@ subroutine valid_map_use_device_addr
   !$omp end target data
 
   !$omp target data map(alloc: /valid/) use_device_addr(/valid/)
+  !$omp end target data
+end subroutine
+
+subroutine repeated_maps
+  integer :: x, y
+  common /repeated/ x, y
+
+  !$omp target data map(from: /repeated/) map(to: /repeated/)
+  !$omp end target data
+
+  !$omp target data map(to: /repeated/) map(to: /repeated/) map(to: /repeated/)
+  !$omp end target data
+end subroutine
+
+subroutine repeated_map_controls
+  integer :: x, y, scalar
+  common /controls/ x, y
+
+  !$omp target data map(from: x, y) map(to: x, y) map(to: x, y)
+  !$omp end target data
+
+  !$omp target data map(from: scalar) map(to: scalar) map(to: scalar)
   !$omp end target data
 end subroutine
 
@@ -36,27 +62,47 @@ subroutine duplicate_and_exclusive_clauses
   !$omp end target data
 end subroutine
 
-subroutine third_appearance
+subroutine repeated_maps_with_use_device_addr
   integer :: x, y
   common /third/ x, y
 
-  !ERROR: 'third' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp target data map(tofrom: /third/) use_device_addr(/third/) map(from: /third/)
+  !$omp target data map(from: /third/) map(to: /third/) use_device_addr(/third/)
+  !$omp end target data
+
+  !$omp target data map(from: /third/) use_device_addr(/third/) map(to: /third/)
+  !$omp end target data
+
+  !$omp target data use_device_addr(/third/) map(from: /third/) map(to: /third/)
   !$omp end target data
 
   !ERROR: List item 'third' present at multiple USE_DEVICE_ADDR clauses
   !ERROR: 'third' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp target data map(tofrom: /third/) use_device_addr(/third/) use_device_addr(/third/)
-  !$omp end target data
-
-  !ERROR: 'third' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp target data use_device_addr(/third/) map(tofrom: /third/) map(from: /third/)
+  !$omp target data map(from: /third/) map(to: /third/) use_device_addr(/third/) use_device_addr(/third/)
   !$omp end target data
 
   !ERROR: List item 'third' present at multiple USE_DEVICE_ADDR clauses
   !ERROR: 'third' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp target data use_device_addr(/third/) map(tofrom: /third/) use_device_addr(/third/)
+  !$omp target data use_device_addr(/third/) map(from: /third/) map(to: /third/) use_device_addr(/third/)
   !$omp end target data
+end subroutine
+
+subroutine nested_repeated_maps
+  integer :: x, y
+  common /nested_repeated/ x, y
+
+  !$omp target data map(from: /nested_repeated/) use_device_addr(/nested_repeated/) map(to: /nested_repeated/)
+    !$omp target data use_device_addr(/nested_repeated/) map(from: /nested_repeated/) map(to: /nested_repeated/)
+    !$omp end target data
+  !$omp end target data
+end subroutine
+
+subroutine unrelated_data_sharing_conflict
+  integer :: x, y
+  common /conflict/ x, y
+
+  !ERROR: 'conflict' appears in more than one data-sharing clause on the same OpenMP directive
+  !$omp target map(to: /conflict/) map(from: /conflict/) private(/conflict/)
+  !$omp end target
 end subroutine
 
 subroutine map_use_device_ptr_non_cptr

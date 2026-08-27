@@ -57,9 +57,10 @@ subroutine mixed_common
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmapped_common
-! CHECK: %[[MAPPED_MAP:.*]] = omp.map.info {{.*}} map_clauses(tofrom) {{.*}} {{(\{name = "mapped"\}|name\("mapped"\))}}
+! CHECK: %[[MAPPED_FROM:.*]] = omp.map.info {{.*}} map_clauses(from) {{.*}} {{(\{name = "mapped"\}|name\("mapped"\))}}
+! CHECK: %[[MAPPED_TO:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}} {{(\{name = "mapped"\}|name\("mapped"\))}}
 ! CHECK: %[[MAPPED_UDA:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "mapped"\}|name\("mapped"\))}}
-! CHECK: omp.target_data map_entries(%[[MAPPED_MAP]] : {{.*}}) use_device_addr(%[[MAPPED_UDA]] -> %[[MAPPED_ARG:.*]] : {{.*}}) {
+! CHECK: omp.target_data map_entries(%[[MAPPED_FROM]], %[[MAPPED_TO]] : {{.*}}) use_device_addr(%[[MAPPED_UDA]] -> %[[MAPPED_ARG:.*]] : {{.*}}) {
 ! CHECK: %[[MAPPED_X_COORD:.*]] = fir.coordinate_of %[[MAPPED_ARG]], %{{.*}}
 ! CHECK: %[[MAPPED_X_REF:.*]] = fir.convert %[[MAPPED_X_COORD]]
 ! CHECK: %[[MAPPED_X:.*]]:2 = hlfir.declare %[[MAPPED_X_REF]] storage(%[[MAPPED_ARG]][0])
@@ -72,7 +73,41 @@ end subroutine
 subroutine mapped_common
   integer :: x, y
   common /mapped/ x, y
-  !$omp target data map(tofrom: /mapped/) use_device_addr(/mapped/)
+  !$omp target data map(from: /mapped/) map(to: /mapped/) use_device_addr(/mapped/)
+    x = y + 1
+  !$omp end target data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPuse_device_addr_first
+! CHECK: %[[UDA_FIRST_FROM:.*]] = omp.map.info {{.*}} map_clauses(from) {{.*}} {{(\{name = "uda_first"\}|name\("uda_first"\))}}
+! CHECK: %[[UDA_FIRST_TO:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}} {{(\{name = "uda_first"\}|name\("uda_first"\))}}
+! CHECK: %[[UDA_FIRST_UDA:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {{(\{name = "uda_first"\}|name\("uda_first"\))}}
+! CHECK: omp.target_data map_entries(%[[UDA_FIRST_FROM]], %[[UDA_FIRST_TO]] : {{.*}}) use_device_addr(%[[UDA_FIRST_UDA]] -> %[[UDA_FIRST_ARG:.*]] : {{.*}}) {
+! CHECK: %[[UDA_FIRST_X_COORD:.*]] = fir.coordinate_of %[[UDA_FIRST_ARG]], %{{.*}}
+! CHECK: %[[UDA_FIRST_X_REF:.*]] = fir.convert %[[UDA_FIRST_X_COORD]]
+! CHECK: %[[UDA_FIRST_X:.*]]:2 = hlfir.declare %[[UDA_FIRST_X_REF]] storage(%[[UDA_FIRST_ARG]][0])
+! CHECK: %[[UDA_FIRST_Y_COORD:.*]] = fir.coordinate_of %[[UDA_FIRST_ARG]], %{{.*}}
+! CHECK: %[[UDA_FIRST_Y_REF:.*]] = fir.convert %[[UDA_FIRST_Y_COORD]]
+! CHECK: %[[UDA_FIRST_Y:.*]]:2 = hlfir.declare %[[UDA_FIRST_Y_REF]] storage(%[[UDA_FIRST_ARG]][4])
+! CHECK: %[[UDA_FIRST_LOAD:.*]] = fir.load %[[UDA_FIRST_Y]]#0
+! CHECK: hlfir.assign %{{.*}} to %[[UDA_FIRST_X]]#0
+subroutine use_device_addr_first
+  integer :: x, y
+  common /uda_first/ x, y
+  !$omp target data use_device_addr(/uda_first/) map(from: /uda_first/) map(to: /uda_first/)
+    x = y + 1
+  !$omp end target data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPrepeated_map_common
+! CHECK: %[[REPEATED_FROM:.*]] = omp.map.info {{.*}} map_clauses(from) {{.*}} {{(\{name = "repeated_map"\}|name\("repeated_map"\))}}
+! CHECK: %[[REPEATED_TO_1:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}} {{(\{name = "repeated_map"\}|name\("repeated_map"\))}}
+! CHECK: %[[REPEATED_TO_2:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}} {{(\{name = "repeated_map"\}|name\("repeated_map"\))}}
+! CHECK: omp.target_data map_entries(%[[REPEATED_FROM]], %[[REPEATED_TO_1]], %[[REPEATED_TO_2]] : {{.*}}) {
+subroutine repeated_map_common
+  integer :: x, y
+  common /repeated_map/ x, y
+  !$omp target data map(from: /repeated_map/) map(to: /repeated_map/) map(to: /repeated_map/)
     x = y + 1
   !$omp end target data
 end subroutine

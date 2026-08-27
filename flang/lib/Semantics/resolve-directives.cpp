@@ -61,7 +61,7 @@ protected:
     Scope &scope;
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
-    std::map<const Symbol *, Symbol::Flag> commonBlockClauseFlags;
+    std::map<const Symbol *, Symbol::Flags> commonBlockClauseFlags;
     std::map<parser::OmpVariableCategory::Value,
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap;
@@ -3195,28 +3195,25 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
   Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
   if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
-      auto isMapFlag{[](Symbol::Flag flag) {
-        return flag == Symbol::Flag::OmpMapTo ||
-            flag == Symbol::Flag::OmpMapFrom ||
-            flag == Symbol::Flag::OmpMapToFrom ||
-            flag == Symbol::Flag::OmpMapStorage ||
-            flag == Symbol::Flag::OmpMapDelete;
-      }};
+      const Symbol::Flags mapFlags{Symbol::Flag::OmpMapTo,
+          Symbol::Flag::OmpMapFrom, Symbol::Flag::OmpMapToFrom,
+          Symbol::Flag::OmpMapStorage, Symbol::Flag::OmpMapDelete};
       const Symbol *commonBlock{&symbol->GetUltimate()};
-      auto [it, inserted]{GetContext().commonBlockClauseFlags.try_emplace(
-          commonBlock, ompFlag)};
-      bool mapUseDeviceAddrPair{
-          GetContext().directive == llvm::omp::Directive::OMPD_target_data &&
-          !inserted &&
-          ((isMapFlag(it->second) &&
-               ompFlag == Symbol::Flag::OmpUseDeviceAddr) ||
-              (it->second == Symbol::Flag::OmpUseDeviceAddr &&
-                  isMapFlag(ompFlag)))};
-      if (mapUseDeviceAddrPair) {
-        // Mark the one permitted overlap as consumed so a third appearance is
-        // still diagnosed.
-        it->second = Symbol::Flag::OmpCommonBlock;
-      } else {
+      auto [it, inserted]{
+          GetContext().commonBlockClauseFlags.try_emplace(commonBlock)};
+      bool isTargetData{
+          GetContext().directive == llvm::omp::Directive::OMPD_target_data};
+      Symbol::Flags allowedRepeatFlags{mapFlags};
+      if (isTargetData) {
+        allowedRepeatFlags.set(Symbol::Flag::OmpUseDeviceAddr);
+      }
+      bool allowRepeatedAppearance{!inserted &&
+          (it->second & ~allowedRepeatFlags).none() &&
+          (mapFlags.test(ompFlag) ||
+              (isTargetData && ompFlag == Symbol::Flag::OmpUseDeviceAddr &&
+                  !it->second.test(Symbol::Flag::OmpUseDeviceAddr)))};
+      it->second.set(ompFlag);
+      if (!allowRepeatedAppearance) {
         CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
       }
     }
