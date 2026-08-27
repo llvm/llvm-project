@@ -15428,17 +15428,13 @@ SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
   IncrementWrapFlags ImpliedFlags = IncrementAnyWrap;
   SCEV::NoWrapFlags StaticFlags = AR->getNoWrapFlags();
 
-  // We can safely transfer the NSW flag as NSSW.
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNSW) == StaticFlags)
-    ImpliedFlags = IncrementNSSW;
+  // nsw implies nssw. nssw is equivalent to nsw.
+  if (ScalarEvolution::hasFlags(StaticFlags, SCEV::FlagNSW))
+    ImpliedFlags = setFlags(ImpliedFlags, IncrementNSSW);
 
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNUW) == StaticFlags) {
-    // If the increment is positive, the SCEV NUW flag will also imply the
-    // WrapPredicate NUSW flag.
-    if (const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
-      if (Step->getValue()->getValue().isNonNegative())
-        ImpliedFlags = setFlags(ImpliedFlags, IncrementNUSW);
-  }
+  // nuw implies nusw. nusw is strictly weaker than nuw.
+  if (ScalarEvolution::hasFlags(StaticFlags, SCEV::FlagNUW))
+    ImpliedFlags = setFlags(ImpliedFlags, IncrementNUSW);
 
   return ImpliedFlags;
 }
