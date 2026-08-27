@@ -1878,7 +1878,8 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   OpBuilder::InsertionGuard guard(builder);
 
   // Create the recipe operation first so regions have proper parent context
-  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName,
+                                        /*sym_visibility=*/nullptr, varType);
 
   // Populate the init region
   bool needsFree = false;
@@ -1913,7 +1914,8 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Create the private.recipe op with the same type as the firstprivate.recipe.
   OpBuilder::InsertionGuard guard(builder);
   auto varType = firstprivRecipe.getType();
-  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName,
+                                        /*sym_visibility=*/nullptr, varType);
 
   // Clone the init region
   IRMapping mapping;
@@ -1975,7 +1977,8 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   OpBuilder::InsertionGuard guard(builder);
 
   // Create the recipe operation first so regions have proper parent context
-  auto recipe = FirstprivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = FirstprivateRecipeOp::create(
+      builder, loc, recipeName, /*sym_visibility=*/nullptr, varType);
 
   // Populate the init region
   bool needsFree = false;

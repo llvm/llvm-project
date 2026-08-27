@@ -3070,6 +3070,63 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
+  // The addressable cap is a fixed hardware property, independent of how many
+  // SIMDs a work-group runs on.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch600),
+      32768u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch700),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch900),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch950),
+      163840u);
+  // gfx10+ addresses 64 KiB even though the physical block is 128 KiB.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1030),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1250),
+      327680u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX900),
+            65536u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX950),
+            163840u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX1250),
+            327680u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
+  EXPECT_EQ(AMDGPU::getMinWavesPerEU(), 1u);
+
+  // GFX90A/GFX9.4/GFX9.5 -> 8, other pre-GFX10 -> 10, GFX10.1 -> 20,
+  // GFX10.3 and every later generation -> 16.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch900), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch942), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch950), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1010), 20u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1030), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1250), 16u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1030), 16u);
+}
+
 TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   using AMDGPU::TargetID;
   using AMDGPU::TargetIDSetting;
