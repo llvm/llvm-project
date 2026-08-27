@@ -924,6 +924,22 @@ def AlignValue : Attr {
   let Documentation = [AlignValueDocs];
 }
 
+def AnalyzeAsClass : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_class">];
+  let Args = [StringArgument<"ClassName">];
+  let Subjects = SubjectList<[Record],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def AnalyzeAsMethod : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_method">];
+  let Args = [StringArgument<"MethodName">];
+  let Subjects = SubjectList<[CXXMethod],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def AlignMac68k : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

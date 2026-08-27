@@ -6654,6 +6654,115 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));
 }
 
+// for now this only handles std::optional (POC)
+static bool isValidAnalyzeAsClassAttr(Decl *D, StringRef Tag) {
+  if (Tag == "std::optional")
+    return true;
+  return false;
+}
+
+static void handleAnalyzeAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  if (D->hasAttr<AnalyzeAsClassAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
+    return;
+  }
+  if (!isValidAnalyzeAsClassAttr(D, Str)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AnalyzeAsClassAttr(S.Context, AL, Str));
+}
+
+// for now this only handles std::optional (POC)
+static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
+  if (Tag.empty())
+    return false;
+
+  return true;
+
+  // Parameter-signature validation removed.
+  //
+  // The block below parsed the annotation string's parameter list and checked
+  // that () and <> were balanced (so e.g. "emplace(oops))" was rejected). It
+  // was written when we expected to parse the parameters of the referenced
+  // method. That is no longer how matching works: the model layer compares the
+  // annotation string to the query verbatim (hasAnalyzeAsMethodName does
+  // `AttrValue == query`) and never inspects the parameter structure — so the
+  // balance check validated a property nothing downstream depends on. It also
+  // validated the wrong thing: it caught syntactic garbage but silently
+  // accepted semantic typos like "emplaceTYPO(int)", which simply fail safe by
+  // never matching. Kept here (not deleted) in case we later validate against a
+  // known set of operations, at which point it should be rewritten to check
+  // what the matcher actually relies on.
+  //
+  // size_t OpenParen = Tag.find('(');
+  // if(OpenParen == StringRef::npos)
+  //   return true;    // simple function name with no arguments
+  //
+  // if(OpenParen == 0)
+  //   return false;  // no method name before parentheses
+  //
+  // if (Tag.back() != ')')
+  //   return false;  // some trailing rubbish after close parenthesis
+  //
+  // StringRef AllParams = Tag.slice(OpenParen + 1, Tag.size() - 1);
+  //
+  // if (AllParams.empty())
+  //   return true;  // verbose but valid
+  //
+  // // look through all the parameters
+  // // check () and <> are balanced
+  // // split on ','
+  // SmallVector<char, 4> BalanceCheckStack;
+  // size_t SegStart = 0;
+  //
+  // // TODO currently something like  blah<,> would pass validation
+  // // we should improve this past POC stage
+  // for (size_t I = 0, End = AllParams.size(); I != End; ++I )
+  // {
+  //   char C = AllParams[I];
+  //   if(C == '('|| C == '<'){
+  //     BalanceCheckStack.push_back(C);
+  //   }
+  //   else if(C == ')')
+  //   {
+  //     if(BalanceCheckStack.empty() || BalanceCheckStack.back() != '(')
+  //       return false;
+  //     BalanceCheckStack.pop_back();
+  //   }
+  //   else if(C == '>'){
+  //     if(BalanceCheckStack.empty() || BalanceCheckStack.back() != '<')
+  //       return false;
+  //     BalanceCheckStack.pop_back();
+  //   }
+  //   else if(C == ',' && BalanceCheckStack.empty()){
+  //     // TODO more detailed param checks
+  //   }
+  // }
+  //
+  // return BalanceCheckStack.empty();
+}
+
+static void handleAnalyzeAsMethod(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  if (D->hasAttr<AnalyzeAsMethodAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_duplicate_attribute) << AL;
+    return;
+  }
+  if (!isValidAnalyzeAsMethodAttr(D, Str)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) AnalyzeAsMethodAttr(S.Context, AL, Str));
+}
+
 static bool hasBTFDeclTagAttr(Decl *D, StringRef Tag) {
   for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     if (I->getBTFDeclTag() == Tag)
@@ -7744,6 +7853,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BPFPreserveStaticOffset:
     handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnalyzeAsClass:
+    handleAnalyzeAsClass(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnalyzeAsMethod:
+    handleAnalyzeAsMethod(S, D, AL);
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
