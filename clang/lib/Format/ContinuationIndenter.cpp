@@ -964,17 +964,18 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // - foo(::new Bar())
     if (Tok.is(tok::kw_new) || Tok.startsSequence(tok::coloncolon, tok::kw_new))
       return true;
-    if (Tok.is(TT_UnaryOperator) ||
-        (Style.isJavaScript() &&
-         Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
-      return true;
-    }
+
     const auto *Previous = TokAfterLParen.Previous;
     assert(Previous); // IsOpeningBracket(Previous)
     if (Previous->Previous &&
         (Previous->Previous->isIf() || Previous->Previous->isLoop(Style) ||
          Previous->Previous->is(tok::kw_switch))) {
       return false;
+    }
+    if (Tok.is(TT_UnaryOperator) ||
+        (Style.isJavaScript() &&
+         Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
+      return true;
     }
     if (Previous->isNoneOf(TT_FunctionDeclarationLParen,
                            TT_LambdaDefinitionLParen) &&

@@ -16,7 +16,6 @@ namespace test {
 namespace {
 
 class FormatTest : public test::FormatTestBase {};
-
 TEST_F(FormatTest, MessUp) {
   EXPECT_EQ("1 2 3", messUp("1 2 3"));
   EXPECT_EQ("1 2 3", messUp("1\n2\n3"));
@@ -26645,7 +26644,28 @@ TEST_F(FormatTest, UnbalancedAngleBrackets) {
 TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
   verifyNoCrash("void foo()([] consteval -> int {}())");
 }
+TEST_F(FormatTest, BreakAfterOpenBracketIfUnary) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ContinuationIndentWidth = 2;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketIf = true;
 
+  verifyFormat("int main() {\n"
+               "  if (\n"
+               "    !printf(\"%s %s %s %s %s %s\",\n"
+               "            \"foobar\",\n"
+               "            \"foobar\",\n"
+               "            \"foobar\",\n"
+               "            \"foobar\",\n"
+               "            \"foobar\",\n"
+               "            \"foobar\")\n"
+               "  ) {\n"
+               "    return 1;\n"
+               "  }\n"
+               "}\n",
+               Style);
+}
 } // namespace
 } // namespace test
 } // namespace format
