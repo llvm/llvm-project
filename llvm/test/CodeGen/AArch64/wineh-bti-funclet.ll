@@ -54,7 +54,7 @@ define dso_local void @wineh_funclet() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    bl may_throw
 ; CHECK-NEXT:    adrp x0, .LBB0_1
-; CHECK-NEXT:    add x0, x0, .LBB0_1
+; CHECK-NEXT:    add x0, x0, :lo12:.LBB0_1
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr_x 16

@@ -173,7 +173,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
   }
   // TODO: Migrate to MCSpecifierExpr::create like ELF.
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
   return MCOperand::createExpr(Expr);
@@ -259,7 +259,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     RefFlags |= AArch64::S_NC;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
@@ -310,7 +310,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  if (!MO.isJTI() && MO.getOffset())
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
@@ -347,8 +347,13 @@ bool AArch64MCInstLower::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createImm(MO.getImm());
     break;
   case MachineOperand::MO_MachineBasicBlock:
-    MCOp = MCOperand::createExpr(
-        MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+    // A flagged block operand (Windows catchret's ADRP/ADD) needs its
+    // relocation specifier; a plain branch target does not.
+    if (MO.getTargetFlags() & AArch64II::MO_FRAGMENT)
+      MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
+    else
+      MCOp = MCOperand::createExpr(
+          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
     break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = LowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
