@@ -27799,7 +27799,8 @@ static SDValue splitStoreConstVector128(StoreSDNode *ST,
       Value.getNumOperands() != 2 || !BVN->isConstant())
     return SDValue();
 
-  if (!Value.hasOneUse() || ISD::isBuildVectorAllZeros(Value.getNode()))
+  if (ST->isVolatile() || ST->isIndexed() || !Value.hasOneUse() ||
+      ISD::isBuildVectorAllZeros(Value.getNode()))
     return SDValue();
 
   // For SVE targets, skip this optimization if the types have been legalized.
