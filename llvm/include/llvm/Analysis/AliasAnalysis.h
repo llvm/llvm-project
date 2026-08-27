@@ -582,7 +582,8 @@ public:
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
-  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -765,7 +766,7 @@ public:
   /// Returns an AliasResult indicating whether a specific memory location
   /// aliases errno.
   virtual AliasResult aliasErrno(const MemoryLocation &Loc,
-                                 const Module *M) = 0;
+                                 const Instruction *CtxI) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -834,8 +835,9 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
-    return Result.aliasErrno(Loc, M);
+  AliasResult aliasErrno(const MemoryLocation &Loc,
+                         const Instruction *CtxI) override {
+    return Result.aliasErrno(Loc, CtxI);
   }
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -898,7 +900,7 @@ public:
     return AliasResult::MayAlias;
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Instruction *CtxI) {
     return AliasResult::MayAlias;
   }
 

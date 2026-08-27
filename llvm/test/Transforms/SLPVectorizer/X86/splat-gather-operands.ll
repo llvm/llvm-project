@@ -252,3 +252,77 @@ entry:
   store i32 %r3, ptr %s3, align 4
   ret void
 }
+
+; Splat gathers of cast instructions: the unique scalars form a vectorizable
+; cast subtree, the gathers are emitted as its broadcasts.
+
+define void @splat_cast_scalars(ptr %p, ptr %r) {
+; CHECK-LABEL: @splat_cast_scalars(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load i16, ptr %p, align 2
+  %g1 = getelementptr i16, ptr %p, i64 1
+  %b = load i16, ptr %g1, align 2
+  %x = zext i16 %a to i32
+  %y = zext i16 %b to i32
+  %r0 = add i32 %x, %y
+  %r1 = sub i32 %x, %y
+  %r2 = add i32 %x, %y
+  %r3 = sub i32 %x, %y
+  store i32 %r0, ptr %r, align 4
+  %s1 = getelementptr i32, ptr %r, i64 1
+  store i32 %r1, ptr %s1, align 4
+  %s2 = getelementptr i32, ptr %r, i64 2
+  store i32 %r2, ptr %s2, align 4
+  %s3 = getelementptr i32, ptr %r, i64 3
+  store i32 %r3, ptr %s3, align 4
+  ret void
+}
+
+; Splat gathers of compare instructions with per-lane constants.
+
+define void @splat_cmp_scalars(ptr %p, ptr %r) {
+; CHECK-LABEL: @splat_cmp_scalars(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[TMP0]], <i32 10, i32 20>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load i32, ptr %p, align 4
+  %g1 = getelementptr i32, ptr %p, i64 1
+  %b = load i32, ptr %g1, align 4
+  %x = icmp ugt i32 %a, 10
+  %y = icmp ugt i32 %b, 20
+  %xa = zext i1 %x to i32
+  %ya = zext i1 %y to i32
+  %r0 = add i32 %xa, %ya
+  %r1 = sub i32 %xa, %ya
+  %r2 = add i32 %xa, %ya
+  %r3 = sub i32 %xa, %ya
+  store i32 %r0, ptr %r, align 4
+  %s1 = getelementptr i32, ptr %r, i64 1
+  store i32 %r1, ptr %s1, align 4
+  %s2 = getelementptr i32, ptr %r, i64 2
+  store i32 %r2, ptr %s2, align 4
+  %s3 = getelementptr i32, ptr %r, i64 3
+  store i32 %r3, ptr %s3, align 4
+  ret void
+}
