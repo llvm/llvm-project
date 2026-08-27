@@ -15,7 +15,7 @@
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
-// RUN: %if darwin %{ codesign --entitlements %S/entitlements-macos.plist -f -s - %t.exe %}
+// RUN: %if darwin %{ codesign --entitlements %S/entitlements-apple.plist -f -s - %t.exe %}
 // RUN: %{exec} "%{lldb}" %t.exe -o "command script import %S/breakpoint__lldb.py"
 
 // <debugging>
