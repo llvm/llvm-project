@@ -19517,6 +19517,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
+    // Combined subnodes are not costed on their own, only as a whole combined
+    // node, so only the root nodes are considered.
+    if (TE.State == TreeEntry::CombinedVectorize)
+      continue;
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -19550,8 +19554,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   PriorityQueue<CostIndicesTy, SmallVector<CostIndicesTy>, FirstGreater>
       Worklist;
-  for (const auto [Idx, P] : enumerate(SubtreeCosts))
+  for (const auto [Idx, P] : enumerate(SubtreeCosts)) {
+    // Combined subnodes are not trimmed on their own, only as a whole combined
+    // node, so only the root nodes are checked and included into the worklist.
+    if (VectorizableTree[Idx]->State == TreeEntry::CombinedVectorize)
+      continue;
     Worklist.emplace(VectorizableTree[Idx].get(), P);
+  }
 
   // Narrow store trees with non-profitable immediate values - exit.
   if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&
