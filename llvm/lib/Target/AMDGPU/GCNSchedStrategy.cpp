@@ -1315,48 +1315,108 @@ bool GCNSchedStage::initGCNSchedStage() {
   return true;
 }
 
+static void collectReachingDefsInRange(const LiveRange &QR,
+                                       MachineBasicBlock *UseMBB,
+                                       SlotIndex UseIdx,
+                                       const LiveIntervals *LIS,
+                                       SmallSet<SlotIndex, 8> &ResultSet) {
+  const VNInfo *VNI = QR.getVNInfoAt(UseIdx);
+  if (!VNI)
+    return;
+
+  if (!VNI->isPHIDef()) {
+    ResultSet.insert(VNI->def);
+    return;
+  }
+
+  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallVector<MachineBasicBlock *, 8> Worklist;
+  for (MachineBasicBlock *PredMBB : UseMBB->predecessors())
+    if (Visited.insert(PredMBB).second)
+      Worklist.push_back(PredMBB);
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *CurrMBB = Worklist.pop_back_val();
+    SlotIndex CurrMBBEnd = LIS->getMBBEndIdx(CurrMBB).getPrevSlot();
+    const VNInfo *PredVNI = QR.getVNInfoAt(CurrMBBEnd);
+    if (!PredVNI)
+      continue;
+
+    if (!PredVNI->isPHIDef()) {
+      // Skip self-referential defs (src2 == dst): the MFMA's own result must
+      // not appear as a reaching def of its own src2 operand.
+      if (SlotIndex::isSameInstr(PredVNI->def, UseIdx))
+        continue;
+      ResultSet.insert(PredVNI->def);
+      continue;
+    }
+
+    MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(PredVNI->def);
+    for (MachineBasicBlock *PredMBB : DefMBB->predecessors())
+      if (Visited.insert(PredMBB).second)
+        Worklist.push_back(PredMBB);
+  }
+}
+
 void RewriteMFMAFormStage::findReachingDefs(
     MachineOperand &UseMO, LiveIntervals *LIS,
     SmallVectorImpl<SlotIndex> &DefIdxs) {
   MachineInstr *UseMI = UseMO.getParent();
-  LiveInterval &UseLI = LIS->getInterval(UseMO.getReg());
-  VNInfo *VNI = UseLI.getVNInfoAt(LIS->getInstructionIndex(*UseMI));
+  Register UseReg = UseMO.getReg();
+  unsigned UseSubReg = UseMO.getSubReg();
 
-  // If the def is not a PHI, then it must be the only reaching def.
-  if (!VNI->isPHIDef()) {
-    DefIdxs.push_back(VNI->def);
+  if (!UseReg.isVirtual() || !LIS->hasInterval(UseReg))
     return;
-  }
 
-  SmallPtrSet<MachineBasicBlock *, 8> Visited = {UseMI->getParent()};
-  SmallVector<MachineBasicBlock *, 8> Worklist;
+  LiveInterval &UseLI = LIS->getInterval(UseReg);
+  SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
 
-  // Mark the predecessor blocks for traversal
-  for (MachineBasicBlock *PredMBB : UseMI->getParent()->predecessors()) {
-    Worklist.push_back(PredMBB);
-    Visited.insert(PredMBB);
-  }
+  // Use a set to deduplicate: a full-reg def appears in every SubRange but
+  // must be inserted into DefIdxs only once.
+  SmallSet<SlotIndex, 8> ResultSet;
 
-  while (!Worklist.empty()) {
-    MachineBasicBlock *CurrMBB = Worklist.pop_back_val();
+  if (UseLI.hasSubRanges()) {
+    const TargetRegisterInfo *TRI = DAG.MRI.getTargetRegisterInfo();
 
-    SlotIndex CurrMBBEnd = LIS->getMBBEndIdx(CurrMBB);
-    VNInfo *VNI = UseLI.getVNInfoAt(CurrMBBEnd.getPrevSlot());
-
-    MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNI->def);
-
-    // If there is a def in this block, then add it to the list. This is the
-    // reaching def of this path.
-    if (!VNI->isPHIDef()) {
-      DefIdxs.push_back(VNI->def);
-      continue;
+    if (UseSubReg) {
+      // Find the SubRange whose LaneMask fully covers the operand's lanes.
+      // If none does (e.g. register initialised via per-lane subreg writes),
+      // fall back to all overlapping SubRanges to capture every reaching def.
+      LaneBitmask UseLanes = TRI->getSubRegIndexLaneMask(UseSubReg);
+      bool FoundFullCoverage = false;
+      for (LiveInterval::SubRange &SR : UseLI.subranges()) {
+        if ((SR.LaneMask & UseLanes) == UseLanes) {
+          collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
+                                     ResultSet);
+          FoundFullCoverage = true;
+          break;
+        }
+      }
+      if (!FoundFullCoverage) {
+        for (LiveInterval::SubRange &SR : UseLI.subranges())
+          if ((SR.LaneMask & UseLanes).any())
+            collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
+                                       ResultSet);
+      }
+    } else {
+      // Full-reg use: query every subrange so that partial (subreg) defs on
+      // different lanes are all captured.
+      for (LiveInterval::SubRange &SR : UseLI.subranges())
+        collectReachingDefsInRange(SR, UseMI->getParent(), UseIdx, LIS,
+                                   ResultSet);
+      // If the register has SubRanges but none covers the use point,
+      // LiveIntervals is malformed: a full-width def must appear in at least
+      // one SubRange.
+      assert(!ResultSet.empty() &&
+             "hasSubRanges() but no SubRange live at full-reg use: "
+             "LiveInterval construction is inconsistent");
     }
-
-    for (MachineBasicBlock *PredMBB : DefMBB->predecessors()) {
-      if (Visited.insert(PredMBB).second)
-        Worklist.push_back(PredMBB);
-    }
+  } else {
+    collectReachingDefsInRange(UseLI, UseMI->getParent(), UseIdx, LIS,
+                               ResultSet);
   }
+
+  DefIdxs.append(ResultSet.begin(), ResultSet.end());
 }
 
 void RewriteMFMAFormStage::findReachingUses(
@@ -1365,6 +1425,12 @@ void RewriteMFMAFormStage::findReachingUses(
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
   for (MachineOperand &UseMO :
        DAG.MRI.use_nodbg_operands(DefMI->getOperand(0).getReg())) {
+    // Skip implicit operands: partial subreg defs carry an implicit use of the
+    // full register for RMW lane preservation, not as a real consumer of the
+    // MFMA dst value. Treating them as reaching uses inserts a spurious bridge
+    // copy before the partial def, corrupting MappedReg's live range.
+    if (UseMO.isImplicit())
+      continue;
     SmallVector<SlotIndex, 8> ReachingDefIndexes;
     findReachingDefs(UseMO, LIS, ReachingDefIndexes);
 
@@ -2435,6 +2501,13 @@ bool RewriteMFMAFormStage::initHeuristics(
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
           if (!Src2NeedsVGPR &&
               isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
+            continue;
+          // If this reaching def writes into the src2 register itself (possibly
+          // a partial subreg write), the def will be reclassified together with
+          // src2 and does not need a bridge copy.
+          if (any_of(RD->defs(), [&](const MachineOperand &DefOp) {
+                return DefOp.isReg() && DefOp.getReg() == Src2->getReg();
+              }))
             continue;
           CopyForDef.insert(RD);
         }
