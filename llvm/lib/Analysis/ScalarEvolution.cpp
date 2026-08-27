@@ -1051,16 +1051,6 @@ public:
     return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
   }
 
-  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
-    SmallVector<SCEVUse, 2> Operands;
-    bool Changed = false;
-    for (SCEVUse Op : Expr->operands()) {
-      Operands.push_back(visit(Op.getPointer()));
-      Changed |= Op.getPointer() != Operands.back();
-    }
-    return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
-  }
-
   const SCEV *visitUnknown(const SCEVUnknown *Expr) {
     assert(Expr->getType()->isPointerTy() &&
            "Should only reach pointer-typed SCEVUnknown's.");
