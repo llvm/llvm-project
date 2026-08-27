@@ -110,7 +110,7 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
   if (Op1->getType() != Op2->getType())
     return "both values to select must have same type";
 
-  if (Op1->getType()->isTokenTy())
+  if (Op1->getType()->isTokenLikeTy())
     return "select values cannot have token type";
 
   if (VectorType *VT = dyn_cast<VectorType>(Op0->getType())) {
@@ -132,6 +132,14 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 //===----------------------------------------------------------------------===//
 //                               PHINode Class
 //===----------------------------------------------------------------------===//
+
+/// isInvalidType - Return a string if the specified type is invalid for a
+/// PHI node, otherwise return null.
+const char *PHINode::isInvalidType(Type *Ty) {
+  if (Ty->isTokenLikeTy())
+    return "PHI nodes cannot have token type!";
+  return nullptr;
+}
 
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, AllocMarker),
