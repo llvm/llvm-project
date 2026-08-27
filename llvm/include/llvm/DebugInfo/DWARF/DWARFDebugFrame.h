@@ -73,19 +73,17 @@ public:
   const CFIProgram &cfis() const { return CFIs; }
   CFIProgram &cfis() { return CFIs; }
 
-  /// Section offset at which this entry's CFI instructions begin, recorded so a
-  /// program left undecoded can be parsed on demand later via
-  /// cfis().parse(Data, ..., getEndOffset()).
-  uint64_t getCFIStartOffset() const { return CFIStartOffset; }
-  void setCFIStartOffset(uint64_t O) { CFIStartOffset = O; }
-
-  /// Whether this entry's CFI instruction program has been decoded. False for
-  /// an entry whose program parse() was told to skip.
-  bool isCFIProgramParsed() const { return CFIsParsed; }
-  void setCFIProgramParsed() { CFIsParsed = true; }
-
-  /// Section offset one past the end of this entry (exclusive end of its CFI
-  /// instructions).
+  /// If using lazily parsed CFIs, this returns the section offset where the
+  /// unparsed CFIs start so user can parse them on-demand through the
+  /// CFIProgram parsing interface cfis().parse(Data, ..., getEndOffset()).
+  /// This returns std::nullopt if CFIs are already succesfully parsed.
+  std::optional<uint64_t> getUnparsedCFIStartOffset() const {
+    return UnparsedCFIStartOffset;
+  }
+  void markCFIProgramUnparsed(uint64_t StartOffset) {
+    UnparsedCFIStartOffset = StartOffset;
+  }
+  void markCFIProgramParsed() { UnparsedCFIStartOffset = std::nullopt; }
   uint64_t getEndOffset() const {
     // End is Offset plus the size of the initial length field plus Length.
     // The initial length field is 4 bytes in DWARF32 and 12 bytes in DWARF64
@@ -101,17 +99,14 @@ protected:
 
   const bool IsDWARF64;
 
-  /// Whether CFIs holds the decoded CFI instruction program.
-  bool CFIsParsed = false;
-
   /// Offset of this entry in the section.
   const uint64_t Offset;
 
   /// Entry length as specified in DWARF.
   const uint64_t Length;
 
-  /// Section offset at which this entry's CFI instructions begin.
-  uint64_t CFIStartOffset = 0;
+  /// Offset for lazy parsing; std::nullopt if CFIs are already parsed.
+  std::optional<uint64_t> UnparsedCFIStartOffset;
 
   CFIProgram CFIs;
 };

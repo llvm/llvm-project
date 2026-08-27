@@ -223,9 +223,6 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
       auto Cie = std::make_unique<CIE>(
           IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
           SmallString<8>(), 0, 0, std::nullopt, std::nullopt, Arch);
-      // A terminator has no instructions: it is fully parsed either way.
-      Cie->setCFIStartOffset(Offset);
-      Cie->setCFIProgramParsed();
       CIEs[StartOffset] = Cie.get();
       Entries.push_back(std::move(Cie));
       break;
@@ -393,11 +390,10 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
                                    LSDAAddress, Arch));
     }
 
-    // Record where this entry's CFI instructions begin, so that a program left
-    // undecoded below can be parsed on demand later.
-    Entries.back()->setCFIStartOffset(Offset);
-
     if (!ParseCFIProgram) {
+      // Record where this entry's CFI instructions begin, so that the program
+      // left undecoded here can be parsed on demand later.
+      Entries.back()->markCFIProgramUnparsed(Offset);
       Offset = EndStructureOffset;
       continue;
     }
@@ -405,7 +401,6 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
     if (Error E =
             Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset))
       return E;
-    Entries.back()->setCFIProgramParsed();
 
     if (Offset != EndStructureOffset)
       return createStringError(
@@ -426,7 +421,8 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
 }
 
 Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
-  if (Entry.isCFIProgramParsed())
+  std::optional<uint64_t> StartOffset = Entry.getUnparsedCFIStartOffset();
+  if (!StartOffset)
     return Error::success();
 
   if (!Data)
@@ -436,12 +432,13 @@ Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
         " on demand: the section contents were not retained",
         Entry.getOffset());
 
-  uint64_t Offset = Entry.getCFIStartOffset();
-  const uint64_t EndOffset = Entry.getEndOffset();
+  uint64_t Offset = *StartOffset;
+  uint64_t EndOffset = Entry.getEndOffset();
   assert(Offset >= Entry.getOffset() && Offset <= EndOffset &&
          "entry does not know where its instructions begin");
   DWARFDataExtractor EntryData = *Data;
-  Entry.setCFIProgramParsed();
+  // Clear previous unsuccessful parsing attempts, if any.
+  Entry.cfis().clear();
   if (Error E = Entry.cfis().parse(EntryData, &Offset, EndOffset))
     return E;
 
@@ -451,6 +448,8 @@ Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
                              " failed",
                              Entry.getOffset());
 
+  // Signal we have a valid fully parsed CFI program.
+  Entry.markCFIProgramParsed();
   return Error::success();
 }
 
