@@ -54,7 +54,8 @@ public:
 
   LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,
-                       SmallPtrSetImpl<const MDNode *> &Domains);
+                       SmallPtrSetImpl<const MDNode *> &Domains,
+                       bool DisjointOnly = false);
 
   LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
                                         const MDNode *NoAlias);
