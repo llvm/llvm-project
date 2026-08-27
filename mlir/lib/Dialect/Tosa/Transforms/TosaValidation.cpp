@@ -29,6 +29,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
@@ -668,6 +669,20 @@ private:
     return success();
   }
 
+  LogicalResult attributeCheckCast(Operation *op) {
+    if (auto cast = dyn_cast<tosa::CastOp>(op)) {
+      const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
+      const TosaSpecificationVersion minRequiredVersion(1, 1, true);
+      if (cast.getInputUnsigned() &&
+          !(targetVersion.isBackwardsCompatibleWith(minRequiredVersion)))
+        return op->emitOpError()
+               << "failed attribute check: CAST attribute input_unsigned "
+               << "requires version 1.1.draft"
+               << " (got " << stringifyVersion(targetVersion) << ") ";
+    }
+    return success();
+  }
+
   LogicalResult CheckVariable(Operation *op);
   LogicalResult CheckVariableReadOrWrite(Operation *op);
   LogicalResult validateValidElementType(Operation *op, Type type,
@@ -975,6 +990,8 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
 LogicalResult TosaValidation::applyAttributeCheck(Operation *op) {
   if (failed(attributeCheckRescale(op)))
     return failure();
+  if (failed(attributeCheckCast(op)))
+    return failure();
   return success();
 }
 
@@ -1006,7 +1023,10 @@ LogicalResult TosaValidation::CheckVariable(Operation *op) {
 LogicalResult TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr =
+        TypeSwitch<Operation *, mlir::StringAttr>(op)
+            .Case<mlir::tosa::VariableReadOp, mlir::tosa::VariableWriteOp>(
+                [](auto variableOp) { return variableOp.getNameAttr(); });
     if (!variablesMap.count(nameAttr))
       return op->emitOpError() << "name has not been declared";
 

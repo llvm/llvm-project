@@ -916,7 +916,7 @@ bool llvm::optimizeTerminators(MachineBasicBlock *MBB,
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
   while (Register::isVirtualRegister(VReg)) {
     const MachineInstr *DefMI = MRI.getVRegDef(VReg);
-    if (!DefMI->isFullCopy())
+    if (!DefMI || !DefMI->isFullCopy())
       return VReg;
     VReg = DefMI->getOperand(1).getReg();
   }
@@ -934,6 +934,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
   const MachineInstr *DefMI = MRI.getVRegDef(VReg);
+  if (!DefMI)
+    return 0;
   unsigned Opc = 0;
   unsigned SrcReg = 0;
   switch (DefMI->getOpcode()) {
@@ -10096,11 +10098,13 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
     Register CopyVReg = DefMI->getOperand(1).getReg();
+    if (!CopyVReg.isVirtual())
+      return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
-    if (!MRI->hasOneDef(CopyVReg))
-      return false;
     DefMI = MRI->getVRegDef(CopyVReg);
+    if (!DefMI)
+      return false;
   }
 
   switch (DefMI->getOpcode()) {
@@ -10127,7 +10131,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!NewReg.isVirtual())
       return false;
 
-    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+    if (!MRI->getVRegDef(NewReg))
+      return false;
 
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI.getOperand(1).getMBB();

@@ -158,6 +158,14 @@ func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
 
 // -----
 
+func.func @test_cast_input_unsigned_true_wrong_version(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.cast' op failed attribute check: CAST attribute input_unsigned requires version 1.1.draft (got 1.0)}}
+  %0 = tosa.cast %arg0 {input_unsigned = true} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
 func.func @test_cast_bool_i64(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi64> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires any of [int64] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xi64>
@@ -282,6 +290,13 @@ func.func @test_block_scaled_concat(%arg0: tensor<13x21x32x!tosa.block_scaled<BL
   // expected-error@+1 {{'tosa.concat' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3] profiles/extensions to be specified in the target environment}}
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<26x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<26x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+func.func @test_block_scaled_dim(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) {
+  // expected-error@+1 {{'tosa.dim' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3, shape] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> !tosa.shape<1>
+  return
 }
 
 // -----

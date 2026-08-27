@@ -87,7 +87,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, CostKind);
   InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
   if (PHICost > BroadcastCost)
     return;
@@ -980,10 +980,8 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul,
-      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
-      {true, false});
+  VPValue *MulByUF =
+      Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -1005,8 +1003,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, AddrType, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, AddrType, DebugLoc::getUnknown());
+      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
+      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write

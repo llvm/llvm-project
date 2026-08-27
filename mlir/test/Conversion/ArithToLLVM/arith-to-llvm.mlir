@@ -557,7 +557,7 @@ func.func @fcmp(f32, f32) -> () {
   %13 = arith.cmpf une, %arg0, %arg1 : f32
   %14 = arith.cmpf uno, %arg0, %arg1 : f32
 
-  %15 = arith.cmpf oeq, %arg0, %arg1 {fastmath = #arith.fastmath<fast>} : f32
+  %15 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }
@@ -981,4 +981,3 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   %3 = arith.cmpf oeq, %arg0, %arg3 : f32
   return
 }
-
