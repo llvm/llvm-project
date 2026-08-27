@@ -283,6 +283,25 @@ public:
     return RC->TSFlags & SIRCFlags::HasSGPR;
   }
 
+  /// \returns the VGPR register bank index (0-3)
+  unsigned getVGPRBankIndex(MCRegister Reg) const;
+
+  /// \returns a mask of VGPR Banks that wouldn't cause a conflict
+  /// with other vgpr source operands of the instruction.
+  unsigned getCoOpndsFreeVGPRBankMask(Register VirtReg,
+                                      const MachineFunction &MF,
+                                      const VirtRegMap *VRM) const;
+
+  /// \returns a mask of VGPR Banks with the least known overlap
+  /// that can hold vopd pairing.
+  unsigned getVGPRBankParityMask(Register VirtReg,
+                                 const MachineFunction &MF,
+                                 const VirtRegMap *VRM) const;
+
+  void appendRAHintsForConflictAndOverlapAvoidance(
+      ArrayRef<MCPhysReg> Order, SmallVectorImpl<MCPhysReg> &Hints,
+      unsigned LeastBankConflictMask, unsigned LeastBankOverlapMask) const;
+
   /// \returns true if this class contains any vector registers.
   static bool hasVectorRegisters(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) || hasAGPRs(RC);

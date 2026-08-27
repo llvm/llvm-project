@@ -52,6 +52,15 @@ static cl::opt<unsigned> StressSGPRLimit(
     "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
     cl::desc("Limit SGPRs to N registers by reserving the rest"));
 
+static cl::opt<bool> EnableVGPRBankConflictAvoidance(
+    "amdgpu-avoid-vgpr-bank-conflicts",
+    cl::desc("Enable VGPR bank conflict avoidance in register allocation"),
+    cl::init(true), cl::Hidden);
+
+// AMDGPU organizes VGPRs into banks selected by the low bits of the register
+// index.
+static constexpr unsigned NumVGPRBanks = 4;
+
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -4106,6 +4115,194 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 
+unsigned SIRegisterInfo::getVGPRBankIndex(MCRegister Reg) const {
+  return getHWRegIndex(Reg) % NumVGPRBanks;
+}
+
+unsigned SIRegisterInfo::getCoOpndsFreeVGPRBankMask(Register VirtReg,
+                                                    const MachineFunction &MF,
+                                                    const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (!EnableVGPRBankConflictAvoidance || !VRM || !isVGPR(MRI, VirtReg))
+    return 0;
+
+  // Track banks use count by allocated operands of VirtReg uses.
+  // Key is bank index, value is number of operands using that bank.
+  SmallDenseMap<unsigned, unsigned, NumVGPRBanks> BankUsage;
+
+  // Scan all uses of this virtual register
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
+    // Check which banks are used by other operands
+    for (const MachineOperand &MO : Use.uses()) {
+      if (!MO.isReg() || MO.getReg() == VirtReg)
+        continue;
+
+      Register OpReg = MO.getReg();
+
+      // Only care about already-allocated physical registers
+      if (!OpReg.isVirtual() || !VRM->hasPhys(OpReg))
+        continue;
+      OpReg = VRM->getPhys(OpReg);
+
+      if (OpReg.isPhysical() && isVGPR(MRI, OpReg))
+        BankUsage[getVGPRBankIndex(OpReg)]++;
+    }
+  }
+
+  if (BankUsage.empty())
+    return 0;
+
+  unsigned BankUsageMask = 0;
+    for (const auto &Bank : BankUsage) {
+      if (Bank.second > 0)
+        BankUsageMask |= 1 << Bank.first;
+    }
+    return ~BankUsageMask & ((1 << NumVGPRBanks) - 1);
+}
+
+static bool isVopdPairable(const MachineInstr &Def,
+                                    const MachineInstr &Neighbor,
+                                    const MachineFunction &MF,
+                                    AMDGPU::CanBeVOPD DefCanBeVOPD) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  // Both instructions must be VOPD-eligible opcodes.
+  auto NeighborCanBeVOPD = AMDGPU::getCanBeVOPD(
+      Neighbor.getOpcode(), AMDGPU::getVOPDEncodingFamily(ST), ST.hasVOPD3());
+  if (!(DefCanBeVOPD.X && NeighborCanBeVOPD.Y) &&
+        !(DefCanBeVOPD.Y && NeighborCanBeVOPD.X))
+    return false;
+
+  // No DPP modifiers allowed.
+  if (Def.getDesc().TSFlags & SIInstrFlags::DPP)
+    return false;
+  if (Neighbor.getDesc().TSFlags & SIInstrFlags::DPP)
+    return false;
+
+  // OPX must not write any register read by OPY.
+  if (DefCanBeVOPD.X && NeighborCanBeVOPD.Y) {
+    Register NeighborDest = Neighbor.getOperand(0).getReg();
+    for (const MachineOperand &MO : Def.uses()) {
+      if (MO.isReg() && MO.getReg() == NeighborDest)
+        return false;
+    }
+  } else if (DefCanBeVOPD.Y && NeighborCanBeVOPD.X) {
+    Register DefDest = Def.getOperand(0).getReg();
+    for (const MachineOperand &MO : Neighbor.uses()) {
+      if (MO.isReg() && MO.getReg() == DefDest)
+        return false;
+    }
+  }
+
+  return true;
+}
+
+unsigned SIRegisterInfo::getVGPRBankParityMask(Register VirtReg,
+                                                     const MachineFunction &MF,
+                                                     const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  // VOPD is wave32 only.
+  if (ST.isWave64())
+    return 0;
+  if (!EnableVGPRBankConflictAvoidance || !VRM || !isVGPR(MRI, VirtReg))
+    return 0;
+
+  unsigned EvenParityBias = 0;
+  unsigned OddParityBias = 0;
+
+  for (const MachineInstr &Def : MRI.def_instructions(VirtReg)) {
+    auto DefCanBeVOPD = AMDGPU::getCanBeVOPD(
+        Def.getOpcode(), AMDGPU::getVOPDEncodingFamily(ST), ST.hasVOPD3());
+    if (!DefCanBeVOPD.X && !DefCanBeVOPD.Y)
+      continue;
+
+    unsigned InstCount = 0;
+    for (auto I = Def.getIterator();
+         I != Def.getParent()->begin() && InstCount < 4; --I, ++InstCount) {
+      if (!SIInstrInfo::isVALU(*I, false))
+        continue;
+      // Skip instructions that cannot be paired with the Def instruction
+      // to form a VOPD.
+      if (!isVopdPairable(Def, *I, MF, DefCanBeVOPD))
+        continue;
+      const MachineOperand &Dst = I->getOperand(0);
+      if (!Dst.isReg())
+        continue;
+      Register Reg = Dst.getReg();
+      if (Reg.isVirtual()) {
+        if (!VRM->hasPhys(Reg))
+          continue;
+        Reg = VRM->getPhys(Reg);
+      }
+      if (!Reg.isPhysical() || !isVGPR(MRI, Reg))
+        continue;
+      // Encourage pairing vop3 instructions together
+      if (SIInstrInfo::isVOP3(Def) != SIInstrInfo::isVOP3(*I))
+        continue;
+      unsigned Bank = getVGPRBankIndex(Reg);
+      // Bias towards the inverse destination parity
+      if (Bank % 2 == 0)
+        OddParityBias++;
+      else
+        EvenParityBias++;
+      // Stop at the first pairable instruction
+      break;
+    }
+  }
+  if (EvenParityBias == 0 && OddParityBias == 0)
+    return 0;
+  return (EvenParityBias > OddParityBias)
+             ? 0x5555 & ((1 << NumVGPRBanks) - 1)
+             : 0xaaaa & ((1 << NumVGPRBanks) - 1);
+}
+
+void SIRegisterInfo::appendRAHintsForConflictAndOverlapAvoidance(
+    ArrayRef<MCPhysReg> Order,SmallVectorImpl<MCPhysReg> &Hints,
+    unsigned BankMinConflictMask,unsigned BankMinOverlapMask) const{
+  if (!BankMinConflictMask && !BankMinOverlapMask)
+    return;
+  // Append registers that has least bank conflict and parity overlap
+  // to the end of the hints list.
+  const unsigned MaxNumHints = 32;
+  unsigned Added = 0;
+  for (MCPhysReg Cand : Order) {
+    if (Added >= MaxNumHints)
+      break;
+
+    if ((BankMinConflictMask & (1 << getVGPRBankIndex(Cand))) &&
+        (BankMinOverlapMask & (1 << getVGPRBankIndex(Cand)))) {
+      Hints.push_back(Cand);
+      Added++;
+    }
+  }
+  // Next prefer registers that are least possible to overlap in
+  // a way that prevents vopd pairing. No duplicates.
+  for (MCPhysReg Cand : Order) {
+    if (!BankMinOverlapMask)
+      break;
+    if (Added >= MaxNumHints)
+      break;
+    if (!(BankMinConflictMask & (1 << getVGPRBankIndex(Cand))) &&
+        (BankMinOverlapMask & (1 << getVGPRBankIndex(Cand)))) {
+      Hints.push_back(Cand);
+      Added++;
+    }
+  }
+  // Finally prefer registers that are least possible to cause bank conflicts,
+  // No duplicates.
+  for (MCPhysReg Cand : Order) {
+    if (!BankMinConflictMask)
+      break;
+    if (Added >= MaxNumHints)
+      break;
+    if ((BankMinConflictMask & (1 << getVGPRBankIndex(Cand))) &&
+        !(BankMinOverlapMask & (1 << getVGPRBankIndex(Cand)))) {
+      Hints.push_back(Cand);
+      Added++;
+    }
+  }
+}
+
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
                                            ArrayRef<MCPhysReg> Order,
                                            SmallVectorImpl<MCPhysReg> &Hints,
@@ -4118,6 +4315,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
+  bool BaseImplRetVal = false;
   switch (Hint.first) {
   case AMDGPURI::Size32: {
     Register Paired = Hint.second;
@@ -4136,7 +4334,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
       Hints.push_back(PairedPhys);
-    return false;
+    break;
   }
   case AMDGPURI::Size16: {
     Register Paired = Hint.second;
@@ -4165,12 +4363,26 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
           Hints.push_back(PhysReg);
       }
     }
-    return false;
+    break;
   }
-  default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+  default: {
+
+        BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(VirtReg, Order,
+                                                                   Hints, MF, VRM);
+        break;
+    }
   }
+
+  // Bank conflict-free for VGPR source operands in the same instruction.
+  unsigned BankMinConflictMask = getCoOpndsFreeVGPRBankMask(VirtReg, MF, VRM);
+
+  // Bank overlap reduction for vopd pairing
+  unsigned BankMinOverlapMask = getVGPRBankParityMask(VirtReg, MF, VRM);
+
+  // Append the least bank conflict/overlap register to the end of the hints list.
+  appendRAHintsForConflictAndOverlapAvoidance(Order, Hints, BankMinConflictMask, BankMinOverlapMask);
+
+  return BaseImplRetVal;
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
