@@ -5812,19 +5812,18 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
   SmallVector<BasicBlock *, 8> BlocksToMerge;
   BlocksToMerge.push_back(BB);
 
-  for (User *U : Callee->users()) {
-    auto *OtherCI = dyn_cast<CallInst>(U);
+  auto CheckCandidate = [&](CallInst *OtherCI) {
     if (!OtherCI || OtherCI == CI || OtherCI->getFunction() != CurrentFn ||
         OtherCI->cannotMerge() || OtherCI->isConvergent())
-      continue;
+      return;
 
     BasicBlock *OtherBB = OtherCI->getParent();
     if (OtherBB->size() != 2 || !isa<UnreachableInst>(OtherBB->getTerminator()))
-      continue;
+      return;
 
     if (!OtherCI->isSameOperationAs(CI,
                                     Instruction::CompareUsingIntersectedAttrs))
-      continue;
+      return;
 
     bool CanMerge = true;
     for (unsigned i = 0, e = CI->getNumOperands(); i != e; ++i) {
@@ -5839,6 +5838,18 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
 
     if (CanMerge)
       BlocksToMerge.push_back(OtherBB);
+  };
+
+  if (Callee->getNumUses() > CurrentFn->size()) {
+    for (BasicBlock &OtherBB : *CurrentFn) {
+      if (&OtherBB == BB || OtherBB.size() != 2 ||
+          !isa<UnreachableInst>(OtherBB.getTerminator()))
+        continue;
+      CheckCandidate(dyn_cast<CallInst>(&OtherBB.front()));
+    }
+  } else {
+    for (User *U : Callee->users())
+      CheckCandidate(dyn_cast<CallInst>(U));
   }
 
   if (BlocksToMerge.size() < 2)
