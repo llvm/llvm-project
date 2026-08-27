@@ -428,3 +428,29 @@ struct U {
 };
 constexpr int c = U<Always, Always>::f<int>(); // expected-error {{call to 'f' is ambiguous}}
 }
+
+
+auto Lambda = []<typename T, auto N, template <typename> concept... CC>() requires (CC...[T{N}]<int>) { // #Lambda1
+    return bool(decltype(CC...[T{N}]<T>){1});
+};
+template <class T> concept Always = true;
+template <class T> concept Never = false;
+
+static_assert(Lambda.operator()<int, 0, Always>());
+static_assert(Lambda.operator()<int, 1, Always>());
+// expected-error@-1{{no matching member function for call to 'operator()'}} \
+// expected-note@#Lambda1{{candidate template ignored: constraints not satisfied [with T = int, N = 1, CC = <Always>]}} \
+// expected-note@#Lambda1{{because substituted constraint expression is ill-formed: invalid index 1 for pack 'CC' of size 1}}
+
+
+template <auto...N>
+auto Lambda2 = []<typename T, template <typename> concept... CC>() -> decltype(CC...[N...[0]]<T>) {
+    return (CC...[T{N}]<T> && ...);
+};
+static_assert(Lambda2<0>.operator()<int, Always>());
+static_assert(!Lambda2<0>.operator()<int, Never>());
+static_assert(!Lambda2<0>.operator()<int, Never, Always>());
+static_assert(!Lambda2<1>.operator()<int, Always, Never>());
+static_assert(Lambda2<0>.operator()<int, Always, Never>());
+static_assert(Lambda2<0, 0>.operator()<int, Always, Never>());
+static_assert(!Lambda2<1, 1>.operator()<int, Always, Never>());
