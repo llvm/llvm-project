@@ -92,9 +92,7 @@ define <4 x i1> @extract_fixed_from_active_lane_mask() vscale_range(4, 4) {
 define i1 @vecreduce_or_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v4i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[MASK]] to i4
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %a, i32 %b)
@@ -105,9 +103,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 define i1 @vecreduce_or_get_active_lane_mask_v16i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v16i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i1> [[MASK]] to i16
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i16 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %a, i32 %b)
@@ -118,9 +114,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v16i1(i32 %a, i32 %b) {
 define i1 @vecreduce_or_get_active_lane_mask_v32i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @vecreduce_or_get_active_lane_mask_v32i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <32 x i1> [[MASK]] to i32
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 %a, i32 %b)
@@ -133,8 +127,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v4i1_multiuse(i32 %a, i32 %b) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(<4 x i1> [[MASK]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[MASK]] to i4
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %a, i32 %b)
@@ -148,8 +141,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v16i1_multiuse(i32 %a, i32 %b) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(<16 x i1> [[MASK]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i1> [[MASK]] to i16
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i16 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %a, i32 %b)
@@ -163,8 +155,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v32i1_multiuse(i32 %a, i32 %b) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(<32 x i1> [[MASK]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <32 x i1> [[MASK]] to i32
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 %a, i32 %b)
@@ -176,9 +167,7 @@ define i1 @vecreduce_or_get_active_lane_mask_v32i1_multiuse(i32 %a, i32 %b) {
 define i8 @vecreduce_or_zext_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @vecreduce_or_zext_get_active_lane_mask_v4i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[MASK]] to i4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[RED:%.*]] = zext i1 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[RED]]
 ;
@@ -191,9 +180,7 @@ define i8 @vecreduce_or_zext_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 define i8 @vecreduce_or_sext_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i8 @vecreduce_or_sext_get_active_lane_mask_v4i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[MASK]] to i4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[RED:%.*]] = sext i1 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[RED]]
 ;
@@ -206,9 +193,7 @@ define i8 @vecreduce_or_sext_get_active_lane_mask_v4i1(i32 %a, i32 %b) {
 define i1 @bitcast_inverted_condition_v32i1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @bitcast_inverted_condition_v32i1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <32 x i1> [[MASK]] to i32
-; CHECK-NEXT:    [[RED:%.*]] = icmp eq i32 [[CAST]], 0
+; CHECK-NEXT:    [[RED:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 %a, i32 %b)
