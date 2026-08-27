@@ -128,15 +128,17 @@ GlobalVariable *offloading::emitOffloadingEntry(
   return Entry;
 }
 
-std::pair<GlobalVariable *, GlobalVariable *>
-offloading::getOffloadEntryArray(Module &M) {
+std::pair<Constant *, Constant *> offloading::getOffloadEntryArray(Module &M) {
   const llvm::Triple &Triple = M.getTargetTriple();
   StringRef SectionName = getOffloadEntrySection(M);
 
-  auto *ZeroInitilaizer =
-      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
-  auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitilaizer : nullptr;
-  auto *EntryType = ArrayType::get(getEntryTy(M), 0);
+  constexpr unsigned COFFSentinelEntryCount = 1;
+  unsigned EntryCount =
+      Triple.isOSBinFormatCOFF() ? COFFSentinelEntryCount : 0u;
+  auto *ZeroInitializer =
+      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), EntryCount));
+  auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitializer : nullptr;
+  auto *EntryType = ZeroInitializer->getType();
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
@@ -156,8 +158,8 @@ offloading::getOffloadEntryArray(Module &M) {
     // valid C-identifier is present. We define a dummy variable here to force
     // the linker to always provide these symbols.
     auto *DummyEntry = new GlobalVariable(
-        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
-        ZeroInitilaizer, "__dummy." + SectionName);
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
     DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToUsed(M, DummyEntry);
@@ -166,8 +168,8 @@ offloading::getOffloadEntryArray(Module &M) {
     // linker provides the section boundary symbols. Mark it used so the
     // section survives dead-stripping.
     auto *DummyEntry = new GlobalVariable(
-        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
-        ZeroInitilaizer, "__dummy." + SectionName);
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
     DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToUsed(M, DummyEntry);
@@ -178,6 +180,20 @@ offloading::getOffloadEntryArray(Module &M) {
     // sections here to ensure that the beginning and end symbols are sorted.
     EntriesB->setSection((SectionName + "$OA").str());
     EntriesE->setSection((SectionName + "$OZ").str());
+    EntriesB->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    EntriesE->setAlignment(Align(object::OffloadBinary::getAlignment()));
+
+    // COFF lays out offload entries by sorted subsections: $OA is a synthetic
+    // begin sentinel, $OE contains real entries, and $OZ is a synthetic end
+    // sentinel. Keep the boundary sections non-empty so lld-link does not
+    // discard them under /opt:ref, but skip the begin sentinel for runtime
+    // users.
+    Type *Int32Ty = Type::getInt32Ty(M.getContext());
+    Constant *Indices[] = {ConstantInt::get(Int32Ty, 0),
+                           ConstantInt::get(Int32Ty, COFFSentinelEntryCount)};
+    Constant *BeginAfterSentinel = ConstantExpr::getInBoundsGetElementPtr(
+        EntriesB->getValueType(), EntriesB, Indices);
+    return std::make_pair(BeginAfterSentinel, EntriesE);
   }
 
   return std::make_pair(EntriesB, EntriesE);

@@ -139,6 +139,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_long_vector``
+     - Adds support for any vector rank.
    * - ``SPV_EXT_optnone``
      - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
@@ -261,6 +263,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
    * - ``SPV_KHR_poison_freeze``
      - Adds instructions to represent a poison value and freeze. Also adds an execution mode to control poison behavior.
+   * - ``SPV_KHR_untyped_pointers``
+     - Adds untyped pointer types and instructions that operate on them, decoupling pointer types from the type of the data they point to.
 
 ```
 

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=fast -optimize-regalloc=0 -verify-machineinstrs | FileCheck %s -check-prefix=A8 -check-prefix=CHECK -check-prefix=NORMAL
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-m3 -regalloc=fast -optimize-regalloc=0 | FileCheck %s -check-prefix=M3 -check-prefix=CHECK -check-prefix=NORMAL
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=fast -verify-machineinstrs | FileCheck %s -check-prefix=A8 -check-prefix=CHECK -check-prefix=NORMAL
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-m3 -regalloc=fast | FileCheck %s -check-prefix=M3 -check-prefix=CHECK -check-prefix=NORMAL
 ; rdar://6949835
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=basic | FileCheck %s -check-prefix=BASIC -check-prefix=CHECK -check-prefix=NORMAL
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=greedy | FileCheck %s -check-prefix=GREEDY -check-prefix=CHECK -check-prefix=NORMAL

@@ -44,24 +44,13 @@ static constexpr const char kSPIRVModule[] = "__spv__";
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Returns the string name of the `DescriptorSet` decoration.
-static std::string descriptorSetName() {
-  return spirv::getDecorationString(spirv::Decoration::DescriptorSet);
-}
-
-/// Returns the string name of the `Binding` decoration.
-static std::string bindingName() {
-  return spirv::getDecorationString(spirv::Decoration::Binding);
-}
-
 /// Calculates the index of the kernel's operand that is represented by the
 /// given global variable with the `bind` attribute. We assume that the index of
 /// each kernel's operand is mapped to (descriptorSet, binding) by the map:
 ///   i -> (0, i)
 /// which is implemented under `LowerABIAttributesPass`.
 static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return binding.getInt();
+  return *op.getBinding();
 }
 
 /// Copies the given number of bytes from src to dst pointers.
@@ -78,22 +67,16 @@ static void copy(Location loc, Value dst, Value src, Value size,
 static std::string
 createGlobalVariableWithBindName(spirv::GlobalVariableOp op,
                                  StringRef kernelModuleName) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
   return llvm::formatv("{0}_{1}_descriptor_set{2}_binding{3}",
                        kernelModuleName.str(), op.getSymName().str(),
-                       std::to_string(descriptorSet.getInt()),
-                       std::to_string(binding.getInt()));
+                       std::to_string(*op.getDescriptorSet()),
+                       std::to_string(*op.getBinding()));
 }
 
 /// Returns true if the given global variable has both a descriptor set number
 /// and a binding number.
 static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return descriptorSet && binding;
+  return op.getDescriptorSetAttr() && op.getBindingAttr();
 }
 
 /// Fills `globalVariableMap` with SPIR-V global variables that represent kernel
@@ -289,8 +272,8 @@ public:
 
     // Request C wrapper emission.
     for (auto func : module.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(&getContext()));
     }
 
     // Specify options to lower to LLVM and pull in the conversion patterns.

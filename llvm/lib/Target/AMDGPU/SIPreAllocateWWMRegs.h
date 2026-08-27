@@ -13,6 +13,8 @@
 
 namespace llvm {
 
+bool isPreallocateSGPRSpillVGPRsEnabled(const MachineFunction &MF);
+
 class SIPreAllocateWWMRegsPass
     : public RequiredPassInfoMixin<SIPreAllocateWWMRegsPass> {
 public:

@@ -88,12 +88,13 @@ static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
   if (Operation *dstOp = dst.getDefiningOp()) {
-    if (dstOp->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName()))
+    if (dstOp->getDiscardableAttrOfType<acc::VarNameAttr>(
+            acc::getVarNameAttrName()))
       return;
     if (isa<ACC_DATA_ENTRY_OPS>(dstOp))
       return;
-    dstOp->setAttr(acc::getVarNameAttrName(),
-                   acc::VarNameAttr::get(dstOp->getContext(), name));
+    dstOp->setDiscardableAttr(acc::getVarNameAttrName(),
+                              acc::VarNameAttr::get(dstOp->getContext(), name));
     return;
   }
   auto blockArg = dyn_cast<BlockArgument>(dst);
@@ -126,13 +127,14 @@ static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
                                        StringRef name) {
   StringRef placeholder = acc::getVarNamePlaceholder();
   for (auto it = block->begin(); it != std::next(ip); ++it) {
-    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    auto attr = it->getDiscardableAttrOfType<acc::VarNameAttr>(
+        acc::getVarNameAttrName());
     if (attr && attr.getName() == placeholder) {
       if (name.empty())
-        it->removeAttr(acc::getVarNameAttrName());
+        it->removeDiscardableAttr(acc::getVarNameAttrName());
       else
-        it->setAttr(acc::getVarNameAttrName(),
-                    acc::VarNameAttr::get(it->getContext(), name));
+        it->setDiscardableAttr(acc::getVarNameAttrName(),
+                               acc::VarNameAttr::get(it->getContext(), name));
     }
   }
 }

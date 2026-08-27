@@ -869,13 +869,20 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         Scheduler.exitRegion();
         continue;
       }
-      LLVM_DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      LLVM_DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB)
-                        << " " << MBB->getName() << "\n  From: " << *I
-                        << "    To: ";
-                 if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
-                 else dbgs() << "End\n";
-                 dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
+      auto DumpRegionHeader = [&] {
+        dbgs() << "Current Schedule Region\n";
+        dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
+               << MBB->getName() << "\n  From: " << *I << "    To: ";
+        if (RegionEnd != MBB->end())
+          dbgs() << *RegionEnd;
+        else
+          dbgs() << "End\n";
+        dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n';
+      };
+      if (PrintDAGs)
+        DumpRegionHeader();
+      else
+        LLVM_DEBUG(DumpRegionHeader());
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
         errs() << ":%bb. " << MBB->getNumber();
@@ -1901,8 +1908,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
         RegOpers.detectDeadDefs(*MI, *LIS);
@@ -1936,8 +1942,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
         RegOpers.detectDeadDefs(*MI, *LIS);
@@ -2475,7 +2480,7 @@ void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
 
 static const unsigned InvalidCycle = ~0U;
 
-SchedBoundary::~SchedBoundary() { delete HazardRec; }
+SchedBoundary::~SchedBoundary() = default;
 
 /// Given a Count of resource usage and a Latency value, return true if a
 /// SchedBoundary becomes resource limited.
@@ -2494,10 +2499,8 @@ void SchedBoundary::reset() {
   // A new HazardRec is created for each DAG and owned by SchedBoundary.
   // Destroying and reconstructing it is very expensive though. So keep
   // invalid, placeholder HazardRecs.
-  if (HazardRec && HazardRec->isEnabled()) {
-    delete HazardRec;
-    HazardRec = nullptr;
-  }
+  if (HazardRec && HazardRec->isEnabled())
+    HazardRec.reset();
   Available.clear();
   Pending.clear();
   CheckPending = false;
@@ -3658,12 +3661,10 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty, or
   // are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
 
@@ -4370,12 +4371,10 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty,
   // or are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
   TopClusterID = InvalidClusterId;
   BotClusterID = InvalidClusterId;
 }

@@ -154,6 +154,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
     case TargetOpcode::G_ADD:
@@ -169,6 +170,8 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FDIV:
     case TargetOpcode::G_FREM:
     case TargetOpcode::G_FMA:
+    case TargetOpcode::G_FATAN2:
+    case TargetOpcode::G_FPOW:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
@@ -227,7 +230,8 @@ static SPIRVTypeInst deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
     switch (PointeeType->getOpcode()) {
     case SPIRV::OpTypeArray:
     case SPIRV::OpTypeRuntimeArray:
-    case SPIRV::OpTypeVector: {
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeVectorIdEXT: {
       Register ElemTypeReg = PointeeType->getOperand(1).getReg();
       PointeeType = GR->getSPIRVTypeForVReg(ElemTypeReg);
       break;
@@ -322,7 +326,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   Register SrcReg = I->getOperand(I->getNumOperands() - 1).getReg();
   SPIRVTypeInst ScalarType = nullptr;
   if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
-    assert(DefType->getOpcode() == SPIRV::OpTypeVector);
+    assert(isVectorType(DefType));
     ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 

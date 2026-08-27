@@ -106,20 +106,34 @@ T tmain(T argc, T *argv) {
 // CHECK: T clen = 5;
   T *p;
 #pragma omp threadprivate(g)
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp target simd linear(a) allocate(a)
-  // CHECK: #pragma omp target simd linear(a) allocate(a)
+#else
+#pragma omp target simd linear(a)
+#endif
+  // OMP45: #pragma omp target simd linear(a)
+  // OMP50: #pragma omp target simd linear(a) allocate(a)
+  // OMP51: #pragma omp target simd linear(a) allocate(a)
+  // OMP52: #pragma omp target simd linear(a) allocate(a)
   for (T i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (T i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp target simd allocate(f) private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) if (target :argc) reduction(+ : h)
+#else
+#pragma omp target simd private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) if (target :argc) reduction(+ : h)
+#endif
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             foo();
-  // CHECK-NEXT: #pragma omp target simd allocate(f) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) if(target: argc) reduction(+: h)
+  // OMP45-NEXT: #pragma omp target simd private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) if(target: argc) reduction(+: h)
+  // OMP50-NEXT: #pragma omp target simd allocate(f) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) if(target: argc) reduction(+: h)
+  // OMP51-NEXT: #pragma omp target simd allocate(f) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) if(target: argc) reduction(+: h)
+  // OMP52-NEXT: #pragma omp target simd allocate(f) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) if(target: argc) reduction(+: h)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
