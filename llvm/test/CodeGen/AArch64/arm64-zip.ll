@@ -391,23 +391,20 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip1:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    fcmgt.4s v0, v0, #0.0
-; CHECK-GI-NEXT:    fmov.4s v2, #1.00000000
-; CHECK-GI-NEXT:    mov.s w8, v0[1]
-; CHECK-GI-NEXT:    mov.s w9, v0[2]
-; CHECK-GI-NEXT:    mov.s w10, v0[3]
-; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    adrp x8, .LCPI27_1
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
-; CHECK-GI-NEXT:    mov.b v0[2], w9
-; CHECK-GI-NEXT:    mov.b v0[3], w10
+; CHECK-GI-NEXT:    fmov.4s v2, #1.00000000
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    mov.s w9, v0[1]
+; CHECK-GI-NEXT:    mov.s w10, v0[2]
+; CHECK-GI-NEXT:    mov.s w11, v0[3]
+; CHECK-GI-NEXT:    mov.b v0[1], w9
+; CHECK-GI-NEXT:    mov.b v0[2], w10
+; CHECK-GI-NEXT:    mov.b v0[3], w11
 ; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI27_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
@@ -451,18 +448,15 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    mov.s w10, v0[3]
 ; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_1
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI28_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI28_0]
 ; CHECK-GI-NEXT:    mov.b v0[2], w9
 ; CHECK-GI-NEXT:    mov.b v0[3], w10
 ; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI28_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
@@ -501,22 +495,19 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip3:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    cmgt.4s v0, v0, #0
-; CHECK-GI-NEXT:    mov.s w8, v0[1]
-; CHECK-GI-NEXT:    mov.s w9, v0[2]
-; CHECK-GI-NEXT:    mov.s w10, v0[3]
-; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    adrp x8, .LCPI29_1
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI29_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
-; CHECK-GI-NEXT:    mov.b v0[2], w9
-; CHECK-GI-NEXT:    mov.b v0[3], w10
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-NEXT:    mov.s w9, v0[1]
+; CHECK-GI-NEXT:    mov.s w10, v0[2]
+; CHECK-GI-NEXT:    mov.s w11, v0[3]
+; CHECK-GI-NEXT:    mov.b v0[1], w9
+; CHECK-GI-NEXT:    mov.b v0[2], w10
+; CHECK-GI-NEXT:    mov.b v0[3], w11
 ; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI29_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
