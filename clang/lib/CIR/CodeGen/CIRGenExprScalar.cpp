@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenConstantEmitter.h"
+#include "CIRGenFixedPointBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
@@ -615,6 +616,9 @@ public:
   mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
     return VisitUnaryPrePostIncDec(e);
   }
+
+  mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value,
+                                   QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
     if (cgf.getLangOpts().OpenMP)
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
@@ -727,8 +731,7 @@ public:
         return {};
       }
     } else if (type->isFixedPointType()) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fixed point");
-      return {};
+      value = emitFixedPointIncDec(e, value, type);
     } else {
       assert(type->castAs<ObjCObjectPointerType>());
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec ObjectiveC pointer");
@@ -933,6 +936,9 @@ public:
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
+  mlir::Value emitFixedPointConversion(mlir::Value src, QualType srcTy,
+                                       QualType dstTy, mlir::Location loc);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -946,12 +952,28 @@ public:
     // this function more, and although fixed point numbers are represented by
     // integers, we do not want to follow any logic that assumes they should be
     // treated as integers.
-    // TODO(leonardchan): When necessary, add another if statement checking for
-    // conversions to fixed point types from other types.
-    // conversions to fixed point types from other types.
-    if (srcType->isFixedPointType() || dstType->isFixedPointType()) {
-      cgf.getCIRGenModule().errorNYI(loc, "fixed point conversions");
-      return {};
+    if (srcType->isFixedPointType()) {
+      if (dstType->isBooleanType()) {
+        cir::BoolType boolTy = builder.getBoolTy();
+        return cir::CastOp::create(builder, cgf.getLoc(loc), boolTy,
+                                   cir::CastKind::int_to_bool, src);
+      }
+
+      if (dstType->isFixedPointType() || dstType->isIntegerType() ||
+          dstType->isRealFloatingType())
+        return emitFixedPointConversion(src, srcType, dstType, cgf.getLoc(loc));
+
+      llvm_unreachable("Unhandled scalar conversion from a fixed point type to "
+                       "another type.");
+    } else if (dstType->isFixedPointType()) {
+      if (srcType->isIntegerType() || srcType->isRealFloatingType()) {
+        // This also includes converting booleans and enums to fixed point
+        // types.
+        return emitFixedPointConversion(src, srcType, dstType, cgf.getLoc(loc));
+      }
+
+      llvm_unreachable("Unhandled scalar conversion to a fixed point type from "
+                       "another type.");
     }
 
     srcType = srcType.getCanonicalType();
@@ -1084,6 +1106,8 @@ public:
   mlir::Value emitXor(const BinOpInfo &ops);
   mlir::Value emitOr(const BinOpInfo &ops);
 
+  mlir::Value emitFixedPointBinOp(const BinOpInfo &ops);
+
   LValue emitCompoundAssignLValue(
       const CompoundAssignOperator *e,
       mlir::Value (ScalarExprEmitter::*f)(const BinOpInfo &),
@@ -1138,32 +1162,31 @@ public:
   HANDLEBINOP(Or)
 #undef HANDLEBINOP
 
+  cir::CmpOpKind clangCmpToCIRCmp(clang::BinaryOperatorKind clangCmp) {
+    switch (clangCmp) {
+    case BO_LT:
+      return cir::CmpOpKind::lt;
+    case BO_GT:
+      return cir::CmpOpKind::gt;
+    case BO_LE:
+      return cir::CmpOpKind::le;
+    case BO_GE:
+      return cir::CmpOpKind::ge;
+    case BO_EQ:
+      return cir::CmpOpKind::eq;
+    case BO_NE:
+      return cir::CmpOpKind::ne;
+    default:
+      llvm_unreachable("unsupported comparison kind for cir.cmp");
+    }
+  }
+
   mlir::Value emitCmp(const BinaryOperator *e) {
     ignoreResultAssign = false;
     const mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Value result;
     QualType lhsTy = e->getLHS()->getType();
     QualType rhsTy = e->getRHS()->getType();
-
-    auto clangCmpToCIRCmp =
-        [](clang::BinaryOperatorKind clangCmp) -> cir::CmpOpKind {
-      switch (clangCmp) {
-      case BO_LT:
-        return cir::CmpOpKind::lt;
-      case BO_GT:
-        return cir::CmpOpKind::gt;
-      case BO_LE:
-        return cir::CmpOpKind::le;
-      case BO_GE:
-        return cir::CmpOpKind::ge;
-      case BO_EQ:
-        return cir::CmpOpKind::eq;
-      case BO_NE:
-        return cir::CmpOpKind::ne;
-      default:
-        llvm_unreachable("unsupported comparison kind for cir.cmp");
-      }
-    };
 
     cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
@@ -1190,9 +1213,7 @@ public:
                                          boInfo.lhs, boInfo.rhs);
         }
       } else if (boInfo.isFixedPointOp()) {
-        assert(!cir::MissingFeatures::fixedPointType());
-        cgf.cgm.errorNYI(loc, "fixed point comparisons");
-        result = builder.getBool(false, loc);
+        result = emitFixedPointBinOp(boInfo);
       } else {
         // integers and pointers
         if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
@@ -2038,6 +2059,76 @@ static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
   return nullptr;
 }
 
+mlir::Value ScalarExprEmitter::emitFixedPointIncDec(const UnaryOperator *e,
+                                                    mlir::Value value,
+                                                    QualType type) {
+  // Fixed-point types are tricky. In some cases, it isn't possible to
+  // represent a 1 or a -1 in the type at all. Piggyback off of
+  // EmitFixedPointBinOp to avoid having to reimplement saturation.
+  BinOpInfo info;
+  info.loc = e->getSourceRange();
+  info.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+  info.e = e;
+  info.compType = info.fullType = e->getType();
+  info.opcode = e->isIncrementOp() ? BO_Add : BO_Sub;
+  info.lhs = value;
+  info.rhs = builder.getConstInt(cgf.getLoc(info.loc), value.getType(), 1);
+  // If the type is signed, it's better to represent this as +(-1) or -(-1),
+  // since -1 is guaranteed to be representable.
+  // FIXME(cir): This is a carry-over from Classic codegen, we should probably
+  // figure out if ++ -> -(-1) and -- -> +(-1) is REALLY what we want? For now
+  // we are just doing what classic does here.
+  if (type->isSignedFixedPointType()) {
+    info.opcode = e->isIncrementOp() ? BO_Sub : BO_Add;
+    info.rhs = builder.createNeg(cgf.getLoc(info.loc), info.rhs);
+  }
+  // Now, convert from our invented integer literal to the type of the unary
+  // op. This will upscale and saturate if necessary. This value can become
+  // undef in some cases.
+  CIRGenFixedPointBuilder fpbuilder(builder, cgf.getLoc(info.loc));
+  auto dstSema = cgf.getContext().getFixedPointSemantics(info.fullType);
+  info.rhs =
+      fpbuilder.createIntegerToFixed(info.rhs, /*srcIsSigned=*/true, dstSema);
+  return emitFixedPointBinOp(info);
+}
+
+mlir::Value ScalarExprEmitter::emitFixedPointConversion(mlir::Value src,
+                                                        QualType srcTy,
+                                                        QualType dstTy,
+                                                        mlir::Location loc) {
+  assert(srcTy->isFixedPointType() || dstTy->isFixedPointType());
+
+  CIRGenFixedPointBuilder fpBuilder(builder, loc);
+  mlir::Value result;
+  if (srcTy->isRealFloatingType()) {
+    assert(dstTy->isFixedPointType());
+    result = fpBuilder.createFloatingToFixed(
+        src, cgf.getContext().getFixedPointSemantics(dstTy));
+  } else if (dstTy->isRealFloatingType()) {
+    assert(srcTy->isFixedPointType());
+    result = fpBuilder.createFixedToFloating(
+        src, cgf.getContext().getFixedPointSemantics(srcTy),
+        cgf.convertType(dstTy));
+  } else {
+    llvm::FixedPointSemantics srcFPSema =
+        cgf.getContext().getFixedPointSemantics(srcTy);
+    llvm::FixedPointSemantics dstFPSema =
+        cgf.getContext().getFixedPointSemantics(dstTy);
+
+    if (dstTy->isIntegerType())
+      result = fpBuilder.createFixedToInteger(
+          src, srcFPSema, dstFPSema.getWidth(), dstFPSema.isSigned());
+    else if (srcTy->isIntegerType())
+      result =
+          fpBuilder.createIntegerToFixed(src, srcFPSema.isSigned(), dstFPSema);
+    else {
+      assert(srcTy->isFixedPointType() && dstTy->isFixedPointType());
+      result = fpBuilder.createFixedToFixed(src, srcFPSema, dstFPSema);
+    }
+  }
+  return result;
+}
+
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
@@ -2072,11 +2163,8 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     return builder.createFMul(loc, ops.lhs, ops.rhs);
   }
 
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return nullptr;
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   return cir::MulOp::create(builder, cgf.getLoc(ops.loc),
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
@@ -2087,6 +2175,10 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     return builder.createFDiv(loc, ops.lhs, ops.rhs);
   }
+
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
+
   return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
                             ops.lhs, ops.rhs);
 }
@@ -2098,6 +2190,101 @@ mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
   }
   return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
                             ops.lhs, ops.rhs);
+}
+
+mlir::Value ScalarExprEmitter::emitFixedPointBinOp(const BinOpInfo &ops) {
+  // This is either a binary operation where at least one of the operands is
+  // a fixed-point type, or a unary operation where the operand is a fixed-point
+  // type. The result type of a binary operation is determined by
+  // Sema::handleFixedPointConversions().
+  QualType resultTy = ops.compType;
+  QualType lhsTy, rhsTy;
+  if (const auto *binOp = dyn_cast<BinaryOperator>(ops.e)) {
+    rhsTy = binOp->getRHS()->getType();
+    if (const auto *cao = dyn_cast<CompoundAssignOperator>(binOp)) {
+      // For compound assignment, the effective type of the LHS at this point
+      // is the computation LHS type, not the actual LHS type, and the final
+      // result type is not the type of the expression but rather the
+      // computation result type.
+      lhsTy = cao->getComputationLHSType();
+      resultTy = cao->getComputationResultType();
+    } else {
+      lhsTy = binOp->getLHS()->getType();
+    }
+  } else if (const auto *unOp = dyn_cast<UnaryOperator>(ops.e)) {
+    lhsTy = unOp->getSubExpr()->getType();
+    rhsTy = unOp->getSubExpr()->getType();
+  }
+  ASTContext &ctx = cgf.getContext();
+  mlir::Value lhs = ops.lhs;
+  mlir::Value rhs = ops.rhs;
+
+  auto lhsFixedSema = ctx.getFixedPointSemantics(lhsTy);
+  auto rhsFixedSema = ctx.getFixedPointSemantics(rhsTy);
+  auto resultFixedSema = ctx.getFixedPointSemantics(resultTy);
+  auto commonFixedSema = lhsFixedSema.getCommonSemantics(rhsFixedSema);
+
+  // Perform the actual operation.
+  mlir::Value result;
+  CIRGenFixedPointBuilder fpbuilder(builder, cgf.getLoc(ops.loc));
+  switch (ops.opcode) {
+  case BO_AddAssign:
+  case BO_Add:
+    result = fpbuilder.createAdd(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_SubAssign:
+  case BO_Sub:
+    result = fpbuilder.createSub(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_MulAssign:
+  case BO_Mul:
+    result = fpbuilder.createMul(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_DivAssign:
+  case BO_Div:
+    result = fpbuilder.createDiv(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_ShlAssign:
+  case BO_Shl:
+    result = fpbuilder.createShl(lhs, lhsFixedSema, rhs);
+    break;
+  case BO_ShrAssign:
+  case BO_Shr:
+    result = fpbuilder.createShr(lhs, rhs);
+    break;
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+    return fpbuilder.createCmp(lhs, lhsFixedSema, rhs, rhsFixedSema,
+                               clangCmpToCIRCmp(ops.opcode));
+  case BO_Cmp:
+  case BO_LAnd:
+  case BO_LOr:
+    llvm_unreachable("Found unimplemented fixed point binary operation");
+  case BO_PtrMemD:
+  case BO_PtrMemI:
+  case BO_Rem:
+  case BO_Xor:
+  case BO_And:
+  case BO_Or:
+  case BO_Assign:
+  case BO_RemAssign:
+  case BO_AndAssign:
+  case BO_XorAssign:
+  case BO_OrAssign:
+  case BO_Comma:
+    llvm_unreachable(
+        "Found unsupported binary operation for fixed point types.");
+  }
+
+  bool isShift = BinaryOperator::isShiftOp(ops.opcode) ||
+                 BinaryOperator::isShiftAssignOp(ops.opcode);
+  // Convert to the result type.
+  return fpbuilder.createFixedToFixed(
+      result, isShift ? lhsFixedSema : commonFixedSema, resultFixedSema);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
@@ -2143,11 +2330,8 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
 
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   return builder.createAdd(loc, ops.lhs, ops.rhs);
 }
@@ -2195,11 +2379,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
 
-    if (ops.isFixedPointOp()) {
-      assert(!cir::MissingFeatures::fixedPointType());
-      cgf.cgm.errorNYI("fixed point");
-      return {};
-    }
+    if (ops.isFixedPointOp())
+      return emitFixedPointBinOp(ops);
 
     return builder.createSub(loc, ops.lhs, ops.rhs);
   }
@@ -2224,11 +2405,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   // CIR accepts shift between different types, meaning nothing special
   // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
@@ -2256,11 +2434,8 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   // CIR accepts shift between different types, meaning nothing special
   // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
@@ -2539,16 +2714,37 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     cgf.emitIgnoredExpr(subExpr);
     return {};
 
+  case CK_FixedPointCast:
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_FixedPointToBoolean:
+    assert(subExpr->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(destTy->isBooleanType() && "Expected dest type to be boolean type");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_FixedPointToIntegral:
+    assert(subExpr->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(destTy->isIntegerType() && "Expected dest type to be an integer");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_IntegralToFixedPoint:
+    assert(subExpr->getType()->isIntegerType() &&
+           "Expected src type to be an integer");
+    assert(destTy->isFixedPointType() &&
+           "Expected dest type to be fixed point type");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
   case CK_FloatingCast:
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
-    if (kind == CK_FixedPointToFloating || kind == CK_FloatingToFixedPoint) {
-      cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                     "fixed point casts");
-      return {};
-    }
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ce);
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());

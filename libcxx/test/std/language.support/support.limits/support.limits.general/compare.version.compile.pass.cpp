@@ -74,7 +74,11 @@
 #    error "__cpp_lib_type_order should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
+#  endif
+
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_three_way_comparison
 #    error "__cpp_lib_three_way_comparison should be defined in c++26"
@@ -96,6 +100,28 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#  if __has_builtin(__builtin_type_order)
+#    ifndef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should be defined in c++26"
+#    endif
+#    if __cpp_lib_type_order != 202506L
+#      error "__cpp_lib_type_order should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should not be defined when the requirement '__has_builtin(__builtin_type_order)' is not met!"
+#    endif
+#  endif
+
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_three_way_comparison
+#    error "__cpp_lib_three_way_comparison should be defined in c++29"
+#  endif
+#  if __cpp_lib_three_way_comparison != 201907L
+#    error "__cpp_lib_three_way_comparison should have the value 201907L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

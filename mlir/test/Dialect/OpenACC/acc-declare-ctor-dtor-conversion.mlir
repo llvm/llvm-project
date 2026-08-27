@@ -39,14 +39,14 @@ acc.global_ctor @other_arr_acc_ctor {
 }
 acc.global_dtor @arr_acc_dtor {
   %0 = llvm.mlir.addressof @arr {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr
-  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(!llvm.array<7 x f32>) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(!llvm.array<7 x f32>) dataClause(acc_create) -> !llvm.ptr
   acc.declare_exit dataOperands(%1 : !llvm.ptr)
   acc.delete accPtr(%1 : !llvm.ptr)
   acc.terminator
 }
 acc.global_dtor @other_arr_acc_dtor {
   %0 = llvm.mlir.addressof @other_arr {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr
-  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(!llvm.array<3 x f32>) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(!llvm.array<3 x f32>) dataClause(acc_create) -> !llvm.ptr
   acc.declare_exit dataOperands(%1 : !llvm.ptr)
   acc.delete accPtr(%1 : !llvm.ptr)
   acc.terminator
