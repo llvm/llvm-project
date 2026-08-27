@@ -2754,7 +2754,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     Ctor.addInt(Int32Ty, I.Priority);
     Ctor.add(I.Initializer);
     if (I.AssociatedData)
-      Ctor.add(I.AssociatedData);
+      Ctor.add(cast<llvm::Constant>(I.AssociatedData));
     else
       Ctor.addNullPointer(PtrTy);
     Ctor.finishAndAddTo(Ctors);
