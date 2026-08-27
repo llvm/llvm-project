@@ -346,3 +346,67 @@ void g15(void) {
   to_void_with_expr(&arguable.x, 3); // no-warning
   to_void_with_expr(&arguable.x, ({3;})); // no-warning
 }
+
+#pragma pack(push, 1)
+struct PragmaPack1 {
+  char c0;
+  int x;
+};
+#pragma pack(pop)
+
+void g16(struct PragmaPack1 *p) {
+  f1(&p->x); // expected-warning {{packed member 'x' of class or structure 'PragmaPack1'}}
+  f2(&p->c0); // no-warning
+}
+
+// #pragma pack(4) does not reduce an int.
+#pragma pack(push, 4)
+struct PragmaPack4 {
+  char c0;
+  int x;
+  char c1;
+};
+#pragma pack(pop)
+
+void g17(struct PragmaPack4 *p) {
+  f1(&p->x); // no-warning
+}
+
+// The record is two-aligned, so x is misaligned despite an offset of four.
+#pragma pack(push, 2)
+struct PragmaPack2 {
+  char c0;
+  char c1;
+  int x;
+};
+#pragma pack(pop)
+
+void g18(struct PragmaPack2 *p) {
+  f1(&p->x); // expected-warning {{packed member 'x' of class or structure 'PragmaPack2'}}
+}
+
+struct PragmaPackOuter {
+  char c0;
+  struct PragmaPack1 inner;
+};
+
+void g19(struct PragmaPackOuter *p) {
+  f1(&p->inner.x); // expected-warning {{packed member 'x' of class or structure 'PragmaPack1'}}
+}
+
+extern void f3(short *);
+
+// short is two-aligned and so is PragmaPack2.
+void g20(struct PragmaPack2 *p) {
+  f3((short *)&p->x); // no-warning
+}
+
+// The outer packed record lowers it to one.
+struct __attribute__((packed)) PragmaPackInPacked {
+  char c0;
+  struct PragmaPack2 inner;
+};
+
+void g21(struct PragmaPackInPacked *p) {
+  f3((short *)&p->inner.x); // expected-warning {{packed member 'x' of class or structure 'PragmaPack2'}}
+}

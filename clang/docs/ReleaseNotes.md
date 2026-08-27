@@ -418,6 +418,9 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses more details when a constraint evaluates to false.
 
+- `-Waddress-of-packed-member` now also diagnoses members of records packed
+  by `#pragma pack`. (#GH97091)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
