@@ -1267,6 +1267,30 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   SmallVector<Register> Arguments =
       getBuiltinCallArguments(Call, Number, MIRBuilder, GR);
 
+  // OpenCL printf's format operand must be a pointer to i8, but string
+  // literals are [N x i8] array globals and the deduced pointer-to-array
+  // type would flow into the ExtInst otherwise. Consumers that type the
+  // printf declaration from its first call site (e.g. Arm's SPIR-V
+  // importer) then reject modules whose format strings differ in length.
+  if (Number == SPIRV::OpenCLExtInst::printf && !Arguments.empty()) {
+    Register FmtReg = Arguments[0];
+    SPIRVTypeInst FmtTy = GR->getSPIRVTypeForVReg(FmtReg);
+    if (FmtTy && FmtTy->getOpcode() == SPIRV::OpTypePointer) {
+      const SPIRVTypeInst Int8Ty =
+          GR->getOrCreateSPIRVIntegerType(8, MIRBuilder);
+      if (GR->getPointeeType(FmtTy) != Int8Ty) {
+        const SPIRVTypeInst Int8Ptr = GR->getOrCreateSPIRVPointerType(
+            Int8Ty, MIRBuilder, GR->getPointerStorageClass(FmtReg));
+        Register Cast = createVirtualRegister(Int8Ptr, GR, MIRBuilder);
+        MIRBuilder.buildInstr(SPIRV::OpBitcast)
+            .addDef(Cast)
+            .addUse(GR->getSPIRVTypeID(Int8Ptr))
+            .addUse(FmtReg);
+        Arguments[0] = Cast;
+      }
+    }
+  }
+
   MachineInstrBuilder MIB;
   if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma) &&
       Number == SPIRV::OpenCLExtInst::fma) {
