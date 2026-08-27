@@ -3077,7 +3077,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = 1ULL << Log2_32(TC);
     if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() &&
-        MaxVFForTC <= MaxFactors.FixedVF.getFixedValue() &&
+        MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
         !Config.OptForSize) {
       unsigned VF = MaxVFForTC / EffectiveIC;
       LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
