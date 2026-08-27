@@ -8,7 +8,7 @@
 // CHECK-LABEL: func @reuse_non_overlapping
 func.func @reuse_non_overlapping() {
   // Arena should be 4096 bytes (1024 * 4), not 8192.
-  // CHECK: %[[ARENA:.*]] = memref.alloc() {alignment = 1 : i64} : memref<4096xi8>
+  // CHECK: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<4096xi8>
   // First allocation at offset 0
   // CHECK-NEXT: %[[C0_0:.*]] = arith.constant 0 : index
   // CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0_0]]][] : memref<4096xi8> to memref<1024xf32>
@@ -28,7 +28,7 @@ func.func @reuse_non_overlapping() {
 // CHECK-LABEL: func @no_reuse_overlapping
 func.func @no_reuse_overlapping() {
   // Both are live at the same time, so arena = 4096 + 2048 = 6144 bytes.
-  // CHECK: %[[ARENA:.*]] = memref.alloc() {alignment = 1 : i64} : memref<6144xi8>
+  // CHECK: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<6144xi8>
   // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
   // CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<6144xi8> to memref<1024xf32>
   // CHECK-NEXT: %[[C4096:.*]] = arith.constant 4096 : index
@@ -52,7 +52,7 @@ func.func @no_reuse_overlapping() {
 // Best-fit should pick one of the 1024-byte gaps (smallest fit for 512).
 // CHECK-LABEL: func @best_fit_smallest_gap
 func.func @best_fit_smallest_gap() {
-  // CHECK: %[[ARENA:.*]] = memref.alloc() {alignment = 1 : i64} : memref<10240xi8>
+  // CHECK: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<10240xi8>
   // A at offset 0
   // CHECK-NEXT: %{{.*}} = arith.constant 0 : index
   // CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]]
@@ -91,7 +91,7 @@ func.func @best_fit_smallest_gap() {
 //   E must go past the arena high-water mark.
 // CHECK-LABEL: func @best_fit_alignment
 func.func @best_fit_alignment() {
-  // CHECK: %[[ARENA:.*]] = memref.alloc() {alignment = 256 : i64} : memref<576xi8>
+  // CHECK: %[[ARENA:.*]] = memref.alloc() alignment = 256 : memref<576xi8>
   // CHECK-NEXT: %{{.*}} = arith.constant 0 : index
   // CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]]{{.*}} to memref<128xi8>
   // CHECK-NEXT: %{{.*}} = arith.constant 128 : index
@@ -104,12 +104,12 @@ func.func @best_fit_alignment() {
   // E cannot fit in gap (alignment 256), placed at offset 512
   // CHECK-NEXT: %{{.*}} = arith.constant 512 : index
   // CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]]{{.*}} to memref<64xi8>
-  %a = memref.alloc() {alignment = 128 : i64} : memref<128xi8>
+  %a = memref.alloc() alignment = 128 : memref<128xi8>
   %b = memref.alloc() : memref<56xi8>
-  %c = memref.alloc() {alignment = 128 : i64} : memref<128xi8>
+  %c = memref.alloc() alignment = 128 : memref<128xi8>
   memref.dealloc %b : memref<56xi8>
-  %d = memref.alloc() {alignment = 128 : i64} : memref<64xi8>
-  %e = memref.alloc() {alignment = 256 : i64} : memref<64xi8>
+  %d = memref.alloc() alignment = 128 : memref<64xi8>
+  %e = memref.alloc() alignment = 256 : memref<64xi8>
   memref.dealloc %a : memref<128xi8>
   memref.dealloc %c : memref<128xi8>
   memref.dealloc %d : memref<64xi8>

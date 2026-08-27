@@ -18,6 +18,8 @@ class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;
 
+  /// Do not cache the returned CompilerType. A target may replace its scratch
+  /// type system, so callers must request the type again whenever needed.
   virtual CompilerType GetRegisterType(const RegisterInfo &reg_info) = 0;
 
 protected:

@@ -60,7 +60,8 @@ using llvm::dxil::ResourceClass;
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr,
+    Expr *SampleCountExpr = nullptr);
 
 enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
 

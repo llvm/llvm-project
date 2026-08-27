@@ -182,6 +182,9 @@ static std::optional<Instruction *>
 simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                              const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
                              IntrinsicInst &II, InstCombiner &IC) {
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
+
   // Optimize _L to _LZ when _L is zero
   if (const auto *LZMappingInfo =
           AMDGPU::getMIMGLZMappingInfo(ImageDimIntr->BaseOpcode)) {
@@ -251,12 +254,32 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     }
   }
 
+  // Optimize the arrayed dim away when the array slice is zero, since slice 0
+  // is the base layer.  Restricted to non-atomic, non-sampled image loads and
+  // stores for now.
+  const AMDGPU::MIMGDimInfo *DimInfo =
+      AMDGPU::getMIMGDimInfo(ImageDimIntr->Dim);
+  if (!BaseOpcode->Atomic && !BaseOpcode->Sampler && BaseOpcode->Coordinates &&
+      DimInfo->NonArrayDim != ImageDimIntr->Dim) {
+    // Address is [coords..., slice, (fragid)] plus an optional mip operand.
+    // The slice is the last coordinate, so index it from CoordStart.
+    unsigned SliceIndex = ImageDimIntr->CoordStart + DimInfo->NumCoords - 1 -
+                          (DimInfo->MSAA ? 1 : 0);
+    auto *ConstantSlice = dyn_cast<ConstantInt>(II.getOperand(SliceIndex));
+    if (ConstantSlice && ConstantSlice->isZero()) {
+      if (const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+              AMDGPU::getImageDimIntrinsicByBaseOpcode(ImageDimIntr->BaseOpcode,
+                                                       DimInfo->NonArrayDim)) {
+        return modifyIntrinsicCall(II, II, NewImageDimIntr->Intr, IC,
+                                   [&](auto &Args, auto &ArgTys) {
+                                     Args.erase(Args.begin() + SliceIndex);
+                                   });
+      }
+    }
+  }
+
   // Try to use D16
   if (ST->hasD16Images()) {
-
-    const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-        AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
-
     if (BaseOpcode->HasD16) {
 
       // If the only use of image intrinsic is a fptrunc (with conversion to
@@ -346,8 +369,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
   // Address is interpreted as float if the instruction has a sampler or as
   // unsigned int if there is no sampler.
-  bool HasSampler =
-      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode)->Sampler;
+  bool HasSampler = BaseOpcode->Sampler;
   bool FloatCoord = false;
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;

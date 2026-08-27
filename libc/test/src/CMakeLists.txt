@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPFR_F128;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
@@ -14,6 +14,17 @@ function(add_fp_unittest name)
       return()
     endif()
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
+  endif()
+
+  # TODO: To be removed when we find a workaround to run MPFR tests for
+  # emulated type where compiler doesn't support the native float128
+  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
+  if(MATH_UNITTEST_NEED_MPFR_F128)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
+      message(VERBOSE "Math test ${name} will be skipped as native float128 support in MPFR is not available.")
+      return()
+    endif()
   endif()
 
   if(MATH_UNITTEST_NEED_MPFR)
@@ -39,9 +50,8 @@ function(add_fp_unittest name)
       list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
     endif()
   endif()
-  list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
-  set(deps libc.hdr.math_macros)
+  set(deps libc.hdr.math_macros libc.test.UnitTest.FPTestHelpers)
   if(MATH_UNITTEST_DEPENDS)
     list(APPEND deps ${MATH_UNITTEST_DEPENDS})
   endif()

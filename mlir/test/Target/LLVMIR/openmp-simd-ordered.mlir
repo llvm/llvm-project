@@ -36,7 +36,7 @@ module {
     // CHECK: %.linear_var = alloca i32
     // CHECK: %.linear_result = alloca i32
 
-    omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) {
+    omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
       omp.loop_nest (%iv) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
         // CHECK: omp.loop_nest.region:
         // CHECK: load i32, ptr %.linear_result
@@ -78,7 +78,7 @@ module {
 
         omp.yield
       }
-    } {linear_var_types = [i32]}
+    }
     llvm.return
   }
   // CHECK: !{!"llvm.loop.vectorize.enable"}

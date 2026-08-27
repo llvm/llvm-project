@@ -88,10 +88,9 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
-  IRPrinter
   GlobalISel
   MC
-  ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

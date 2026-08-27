@@ -5412,6 +5412,87 @@ TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
   EXPECT_FALSE(H);
 }
 
+TEST(Hover, AttributedStmt) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedName;
+    bool IsHLSL;
+    bool ExpectDocumentation;
+  } Cases[] = {
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [^unroll]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "unroll", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [l^oop]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "loop", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [b^ranch]
+           if (true) {}
+         }
+       )hlsl",
+       "branch", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [f^latten]
+           if (true) {}
+         }
+       )hlsl",
+       "flatten", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^likely]] if (true) {}
+         }
+       )cpp",
+       "likely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^unlikely]] if (true) {}
+         }
+       )cpp",
+       "unlikely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           switch (1) {
+           case 1:
+             [[^fallthrough]];
+           case 2:
+             break;
+           }
+         }
+       )cpp",
+       "fallthrough", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code,
+                  Annotations::Markers().setRangeBegin("{{").setRangeEnd("}}"));
+    TestTU TU = TestTU::withCode(T.code());
+    if (Case.IsHLSL)
+      configureHLSL(TU);
+    else
+      TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+    if (Case.ExpectDocumentation) {
+      EXPECT_FALSE(H->Documentation.empty());
+    }
+  }
+}
 TEST(Hover, HLSLRegisterAttributeRange) {
   Annotations T(R"hlsl(
     Texture2D tex : [[^register]]([[^t1]]);

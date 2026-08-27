@@ -660,6 +660,7 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
+  M.reserve(*NumVTableTypes);
 
   for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
     auto VTableType(readStringFromTable());
@@ -693,6 +694,7 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
   auto NumCallsites = readNumber<uint32_t>();
   if (std::error_code EC = NumCallsites.getError())
     return EC;
+  FProfile.reserveCallsiteTypeCounts(*NumCallsites);
 
   for (uint32_t I = 0; I < *NumCallsites; ++I) {
     auto LineOffset = readNumber<uint64_t>();
@@ -727,6 +729,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   auto NumRecords = readNumber<uint32_t>();
   if (std::error_code EC = NumRecords.getError())
     return EC;
+  FProfile.reserveBodySamples(*NumRecords);
 
   for (uint32_t I = 0; I < *NumRecords; ++I) {
     auto LineOffset = readNumber<uint64_t>();
@@ -2012,6 +2015,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
         LineLocation(LineOffset, Discriminator))[FunctionId(Name)];
   }
   FProfile->setFunction(FunctionId(Name));
+  FProfile->reserveBodySamples(NumPosCounts);
 
   for (uint32_t I = 0; I < NumPosCounts; ++I) {
     uint32_t Offset;
