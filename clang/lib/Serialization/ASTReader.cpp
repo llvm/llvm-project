@@ -525,13 +525,18 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
+  auto FeatureLess = [](StringRef A, StringRef B) {
+    return A.substr(1) < B.substr(1);
+  };
+
   SmallVector<StringRef, 4> UnmatchedExistingFeatures, UnmatchedReadFeatures;
-  std::set_difference(
-      ExistingFeatures.begin(), ExistingFeatures.end(), ReadFeatures.begin(),
-      ReadFeatures.end(), std::back_inserter(UnmatchedExistingFeatures));
+  std::set_difference(ExistingFeatures.begin(), ExistingFeatures.end(),
+                      ReadFeatures.begin(), ReadFeatures.end(),
+                      std::back_inserter(UnmatchedExistingFeatures),
+                      FeatureLess);
   std::set_difference(ReadFeatures.begin(), ReadFeatures.end(),
                       ExistingFeatures.begin(), ExistingFeatures.end(),
-                      std::back_inserter(UnmatchedReadFeatures));
+                      std::back_inserter(UnmatchedReadFeatures), FeatureLess);
 
   // If we are allowing compatible differences and the read feature set is
   // a strict subset of the existing feature set, there is nothing to diagnose.

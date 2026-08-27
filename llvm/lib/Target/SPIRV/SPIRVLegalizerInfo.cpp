@@ -38,6 +38,13 @@ LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   };
 }
 
+LegalityPredicate typeOfLongVectors(unsigned TypeIdx, bool IsLongVecs) {
+  return [TypeIdx, IsLongVecs](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return IsLongVecs && Ty.isValid() && Ty.isVector();
+  };
+}
+
 SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   using namespace TargetOpcode;
 
@@ -166,6 +173,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       HasArbitraryPrecisionInts ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
+  bool IsLongVecs = ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
   auto ExtendedIntScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
@@ -206,6 +214,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       getActionDefinitionsBuilder(Opc)
           .customFor(allScalars)
           .customFor(allowedVectorTypes)
+          .customIf(typeOfLongVectors(0, IsLongVecs))
           .moreElementsToNextPow2(0)
           .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                            LegalizeMutations::changeElementCountTo(
@@ -218,6 +227,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_UREM, G_SREM, G_SDIV, G_UDIV, G_FREM})
       .customFor(allScalars)
       .customFor(allowedVectorTypes)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .scalarizeIf(numElementsNotPow2(0), 0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -227,6 +237,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allScalars)
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -237,12 +248,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .legalIf(typeOfLongVectors(1, IsLongVecs))
       .moreElementsToNextPow2(0)
       .lowerIf(vectorElementCountIsGreaterThan(0, MaxVectorSize))
       .moreElementsToNextPow2(1)
       .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize));
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .customIf(typeOfLongVectors(1, IsLongVecs))
       .moreElementsToNextPow2(1)
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -250,6 +264,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .custom();
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -259,6 +274,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Illegal G_UNMERGE_VALUES instructions should be handled
   // during the combine phase.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize))
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -271,6 +287,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // we turn it back into a call to the intrinsic with a custom rule to avoid
   // potential machine verifier failures.
   getActionDefinitionsBuilder(G_BITCAST)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .moreElementsToNextPow2(1)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
@@ -281,10 +298,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // If the result is still illegal, the combiner should be able to remove it.
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes);
+      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
+      .legalIf(LegalityPredicates::any(typeOfLongVectors(0, IsLongVecs),
+                                       typeOfLongVectors(1, IsLongVecs)));
 
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementSizeTo(0, MaxVectorSize))
@@ -297,6 +317,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
        G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
        G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .scalarize(1)
       .lower();
 
@@ -307,6 +328,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Illegal G_UNMERGE_VALUES instructions should be handled
   // during the combine phase.
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+      .legalIf(LegalityPredicates::any(typeOfLongVectors(0, IsLongVecs),
+                                       typeOfLongVectors(1, IsLongVecs)))
       .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize));
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE})
@@ -327,6 +350,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allowedVectorTypes, allPtrs)
       .legalForCartesianProduct(allPtrs, allPtrs)
       .legalIf(isScalar(0))
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .custom();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
@@ -357,17 +381,20 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_CTPOP)
       .legalForCartesianProduct(allIntScalarsAndVectors)
-      .legalIf(ExtendedScalarsAndVectorsProduct);
+      .legalIf(ExtendedScalarsAndVectorsProduct)
+      .legalIf(typeOfLongVectors(0, IsLongVecs));
 
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(ExtendedScalarsAndVectorsProduct)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            0, ElementCount::getFixed(MaxVectorSize)));
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
+      .lowerIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -375,6 +402,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .lower();
 
   getActionDefinitionsBuilder(G_PHI)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            0, ElementCount::getFixed(MaxVectorSize)))
@@ -393,6 +421,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf([](const LegalityQuery &Query) {
         return Query.Types[0].isPointerVector();
       })
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -632,7 +661,8 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVTypeInst SpvType,
 }
 
 static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
-  if (!Ty.isVector())
+  if (!Ty.isVector() ||
+      ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
     return false;
   unsigned NumElements = Ty.getNumElements();
   unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
