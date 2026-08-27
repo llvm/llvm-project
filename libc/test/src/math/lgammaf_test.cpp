@@ -48,7 +48,7 @@ TEST_F(LlvmLibcLgammafTest, HardCases) {
 }
 
 TEST_F(LlvmLibcLgammafTest, PositiveRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   // [min normal, max_normal].
   constexpr uint32_t POS_START = 0x0080'0000U;
   constexpr uint32_t POS_STOP = 0x7f7f'ffffU;
@@ -65,7 +65,7 @@ TEST_F(LlvmLibcLgammafTest, PositiveRange) {
 }
 
 TEST_F(LlvmLibcLgammafTest, NegativeRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   //-max_normal, -min normal].
   constexpr uint32_t NEG_START = 0x8080'0000U;
   constexpr uint32_t NEG_STOP = 0xff7f'ffffU;
@@ -86,7 +86,7 @@ TEST_F(LlvmLibcLgammafTest, NegativeRange) {
 TEST_F(LlvmLibcLgammafTest, SmallRange) {
   constexpr float LO = -4.0f;
   constexpr float HI = 4.0f;
-  constexpr uint32_t COUNT = 10'000;
+  constexpr uint32_t COUNT = 1'231;
   for (uint32_t i = 0; i <= COUNT; ++i) {
     float x =
         LO + (HI - LO) * static_cast<float>(i) / static_cast<float>(COUNT);

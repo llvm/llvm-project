@@ -9,6 +9,7 @@
 #include "hdr/errno_macros.h"
 #include "src/math/lgammaf.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcLgammafTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -55,8 +56,45 @@ TEST_F(LlvmLibcLgammafTest, ExactValues) {
 }
 
 TEST_F(LlvmLibcLgammafTest, Overflow) {
-  // lgamma(x) overflows float around x ~ 2^121. Pick a comfortable margin.
+  // lgamma(x) overflows float around x >= 0x1.895f1cp+121f (~ 2^121).
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf(0x1.895f1cp+121f),
+                              FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf(0x1.896p+121f),
+                              FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf(0x1.898p+121f),
+                              FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::lgammaf(0x1p126f),
                               FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
+
+  using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+  using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+  const RoundingMode modes[] = {RoundingMode::Nearest, RoundingMode::Upward,
+                                RoundingMode::Downward,
+                                RoundingMode::TowardZero};
+  const float overflow_inputs[] = {0x1.895f1cp+121f, 0x1.896p+121f,
+                                   0x1.898p+121f, 0x1p126f};
+
+  for (RoundingMode mode : modes) {
+    ForceRoundingMode r(mode);
+    if (!r.success)
+      continue;
+    for (float x : overflow_inputs) {
+      libc_errno = 0;
+      float expected = (mode == RoundingMode::Downward ||
+                        mode == RoundingMode::TowardZero)
+                           ? FPBits::max_normal().get_val()
+                           : inf;
+      EXPECT_FP_EQ_WITH_EXCEPTION(expected, LIBC_NAMESPACE::lgammaf(x),
+                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_MATH_ERRNO(ERANGE);
+    }
+  }
 }

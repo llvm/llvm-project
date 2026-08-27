@@ -383,13 +383,10 @@ LIBC_INLINE float lgammaf(float x) {
     // For huge positive x, lgamma(x) overflows float. Use a linear
     // approximation in double that maps to the correct Inf/max_normal.
     if (LIBC_UNLIKELY(!xbits.is_neg() && x >= 0x1.895f1cp+121f)) {
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       double r = fputil::multiply_add(xd, 0x1.4d3398p+6, 0x1.10f35ep+103);
-      float result = fputil::cast<float>(r);
-      if (FPBits(result).is_inf()) {
-        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-        fputil::set_errno_if_required(ERANGE);
-      }
-      return result;
+      return fputil::cast<float>(r);
     }
 
     // No cancellation in (x-0.5)*(log(x)-1): log(x)-1 > 0.2 on this range.
