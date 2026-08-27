@@ -192,6 +192,36 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   if (Kind != RecurKind::FAdd && Kind != RecurKind::FMulAdd)
     return false;
 
+  // A conditional reduction merges the updated and unchanged values through
+  // a phi, instead of exiting directly on the fadd/fmuladd. Look through it
+  // to find the real exit instruction.
+  if (auto *ExitPhi = dyn_cast<PHINode>(Exit)) {
+    if (ExitPhi->getNumIncomingValues() != 2)
+      return false;
+
+    Instruction *Inc0 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(0));
+    Instruction *Inc1 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(1));
+
+    // One incoming value is the reduction phi itself (carried forward when
+    // the update did not happen); the other is the candidate exit
+    // instruction.
+    Instruction *Chain = nullptr;
+    if (Inc0 == Phi)
+      Chain = Inc1;
+    else if (Inc1 == Phi)
+      Chain = Inc0;
+    else
+      return false;
+
+    // The candidate must be the tracked exact-FP instruction, and must not
+    // be used anywhere else, or replacing it with a masked operation later
+    // would not be equivalent.
+    if (!Chain || Chain != ExactFPMathInst || !Chain->hasOneUse())
+      return false;
+
+    Exit = Chain;
+  }
+
   if (Kind == RecurKind::FAdd && Exit->getOpcode() != Instruction::FAdd)
     return false;
 
