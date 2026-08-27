@@ -24,6 +24,9 @@
 #include "builtins/divsf3.h"
 #include "builtins/divtf3.h"
 #include "builtins/extenddftf2.h"
+#include "builtins/extendhfdf2.h"
+#include "builtins/extendhfsf2.h"
+#include "builtins/extendhftf2.h"
 #include "builtins/extendsfdf2.h"
 #include "builtins/extendsftf2.h"
 #include "builtins/extendxftf2.h"
@@ -61,6 +64,7 @@
 #include "builtins/subtf3.h"
 #include "builtins/truncdfsf2.h"
 #include "builtins/trunctfdf2.h"
+#include "builtins/trunctfhf2.h"
 #include "builtins/trunctfsf2.h"
 #include "builtins/trunctfxf2.h"
 
