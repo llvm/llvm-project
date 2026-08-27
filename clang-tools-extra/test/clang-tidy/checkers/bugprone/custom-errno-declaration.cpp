@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s bugprone-custom-errno-declaration %t
+// RUN: %check_clang_tidy %s bugprone-custom-errno-declaration %t -- -- -I %S/Inputs/custom-errno-declaration
+
+#include <stdint.h>
 
 namespace errno_test_0 {
     extern int errno;
@@ -18,7 +20,19 @@ namespace errno_test_2 {
     // CHECK-FIXES: {{^}}{{$}}
 } // namespace errno_test_2
 
-namespace errno_test_3 { // all cases should be ignored in this namespace
+namespace errno_test_3 {
+    extern int32_t errno;
+    // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: errno declaration detected, include cerrno instead [bugprone-custom-errno-declaration]
+    // CHECK-FIXES: {{^}}{{$}}
+} // namespace errno_test_3
+
+namespace errno_test_4 {
+    extern int16_t errno;
+    // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: errno declaration detected, include cerrno instead [bugprone-custom-errno-declaration]
+    // CHECK-FIXES: {{^}}{{$}}
+} // namespace errno_test_4
+
+namespace errno_test_5 { // all cases should be ignored in this namespace
     extern bool errno;
 
     void foo(int errno) {}
@@ -28,4 +42,4 @@ namespace errno_test_3 { // all cases should be ignored in this namespace
         int errno = 0;
         return errno;
     }
-} // namespace errno_test_3
+} // namespace errno_test_5
