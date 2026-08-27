@@ -8101,6 +8101,22 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
+When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
+permitted to reorder floating-point operations by default (equivalent to the
+behaviour of `#pragma clang loop vectorize(enable)`). This default can be
+overridden per-loop using `llvm.loop.vectorize.fp_reordering` (see below).
+
+#### '`llvm.loop.vectorize.fp_reordering`' Metadata
+
+This metadata gives the Loop Vectorizer an explicit per-loop instruction about
+whether floating-point operation reordering (reassociation) is permitted. It
+takes a single boolean operand:
+
+```llvm
+!0 = !{!"llvm.loop.vectorize.fp_reordering", i1 true}   ; reordering allowed
+!1 = !{!"llvm.loop.vectorize.fp_reordering", i1 false}  ; reordering suppressed
+```
+
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
