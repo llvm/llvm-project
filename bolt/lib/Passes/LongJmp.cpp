@@ -40,6 +40,11 @@ static cl::opt<bool>
 static cl::opt<bool> RelaxPLT("relax-plt",
                               cl::desc("indicate PLT proximity to hot text"),
                               cl::init(true), cl::cat(BoltOptCategory));
+
+static cl::opt<unsigned long long> MaxClusterSize(
+    "max-cluster-size",
+    cl::desc("maximum estimated size of a function fragment cluster in bytes"),
+    cl::init(124 * 1024 * 1024), cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -1079,15 +1084,15 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     const uint64_t FFSize = estimateFragmentSize(BF, FF);
 
     if (Layout.Clusters.empty() ||
-        Layout.Clusters.back().SectionName != Fragment.SectionName ||
-        Layout.Clusters.back().Size + FFSize > MaxClusterSize) {
+        Layout.Clusters.back().Size + FFSize > opts::MaxClusterSize) {
       Layout.Clusters.emplace_back(FragmentCluster());
       FragmentCluster &FC = Layout.Clusters.back();
-      FC.SectionName = Fragment.SectionName;
+      FC.StartSectionName = Fragment.SectionName;
       FC.FirstFunctionIndex = Fragment.FunctionIndex;
     }
 
     FragmentCluster &FC = Layout.Clusters.back();
+    FC.EndSectionName = Fragment.SectionName;
     FC.LastFunctionIndex = Fragment.FunctionIndex;
     ++FC.NumFragments;
     EstimatedSize += FFSize;
@@ -1249,7 +1254,7 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
     BinaryFunction *Thunk = createCallThunk(TargetSymbol, IsShort);
 
     FragmentCluster &ThunkCluster = Clusters[SourceCluster];
-    Thunk->setCodeSectionName(ThunkCluster.SectionName);
+    Thunk->setCodeSectionName(ThunkCluster.getThunkSectionName(IsForward));
     BinaryFunctionListType &ThunkList = IsForward
                                             ? ThunkCluster.ForwardThunkList
                                             : ThunkCluster.BackwardThunkList;
@@ -1355,7 +1360,7 @@ void LongJmpPass::relaxUnconditionalBranches(
           return It->second;
 
         BinaryFunction *Thunk = createBranchThunk(NextTarget, IsForward);
-        Thunk->setCodeSectionName(Cluster.SectionName);
+        Thunk->setCodeSectionName(Cluster.getThunkSectionName(IsForward));
         auto &ThunkList =
             IsForward ? Cluster.ForwardThunkList : Cluster.BackwardThunkList;
         ThunkList.push_back(Thunk);

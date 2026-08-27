@@ -84,10 +84,13 @@ class LongJmpPass : public BinaryFunctionPass {
 
   /// A group of function fragments that are located within the longest direct
   /// branch/call instruction distance. Jumps within the cluster do not require
-  /// a thunk. The cluster may include thunks for jumps to targets outside.
+  /// a thunk. The cluster may span output sections and include thunks for jumps
+  /// to targets outside. Backward thunks are inserted before the cluster, while
+  /// forward thunks are inserted after it.
   struct FragmentCluster {
-    /// Output code section containing fragments in this cluster.
-    SmallString<32> SectionName;
+    /// Output code sections containing the first and last cluster fragments.
+    SmallString<32> StartSectionName;
+    SmallString<32> EndSectionName;
 
     /// Estimated size of the cluster in bytes.
     uint64_t Size{0};
@@ -115,12 +118,11 @@ class LongJmpPass : public BinaryFunctionPass {
     /// <Destination Symbol> -> <Thunk Function>.
     DenseMap<const MCSymbol *, BinaryFunction *> ForwardBranchThunks;
     DenseMap<const MCSymbol *, BinaryFunction *> BackwardBranchThunks;
-  };
 
-  /// Maximum size of combined regular functions in the cluster. Note that it's
-  /// less than 128MB, because the size of the cluster plus its thunks should be
-  /// less than 128MB.
-  static constexpr uint64_t MaxClusterSize = 120 * 1024 * 1024;
+    StringRef getThunkSectionName(bool IsForward) const {
+      return IsForward ? EndSectionName : StartSectionName;
+    }
+  };
 
   struct FragmentClusterLayout {
     SmallVector<FragmentCluster, 4> Clusters;
