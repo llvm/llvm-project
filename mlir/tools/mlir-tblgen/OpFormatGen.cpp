@@ -2327,7 +2327,12 @@ static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
-      printTerminator = !term->getAttrDictionary().empty() ||
+      ::mlir::NamedAttrList termAttrs(term->getRawDictionaryAttrs());
+      term->getName().walkInherentAttrs(
+          term, [&](::llvm::StringRef name, ::mlir::Attribute &attr) {{
+            termAttrs.append(name, attr);
+          });
+      printTerminator = !termAttrs.empty() ||
                         term->getNumOperands() != 0 ||
                         term->getNumResults() != 0;
     }
@@ -2544,7 +2549,7 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
           std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
                             tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -2567,7 +2572,7 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // The `printProperties` method is responsible for printing out a leading
   // space so that empty `prop-dict`s don't produce stray whitespace.
   if (fmt.useProperties) {
-    body << "  printProperties(this->getContext(), _odsPrinter, "
+    body << "  printProperties((*this)->getContext(), _odsPrinter, "
             "getProperties(), elidedProps);\n";
   }
 }
@@ -2597,7 +2602,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
           std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
                             tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -2608,11 +2613,20 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   if (fmt.hasPropDict)
     body << "  _odsPrinter.printOptionalAttrDict"
          << (withKeyword ? "WithKeyword" : "")
-         << "(llvm::to_vector((*this)->getDiscardableAttrs()), elidedAttrs);\n";
-  else
-    body << "  _odsPrinter.printOptionalAttrDict"
+         << "(llvm::to_vector((*this)->getDiscardableAttrDictionary().getValue("
+            ")), elidedAttrs);\n";
+  else {
+    body << "  ::mlir::NamedAttrList _odsAttrs("
+            "(*this)->getRawDictionaryAttrs());\n"
+            "  (*this)->getName().walkInherentAttrs(*this, "
+            "[&](::llvm::StringRef name, ::mlir::Attribute &attr) {\n"
+            "    _odsAttrs.append(name, attr);\n"
+            "  });\n"
+            "  _odsPrinter.printOptionalAttrDict"
          << (withKeyword ? "WithKeyword" : "")
-         << "((*this)->getAttrs(), elidedAttrs);\n";
+         << "(_odsAttrs.getDictionary((*this)->getContext()).getValue(), "
+            "elidedAttrs);\n";
+  }
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
@@ -2654,7 +2668,12 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     body << op.getGetterName(attr->getVar()->name) << "Attr()";
 
   } else if (isa<AttrDictDirective>(element)) {
-    body << "getOperation()->getAttrDictionary()";
+    body << "[&]() { ::mlir::NamedAttrList attrs("
+            "getOperation()->getRawDictionaryAttrs()); "
+            "getOperation()->getName().walkInherentAttrs(getOperation(), "
+            "[&](::llvm::StringRef name, ::mlir::Attribute &attr) { "
+            "attrs.append(name, attr); }); return attrs.getDictionary("
+            "getOperation()->getContext()); }()";
 
   } else if (isa<PropDictDirective>(element)) {
     body << "getProperties()";
