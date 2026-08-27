@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# ====- Unit tests for diff coverage analyzer ------------------*- python -*--==#
+# ===- Unit tests for diff coverage analyzer -----------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ==------------------------------------------------------------------------==#
 
 import io
 import json
@@ -301,7 +301,7 @@ class TestStatisticsAndReporting(unittest.TestCase):
         self.assertEqual(stats.total_covered_lines, 1)  # line 11 (if x < 0)
         self.assertEqual(stats.total_missed_lines, 1)   # line 12 (return -x)
         self.assertEqual(stats.total_lines, 2)
-        self.assertEqual(stats.line_coverage_pct, 50.0)
+        self.assertEqual(stats.line_coverage_percentage, 50.0)
         self.assertFalse(stats.has_mcdc)
 
     def test_mcdc_decision_diagnostics(self) -> None:
@@ -336,115 +336,112 @@ class TestStatisticsAndReporting(unittest.TestCase):
         stats = calculate_patch_statistics(diff_files, matrix)
 
         self.assertTrue(stats.has_mcdc)
-        self.assertEqual(stats.total_mcdc_cov, 2)
-        self.assertEqual(stats.total_mcdc_tot, 3)
-        self.assertEqual(stats.mcdc_coverage_pct, 66.66666666666666)
+        self.assertEqual(stats.total_mcdc_covered_conditions, 2)
+        self.assertEqual(stats.total_mcdc_total_conditions, 3)
+        self.assertEqual(stats.mcdc_coverage_percentage, 66.66666666666666)
         self.assertEqual(stats.total_decisions_count, 1)
         self.assertEqual(stats.fully_verified_decisions, 0)
 
-        f_metrics = stats.files["libc/src/ctype/isspace.cpp"]
-        self.assertIn("C3 unverified", f_metrics.condition_diagnostics[0])
-        self.assertEqual(f_metrics.unverified_decision_lines[11], ["C3"])
+        file_metrics = stats.files["libc/src/ctype/isspace.cpp"]
+        self.assertIn("C3 unverified", file_metrics.condition_diagnostics[0])
+        self.assertEqual(file_metrics.unverified_decision_lines[11], ["C3"])
 
     def test_format_status_banner(self) -> None:
         # Full statement & full MC/DC
-        s1 = PatchCoverageSummary(
+        summary_full = PatchCoverageSummary(
             total_covered_lines=10,
             total_missed_lines=0,
-            total_mcdc_cov=4,
-            total_mcdc_tot=4,
+            total_mcdc_covered_conditions=4,
+            total_mcdc_total_conditions=4,
             total_decisions_count=2,
             fully_verified_decisions=2,
         )
-        banner1 = format_status_banner(s1)
-        self.assertIn("> [!TIP]", banner1)
-        self.assertIn("100.00% Line", banner1)
-        self.assertIn("100.00% MC/DC", banner1)
+        banner_full = format_status_banner(summary_full)
+        self.assertIn("100.00% Line", banner_full)
+        self.assertIn("100.00% MC/DC", banner_full)
 
         # Full statement, partial MC/DC
-        s2 = PatchCoverageSummary(
+        summary_partial = PatchCoverageSummary(
             total_covered_lines=10,
             total_missed_lines=0,
-            total_mcdc_cov=3,
-            total_mcdc_tot=4,
+            total_mcdc_covered_conditions=3,
+            total_mcdc_total_conditions=4,
             total_decisions_count=2,
             fully_verified_decisions=1,
         )
-        banner2 = format_status_banner(s2)
-        self.assertIn("> [!NOTE]", banner2)
-        self.assertIn("75.0% MC/DC", banner2)
+        banner_partial = format_status_banner(summary_partial)
+        self.assertIn("75.0% MC/DC", banner_partial)
 
-        # Warning when lines missed
-        s3 = PatchCoverageSummary(
+        # Lines missed
+        summary_warn = PatchCoverageSummary(
             total_covered_lines=8,
             total_missed_lines=2,
         )
-        banner3 = format_status_banner(s3)
-        self.assertIn("> [!WARNING]", banner3)
-        self.assertIn("80.00%", banner3)
-        self.assertIn("unexecuted lines detected in patch", banner3)
+        banner_warn = format_status_banner(summary_warn)
+        self.assertIn("80.00%", banner_warn)
+        self.assertIn("unexecuted lines detected in patch", banner_warn)
 
     def test_format_metadata_section(self) -> None:
-        meta = format_metadata_section(
-            base_sha="abcdef1234567890",
-            head_sha="123456abcdef7890",
-            base_branch="main",
-            head_branch="my-pr",
-            targets_str="libc.test.src.math.sin_test libc.test.src.math.cos_test",
-            base_repo="llvm/llvm-project",
-            head_repo="user/llvm-project",
+        metadata_string = format_metadata_section(
+            base_commit_sha="abcdef1234567890",
+            head_commit_sha="123456abcdef7890",
+            base_branch_name="main",
+            head_branch_name="my-pr",
+            targeted_tests_string="libc.test.src.math.sin_test libc.test.src.math.cos_test",
+            base_repository="llvm/llvm-project",
+            head_repository="user/llvm-project",
         )
-        self.assertIn("abcdef1", meta)
-        self.assertIn("123456a", meta)
-        self.assertIn("`libc.test.src.math.sin_test`, `libc.test.src.math.cos_test`", meta)
+        self.assertIn("abcdef1", metadata_string)
+        self.assertIn("123456a", metadata_string)
+        self.assertIn("`libc.test.src.math.sin_test`, `libc.test.src.math.cos_test`", metadata_string)
 
     def test_format_breakdown_table_standard_and_mcdc(self) -> None:
-        fm = FilePatchMetrics(
-            fpath="libc/src/math/tan.cpp",
+        file_metrics = FilePatchMetrics(
+            file_path="libc/src/math/tan.cpp",
             covered_lines={10, 11},
             missed_lines={12},
-            mcdc_cov=2,
-            mcdc_tot=2,
-            decisions_ver=1,
-            decisions_tot=1,
+            mcdc_covered_conditions=2,
+            mcdc_total_conditions=2,
+            decisions_verified=1,
+            decisions_total=1,
             condition_diagnostics=["`L10`: 2/2 verified"],
         )
         summary_mcdc = PatchCoverageSummary(
-            files={"libc/src/math/tan.cpp": fm},
+            files={"libc/src/math/tan.cpp": file_metrics},
             total_covered_lines=2,
             total_missed_lines=1,
-            total_mcdc_cov=2,
-            total_mcdc_tot=2,
+            total_mcdc_covered_conditions=2,
+            total_mcdc_total_conditions=2,
             total_decisions_count=1,
             fully_verified_decisions=1,
         )
-        table_mcdc = format_breakdown_table(summary_mcdc, head_repo="llvm/llvm-project")
+        table_mcdc = format_breakdown_table(summary_mcdc, head_repository="llvm/llvm-project")
         self.assertIn("MC/DC Conditions", table_mcdc)
         self.assertIn("`L10`: 2/2 verified", table_mcdc)
 
         summary_std = PatchCoverageSummary(
-            files={"libc/src/math/tan.cpp": fm},
+            files={"libc/src/math/tan.cpp": file_metrics},
             total_covered_lines=2,
             total_missed_lines=1,
         )
-        table_std = format_breakdown_table(summary_std, head_repo="llvm/llvm-project")
+        table_std = format_breakdown_table(summary_std, head_repository="llvm/llvm-project")
         self.assertIn("Unexecuted Line Spans", table_std)
         self.assertIn("`L12`", table_std)
 
     def test_render_patch_report_empty_diff(self) -> None:
-        stdout_buf = io.StringIO()
-        with redirect_stdout(stdout_buf):
+        stdout_buffer = io.StringIO()
+        with redirect_stdout(stdout_buffer):
             render_patch_report(
                 diff_files={},
                 coverage_matrix={},
-                base_sha="base",
-                head_sha="head",
-                base_branch="main",
-                head_branch="patch",
+                base_commit_sha="base",
+                head_commit_sha="head",
+                base_branch_name="main",
+                head_branch_name="patch",
             )
-        output = stdout_buf.getvalue()
-        self.assertIn("Coverage Validated", output)
-        self.assertIn("No `.cpp` source files in `libc/src/` were modified", output)
+        output_text = stdout_buffer.getvalue()
+        self.assertIn("### Coverage Summary", output_text)
+        self.assertIn("No `.cpp` source files in `libc/src/` were modified", output_text)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# ====- Unit tests for codebase coverage analyzer --------------*- python -*--==#
+# ===- Unit tests for codebase coverage analyzer -------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ==------------------------------------------------------------------------==#
 
 import io
 import json
@@ -19,22 +19,22 @@ from typing import Dict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from codebase_coverage import (
+    DirectoryCoverageMetrics,
     FullCoverageSummary,
-    SubsystemCoverageMetrics,
     extract_full_coverage_statistics,
+    format_directory_breakdown_table,
     format_global_summary_table,
     format_overview_callout,
-    format_subsystem_breakdown_table,
     render_full_report,
     resolve_dashboard_url,
 )
 
 
-class TestSubsystemCoverageMetrics(unittest.TestCase):
+class TestDirectoryCoverageMetrics(unittest.TestCase):
     """Tests for mathematical calculation and edge-case handling in metric models."""
 
     def test_metrics_percentages(self) -> None:
-        metrics = SubsystemCoverageMetrics(
+        metrics = DirectoryCoverageMetrics(
             name="math",
             lines_cov=850,
             lines_tot=1000,
@@ -52,7 +52,7 @@ class TestSubsystemCoverageMetrics(unittest.TestCase):
         self.assertEqual(metrics.missed_lines, 150)
 
     def test_zero_division_guard(self) -> None:
-        empty = SubsystemCoverageMetrics(name="empty")
+        empty = DirectoryCoverageMetrics(name="empty")
         self.assertEqual(empty.line_pct, 0.0)
         self.assertEqual(empty.func_pct, 0.0)
         self.assertEqual(empty.mcdc_pct, 0.0)
@@ -83,14 +83,14 @@ class TestDashboardURLResolution(unittest.TestCase):
 
 
 class TestDataExtraction(unittest.TestCase):
-    """Tests for extracting and aggregating metrics across multi-directory subsystems."""
+    """Tests for extracting and aggregating metrics across multi-directory codebase."""
 
-    def test_multi_subsystem_aggregation(self) -> None:
+    def test_multi_directory_aggregation(self) -> None:
         cov_data = {
             "data": [
                 {
                     "files": [
-                        # 1. ctype subsystem
+                        # 1. ctype directory
                         {
                             "filename": "libc/src/ctype/isalpha.cpp",
                             "summary": {
@@ -102,7 +102,7 @@ class TestDataExtraction(unittest.TestCase):
                                 [10, 1, 10, 20, 2, 2, 2, 1, 1, [True, True]]
                             ],
                         },
-                        # 2. math subsystem with nested directory
+                        # 2. math directory with nested directory
                         {
                             "filename": "libc/src/math/generic/sin.cpp",
                             "summary": {
@@ -115,7 +115,7 @@ class TestDataExtraction(unittest.TestCase):
                                 [25, 1, 25, 30, 2, 2, 2, 1, 1, [True, True]],
                             ],
                         },
-                        # 3. support subsystem
+                        # 3. support directory
                         {
                             "filename": "libc/src/__support/OSUtil/linux/syscall.cpp",
                             "summary": {
@@ -143,14 +143,14 @@ class TestDataExtraction(unittest.TestCase):
         self.assertIsNotNone(summary)
         assert summary is not None
 
-        # Verify only 3 libc/src subsystems are tracked
-        self.assertEqual(len(summary.subsystems), 3)
-        self.assertIn("src/ctype", summary.subsystems)
-        self.assertIn("src/math", summary.subsystems)
-        self.assertIn("src/__support", summary.subsystems)
+        # Verify only 3 libc/src directories are tracked
+        self.assertEqual(len(summary.directories), 3)
+        self.assertIn("src/ctype", summary.directories)
+        self.assertIn("src/math", summary.directories)
+        self.assertIn("src/__support", summary.directories)
 
-        # Verify subsystem-specific metrics
-        math_m = summary.subsystems["src/math"]
+        # Verify directory-specific metrics
+        math_m = summary.directories["src/math"]
         self.assertEqual(math_m.lines_cov, 40)
         self.assertEqual(math_m.lines_tot, 50)
         self.assertEqual(math_m.line_pct, 80.0)
@@ -180,14 +180,14 @@ class TestReportFormatting(unittest.TestCase):
 
     def test_format_overview_callout(self) -> None:
         # Standard line mode
-        g_std = SubsystemCoverageMetrics(lines_cov=950, lines_tot=1000)
+        g_std = DirectoryCoverageMetrics(lines_cov=950, lines_tot=1000)
         s_std = FullCoverageSummary(global_stats=g_std, dashboard_url="https://llvm.github.io/llvm-project/")
         callout_std = format_overview_callout(s_std)
         self.assertIn("95.00%", callout_std)
         self.assertNotIn("MC/DC", callout_std)
 
         # MC/DC mode
-        g_mcdc = SubsystemCoverageMetrics(lines_cov=950, lines_tot=1000, mcdc_cov=90, mcdc_tot=100, decisions_tot=40)
+        g_mcdc = DirectoryCoverageMetrics(lines_cov=950, lines_tot=1000, mcdc_cov=90, mcdc_tot=100, decisions_tot=40)
         s_mcdc = FullCoverageSummary(global_stats=g_mcdc, dashboard_url="https://llvm.github.io/llvm-project/mcdc/")
         callout_mcdc = format_overview_callout(s_mcdc)
         self.assertIn("95.00% Line", callout_mcdc)
@@ -195,7 +195,7 @@ class TestReportFormatting(unittest.TestCase):
         self.assertIn("https://llvm.github.io/llvm-project/mcdc/", callout_mcdc)
 
     def test_format_global_summary_table(self) -> None:
-        g = SubsystemCoverageMetrics(
+        g = DirectoryCoverageMetrics(
             lines_cov=950, lines_tot=1000, func_cov=98, func_tot=100,
             mcdc_cov=90, mcdc_tot=100, decisions_full=36, decisions_tot=40
         )
@@ -208,14 +208,14 @@ class TestReportFormatting(unittest.TestCase):
         self.assertIn("| **Executable Lines** | 950 | 1,000 | **95.00%** |", table)
         self.assertIn("| **Functions** | 98 | 100 | **98.00%** |", table)
 
-    def test_format_subsystem_breakdown_table_sorted(self) -> None:
-        sub_metrics = {
-            "src/string": SubsystemCoverageMetrics(name="src/string", lines_cov=20, lines_tot=20),
-            "src/ctype": SubsystemCoverageMetrics(name="src/ctype", lines_cov=10, lines_tot=10),
-            "src/math": SubsystemCoverageMetrics(name="src/math", lines_cov=40, lines_tot=50),
+    def test_format_directory_breakdown_table_sorted(self) -> None:
+        dir_metrics = {
+            "src/string": DirectoryCoverageMetrics(name="src/string", lines_cov=20, lines_tot=20),
+            "src/ctype": DirectoryCoverageMetrics(name="src/ctype", lines_cov=10, lines_tot=10),
+            "src/math": DirectoryCoverageMetrics(name="src/math", lines_cov=40, lines_tot=50),
         }
-        summary = FullCoverageSummary(subsystems=sub_metrics)
-        table = format_subsystem_breakdown_table(summary)
+        summary = FullCoverageSummary(directories=dir_metrics)
+        table = format_directory_breakdown_table(summary)
 
         # Must be alphabetically sorted: ctype, math, string
         pos_ctype = table.find("`libc/src/ctype`")

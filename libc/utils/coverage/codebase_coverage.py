@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 #
-# ====- Generate codebase coverage reports ---------------------*- python -*--==#
+# ===- Generate codebase coverage reports --------------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ==------------------------------------------------------------------------==#
 
 """
-Standalone analyzer for generating whole-codebase statement, branch, and MC/DC coverage reports.
+Standalone file for generating whole-codebase statement, branch, and MC/DC coverage reports.
 
 This script parses full-codebase `llvm-cov export` JSON files, aggregates metrics
-across all top-level LLVM-libc subsystems (e.g. `src/ctype`, `src/math`, `src/string`),
+across all top-level LLVM-libc directories (e.g. `src/ctype`, `src/math`, `src/string`),
 and outputs Markdown summary tables for CI step summaries.
 """
 
@@ -25,20 +25,12 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-# -----------------------------------------------------------------------------
-# Constants & Configuration
-# -----------------------------------------------------------------------------
-
 DEFAULT_REPOSITORY = "llvm/llvm-project"
 
 
-# -----------------------------------------------------------------------------
-# Data Models
-# -----------------------------------------------------------------------------
-
 @dataclass
-class SubsystemCoverageMetrics:
-    """Encapsulates coverage metrics and boolean decision counts for a subsystem or whole codebase."""
+class DirectoryCoverageMetrics:
+    """Encapsulates coverage metrics and boolean decision counts for a directory or whole codebase."""
 
     name: str = ""
     lines_cov: int = 0
@@ -78,10 +70,10 @@ class SubsystemCoverageMetrics:
 
 @dataclass
 class FullCoverageSummary:
-    """Encapsulates global and subsystem-level coverage statistics across LLVM-libc."""
+    """Encapsulates global and directory-level coverage statistics across LLVM-libc."""
 
-    global_stats: SubsystemCoverageMetrics = field(default_factory=SubsystemCoverageMetrics)
-    subsystems: Dict[str, SubsystemCoverageMetrics] = field(default_factory=dict)
+    global_stats: DirectoryCoverageMetrics = field(default_factory=DirectoryCoverageMetrics)
+    directories: Dict[str, DirectoryCoverageMetrics] = field(default_factory=dict)
     dashboard_url: str = ""
 
     @property
@@ -89,10 +81,6 @@ class FullCoverageSummary:
         """Returns True if any MC/DC condition data exists in the summary."""
         return self.global_stats.mcdc_tot > 0
 
-
-# -----------------------------------------------------------------------------
-# Data Extraction & Aggregation
-# -----------------------------------------------------------------------------
 
 def resolve_dashboard_url(has_mcdc: bool) -> str:
     """Resolves the live dashboard URL based on repository environment variables."""
@@ -111,22 +99,22 @@ def resolve_dashboard_url(has_mcdc: bool) -> str:
 
 
 def extract_full_coverage_statistics(cov_data: dict) -> Optional[FullCoverageSummary]:
-    """Extracts global and per-subsystem metrics from llvm-cov export JSON data."""
+    """Extracts global and per-directory metrics from llvm-cov export JSON data."""
     if "data" not in cov_data or not cov_data["data"]:
         return None
 
-    global_m = SubsystemCoverageMetrics(name="global")
-    subsystems: Dict[str, SubsystemCoverageMetrics] = {}
+    global_metrics = DirectoryCoverageMetrics(name="global")
+    directories: Dict[str, DirectoryCoverageMetrics] = {}
 
     for item in cov_data["data"][0].get("files", []):
-        fpath = item.get("filename", "")
-        if "src/" not in fpath or "/test/" in fpath or "/utils/" in fpath:
+        file_path = item.get("filename", "")
+        if "src/" not in file_path or "/test/" in file_path or "/utils/" in file_path:
             continue
 
-        idx = fpath.find("src/")
+        idx = file_path.find("src/")
         if idx == -1:
             continue
-        rel_path = fpath[idx:]
+        rel_path = file_path[idx:]
 
         summary = item.get("summary", {})
         lines_summary = summary.get("lines", {})
@@ -149,64 +137,60 @@ def extract_full_coverage_statistics(cov_data: dict) -> Optional[FullCoverageSum
             1 for rec in mcdc_records if len(rec) >= 10 and isinstance(rec[9], list) and all(rec[9])
         )
 
-        global_m.lines_cov += line_cov
-        global_m.lines_tot += line_tot
-        global_m.func_cov += func_cov
-        global_m.func_tot += func_tot
-        global_m.mcdc_cov += mcdc_cov
-        global_m.mcdc_tot += mcdc_tot
-        global_m.decisions_tot += file_decisions_tot
-        global_m.decisions_full += file_decisions_full
+        global_metrics.lines_cov += line_cov
+        global_metrics.lines_tot += line_tot
+        global_metrics.func_cov += func_cov
+        global_metrics.func_tot += func_tot
+        global_metrics.mcdc_cov += mcdc_cov
+        global_metrics.mcdc_tot += mcdc_tot
+        global_metrics.decisions_tot += file_decisions_tot
+        global_metrics.decisions_full += file_decisions_full
 
         parts = rel_path.split("/")
-        subsystem_name = "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
+        directory_name = "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
 
-        if subsystem_name not in subsystems:
-            subsystems[subsystem_name] = SubsystemCoverageMetrics(name=subsystem_name)
+        if directory_name not in directories:
+            directories[directory_name] = DirectoryCoverageMetrics(name=directory_name)
 
-        sub_m = subsystems[subsystem_name]
-        sub_m.lines_cov += line_cov
-        sub_m.lines_tot += line_tot
-        sub_m.func_cov += func_cov
-        sub_m.func_tot += func_tot
-        sub_m.mcdc_cov += mcdc_cov
-        sub_m.mcdc_tot += mcdc_tot
-        sub_m.decisions_tot += file_decisions_tot
-        sub_m.decisions_full += file_decisions_full
+        dir_metrics = directories[directory_name]
+        dir_metrics.lines_cov += line_cov
+        dir_metrics.lines_tot += line_tot
+        dir_metrics.func_cov += func_cov
+        dir_metrics.func_tot += func_tot
+        dir_metrics.mcdc_cov += mcdc_cov
+        dir_metrics.mcdc_tot += mcdc_tot
+        dir_metrics.decisions_tot += file_decisions_tot
+        dir_metrics.decisions_full += file_decisions_full
 
-    if global_m.lines_tot == 0:
+    if global_metrics.lines_tot == 0:
         return None
 
-    has_mcdc = global_m.mcdc_tot > 0
+    has_mcdc = global_metrics.mcdc_tot > 0
     dashboard_url = resolve_dashboard_url(has_mcdc)
 
     return FullCoverageSummary(
-        global_stats=global_m,
-        subsystems=subsystems,
+        global_stats=global_metrics,
+        directories=directories,
         dashboard_url=dashboard_url,
     )
 
 
-# -----------------------------------------------------------------------------
-# Report Formatting
-# -----------------------------------------------------------------------------
-
 def format_overview_callout(summary: FullCoverageSummary) -> str:
     """Generates the executive summary banner with dashboard link."""
     g = summary.global_stats
-    lines: List[str] = ["> [!NOTE]"]
+    lines: List[str] = []
 
     if summary.has_mcdc:
         lines.append(
-            f"> ### Overall Codebase Coverage: **{g.line_pct:.2f}% Line** | **{g.mcdc_pct:.2f}% MC/DC**"
+            f"### Overall Codebase Coverage: **{g.line_pct:.2f}% Line** | **{g.mcdc_pct:.2f}% MC/DC**"
         )
         lines.append(
-            f"> Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines and **{g.mcdc_cov:,} / {g.mcdc_tot:,}** boolean conditions across **{g.decisions_tot:,}** decisions."
+            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines and **{g.mcdc_cov:,} / {g.mcdc_tot:,}** boolean conditions across **{g.decisions_tot:,}** decisions."
         )
     else:
-        lines.append(f"> ### Overall Codebase Coverage: **{g.line_pct:.2f}%**")
+        lines.append(f"### Overall Codebase Coverage: **{g.line_pct:.2f}%**")
         lines.append(
-            f"> Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines across all LLVM-libc subsystems."
+            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines across all LLVM-libc directories."
         )
 
     lines.append("")
@@ -240,24 +224,24 @@ def format_global_summary_table(summary: FullCoverageSummary) -> str:
     return "\n".join(lines)
 
 
-def format_subsystem_breakdown_table(summary: FullCoverageSummary) -> str:
-    """Generates the subsystem breakdown table."""
+def format_directory_breakdown_table(summary: FullCoverageSummary) -> str:
+    """Generates the directory breakdown table."""
     lines: List[str] = ["### Coverage Breakdown"]
     has_mcdc = summary.has_mcdc
 
     if has_mcdc:
         lines.append(
-            "| Subsystem | MC/DC Conditions | Decisions (Verified / Total) | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
+            "| Directory | MC/DC Conditions | Decisions (Verified / Total) | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
         )
         lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
     else:
         lines.append(
-            "| Subsystem | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
+            "| Directory | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
         )
         lines.append("| :--- | :---: | :---: | :---: | :---: |")
 
-    for sub_name in sorted(summary.subsystems.keys()):
-        data = summary.subsystems[sub_name]
+    for dir_name in sorted(summary.directories.keys()):
+        data = summary.directories[dir_name]
         if has_mcdc:
             mc_cell = (
                 f"**{data.mcdc_pct:.1f}%** ({data.mcdc_cov}/{data.mcdc_tot})"
@@ -270,11 +254,11 @@ def format_subsystem_breakdown_table(summary: FullCoverageSummary) -> str:
                 else "N/A"
             )
             lines.append(
-                f"| `libc/{sub_name}` | {mc_cell} | {dec_cell} | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
+                f"| `libc/{dir_name}` | {mc_cell} | {dec_cell} | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
             )
         else:
             lines.append(
-                f"| `libc/{sub_name}` | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
+                f"| `libc/{dir_name}` | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
             )
 
     return "\n".join(lines)
@@ -287,9 +271,8 @@ def render_full_report(cov_data: dict) -> None:
     print("## LLVM-libc Full Codebase Coverage Report\n")
 
     if not summary:
-        print("> [!WARNING]")
-        print("> ### No Coverage Data Detected")
-        print("> The test execution completed but no coverage profiles were exported.")
+        print("### No Coverage Data Detected")
+        print("The test execution completed but no coverage profiles were exported.")
         return
 
     # 1. Executive Callout Banner
@@ -300,13 +283,9 @@ def render_full_report(cov_data: dict) -> None:
     print(format_global_summary_table(summary))
     print("")
 
-    # 3. Subsystem Breakdown Table
-    print(format_subsystem_breakdown_table(summary))
+    # 3. Directory Breakdown Table
+    print(format_directory_breakdown_table(summary))
 
-
-# -----------------------------------------------------------------------------
-# CLI Entry Point
-# -----------------------------------------------------------------------------
 
 def main() -> None:
     """Parses command-line arguments and triggers report generation."""
