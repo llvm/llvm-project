@@ -124,6 +124,10 @@ class TestVarPath(TestBase):
                 v.GetError().Fail(), "Make sure we don't find 'pt_sp->not_valid_child'"
             )
 
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/25037",
+    )
     def test_frame_var_use_dynamic(self):
         """Test `SBFrame.GetValueForVariablePath` return the current value and variable type."""
         self.build()
