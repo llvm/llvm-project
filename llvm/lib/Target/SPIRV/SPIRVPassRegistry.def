@@ -46,4 +46,5 @@ FUNCTION_ANALYSIS("spirv-convergence-region", SPIRVConvergenceRegionAnalysis())
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("spirv-prelegalizer", SPIRVPreLegalizerPass())
+MACHINE_FUNCTION_PASS("spirv-prelegalizer-combiner", SPIRVPreLegalizerCombinerPass())
 #undef MACHINE_FUNCTION_PASS

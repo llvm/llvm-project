@@ -151,8 +151,7 @@ Error SPIRVCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerCombiner when it has been
-  // ported.
+  addMachineFunctionPass(SPIRVPreLegalizerCombinerPass(), PMW);
   addMachineFunctionPass(SPIRVPreLegalizerPass(), PMW);
 }
 
