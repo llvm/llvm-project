@@ -81,6 +81,10 @@ public:
   CreateWithScriptCode(const char *data,
                        uint32_t options = 0); // see lldb::eTypeOption values
 
+  static SBTypeSummary
+  CreateWithClassName(const char *data,
+                      uint32_t options = 0); // see lldb::eTypeOption values
+
 #ifndef SWIG
   static SBTypeSummary CreateWithCallback(FormatCallback cb,
                                           uint32_t options = 0,

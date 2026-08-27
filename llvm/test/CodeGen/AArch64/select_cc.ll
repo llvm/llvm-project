@@ -96,9 +96,7 @@ define <2 x double> @select_olt_load_cmp(<2 x double> %a, ptr %src) {
 ; CHECK-GI-NEXT:    ldr d1, [x0]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    fcmgt v1.2s, v1.2s, #0.0
-; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-GI-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-GI-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -13,7 +13,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecMemfdCreateCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
+  const auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
   registerMatchersImpl(
       Finder, functionDecl(returns(isInteger()), hasName("memfd_create"),
                            hasParameter(0, CharPointerType),

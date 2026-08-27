@@ -243,6 +243,27 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+# Implement extended-precision builtins, assuming long double is 80 bits.
+# long double is not 80 bits on Android or MSVC.
+set(x86_80_BIT_SOURCES
+  divxc3.c
+  extendhfxf2.c
+  extendxftf2.c
+  fixxfdi.c
+  fixxfti.c
+  fixunsxfdi.c
+  fixunsxfsi.c
+  fixunsxfti.c
+  floatdixf.c
+  floattixf.c
+  floatundixf.c
+  floatuntixf.c
+  mulxc3.c
+  powixf2.c
+  trunctfxf2.c
+  truncxfhf2.c
+)
+
 option(COMPILER_RT_USE_LIBC_MATH
       "Use LLVM libc math routines for floating-point builtins" OFF)
 
@@ -270,6 +291,34 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_SOURCES    divdf3)
   use_libc_builtin(GENERIC_SOURCES    divsf3)
   use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_TF_SOURCES extenddftf2)
+  use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
+  use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
+  use_libc_builtin(GENERIC_SOURCES    fixdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixsfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfti)
+  use_libc_builtin(GENERIC_SOURCES    floatsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatdidf)
+  use_libc_builtin(GENERIC_SOURCES    floattidf)
+  use_libc_builtin(GENERIC_SOURCES    floatsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatdisf)
+  use_libc_builtin(GENERIC_SOURCES    floattisf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsidf)
+  use_libc_builtin(GENERIC_SOURCES    floatundidf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntidf)
+  use_libc_builtin(GENERIC_SOURCES    floatunsisf)
+  use_libc_builtin(GENERIC_SOURCES    floatundisf)
+  use_libc_builtin(GENERIC_SOURCES    floatuntisf)
   use_libc_builtin(GENERIC_SOURCES    muldf3)
   use_libc_builtin(GENERIC_SOURCES    mulsf3)
   use_libc_builtin(GENERIC_TF_SOURCES multf3)
@@ -278,6 +327,10 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_SOURCES    subdf3)
   use_libc_builtin(GENERIC_SOURCES    subsf3)
   use_libc_builtin(GENERIC_TF_SOURCES subtf3)
+  use_libc_builtin(GENERIC_SOURCES    truncdfsf2)  
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
+  use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
 endif()
 
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
@@ -348,27 +401,6 @@ if (NOT MSVC)
     i386/fp_mode.c
   )
 endif ()
-
-# Implement extended-precision builtins, assuming long double is 80 bits.
-# long double is not 80 bits on Android or MSVC.
-set(x86_80_BIT_SOURCES
-  divxc3.c
-  extendhfxf2.c
-  extendxftf2.c
-  fixxfdi.c
-  fixxfti.c
-  fixunsxfdi.c
-  fixunsxfsi.c
-  fixunsxfti.c
-  floatdixf.c
-  floattixf.c
-  floatundixf.c
-  floatuntixf.c
-  mulxc3.c
-  powixf2.c
-  trunctfxf2.c
-  truncxfhf2.c
-)
 
 if (NOT MSVC)
   set(x86_64_SOURCES
@@ -1012,7 +1044,7 @@ set(ve_SOURCES
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
+set_target_properties(builtins PROPERTIES FOLDER "compiler-rt/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
@@ -1160,6 +1192,38 @@ else ()
       get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
       set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
       file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
+
+      # For spirv64, produce a combined bitcode file alongside the static archive.
+      # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
+      # so we use llvm-link to merge the archive members into a single .bc file.
+      if("${arch}" MATCHES "^spirv64")
+        find_program(LLVM_LINK llvm-link
+          PATHS ${LLVM_TOOLS_BINARY_DIR}
+          NO_DEFAULT_PATH)
+        if(LLVM_LINK)
+          set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
+          add_custom_command(
+            OUTPUT "${SPIRV64_BC_OUTPUT}"
+            COMMAND "${LLVM_LINK}"
+                    "$<TARGET_FILE:clang_rt.builtins-spirv64>"
+                    -o "${SPIRV64_BC_OUTPUT}"
+            DEPENDS clang_rt.builtins-${arch}
+            COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
+            VERBATIM)
+          add_custom_target(clang_rt.builtins-spirv64-bc ALL
+            DEPENDS "${SPIRV64_BC_OUTPUT}")
+          add_dependencies(builtins clang_rt.builtins-spirv64-bc)
+          get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
+          install(FILES "${SPIRV64_BC_OUTPUT}"
+                  DESTINATION "${BUILTIN_INSTALL_DIR}"
+                  COMPONENT clang_rt.builtins-${arch})
+        else()
+          message(WARNING
+            "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "
+            "skipping libclang_rt.builtins.bc for spirv64")
+        endif()
+      endif()
+
       cmake_pop_check_state()
     endif ()
   endforeach ()

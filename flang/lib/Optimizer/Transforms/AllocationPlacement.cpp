@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -125,20 +126,10 @@ getConstantByteSize(mlir::Operation *op,
 }
 
 /// Replacement generator used for stack-to-heap conversions (fir.alloca ->
-/// fir.allocmem). Mirrors the MemoryAllocation pass.
+/// fir.allocmem).
 static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool /*deallocPointsDominateAlloc*/) {
-  mlir::Type varTy = alloca.getInType();
-  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-    if (opt)
-      return *opt;
-    return {};
-  };
-  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
-  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
-                                      bindcName, alloca.getTypeparams(),
-                                      alloca.getShape());
+  fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
   LLVM_DEBUG(llvm::dbgs() << "allocation placement: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;
@@ -232,6 +223,16 @@ void AllocationPlacementPass::runOnOperation() {
     auto allocmem = mlir::dyn_cast<fir::AllocMemOp>(op);
     if (!alloca && !allocmem)
       return;
+
+    if (alloca) {
+      // Do not touch to fir.alloca that must stay fir.alloca (e.g.
+      // the temporary alloca for array function results that will
+      // later be promoted to hidden arguments).
+      auto attr = alloca->getAttrOfType<fir::MustBeStackAttr>(
+          fir::MustBeStackAttr::getAttrName());
+      if (attr && attr.getValue())
+        return;
+    }
 
     // Only array allocations are considered.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();

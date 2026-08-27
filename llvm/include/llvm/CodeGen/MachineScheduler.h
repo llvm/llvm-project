@@ -88,6 +88,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -134,7 +135,6 @@ class MachineInstr;
 class MachineLoopInfo;
 class RegisterClassInfo;
 class SchedDFSResult;
-class ScheduleHazardRecognizer;
 class TargetInstrInfo;
 class TargetPassConfig;
 class TargetRegisterInfo;
@@ -874,7 +874,7 @@ public:
   ReadyQueue Available;
   ReadyQueue Pending;
 
-  ScheduleHazardRecognizer *HazardRec = nullptr;
+  std::unique_ptr<ScheduleHazardRecognizer> HazardRec;
 
 private:
   /// True if the pending Q should be checked/updated before scheduling another

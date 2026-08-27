@@ -5,7 +5,7 @@
 define void @clmul() {
 ;
 ; NOAES-LABEL: 'clmul'
-; NOAES-NEXT:  Cost Model: Found costs of RThru:768 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; NOAES-NEXT:  Cost Model: Found costs of 768 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 43 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 43 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 48 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)

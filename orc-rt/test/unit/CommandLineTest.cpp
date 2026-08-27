@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-utils/CommandLine.h"
-#include "orc-rt/Error.h"
+#include "orc-rt/bedrock/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -114,9 +114,7 @@ TEST_F(CommandLineParserTest, PrintHelpAlignmentWithShortFlags) {
   std::string LogFile;
   Parser.addValue("log-file", "Path to log", std::string("out.log"), LogFile);
 
-  std::stringstream SS;
-  Parser.printHelp(SS, "appname");
-  std::string Result = SS.str();
+  std::string Result = Parser.formatHelp("appname");
 
   auto GetColumn = [&](std::string_view SearchTerm) -> size_t {
     size_t Pos = Result.find(SearchTerm);

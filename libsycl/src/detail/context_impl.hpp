@@ -15,6 +15,7 @@
 #ifndef _LIBSYCL_CONTEXT_IMPL
 #define _LIBSYCL_CONTEXT_IMPL
 
+#include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 
@@ -23,16 +24,14 @@
 #include <functional>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+class property_list;
+
 namespace detail {
 
 class PlatformImpl;
 class DeviceImpl;
 
-// TODO: Presence of context object is essential for many APIs. Current
-// implementation of this class is a way to support them in case of absence of
-// context support in liboffload. For backends where context exists and
-// participates in operations, liboffload plugins create and use default context
-// that represents all devices in that platform. Duplicating this logic here.
 /// Context represents the runtime data structures and state required by a SYCL
 /// backend API to interact with a group of devices associated with a platform.
 class ContextImpl : public std::enable_shared_from_this<ContextImpl> {
@@ -41,12 +40,22 @@ class ContextImpl : public std::enable_shared_from_this<ContextImpl> {
   };
 
 public:
-  /// Constructs a ContextImpl using a platform.
+  /// Constructs a context implementation for the provided devices.
   ///
-  /// Newly created instance represents all devices in platform.
+  /// \param DeviceList is the list of devices associated with this context.
+  /// \param AsyncHandler is a SYCL asynchronous exception handler.
+  /// \param PropList is a list of context properties.
+  ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
+              const async_handler &AsyncHandler, const property_list &PropList,
+              Private);
+
+  /// Releases the underlying offload context handle.
+  ~ContextImpl();
+
+  /// Gets asynchronous exception handler.
   ///
-  /// \param Platform is a platform to associate this context with.
-  ContextImpl(PlatformImpl &Platform, Private) : MPlatform(Platform) {}
+  /// \return an instance of SYCL async_handler.
+  const async_handler &get_async_handler() const { return MAsyncHandler; }
 
   /// Constructs a ContextImpl with a provided arguments. Variadic helper.
   /// Restrics ways of ContextImpl creation.
@@ -55,8 +64,16 @@ public:
     return std::make_shared<ContextImpl>(std::forward<Ts>(args)..., Private{});
   }
 
+  /// Returns the raw underlying offload context handle.
+  ///
+  /// The caller is responsible for ensuring that the returned handle is only
+  /// used while this ContextImpl object is alive.
+  ///
+  /// \return the raw offload context handle.
+  const ol_context_handle_t &getOLHandleRef() const { return MOffloadContext; }
+
   /// \return the platform this context is associated with.
-  PlatformImpl &getPlatformImpl() const { return MPlatform; }
+  PlatformImpl &getPlatformImpl() const;
 
   /// Calls "callback" with every device associated
   /// with this context.
@@ -66,7 +83,9 @@ public:
   backend getBackend() const;
 
 private:
-  PlatformImpl &MPlatform;
+  const async_handler MAsyncHandler;
+  const std::vector<DeviceImpl *> MDevices;
+  ol_context_handle_t MOffloadContext{};
 };
 
 } // namespace detail

@@ -68,7 +68,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -80,7 +79,7 @@ if config.enable_profcheck:
     )
     # Not aimed at being used for peak-optimized binaries. These will be
     # addressed later. PhaseOrdering has a couple of merge function tests.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -229,6 +228,7 @@ tools = [
     ToolSubst("%lli", FindTool("lli"), post=".", extra_args=lli_args),
     ToolSubst("%llc_dwarf", FindTool("llc"), extra_args=llc_args),
     ToolSubst("%gold", config.gold_executable, unresolved="ignore"),
+    ToolSubst("%ld_bfd", config.ld_bfd_executable, unresolved="ignore"),
     ToolSubst("%ld64", ld64_cmd, unresolved="ignore"),
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
@@ -296,7 +296,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -341,6 +340,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
@@ -585,6 +585,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
@@ -647,14 +650,14 @@ if config.have_llvm_driver:
 import subprocess
 
 
-def have_ld_plugin_support():
+def have_ld_plugin_support(ld_executable, name):
     if not os.path.exists(
         os.path.join(config.llvm_shlib_dir, "LLVMgold" + config.llvm_shlib_ext)
     ):
         return False
 
     ld_cmd = subprocess.Popen(
-        [config.gold_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
@@ -677,18 +680,20 @@ def have_ld_plugin_support():
         config.available_features.add("ld_emu_elf32ppc")
 
     ld_version = subprocess.Popen(
-        [config.gold_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
-    if not "GNU gold" in ld_version.stdout.read().decode():
+    if not name in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
 
-if have_ld_plugin_support():
+if have_ld_plugin_support(config.ld_bfd_executable, "GNU ld"):
     config.available_features.add("ld_plugin")
 
+if have_ld_plugin_support(config.gold_executable, "GNU gold"):
+    config.available_features.add("gold_linker")
 
 def have_ld64_plugin_support():
     if not os.path.exists(

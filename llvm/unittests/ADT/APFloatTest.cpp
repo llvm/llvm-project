@@ -2304,6 +2304,104 @@ TEST(APFloatTest, Float8E8M0FNUValues) {
   EXPECT_EQ(0x1.0p-127, test.convertToDouble());
 }
 
+// Test that a Float8E8M0FNU NaN, which has no payload bits, does not
+// become an Inf when converted to a format that has infinities.
+TEST(APFloatTest, Float8E8M0FNUNaNConvert) {
+  APFloat nan = APFloat(APFloat::Float8E8M0FNU(), "nan");
+  EXPECT_TRUE(nan.isNaN());
+  EXPECT_EQ(APInt(8, 0xff), nan.bitcastToAPInt());
+
+  const std::pair<const fltSemantics *, uint64_t> ToSemantics[] = {
+      {&APFloat::IEEEhalf(), 0x7e00},
+      {&APFloat::BFloat(), 0x7fc0},
+      {&APFloat::IEEEsingle(), 0x7fc00000},
+      {&APFloat::IEEEdouble(), 0x7ff8000000000000ULL},
+  };
+
+  for (const auto &[Sem, ExpectedBits] : ToSemantics) {
+    APFloat test = nan;
+    bool losesInfo = true;
+    APFloat::opStatus status =
+        test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_TRUE(test.isNaN());
+    EXPECT_FALSE(test.isInfinity());
+    APInt bits = test.bitcastToAPInt();
+    EXPECT_EQ(APInt(APFloat::getSizeInBits(*Sem), ExpectedBits), bits);
+    // The stored bit pattern, not just the category, has to say NaN.
+    EXPECT_TRUE(APFloat(*Sem, bits).isNaN());
+  }
+}
+
+// Test that converting into a format that cannot represent the sign, or that
+// has no encoding for zero, reports the loss. The value that comes out is
+// still the one convert computed: the sign bit is carried into a format that
+// cannot spell it, and zero is replaced by the smallest normalized value. The
+// status is what tells a caller not to keep it.
+TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
+  // Neither format has a sign; only Float8E8M0FNU also lacks a zero.
+  const fltSemantics *NoSignSemantics[] = {&APFloat::Float8E8M0FNU(),
+                                           &APFloat::Float8E5M3FNU()};
+
+  for (const fltSemantics *Sem : NoSignSemantics) {
+    // The magnitude converts exactly, so the sign is the whole of the loss.
+    APFloat test(-2.0);
+    bool losesInfo = false;
+    APFloat::opStatus status =
+        test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isNegative());
+    EXPECT_EQ(-2.0, test.convertToDouble());
+
+    // The same magnitude without the sign has nothing to report.
+    test = APFloat(2.0);
+    losesInfo = true;
+    status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(test.isNegative());
+    EXPECT_EQ(2.0, test.convertToDouble());
+  }
+
+  // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That
+  // substitution is unsigned, so both zeros come out as the same value.
+  for (double Zero : {0.0, -0.0}) {
+    APFloat test(Zero);
+    bool losesInfo = false;
+    APFloat::opStatus status = test.convert(
+        APFloat::Float8E8M0FNU(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isSmallestNormalized());
+    EXPECT_EQ(0x1.0p-127, test.convertToDouble());
+    EXPECT_EQ(APInt(8, 0), test.bitcastToAPInt());
+  }
+
+  // Float8E5M3FNU does have one, so a positive zero converts exactly, and a
+  // negative one keeps its value and loses only the sign.
+  {
+    APFloat test(0.0);
+    bool losesInfo = true;
+    APFloat::opStatus status = test.convert(
+        APFloat::Float8E5M3FNU(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_TRUE(test.isZero());
+    EXPECT_FALSE(test.isNegative());
+
+    test = APFloat(-0.0);
+    losesInfo = false;
+    status = test.convert(APFloat::Float8E5M3FNU(),
+                          APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isZero());
+    EXPECT_TRUE(test.isNegative());
+  }
+}
+
 TEST(APFloatTest, getLargest) {
   EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
   EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());
@@ -7508,6 +7606,19 @@ TEST(APFloatTest, x87Bits) {
                   makeX87Bits(false, bias * 2 - 1, 1, 0));
     EXPECT_TRUE((pseudoDenormal * scale).bitwiseIsEqual(makeX87(1.0)));
   }
+
+  // Test pseudodenormal with non-zero significand
+  {
+    APFloat pseudoDenormal(S, makeX87Bits(false, 0, 1, 0x7FFF000000000000ull));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    EXPECT_TRUE(pseudoDenormal.isNormal());
+
+    // Verify the round-trip produces the normalized form
+    APInt result = pseudoDenormal.bitcastToAPInt();
+    APInt expected(80, {0xFFFF000000000000ull, 0x0001ull});
+    EXPECT_EQ(expected, result);
+  }
 }
 
 static bool isBitcastRoundtripSafe(APFloat value) {
@@ -9838,13 +9949,14 @@ TEST(APFloatTest, ConvertDoubleToE8M0FNU) {
   EXPECT_EQ(status, APFloat::opOK);
 
   // For E8M0, zero encoding is represented as the smallest normalized value.
+  // That is a different value, so the conversion reports the loss.
   test = APFloat(APFloat::IEEEdouble(), "0.0");
   status = test.convert(APFloat::Float8E8M0FNU(), APFloat::rmNearestTiesToEven,
                         &losesInfo);
   EXPECT_TRUE(test.isSmallestNormalized());
   EXPECT_EQ(0x1.0p-127, test.convertToDouble());
-  EXPECT_FALSE(losesInfo);
-  EXPECT_EQ(status, APFloat::opOK);
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(status, APFloat::opInexact);
 
   // Test that the conversion of a power-of-two value is precise.
   test = APFloat(APFloat::IEEEdouble(), "8.0");
@@ -10722,6 +10834,7 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M3FNU"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
   EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
@@ -10731,6 +10844,51 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
+}
+
+TEST(APFloatTest, getArbitraryFPSemantics) {
+  // Formats that can currently be lowered map to their semantics.
+  EXPECT_EQ(&APFloat::Float8E5M2(),
+            APFloat::getArbitraryFPSemantics("Float8E5M2"));
+  EXPECT_EQ(&APFloat::Float8E4M3FN(),
+            APFloat::getArbitraryFPSemantics("Float8E4M3FN"));
+  EXPECT_EQ(&APFloat::Float8E5M3FNU(),
+            APFloat::getArbitraryFPSemantics("Float8E5M3FNU"));
+  EXPECT_EQ(&APFloat::Float6E3M2FN(),
+            APFloat::getArbitraryFPSemantics("Float6E3M2FN"));
+  EXPECT_EQ(&APFloat::Float6E2M3FN(),
+            APFloat::getArbitraryFPSemantics("Float6E2M3FN"));
+  EXPECT_EQ(&APFloat::Float4E2M1FN(),
+            APFloat::getArbitraryFPSemantics("Float4E2M1FN"));
+
+  // Formats that are valid but cannot be lowered yet report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E5M2FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E3M4"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E8M0FNU"));
+
+  // Invalid formats report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics(""));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("float8e5m2"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("unknown"));
+}
+
+// The two arbitrary FP format tables must agree: every format with lowerable
+// semantics reports the size of those semantics.
+TEST(APFloatTest, ArbitraryFPSemanticsMatchSizeInBits) {
+  for (StringRef Format :
+       {"Float8E5M2", "Float8E5M2FNUZ", "Float8E4M3", "Float8E4M3FN",
+        "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4", "Float8E8M0FNU",
+        "Float8E5M3FNU", "Float6E3M2FN", "Float6E2M3FN", "Float4E2M1FN"}) {
+    ASSERT_TRUE(APFloat::isValidArbitraryFPFormat(Format)) << Format;
+    if (const fltSemantics *Sem = APFloat::getArbitraryFPSemantics(Format))
+      EXPECT_EQ(APFloat::getSizeInBits(*Sem),
+                APFloat::getArbitraryFPFormatSizeInBits(Format))
+          << Format;
+  }
 }
 
 TEST(APFloatTest, DecimalStringPreservesInexactStatus) {

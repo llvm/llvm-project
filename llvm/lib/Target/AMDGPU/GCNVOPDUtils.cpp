@@ -298,7 +298,8 @@ std::optional<VOPDMatchInfo> llvm::tryMatchVOPDPair(const SIInstrInfo &TII,
 static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const TargetSubtargetInfo &TSI,
                                        const MachineInstr *FirstMI,
-                                       const MachineInstr &SecondMI) {
+                                       const MachineInstr &SecondMI,
+                                       const SDep *) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
   const GCNSubtarget &ST = STII.getSubtarget();
 
@@ -446,7 +447,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI) &&
+      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI, nullptr) &&
           hasLessThanNumFused(*ISUI, 2))
         VOPDCapable[IIdx] = true;
     }
@@ -477,7 +478,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
-            !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
+            !shouldScheduleAdjacent(TII, ST, IMI, *JMI, nullptr))
           continue;
 
         if (loadsMayOverlap(*ISUI, ILoadSuccs, *JSUI, LoadPredsComputed,

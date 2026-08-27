@@ -312,15 +312,15 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     if (Src->isPointer()) {
       if (Opc == Instruction::PtrToInt)
         exposeProvenance(Src->asPointer().provenance());
-      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
-                                  Cacheable);
+      return MaterializedConstant(
+          Src->asPointer().address().zextOrTrunc(BitWidth), Cacheable);
     }
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
       if (V.isPointer()) {
         if (Opc == Instruction::PtrToInt)
           exposeProvenance(V.asPointer().provenance());
-        V = V.asPointer().address().trunc(BitWidth);
+        V = V.asPointer().address().zextOrTrunc(BitWidth);
       }
     }
     return MaterializedConstant(std::move(Vec), Cacheable);
@@ -1011,12 +1011,8 @@ Context::computeGEP(GEPOperator &GEP,
     AccumulatedOffset =
         AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
   auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-    if (Index.isAggregate() && !Res.isAggregate()) {
-      Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-      AccumulatedOffset = AnyValue::getVectorSplat(AccumulatedOffset,
-                                                   Index.asAggregate().size());
-    }
-    if (Index.isAggregate() && Res.isAggregate()) {
+    if (Index.isAggregate()) {
+      assert(Res.isAggregate() && "Res must be splatted before.");
       for (auto &&[ResElem, IndexElem, OffsetElem] :
            zip(Res.asAggregate(), Index.asAggregate(),
                AccumulatedOffset.asAggregate()))
@@ -1041,6 +1037,16 @@ Context::computeGEP(GEPOperator &GEP,
        GTI != GTE; ++GTI) {
     Value *V = GTI.getOperand();
 
+    // If the index is a vector, make sure the accumulated pointer is also a
+    // vector. Otherwise, make it a vector splat.
+    if (auto *VTy = dyn_cast<VectorType>(V->getType());
+        VTy && !Res.isAggregate()) {
+      uint32_t NumElements = getEVL(VTy->getElementCount());
+      Res = AnyValue::getVectorSplat(Res, NumElements);
+      AccumulatedOffset =
+          AnyValue::getVectorSplat(AccumulatedOffset, NumElements);
+    }
+
     // Fast path for zero offsets.
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->isZero())
@@ -1054,7 +1060,8 @@ Context::computeGEP(GEPOperator &GEP,
       unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
-      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
+      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
+                              /*isSigned=*/false, /*implicitTrunc=*/true),
                         APInt(IndexBitWidth, 1));
       continue;
     }
