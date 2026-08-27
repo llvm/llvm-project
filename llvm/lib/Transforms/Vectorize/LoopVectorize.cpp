@@ -1037,7 +1037,7 @@ public:
 
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) const;
 
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
@@ -1337,10 +1337,10 @@ private:
   InstructionCost getMemInstScalarizationCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for interleaving group of memory instructions.
-  InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF);
+  InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF) const;
 
   /// The cost computation for Gather/Scatter instruction.
-  InstructionCost getGatherScatterCost(Instruction *I, ElementCount VF);
+  InstructionCost getGatherScatterCost(Instruction *I, ElementCount VF) const;
 
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
@@ -1351,7 +1351,7 @@ private:
   /// Load: scalar load + broadcast.
   /// Store: scalar store + (loop invariant value stored? 0 : extract of last
   /// element)
-  InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF);
+  InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF) const;
 
   /// Estimate the overhead of scalarizing an instruction. This is a
   /// convenience wrapper for the type-based getScalarizationOverhead API.
@@ -3906,8 +3906,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   return 1;
 }
 
-bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
-                                                           ElementCount VF) {
+bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(
+    Instruction *I, ElementCount VF) const {
   // TODO: Cost model for emulated masked load/store is completely
   // broken. This hack guides the cost model to use an artificially
   // high enough value to practically disable vectorization with such
@@ -4233,7 +4233,7 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
 
 InstructionCost
 LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
-                                                ElementCount VF) {
+                                                ElementCount VF) const {
   assert(isUniformMemOp(*I, VF));
 
   Type *ValTy = getLoadStoreType(I);
@@ -4268,7 +4268,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
 
 InstructionCost
 LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
-                                                 ElementCount VF) {
+                                                 ElementCount VF) const {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
@@ -4291,7 +4291,7 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 
 InstructionCost
 LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
-                                                   ElementCount VF) {
+                                                   ElementCount VF) const {
   const auto *Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
 
