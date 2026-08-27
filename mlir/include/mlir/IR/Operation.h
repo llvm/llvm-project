@@ -467,6 +467,13 @@ public:
   /// to use Properties instead.
   std::optional<Attribute> getInherentAttr(StringRef name);
 
+  /// Access an inherent attribute by name and cast it to `AttrClass`.
+  template <typename AttrClass>
+  AttrClass getInherentAttrOfType(StringRef name) {
+    return llvm::dyn_cast_or_null<AttrClass>(
+        getInherentAttr(name).value_or(Attribute{}));
+  }
+
   /// Set an inherent attribute by name.
   ///
   /// This method is available as a transient facility in the migration process

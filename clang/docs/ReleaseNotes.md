@@ -550,6 +550,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
+- Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 
 ### OpenACC Specific Changes
 
@@ -679,6 +680,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Moved checkers
 
+The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.UseAfterLifetimeEnd`.
+
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
@@ -691,8 +694,8 @@ features cannot lower the translation-unit ABI level;
 
 ### OpenMP Support
 
-- Added parsing and semantic support for `dims` modifier in `num_teams` and
-  `thread_limit` clauses for OpenMP 6.1 or later.
+- Added parsing and semantic support for `dims` modifier in `num_teams`,
+  `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.

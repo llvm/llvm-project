@@ -514,21 +514,39 @@ inline bool isVector1(Type *Ty) {
   return FVTy && FVTy->getNumElements() == 1;
 }
 
+// We define this predicate out of line to avoid having to include all OpTypes.
+bool isVectorType(SPIRVTypeInst SPVTy);
+
+inline bool isLongVectorEXT(const Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
+    unsigned N = FVTy->getNumElements();
+    // Per specification: `Vector types must be parameterized only with 2, 3, or
+    // 4 components, plus any additional sizes enabled by capabilities.`, and we
+    // always enable the Vector16 capability.
+    return N != 2 && N != 3 && N != 4 && N != 8 && N != 16;
+  }
+  return false;
+}
+
 // Modify an LLVM type to conform with future transformations in IRTranslator.
 // At the moment use cases comprise only a <1 x Type> vector. To extend when/if
 // needed.
-inline Type *normalizeType(Type *Ty) {
+inline Type *normalizeType(Type *Ty, bool CanUseAnyVectorRank) {
+  if (CanUseAnyVectorRank)
+    return Ty;
+
   auto *FVTy = dyn_cast<FixedVectorType>(Ty);
   if (!FVTy || FVTy->getNumElements() != 1)
     return Ty;
   // If it's a <1 x Type> vector type, replace it by the element type, because
   // it's not a legal vector type in LLT and IRTranslator will represent it as
   // the scalar eventually.
-  return normalizeType(FVTy->getElementType());
+  return normalizeType(FVTy->getElementType(), CanUseAnyVectorRank);
 }
 
-inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
-  return PoisonValue::get(normalizeType(Ty));
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty,
+                                             bool CanUseAnyVectorRank) {
+  return PoisonValue::get(normalizeType(Ty, CanUseAnyVectorRank));
 }
 
 inline MetadataAsValue *buildMD(Value *Arg) {
