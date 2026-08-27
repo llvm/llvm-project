@@ -2135,6 +2135,12 @@ void VPIRMetadata::applyMetadata(Instruction &I) const {
     I.setMetadata(Kind, Node);
 }
 
+/// Returns the execution probability recorded in \p Node.
+static VPExecutionProbability getExecutionProbabilityFromMD(const MDNode *Node) {
+  return VPExecutionProbability::getRaw(
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
+}
+
 void VPIRMetadata::setExecutionProbability(VPExecutionProbability Prob,
                                            LLVMContext &Ctx) {
   // A recipe that never or always executes needs no annotation.
@@ -2154,8 +2160,7 @@ VPExecutionProbability VPIRMetadata::getExecutionProbability() const {
   MDNode *Node = getMetadata(getMDKindID(ExecutionProbabilityMDName));
   if (!Node)
     return VPExecutionProbability::getUnknown();
-  return VPExecutionProbability::getRaw(
-      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
+  return getExecutionProbabilityFromMD(Node);
 }
 
 void VPIRMetadata::clearExecutionProbability() {
@@ -2199,10 +2204,13 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
       interleaveComma(Weights, O);
       O << "}";
     } else if (MDNames[Kind] == ExecutionProbabilityMDName) {
-      // Print execution probabilities as percentages, which is precise enough
-      // to relate them to the block frequencies of the original loop.
-      O << format("%.2f%%", 100.0 * getExecutionProbability().getNumerator() /
-                                VPExecutionProbability::getDenominator());
+      // Print execution probabilities as percentages, which relates them to
+      // the block frequencies of the original loop. Use %g with a few
+      // significant digits, so that the tiny probabilities of deeply nested
+      // blocks stay legible without adding noise to the common ones.
+      O << format("%.4g%%",
+                  100.0 * getExecutionProbabilityFromMD(Node).getNumerator() /
+                      VPExecutionProbability::getDenominator());
     } else {
       Node->printAsOperand(O, M);
     }

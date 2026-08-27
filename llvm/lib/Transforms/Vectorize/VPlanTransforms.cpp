@@ -489,7 +489,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
     VPExecutionProbability Prob1 =
         Region1->getEntryBranchOnMask()->getExecutionProbability();
-    if (!Prob1.isUnknown() && Guard2->getExecutionProbability() < Prob1)
+    VPExecutionProbability Prob2 = Guard2->getExecutionProbability();
+    if (!Prob1.isUnknown() && !Prob2.isUnknown() && Prob2 < Prob1)
       Guard2->setExecutionProbability(Prob1, Plan.getContext());
 
     // Note: No fusion-preventing memory dependencies are expected in either

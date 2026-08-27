@@ -13,6 +13,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1139,16 +1140,27 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
     Weights.assign(Successors.size(), 0);
   uint64_t Total = sum_of(Weights, uint64_t(0));
 
+  // Sum the weights of parallel edges to the same successor, so that the
+  // division below rounds once per successor rather than once per edge.
   SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
   for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
     WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
 
   return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
     auto [Succ, Weight] = SuccWeight;
-    return std::make_pair(
-        Succ, Total == 0
-                  ? BranchProbability::getUnknown()
-                  : BranchProbability::getBranchProbability(Weight, Total));
+    if (Total == 0)
+      return std::make_pair(Succ, BranchProbability::getUnknown());
+    BranchProbability P =
+        BranchProbability::getBranchProbability(Weight, Total);
+    // A total wider than 32 bits gets scaled down, truncating the numerator.
+    // That can collapse a taken edge to probability zero, or a partially taken
+    // one to probability one; keep both ends apart, as BlockFrequencyInfo also
+    // gives a zero-weight edge a non-zero share.
+    if (P.isZero() && Weight != 0)
+      P = BranchProbability::getRaw(1);
+    else if (P.isOne() && Weight != Total)
+      P = BranchProbability::getRaw(BranchProbability::getDenominator() - 1);
+    return std::make_pair(Succ, P);
   });
 }
 
@@ -1169,7 +1181,7 @@ vputils::computeExecutionProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
 
   for (VPBasicBlock *VPBB : Blocks) {
     VPExecutionProbability SrcProb = Probabilities.at(VPBB);
-    for (auto [Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
+    for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
       VPExecutionProbability &SuccProb = Probabilities.at(Succ);
       // An unknown edge or predecessor poisons the successor: its probability
       // is only known if all edges on paths reaching it carry branch weights.

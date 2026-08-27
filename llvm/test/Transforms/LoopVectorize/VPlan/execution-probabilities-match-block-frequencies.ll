@@ -34,7 +34,7 @@ define void @single_pred(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25.00%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -97,20 +97,20 @@ define void @two_preds(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noali
 ; VPLAN-NEXT:    else:
 ; VPLAN-NEXT:      EMIT vp<[[NOT_C0:%.+]]> = not ir<%c.0>
 ; VPLAN-NEXT:      EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.c>, vp<[[NOT_C0]]> (!vplan.execution.probability 75.00%)
-; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100>, vp<[[NOT_C0]]> (!vplan.execution.probability 75.00%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.c>, vp<[[NOT_C0]]> (!vplan.execution.probability 75%)
+; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100>, vp<[[NOT_C0]]> (!vplan.execution.probability 75%)
 ; VPLAN-NEXT:    Successor(s): then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25.00%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25%)
 ; VPLAN-NEXT:    Successor(s): merge
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    merge:
 ; VPLAN-NEXT:      EMIT vp<[[AND:%.+]]> = logical-and vp<[[NOT_C0]]>, ir<%c.1>
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = or vp<[[AND]]>, ir<%c.0>
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[MASK]]> (!vplan.execution.probability 50.00%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[MASK]]> (!vplan.execution.probability 50%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -178,14 +178,14 @@ define void @nested_ifs(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.0:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0> (!vplan.execution.probability 25.00%)
-; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<100>, ir<%c.0> (!vplan.execution.probability 25.00%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0> (!vplan.execution.probability 25%)
+; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<100>, ir<%c.0> (!vplan.execution.probability 25%)
 ; VPLAN-NEXT:    Successor(s): if.1
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.1:
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = logical-and ir<%c.0>, ir<%c.1>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 12.50%)
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 12.5%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -256,17 +256,17 @@ define void @switch_common_dest(ptr noalias %a, ptr noalias %b, ptr noalias %c, 
 ; VPLAN-NEXT:      EMIT vp<[[ANY:%.+]]> = or vp<[[C0_OR_C1]]>, vp<[[C2]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[ANY]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<2>, ir<%gep.b>, vp<[[C2]]> (!vplan.execution.probability 12.50%)
+; VPLAN-NEXT:      EMIT store ir<2>, ir<%gep.b>, vp<[[C2]]> (!vplan.execution.probability 12.5%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 37.50%)
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 37.5%)
 ; VPLAN-NEXT:    Successor(s): default
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    default:
 ; VPLAN-NEXT:      EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.c>, vp<[[DEFAULT]]> (!vplan.execution.probability 50.00%)
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.c>, vp<[[DEFAULT]]> (!vplan.execution.probability 50%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -414,12 +414,12 @@ define void @switch_common_dest_almost_always_taken(ptr noalias %a, ptr noalias 
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[C0_OR_C1]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 100.00%)
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 100%)
 ; VPLAN-NEXT:    Successor(s): default
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    default:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!vplan.execution.probability 0.00%)
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!vplan.execution.probability 4.657e-08%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -459,8 +459,9 @@ exit:
 
 define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; %mid is almost never executed, and %if.then is reached from 4 of the switch's
-; cases in %mid. The probability of each single edge to %if.then rounds to zero,
-; so each is bumped to the lowest representable probability.
+; cases in %mid. Both probabilities are far below BranchProbability's 2^-31
+; resolution, so they must be represented as block frequencies to stay
+; distinguishable from zero.
 ;
 ;   %loop                       1 =   1
 ;   %mid             1/2147483648 ~   0
@@ -485,7 +486,7 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    mid:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 0.00%)
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 4.657e-08%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
@@ -500,7 +501,7 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 0.00%)
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 4.657e-08%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -542,9 +543,9 @@ exit:
 }
 
 define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
-; Same as @switch_common_dest_almost_never_taken, but with enough edges to
-; %if.then that bumping each of them separately to the lowest representable
-; probability drifts further from BlockFrequencyInfo than its tolerance allows.
+; Same as @switch_common_dest_almost_never_taken, but with more parallel edges
+; to %if.then. Their weights must be summed per successor before the edge
+; probability is computed, so that it is rounded once rather than once per edge.
 ;
 ;   %loop                       1 =   1
 ;   %mid             1/2147483648 ~   0
@@ -569,7 +570,7 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    mid:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 0.00%)
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 4.657e-08%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
@@ -577,7 +578,7 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 0.00%)
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 4.657e-08%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -621,6 +622,155 @@ latch:
 exit:
   ret void
 }
+
+define void @switch_common_dest_weight_sum_exceeds_32_bits(ptr noalias %a, ptr noalias %idx) {
+; The weights of the five parallel edges to %if.then sum to more than 2^32, so
+; scaling the frequency by them must not lose enough precision to round
+; %if.then's probability up to one; that would drop the recorded probability,
+; because probability one needs no annotation.
+;
+;   %loop                              1 =   1
+;   %if.then     21474836475/21474836511 ~   1
+;   %latch                             1 =   1
+;
+; BFI-LABEL: block-frequency-info: switch_common_dest_weight_sum_exceeds_32_bits
+; BFI-NEXT:   - entry: float = 1.0,
+; BFI-NEXT:   - loop: float = 1000.0,
+; BFI-NEXT:   - if.then: float = 1000.0,
+; BFI-NEXT:   - latch: float = 1000.0,
+; BFI-NEXT:   - exit: float = 1.0,
+;
+; VPLAN-LABEL: VPlan for loop in 'switch_common_dest_weight_sum_exceeds_32_bits'
+; VPLAN:         vector.body:
+; VPLAN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%{{.+}}>
+; VPLAN-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; VPLAN-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep.idx>
+; VPLAN-NEXT:    Successor(s): if.then
+; VPLAN-EMPTY:
+; VPLAN-NEXT:    if.then:
+; VPLAN-NEXT:      EMIT vp<[[C0:%.+]]> = icmp eq ir<%l>, ir<0>
+; VPLAN-NEXT:      EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<1>
+; VPLAN-NEXT:      EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<2>
+; VPLAN-NEXT:      EMIT vp<[[C3:%.+]]> = icmp eq ir<%l>, ir<3>
+; VPLAN-NEXT:      EMIT vp<[[C4:%.+]]> = icmp eq ir<%l>, ir<4>
+; VPLAN-NEXT:      EMIT vp<[[OR0:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
+; VPLAN-NEXT:      EMIT vp<[[OR1:%.+]]> = or vp<[[OR0]]>, vp<[[C2]]>
+; VPLAN-NEXT:      EMIT vp<[[OR2:%.+]]> = or vp<[[OR1]]>, vp<[[C3]]>
+; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = or vp<[[OR2]]>, vp<[[C4]]>
+; VPLAN-NEXT:      EMIT vp<{{.+}}> = not vp<[[MASK]]>
+; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 100%)
+; VPLAN-NEXT:    Successor(s): latch
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.idx = getelementptr inbounds i32, ptr %idx, i64 %iv
+  %l = load i32, ptr %gep.idx, align 4
+  switch i32 %l, label %latch [
+    i32 0, label %if.then
+    i32 1, label %if.then
+    i32 2, label %if.then
+    i32 3, label %if.then
+    i32 4, label %if.then
+  ], !prof !10
+
+if.then:
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 1, ptr %gep.a, align 4
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !prof !3
+
+exit:
+  ret void
+}
+
+define void @switch_many_edges_to_latch(ptr noalias %a, ptr noalias %idx) {
+; %if.then is reached only via the switch's default edge, while 32 parallel
+; edges go to %latch. BlockFrequencyInfo rounds once per edge, so the
+; cross-check's tolerance has to account for the number of edges, not just the
+; number of blocks.
+;
+;   %loop                1 =      1
+;   %if.then     1000/1224 ~ 0.8170
+;   %latch               1 =      1
+;
+; BFI-LABEL: block-frequency-info: switch_many_edges_to_latch
+; BFI-NEXT:   - entry: float = 1.0,
+; BFI-NEXT:   - loop: float = 1000.0,
+; BFI-NEXT:   - if.then: float = 816.99,
+; BFI-NEXT:   - latch: float = 1000.0,
+; BFI-NEXT:   - exit: float = 1.0,
+;
+; VPLAN-LABEL: VPlan for loop in 'switch_many_edges_to_latch'
+; VPLAN:         if.then:
+; VPLAN:           EMIT store ir<1>, ir<%gep.a>, vp<{{.+}}> (!vplan.execution.probability 81.7%)
+; VPLAN-NEXT:    Successor(s): latch
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.idx = getelementptr inbounds i32, ptr %idx, i64 %iv
+  %l = load i32, ptr %gep.idx, align 4
+  switch i32 %l, label %if.then [
+    i32 0, label %latch
+    i32 1, label %latch
+    i32 2, label %latch
+    i32 3, label %latch
+    i32 4, label %latch
+    i32 5, label %latch
+    i32 6, label %latch
+    i32 7, label %latch
+    i32 8, label %latch
+    i32 9, label %latch
+    i32 10, label %latch
+    i32 11, label %latch
+    i32 12, label %latch
+    i32 13, label %latch
+    i32 14, label %latch
+    i32 15, label %latch
+    i32 16, label %latch
+    i32 17, label %latch
+    i32 18, label %latch
+    i32 19, label %latch
+    i32 20, label %latch
+    i32 21, label %latch
+    i32 22, label %latch
+    i32 23, label %latch
+    i32 24, label %latch
+    i32 25, label %latch
+    i32 26, label %latch
+    i32 27, label %latch
+    i32 28, label %latch
+    i32 29, label %latch
+    i32 30, label %latch
+    i32 31, label %latch
+  ], !prof !11
+
+if.then:
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 1, ptr %gep.a, align 4
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !prof !3
+
+exit:
+  ret void
+}
+
+!10 = !{!"branch_weights", i32 36, i32 4294967295, i32 4294967295, i32 4294967295, i32 4294967295, i32 4294967295}
+!11 = !{!"branch_weights", i32 1000, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7}
 
 !0 = !{!"branch_weights", i32 1, i32 3}
 !1 = !{!"branch_weights", i32 1, i32 2}

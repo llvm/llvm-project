@@ -683,11 +683,13 @@ static MDNode *convertProbabilityToBranchWeights(VPExecutionProbability Prob,
                                                  LLVMContext &Ctx) {
   if (Prob.isUnknown())
     return nullptr;
+  BranchProbability P = Prob;
 
-  // Use the numerators of Prob and its complement as weights and reduce them
-  // via gcd to keep them small.
-  uint32_t Taken = Prob.getNumerator();
-  uint32_t NotTaken = Prob.getCompl().getNumerator();
+  // Use the numerators of P and its complement as weights and reduce them via
+  // gcd to keep them small. Round a probability that underflows P up, to keep a
+  // rarely entered block distinguishable from a never entered one.
+  uint32_t Taken = std::max(P.getNumerator(), 1u);
+  uint32_t NotTaken = BranchProbability::getDenominator() - Taken;
   uint32_t GCD = std::gcd(Taken, NotTaken);
   return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
 }

@@ -41,11 +41,11 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-NEXT:    Successor(s): if.then
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    if.then:
-; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.probability 25.00%)
+; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.probability 25%)
 ; PREDICATE-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
 ; PREDICATE-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
 ; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
-; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.probability 25.00%)
+; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.probability 25%)
 ; PREDICATE-NEXT:    Successor(s): latch
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    latch:
@@ -84,11 +84,11 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-NEXT:    Successor(s): if.then
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    if.then:
-; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.probability 25.00%)
+; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.probability 25%)
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
 ; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
-; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.probability 25.00%)
+; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.probability 25%)
 ; CONSTRUCT-NEXT:    Successor(s): latch
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    latch:
@@ -131,7 +131,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; REGION-EMPTY:
 ; REGION-NEXT:    <xVFxUF> pred.store: {
 ; REGION-NEXT:      pred.store.entry:
-; REGION-NEXT:        BRANCH-ON-MASK ir<%cmp> (!vplan.execution.probability 25.00%)
+; REGION-NEXT:        BRANCH-ON-MASK ir<%cmp> (!vplan.execution.probability 25%)
 ; REGION-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; REGION-EMPTY:
 ; REGION-NEXT:      pred.store.if:

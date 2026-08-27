@@ -6485,27 +6485,32 @@ static bool verifyExecutionProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
   if (HeaderFreq == 0)
     return true;
 
-  // BFI's fixed-point mass propagation rounds per edge, losing up to 1 ULP per
-  // block on the path from the header.
-  uint64_t Tolerance =
-      Blocks.size() + VPExecutionProbability::getDenominator() / HeaderFreq;
+  // BFI's fixed-point mass propagation rounds once per edge, losing up to 1 ULP
+  // per edge on the paths reaching a block. Bound that by the total number of
+  // edges in the region, as a block distributing its frequency over many
+  // successors rounds once for each of them.
+  uint64_t Edges = 0;
+  for (const VPBasicBlock *VPBB : Blocks)
+    Edges += VPBB->getNumSuccessors();
+  uint64_t Tolerance = Edges + BranchProbability::getDenominator() / HeaderFreq;
 
   DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities =
       vputils::computeExecutionProbabilities(Blocks);
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    VPExecutionProbability Computed = Probabilities.lookup(VPBB);
     // Currently VPlan-based probabilities are only computed when all blocks
-    // have branch-weights.
-    if (Computed.isUnknown())
+    // have branch-weights. Compare at BranchProbability's coarser resolution,
+    // which is as precise as BFI's frequencies get.
+    VPExecutionProbability Prob = Probabilities.lookup(VPBB);
+    if (Prob.isUnknown())
       continue;
+    BranchProbability Computed = Prob;
 
     // Clamp the frequency to the header's; it may exceed it slightly due to
     // BFI's rounding.
     uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
-    VPExecutionProbability Expected =
-        VPExecutionProbability::getBranchProbability(std::min(Freq, HeaderFreq),
-                                                     HeaderFreq);
+    BranchProbability Expected = BranchProbability::getBranchProbability(
+        std::min(Freq, HeaderFreq), HeaderFreq);
     if (AbsoluteDifference(Computed.getNumerator(), Expected.getNumerator()) <=
         Tolerance)
       continue;
