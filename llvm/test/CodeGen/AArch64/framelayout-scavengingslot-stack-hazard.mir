@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-stack-hazard-size=1024 -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-stack-hazard-size=1024 -run-pass=prolog-epilog %s -o - | FileCheck %s
 --- |
 
   define void @stack_hazard_streaming_compat() "aarch64_pstate_sm_compatible" { entry: unreachable }

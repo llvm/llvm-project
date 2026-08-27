@@ -5,12 +5,12 @@
 define void @exceed(double %0, double %1) {
 ; X86-LABEL: @exceed(
 ; X86-NEXT:  entry:
-; X86-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
+; X86-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i64 0
 ; X86-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; X86-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
+; X86-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i64 0
 ; X86-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
 ; X86-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x double> [[TMP3]], [[TMP5]]
-; X86-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
+; X86-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; X86-NEXT:    [[IX:%.*]] = fmul double [[TMP7]], undef
 ; X86-NEXT:    [[IXX0:%.*]] = fsub double undef, undef
 ; X86-NEXT:    [[IXX1:%.*]] = fsub double undef, undef
@@ -28,7 +28,7 @@ define void @exceed(double %0, double %1) {
 ; X86-NEXT:    [[IXX20:%.*]] = fsub double undef, undef
 ; X86-NEXT:    [[IXX21:%.*]] = fsub double undef, undef
 ; X86-NEXT:    [[IXX22:%.*]] = fsub double undef, undef
-; X86-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
+; X86-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
 ; X86-NEXT:    [[IX2:%.*]] = fmul double [[TMP8]], [[TMP8]]
 ; X86-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
 ; X86-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 2>
@@ -65,18 +65,18 @@ define void @exceed(double %0, double %1) {
 ; AARCH64-NEXT:    [[IXX20:%.*]] = fsub double undef, undef
 ; AARCH64-NEXT:    [[IXX21:%.*]] = fsub double undef, undef
 ; AARCH64-NEXT:    [[IXX22:%.*]] = fsub double undef, undef
-; AARCH64-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i32 0
+; AARCH64-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0:%.*]], i64 0
 ; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; AARCH64-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i32 0
+; AARCH64-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[TMP1:%.*]], i64 0
 ; AARCH64-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
 ; AARCH64-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x double> [[TMP3]], [[TMP5]]
-; AARCH64-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
+; AARCH64-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
 ; AARCH64-NEXT:    [[IX2:%.*]] = fmul double [[TMP7]], [[TMP7]]
 ; AARCH64-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
 ; AARCH64-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 2>
 ; AARCH64-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double poison, double 1.000000e+00>, <2 x i32> <i32 0, i32 3>
 ; AARCH64-NEXT:    [[TMP11:%.*]] = fdiv reassoc nsz arcp contract afn <2 x double> [[TMP9]], [[TMP10]]
-; AARCH64-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
+; AARCH64-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; AARCH64-NEXT:    [[IX:%.*]] = fmul double [[TMP12]], undef
 ; AARCH64-NEXT:    [[IX1:%.*]] = fmul double [[TMP12]], undef
 ; AARCH64-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP9]]

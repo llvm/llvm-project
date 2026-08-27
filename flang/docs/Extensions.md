@@ -176,7 +176,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.
@@ -203,6 +205,10 @@ end
 ## Extensions, deletions, and legacy features supported by default
 
 * Tabs in source
+* A bare carriage return (CR, 0x0d) in the interior of a source line -- e.g.
+  from a file with Windows line endings that has been mishandled -- is treated
+  as a blank, except within a character or Hollerith literal where it is
+  retained.
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
@@ -290,6 +296,7 @@ end
   not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
   `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
   the type resolution of such BOZ literals usages is highly non portable).
+  A warning is emitted when the BOZ literal is too large for the target.
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
@@ -465,6 +472,20 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* In `NAMELIST` input, an assignment to a scalar item may omit its
+  value (e.g. `l=`, immediately followed by the next name-value pair,
+  the group terminator, or end-of-record).  F2023 13.11.2 p1 requires
+  one or more values to follow the `=`, but classic nvfortran and
+  gfortran accept the empty form and leave the item's current value
+  unchanged.  Flang follows the same convention.  For example, given
+  a namelist group `nml` with a `LOGICAL` scalar `l`, an `INTEGER`
+  scalar `i_count`, and a `REAL` scalar `r_value`, the input record
+  ```
+  &nml l= i_count=7 r_value=2.72/
+  ```
+  leaves `l` unchanged and assigns `7` and `2.72` to `i_count` and
+  `r_value` respectively.  Without this extension, the runtime would
+  abort with `Bad character 'i' in LOGICAL input field`.
 * In `NAMELIST` input, a `!` character is accepted as terminating the
   current value and introducing a comment even when it is not preceded
   by a value separator.  For example, `name=0.01!comment` is accepted

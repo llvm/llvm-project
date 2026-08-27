@@ -11,6 +11,7 @@ from lldbsuite.test.lldbreverse import ReverseTestBase
 from lldbsuite.test import lldbutil
 
 
+@requireNotWasm("no reverse execution")
 class TestReverseContinue(ReverseTestBase):
     @skipIfRemote
     def test_reverse_continue(self):

@@ -1134,10 +1134,10 @@ define i32 @test13a(ptr %ptr, i1 %cond, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK:       loop_b_inner_body.us:
 ; CHECK-NEXT:    [[V4_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4_US]], label [[LOOP_B_INNER_LATCH_US]], label [[LOOP_B_INNER_EXIT_US:%.*]]
-; CHECK:       loop_b_inner_exit.us:
-; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
 ; CHECK:       loop_b_inner_latch.us:
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_HEADER_US]]
+; CHECK:       loop_b_inner_exit.us:
+; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
 ; CHECK:       loop_a.us:
 ; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US:%.*]], label [[LOOP_LATCH_US]]
@@ -1426,10 +1426,10 @@ define i32 @test29(i32 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
 ; CHECK-NEXT:    switch i32 [[ARG_FR]], label [[ENTRY_SPLIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[ENTRY_SPLIT_US:%.*]]
-; CHECK-NEXT:    i32 1, label [[ENTRY_SPLIT_US]]
-; CHECK-NEXT:    i32 2, label [[ENTRY_SPLIT_US1:%.*]]
-; CHECK-NEXT:    i32 3, label [[ENTRY_SPLIT]]
+; CHECK-NEXT:      i32 0, label [[ENTRY_SPLIT_US:%.*]]
+; CHECK-NEXT:      i32 1, label [[ENTRY_SPLIT_US]]
+; CHECK-NEXT:      i32 2, label [[ENTRY_SPLIT_US1:%.*]]
+; CHECK-NEXT:      i32 3, label [[ENTRY_SPLIT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[HEADER_US:%.*]]
@@ -1587,10 +1587,10 @@ define i32 @test30(i32 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
 ; CHECK-NEXT:    switch i32 [[ARG_FR]], label [[ENTRY_SPLIT:%.*]] [
-; CHECK-NEXT:    i32 -1, label [[ENTRY_SPLIT]]
-; CHECK-NEXT:    i32 0, label [[ENTRY_SPLIT_US:%.*]]
-; CHECK-NEXT:    i32 1, label [[ENTRY_SPLIT_US1:%.*]]
-; CHECK-NEXT:    i32 2, label [[ENTRY_SPLIT_US1]]
+; CHECK-NEXT:      i32 -1, label [[ENTRY_SPLIT]]
+; CHECK-NEXT:      i32 0, label [[ENTRY_SPLIT_US:%.*]]
+; CHECK-NEXT:      i32 1, label [[ENTRY_SPLIT_US1:%.*]]
+; CHECK-NEXT:      i32 2, label [[ENTRY_SPLIT_US1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[HEADER_US:%.*]]
@@ -2259,9 +2259,9 @@ define void @hoist_inner_loop_switch(ptr %ptr) {
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @cond.i32()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
 ; CHECK-NEXT:    switch i32 [[V1_FR]], label [[B_HEADER_SPLIT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[B_HEADER_SPLIT_US:%.*]]
-; CHECK-NEXT:    i32 2, label [[B_HEADER_SPLIT_US]]
-; CHECK-NEXT:    i32 3, label [[B_HEADER_SPLIT_US]]
+; CHECK-NEXT:      i32 1, label [[B_HEADER_SPLIT_US:%.*]]
+; CHECK-NEXT:      i32 2, label [[B_HEADER_SPLIT_US]]
+; CHECK-NEXT:      i32 3, label [[B_HEADER_SPLIT_US]]
 ; CHECK-NEXT:    ]
 ; CHECK:       b.header.split.us:
 ; CHECK-NEXT:    br label [[C_HEADER_US:%.*]]

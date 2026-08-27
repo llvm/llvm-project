@@ -470,5 +470,5 @@ BinaryTranslatorJobAction::BinaryTranslatorJobAction(Action *Input,
 
 void ObjcopyJobAction::anchor() {}
 
-ObjcopyJobAction::ObjcopyJobAction(Action *Input, types::ID Type)
-    : JobAction(ObjcopyJobClass, Input, Type) {}
+ObjcopyJobAction::ObjcopyJobAction(ActionList &Inputs, types::ID Type)
+    : JobAction(ObjcopyJobClass, Inputs, Type) {}

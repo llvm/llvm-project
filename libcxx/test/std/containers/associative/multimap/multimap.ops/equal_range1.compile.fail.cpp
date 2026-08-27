@@ -29,4 +29,6 @@ int main(int, char**) {
   typedef std::multimap<int, double, transparent_less_no_type> M;
 
   TEST_IGNORE_NODISCARD M().equal_range(C2Int{5});
+
+  return 0;
 }

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -start-before=machine-scheduler -stop-after=virtregrewriter,0 -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.30-amd-amdhsa -start-before=machine-scheduler -stop-after=virtregrewriter,0 -o - %s | FileCheck %s
 
 ---
 # If optimize-exec-mask-pre-ra over approximates live intervals (not replicating splits)

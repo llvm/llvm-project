@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IdivTest.h"
+#include "IdivFxTest.h"
 
 #include "llvm-libc-macros/stdfix-macros.h" // unsigned long accum
 #include "src/stdfix/idivulk.h"
 
-LIST_IDIV_TESTS(ulk, unsigned long accum, unsigned long int,
-                LIBC_NAMESPACE::idivulk);
+LIST_IDIVFX_TESTS(ulk, unsigned long accum, unsigned long int,
+                  LIBC_NAMESPACE::idivulk);

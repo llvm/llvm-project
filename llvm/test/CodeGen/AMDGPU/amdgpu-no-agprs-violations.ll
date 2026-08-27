@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s 2> %t.err | FileCheck -check-prefixes=CHECK,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08-amd-amdhsa < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
+; RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa < %s 2> %t.err | FileCheck -check-prefixes=CHECK,GFX90A %s
 ; RUN: FileCheck --implicit-check-not=error -check-prefix=ERR < %t.err %s
 
 ; Test undefined behavior where a function ends up needing AGPRs that

@@ -206,6 +206,21 @@ const SourceFile *AllSources::ReadStandardInput(llvm::raw_ostream &error) {
   return nullptr;
 }
 
+std::vector<std::string> AllSources::GetIncludedFilePaths() const {
+  std::vector<std::string> paths;
+  std::set<std::string> seen;
+  for (const auto &source : ownedSourceFiles_) {
+    const std::string &path{source->path()};
+    if (path.empty() || path == "-") {
+      continue;
+    }
+    if (seen.insert(path).second) {
+      paths.push_back(path);
+    }
+  }
+  return paths;
+}
+
 ProvenanceRange AllSources::AddIncludedFile(
     const SourceFile &source, ProvenanceRange from, bool isModule) {
   ProvenanceRange covers{range_.NextAfter(), source.bytes()};

@@ -1350,7 +1350,6 @@
 {'is_defined': True, 'name': '_ZNSt3__16gslice6__initEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale14__install_ctorERKS0_PNS0_5facetEl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16locale2id5__getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__16locale2id9__next_idE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale3allE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale4noneE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16locale4timeE', 'size': 4, 'type': 'OBJECT'}
@@ -2003,3 +2002,6 @@
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD1Ev', 'type': 'FUNC'}
+{'name': '_ZTINSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 24, 'type': 'OBJECT', 'is_defined': True}
+{'name': '_ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 47, 'type': 'OBJECT', 'is_defined': True}
+{'name': '_ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 128, 'type': 'OBJECT', 'is_defined': True}

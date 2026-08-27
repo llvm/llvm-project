@@ -7,8 +7,8 @@ define i32 @test() {
 ; CHECK-NEXT:    [[ARRAYIDX565:%.*]] = getelementptr i8, ptr poison, i64 56
 ; CHECK-NEXT:    [[MUL474:%.*]] = fmul double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[MUL475:%.*]] = fmul double 0.000000e+00, [[MUL474]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[MUL475]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double 0.000000e+00, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[MUL475]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], zeroinitializer

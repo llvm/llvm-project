@@ -2173,6 +2173,16 @@ ConstantRange ConstantRange::ctpop() const {
   return CR1.unionWith(CR2);
 }
 
+ConstantRange ConstantRange::sqrtFloor() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  // sqrtFloor is monotonic, so the output range is composed by the result of
+  // sqrtFloor of the two extremes.
+  return getNonEmpty(getUnsignedMin().sqrtFloor(),
+                     getUnsignedMax().sqrtFloor() + 1);
+}
+
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(
     const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())

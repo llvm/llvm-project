@@ -346,14 +346,14 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
 // Implementation of BugReporterVisitor.
 //===----------------------------------------------------------------------===//
 
-PathDiagnosticPieceRef BugReporterVisitor::getEndPath(BugReporterContext &,
-                                                      const ExplodedNode *,
-                                                      PathSensitiveBugReport &) {
+PathDiagnosticPieceRef
+BugReporterVisitor::getEndPath(const ExplodedNode *, BugReporterContext &,
+                               PathSensitiveBugReport &) {
   return nullptr;
 }
 
-void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
-                                         const ExplodedNode *,
+void BugReporterVisitor::finalizeVisitor(const ExplodedNode *,
+                                         BugReporterContext &,
                                          PathSensitiveBugReport &) {}
 
 PathDiagnosticPieceRef
@@ -1115,7 +1115,7 @@ public:
     llvm_unreachable("Invalid visit mode!");
   }
 
-  void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
+  void finalizeVisitor(const ExplodedNode *, BugReporterContext &,
                        PathSensitiveBugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
       BR.markInvalid(ReturnVisitor::getTag(), CalleeSF);
@@ -2899,13 +2899,15 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
 }
 
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
-                                      raw_ostream &Out, BugReporterContext &BRC,
-                                      PathSensitiveBugReport &report,
+                                      const Expr *OtherEx, raw_ostream &Out,
+                                      BugReporterContext &BRC,
+                                      PathSensitiveBugReport &Report,
                                       const ExplodedNode *N,
-                                      std::optional<bool> &prunable,
+                                      std::optional<bool> &Prunable,
                                       bool IsSameFieldName) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
+  OtherEx = OtherEx->IgnoreParenCasts();
 
   if (isa<GNUNullExpr, ObjCBoolLiteralExpr, CXXBoolLiteralExpr, IntegerLiteral,
           FloatingLiteral>(Ex)) {
@@ -2933,13 +2935,13 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       if (const MemRegion *R =
               state->getLValue(cast<VarDecl>(DR->getDecl()), N->getStackFrame())
                   .getAsRegion()) {
-        if (report.isInteresting(R))
-          prunable = false;
+        if (Report.isInteresting(R))
+          Prunable = false;
         else {
           const ProgramState *state = N->getState().get();
           SVal V = state->getSVal(R);
-          if (report.isInteresting(V))
-            prunable = false;
+          if (Report.isInteresting(V))
+            Prunable = false;
         }
       }
     }
@@ -2964,7 +2966,9 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       }
     }
 
-    Out << IL->getValue();
+    bool IsAnySigned = Ex->getType()->isSignedIntegerOrEnumerationType() ||
+                       OtherEx->getType()->isSignedIntegerOrEnumerationType();
+    IL->getValue().print(Out, /*isSigned=*/IsAnySigned);
     return false;
   }
 
@@ -3003,10 +3007,12 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, OutLHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, OutRHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
+    const bool isVarLHS =
+        patternMatch(BExpr->getLHS(), BExpr, BExpr->getRHS(), OutLHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
+    const bool isVarRHS =
+        patternMatch(BExpr->getRHS(), BExpr, BExpr->getLHS(), OutRHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }
@@ -3252,7 +3258,7 @@ bool ConditionBRVisitor::isPieceMessageGeneric(
 //===----------------------------------------------------------------------===//
 
 void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *N,
+    const ExplodedNode *N, BugReporterContext &BRC,
     PathSensitiveBugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
@@ -3292,8 +3298,8 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
-      for (const auto *SF = N->getStackFrame(); SF; SF = SF->getParent()) {
-        const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
+      for (const StackFrame &SF : N->stackframes()) {
+        const auto *MD = dyn_cast<CXXMethodDecl>(SF.getDecl());
         if (!MD)
           continue;
 

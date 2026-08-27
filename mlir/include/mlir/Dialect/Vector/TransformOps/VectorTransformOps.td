@@ -360,6 +360,26 @@ def ApplyLowerShapeCastPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLowerStepPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_step",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector.step operations should be lowered to finer-grained
+    vector primitives.
+
+    `index_bitwidth` is the bitwidth used to materialize `index`-typed steps; a
+    bitwidth of 0 leaves them untouched (e.g. to defer to a later, target-aware
+    lowering). It must not exceed the index storage bitwidth. Integer-typed
+    steps are unaffected by this option.
+  }];
+
+  let arguments = (ins I64Attr:$index_bitwidth);
+
+  let assemblyFormat = [{
+    `index_bitwidth` `=` $index_bitwidth attr-dict
+  }];
+}
+
 def ApplyLowerTransferPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_transfer",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

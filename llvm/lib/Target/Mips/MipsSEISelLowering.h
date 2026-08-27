@@ -24,7 +24,8 @@ class MachineInstr;
 class MipsSubtarget;
 class MipsTargetMachine;
 class SelectionDAG;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
   class MipsSETargetLowering : public MipsTargetLowering  {
   public:

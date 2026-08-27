@@ -8,6 +8,7 @@
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
+#include <sycl/__impl/property_list.hpp>
 
 #include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
@@ -45,6 +46,8 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
 
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
+      if (Topo.getBackend() == OL_PLATFORM_BACKEND_HOST)
+        continue;
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.getPlatforms()) {
         PlatformCache.emplace_back(std::make_unique<PlatformImpl>(
@@ -90,7 +93,13 @@ PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
                       Device, *this, DeviceImpl::PrivateTag{}));
                 });
 
-  MDefaultContext = ContextImpl::create(*this);
+  std::vector<DeviceImpl *> DeviceImpls;
+  DeviceImpls.reserve(MRootDevices.size());
+  for (const auto &Device : MRootDevices)
+    DeviceImpls.push_back(Device.get());
+
+  MDefaultContext = ContextImpl::create(std::move(DeviceImpls),
+                                        defaultAsyncHandler, property_list{});
 }
 
 const std::vector<DeviceImplUPtr> &PlatformImpl::getRootDevices() const {

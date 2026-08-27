@@ -24,16 +24,17 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
                                      llvm::StringRef Proc) {
   // Entries in returned vector should be in alphabetical order.
   llvm::SmallVector<llvm::StringRef, 4> Ret;
-  auto ProcKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Proc)
-                               : llvm::AMDGPU::parseArchR600(Proc);
+  if (!T.isAMDGCN())
+    return Ret;
+  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Proc);
   if (ProcKind == llvm::AMDGPU::GK_NONE)
     return Ret;
-  auto Features = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
-                               : llvm::AMDGPU::getArchAttrR600(ProcKind);
-  if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(ProcKind);
+  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
     Ret.push_back("sramecc");
   // Only allow xnack in target ID if the processor supports on/off modes.
-  if (Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES)
+  if (Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
     Ret.push_back("xnack");
   return Ret;
 }

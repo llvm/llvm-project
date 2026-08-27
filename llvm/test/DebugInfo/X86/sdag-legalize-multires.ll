@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -stop-after=livedebugvars -o - | FileCheck %s
+; RUN: llc -O0 %s -stop-before=x86-asm-printer -o - | FileCheck %s
 ; This is a hand-crafted example modified after some Swift compiler output.
 ; Test that SelectionDAG legalization of DAG nodes with two results
 ; transfers debug info correctly.

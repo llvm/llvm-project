@@ -903,8 +903,13 @@ def neg_and_one_to_sext_inreg : GICombineRule<
   (match (G_AND $and, $x, 1),
          (G_SUB $dst, 0, $and),
          [{ return MRI.hasOneNonDBGUse(${and}.getReg()) &&
-            Helper.isLegalOrBeforeLegalizer(
-              {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
+            Helper.isLegalOrBeforeLegalizer({
+              TargetOpcode::G_SEXT_INREG,
+              {MRI.getType(${x}.getReg())},
+              {},
+              {1}
+            });
+         }]),
   (apply (G_SEXT_INREG $dst, $x, 1))
 >;
 
@@ -941,6 +946,42 @@ def redundant_sext_inreg: GICombineRule <
          [{ return Helper.matchRedundantSExtInReg(*${root}); }]),
      (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
+
+// Convert G_SEXT_INREG(G_ZEXT) -> G_SEXT
+class redundant_ext_sext_inreg<Instruction Ext>: GICombineRule <
+  (defs root:$root),
+  (match (Ext $tmp, $src),
+         (G_SEXT_INREG $dst, $tmp, $amt):$root,
+         [{ LLT SrcTy = MRI.getType(${src}.getReg());
+            return ${amt}.getImm() <= SrcTy.getScalarSizeInBits() &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                   (SrcTy.getScalarSizeInBits() - ${amt}.getImm() + 1); }]),
+  (apply (G_SEXT $dst, $src))
+>;
+def redundant_zext_sext_inreg : redundant_ext_sext_inreg<G_ZEXT>;
+def redundant_aext_sext_inreg : redundant_ext_sext_inreg<G_ANYEXT>;
+
+// Convert G_SEXT_INREG(G_ZEXT(G_UNMERGE(G_ZEXT))) -> G_SEXT(G_UNMERGE(G_SEXT))
+class redundant_ext_unmerge_sext_inreg<Instruction Ext>: GICombineRule <
+  (defs root:$root),
+  (match (Ext $tmp1, $src),
+         (G_UNMERGE_VALUES $tmp2, $tmp3, $tmp1):$unmerge,
+         (Ext $tmp4, $tmp2),
+         (G_SEXT_INREG $dst, $tmp4, $amt):$root,
+         [{ LLT SrcTy = MRI.getType(${src}.getReg());
+            return ${amt}.getImm() <= SrcTy.getScalarSizeInBits() &&
+                   MRI.getType(${tmp2}.getReg()).getScalarType() ==
+                     MRI.getType(${tmp1}.getReg()).getScalarType() &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                     (SrcTy.getScalarSizeInBits() - ${amt}.getImm() + 1); }]),
+  (apply [{ auto SExt1 = Helper.getBuilder().buildSExt(MRI.getType(${tmp1}.getReg()), ${src}.getReg());
+            auto Unmerge = Helper.getBuilder().buildUnmerge(MRI.getType(${tmp2}.getReg()), SExt1);
+            unsigned UnmergeDef = ${tmp2}.getReg() == ${unmerge}->getOperand(0).getReg() ? 0 : 1;
+            Helper.getBuilder().buildSExt(${dst}.getReg(), Unmerge.getReg(UnmergeDef));
+            ${root}->eraseFromParent(); }])
+>;
+def redundant_zext_unmerge_sext_inreg : redundant_ext_unmerge_sext_inreg<G_ZEXT>;
+def redundant_aext_unmerge_sext_inreg : redundant_ext_unmerge_sext_inreg<G_ANYEXT>;
 
 // Fold (anyext (trunc x)) -> x if the source type is same as
 // the destination type.
@@ -1368,15 +1409,33 @@ def and_xor_or_to_and : GICombineRule<
 def and_xor_or_to_xor_and : GICombineRule<
   (defs root:$root),
   (match (G_XOR $not, $y, -1),
-         (G_OR $and, $x, $y),
-         (G_AND $root, $and, $not)),
+         (G_OR $or, $x, $y),
+         (G_AND $root, $or, $not)),
   (apply (G_XOR $xor, $y, -1),
          (G_AND $root, $x, $xor))>;
+
+// fold or (xor x, y), (x or y) --> or x, y
+def or_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_OR $or, $x, $y),
+         (G_OR $root, $xor, $or)),
+  (apply (G_OR $root, $x, $y))>;
+
+// fold or (xor x, y), (x and y) --> or x, y
+def or_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $xor, $and)),
+  (apply (G_OR $root, $x, $y))>;
 
 def or_and_xor_combines : GICombineGroup<[or_and_xor_to_or,
                                           or_and_xor_to_xor_or,
                                           and_xor_or_to_and,
-                                          and_xor_or_to_xor_and]>;
+                                          and_xor_or_to_xor_and,
+                                          or_xor_or,
+                                          or_xor_and]>;
 
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
@@ -2416,6 +2475,22 @@ def ctls_combines : GICombineGroup<[
   ctlz_zero_poison_to_ctls,
 ]>;
 
+// Switch G_CTLZ / G_CTTZ to *_ZERO_POISON when the input is provably nonzero
+// and the target supports the variant. The zero-poison variants compute the
+// same result for nonzero inputs and can let targets skip zero-input fixups.
+class count_zero_to_zero_poison<Instruction opc> : GICombineRule<
+  (defs root:$root),
+  (match (opc $dst, $src):$root,
+         [{ return Helper.matchCountZeroToZeroPoison(*${root}); }]),
+  (apply [{ Helper.applyCountZeroToZeroPoison(*${root}); }])>;
+
+def ctlz_to_ctlz_zero_poison : count_zero_to_zero_poison<G_CTLZ>;
+def cttz_to_cttz_zero_poison : count_zero_to_zero_poison<G_CTTZ>;
+
+def count_zero_poison_combines : GICombineGroup<[
+  ctlz_to_ctlz_zero_poison, cttz_to_cttz_zero_poison
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2570,8 +2645,9 @@ def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      combine_minmax_nan, expand_const_fpowi]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold,
+  redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
+  redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
+  redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
   sext_inreg_to_zext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
@@ -2627,7 +2703,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines,
+    count_zero_poison_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const, max_min_combines,
     avgfloor_u_match, avgfloor_s_match,
     avgceil_u_match, avgceil_s_match, combine_or_of_and]>;

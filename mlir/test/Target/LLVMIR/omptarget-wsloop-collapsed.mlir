@@ -7,7 +7,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @target_collapsed_wsloop(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
     %loop_ub = llvm.mlir.constant(99 : i32) : i32
     %loop_lb = llvm.mlir.constant(0 : i32) : i32
-    %loop_step = llvm.mlir.constant(1 : index) : i32
+    %loop_step = llvm.mlir.constant(1 : i32) : i32
     omp.wsloop {
       omp.loop_nest (%arg1, %arg2) : i32 = (%loop_lb, %loop_lb) to (%loop_ub, %loop_ub) inclusive step (%loop_step, %loop_step) collapse(2) {
         %1 = llvm.add %arg1, %arg2  : i32
@@ -22,7 +22,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 }
 
-// CHECK: define void @[[FUNC_COLLAPSED_WSLOOP:.*]](ptr %[[ARG0:.*]])
+// CHECK: define hidden void @[[FUNC_COLLAPSED_WSLOOP:.*]](ptr %[[ARG0:.*]])
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr),
 // CHECK-SAME: ptr @[[COLLAPSED_WSLOOP_BODY_FN:.*]], ptr %[[STRUCT_ARG:.*]], i32 10000,
 // CHECK-SAME: i32 %[[NUM_THREADS:.*]], i8 0)

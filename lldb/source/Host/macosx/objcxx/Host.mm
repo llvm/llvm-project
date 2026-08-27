@@ -341,7 +341,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
 llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                                            const FileSpec &file_spec,
-                                           uint32_t line_no) {
+                                           uint32_t line_no, bool foreground) {
 #if !TARGET_OS_OSX
   return llvm::errorCodeToError(
       std::error_code(ENOTSUP, std::system_category()));
@@ -432,8 +432,9 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
   // Build app launch parameters.
   LSApplicationParameters app_params;
   ::memset(&app_params, 0, sizeof(app_params));
-  app_params.flags =
-      kLSLaunchDefaults | kLSLaunchDontAddToRecents | kLSLaunchDontSwitch;
+  app_params.flags = kLSLaunchDefaults | kLSLaunchDontAddToRecents;
+  if (!foreground)
+    app_params.flags |= kLSLaunchDontSwitch;
   if (app_fsref)
     app_params.application = &(*app_fsref);
 
@@ -607,10 +608,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
         if (match_info_ptr == NULL ||
-            NameMatches(
-                process_info.GetExecutableFile().GetFilename().GetCString(),
-                match_info_ptr->GetNameMatchType(),
-                match_info_ptr->GetProcessInfo().GetName())) {
+            NameMatches(process_info.GetExecutableFile().GetFilename(),
+                        match_info_ptr->GetNameMatchType(),
+                        match_info_ptr->GetProcessInfo().GetName())) {
           // Skip NULLs
           while (true) {
             const uint8_t *p = data.PeekData(offset, 1);

@@ -112,7 +112,7 @@ In LLDB you will see the following new registers:
   to the vector length of non-streaming mode and may change independently. This
   register is read only.
 
-```{note}
+:::{note}
   While in non-streaming mode, the `vg` register shows the non-streaming
   vector length, and the `svg` register shows the streaming vector length.
   When in streaming mode, both `vg` and `svg` show the streaming mode vector
@@ -120,7 +120,7 @@ In LLDB you will see the following new registers:
   vector length within LLDB, while in streaming mode. This is a limitation of
   the LLDB implementation not the architecture, which stores both lengths
   independently.
-```
+:::
 
 In the example below, the streaming vector length is 16 bytes and we are in
 streaming mode. Note that bits 0 and 1 of `svcr` are set, indicating that we

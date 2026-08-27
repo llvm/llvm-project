@@ -15,16 +15,13 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -830,6 +827,28 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     else
       unknownAllocOp = true;
 
+    // Check if this allocation is a local copy of a VALUE dummy argument.
+    // A VALUE dummy arg is lowered as a local alloca declared with the
+    // fir::FortranVariableFlagsEnum::value flag. Accesses through this copy
+    // must be tagged under dummyArgDataTree (not allocatedDataTree) so they
+    // are consistent with other accesses to the same dummy variable, which
+    // are also tagged under dummyArgDataTree. Using allocatedDataTree here
+    // makes the copy-stores and dummy-arg reads appear non-aliasing to DSE,
+    // which then incorrectly eliminates the copy stores.
+    bool isValueDummyCopy = false;
+    if (!unknownAllocOp) {
+      mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
+      if (fir::DeclareOp declareOp = getDeclareOp(sourceVal)) {
+        auto varIf = mlir::cast<fir::FortranVariableOpInterface>(
+            declareOp.getOperation());
+        auto fortranAttrs = varIf.getFortranAttrs();
+        if (fortranAttrs &&
+            bitEnumContainsAny(*fortranAttrs,
+                               fir::FortranVariableFlagsEnum::value))
+          isValueDummyCopy = true;
+      }
+    }
+
     if (unknownAllocOp) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: unknown defining op for SourceKind::Allocate " << *op
@@ -848,6 +867,19 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                  << "WARN: couldn't find a name for TARGET allocation " << *op
                  << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (isValueDummyCopy && name && state.attachLocalAllocTag()) {
+      // VALUE dummy arg copy: tag under dummyArgDataTree to match the
+      // dummy arg reads, preventing DSE from treating stores as dead.
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "Found reference to VALUE dummy copy " << name << " at "
+                 << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .dummyArgDataTree.getTag(*name);
+    } else if (isValueDummyCopy && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "WARN: couldn't find name for VALUE dummy copy at " << *op
+                 << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).dummyArgDataTree.getTag();
     } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");

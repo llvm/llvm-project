@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -304,7 +305,12 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
-  return m_locations.AddLocation(addr, m_resolve_indirect_symbols,
+  // A breakpoint must be set on an executable instruction, not on a function's
+  // non-instruction header.
+  Address bp_addr = addr;
+  if (Architecture *arch = m_target.GetArchitecturePlugin())
+    bp_addr = arch->SkipFunctionHeader(bp_addr);
+  return m_locations.AddLocation(bp_addr, m_resolve_indirect_symbols,
                                  new_location);
 }
 
@@ -988,7 +994,7 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
       // don't generally know how to set them until the target is run.
       if (m_resolver_sp->getResolverID() !=
           BreakpointResolver::ExceptionResolver)
-        s->Printf(", locations = 0 (pending)");
+        s->PutCString(", locations = 0 (pending)");
     }
 
     m_options.GetDescription(s, level);
@@ -1000,7 +1006,7 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
       if (!m_name_list.empty()) {
         s->EOL();
         s->Indent();
-        s->Printf("Names:");
+        s->PutCString("Names:");
         s->EOL();
         s->IndentMore();
         for (llvm::StringRef name : m_name_list.keys()) {
@@ -1017,7 +1023,7 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
   case lldb::eDescriptionLevelInitial:
     s->Printf("Breakpoint %i: ", GetID());
     if (num_locations == 0) {
-      s->Printf("no locations (pending).");
+      s->PutCString("no locations (pending).");
     } else if (num_locations == 1 && !show_locations) {
       // There is only one location, so we'll just print that location
       // information.
@@ -1045,9 +1051,9 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
   if (show_locations && level != lldb::eDescriptionLevelBrief) {
     if ((display_type & eDisplayHeader) != 0) {
       if ((display_type & eDisplayFacade) != 0)
-        s->Printf("Facade locations:\n");
+        s->PutCString("Facade locations:\n");
       else
-        s->Printf("Implementation Locations\n");
+        s->PutCString("Implementation Locations\n");
     }
     s->IndentMore();
     for (size_t i = 0; i < num_locations; ++i) {
