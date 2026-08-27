@@ -22,12 +22,14 @@ body: |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   liveins: $vgpr3
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $vgpr3
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_LSHLREV_B32_e64 32, $vgpr3, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:

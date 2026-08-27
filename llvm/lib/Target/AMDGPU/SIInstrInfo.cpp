@@ -3594,7 +3594,8 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
 
 bool SIInstrInfo::isXcntDrain(const MachineInstr &MI) {
 
-  if (MI.isBranch() || MI.isCall() || MI.isReturn() || MI.isIndirectBranch())
+  if (MI.isUnconditionalBranch() || MI.isCall() || MI.isReturn() ||
+      MI.isIndirectBranch())
     return true;
 
   switch (MI.getOpcode()) {
