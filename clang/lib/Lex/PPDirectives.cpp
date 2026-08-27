@@ -416,20 +416,28 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
     D = shouldWarnOnMacroUndef(*this, II);
   if (D != MD_NoWarn && !SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
-    if (D == MD_KeywordDef) {
+    switch (D) {
+    default:
+      llvm_unreachable("Unexpected MacroDiag kind");
+      break;
+    case MD_KeywordDef:
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
       // now, only inform caller.
       if (ShadowFlag)
         *ShadowFlag = true;
-    }
-    if (D == MD_KeywordUndef)
+      break;
+    case MD_KeywordUndef:
       Diag(MacroNameTok, diag::ext_pp_macro_name_is_keyword);
-    if (D == MD_ReservedMacro)
+      break;
+    case MD_ReservedMacro:
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
-    if (D == MD_ReservedAttributeIdentifier)
+      break;
+    case MD_ReservedAttributeIdentifier:
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_attribute_id)
           << II->getName();
+      break;
+    }
   }
 
   // Okay, we got a good identifier.
