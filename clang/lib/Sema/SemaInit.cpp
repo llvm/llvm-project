@@ -835,6 +835,9 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         return;
       }
       SemaRef.checkInitializerLifetime(MemberEntity, DIE.get());
+      // Record that `this` within the default member initializer denotes the
+      // object this list initializes.
+      ILE->setInitializesObjectWithDefaultMemberInit();
       if (Init < NumInits)
         ILE->setInit(Init, DIE.get());
       else {
@@ -5967,6 +5970,7 @@ static void TryOrBuildParenListInitialization(
   QualType ResultType;
   Expr *ArrayFiller = nullptr;
   FieldDecl *InitializedFieldInUnion = nullptr;
+  bool UsesDefaultMemberInit = false;
 
   auto HandleInitializedEntity = [&](const InitializedEntity &SubEntity,
                                      const InitializationKind &SubKind,
@@ -6158,6 +6162,7 @@ static void TryOrBuildParenListInitialization(
               return;
             S.checkInitializerLifetime(SubEntity, DIE.get());
             InitExprs.push_back(DIE.get());
+            UsesDefaultMemberInit = true;
           }
         } else {
           // C++ [dcl.init]p17.6.2.2
@@ -6211,6 +6216,8 @@ static void TryOrBuildParenListInitialization(
       CPLIE->setArrayFiller(ArrayFiller);
     if (InitializedFieldInUnion)
       CPLIE->setInitializedFieldInUnion(InitializedFieldInUnion);
+    if (UsesDefaultMemberInit)
+      CPLIE->setInitializesObjectWithDefaultMemberInit();
     *Result = CPLIE;
     S.Diag(Kind.getLocation(),
            diag::warn_cxx17_compat_aggregate_init_paren_list)

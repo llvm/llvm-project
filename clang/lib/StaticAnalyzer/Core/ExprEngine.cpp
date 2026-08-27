@@ -976,6 +976,11 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
     case CFGElement::LoopExit:
       ProcessLoopExit(E.castAs<CFGLoopExit>().getLoopStmt(), Pred);
       return;
+    case CFGElement::ListInitObjectBegin:
+    case CFGElement::ListInitObjectEnd:
+      // These only carry information for consumers that need to know which
+      // object a default member initializer initializes; nothing to evaluate.
+      return;
     case CFGElement::LifetimeEnds:
       ProcessLifetimeEnd(E.castAs<CFGLifetimeEnds>().getTriggerStmt(),
                          E.castAs<CFGLifetimeEnds>().getVarDecl(), Pred);

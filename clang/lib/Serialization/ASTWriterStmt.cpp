@@ -1251,6 +1251,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
       Record.AddStmt(E->getInit(I));
   }
   Record.writeBool(E->isExplicit());
+  Record.writeBool(E->initializesObjectWithDefaultMemberInit());
   Code = serialization::EXPR_INIT_LIST;
 }
 
@@ -2418,6 +2419,7 @@ void ASTStmtWriter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
     else
       Record.AddDeclRef(UnionField);
   }
+  Record.writeBool(E->initializesObjectWithDefaultMemberInit());
   Code = serialization::EXPR_CXX_PAREN_LIST_INIT;
 }
 

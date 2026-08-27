@@ -484,7 +484,13 @@ public:
   }
 
   void VisitCXXThisExpr(const CXXThisExpr *S) {
-    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation(*S);
+    // Within a default member initializer used by a list-initialization,
+    // `this` denotes the object that initialization establishes; the CFG
+    // brackets it with markers that put it in the environment. Otherwise
+    // `this` is the pointee of the enclosing member function.
+    auto *ThisPointeeLoc = Env.getListInitObjectLocation();
+    if (ThisPointeeLoc == nullptr)
+      ThisPointeeLoc = Env.getThisPointeeStorageLocation();
     if (ThisPointeeLoc == nullptr)
       // Unions are not supported yet, and will not have a location for the
       // `this` expression's pointee.

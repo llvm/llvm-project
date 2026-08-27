@@ -1567,6 +1567,16 @@ void JSONNodeDumper::VisitConstantExpr(const ConstantExpr *CE) {
 void JSONNodeDumper::VisitInitListExpr(const InitListExpr *ILE) {
   if (const FieldDecl *FD = ILE->getInitializedFieldInUnion())
     JOS.attribute("field", createBareDeclRef(FD));
+  attributeOnlyIfTrue("usesDefaultMemberInit",
+                      ILE->initializesObjectWithDefaultMemberInit());
+}
+
+void JSONNodeDumper::VisitCXXParenListInitExpr(
+    const CXXParenListInitExpr *PLIE) {
+  if (const FieldDecl *FD = PLIE->getInitializedFieldInUnion())
+    JOS.attribute("field", createBareDeclRef(FD));
+  attributeOnlyIfTrue("usesDefaultMemberInit",
+                      PLIE->initializesObjectWithDefaultMemberInit());
 }
 
 void JSONNodeDumper::VisitGenericSelectionExpr(

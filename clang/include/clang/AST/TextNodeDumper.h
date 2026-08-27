@@ -287,6 +287,7 @@ public:
   void VisitFloatingLiteral(const FloatingLiteral *Node);
   void VisitStringLiteral(const StringLiteral *Str);
   void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE);
   void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   void VisitUnaryOperator(const UnaryOperator *Node);
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
