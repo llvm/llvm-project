@@ -202,9 +202,9 @@ func.func @calls(%arg0: i32) {
   %3 = "func.call_indirect"(%f_0, %arg0) : ((i32) -> i32, i32) -> i32
 
   // CHECK: %{{.*}} = call @return_op(%arg0) <arg_attrs = [{test.arg}],
-  // CHECK-SAME: res_attrs = [{test.res = 42 : i64}], no_inline = unit> : (i32) -> i32
+  // CHECK-SAME: res_attrs = [{test.res = 42 : i64}], no_inline> : (i32) -> i32
   %4 = call @return_op(%arg0) <arg_attrs = [{test.arg}],
-      res_attrs = [{test.res = 42 : i64}], no_inline = unit> : (i32) -> i32
+      res_attrs = [{test.res = 42 : i64}], no_inline> : (i32) -> i32
 
   // CHECK: %{{.*}} = call_indirect %f_0(%arg0)
   // CHECK-SAME: arg_attrs = [{test.arg}],

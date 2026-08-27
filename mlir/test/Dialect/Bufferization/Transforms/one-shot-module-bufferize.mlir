@@ -599,8 +599,8 @@ func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true
   // CHECK: scf.for {{.*}} iter_args(%[[t1:.*]] = %[[arg0]])
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
     // CHECK: call @inner_func(%[[t1]])
-    // INHERENT: call @inner_func({{.*}}) <no_inline = unit>
-    %3 = func.call @inner_func(%t1) <no_inline = unit> : (tensor<?xf32>) -> tensor<?xf32>
+    // INHERENT: call @inner_func({{.*}}) <no_inline>
+    %3 = func.call @inner_func(%t1) <no_inline> : (tensor<?xf32>) -> tensor<?xf32>
     // CHECK: scf.yield %[[t1]]
     scf.yield %3 : tensor<?xf32>
   }
