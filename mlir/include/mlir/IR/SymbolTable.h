@@ -78,9 +78,6 @@ public:
   /// Returns the associated operation.
   Operation *getOp() const { return symbolTableOp; }
 
-  /// Return the name of the attribute used for symbol visibility.
-  static StringRef getVisibilityAttrName() { return "sym_visibility"; }
-
   //===--------------------------------------------------------------------===//
   // Symbol Utilities
   //===--------------------------------------------------------------------===//
@@ -131,9 +128,11 @@ public:
     setSymbolName(symbol, StringAttr::get(symbol->getContext(), name));
   }
 
-  /// Returns the visibility of the given symbol operation.
+  /// Returns the visibility of the given symbol operation, which is required to
+  /// implement `SymbolOpInterface`.
   static Visibility getSymbolVisibility(Operation *symbol);
-  /// Sets the visibility of the given symbol operation.
+  /// Sets the visibility of the given symbol operation, which is required to
+  /// implement `SymbolOpInterface`.
   static void setSymbolVisibility(Operation *symbol, Visibility vis);
 
   /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -438,6 +437,13 @@ private:
 namespace detail {
 LogicalResult verifySymbolTable(Operation *op);
 LogicalResult verifySymbol(Operation *op);
+
+/// Default implementations of `SymbolOpInterface::getVisibility` and
+/// `SymbolOpInterface::setVisibility`, which keep the visibility in the
+/// `SymbolOpInterface::getDefaultVisibilityAttrName()` attribute. Public
+/// visibility is represented by the absence of that attribute.
+SymbolTable::Visibility defaultGetSymbolVisibility(Operation *symbol);
+void defaultSetSymbolVisibility(Operation *symbol, SymbolTable::Visibility vis);
 } // namespace detail
 
 namespace OpTrait {
