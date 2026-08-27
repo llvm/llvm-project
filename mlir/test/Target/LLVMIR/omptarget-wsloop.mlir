@@ -29,6 +29,32 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
     llvm.return
   }
+
+  llvm.func @target_wsloop_nowait(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+      %loop_ub = llvm.mlir.constant(9 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      omp.wsloop nowait {
+        omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+          %gep = llvm.getelementptr %arg0[0, %loop_cnt] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<10 x i32>
+          llvm.store %loop_cnt, %gep : i32, !llvm.ptr
+          omp.yield
+        }
+      }
+    llvm.return
+  }
+
+  llvm.func @target_wsloop_linear(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+      %loop_ub = llvm.mlir.constant(9 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      omp.wsloop linear(%arg0 : !llvm.ptr = %loop_step : i32) linear_var_types([i32]) {
+        omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+          omp.yield
+        }
+      }
+    llvm.return
+  }
 }
 
 // CHECK: define hidden void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
@@ -38,6 +64,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:   store ptr %[[ARG0]], ptr addrspace(5) %[[GEP]], align 8
 // CHECK:   %[[NUM_THREADS:.*]] = call i32 @omp_get_num_threads()
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), ptr @[[LOOP_BODY_FN:.*]], ptr %[[STRUCTARG_ASCAST]], i32 10, i32 %[[NUM_THREADS]], i32 0, i8 0)
+// CHECK:   call void @__kmpc_barrier{{.*}}[[IMPL_WSBAR:@[0-9]+]] to ptr
 
 // CHECK: define internal void @[[LOOP_BODY_FN]](i32 %[[LOOP_CNT:.*]], ptr %[[LOOP_BODY_ARG:.*]])
 // CHECK:   %[[GEP2:.*]] = getelementptr { ptr }, ptr %[[LOOP_BODY_ARG]], i32 0, i32 0
@@ -49,3 +76,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr), ptr @[[LOOP_EMPTY_BODY_FN:.*]], ptr null, i32 10, i32 %[[NUM_THREADS:.*]], i32 0, i8 0)
 
 // CHECK: define internal void @[[LOOP_EMPTY_BODY_FN]](i32 %[[LOOP_CNT:.*]])
+
+// CHECK: define hidden void @target_wsloop_nowait(ptr %{{.*}})
+// CHECK: call void @__kmpc_for_static_loop_4u
+// CHECK-NOT: call void @__kmpc_barrier{{.*}}[[IMPL_WSBAR]] to ptr
+
+// CHECK: define hidden void @target_wsloop_linear(ptr %{{.*}})
+// CHECK:   store i32 0, ptr{{.*}} %p.lastiter
+// CHECK:   call void @__kmpc_for_static_loop_4u
+// CHECK:   call void @__kmpc_barrier{{.*}}[[IMPL_WSBAR]] to ptr
+
+// CHECK: define internal void @target_wsloop_linear
+// CHECK:   %omp.is_last_iter  = icmp eq
+// CHECK:   store{{.*}}_p.lastiter
