@@ -72,7 +72,7 @@ static cl::opt<std::string>
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
-    cl::desc("List of functions to print disassembly for. Accept demangled "
+    cl::desc("List of functions to print disassembly for. Accept mangled "
              "names only. Only work with show-disassembly-only"),
     cl::cat(ProfGenCategory));
 
@@ -167,9 +167,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
-      SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc,
-                                               FunctionId(CallerName));
+      SizeContext = SizeContext->getOrCreateChildContext(
+          CallsiteLoc, FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);
@@ -501,9 +500,11 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
         auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
-          FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(
-              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
+          if (FuncRange *Range = findFuncRangeForStartAddr(StartAddr))
+            GuidFilter.insert(
+                Function::getGUIDAssumingExternalLinkage(Range->getFuncName()));
+          else
+            GuidFilter.insert(GUID);
         }
       }
     }
