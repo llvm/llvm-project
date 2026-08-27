@@ -147,6 +147,7 @@ define <2 x float> @frem_v2f32(<2 x float> %unused, <2 x float> %a, <2 x float> 
   ret <2 x float> %res
 }
 
+; Expected not to be widened.
 define <1 x double> @frem_v1f64(<1 x double> %unused, <1 x double> %a, <1 x double> %b) #0 {
 ; ARMPL-LABEL: frem_v1f64:
 ; ARMPL:       // %bb.0:
