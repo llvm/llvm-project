@@ -683,6 +683,6 @@ func.func @test_resize_mxfp_types(
 
 // CHECK-LABEL: test_transpose_block_scaled_f6E3M2FN
 func.func @test_transpose_block_scaled_f6E3M2FN(%input: tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>> {
-  %transpose = tosa.transpose %input  { perms = array<i32: 2, 0, 1, 3> } : (tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  %transpose = tosa.transpose %input perms([2, 0, 1, 3]) : (tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
   return %transpose : tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
 }
