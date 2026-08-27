@@ -425,6 +425,9 @@ public:
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
                        Register TrueReg, Register FalseReg, int &CondCycles,
@@ -1054,11 +1057,11 @@ public:
   }
 
   static bool usesTENSOR_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(MI);
   }
 
   bool usesTENSOR_CNT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(get(Opcode));
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some

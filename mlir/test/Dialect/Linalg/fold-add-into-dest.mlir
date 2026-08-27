@@ -267,12 +267,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-memref.global "private" constant @big_const : memref<2048x2048xf32> = dense<1.11111104> {alignment = 64 : i64}
+memref.global "private" constant @big_const : memref<2048x2048xf32> = dense<1.11111104> alignment = 64
 func.func @expect_no_fold_due_to_no_memref_support(%arg0: memref<2048x2048xf32>, %arg1: memref<2048x2048xf32>) -> memref<2048x2048xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.get_global @big_const  : memref<2048x2048xf32>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<2048x2048xf32>
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<2048x2048xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<2048x2048xf32>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<2048x2048xf32>
   linalg.fill ins(%cst : f32) outs(%alloc_0 : memref<2048x2048xf32>)
   linalg.matmul ins(%arg0, %0 : memref<2048x2048xf32>, memref<2048x2048xf32>) outs(%alloc_0 : memref<2048x2048xf32>)
   linalg.fill ins(%cst : f32) outs(%alloc : memref<2048x2048xf32>)

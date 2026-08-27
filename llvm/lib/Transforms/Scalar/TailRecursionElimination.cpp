@@ -114,10 +114,6 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
   if (CB && CB->isMustTailCall())
     return false;
 
-  if (CB && (CB->hasFnAttr(Attribute::Cold) ||
-             CB->getCallingConv() == CallingConv::Cold))
-    return true;
-
   if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
                  Caller->getCallingConv() == CallingConv::Cold))
     return true;
@@ -125,9 +121,22 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
   if (!PSI || !PSI->hasProfileSummary())
     return false;
 
-  if (CB && BFI &&
-      (PSI->isColdCallSite(*CB, BFI) || PSI->isColdBlock(CB->getParent(), BFI)))
-    return true;
+  // We require both the function entry and the call site/block/callee to be
+  // cold.
+  // 1. Checking that the function entry is cold ensures we don't disable tail
+  //    call elimination in hot functions (with calls on cold conditional
+  //    paths), which would force stack frame setup and teardown on hot paths.
+  // 2. Checking that the call site/block/callee is also cold ensures that if a
+  //    function has a cold entry count but contains a hot loop, we don't
+  //    disable tail call elimination for calls within that hot loop.
+  if (Caller && PSI->isFunctionEntryCold(Caller) && CB) {
+    if (CB->hasFnAttr(Attribute::Cold) ||
+        CB->getCallingConv() == CallingConv::Cold)
+      return true;
+    if (BFI && (PSI->isColdCallSite(*CB, BFI) ||
+                PSI->isColdBlock(CB->getParent(), BFI)))
+      return true;
+  }
 
   return false;
 }
@@ -402,7 +411,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
       const DataLayout &DL = L->getDataLayout();
       if (isModSet(AA->getModRefInfo(CI, MemoryLocation::get(L))) ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(), L->getType(),
-                                       L->getAlign(), DL, L))
+                                       L->getAlign(), SimplifyQuery(DL, L)))
         return false;
     }
   }
@@ -437,27 +446,11 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
   return isa<ConstantInt>(I->getOperand(1));
 }
 
-// Return true if V is a recursive call to F or an instruction directly using
-// the result of one. A depth-1 check is enough here: the value feeding a
-// return either uses the recursive call as an immediate operand (the
-// accumulator instruction, or the PHI merging it with the base case), or it
-// is rejected by findBaseCaseRetConstant below as a non-constant anyway.
-static bool usesRecursiveCall(Value *V, Function &F) {
-  auto IsRecursiveCall = [&F](Value *V) {
-    auto *CI = dyn_cast<CallInst>(V);
-    return CI && CI->getCalledFunction() == &F;
-  };
-  if (IsRecursiveCall(V))
-    return true;
-  auto *I = dyn_cast<Instruction>(V);
-  return I && llvm::any_of(I->operands(), IsRecursiveCall);
-}
-
-// Find the base-case return value for function F: examine all return
-// instructions, skipping those whose return value depends on a recursive call
-// to F (that value differs for each iteration of the recursion). If the
-// remaining returns yield exactly one distinct constant, return it; otherwise
-// return nullptr to indicate failure.
+// Find the base-case return value for function F, given the accumulator
+// recursion instruction AccRecInstr that is about to be eliminated. Every
+// return other than the one fed by AccRecInstr survives the transformation and
+// will be rewritten to return the accumulator, so all of them have to yield the
+// same base-case constant. Return that constant, or nullptr on failure.
 //
 // FIXME: There is a room for improvement here in the future, e.g., consider
 // non-constant values and multiple base cases -- e.g., we want to be able to
@@ -469,7 +462,8 @@ static bool usesRecursiveCall(Value *V, Function &F) {
 //  return f(x-1) << 1;
 // }
 // ```
-static Constant *findBaseCaseRetConstant(Function &F) {
+static Constant *findBaseCaseRetConstant(Function &F,
+                                         Instruction *AccRecInstr) {
   Constant *BaseCaseVal = nullptr;
 
   for (BasicBlock &BB : F) {
@@ -478,9 +472,16 @@ static Constant *findBaseCaseRetConstant(Function &F) {
       continue;
 
     Value *RV = RI->getReturnValue();
-    if (usesRecursiveCall(RV, F))
+
+    // This is the recursive case being turned into a loop: the return goes
+    // away along with AccRecInstr.
+    if (RV == AccRecInstr)
       continue;
 
+    // Anything else has to be the base case. In particular a return still
+    // computing from a recursive call (e.g. a second recursion site that is
+    // not eliminated) must be rejected: returning the accumulator in its place
+    // would drop that computation.
     auto *C = dyn_cast<Constant>(RV);
     if (!C)
       return nullptr;
@@ -516,7 +517,7 @@ static Constant *canTransformAccumulatorRecursion(Instruction *I,
 
     // findTRECandidate guarantees CI is a recursive call to its own
     // function, so scan the enclosing function for the base-case return.
-    AccInitVal = findBaseCaseRetConstant(*CI->getFunction());
+    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
     if (!AccInitVal)
       return nullptr;
   } else {

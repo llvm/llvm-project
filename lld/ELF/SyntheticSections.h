@@ -1330,8 +1330,7 @@ template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf);
 template <typename ELFT> void writePhdrs(Ctx &, uint8_t *buf);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
-                           uint64_t value, uint64_t size,
-                           InputSectionBase &section);
+                           uint64_t value, uint64_t size, SectionBase &section);
 
 void addVerneed(Ctx &, Symbol &ss);
 

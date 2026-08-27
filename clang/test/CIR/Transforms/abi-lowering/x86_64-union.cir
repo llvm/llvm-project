@@ -7,20 +7,20 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !u8i = !cir.int<u, 8>
-!rec_UIntFloat = !cir.union<"UIntFloat" {!s32i, !cir.float}>
-!rec_UFloatInt = !cir.union<"UFloatInt" {!cir.float, !s32i}>
-!rec_ULongDouble = !cir.union<"ULongDouble" {!s64i, !cir.double}>
-!rec_UDoubleLong = !cir.union<"UDoubleLong" {!cir.double, !s64i}>
-!rec_UFloats = !cir.union<"UFloats" {!cir.float, !cir.float}>
-!rec_UThree = !cir.union<"UThree" {!cir.array<!s8i x 3>}>
-!rec_UNarrowStorage = !cir.union<"UNarrowStorage" {!s32i, !cir.array<!s8i x 8>}, padding = {!cir.array<!u8i x 4>}>
-!rec_UTwoEightbytes = !cir.union<"UTwoEightbytes" {!s64i, !cir.array<!s8i x 16>}, padding = {!cir.array<!u8i x 8>}>
-!rec_UBig = !cir.union<"UBig" {!cir.array<!s8i x 32>}>
-!rec_UBigOverAligned = !cir.union<"UBigOverAligned" {!cir.array<!s8i x 32>}>
-!rec_SOverAligned = !cir.struct<"SOverAligned" {!cir.array<!s8i x 32>}>
+!rec_UIntFloat = !cir.union<"UIntFloat" {data !s32i, data !cir.float}>
+!rec_UFloatInt = !cir.union<"UFloatInt" {data !cir.float, data !s32i}>
+!rec_ULongDouble = !cir.union<"ULongDouble" {data !s64i, data !cir.double}>
+!rec_UDoubleLong = !cir.union<"UDoubleLong" {data !cir.double, data !s64i}>
+!rec_UFloats = !cir.union<"UFloats" {data !cir.float, data !cir.float}>
+!rec_UThree = !cir.union<"UThree" {data !cir.array<!s8i x 3>}>
+!rec_UNarrowStorage = !cir.union<"UNarrowStorage" {data !s32i, data !cir.array<!s8i x 8>}, padding = {!cir.array<!u8i x 4>}>
+!rec_UTwoEightbytes = !cir.union<"UTwoEightbytes" {data !s64i, data !cir.array<!s8i x 16>}, padding = {!cir.array<!u8i x 8>}>
+!rec_UBig = !cir.union<"UBig" {data !cir.array<!s8i x 32>}>
+!rec_UBigOverAligned = !cir.union<"UBigOverAligned" {data !cir.array<!s8i x 32>}>
+!rec_SOverAligned = !cir.struct<"SOverAligned" {data !cir.array<!s8i x 32>}>
 !rec_UEmpty = !cir.union<"UEmpty" {}, padding = {!u8i}>
-!rec_UNoRegs = !cir.union<"UNoRegs" {!s32i, !cir.float}>
-!rec_SWithUnion = !cir.struct<"SWithUnion" {!rec_UIntFloat, !s32i}>
+!rec_UNoRegs = !cir.union<"UNoRegs" {data !s32i, data !cir.float}>
+!rec_SWithUnion = !cir.struct<"SWithUnion" {data !rec_UIntFloat, data !s32i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",

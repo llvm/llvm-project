@@ -306,6 +306,29 @@ LLCAS_PUBLIC llcas_data_t llcas_loaded_object_get_data(llcas_cas_t,
                                                        llcas_loaded_object_t);
 
 /**
+ * \returns a data buffer for the provided \c llcas_loaded_object_t that stays
+ * valid after the \c llcas_cas_t is disposed of. The buffer pointer must be
+ * 8-byte aligned and \c NULL terminated. It must be released via
+ * \c llcas_standalone_data_dispose, which may outlive the \c llcas_cas_t.
+ *
+ * This is an optimization over copying the buffer returned by
+ * \c llcas_loaded_object_get_data: an implementation that can hand out storage
+ * outliving itself, e.g. a mapping of a file it does not keep open, avoids the
+ * copy. Implementing it is optional, and requires
+ * \c llcas_standalone_data_dispose to be implemented as well.
+ */
+LLCAS_PUBLIC llcas_data_t
+    llcas_loaded_object_get_standalone_data(llcas_cas_t, llcas_loaded_object_t);
+
+/**
+ * Releases a buffer returned by \c llcas_loaded_object_get_standalone_data.
+ *
+ * This may be called after the \c llcas_cas_t that produced the buffer has
+ * been disposed of, so it must not depend on it.
+ */
+LLCAS_PUBLIC void llcas_standalone_data_dispose(llcas_data_t);
+
+/**
  * \returns the references of the provided \c llcas_loaded_object_t.
  */
 LLCAS_PUBLIC llcas_object_refs_t

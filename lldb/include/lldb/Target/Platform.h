@@ -204,7 +204,7 @@ public:
 
   virtual const char *GetHostname();
 
-  virtual ConstString GetFullNameForDylib(ConstString basename);
+  virtual std::string GetFullNameForDylib(llvm::StringRef basename);
 
   virtual llvm::StringRef GetDescription() = 0;
 
@@ -328,6 +328,24 @@ public:
   virtual Status GetSharedModule(
       const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  /// Find a module's files on this host.
+  ///
+  /// The symbol locator plugins have no Platform to consult, so a platform
+  /// that knows where its binaries live answers here instead.
+  ///
+  /// An answer ends the search, so an override owns what the plugins would
+  /// otherwise have been asked for: the files it names have to exist, and have
+  /// to be the ones \a module_spec describes.
+  ///
+  /// \return
+  ///     Where the files are, or std::nullopt if this platform has nothing to
+  ///     say about this module.
+  virtual std::optional<ModuleSpec>
+  FindModuleFiles(const ModuleSpec &module_spec,
+                  const FileSpecList &search_paths, StatisticsMap &statistics) {
+    return std::nullopt;
+  }
 
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
