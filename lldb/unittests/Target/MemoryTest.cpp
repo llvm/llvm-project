@@ -520,6 +520,7 @@ public:
       buffer[addr - vm_addr] = static_cast<uint8_t>(addr); // LSB of addr.
     return size;
   }
+  MemoryCache &GetMemoryCache() { return m_memory_cache; }
   // Boilerplate, nothing interesting below.
   DummyReaderProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
       : Process(target_sp, listener_sp) {}
@@ -844,6 +845,62 @@ public:
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
   llvm::StringRef GetPluginName() override { return "Dummy"; }
 };
+
+#ifndef NDEBUG
+TEST_F(MemoryDeathTest, TestVerifyMemoryReads) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  auto process_sp =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+
+  // Off by default, and set on this process, so there is nothing to restore.
+  ASSERT_FALSE(process_sp->GetVerifyMemoryReads());
+  Status set_error = process_sp->SetPropertyValue(
+      nullptr, eVarSetOperationAssign, "verify-memory-reads", "true");
+  ASSERT_TRUE(set_error.Success()) << set_error.AsCString();
+  ASSERT_TRUE(process_sp->GetVerifyMemoryReads());
+
+  // A cache that agrees with the process passes, and still returns the bytes.
+  Status error;
+  std::vector<uint8_t> buf(16, 0);
+  EXPECT_EQ(process_sp->ReadMemory(0x1000, buf.data(), buf.size(), error),
+            buf.size());
+  for (size_t i = 0; i < buf.size(); ++i)
+    ASSERT_EQ(buf[i], static_cast<uint8_t>(0x1000 + i)) << "byte " << i;
+
+  // The same holds for the ranges API.
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x1000, 16},
+                                                     {0x3000, 16}};
+  llvm::SmallVector<uint8_t, 0> ranges_buf(32, 0);
+  for (auto [range, memory] :
+       llvm::zip(ranges, process_sp->ReadMemoryRanges(ranges, ranges_buf))) {
+    ASSERT_EQ(memory.size(), 16u);
+    for (auto [i, byte] : llvm::enumerate(memory))
+      ASSERT_EQ(byte, static_cast<uint8_t>(range.GetRangeBase() + i));
+  }
+
+  // DummyReaderProcess returns the low byte of each address, so a run of
+  // zeroes cannot be what it would read.
+  process_sp->GetMemoryCache().Clear();
+  process_sp->GetMemoryCache().AddL1CacheData(
+      0x2000, std::make_shared<DataBufferHeap>(16, 0));
+  std::vector<uint8_t> bad(16, 0);
+  ASSERT_DEATH(
+      { process_sp->ReadMemory(0x2000, bad.data(), bad.size(), error); },
+      "memory cache returned something the process did not");
+  Range<addr_t, size_t> bad_range(0x2000, 16);
+  ASSERT_DEATH(
+      { process_sp->ReadMemoryRanges(bad_range, bad); },
+      "memory cache returned something the process did not");
+}
+#endif // NDEBUG
 
 TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   ArchSpec arch("x86_64-apple-macosx-");
