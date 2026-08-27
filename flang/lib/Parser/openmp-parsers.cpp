@@ -1002,6 +1002,9 @@ TYPE_PARSER(OmpMapTypeModifierParser{})
 TYPE_PARSER(construct<OmpMemSpace>( //
     "MEMSPACE" >> parenthesized(scalarIntExpr)))
 
+TYPE_PARSER(construct<OmpMotionModifier>( //
+    "PRESENT" >> pure(OmpMotionModifier::Value::Present)))
+
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
     "UNCONSTRAINED" >> pure(OmpOrderModifier::Value::Unconstrained)))
@@ -1115,7 +1118,12 @@ template <typename MotionClause> struct OmpMotionClauseModifierParser {
 
   std::optional<resultType> Parse(ParseState &state) const {
     unsigned version{state.userState()->langOptions().OpenMPVersion};
-    if (version == 52) {
+    if (version <= 51) {
+      auto motion{sourced(construct<resultType>(Parser<OmpMotionModifier>{}))};
+      if (auto &&result{attempt(motion).Parse(state)}) {
+        return std::move(result);
+      }
+    } else if (version == 52) {
       auto expect{sourced(construct<resultType>(Parser<OmpExpectation>{}))};
       if (auto &&result{attempt(expect).Parse(state)}) {
         return std::move(result);

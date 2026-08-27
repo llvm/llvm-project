@@ -36,8 +36,8 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 868082074056920076
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x i64>), [[COPY]](p0) :: (store (<2 x i64>) into %ir.dst, align 4)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](i64)
     ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x i64>), [[PTR_ADD]](p0) :: (store (<2 x i64>) into %ir.dst + 16, align 4)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0

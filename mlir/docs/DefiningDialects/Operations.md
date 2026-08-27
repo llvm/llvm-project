@@ -768,7 +768,10 @@ The available directives are as follows:
         `FieldParser` specialization is available or when the selected
         specialization declares `isKeyValueCompositional = false`.
     -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
-        accepted when parsing and is used by the generated printer.
+        accepted when parsing. The generated printer uses the key-value
+        spelling and the same custom-printer or attribute-conversion choice.
+        Operations that provide a custom `printProperties` hook should set
+        `hasCustomPropertiesPrinter` to suppress the shadowed generated helper.
     -   Any property or inherent attribute that is not used elsewhere in the
         format is parsed and printed as part of this list.
     -   If present, the `attr-dict` will not contain any inherent attributes.
@@ -786,10 +789,15 @@ The available directives are as follows:
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
-*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)``
+*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)`` or
+    ``oilist < `separator` > ( `keyword` elements | `otherKeyword` elements ...)``
 
     -   Represents an optional order-independent list of clauses. Each clause
         has a keyword and corresponding assembly format.
+    -   The separator specification is optional. When present, the separator
+        is parsed and printed between clauses. For example,
+        ``oilist<`,`>(...)`` formats a comma-separated list without a trailing
+        comma.
     -   Each clause can appear 0 or 1 time (in any order).
     -   Only literals, types and variables can be used within an oilist element.
     -   All the variables must be optional or variadic.

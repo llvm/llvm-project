@@ -256,10 +256,12 @@ template <size_t Bits> struct DyadicFloat {
             static_cast<StorageType>(unbiased_exp + FPBits::EXP_BIAS);
       }
 
-      MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
-      round = (mantissa & round_mask) != 0;
-      MantissaType sticky_mask = round_mask - 1;
-      sticky = (mantissa & sticky_mask) != 0;
+      if (extra_fraction_len > 0) {
+        MantissaType round_mask = MantissaType(1) << (extra_fraction_len - 1);
+        round = (mantissa & round_mask) != 0;
+        MantissaType sticky_mask = round_mask - 1;
+        sticky = (mantissa & sticky_mask) != 0;
+      }
 
       out_mantissa = static_cast<StorageType>(mantissa >> extra_fraction_len);
     }
@@ -438,7 +440,8 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T as() const {
-    if constexpr (cpp::is_same_v<T, bfloat16> || cpp::is_same_v<T, Float128>
+    if constexpr (cpp::is_same_v<T, bfloat16> || cpp::is_same_v<T, Float128> ||
+                  cpp::is_same_v<T, Float80>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<T, float16>
 #endif

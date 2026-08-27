@@ -346,9 +346,11 @@ public:
       Base::TraverseTypeLoc(TL, TraverseQualifier);
     });
   }
-  bool TraverseTemplateName(const TemplateName &TN) {
-    return TN.isNull() || traverseNode("template name", TN,
-                                       [&] { Base::TraverseTemplateName(TN); });
+  bool TraverseTemplateName(const TemplateName &TN,
+                            bool TraverseQualifier = true) {
+    return TN.isNull() || traverseNode("template name", TN, [&] {
+             Base::TraverseTemplateName(TN, TraverseQualifier);
+           });
   }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
     return traverseNode("template argument", TAL,

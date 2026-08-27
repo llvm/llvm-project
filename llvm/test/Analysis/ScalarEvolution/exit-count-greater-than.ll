@@ -5,14 +5,13 @@
 
 ; The IV counts down by 3 from 32767 (SMAX) and the loop exits when it reaches
 ; -32767. Test for https://github.com/llvm/llvm-project/issues/217537.
-; FIXME: Currently BTC is computed incorreclty as 0.
 define i32 @sgt_stride_3_wrapping_distance(ptr %out) {
 ; CHECK-LABEL: 'sgt_stride_3_wrapping_distance'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_3_wrapping_distance
-; CHECK-NEXT:  Loop %loop.header: backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop.header: backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: Trip multiple is 21846
 ;
 entry:
   br label %loop.header
@@ -35,14 +34,13 @@ exit:
 
 ; Unsigned variant of the above: the IV counts down by 3 from 65535 (UMAX) and
 ; the loop exits when it reaches 1.
-; FIXME: Currently BTC is computed incorreclty as 0.
 define i32 @ugt_stride_3_wrapping_distance(ptr %out) {
 ; CHECK-LABEL: 'ugt_stride_3_wrapping_distance'
 ; CHECK-NEXT:  Determining loop execution counts for: @ugt_stride_3_wrapping_distance
-; CHECK-NEXT:  Loop %loop.header: backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is i16 0
-; CHECK-NEXT:  Loop %loop.header: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop.header: backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: constant max backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: symbolic max backedge-taken count is i16 21845
+; CHECK-NEXT:  Loop %loop.header: Trip multiple is 21846
 ;
 entry:
   br label %loop.header
@@ -64,14 +62,13 @@ exit:
 }
 
 ; Same overflow, but with a stride that is itself larger than SMAX / 2.
-; FIXME: Currently BTC is computed incorreclty as 0.
 define i32 @sgt_large_stride_wrapping_distance() {
 ; CHECK-LABEL: 'sgt_large_stride_wrapping_distance'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_large_stride_wrapping_distance
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
 ;
 entry:
   br label %loop
@@ -89,10 +86,9 @@ exit:
 define i32 @sgt_stride_4_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'sgt_stride_4_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_4_variable_bound
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %add = add nsw i32 %n, 4
@@ -119,10 +115,9 @@ ret:
 define i32 @ugt_stride_4_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'ugt_stride_4_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @ugt_stride_4_variable_bound
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((3 + (-1 * %m) + %n) /u 4)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %add = add nuw i32 %n, 4
@@ -150,10 +145,9 @@ ret:
 define i32 @sgt_stride_3_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'sgt_stride_3_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_3_variable_bound
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((2 + (-1 * %m) + %n) /u 3)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1431655765
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((2 + (-1 * %m) + %n) /u 3)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %add = add nsw i32 %n, 3
