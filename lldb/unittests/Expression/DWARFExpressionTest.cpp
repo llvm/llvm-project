@@ -2373,6 +2373,31 @@ TEST_F(DWARFExpressionMockProcessTest, deref_register) {
       ExpectLoadAddress(0x08070605, Value::ContextType::Invalid));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_drop_location_description) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {{{0x4, 2}, {0x1, 0x2}}};
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x504}), memory));
+
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Dropping a register location restores the memory location underneath it.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_lit4, DW_OP_reg0, DW_OP_drop, DW_OP_deref_size, 2}),
+      ExpectLoadAddress(0x0201));
+
+  // Dropping the only implicit location clears its location state before the
+  // following memory location is pushed.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_implicit_value, 1, 0, DW_OP_drop, DW_OP_lit4,
+                             DW_OP_deref_size, 2}),
+                       ExpectLoadAddress(0x0201));
+}
+
 TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
   TestContext test_ctx;
   MockMemory::Map memory = {

@@ -64,6 +64,71 @@ enum LocationDescriptionKind {
   /* Composite*/
 };
 
+/// Keeps the location description kind associated with each eagerly
+/// materialized value on the DWARF expression stack.
+class EvaluationStack {
+public:
+  bool empty() const { return m_values.empty(); }
+  size_t size() const { return m_values.size(); }
+
+  Value &back() { return m_values.back(); }
+  const Value &back() const { return m_values.back(); }
+
+  Value &operator[](size_t index) { return m_values[index]; }
+  const Value &operator[](size_t index) const { return m_values[index]; }
+
+  void push_back(Value value, LocationDescriptionKind loc_desc_kind = Memory) {
+    m_values.push_back(std::move(value));
+    m_loc_desc_kinds.push_back(loc_desc_kind);
+  }
+
+  void PushCopy(size_t index) {
+    push_back(m_values[index], m_loc_desc_kinds[index]);
+  }
+
+  void pop_back() {
+    m_values.pop_back();
+    m_loc_desc_kinds.pop_back();
+  }
+
+  LocationDescriptionKind GetLocationDescriptionKind() const {
+    return m_loc_desc_kinds.back();
+  }
+
+  void SetLocationDescriptionKind(LocationDescriptionKind loc_desc_kind) {
+    m_loc_desc_kinds.back() = loc_desc_kind;
+  }
+
+  void SwapTopTwo() {
+    const size_t last = size() - 1;
+    std::swap(m_values[last], m_values[last - 1]);
+    std::swap(m_loc_desc_kinds[last], m_loc_desc_kinds[last - 1]);
+  }
+
+  void RotateTopThree() {
+    const size_t last = size() - 1;
+    Value old_top = m_values[last];
+    m_values[last] = m_values[last - 1];
+    m_values[last - 1] = m_values[last - 2];
+    m_values[last - 2] = std::move(old_top);
+
+    LocationDescriptionKind old_top_kind = m_loc_desc_kinds[last];
+    m_loc_desc_kinds[last] = m_loc_desc_kinds[last - 1];
+    m_loc_desc_kinds[last - 1] = m_loc_desc_kinds[last - 2];
+    m_loc_desc_kinds[last - 2] = old_top_kind;
+  }
+
+  DWARFExpression::Stack &Values() { return m_values; }
+
+  void SyncLocationDescriptionKinds() {
+    m_loc_desc_kinds.resize(m_values.size(), Memory);
+  }
+
+private:
+  DWARFExpression::Stack m_values;
+  std::vector<LocationDescriptionKind> m_loc_desc_kinds;
+};
+
 /// Aggregates the inputs, derived pointers, and mutable evaluation state for
 /// a single DWARF expression evaluation. Passed by reference to every helper
 /// so they don't need to re-thread these individually.
@@ -81,10 +146,9 @@ struct EvalContext {
 
   /// Mutable evaluation state.
   /// @{
-  std::vector<Value> stack;
+  EvaluationStack stack;
   Value pieces;
   uint64_t op_piece_offset = 0;
-  LocationDescriptionKind loc_desc_kind = Memory;
   /// @}
 
   EvalContext(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
@@ -974,10 +1038,11 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   // Deref a register or implicit location and truncate the value to `size`
   // bytes. See the corresponding comment in DW_OP_deref for more details on
   // why we deref these locations this way.
-  if (eval_ctx.loc_desc_kind == Register ||
-      eval_ctx.loc_desc_kind == Implicit) {
+  LocationDescriptionKind loc_desc_kind =
+      eval_ctx.stack.GetLocationDescriptionKind();
+  if (loc_desc_kind == Register || loc_desc_kind == Implicit) {
     // Reset context to default values.
-    eval_ctx.loc_desc_kind = Memory;
+    eval_ctx.stack.SetLocationDescriptionKind(Memory);
     eval_ctx.stack.back().ClearContext();
 
     // Truncate the value on top of the stack to *size* bytes then
@@ -1108,12 +1173,15 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
 
 static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
                                         uint64_t piece_byte_size) {
-  LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
-  // Reset for the next piece.
-  eval_ctx.loc_desc_kind = Memory;
+  LocationDescriptionKind piece_locdesc =
+      eval_ctx.stack.empty() ? Memory
+                             : eval_ctx.stack.GetLocationDescriptionKind();
 
-  if (piece_byte_size == 0)
+  if (piece_byte_size == 0) {
+    if (!eval_ctx.stack.empty())
+      eval_ctx.stack.SetLocationDescriptionKind(Memory);
     return llvm::Error::success();
+  }
 
   Value curr_piece;
 
@@ -1455,7 +1523,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   EvalContext eval_ctx(exe_ctx, reg_ctx, std::move(module_sp), dwarf_cu,
                        reg_kind, initial_value_ptr, object_address_ptr);
 
-  Stack &stack = eval_ctx.stack;
+  EvaluationStack &stack = eval_ctx.stack;
 
   if (initial_value_ptr)
     stack.push_back(*initial_value_ptr);
@@ -1557,7 +1625,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (stack.empty()) {
         return llvm::createStringError("expression stack empty for DW_OP_dup");
       } else
-        stack.push_back(stack.back());
+        stack.PushCopy(stack.size() - 1);
       break;
 
     case DW_OP_drop:
@@ -1568,13 +1636,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_over:
-      stack.push_back(stack[stack.size() - 2]);
+      stack.PushCopy(stack.size() - 2);
       break;
 
     case DW_OP_pick: {
       uint8_t pick_idx = op->getRawOperand(0);
       if (pick_idx < stack.size())
-        stack.push_back(stack[stack.size() - 1 - pick_idx]);
+        stack.PushCopy(stack.size() - 1 - pick_idx);
       else {
         return llvm::createStringError(
             "Index %u out of range for DW_OP_pick.\n", pick_idx);
@@ -1582,18 +1650,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_swap:
-      tmp = stack.back();
-      stack.back() = stack[stack.size() - 2];
-      stack[stack.size() - 2] = tmp;
+      stack.SwapTopTwo();
       break;
 
-    case DW_OP_rot: {
-      size_t last_idx = stack.size() - 1;
-      Value old_top = stack[last_idx];
-      stack[last_idx] = stack[last_idx - 1];
-      stack[last_idx - 1] = stack[last_idx - 2];
-      stack[last_idx - 2] = old_top;
-    } break;
+    case DW_OP_rot:
+      stack.RotateTopThree();
+      break;
 
     case DW_OP_abs:
       if (!stack.back().GetScalar().AbsoluteValue()) {
@@ -1948,22 +2010,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_reg29:
     case DW_OP_reg30:
     case DW_OP_reg31: {
-      eval_ctx.loc_desc_kind = Register;
       reg_num = opcode - DW_OP_reg0;
 
       if (llvm::Error err = ReadRegisterValueAsScalar(
               eval_ctx.reg_ctx, eval_ctx.reg_kind, reg_num, tmp))
         return err;
-      stack.push_back(tmp);
+      stack.push_back(tmp, Register);
     } break;
     case DW_OP_regx: {
-      eval_ctx.loc_desc_kind = Register;
       reg_num = op->getRawOperand(0);
       Status read_err;
       if (llvm::Error err = ReadRegisterValueAsScalar(
               eval_ctx.reg_ctx, eval_ctx.reg_kind, reg_num, tmp))
         return err;
-      stack.push_back(tmp);
+      stack.push_back(tmp, Register);
     } break;
 
     case DW_OP_breg0:
@@ -2045,15 +2105,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (stack.size() < 1) {
         UpdateValueTypeFromLocationDescription(eval_ctx,
                                                LocationDescriptionKind::Empty);
-        // Reset for the next piece.
-        eval_ctx.loc_desc_kind = Memory;
         return llvm::createStringError(
             "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
-        UpdateValueTypeFromLocationDescription(eval_ctx, eval_ctx.loc_desc_kind,
-                                               &stack.back());
+        UpdateValueTypeFromLocationDescription(
+            eval_ctx, stack.GetLocationDescriptionKind(), &stack.back());
         // Reset for the next piece.
-        eval_ctx.loc_desc_kind = Memory;
+        stack.SetLocationDescriptionKind(Memory);
         const uint64_t piece_bit_size = op->getRawOperand(0);
         const uint64_t piece_bit_offset = op->getRawOperand(1);
         switch (stack.back().GetValueType()) {
@@ -2083,8 +2141,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_implicit_value: {
-      eval_ctx.loc_desc_kind = Implicit;
-
       // The second operand is a sequence of bytes of the length specified by
       // the first operand. LLVM represents it as an offset to that sequence.
       const uint64_t block_size = op->getRawOperand(0);
@@ -2098,12 +2154,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return error;
 
       Value result(block_data.data(), block_data.size());
-      stack.push_back(result);
+      stack.push_back(result, Implicit);
       break;
     }
 
     case DW_OP_implicit_pointer: {
-      eval_ctx.loc_desc_kind = Implicit;
       return llvm::createStringError("could not evaluate %s",
                                      DW_OP_value_to_name(opcode));
     }
@@ -2118,7 +2173,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_stack_value:
-      eval_ctx.loc_desc_kind = Implicit;
+      stack.SetLocationDescriptionKind(Implicit);
       stack.back().SetValueType(Value::ValueType::Scalar);
       break;
 
@@ -2213,7 +2268,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         uint64_t offset = operands_offset; // Updated by the callee.
         if (eval_ctx.dwarf_cu->ParseVendorDWARFOpcode(
                 opcode, expr_data, offset, eval_ctx.reg_ctx, eval_ctx.reg_kind,
-                stack)) {
+                stack.Values())) {
+          stack.SyncLocationDescriptionKinds();
           // This is a little tricky. If LLVM knows about this vendor-specific
           // operation, `getEndOffset()` points past its last operand. If LLVM
           // knows nothing about this operation, `getEndOffset()` points to its
@@ -2242,8 +2298,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     return llvm::createStringError("stack empty after evaluation");
   }
 
-  UpdateValueTypeFromLocationDescription(eval_ctx, eval_ctx.loc_desc_kind,
-                                         &stack.back());
+  UpdateValueTypeFromLocationDescription(
+      eval_ctx, stack.GetLocationDescriptionKind(), &stack.back());
 
   if (log && log->GetVerbose()) {
     size_t count = stack.size();
