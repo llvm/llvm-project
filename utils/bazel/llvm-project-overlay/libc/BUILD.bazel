@@ -8320,6 +8320,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_gamma_util",
+    hdrs = ["src/__support/math/gamma_util.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_getpayload",
     hdrs = ["src/__support/math/getpayload.h"],
     deps = [
@@ -8734,10 +8746,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_lgammaf",
+    hdrs = ["src/__support/math/lgammaf.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_gamma_util",
+        ":__support_math_log",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_lgammaf16",
     hdrs = ["src/__support/math/lgammaf16.h"],
     deps = [
-        ":__support_cpp_bit",
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -8747,6 +8778,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_types",
+        ":__support_math_gamma_util",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -12527,6 +12559,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_ldexpf16",
     ],
+)
+
+libc_math_function(
+    name = "lgammaf",
+    additional_deps = [":__support_math_lgammaf"],
 )
 
 libc_math_function(
