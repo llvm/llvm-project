@@ -6703,7 +6703,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
     Value *DistScheduleChunkSize) {
-  if (Config.isTargetDevice())
+  // The device path hands the loop to a __kmpc_*_static_loop_* entry, which
+  // cannot provide the ordering an `ordered` region needs: the device
+  // __kmpc_ordered is an empty stub and the ordering comes from
+  // __kmpc_dispatch_fini. Use the generic path so a dispatch loop is emitted,
+  // as clang does for the same construct.
+  if (Config.isTargetDevice() && !HasOrderedClause)
     return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
@@ -6850,6 +6855,21 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
   CLI->setLastIter(PLastIter);
 
+  // __kmpc_dispatch_next takes generic pointers. Where the alloca address
+  // space is not zero, as on AMDGPU, the allocas above are in the private
+  // address space and have to be cast for the call. The casts fold away when
+  // the alloca address space is already zero. Loads below keep using the
+  // original allocas.
+  PointerType *ArgPtrTy = Builder.getPtrTy();
+  Value *PLastIterArg =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(PLastIter, ArgPtrTy);
+  Value *PLowerBoundArg =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(PLowerBound, ArgPtrTy);
+  Value *PUpperBoundArg =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(PUpperBound, ArgPtrTy);
+  Value *PStrideArg =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(PStride, ArgPtrTy);
+
   // At the end of the preheader, prepare for calling the "init" function by
   // storing the current loop bounds into the allocated space. A canonical loop
   // always iterates from 0 to trip-count with step 1. Note that "init" expects
@@ -6892,8 +6912,8 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   // This needs to be 32-bit always, so can't use the IVTy Zero above.
   Builder.SetInsertPoint(OuterCond, OuterCond->getFirstInsertionPt());
   Value *Res = createRuntimeFunctionCall(
-      DynamicNext,
-      {SrcLoc, ThreadNum, PLastIter, PLowerBound, PUpperBound, PStride});
+      DynamicNext, {SrcLoc, ThreadNum, PLastIterArg, PLowerBoundArg,
+                    PUpperBoundArg, PStrideArg});
   Constant *Zero32 = ConstantInt::get(I32Type, 0);
   Value *MoreWork = Builder.CreateCmp(CmpInst::ICMP_NE, Res, Zero32);
   Value *LowerBound =
