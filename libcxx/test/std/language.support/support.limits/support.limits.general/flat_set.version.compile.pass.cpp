@@ -71,7 +71,7 @@
 #    error "__cpp_lib_flat_set should have the value 202511L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_constexpr_flat_set
 #    error "__cpp_lib_constexpr_flat_set should be defined in c++26"
@@ -87,6 +87,22 @@
 #    error "__cpp_lib_flat_set should have the value 202511L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_flat_set != 202502L
+#    error "__cpp_lib_constexpr_flat_set should have the value 202502L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_flat_set
+#    error "__cpp_lib_flat_set should be defined in c++29"
+#  endif
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

@@ -999,6 +999,18 @@ private:
 };
 
 template <typename SCEVPtrT>
+inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
+    : Base(S, 0) {
+  if (any(Flags)) {
+    assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
+           "use flags require an expression that can carry no-wrap flags");
+    // Drop flags already present on S.
+    Flags &= ~cast<SCEVNAryExpr>(S)->getNoWrapFlags();
+  }
+  Base::setInt(static_cast<unsigned>(Flags) >> 1);
+}
+
+template <typename SCEVPtrT>
 inline SCEVNoWrapFlags
 SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
   SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagAnyWrap;

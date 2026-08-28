@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "../Tooling/ReplacementTest.h"
-#include "../Tooling/RewriterTestContext.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "gtest/gtest.h"
+#include <cassert>
 
 namespace clang {
 namespace tooling {
@@ -65,7 +65,7 @@ TEST_F(HeaderIncludesTest, RepeatedIncludes) {
 
 TEST_F(HeaderIncludesTest, InsertImportWithSameInclude) {
   std::string Code = "#include \"a.h\"\n";
-  std::string Expected = Code + "#import \"a.h\"\n";
+  std::string Expected = "#import \"a.h\"\n";
   EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
@@ -106,20 +106,38 @@ TEST_F(HeaderIncludesTest, ImportWithSpacesAndTabs) {
   // Try inserting "b.h" again as include - should be blocked.
   EXPECT_EQ(CodeWithSpaces,
             insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Include));
+
+  // Try inserting "b.h" again as import - should replace.
+  std::string ExpectedAfterBImport =
+      "#  import   \"a.h\"\n#import \"b.h\"\nint x;\n";
+  EXPECT_EQ(ExpectedAfterBImport,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Import));
 }
 
 TEST_F(HeaderIncludesTest, InsertIncludeWhenImportExists) {
   std::string Code = "#import \"a.h\"\n";
-  std::string Expected = Code + "#include \"a.h\"\n";
-  // Currently, the logic allows inserting #include even if #import exists
-  // because the Directive differs. This test verifies this current behavior.
-  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Include));
+  EXPECT_EQ(Code, insert(Code, "\"a.h\"", IncludeDirective::Include));
 }
 
-TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExists) {
+TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExistsAngled) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import <a.h>\n";
+  // Replaces #include with #import.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportAngledWhenIncludeQuotedExists) {
   std::string Code = "#include \"a.h\"\n";
-  std::string Expected = Code + "#import \"a.h\"\n";
-  // Similarly, allows inserting #import even if #include exists.
+  std::string Expected = Code + "#import <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  EXPECT_EQ(Expected, insert(Code, "<a.h>", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportQuotedWhenIncludeAngledExists) {
+  std::string Code = "#include <a.h>\n";
+  std::string Expected = "#import \"a.h\"\n#include <a.h>\n";
+  // Different quotation, so it should insert alongside, not replace.
+  // " comes before < in ASCII, so it is inserted before.
   EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
 }
 
