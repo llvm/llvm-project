@@ -71,27 +71,27 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
 
   // Get the status information of a process by memory mapping the file /proc/PID/status.
   // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
-  char __filename[] = "/proc/4294967295/status";
-  if (auto [__ptr, __ec] = std::to_chars(__filename + 6, __filename + 16, ::getpid()); __ec == std::errc()) {
-    ::strcpy(__ptr, "/status");
+  char filename[] = "/proc/4294967295/status";
+  if (auto [ptr, ec] = std::to_chars(filename + 6, filename + 16, ::getpid()); ec == std::errc()) {
+    ::strcpy(ptr, "/status");
   } else {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not convert pid to cstring.");
     return false;
   }
 
-  int __fd = ::open(__filename, O_RDONLY);
-  if (__fd < 0) {
+  int fd = ::open(filename, O_RDONLY);
+  if (fd < 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/{pid}/status' for reading.");
     return false;
   }
 
-  pstatus_t __status;
-  if (::read(__fd, &__status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
+  ::pstatus_t status;
+  if (::read(fd, &status, sizeof(::pstatus_t)) < static_cast<ssize_t>(sizeof(::pstatus_t))) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not read from '/proc/{pid}/status'.");
     return false;
   }
 
-  if (__status.pr_flag & STRC)
+  if (status.pr_flag & STRC)
     return true;
 
   return false;
@@ -106,18 +106,18 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
 
   // Initialize mib, which tells 'sysctl' to fetch the information about the current process.
 
-  array __mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, ::getpid()};
+  array<int, 4> mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, ::getpid()};
 
   // Initialize the flags so that, if 'sysctl' fails for some bizarre
   // reason, we get a predictable result.
 
-  struct kinfo_proc __info{};
+  ::kinfo_proc info{};
 
   // Call sysctl.
   // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sysctl.3.html
 
-  size_t __info_size = sizeof(__info);
-  if (::sysctl(__mib.data(), __mib.size(), &__info, &__info_size, nullptr, 0) != 0) {
+  size_t info_size = sizeof(info);
+  if (::sysctl(mib.data(), mib.size(), &info, &info_size, nullptr, 0) != 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "'sysctl' runtime error");
     return false;
   }
@@ -126,38 +126,34 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
 #  if defined(__FreeBSD__)
-  const auto __p_flag = __info.ki_flag;
+  const auto p_flag = info.ki_flag;
 #  else // __APPLE__
-  const auto __p_flag = __info.kp_proc.p_flag;
+  const auto p_flag = info.kp_proc.p_flag;
 #  endif
 
-  return ((__p_flag & P_TRACED) != 0);
+  return ((p_flag & P_TRACED) != 0);
 
 #elif defined(__linux__)
 
   // https://docs.kernel.org/filesystems/proc.html
-  alignas(8) array<char, 256 + 1> __buffer;
-  constexpr auto __tracer_key_ = span("\nTracerPid:\t");
+  alignas(8) array<char, 256 + 1> buffer;
+  constexpr std::span<const char> tracer_key("\nTracerPid:\t");
 
-  auto __result = [&__buffer] {
-    int __buf_read      = ::open("/proc/self/status", O_RDONLY | O_CLOEXEC);
-    const auto __result = ::read(__buf_read, __buffer.data(), __buffer.size() - 1);
-    ::close(__buf_read);
-    return __result;
-  }();
+  int buf_read      = ::open("/proc/self/status", O_RDONLY | O_CLOEXEC);
+  const auto result = ::read(buf_read, buffer.data(), buffer.size() - 1);
+  ::close(buf_read);
 
-  if (__result < 80) {
+  if (result < 80) {
     return false;
   }
 
-  __buffer[__result] = '\0';
+  buffer[result] = '\0';
 
-  char* __pos = std::strstr(__buffer.data() + 64, __tracer_key_.data());
-  return __pos != nullptr && __pos[__tracer_key_.size() - 1] != '0';
+  char* pos = std::strstr(buffer.data() + 64, tracer_key.data());
+  return pos != nullptr && pos[tracer_key.size() - 1] != '0';
 
 #else
 
-  // The implementation returns 'false' by default.
   return false;
 
 #endif // defined(_WIN32)
