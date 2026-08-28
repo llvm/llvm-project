@@ -1326,7 +1326,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (OptForSize)
     UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
-  if (!(TM & TM_ForcedByUser)) {
+  if (!(TM & TM_ForcedByUser) || PrepareForLTO) {
     if (UCE.NumInlineCandidates != 0) {
       LLVM_DEBUG(dbgs().indent(1)
                  << "Not unrolling loop with inlinable calls.\n");
