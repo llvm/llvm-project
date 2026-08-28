@@ -622,10 +622,6 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
   std::optional<Value> val = std::nullopt;
   std::optional<LLVM::AtomicBinOp> kind = std::nullopt;
 
-  auto &ops = updateBlock.getOperations();
-  Operation &firstOp = ops.front();
-  Operation &yield = ops.back();
-
   if (auto matched = matchAtomicBinOpUpdate(update)) {
     Operation *binOp = matched->second;
     bool updateIsLhs = binOp->getOperand(0) == updateArgument;
