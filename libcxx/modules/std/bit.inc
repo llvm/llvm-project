@@ -22,6 +22,10 @@ export namespace std {
   using std::bit_width;
   using std::has_single_bit;
 
+  // [bit.shift], shifting
+  using std::shl;
+  using std::shr;
+
   // [bit.rotate], rotating
   using std::rotl;
   using std::rotr;

@@ -204,8 +204,8 @@
 #  ifndef __cpp_lib_bitops
 #    error "__cpp_lib_bitops should be defined in c++29"
 #  endif
-#  if __cpp_lib_bitops != 201907L
-#    error "__cpp_lib_bitops should have the value 201907L in c++29"
+#  if __cpp_lib_bitops != 202606L
+#    error "__cpp_lib_bitops should have the value 202606L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_byteswap
