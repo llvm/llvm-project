@@ -73,6 +73,36 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
+// Validate data patterns supported with the TMA Copy from Global to Shared
+// memory (CTA and Cluster) intrinsics.
+enum class TMAValidateDataPattern : uint8_t {
+  DISABLED = 0, // Default; no validate_data qualifier is emitted.
+  PER_16BYTES_80000000 = 1,
+  PER_16BYTES_8000 = 2,
+  PER_16BYTES_80 = 3,
+  PER_16BYTES_8 = 4,
+  PER_ELEMENT_FF = 5,
+};
+
+inline StringRef getTMAValidateDataPatternName(TMAValidateDataPattern Pattern) {
+  using VDTy = TMAValidateDataPattern;
+  switch (Pattern) {
+  case VDTy::DISABLED:
+    return "disabled";
+  case VDTy::PER_16BYTES_80000000:
+    return "per_16bytes::80000000";
+  case VDTy::PER_16BYTES_8000:
+    return "per_16bytes::8000";
+  case VDTy::PER_16BYTES_80:
+    return "per_16bytes::80";
+  case VDTy::PER_16BYTES_8:
+    return "per_16bytes::8";
+  case VDTy::PER_ELEMENT_FF:
+    return "per_element::ff";
+  }
+  llvm_unreachable("invalid TMA validate data pattern");
+}
+
 // Eviction priorities applicable for prefetch and applypriority intrinsics.
 enum class EvictPolicyType : uint8_t {
   EVICT_NORMAL = 0, // default
@@ -161,6 +191,9 @@ LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAValidateDataPattern(raw_ostream &OS,
+                                          const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);

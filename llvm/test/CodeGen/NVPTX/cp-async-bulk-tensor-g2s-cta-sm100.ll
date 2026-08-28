@@ -9,6 +9,7 @@ target triple = "nvptx64-nvidia-cuda"
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %f1);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %f1);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %f1);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 %f1);
 
 define void @test_cp_async_bulk_tensor_g2s_cta_im2col_w_3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch) {
 ; CHECK-PTX64-LABEL: test_cp_async_bulk_tensor_g2s_cta_im2col_w_3d(
