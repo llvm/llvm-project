@@ -1631,8 +1631,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT))
-    for (VPRecipeBase &R : reverse(*VPBB))
-      Worklist.insert(&R);
+    Worklist.insert_range(make_pointer_range(reverse(*VPBB)));
 
   while (!Worklist.empty()) {
     auto *Def = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
