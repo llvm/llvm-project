@@ -2126,10 +2126,11 @@ void LoopInterchangeTransform::restructureLoops(
 
   // Switch the loop levels.
   if (OuterLoopParent) {
-    // Remove the loop from its parent loop.
-    removeChildLoop(OuterLoopParent, NewInner);
+    // Detach NewOuter from NewInner.
     removeChildLoop(NewInner, NewOuter);
-    OuterLoopParent->addChildLoop(NewOuter);
+    // Replace NewInner with NewOuter in place.
+    // (This will also preserve the sibling order)
+    OuterLoopParent->replaceChildLoopWith(NewInner, NewOuter);
   } else {
     removeChildLoop(NewInner, NewOuter);
     LI->changeTopLevelLoop(NewInner, NewOuter);
