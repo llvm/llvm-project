@@ -1,7 +1,7 @@
 ## Test stale block matching with pseudo probes including inline tree matching.
 # RUN: split-file %s %t
 # RUN: llvm-bolt \
-# RUN:   %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin \
+# RUN:   %S/../../../llvm/test/tools/llvm-profgen/X86/Inputs/inline-cs-pseudoprobe.perfbin \
 # RUN:   -o %t.bolt -data %t/yaml -infer-stale-profile -v=2 \
 # RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
 

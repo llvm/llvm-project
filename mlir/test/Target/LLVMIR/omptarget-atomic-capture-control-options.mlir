@@ -20,10 +20,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %13 = llvm.mlir.constant(1 : i64) : i64
     llvm.store %10, %2 : i32, !llvm.ptr
     llvm.store %9, %8 : i32, !llvm.ptr
-    %14 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "threads"}
-    %15 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "capture"}
-    %16 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "a"}
-    omp.target map_entries(%14 -> %arg0, %15 -> %arg1, %16 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %14 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("threads") -> !llvm.ptr
+    %15 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("capture") -> !llvm.ptr
+    %16 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("a") -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%14 -> %arg0, %15 -> %arg1, %16 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %17 = llvm.mlir.constant(1 : i32) : i32
       %18 = llvm.load %arg0 : !llvm.ptr -> i32
       omp.parallel num_threads(%18 : i32) {
@@ -33,7 +33,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
           ^bb0(%arg3: i32):
             %19 = llvm.add %arg3, %17 : i32
             omp.yield(%19 : i32)
-          } {atomic_control = #omp.atomic_control<fine_grained_memory = true>}
+          } atomic_control #omp.atomic_control<fine_grained_memory = true>
         }
         omp.terminator
       }

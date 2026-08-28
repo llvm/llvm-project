@@ -128,6 +128,8 @@ public:
                     GetExpressionPathFormat epformat =
                         eGetExpressionPathFormatDereferencePointers) override;
 
+  SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() override;
+
 protected:
   bool UpdateValue() override;
 

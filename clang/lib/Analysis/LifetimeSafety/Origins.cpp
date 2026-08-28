@@ -57,13 +57,16 @@ public:
   bool VisitCallExpr(const CallExpr *CE) {
     // Indirect calls (e.g., function pointers) are skipped because lifetime
     // annotations currently apply to declarations, not types.
-    if (const auto *FD = CE->getDirectCallee())
+    if (const auto *FD = CE->getDirectCallee()) {
       collect(FD, FD->getReturnType());
+      collectCaptureBy(FD);
+    }
     return true;
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     collect(CCE->getConstructor(), CCE->getType());
+    collectCaptureBy(CCE->getConstructor());
     return true;
   }
 
@@ -96,6 +99,34 @@ private:
       }
     }
   }
+
+  void collectCaptureBy(const FunctionDecl *FD) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    bool IsInstance = MD && MD->isInstance();
+    int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
+    for (const auto *Param : FD->parameters()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+        for (int Idx : Attr->params()) {
+          if (Idx == LifetimeCaptureByAttr::Global ||
+              Idx == LifetimeCaptureByAttr::Unknown ||
+              Idx == LifetimeCaptureByAttr::Invalid)
+            continue;
+          if (Idx == LifetimeCaptureByAttr::This) {
+            if (IsInstance)
+              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+          } else if (int LogicalIdx = Idx - Offset;
+                     LogicalIdx >= 0 &&
+                     (unsigned)LogicalIdx < FD->getNumParams()) {
+            CollectedTypes.push_back(
+                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+          }
+        }
+      }
+    }
+  }
 };
 
 } // namespace
@@ -106,6 +137,10 @@ bool OriginManager::hasOrigins(QualType QT, bool IntrinsicOnly) const {
   if (!IntrinsicOnly &&
       LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
+  // An `_Atomic(T)` wraps T transparently for lifetime purposes (the atomic
+  // holds the same value); see through it.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return hasOrigins(AT->getValueType(), IntrinsicOnly);
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
@@ -194,6 +229,9 @@ OriginList *OriginManager::createSingleOriginList(OriginID OID) {
 template <typename T>
 OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");
+  // `_Atomic(T)` is transparent for lifetime purposes: build the node for T.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return buildListForType(AT->getValueType(), Node);
   OriginList *Head = createNode(Node, QT);
 
   if (QT->isPointerOrReferenceType()) {

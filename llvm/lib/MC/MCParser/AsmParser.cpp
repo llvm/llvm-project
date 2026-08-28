@@ -422,6 +422,9 @@ private:
     DK_ORG,
     DK_FILL,
     DK_ENDR,
+    DK_BUNDLE_ALIGN_MODE,
+    DK_BUNDLE_LOCK,
+    DK_BUNDLE_UNLOCK,
     DK_ZERO,
     DK_EXTERN,
     DK_GLOBL,
@@ -710,6 +713,13 @@ private:
   // Directives to support address-significance tables.
   bool parseDirectiveAddrsig();
   bool parseDirectiveAddrsigSym();
+
+  // ".bundle_align_mode"
+  bool parseDirectiveBundleAlignMode();
+  // ".bundle_lock"
+  bool parseDirectiveBundleLock();
+  // ".bundle_unlock"
+  bool parseDirectiveBundleUnlock();
 
   void initializeDirectiveKindMap();
   void initializeCVDefRangeTypeMap();
@@ -1080,9 +1090,9 @@ void AsmParser::eatToEndOfStatement() {
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
     Lexer.Lex();
 
-  // Eat EOL.
+  // Eat EOL and skip the comments that follow.
   if (Lexer.is(AsmToken::EndOfStatement))
-    Lexer.Lex();
+    Lex();
 }
 
 StringRef AsmParser::parseStringToEndOfStatement() {
@@ -2076,6 +2086,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveIrpc(IDLoc);
     case DK_ENDR:
       return parseDirectiveEndr(IDLoc);
+    case DK_BUNDLE_ALIGN_MODE:
+      return parseDirectiveBundleAlignMode();
+    case DK_BUNDLE_LOCK:
+      return parseDirectiveBundleLock();
+    case DK_BUNDLE_UNLOCK:
+      return parseDirectiveBundleUnlock();
     case DK_SLEB128:
       return parseDirectiveLEB128(true);
     case DK_ULEB128:
@@ -2408,12 +2424,8 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
 
   // Like SourceMgr::printMessage() we need to print the include stack if any
   // before printing the message.
-  unsigned DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (!Parser->SavedDiagHandler && DiagCurBuffer &&
-      DiagCurBuffer != DiagSrcMgr.getMainFileID()) {
-    SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
-    DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
-  }
+  if (!Parser->SavedDiagHandler)
+    DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
@@ -2507,7 +2519,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
         I += 2;
         continue;
       }
-      if (Body[I + 1] == '(' && Body[I + 2] == ')') {
+      if (Body[I + 1] == '(' && I + 2 != End && Body[I + 2] == ')') {
         I += 3;
         continue;
       }
@@ -2565,7 +2577,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
     }
 
     const size_t Start = I;
-    while (++I && isIdentifierChar(Body[I])) {
+    while (++I != End && isIdentifierChar(Body[I])) {
     }
     StringRef Token(Body.data() + Start, I - Start);
     if (AltMacroMode) {
@@ -3480,8 +3492,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   // Check whether we should use optimal code alignment for this .align
   // directive.
   if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
-    getStreamer().emitCodeAlignment(
-        Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
+    getStreamer().emitCodeAlignment(Align(Alignment),
+                                    getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
     getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,
@@ -4890,8 +4902,8 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
       }
       Pos += 2;
     } else {
-      unsigned I = Pos + 1;
-      while (isIdentifierChar(Body[I]) && I + 1 != End)
+      size_t I = Pos + 1;
+      while (I != End && isIdentifierChar(Body[I]))
         ++I;
 
       const char *Begin = Body.data() + Pos + 1;
@@ -4902,7 +4914,7 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
           break;
 
       if (Index == NParameters) {
-        if (Body[Pos + 1] == '(' && Body[Pos + 2] == ')')
+        if (Body[Pos + 1] == '(' && Pos + 2 != End && Body[Pos + 2] == ')')
           Pos += 3;
         else {
           Pos = I;
@@ -5629,6 +5641,9 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".irp"] = DK_IRP;
   DirectiveKindMap[".irpc"] = DK_IRPC;
   DirectiveKindMap[".endr"] = DK_ENDR;
+  DirectiveKindMap[".bundle_align_mode"] = DK_BUNDLE_ALIGN_MODE;
+  DirectiveKindMap[".bundle_lock"] = DK_BUNDLE_LOCK;
+  DirectiveKindMap[".bundle_unlock"] = DK_BUNDLE_UNLOCK;
   DirectiveKindMap[".if"] = DK_IF;
   DirectiveKindMap[".ifeq"] = DK_IFEQ;
   DirectiveKindMap[".ifge"] = DK_IFGE;
@@ -5985,6 +6000,56 @@ bool AsmParser::parseDirectiveAddrsigSym() {
   if (check(parseSymbol(Sym), "expected identifier") || parseEOL())
     return true;
   getStreamer().emitAddrsigSym(Sym);
+  return false;
+}
+
+/// parseDirectiveBundleAlignMode
+/// ::= {.bundle_align_mode} expression
+bool AsmParser::parseDirectiveBundleAlignMode() {
+  // Expect a single argument: an expression that evaluates to a constant
+  // in the inclusive range 1-30. Unlike GNU as, 0 (disabling bundling) is not
+  // supported.
+  SMLoc ExprLoc = getLexer().getLoc();
+  int64_t AlignSizePow2;
+  if (checkForValidSection() || parseAbsoluteExpression(AlignSizePow2) ||
+      parseEOL() ||
+      check(AlignSizePow2 < 1 || AlignSizePow2 > 30, ExprLoc,
+            "invalid bundle alignment size (expected between 1 and 30)"))
+    return true;
+
+  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
+  return false;
+}
+
+/// parseDirectiveBundleLock
+/// ::= {.bundle_lock} [align_to_end]
+bool AsmParser::parseDirectiveBundleLock() {
+  if (checkForValidSection())
+    return true;
+  bool AlignToEnd = false;
+
+  StringRef Option;
+  SMLoc Loc = getTok().getLoc();
+  const char *InvalidOptionError = "invalid option for `.bundle_lock`";
+
+  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    if (check(parseIdentifier(Option), Loc, InvalidOptionError) ||
+        check(Option != "align_to_end", Loc, InvalidOptionError) || parseEOL())
+      return true;
+    AlignToEnd = true;
+  }
+
+  getStreamer().emitBundleLock(AlignToEnd, getTargetParser().getSTI());
+  return false;
+}
+
+/// parseDirectiveBundleUnlock
+/// ::= {.bundle_unlock}
+bool AsmParser::parseDirectiveBundleUnlock() {
+  if (checkForValidSection() || parseEOL())
+    return true;
+
+  getStreamer().emitBundleUnlock(getTargetParser().getSTI());
   return false;
 }
 

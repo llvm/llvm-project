@@ -319,6 +319,7 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
 
   S.Origin |= O.Origin | SymbolOrigin::Merge;
   S.Flags |= O.Flags;
+  S.Tags |= O.Tags;
   return S;
 }
 

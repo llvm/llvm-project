@@ -116,6 +116,7 @@ class HeaderFile:
         self.standards = []
         self.merge_yaml_files = []
         self.license_text = []
+        self.public_includes = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -139,6 +140,9 @@ class HeaderFile:
         self.objects = sorted(set(self.objects) | set(other.objects))
         self.functions = sorted(set(self.functions) | set(other.functions))
         self.extra_standards |= other.extra_standards
+        self.public_includes = sorted(
+            set(self.public_includes) | set(other.public_includes)
+        )
         if self.license_text:
             assert not other.license_text, "only one `license_text` allowed"
         else:
@@ -183,7 +187,8 @@ class HeaderFile:
 
     def includes(self):
         return (
-            {
+            {f"<{inc}>" for inc in self.public_includes}
+            | {
                 PurePosixPath("llvm-libc-macros") / macro.header
                 for macro in self.macros
                 if macro.header is not None

@@ -527,7 +527,8 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
-        if (!Callee || isa<GlobalIFunc>(Callee)) {
+        if (!Callee || isa<GlobalIFunc>(Callee) ||
+            isa<GlobalVariable>(Callee)) {
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
@@ -1068,14 +1069,17 @@ AnalysisKey StackSafetyGlobalAnalysis::Key;
 
 StackSafetyGlobalInfo
 StackSafetyGlobalAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  // FIXME: Lookup Module Summary.
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const ModuleSummaryIndex *Index = nullptr;
+  if (auto *IndexPass =
+          AM.getCachedResult<ImmutableModuleSummaryIndexAnalysis>(M))
+    Index = IndexPass->getIndex();
   return {&M,
           [&FAM](Function &F) -> const StackSafetyInfo & {
             return FAM.getResult<StackSafetyAnalysis>(F);
           },
-          nullptr};
+          Index};
 }
 
 PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,

@@ -110,7 +110,7 @@ public:
 
   /// SetReadToken - Set whether the value of 'ReadAnyTokens'.  Called to
   /// override when encountering tokens outside of the include guard that have
-  /// no effect if the file in question is is included multiple times (e.g. the
+  /// no effect if the file in question is included multiple times (e.g. the
   /// null directive).
   void SetReadToken(bool Value) { ReadAnyTokens = Value; }
 

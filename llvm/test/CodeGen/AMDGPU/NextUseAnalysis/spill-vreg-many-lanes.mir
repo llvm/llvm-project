@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 \
+# RUN: llc -mtriple=amdgpu9.00 \
 # RUN:     -run-pass=amdgpu-next-use-printer \
 # RUN:     -amdgpu-next-use-analysis-config=graphics \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -6,7 +6,7 @@
 # RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-GX-JSON %s
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 \
+# RUN: llc -mtriple=amdgpu9.00 \
 # RUN:     -run-pass=amdgpu-next-use-printer \
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -14,7 +14,7 @@
 # RUN:     -filetype=null \
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 \
+# RUN: llc -mtriple=amdgpu9.00 \
 # RUN:     "-passes=require<amdgpu-next-use-analysis>,print<amdgpu-next-use-analysis>" \
 # RUN:     -amdgpu-next-use-analysis-config=compute \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
@@ -23,11 +23,10 @@
 # RUN:     %s | FileCheck --check-prefix=CHECK-CP-JSON %s
 
 --- |
-  define void @stack_args_vgpr_spill(<32 x float> %arg0, <32 x float> %arg1, ptr addrspace(1) %p, ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7) #0 {
+  define void @stack_args_vgpr_spill(<32 x float> %arg0, <32 x float> %arg1, ptr addrspace(1) %p, ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, ptr addrspace(1) %p6, ptr addrspace(1) %p7) {
     ret void
   }
 
-  attributes #0 = { "target-cpu"="gfx900" }
 ...
 ---
 name:            stack_args_vgpr_spill

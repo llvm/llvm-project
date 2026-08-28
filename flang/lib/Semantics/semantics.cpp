@@ -385,6 +385,9 @@ SemanticsContext::SemanticsContext(
     common::FPMaxminBehavior fpMaxminBehavior)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       langOpts_{langOpts}, allCookedSources_{allCookedSources},
+      openAccDefaultNoneScalarsStrictDisableOption_{"-fno-"s +
+          std::string{languageFeatures_.getDefaultCliSpelling(
+              common::LanguageFeature::OpenAccDefaultNoneScalarsStrict)}},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
@@ -699,7 +702,7 @@ bool Semantics::Perform() {
       }
     }
   }
-  if (!(ValidateLabels(context_, program_) &&
+  if (!(AnalyzeLabels(context_, program_) &&
           parser::CanonicalizeDo(program_) && // force line break
           CanonicalizeAcc(context_.messages(), program_) &&
           CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&

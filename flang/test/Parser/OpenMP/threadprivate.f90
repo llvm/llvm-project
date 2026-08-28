@@ -19,7 +19,7 @@ end module
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpThreadprivateDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = threadprivate
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Name = 'blk'
-!PARSE-TREE: | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'b'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Name = 'blk'
+!PARSE-TREE: | OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'b'
 !PARSE-TREE: | OmpClauseList ->
 !PARSE-TREE: | Flags = {}

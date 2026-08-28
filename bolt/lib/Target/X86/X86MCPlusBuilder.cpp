@@ -2286,6 +2286,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8mr; break;
     case 2:      NewOpcode = X86::MOV16mr; break;
     case 4:      NewOpcode = X86::MOV32mr; break;
     case 8:      NewOpcode = X86::MOV64mr; break;
@@ -2317,6 +2318,7 @@ public:
     default:
       llvm_unreachable("Invalid operand size");
       return;
+    case 1:      NewOpcode = X86::MOV8rm; break;
     case 2:      NewOpcode = X86::MOV16rm; break;
     case 4:      NewOpcode = X86::MOV32rm; break;
     case 8:      NewOpcode = X86::MOV64rm; break;
@@ -2788,6 +2790,11 @@ public:
     Inst.setOpcode(X86::TRAP);
   }
 
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
+  }
+
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
@@ -2806,13 +2813,15 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
+    return {Inst};
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -3284,7 +3293,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

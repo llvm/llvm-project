@@ -46,6 +46,7 @@ class FileSystem;
 }
 
 class StringSaver;
+class ElementCount;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.
@@ -630,7 +631,7 @@ struct OptionValue final
 };
 
 // Other safe-to-copy-by-value common option types.
-enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
+enum class boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
 template <>
 struct LLVM_ABI OptionValue<cl::boolOrDefault> final
     : OptionValueCopy<cl::boolOrDefault> {
@@ -1228,6 +1229,28 @@ public:
   StringRef getValueName() const override { return "char"; }
 
   void printOptionDiff(const Option &O, char V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
+extern template class LLVM_TEMPLATE_ABI basic_parser<ElementCount>;
+
+template <>
+class LLVM_ABI parser<ElementCount> : public basic_parser<ElementCount> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, ElementCount &Value);
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "ElementCount"; }
+
+  void printOptionDiff(const Option &O, ElementCount V, OptVal Default,
                        size_t GlobalWidth) const;
 
   // An out-of-line virtual method to provide a 'home' for this class.

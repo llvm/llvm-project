@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// expected-no-diagnostics
+
 namespace A {
 template <typename T>
 concept C = true;
@@ -30,6 +30,23 @@ requires (A<T> || B<T>)
 constexpr int f() { return 1; }
 
 static_assert(f<int>() == 0);
+}
+
+namespace GH182671 {
+
+template<int N> concept Positive = N > 0;
+template<int N> requires Positive<N> struct A {};
+// expected-note@-1 {{'A' declared here}}
+template<template<int N> requires Positive<N> typename T> struct Wrapper {};
+using X = Wrapper<A>;
+
+template<template<int N> requires Positive<N + 1> typename T> struct Wrapper2 {};
+// expected-note@-1 {{'T' declared here}}
+
+// FIXME: The diagnostics are not great
+using Y = Wrapper2<A>;
+// expected-error@-1 {{template template argument 'A' is more constrained than template template parameter 'T'}}
+
 }
 
 namespace GH122581 {
@@ -128,6 +145,22 @@ constexpr int foo(Majority8 auto x) { return 10; }
 constexpr int foo(Y auto y) { return 20; }
 constexpr int foo(Z auto y) { return 30; }
 static_assert(foo(0) == 30);
+}
+
+namespace GH106182 {
+template <class Fn> struct A {
+  constexpr A(Fn) {};
+};
+
+template <template <class> class S>
+void create_unique()
+  requires (S{0}, true);
+
+template <template <class> class S>
+void create_unique()
+  requires (S{0}, true) {}
+
+template void create_unique<A>();
 }
 
 namespace WhateverThisIs {

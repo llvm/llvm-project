@@ -279,13 +279,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     }
     // SHT_RELR relocations are only supported at API level >= 30.
     // ANDROID_RELR relocations were supported at API level >= 28.
-    // Relocation packer was supported at API level >= 23.
     if (!Triple.isAndroidVersionLT(30)) {
       ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
     } else if (!Triple.isAndroidVersionLT(28)) {
       ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
       ExtraOpts.push_back("--use-android-relr-tags");
-    } else if (!Triple.isAndroidVersionLT(23)) {
+    } else {
       ExtraOpts.push_back("--pack-dyn-relocs=android");
     }
   }
@@ -317,15 +316,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // and the MIPS ABI require .dynsym to be sorted in different ways.
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
-  // Android loader does not support .gnu.hash until API 23.
   // Hexagon linker/loader does not support .gnu.hash.
-  // SUSE SLES 11 will stop being supported Mar 2028.
-  if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE() || (IsAndroid && Triple.isAndroidVersionLT(23)))
-      ExtraOpts.push_back("--hash-style=both");
-    else
-      ExtraOpts.push_back("--hash-style=gnu");
-  }
+  if (!IsMips && !IsHexagon)
+    ExtraOpts.push_back("--hash-style=gnu");
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
@@ -484,10 +477,10 @@ static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
 }
 
 std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                               llvm::StringRef BoundArch,
+                                               BoundArch BA,
                                                types::ID InputType) const {
   std::string TripleString =
-      Generic_ELF::ComputeEffectiveClangTriple(Args, BoundArch, InputType);
+      Generic_ELF::ComputeEffectiveClangTriple(Args, BA, InputType);
   if (getTriple().isAArch64()) {
     llvm::Triple Triple(TripleString);
     setPAuthABIInTriple(getDriver(), Args, Triple);
@@ -528,6 +521,11 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
   if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtt_vtable_pointer_discrimination,
+          options::OPT_fno_ptrauth_vtt_vtable_pointer_discrimination))
+    CC1Args.push_back("-fptrauth-vtt-vtable-pointer-discrimination");
+
+  if (!DriverArgs.hasArg(
           options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
           options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
     CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
@@ -545,6 +543,10 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
           options::OPT_fno_ptrauth_init_fini_address_discrimination))
     CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
 
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_elf_got,
+                         options::OPT_fno_ptrauth_elf_got))
+    CC1Args.push_back("-fptrauth-elf-got");
+
   if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
                          options::OPT_fno_aarch64_jump_table_hardening))
     CC1Args.push_back("-faarch64-jump-table-hardening");
@@ -552,12 +554,12 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
 
 void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
-                                  StringRef BoundArch,
+                                  BoundArch BA,
                                   Action::OffloadKind DeviceOffloadKind) const {
   llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
   if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(getDriver(), DriverArgs, CC1Args);
-  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BA,
                                      DeviceOffloadKind);
 }
 
@@ -609,6 +611,14 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     if (Arch == llvm::Triple::ppc &&
         Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
       ArchName = "powerpc-sf";
+    if (Triple.isRISCV()) {
+      StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+      if (ABIName == "ilp32" || ABIName == "lp64") {
+        ArchName += "-sf";
+      } else if (ABIName == "ilp32f" || ABIName == "lp64f") {
+        ArchName += "-sp";
+      }
+    }
 
     return "/lib/ld-musl-" + ArchName + ".so.1";
   }
@@ -876,7 +886,9 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_nostdlib) ||
-      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r) ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
@@ -958,7 +970,7 @@ bool Linux::IsMathErrnoDefault() const {
 }
 
 SanitizerMask
-Linux::getSupportedSanitizers(StringRef BoundArch,
+Linux::getSupportedSanitizers(BoundArch BA,
                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
@@ -977,8 +989,7 @@ Linux::getSupportedSanitizers(StringRef BoundArch,
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1006,6 +1017,8 @@ Linux::getSupportedSanitizers(StringRef BoundArch,
   if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
   }
+  if (IsHexagon)
+    Res |= SanitizerKind::ShadowCallStack;
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }

@@ -1407,6 +1407,28 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
   }
 }
 
+UnsignedOrNone StringLiteral::findZeroCodeUnit(unsigned StartIndex) const {
+  unsigned Length = getLength();
+  if (StartIndex > Length)
+    return std::nullopt;
+
+  if (getCharByteWidth() == 1) {
+    StringRef::size_type Pos = getString().substr(StartIndex).find('\0');
+    if (Pos == StringRef::npos)
+      return Length - StartIndex;
+    return Pos;
+  }
+
+  unsigned Result = 0;
+  for (unsigned I = StartIndex; I != Length; ++I) {
+    if (getCodeUnit(I) == 0)
+      break;
+    ++Result;
+  }
+
+  return Result;
+}
+
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
 StringRef UnaryOperator::getOpcodeStr(Opcode Op) {
@@ -1628,7 +1650,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     // dependent call to the call operator of that type.
     return Ctx.DependentTy;
   } else if (CalleeType->isDependentType() ||
-             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
+             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload) ||
+             CalleeType->isSpecificPlaceholderType(BuiltinType::BuiltinFn)) {
+    // Dependent builtin calls keep their placeholder until instantiation.
     return Ctx.DependentTy;
   }
 
@@ -1691,7 +1715,7 @@ OffsetOfExpr::OffsetOfExpr(const ASTContext &C, QualType type,
   setDependence(computeDependence(this));
 }
 
-IdentifierInfo *OffsetOfNode::getFieldName() const {
+const IdentifierInfo *OffsetOfNode::getFieldName() const {
   assert(getKind() == Field || getKind() == Identifier);
   if (getKind() == Field)
     return getField()->getIdentifier();
@@ -3556,6 +3580,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
         CE->getCastKind() == CK_NonAtomicToAtomic ||
         CE->getCastKind() == CK_AtomicToNonAtomic ||
         CE->getCastKind() == CK_NullToPointer ||
+        CE->getCastKind() == CK_ARCReclaimReturnedObject ||
         CE->getCastKind() == CK_IntToOCLSampler)
       return CE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
 
@@ -3711,6 +3736,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
+  case DependentTemplateIdExprClass:
   case CXXUnresolvedConstructExprClass:
   case CXXDependentScopeMemberExprClass:
   case UnresolvedLookupExprClass:
@@ -3720,6 +3746,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 
@@ -5318,6 +5345,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_fminimum:
+  case AO__atomic_fetch_fmaximum:
+  case AO__atomic_fetch_fminimum_num:
+  case AO__atomic_fetch_fmaximum_num:
   case AO__atomic_fetch_uinc:
   case AO__atomic_fetch_udec:
     return 3;
@@ -5341,6 +5372,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_max_fetch:
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_fetch_fminimum:
+  case AO__scoped_atomic_fetch_fmaximum:
+  case AO__scoped_atomic_fetch_fminimum_num:
+  case AO__scoped_atomic_fetch_fmaximum_num:
   case AO__scoped_atomic_exchange_n:
   case AO__scoped_atomic_fetch_uinc:
   case AO__scoped_atomic_fetch_udec:

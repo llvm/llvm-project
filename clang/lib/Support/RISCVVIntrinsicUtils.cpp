@@ -696,6 +696,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     case 'S':
       TM |= TypeModifier::LMUL1;
       break;
+    case 'A':
+      TM |= TypeModifier::AltFP8;
+      break;
     default:
       llvm_unreachable("Illegal non-primitive type transformer!");
     }
@@ -912,6 +915,14 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
       LMUL = LMULType(0);
       // Update ElementBitwidth need to update Scale too.
       Scale = LMUL.getScale(ElementBitwidth);
+      break;
+    case TypeModifier::AltFP8:
+      if (ScalarType == ScalarTypeKind::FloatE4M3)
+        ScalarType = ScalarTypeKind::FloatE5M2;
+      else if (ScalarType == ScalarTypeKind::FloatE5M2)
+        ScalarType = ScalarTypeKind::FloatE4M3;
+      else
+        llvm_unreachable("AltFP8 modifier requires an OFP8 base type");
       break;
     default:
       llvm_unreachable("Unknown type modifier mask!");

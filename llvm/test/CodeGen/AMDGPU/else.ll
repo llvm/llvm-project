@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow

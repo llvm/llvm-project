@@ -760,8 +760,8 @@ static int RunAtexit() {
 }
 
 #pragma section(".CRT$XID", long, read)
-__declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
-#endif
+IN_SECTION(".CRT$XID") int (*__run_atexit)() = RunAtexit;
+#  endif
 
 // ------------------ sanitizer_libc.h
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *last_error) {

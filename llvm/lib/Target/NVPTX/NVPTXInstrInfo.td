@@ -106,69 +106,137 @@ def PrmtMode : Operand<i32> {
 }
 
 
+class NVPTXAddressSpace<string enum, string name, string suffix = "." # name> {
+  string Suffix = suffix;
+  string Enum = enum;
+  string Name = name;
+}
+
+def AddrSpaceGeneric : NVPTXAddressSpace<"ADDRESS_SPACE_GENERIC", "generic", "">;
+def AddrSpaceLocal   : NVPTXAddressSpace<"ADDRESS_SPACE_LOCAL", "local">;
+def AddrSpaceShared  : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED", "shared">;
+def AddrSpaceGlobal  : NVPTXAddressSpace<"ADDRESS_SPACE_GLOBAL", "global">;
+def AddrSpaceConst   : NVPTXAddressSpace<"ADDRESS_SPACE_CONST", "const">;
+def AddrSpaceParam   : NVPTXAddressSpace<"ADDRESS_SPACE_ENTRY_PARAM", "param">;
+def AddrSpaceSharedCluster : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED_CLUSTER",
+                                               "shared_cluster", ".shared::cluster">;
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//
 
-// Checks PTX version and family-specific and architecture-specific SM versions.
-// For example, sm_100{f/a} and any future variants in the same family will match
-// for any PTX version greater than or equal to `PTXVersion`.
-class PTXWithFamilySMs<int PTXVersion, list<int> SMVersions> :
-  Predicate<"Subtarget->hasPTXWithFamilySMs(" # PTXVersion # ", {" #
-            !interleave(SMVersions, ", ") # "})">;
+class PredAnd<list<Predicate> ps>
+  : Predicate<"(" # !interleave(!foreach(p, ps, "(" # p.CondString # ")"),
+                                " && ") # ")">;
+class PredOr<list<Predicate> ps>
+  : Predicate<"(" # !interleave(!foreach(p, ps, "(" # p.CondString # ")"),
+                                " || ") # ")">;
+class PredNot<Predicate p> : Predicate<"!(" # p.CondString # ")">;
 
-// Checks PTX version and architecture-specific SM versions.
-// For example, sm_100{a} will match for any PTX version
-// greater than or equal to `PTXVersion`.
-class PTXWithAccelSMs<int PTXVersion, list<int> SMVersions> :
-  Predicate<"Subtarget->hasPTXWithAccelSMs(" # PTXVersion # ", {" #
-            !interleave(SMVersions, ", ") # "})">;
+class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
-// Helper predicate to call a subtarget method.
-class callSubtarget<string SubtargetMethod> : Predicate<"Subtarget->" # SubtargetMethod # "()">;
-
-def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
-def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
-def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
-def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
-def hasAtomSwap128 : Predicate<"Subtarget->hasAtomSwap128()">;
-def hasClusters : Predicate<"Subtarget->hasClusters()">;
-def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
-def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
+def hasAtomAddF64 : SubtargetPredicate;
+def hasAtomScope : SubtargetPredicate;
+def hasAtomBitwise64 : SubtargetPredicate;
+def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomSwap128 : SubtargetPredicate;
+def hasClusters : SubtargetPredicate;
+def hasPTXASUnreachableBug : SubtargetPredicate;
+def noPTXASUnreachableBug : PredNot<hasPTXASUnreachableBug>;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
-def hasArchAccelFeatures : Predicate<"Subtarget->hasArchAccelFeatures()">;
-def hasFamilySpecificFeatures : Predicate<"Subtarget->hasFamilySpecificFeatures()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
-def doNoF32FTZ : Predicate<"!useF32FTZ()">;
+def doNoF32FTZ : PredNot<doF32FTZ>;
 def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 def doMADWideOpt : Predicate<"doMADWideOpt()">;
 
-def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
-def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
-def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
-def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
-
-class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
-class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
-
-// Explicit records for arch-accelerated SM versions
-def hasSM90a : Predicate<"Subtarget->getSmVersion() == 90 && Subtarget->hasArchAccelFeatures()">;
-def hasSM100a : Predicate<"Subtarget->getSmVersion() == 100 && Subtarget->hasArchAccelFeatures()">;
-def hasSM101a : Predicate<"Subtarget->getSmVersion() == 101 && Subtarget->hasArchAccelFeatures()">;
-def hasSM120a : Predicate<"Subtarget->getSmVersion() == 120 && Subtarget->hasArchAccelFeatures()">;
-
-def hasSM100aOrSM103a :
-  Predicate<"(Subtarget->getSmVersion() == 100 || " # 
-              "Subtarget->getSmVersion() == 103) " #
-            "&& Subtarget->hasArchAccelFeatures()">;
+def hasHWROT32 : SubtargetPredicate;
+def noHWROT32 : PredNot<hasHWROT32>;
+def hasDotInstructions : SubtargetPredicate;
+def hasF32x2Instructions : SubtargetPredicate;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
-def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
-                          "&& Subtarget->getPTXVersion() >= 64)">;
+def hasSHFL : PredNot<PredAnd<[SM70, PTX64]>>;
 
-def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;
-def hasBF16Math: Predicate<"Subtarget->hasBF16Math()">;
+def allowFP16Math : SubtargetPredicate;
+def hasBF16Math : SubtargetPredicate;
+
+def hasTcgen05InstSupport : SubtargetPredicate;
+def hasTensormapReplaceSupport : SubtargetPredicate;
+
+// Checks Rubin family extensions support.
+//  - TMA S2G im2col_w mode support
+//  - tcgen05.commit shared mem A variants.
+def hasRubinFamilySupport : PredOr<[SM107f]>;
+
+// Checks tcgen05.shift instruction support.
+def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
+
+def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
+def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
+def hasTcgen05MMASparseMxf4 : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
+def hasTcgen05MMASparseMxf4nvf4
+  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM110a, SM107a]>]>;
+def hasTcgen05LdRedSupport : PredAnd<[PTX88, PredOr<[SM103f, SM110f]>]>;
+
+def hasReduxSyncF32 : PredOr<[SM100f]>;
+
+def hasMMABlockScale : PredOr<[SM120f]>;
+def hasMMASparseBlockScaleF4 : PredOr<[SM120a, SM121a]>;
+def hasMMAWithMXF4NVF4Scale4xE8M0 : PredAnd<[PTX91, PredOr<[SM120f]>]>;
+def hasMMASparseWithMXF4NVF4Scale4xE8M0
+  : PredAnd<[PTX91, PredOr<[SM120a, SM121a]>]>;
+
+// Checks support for following in TMA:
+//  - cta_group::1/2 support
+//  - im2col_w/w_128 mode support
+//  - tile_gather4 mode support
+//  - tile_scatter4 mode support
+def hasTMABlackwellSupport : PredOr<[SM100f, SM110f]>;
+
+// Checks support for conversions involving e4m3x2 and e5m2x2. These arrived
+// with sm_90 in PTX 7.8, which SM90 already implies, and were extended to
+// sm_89 in PTX 8.1.
+def hasFP8ConversionSupport : PredOr<[SM90, PredAnd<[SM89, PTX81]>]>;
+
+// Checks support for conversions involving the following types:
+// - e2m3x2/e3m2x2
+// - e2m1x2
+// - ue8m0x2
+def hasNarrowFPConversionSupport : PredOr<[SM100f, SM110f, SM120f]>;
+
+// Checks support for conversions involving the following types:
+// - bf16x2 -> f8x2
+// - f16x2 -> f6x2
+// - bf16x2 -> f6x2
+// - f16x2 -> f4x2
+// - bf16x2 -> f4x2
+def hasFP16X2ToNarrowFPConversionSupport
+  : PredAnd<[PTX91, PredOr<[SM100f, SM110f, SM120f]>]>;
+
+def hasS2F6X2ConversionSupport
+  : PredAnd<[PTX91, PredOr<[SM100a, SM103a, SM110a, SM120a, SM121a]>]>;
+
+// Checks support for conversions from narrow FP types to bf16x2.
+def hasNarrowFPToBF16x2ConversionSupport
+  : PredAnd<[PTX92, PredOr<[SM100f, SM110f, SM120f]>]>;
+
+// Checks support for conversions involving ue5m3x2.
+def hasUE5M3TypeSupport : PredAnd<[PTX94, PredOr<[SM107f]>]>;
+
+def hasTensormapReplaceSwizzleAtomicitySupport
+  : PredOr<[PredAnd<[PTX88, PredOr<[SM100f, SM110f, SM120f]>]>,
+            PredAnd<[PTX87, PredOr<[SM100a, SM110a, SM120a]>]>]>;
+
+def hasClusterLaunchControlTryCancelMulticastSupport
+  : PredOr<[SM100f, SM110f, SM120f]>;
+
+def hasSetMaxNRegSupport : PredOr<[SM90a, SM100f, SM110f, SM120f]>;
+
+def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
+
+def hasConvertWithStochasticRounding
+  : PredAnd<[PTX87, PredOr<[SM100a, SM103a]>]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -187,8 +255,8 @@ class zeroinitializer<ValueType vt> :
 
 def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
 def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
-def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(1.0); }]>;
-def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-1.0); }]>;
+def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
+def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -311,7 +379,7 @@ class I16x2<string OpcStr, SDNode OpNode> :
   BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
               OpcStr # "16x2",
               [(set v2i16:$dst, (OpNode v2i16:$a, v2i16:$b))]>,
-              Requires<[hasPTX<80>, hasSM<90>]>;
+              Requires<[PTX80, SM90]>;
 
 // Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
@@ -319,7 +387,7 @@ multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node, bit commutative> {
   let hasSideEffects = 1 in {
     defm i32 : I3Inst<op_str # ".s32", op_node, I32RT, commutative>;
     defm i64 : I3Inst<op_str # ".s64", op_node, I64RT, commutative,
-                     requires = [hasPTX<43>]>;
+                     requires = [PTX43]>;
   }
 }
 
@@ -360,7 +428,7 @@ multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDPatternOperator OpNode> {
                (ins FTZFlag:$ftz),
                OpcStr # "$ftz" # nan_str # ".f16",
                [(set f16:$dst, (OpNode f16:$a, f16:$b))]>,
-               Requires<[useFP16Math]>;
+               Requires<[allowFP16Math]>;
 
    def _f16x2_rr :
      BasicFlagsNVPTXInst<(outs B32:$dst),
@@ -368,19 +436,19 @@ multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDPatternOperator OpNode> {
                (ins FTZFlag:$ftz),
                OpcStr # "$ftz" # nan_str # ".f16x2",
                [(set v2f16:$dst, (OpNode v2f16:$a, v2f16:$b))]>,
-               Requires<[useFP16Math, hasSM<80>, hasPTX<70>]>;
+               Requires<[allowFP16Math, SM80]>;
    def _bf16_rr :
      BasicNVPTXInst<(outs B16:$dst),
                (ins B16:$a, B16:$b),
                OpcStr # nan_str # ".bf16",
                [(set bf16:$dst, (OpNode bf16:$a, bf16:$b))]>,
-               Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
+               Requires<[hasBF16Math, SM80]>;
    def _bf16x2_rr :
      BasicNVPTXInst<(outs B32:$dst),
                (ins B32:$a, B32:$b),
                OpcStr # nan_str # ".bf16x2",
                [(set v2bf16:$dst, (OpNode v2bf16:$a, v2bf16:$b))]>,
-               Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
+               Requires<[hasBF16Math, SM80]>;
 }
 
 // Template for 3-input minimum/maximum instructions
@@ -396,21 +464,21 @@ multiclass FMINIMUMMAXIMUM3<string OpcStr, bit NaN, SDNode OpNode> {
                (ins FTZFlag:$ftz),
                OpcStr # "$ftz" # nan_str # ".f32",
                [(set f32:$dst, (OpNode f32:$a, f32:$b, f32:$c))]>,
-               Requires<[hasPTX<88>, hasSM<100>]>;
+               Requires<[PTX88, SM100]>;
    def f32rri :
      BasicFlagsNVPTXInst<(outs B32:$dst),
                (ins B32:$a, B32:$b, f32imm:$c),
                (ins FTZFlag:$ftz),
                OpcStr # "$ftz" # nan_str # ".f32",
                [(set f32:$dst, (OpNode f32:$a, f32:$b, fpimm:$c))]>,
-               Requires<[hasPTX<88>, hasSM<100>]>;
+               Requires<[PTX88, SM100]>;
    def f32rii :
      BasicFlagsNVPTXInst<(outs B32:$dst),
                (ins B32:$a, f32imm:$b, f32imm:$c),
                (ins FTZFlag:$ftz),
                OpcStr # "$ftz" # nan_str # ".f32",
                [(set f32:$dst, (OpNode f32:$a, fpimm:$b, fpimm:$c))]>,
-               Requires<[hasPTX<88>, hasSM<100>]>;
+               Requires<[PTX88, SM100]>;
 }
 
 // Template for instructions which take three FP args.  The
@@ -452,7 +520,7 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               (ins FTZFlag:$ftz),
               op_str # "$ftz.f16",
               [(set f16:$dst, (op_pat f16:$a, f16:$b))]>,
-              Requires<[useFP16Math]>;
+              Requires<[allowFP16Math]>;
   def f32x2rr :
     BasicFlagsNVPTXInst<(outs B64:$dst),
               (ins B64:$a, B64:$b),
@@ -466,7 +534,7 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               (ins FTZFlag:$ftz),
               op_str # "$ftz.f16x2",
               [(set v2f16:$dst, (op_pat v2f16:$a, v2f16:$b))]>,
-              Requires<[useFP16Math]>;
+              Requires<[allowFP16Math]>;
   def bf16rr :
     BasicNVPTXInst<(outs B16:$dst),
               (ins B16:$a, B16:$b),
@@ -510,21 +578,21 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
    def bf16 :      BasicNVPTXInst<(outs B16:$dst), (ins B16:$a),
                            OpcStr # ".bf16",
                            [(set bf16:$dst, (OpNode bf16:$a))]>,
-                           Requires<[hasSM<80>, hasPTX<70>]>;
+                           Requires<[SM80]>;
    def bf16x2 :    BasicNVPTXInst<(outs B32:$dst), (ins B32:$a),
                            OpcStr # ".bf16x2",
                            [(set v2bf16:$dst, (OpNode v2bf16:$a))]>,
-                           Requires<[hasSM<80>, hasPTX<70>]>;
+                           Requires<[SM80]>;
    def f16 :       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B16:$a),
                            (ins FTZFlag:$ftz),
                            OpcStr # "$ftz.f16",
                            [(set f16:$dst, (OpNode f16:$a))]>,
-                           Requires<[hasSM<53>, hasPTX<65>]>;
+                           Requires<[SM53, PTX65]>;
    def f16x2 :     BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a),
                            (ins FTZFlag:$ftz),
                            OpcStr # "$ftz.f16x2",
                            [(set v2f16:$dst, (OpNode v2f16:$a))]>,
-                           Requires<[hasSM<53>, hasPTX<65>]>;
+                           Requires<[SM53, PTX65]>;
 
 }
 
@@ -574,16 +642,16 @@ let hasSideEffects = false in {
                 "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}." # ToType # ".bf16">,
       Requires<!if(!eq(ToType, "f32"),
                    // bf16->f32 was introduced early.
-                   [hasPTX<71>, hasSM<80>],
-                   // bf16->everything else needs sm90/ptx78
-                   [hasPTX<78>, hasSM<90>])>;
+                   [PTX71, SM80],
+                   // bf16->everything else needs sm_90.
+                   [SM90])>;
     def _f32 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}." # ToType # ".f32">,
       Requires<!if(!eq(ToType, "bf16"),
                    // f32->bf16 was introduced early.
-                   [hasPTX<70>, hasSM<80>],
+                   [SM80],
                    Preds)>;
     def _f64 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
@@ -600,7 +668,7 @@ let hasSideEffects = false in {
     defm CVT_ # sign # "64" : CVT_FROM_ALL<sign # "64", B64>;
   }
   defm CVT_f16 : CVT_FROM_ALL<"f16", B16>;
-  defm CVT_bf16 : CVT_FROM_ALL<"bf16", B16, [hasPTX<78>, hasSM<90>]>;
+  defm CVT_bf16 : CVT_FROM_ALL<"bf16", B16, [SM90]>;
   defm CVT_f32 : CVT_FROM_ALL<"f32", B32>;
   defm CVT_f64 : CVT_FROM_ALL<"f64", B64>;
   
@@ -627,7 +695,7 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}." # FromName # ".f32">,
-    Requires<[hasPTX<70>, hasSM<80>]>;
+    Requires<[SM80]>;
     
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
@@ -661,16 +729,16 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs B16:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f32">,
-      Requires<[hasPTX<81>, hasSM<89>]>;
+      Requires<[PTX81, SM89]>;
     def _f16x2 :
       BasicFlagsNVPTXInst<(outs B16:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f16x2">,
-      Requires<[hasPTX<81>, hasSM<89>]>;
+      Requires<[PTX81, SM89]>;
     def _bf16x2 :
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.bf16x2">,
-      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+      Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
   }
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
@@ -681,12 +749,12 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
-      Requires<[hasPTX<81>, hasSM<89>]>;
+      Requires<[PTX81, SM89]>;
     def bf16x2_ # F8Name # x2_scale :
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">,
-      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+      Requires<[hasNarrowFPToBF16x2ConversionSupport]>;
   }
 
   defm CVT_ : CVT_F8x2_TO_FP16x2<"e4m3">;
@@ -702,7 +770,7 @@ let hasSideEffects = false in {
   def CVT_e5m2x4_f32x4_rs_sf : CVT_TO_FP8X4<"e5m2">;
 
   // Float to TF32 conversions
-  multiclass CVT_TO_TF32<string Modifier, list<Predicate> Preds = [hasPTX<78>, hasSM<90>]> {
+  multiclass CVT_TO_TF32<string Modifier, list<Predicate> Preds = [SM90]> {
     defvar Intr = !cast<Intrinsic>("int_nvvm_f2tf32_" # !subst(".", "_", Modifier));
 
     def NAME : BasicNVPTXInst<(outs B32:$dst), (ins B32:$src),
@@ -715,15 +783,15 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz : CVT_TO_TF32<"rz">;
   defm CVT_to_tf32_rn_relu  : CVT_TO_TF32<"rn.relu">;
   defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
-  defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
-  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<80>]>;
+  defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [SM80]>;
+  defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [PTX81, SM80]>;
 
-  defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [hasPTX<86>, hasSM<100>]>;
-  defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
-  defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
-  defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [SM100]>;
+  defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [SM100]>;
+  defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [SM100]>;
+  defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [SM100]>;
   
-let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
+let Predicates = [hasS2F6X2ConversionSupport] in {
   def CVT_s2f6x2_f32_sf_scale : BasicFlagsNVPTXInst<(outs B16:$dst),
       (ins B32:$src1, B32:$src2, B16:$scale), (ins CvtMode:$mode),
       "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.f32">;
@@ -744,12 +812,12 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}.f16x2." # F6Name # "x2">,
-      Requires<[callSubtarget<"hasNarrowFPConversionSupport">]>;
+      Requires<[hasNarrowFPConversionSupport]>;
     def bf16x2_ # F6Name # x2_scale :
       BasicFlagsNVPTXInst<(outs B32:$dst),
                 (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
                 "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">,
-      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+      Requires<[hasNarrowFPToBF16x2ConversionSupport]>;
   }
 
   defm CVT_ : CVT_F6x2_TO_FP16x2<"e2m3">;
@@ -772,11 +840,11 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
     def _f16x2_sf : 
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
               "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f16x2">,
-      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+      Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
     def _bf16x2_sf : 
       BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
               "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.bf16x2">,
-      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+      Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
   }
 
   defm CVT_e2m3x2 : CVT_TO_FP6X2<"e2m3">;
@@ -807,7 +875,7 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
               "cvt.u8.u16 \t%e2m1x2_in, $src1; \n\t" #
               "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.e2m1x2 \t$dst, %e2m1x2_in, $src2; \n\t" #
               "}}", []>,
-    Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+    Requires<[hasNarrowFPToBF16x2ConversionSupport]>;
                  
   def CVT_e2m1x4_f32x4_rs_sf :
     NVPTXInst<(outs B16:$dst),
@@ -822,7 +890,7 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
       "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
-      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+      Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
 
   def CVT_e2m1x2_bf16x2_sf : NVPTXInst<(outs B16:$dst), 
       (ins B32:$src, CvtMode:$mode),
@@ -831,7 +899,7 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
       "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
-      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+      Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
@@ -854,18 +922,32 @@ let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
                    (ins B16:$src),
                    "cvt.rn.bf16x2.ue8m0x2">;
 
+  // UE5M3x2 conversions.
+  def CVT_f16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}.f16x2.ue5m3x2">,
+    Requires<[hasUE5M3TypeSupport]>;
+  def CVT_bf16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.bf16x2.ue5m3x2">,
+    Requires<[hasUE5M3TypeSupport]>;
+  def CVT_bf16x2_ue5m3x2_scale_n2 : BasicFlagsNVPTXInst<(outs B32:$dst),
+            (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.ue5m3x2">,
+    Requires<[hasUE5M3TypeSupport]>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;
 def : Pat<(v2bf16 (build_vector (bf16 (fpround_oneuse f32:$lo)),
                                 (bf16 (fpround_oneuse f32:$hi)))),
           (CVT_bf16x2_f32 $hi, $lo, CvtRN)>,
-      Requires<[hasPTX<70>, hasSM<80>, hasBF16Math]>;
+      Requires<[SM80, hasBF16Math]>;
 
 def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
                                (f16 (fpround_oneuse f32:$hi)))),
           (CVT_f16x2_f32 $hi, $lo, CvtRN)>,
-      Requires<[hasPTX<70>, hasSM<80>, useFP16Math]>;
+      Requires<[SM80, allowFP16Math]>;
 
 //-----------------------------------
 // Selection instructions (selp)
@@ -996,7 +1078,7 @@ def UMAX16x2 : I16x2<"max.u", umax>;
 def SMIN16x2 : I16x2<"min.s", smin>;
 def UMIN16x2 : I16x2<"min.u", umin>;
 
-let Predicates = [hasPTX<80>, hasSM<90>] in {
+let Predicates = [PTX80, SM90] in {
 
   def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
                      "min.relu.s32",
@@ -1130,13 +1212,9 @@ class FNEG16<RegTyInfo t> :
                 "neg$ftz." # t.PtxType,
                 [(set t.Ty:$dst, (fneg t.Ty:$src))]>;
 
-let Predicates = [useFP16Math, hasPTX<60>, hasSM<53>] in {
+let Predicates = [allowFP16Math, PTX60, SM53] in {
   def NEG_F16    : FNEG16<F16RT>;
   def NEG_F16x2  : FNEG16<F16X2RT>;
-}
-let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
-  def NEG_BF16   : FNEG16<BF16RT>;
-  def NEG_BF16x2 : FNEG16<BF16X2RT>;
 }
 
 //
@@ -1150,11 +1228,11 @@ class FEXP2Inst<RegTyInfo t, dag flags, string flag_str> :
 
 def EX2_APPROX_f32 : FEXP2Inst<F32RT, (ins FTZFlag:$ftz), "$ftz">;
 
-let Predicates = [useFP16Math, hasPTX<70>, hasSM<75>] in {
+let Predicates = [allowFP16Math, PTX70, SM75] in {
   def EX2_APPROX_f16 : FEXP2Inst<F16RT, (ins), "">;
   def EX2_APPROX_f16x2 : FEXP2Inst<F16X2RT, (ins), "">;
 }
-let Predicates = [hasPTX<78>, hasSM<90>] in {
+let Predicates = [SM90] in {
   def EX2_APPROX_bf16 : FEXP2Inst<BF16RT, (ins), ".ftz">;
   def EX2_APPROX_bf16x2 : FEXP2Inst<BF16X2RT, (ins), ".ftz">;
 }
@@ -1306,8 +1384,8 @@ multiclass FMA<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> {
   }
 }
 
-defm FMA_F16    : FMA<F16RT,    allow_ftz = true, preds = [useFP16Math]>;
-defm FMA_F16x2  : FMA<F16X2RT,  allow_ftz = true, preds = [useFP16Math]>;
+defm FMA_F16    : FMA<F16RT,    allow_ftz = true, preds = [allowFP16Math]>;
+defm FMA_F16x2  : FMA<F16X2RT,  allow_ftz = true, preds = [allowFP16Math]>;
 defm FMA_BF16   : FMA<BF16RT,   allow_ftz = false, preds = [hasBF16Math]>;
 defm FMA_BF16x2 : FMA<BF16X2RT, allow_ftz = false, preds = [hasBF16Math]>;
 defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
@@ -1329,10 +1407,23 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
-def TANH_APPROX_f32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
-                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
-                 Requires<[hasPTX<70>, hasSM<75>]>;
+
+class FTANHInst<RegTyInfo t> :
+      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+                "tanh.approx." # t.PtxType,
+                [(set t.Ty:$dst, (UnaryOpAllowsApproxFn<ftanh> t.Ty:$src))]>;
+
+def TANH_APPROX_f32 : FTANHInst<F32RT>,
+                      Requires<[PTX70, SM75]>;
+
+let Predicates = [allowFP16Math, PTX70, SM75] in {
+  def TANH_APPROX_f16   : FTANHInst<F16RT>;
+  def TANH_APPROX_f16x2 : FTANHInst<F16X2RT>;
+}
+let Predicates = [SM90] in {
+  def TANH_APPROX_bf16   : FTANHInst<BF16RT>;
+  def TANH_APPROX_bf16x2 : FTANHInst<BF16X2RT>;
+}
 
 //-----------------------------------
 // Bitwise operations
@@ -1658,22 +1749,22 @@ defm SETP_i64 : ISETP<I64RT>;
 
 defm SETP_f32 : FSETP<F32RT>;
 defm SETP_f64 : FSETP<F64RT, allow_ftz = false>;
-let Predicates = [useFP16Math] in
+let Predicates = [allowFP16Math] in
   defm SETP_f16 : FSETP<F16RT>;
-let Predicates = [hasBF16Math, hasPTX<78>, hasSM<90>] in
-  defm SETP_bf16 : FSETP<BF16RT>;
+let Predicates = [hasBF16Math, SM90] in
+  defm SETP_bf16 : FSETP<BF16RT, allow_ftz = false>;
 
 def SETP_f16x2rr :
       BasicFlagsNVPTXInst<(outs B1:$p, B1:$q),
                 (ins B32:$a, B32:$b), (ins CmpMode:$cmp, FTZFlag:$ftz),
                 "setp.${cmp:FCmp}$ftz.f16x2">,
-                Requires<[useFP16Math]>;
+                Requires<[allowFP16Math]>;
 
 def SETP_bf16x2rr :
       BasicFlagsNVPTXInst<(outs B1:$p, B1:$q),
-                (ins B32:$a, B32:$b), (ins CmpMode:$cmp, FTZFlag:$ftz),
-                "setp.${cmp:FCmp}$ftz.bf16x2">,
-                Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
+                (ins B32:$a, B32:$b), (ins CmpMode:$cmp),
+                "setp.${cmp:FCmp}.bf16x2">,
+                Requires<[hasBF16Math, SM90]>;
 
 //-----------------------------------
 // Data Movement (Load / Store, Move)
@@ -1697,6 +1788,10 @@ def RegOrSink : Operand<Any> {
 
 def AtomicCode : Operand<i32> {
   let PrintMethod = "printAtomicCode";
+}
+
+def EvictionAndPrefetchHint : Operand<i32> {
+  let PrintMethod = "printEvictionAndPrefetchHint";
 }
 
 def MmaCode : Operand<i32> {
@@ -1760,8 +1855,8 @@ def to_texternsym : SDNodeXForm<externalsym, [{
                                          N->getTargetFlags());
 }]>;
 
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+def to_tjumptable : SDNodeXForm<jumptable, [{
+  return CurDAG->getTargetJumpTable(N->getIndex(), N->getValueType(0));
 }]>;
 
 def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
@@ -1876,18 +1971,6 @@ def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
 def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
           (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
 
-// Call prototype wrapper, this is a dummy instruction that just prints it's
-// operand which is string defining the prototype.
-def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def CallPrototype :
-  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPSideEffect]>;
-def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
-def CALL_PROTOTYPE :
-  NVPTXInst<(outs), (ins ProtoIdent:$ident),
-            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
-
-
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
@@ -1936,15 +2019,22 @@ def Callseq_End :
 //
 // Load / Store Handling
 //
+// CachePolicy operand for L2::cache_hint support.
+// When present, prints the cache policy register.
+def CachePolicy : Operand<i64> { let PrintMethod = "printCachePolicy"; }
+
 class LD<NVPTXRegClass regclass>
-  : NVPTXInst<
-    (outs regclass:$dst),
-    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-         AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-         ADDR:$addr),
-    "${usedBytes}"
-    "ld${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$fromWidth "
-    "\t$dst, [$addr];">;
+    : NVPTXInst<
+          (outs regclass:$dst),
+          (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+              AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+              ADDR:$addr, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+              CachePolicy:$policy),
+          "${usedBytes}"
+          "ld${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+          "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.${Sign:sign}$"
+          "fromWidth "
+          "\t$dst, [$addr]${policy};">;
 
 let mayLoad=1, hasSideEffects=0 in {
   def LD_i16 : LD<B16>;
@@ -1953,13 +2043,15 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 class ST<DAGOperand O>
-  : NVPTXInst<
-    (outs),
-    (ins O:$src,
-         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$toWidth,
-         ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.b$toWidth"
-    " \t[$addr], $src;">;
+    : NVPTXInst<
+          (outs),
+          (ins O:$src, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+              i32imm:$toWidth, ADDR:$addr,
+              EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+              CachePolicy:$policy),
+          "st${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+          "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.b$toWidth"
+          " \t[$addr], $src${policy};">;
 
 let mayStore=1, hasSideEffects=0 in {
   def ST_i16 : ST<RI16>;
@@ -1971,33 +2063,48 @@ let mayStore=1, hasSideEffects=0 in {
 // elementization happens at the machine instruction level, so the following
 // instructions never appear in the DAG.
 multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
-  def _v2 : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2),
-    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-         AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-         ADDR:$addr),
-    "${usedBytes}"
-    "ld${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2}}, [$addr];">;
-  def _v4 : NVPTXInst<
-    (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-         AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-         ADDR:$addr),
-    "${usedBytes}"
-    "ld${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
-    "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];">;
+  def _v2
+      : NVPTXInst<
+            (outs regclass:$dst1, regclass:$dst2),
+            (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+                AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+                ADDR:$addr, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                CachePolicy:$policy),
+            "${usedBytes}"
+            "ld${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+            "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v2.${Sign:sign}"
+            "$fromWidth "
+            "\t{{$dst1, $dst2}}, [$addr]${policy};">;
+  def _v4
+      : NVPTXInst<
+            (outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                regclass:$dst4),
+            (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+                AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+                ADDR:$addr, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                CachePolicy:$policy),
+            "${usedBytes}"
+            "ld${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+            "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v4.${Sign:sign}"
+            "$fromWidth "
+            "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr]${policy};">;
   if support_v8 then
-    def _v8 : NVPTXInst<
-      (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
-            regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-           AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-           ADDR:$addr),
-      "${usedBytes}"
-      "ld${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
-      "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
-      "[$addr];">;
+    def _v8
+        : NVPTXInst<
+              (outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                  regclass:$dst4, regclass:$dst5, regclass:$dst6,
+                  regclass:$dst7, regclass:$dst8),
+              (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+                  AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+                  ADDR:$addr,
+                  EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                  CachePolicy:$policy),
+              "${usedBytes}"
+              "ld${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+              "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v8.${Sign:sign}"
+              "$fromWidth "
+              "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
+              "[$addr]${policy};">;
 }
 let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i16 : LD_VEC<B16>;
@@ -2006,30 +2113,43 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
-  def _v2 : NVPTXInst<
-    (outs),
-    (ins O:$src1, O:$src2,
-         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
-         ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.b$fromWidth "
-    "\t[$addr], {{$src1, $src2}};">;
-  def _v4 : NVPTXInst<
-    (outs),
-    (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3, RegOrSink:$src4,
-         AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
-         ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.b$fromWidth "
-    "\t[$addr], {{$src1, $src2, $src3, $src4}};">;
+  def _v2
+      : NVPTXInst<
+            (outs),
+            (ins O:$src1, O:$src2, AtomicCode:$sem, AtomicCode:$scope,
+                AtomicCode:$addsp, i32imm:$fromWidth, ADDR:$addr,
+                EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                CachePolicy:$policy),
+            "st${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+            "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v2.b$fromWidth "
+            "\t[$addr], {{$src1, $src2}}${policy};">;
+  def _v4
+      : NVPTXInst<
+            (outs),
+            (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
+                RegOrSink:$src4, AtomicCode:$sem, AtomicCode:$scope,
+                AtomicCode:$addsp, i32imm:$fromWidth, ADDR:$addr,
+                EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                CachePolicy:$policy),
+            "st${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+            "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v4.b$fromWidth "
+            "\t[$addr], {{$src1, $src2, $src3, $src4}}${policy};">;
   if support_v8 then
-    def _v8 : NVPTXInst<
-      (outs),
-      (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3, RegOrSink:$src4,
-           RegOrSink:$src5, RegOrSink:$src6, RegOrSink:$src7, RegOrSink:$src8,
-           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
-           ADDR:$addr),
-      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.b$fromWidth "
-      "\t[$addr], "
-      "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, $src8}};">;
+    def _v8
+        : NVPTXInst<
+              (outs),
+              (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
+                  RegOrSink:$src4, RegOrSink:$src5, RegOrSink:$src6,
+                  RegOrSink:$src7, RegOrSink:$src8, AtomicCode:$sem,
+                  AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
+                  ADDR:$addr,
+                  EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                  CachePolicy:$policy),
+              "st${sem:sem}${scope:scope}${addsp:addsp}${evictionAndPrefetchHint:l1}${"
+              "evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}.v8.b$fromWidth "
+              "\t[$addr], "
+              "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, "
+              "$src8}}${policy};">;
 }
 
 let mayStore=1, hasSideEffects=0 in {
@@ -2065,7 +2185,7 @@ def : Pat<(f16 (uint_to_fp i32:$a)), (CVT_f16_u32 $a, CvtRN)>;
 def : Pat<(f16 (uint_to_fp i64:$a)), (CVT_f16_u64 $a, CvtRN)>;
 
 // sint -> bf16
-let Predicates = [hasPTX<78>, hasSM<90>] in {
+let Predicates = [SM90] in {
   def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i16:$a)), (CVT_bf16_s16 $a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i32:$a)), (CVT_bf16_s32 $a, CvtRN)>;
@@ -2073,7 +2193,7 @@ let Predicates = [hasPTX<78>, hasSM<90>] in {
 }
 
 // uint -> bf16
-let Predicates = [hasPTX<78>, hasSM<90>] in {
+let Predicates = [SM90] in {
   def : Pat<(bf16 (uint_to_fp i1:$a)), (CVT_bf16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
   def : Pat<(bf16 (uint_to_fp i16:$a)), (CVT_bf16_u16 $a, CvtRN)>;
   def : Pat<(bf16 (uint_to_fp i32:$a)), (CVT_bf16_u32 $a, CvtRN)>;
@@ -2256,7 +2376,7 @@ let hasSideEffects = false in {
 
   // PTX 7.1 lets you avoid a temp register and just use _ as a "sink" for the
   // unused high/low part.
-  let Predicates = [hasPTX<71>] in {
+  let Predicates = [PTX71] in {
     def I32toI16H_Sink  : NVPTXInst<(outs B16:$high), (ins B32:$s),
                               "mov.b32 \t{{_, $high}}, $s;">;
     def I32toI16L_Sink  : NVPTXInst<(outs B16:$low), (ins B32:$s),
@@ -2268,7 +2388,7 @@ let hasSideEffects = false in {
   }
 }
 
-let Predicates = [hasPTX<71>] in {
+let Predicates = [PTX71] in {
   def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>;
   def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>;
   def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))), (I64toI32H_Sink i64:$s)>;
@@ -2286,8 +2406,8 @@ def: Pat<(i32 (sext (extractelt v2i16:$src, 0))),
 
 // Handle extracting one element from the pair (32-bit types)
 foreach vt = [v2f16, v2bf16, v2i16] in {
-  def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[hasPTX<71>]>;
-  def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[PTX71]>;
+  def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[PTX71]>;
 
   def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
@@ -2298,8 +2418,8 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
 
 // Handle extracting one element from the pair (64-bit types)
 foreach vt = [v2f32, v2i32] in {
-  def : Pat<(extractelt vt:$src, 0), (I64toI32L_Sink $src)>, Requires<[hasPTX<71>]>;
-  def : Pat<(extractelt vt:$src, 1), (I64toI32H_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 0), (I64toI32L_Sink $src)>, Requires<[PTX71]>;
+  def : Pat<(extractelt vt:$src, 1), (I64toI32H_Sink $src)>, Requires<[PTX71]>;
 
   def : Pat<(extractelt vt:$src, 0), (I64toI32L $src)>;
   def : Pat<(extractelt vt:$src, 1), (I64toI32H $src)>;
@@ -2389,14 +2509,14 @@ def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, CvtRN)>;
 
 // fpround f32 -> bf16
 def : Pat<(bf16 (fpround f32:$a)), (CVT_bf16_f32 $a, CvtRN)>, 
-      Requires<[hasPTX<70>, hasSM<80>]>;
+      Requires<[SM80]>;
 
 // fpround f64 -> f16
 def : Pat<(f16 (fpround f64:$a)), (CVT_f16_f64 $a, CvtRN)>;
 
 // fpround f64 -> bf16
 def : Pat<(bf16 (fpround f64:$a)), (CVT_bf16_f64 $a, CvtRN)>, 
-      Requires<[hasPTX<78>, hasSM<90>]>;
+      Requires<[SM90]>;
 
 // fpround f64 -> f32
 def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
@@ -2406,14 +2526,14 @@ def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN)>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE)>;
 // fpextend bf16 -> f32
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ, hasPTX<78>, hasSM<90>]>;
-def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ, SM90]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[PTX71, SM80]>;
 
 // fpextend f16 -> f64
 def : Pat<(f64 (fpextend f16:$a)), (CVT_f64_f16 $a, CvtNONE)>;
 
 // fpextend bf16 -> f64
-def : Pat<(f64 (fpextend bf16:$a)), (CVT_f64_bf16 $a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(f64 (fpextend bf16:$a)), (CVT_f64_bf16 $a, CvtNONE)>, Requires<[SM90]>;
 
 // fpextend f32 -> f64
 def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
@@ -2454,8 +2574,8 @@ let isTerminator=1 in {
 
   let isBranch=1 in {
     def CBranch : NVPTXInst<(outs),
-                              (ins B1:$a, brtarget:$target, BranchFlag:$not),
-                              "@${not}$a bra \t$target;",
+                              (ins B1:$a, brtarget:$target, BranchFlag:$negate),
+                              "@${negate}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
@@ -2486,27 +2606,22 @@ foreach t = [I32RT, I64RT] in {
               (ins t.RC:$size, i32imm:$align),
               "alloca.u" # t.Size,
               [(set t.Ty:$ptr, (dyn_alloca t.Ty:$size, timm:$align))]>,
-              Requires<[hasPTX<73>, hasSM<52>]>;
+              Requires<[PTX73, SM52]>;
 }
 
 //
 // BRX
 //
+def brx_jt : SDNode<"ISD::BR_JT",
+                    SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>,
+                    [SDNPHasChain]>;
 
-let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
+let isTerminator = 1, isBarrier = 1, isBranch = 1, isIndirectBranch = 1,
+    isNotDuplicable = 1 in
+  def BRX_IDX : BasicNVPTXInst<(outs), (ins B32:$val, i32imm:$tgt),
+                               "brx.idx">;
 
-  def BRX_START :
-    NVPTXInst<(outs), (ins i32imm:$id), "$$L_brx_$id: .branchtargets">;
-
-  def BRX_ITEM :
-    NVPTXInst<(outs), (ins brtarget:$target), "\t$target,">;
-
-  def BRX_END :
-    NVPTXInst<(outs), (ins brtarget:$target, B32:$val, i32imm:$id),
-              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;"> {
-      let isBarrier = 1;
-    }
-}
+def : Pat<(brx_jt jumptable:$jt, i32:$idx), (BRX_IDX $idx, (to_tjumptable $jt))>;
 
 
 foreach a_type = ["s", "u"] in {
@@ -2550,7 +2665,7 @@ def stacksave :
   SDNode<"NVPTXISD::STACKSAVE", SDTIntLeaf,
          [SDNPHasChain, SDNPSideEffect]>;
 
-let Predicates = [hasPTX<73>, hasSM<52>] in {
+let Predicates = [PTX73, SM52] in {
   foreach t = [I32RT, I64RT] in {
     def STACKRESTORE_ # t.Size :
       BasicNVPTXInst<(outs), (ins t.RC:$ptr),
@@ -2570,15 +2685,15 @@ include "NVPTXIntrinsics.td"
 // PTX Fence instructions
 ////////////////////////////////////////////////////////////////////////////////
 
-class NVPTXFenceInst<string scope, string sem, Predicate ptx>:
+class NVPTXFenceInst<string scope, string sem, list<Predicate> preds = []>:
     BasicNVPTXInst<(outs), (ins), "fence."#sem#"."#scope>,
-    Requires<[ptx, hasSM<70>]>;
+    Requires<!listconcat([SM70], preds)>;
 
 foreach scope = ["sys", "gpu", "cluster", "cta"] in {
-  def atomic_thread_fence_seq_cst_#scope: NVPTXFenceInst<scope, "sc", hasPTX<60>>;
-  def atomic_thread_fence_acq_rel_#scope: NVPTXFenceInst<scope, "acq_rel", hasPTX<60>>;
-  def atomic_thread_fence_acquire_#scope: NVPTXFenceInst<scope, "acquire", hasPTX<87>>;
-  def atomic_thread_fence_release_#scope: NVPTXFenceInst<scope, "release", hasPTX<87>>;
+  def atomic_thread_fence_seq_cst_#scope: NVPTXFenceInst<scope, "sc">;
+  def atomic_thread_fence_acq_rel_#scope: NVPTXFenceInst<scope, "acq_rel">;
+  def atomic_thread_fence_acquire_#scope: NVPTXFenceInst<scope, "acquire", [PTX87]>;
+  def atomic_thread_fence_release_#scope: NVPTXFenceInst<scope, "release", [PTX87]>;
 }
 
 // Perform substitution if fma only has one use, and also if instruction has
@@ -2600,12 +2715,12 @@ class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
                    "fma.rn" # !if(allow_ftz, "$ftz", "") # ".relu." # t.PtxType,
                    [(set t.Ty:$dst, (NVPTX_fmaxnum_or_fmaximumnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
 
-let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
+let Predicates = [allowFP16Math, SM80] in {
   def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_0>;
   def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, zeroinitializer<v2f16>>;
 }
 
-let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
+let Predicates = [hasBF16Math, SM80] in {
   def FMARELU_BF16 : FMARELUInst<BF16RT, false, fpimm_0>;
   def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, zeroinitializer<v2bf16>>;
 }

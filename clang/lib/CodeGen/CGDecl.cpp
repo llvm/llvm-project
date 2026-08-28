@@ -144,6 +144,13 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     // None of these decls require codegen support.
     return;
 
+  case Decl::CXXExpansionStmt: {
+    const auto *ESD = cast<CXXExpansionStmtDecl>(&D);
+    assert(ESD->getInstantiations() && "expansion statement not expanded?");
+    EmitStmt(ESD->getInstantiations());
+    return;
+  }
+
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
         DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
@@ -1172,7 +1179,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
-  } else if (CacheEntry->getAlignment() < uint64_t(Align.getQuantity())) {
+  } else if (CacheEntry->getAlign().valueOrOne() < Align.getAsAlign()) {
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
@@ -2849,7 +2856,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
        &D == CXXABIThisDecl)) {
     // We don't emit fake uses for coroutine parameters, other than `this`.
     if (auto *FnDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
-        &D == CXXABIThisDecl || !FnDecl ||
+        &D == CXXABIThisDecl || !FnDecl || !FnDecl->getBody() ||
         FnDecl->getBody()->getStmtClass() != Stmt::CoroutineBodyStmtClass) {
       if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
         EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);

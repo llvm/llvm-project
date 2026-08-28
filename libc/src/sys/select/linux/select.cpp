@@ -9,14 +9,13 @@
 #include "src/sys/select/select.h"
 
 #include "hdr/types/sigset_t.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-
-#include "hdr/types/size_t.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {

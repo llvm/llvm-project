@@ -447,11 +447,15 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                     "Apple M4",
+                                    !listconcat(
                                     !listremove(TuneAppleA17.Implies,
-                                    [FeatureStorePairSuppress])>;
+                                    [FeatureStorePairSuppress]),
+                                    [FeatureFuseAppleSMECompute])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
-                                    "Apple M5", TuneAppleM4.Implies>;
+                                    "Apple M5",
+                                    !listconcat(TuneAppleM4.Implies,
+                                    [FeatureFuseFMinFMax])>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -535,7 +539,8 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
                                       "Neoverse N3 ARM processors", [
@@ -602,7 +607,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3",
+def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -614,7 +619,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
@@ -834,7 +839,7 @@ def ProcessorFeatures {
                                    FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                    FeatureAltFPCmp, FeatureFRInt3264,
                                    FeatureMTE, FeatureFineGrainedTraps,
-                                   FeatureHCX, FeatureRCPC3, FeatureETE,
+                                   FeatureRCPC3, FeatureETE,
                                    FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                    FeatureSME, FeatureSME2];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -916,7 +921,7 @@ def ProcessorFeatures {
                                   FeatureAM, FeatureRAS, FeatureSEL2,
                                   FeatureTRACEV8_4, FeatureAltFPCmp,
                                   FeatureFRInt3264, FeatureMTE,
-                                  FeatureFineGrainedTraps, FeatureHCX,
+                                  FeatureFineGrainedTraps,
                                   FeatureSPE_EEF, FeatureRCPC3, FeatureETE,
                                   FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                   FeatureSME, FeatureSME2];
@@ -991,7 +996,7 @@ def ProcessorFeatures {
                                       FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                       FeatureAltFPCmp, FeatureFRInt3264,
                                       FeatureMTE, FeatureFineGrainedTraps,
-                                      FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                      FeatureSPE_EEF, FeatureRCPC3,
                                       FeatureETE, FeatureSVEBitPerm,
                                       FeatureSVE2, FeatureTRBE, FeatureSME,
                                       FeatureSME2];
@@ -1006,7 +1011,7 @@ def ProcessorFeatures {
                                     FeatureSEL2, FeatureTRACEV8_4,
                                     FeatureAltFPCmp, FeatureFRInt3264,
                                     FeatureMTE, FeatureFineGrainedTraps,
-                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureSPE_EEF, FeatureRCPC3,
                                     FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
                                     FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
@@ -1068,7 +1073,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
@@ -1076,7 +1080,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
@@ -1213,7 +1216,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> HIP12 = [HasV8_7aOps, FeatureSVE, FeatureSVE2,
                                   FeatureSVEBitPerm, FeatureSVEAES,
                                   FeatureSVESM4, FeatureSVESHA3,
-                                  FeatureFullFP16, FeaturePerfMon,
+                                  FeatureFullFP16, FeatureFP16FML, FeaturePerfMon,
+                                  FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                  FeatureCCIDX, FeatureRandGen,
                                   FeatureETE, FeatureTRBE, FeatureSPE,
                                   FeatureSPE_EEF, FeatureNMI,
                                   FeatureHBC, FeatureRCPC3, FeatureBF16,
@@ -1273,17 +1278,20 @@ def ProcessorFeatures {
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
 }
 
-// Define an alternative name for a given Processor.
-class ProcessorAlias<string n, string alias> {
-  string Name = n;
-  string Alias = alias;
-}
+// A note on scheduling models - we do not have exact models for each core and
+// attempt to use the "best equivalent" that we have for those that are
+// missing. -mcpu=generic uses a cortex-a510 model to get good scheduling
+// performance for in-order cores where it is most beneficial. Out-of-order
+// cores are expected to be less sensitive and scheduling from an in-order
+// model will be sufficient.
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
-// optimizations.
+// optimizations. We use a fixed load latency of 4 as the a510 scheduling model
+// has a latency of 2 for most loads which is disproportionately low for many
+// cpus.
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize]>;
+                      FeatureEnableSelectOptimize, FeatureFixedLoadLatency4]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
@@ -1314,17 +1322,17 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, ProcessorFeatures.A55,
                      [TuneA75]>;
-def : ProcessorModel<"cortex-a76", CortexA57Model, ProcessorFeatures.A76,
+def : ProcessorModel<"cortex-a76", NeoverseN1Model, ProcessorFeatures.A76,
                      [TuneA76]>;
-def : ProcessorModel<"cortex-a76ae", CortexA57Model, ProcessorFeatures.A76,
+def : ProcessorModel<"cortex-a76ae", NeoverseN1Model, ProcessorFeatures.A76,
                      [TuneA76]>;
-def : ProcessorModel<"cortex-a77", CortexA57Model, ProcessorFeatures.A77,
+def : ProcessorModel<"cortex-a77", NeoverseN2Model, ProcessorFeatures.A77,
                      [TuneA77]>;
-def : ProcessorModel<"cortex-a78", CortexA57Model, ProcessorFeatures.A78,
+def : ProcessorModel<"cortex-a78", NeoverseN2Model, ProcessorFeatures.A78,
                      [TuneA78]>;
-def : ProcessorModel<"cortex-a78ae", CortexA57Model, ProcessorFeatures.A78AE,
+def : ProcessorModel<"cortex-a78ae", NeoverseN2Model, ProcessorFeatures.A78AE,
                      [TuneA78AE]>;
-def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
+def : ProcessorModel<"cortex-a78c", NeoverseN2Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
                      [TuneA710]>;
@@ -1413,8 +1421,7 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 // HiSilicon Processors.
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
-// TODO: Support hip12 model.
-def : ProcessorModel<"hip12", NeoverseV2Model, ProcessorFeatures.HIP12,
+def : ProcessorModel<"hip12", HIP12Model, ProcessorFeatures.HIP12,
                      [TuneHIP12]>;
 
 // Apple CPUs
@@ -1486,6 +1493,10 @@ def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
 
 // NVIDIA Olympus
 def : ProcessorModel<"olympus", OlympusModel, ProcessorFeatures.Olympus,
+                     [TuneOlympus]>;
+
+// NVIDIA Rigel
+def : ProcessorModel<"rigel", OlympusModel, ProcessorFeatures.Olympus,
                      [TuneOlympus]>;
 
 // Ampere Computing

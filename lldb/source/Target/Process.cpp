@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
@@ -50,6 +51,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -172,6 +174,13 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties_def);
+    // MemoryCache divides by the cache line size and holds it in a uint32_t, so
+    // reject a value it could not use.
+    OptionValueUInt64 *line_size =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
+            ePropertyMemCacheLineSize);
+    line_size->SetMinimumValue(1);
+    line_size->SetMaximumValue(UINT32_MAX);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
@@ -202,6 +211,14 @@ bool ProcessProperties::GetDisableMemoryCache() const {
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
 }
+
+#ifndef NDEBUG
+bool ProcessProperties::GetVerifyMemoryReads() const {
+  const uint32_t idx = ePropertyVerifyMemoryReads;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+#endif
 
 uint64_t ProcessProperties::GetMemoryCacheLineSize() const {
   const uint32_t idx = ePropertyMemCacheLineSize;
@@ -479,14 +496,15 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
-      m_memory_cache(*this), m_allocated_memory_cache(*this),
-      m_should_detach(false), m_next_event_action_up(),
-      m_currently_handling_do_on_removals(false), m_resume_requested(false),
-      m_interrupt_tid(LLDB_INVALID_THREAD_ID), m_finalizing(false),
-      m_destructing(false), m_clear_thread_plans_on_stop(false),
-      m_force_next_event_delivery(false), m_last_broadcast_state(eStateInvalid),
-      m_destroy_in_process(false), m_can_interpret_function_calls(false),
-      m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow),
+      m_memory_cache(*this), m_memory_region_infos_cache(),
+      m_allocated_memory_cache(*this), m_should_detach(false),
+      m_next_event_action_up(), m_currently_handling_do_on_removals(false),
+      m_resume_requested(false), m_interrupt_tid(LLDB_INVALID_THREAD_ID),
+      m_finalizing(false), m_destructing(false),
+      m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
+      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
+      m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
+      m_can_jit(eCanJITDontKnow),
       m_crash_info_dict_sp(new StructuredData::Dictionary()) {
   CheckInWithManager();
 
@@ -595,6 +613,7 @@ void Process::Finalize(bool destructing) {
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
   m_memory_cache.Clear();
+  m_memory_region_infos_cache.Clear();
   m_allocated_memory_cache.Clear(/*deallocate_memory=*/true);
   {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
@@ -922,9 +941,9 @@ bool Process::HandleProcessStateChangedEvent(
           if (target_idx != UINT32_MAX)
             stream->Printf("Target %d: (", target_idx);
           else
-            stream->Printf("Target <unknown index>: (");
+            stream->PutCString("Target <unknown index>: (");
           process_sp->GetTarget().Dump(stream, eDescriptionLevelBrief);
-          stream->Printf(") stopped.\n");
+          stream->PutCString(") stopped.\n");
         }
       }
 
@@ -1284,7 +1303,12 @@ StateType Process::GetState() {
   if (policy.view == Policy::View::Private)
     return GetPrivateState();
 
-  if (CurrentThreadPosesAsPrivateStateThread())
+  // Once the private state thread has exited, nothing is left to consume the
+  // public state-changed event and update the public state accordingly (see
+  // Process::ProcessEventData::DoOnRemoval). The private state is always
+  // up to date, so fall back to it rather than reporting a stale public
+  // state indefinitely.
+  if (!m_current_private_state_thread_sp->IsRunning())
     return GetPrivateState();
 
   return GetPublicState();
@@ -1357,7 +1381,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(ResumeSynchronousHijackListenerName.data()));
+      Listener::MakeListener(ResumeSynchronousHijackListenerName));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -1458,6 +1482,7 @@ void Process::SetPrivateState(StateType new_state) {
       if (!m_mod_id.IsLastResumeForUserExpression())
         m_mod_id.SetStopEventForLastNaturalStopID(event_sp);
       m_memory_cache.Clear();
+      m_memory_region_infos_cache.Clear();
       LLDB_LOGF(log, "(plugin = %s, state = %s, stop_id = %u",
                GetPluginName().data(), StateAsCString(new_state),
                m_mod_id.GetStopID());
@@ -2022,52 +2047,57 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   return error;
 }
 
-// Uncomment to verify memory caching works after making changes to caching
-// code
-//#define VERIFY_MEMORY_READS
+#ifndef NDEBUG
+void Process::VerifyMemoryRead(addr_t addr, const void *cache_buf,
+                               size_t cache_bytes_read, size_t size,
+                               const Status &cache_error) {
+  // A failed cache read stopped early, so only the bytes it did return and
+  // the contents can be compared.
+  const bool truncated = cache_error.Fail();
 
-size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
+  std::vector<uint8_t> verify_buf(size, 0);
+  Status verify_error;
+  const size_t verify_bytes_read = ReadMemoryFromInferior(
+      addr, verify_buf.data(), verify_buf.size(), verify_error);
+  const size_t comparable = std::min(cache_bytes_read, verify_bytes_read);
+
+  const char *mismatch = nullptr;
+  if (!truncated && cache_bytes_read != verify_bytes_read)
+    mismatch = "byte count";
+  else if (memcmp(cache_buf, verify_buf.data(), comparable) != 0)
+    mismatch = "contents";
+  else if (!truncated && cache_error.Success() != verify_error.Success())
+    mismatch = "status";
+  if (!mismatch)
+    return;
+
+  // Log before the assert, which cannot carry the two results.
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "memory cache verification failed on {0}: read of {1} bytes at "
+           "{2:x} returned {3} bytes ({4}) from the cache and {5} bytes ({6}) "
+           "from the process",
+           mismatch, size, addr, cache_bytes_read, cache_error,
+           verify_bytes_read, verify_error);
+  assert(false && "memory cache returned something the process did not");
+}
+#endif
+
+size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                           size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
   error.Clear();
-  if (!GetDisableMemoryCache()) {
-#if defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, with debug verification
-
-    if (buf && size) {
-      // Uncomment the line below to make sure memory caching is working.
-      // I ran this through the test suite and got no assertions, so I am
-      // pretty confident this is working well. If any changes are made to
-      // memory caching, uncomment the line below and test your changes!
-
-      // Verify all memory reads by using the cache first, then redundantly
-      // reading the same memory from the inferior and comparing to make sure
-      // everything is exactly the same.
-      std::string verify_buf(size, '\0');
-      assert(verify_buf.size() == size);
-      const size_t cache_bytes_read =
-          m_memory_cache.Read(this, addr, buf, size, error);
-      Status verify_error;
-      const size_t verify_bytes_read =
-          ReadMemoryFromInferior(addr, const_cast<char *>(verify_buf.data()),
-                                 verify_buf.size(), verify_error);
-      assert(cache_bytes_read == verify_bytes_read);
-      assert(memcmp(buf, verify_buf.data(), verify_buf.size()) == 0);
-      assert(verify_error.Success() == error.Success());
-      return cache_bytes_read;
-    }
-    return 0;
-#else  // !defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, without debug verification
-
-    return m_memory_cache.Read(addr, buf, size, error);
-#endif // defined (VERIFY_MEMORY_READS)
-  } else {
-    // Memory caching is disabled
-
+  if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
-  }
+
+  const size_t bytes_read = m_memory_cache.Read(addr, buf, size, error);
+#ifndef NDEBUG
+  if (buf && size && GetVerifyMemoryReads())
+    VerifyMemoryRead(addr, buf, bytes_read, size, error);
+#endif
+  return bytes_read;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -2078,9 +2108,23 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   for (const Range<lldb::addr_t, size_t> &range : ranges)
     fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
                               range.GetByteSize());
-  if (!GetDisableMemoryCache())
-    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
-  return DoReadMemoryRanges(fixed_ranges, buffer);
+  if (GetDisableMemoryCache())
+    return DoReadMemoryRanges(fixed_ranges, buffer);
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results =
+      m_memory_cache.ReadRanges(fixed_ranges, buffer);
+#ifndef NDEBUG
+  if (GetVerifyMemoryReads()) {
+    for (auto [range, result] : llvm::zip(fixed_ranges, results)) {
+      if (!result.empty()) {
+        Status error;
+        VerifyMemoryRead(range.GetRangeBase(), result.data(), result.size(),
+                         range.GetByteSize(), error);
+      }
+    }
+  }
+#endif
+  return results;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -2091,7 +2135,8 @@ Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   // If the buffer is not large enough, this is a programmer error.
   // In production builds, gracefully fail by returning a length of 0 for all
   // ranges.
-  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
+  assert(buffer.size() >= total_ranges_len &&
+         "Process::DoReadMemoryRanges: provided buffer is too short");
   if (buffer.size() < total_ranges_len) {
     llvm::MutableArrayRef<uint8_t> empty;
     return {ranges.size(), empty};
@@ -2697,7 +2742,11 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-  return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  addr_t alloced_addr =
+      m_allocated_memory_cache.AllocateMemory(size, permissions, error);
+  m_memory_region_infos_cache.Clear();
+
+  return alloced_addr;
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2750,6 +2799,7 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
+  m_memory_region_infos_cache.Clear();
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
@@ -2791,11 +2841,11 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   // only print a progress update if we're reading from a
   // live session which might go over gdb remote serial protocol.
   if (IsLiveDebugSession())
-    progress_up = std::make_unique<Progress>(
-        "Reading binary from memory", file_spec.GetFilename().GetString());
+    progress_up = std::make_unique<Progress>("Reading binary from memory",
+                                             file_spec.GetFilename().str());
 
-  if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
-          shared_from_this(), header_addr, error, size_to_read))
+  if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     size_to_read))
     return module_sp;
 
   return error.takeError();
@@ -4075,7 +4125,7 @@ bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
           m_thread_name,
-          [this] { return m_process.RunPrivateStateThread(m_is_override); },
+          [this] { return m_process.RunPrivateStateThread(m_purpose); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -4097,8 +4147,6 @@ bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
 ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
-    return m_private_run_lock;
-  if (IsOnThread(Host::GetCurrentThread()))
     return m_private_run_lock;
   return m_public_run_lock;
 }
@@ -4143,7 +4191,7 @@ bool Process::StartPrivateStateThread(
     *backup_ptr = m_current_private_state_thread_sp;
     m_current_private_state_thread_sp.reset(new PrivateStateThread(
         *this, GetPublicState(), GetPrivateState(), thread_name,
-        /*is_override=*/true));
+        PrivateStateThread::Purpose::RunningExpression));
   } else
     m_current_private_state_thread_sp->SetThreadName(thread_name);
 
@@ -4358,12 +4406,14 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread(bool is_override) {
-  // Override PSTs exist solely to service RunThreadPlan expression evaluation.
-  // They must see parent frames, not provider-augmented frames.
-  std::optional<PolicyStack::Guard> policy_guard;
-  if (is_override)
-    policy_guard.emplace(Policy::PrivateState());
+thread_result_t
+Process::RunPrivateStateThread(PrivateStateThread::Purpose purpose) {
+  // All PSTs see the private reality (private state, private run lock).
+  // A PST created to run an expression additionally skips frame providers
+  // and recognizers, since that's the only reason RunThreadPlan spins up a
+  // second, temporary PST while the primary one is backed up.
+  PolicyStack::Guard policy_guard =
+      PolicyStack::Get().PushPrivateState(purpose);
 
   bool control_only = true;
 
@@ -5418,7 +5468,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard.emplace(Policy::PrivateState());
+      policy_guard = PolicyStack::Get().PushPrivateState(
+          Policy::PrivateStatePurpose::RunningExpression);
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5490,10 +5541,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             Halt(clear_thread_plans, use_run_lock);
           }
 
-          diagnostic_manager.Printf(
-              lldb::eSeverityError,
-              "didn't get running event after initial resume, got %s instead.",
-              StateAsCString(stop_state));
+          diagnostic_manager.Printf(lldb::eSeverityError,
+                                    "didn't get running event after initial "
+                                    "resume, got %s instead.",
+                                    StateAsCString(stop_state));
           return_value = eExpressionSetupError;
           break;
         }
@@ -5915,7 +5966,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               Thread *thread = thread_list.GetThreadAtIndex(thread_index).get();
 
               if (!thread) {
-                ts.Printf("<?> ");
+                ts.PutCString("<?> ");
                 continue;
               }
 
@@ -5926,7 +5977,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               if (register_context)
                 ts.Printf("[ip 0x%" PRIx64 "] ", register_context->GetPC());
               else
-                ts.Printf("[ip unknown] ");
+                ts.PutCString("[ip unknown] ");
 
               // Show the private stop info here, the public stop info will be
               // from the last natural stop.
@@ -5936,7 +5987,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 if (stop_desc)
                   ts.PutCString(stop_desc);
               }
-              ts.Printf(">");
+              ts.PutCString(">");
             }
 
             event_explanation = ts.GetData();
@@ -6042,7 +6093,7 @@ void Process::GetStatus(Stream &strm, bool is_verbose) {
                   exit_description ? exit_description : "");
     } else {
       if (state == eStateConnected)
-        strm.Printf("Connected to remote target.\n");
+        strm.PutCString("Connected to remote target.\n");
       else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
         if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
@@ -6140,24 +6191,6 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 
 ProcessRunLock &Process::GetRunLock() {
   return m_current_private_state_thread_sp->GetRunLock();
-}
-
-bool Process::CurrentThreadIsPrivateStateThread()
-{
-  if (!m_current_private_state_thread_sp)
-    return true;
-  return m_current_private_state_thread_sp->IsOnThread(
-      Host::GetCurrentThread());
-}
-
-bool Process::CurrentThreadPosesAsPrivateStateThread() {
-  // If we haven't started up the private state thread yet, then whatever thread
-  // is fetching this event should be temporarily the private state thread.
-  if (!m_current_private_state_thread_sp ||
-      !m_current_private_state_thread_sp->IsRunning())
-    return true;
-  return m_current_private_state_thread_sp->IsOnThread(
-      Host::GetCurrentThread());
 }
 
 void Process::Flush() {
@@ -6269,6 +6302,7 @@ void Process::DidExec() {
   m_instrumentation_runtimes.clear();
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
+  m_memory_region_infos_cache.Clear();
   DoDidExec();
   CompleteAttach();
   // Flush the process (threads and all stack frames) after running
@@ -6381,8 +6415,8 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
-lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
-  return lldb_private::UUID();
+bool Process::FindModuleUUID(ModuleSpec &spec) {
+  return spec.GetUUID().IsValid();
 }
 
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
@@ -6489,10 +6523,22 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
+
+  std::optional<MemoryRegionInfo> cached_region =
+      m_memory_region_infos_cache.GetMemoryRegion(load_addr);
+  if (cached_region) {
+    range_info = *cached_region;
+    return Status();
+  }
+
   Status error = DoGetMemoryRegionInfo(load_addr, range_info);
-  // Reject a region that does not contain the requested address.
-  if (error.Success() && !range_info.GetRange().Contains(load_addr))
-    error = Status::FromErrorString("Invalid memory region");
+  if (error.Success()) {
+    // Reject a region that does not contain the requested address.
+    if (!range_info.GetRange().Contains(load_addr))
+      error = Status::FromErrorString("Invalid memory region");
+    else
+      m_memory_region_infos_cache.AddRegion(range_info);
+  }
 
   return error;
 }

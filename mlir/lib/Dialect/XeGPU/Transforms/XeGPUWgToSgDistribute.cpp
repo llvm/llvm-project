@@ -189,7 +189,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+    auto layout = dyn_cast<xegpu::DistributeLayoutAttr>(tdescTy.getLayout());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -203,10 +203,14 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
 
+    Value src = op.getSource();
     SmallVector<Value> newCreateNdOps(count);
-    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() {
-      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
-                                           op.getSource(), op.getMixedSizes(),
+    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() -> Value {
+      if (isa<MemRefType>(src.getType()))
+        return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
+                                             cast<TypedValue<MemRefType>>(src));
+      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy, src,
+                                           op.getMixedSizes(),
                                            op.getMixedStrides());
     });
 
@@ -530,7 +534,7 @@ struct WgToSgConvertLayoutOp
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto inputLayout = op.getInputLayout();
+    auto inputLayout = op.getEffectiveInputLayout();
     auto targetLayout = op.getTargetLayout();
 
     if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
@@ -832,8 +836,8 @@ struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
       auto newLayout = layout.dropSgLayoutAndData();
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-          newLayout);
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), newLayout,
+          /*contiguity=*/nullptr);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -879,7 +883,8 @@ struct WgToSgStoreScatterOp
       xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
                                     mask, chunkSizeAttr, op.getL1HintAttr(),
                                     op.getL2HintAttr(), op.getL3HintAttr(),
-                                    layout.dropSgLayoutAndData());
+                                    layout.dropSgLayoutAndData(),
+                                    /*contiguity=*/nullptr);
     }
     rewriter.eraseOp(op);
     return success();
@@ -1598,8 +1603,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
                                xegpu::StoreNdOp, xegpu::PrefetchNdOp>(
       [=](Operation *op) -> bool {
         auto tdescTy = getTensorDescType(op);
-        auto layout =
-            dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+        auto layout = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+            tdescTy.getLayout());
         return isLegal(layout);
       });
 
@@ -1660,7 +1665,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
       [=](xegpu::ConvertLayoutOp op) -> bool {
-        return isLegal(op.getInputLayout()) && isLegal(op.getTargetLayout());
+        return isLegal(op.getEffectiveInputLayout()) &&
+               isLegal(op.getTargetLayout());
       });
 
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(

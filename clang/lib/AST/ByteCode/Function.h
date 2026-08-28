@@ -178,7 +178,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call.
-  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
+  bool isValid() const { return IsValid; }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
@@ -224,9 +224,11 @@ public:
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
   bool hasThisPointer() const { return HasThisPointer; }
-  bool isThisPointerExplicit() const { return ExplicitThisPointer; }
-  bool hasImplicitThisParam() const {
-    return hasThisPointer() && !ExplicitThisPointer;
+  bool hasExplicitThisPointer() const {
+    return HasThisPointer && ExplicitThisPointer;
+  }
+  bool hasImplicitThisPointer() const {
+    return HasThisPointer && !ExplicitThisPointer;
   }
 
   /// Checks if the function already has a body attached.

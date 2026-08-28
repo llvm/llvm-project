@@ -1,7 +1,7 @@
 ; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %s > %t.ll
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj -O0 -o %t.o %t.ll
-; RUN: llvm-objdump --triple=amdgcn-amd-amdhsa --mcpu=gfx802 -d -l %t.o | FileCheck --check-prefix=LINE %t.ll
-; RUN: llvm-objdump --triple=amdgcn-amd-amdhsa --mcpu=gfx802 -d -S %t.o | FileCheck --check-prefix=SOURCE %t.ll
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -filetype=obj -O0 -o %t.o %t.ll
+; RUN: llvm-objdump --triple=amdgpu8.02-amd-amdhsa -d -l %t.o | FileCheck --check-prefix=LINE %t.ll
+; RUN: llvm-objdump --triple=amdgpu8.02-amd-amdhsa -d -S %t.o | FileCheck --check-prefix=SOURCE %t.ll
 
 ; Prologue.
 ; LINE:      source_lines_test{{>?}}:
@@ -36,9 +36,7 @@
 ; SOURCE:      ; }
 ; SOURCE-NEXT: s_endpgm
 
-; ModuleID = 'source-lines.cl'
 source_filename = "source-lines.cl"
-target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: noinline nounwind
 define amdgpu_kernel void @source_lines_test(ptr addrspace(1) %Out) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {

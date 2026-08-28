@@ -1,5 +1,0 @@
-# RUN: echo start
-# RUN: sleep 300 & PID=$!
-# RUN: sleep 2
-# RUN: kill $PID
-# RUN: echo end

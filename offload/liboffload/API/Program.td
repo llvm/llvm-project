@@ -21,7 +21,11 @@ def olCreateProgram : Function {
         Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
         Param<"ol_program_handle_t*", "Program", "output pointer for the created program", PARAM_OUT>
     ];
-    let returns = [];
+    let returns = [
+        Return<"OL_ERRC_INVALID_BINARY", [
+            "If the buffer described by `ProgData` and `ProgDataSize` is not a valid binary image for the platform."
+        ]>,
+    ];
 }
 
 def olIsValidBinary : Function {

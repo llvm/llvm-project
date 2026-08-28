@@ -149,9 +149,10 @@ public:
 /// Otherwise a single control flow graph operation branching to one block
 /// per return-like operation kind remains.
 ///
-/// The transformation currently requires that all control flow graph operations
-/// have no side effects, implement the BranchOpInterface and does not have any
-/// operation produced successor operands.
+/// The transformation currently requires that the region has no unreachable
+/// blocks and that all control flow graph operations have no side effects,
+/// implement the BranchOpInterface and does not have any operation produced
+/// successor operands.
 /// Returns failure if any of the preconditions are violated or if any of the
 /// methods of `interface` failed. The IR is left in an unspecified state.
 ///

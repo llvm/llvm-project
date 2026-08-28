@@ -1330,6 +1330,9 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
         ReplaceReg(F.Register);
         ReplaceReg(F.SpillRegister);
         ReplaceReg(F.MaskRegister);
+      },
+      [](LLVMSetRAStateFields &) {
+        llvm_unreachable(".cfi_set_ra_state does not have registers");
       });
   std::visit(Visitor, ExtraFields);
 }
@@ -1456,6 +1459,24 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     return;
 
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    Streamer.emitInt8(dwarf::DW_CFA_AARCH64_set_ra_state);
+    Streamer.emitULEB128IntValue(Instr.getRASignState());
+    if (MCSymbol *PACSym = Instr.getRASignSymbol()) {
+      MCContext &Ctx = Streamer.getContext();
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(PACSym, Ctx),
+          MCSymbolRefExpr::create(Instr.getLabel(), Ctx), Ctx);
+      const MCExpr *Factored = MCBinaryExpr::createDiv(
+          Diff,
+          MCConstantExpr::create(Ctx.getAsmInfo().getMinInstAlignment(), Ctx),
+          Ctx);
+      Streamer.emitSLEB128Value(Factored);
+    } else {
+      Streamer.emitSLEB128IntValue(Instr.getRASignOffset());
+    }
+    return;
+  }
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.emitInt8(dwarf::DW_CFA_undefined);

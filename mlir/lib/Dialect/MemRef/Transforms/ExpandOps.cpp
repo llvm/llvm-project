@@ -44,10 +44,11 @@ public:
     Location loc = op.getLoc();
     Value stride = nullptr;
     int64_t staticStride = 1;
+    MemRefType resultType = cast<MemRefType>(op.getType());
     for (int i = rank - 1; i >= 0; --i) {
       Value size;
       // Load dynamic sizes from the shape input, use constants for static dims.
-      if (op.getType().isDynamicDim(i)) {
+      if (resultType.isDynamicDim(i)) {
         Value index = arith::ConstantIndexOp::create(rewriter, loc, i);
         size = memref::LoadOp::create(rewriter, loc, op.getShape(), index);
         if (!isa<IndexType>(size.getType()))
@@ -55,7 +56,7 @@ public:
                                             rewriter.getIndexType(), size);
         sizes[i] = size;
       } else {
-        auto sizeAttr = rewriter.getIndexAttr(op.getType().getDimSize(i));
+        auto sizeAttr = rewriter.getIndexAttr(resultType.getDimSize(i));
         size = arith::ConstantOp::create(rewriter, loc, sizeAttr);
         sizes[i] = sizeAttr;
       }
@@ -67,18 +68,18 @@ public:
       if (i > 0) {
         if (stride) {
           stride = arith::MulIOp::create(rewriter, loc, stride, size);
-        } else if (op.getType().isDynamicDim(i)) {
+        } else if (resultType.isDynamicDim(i)) {
           stride = arith::MulIOp::create(
               rewriter, loc,
               arith::ConstantIndexOp::create(rewriter, loc, staticStride),
               size);
         } else {
-          staticStride *= op.getType().getDimSize(i);
+          staticStride *= resultType.getDimSize(i);
         }
       }
     }
     rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        op, op.getType(), op.getSource(), /*offset=*/rewriter.getIndexAttr(0),
+        op, resultType, op.getSource(), /*offset=*/rewriter.getIndexAttr(0),
         sizes, strides);
     return success();
   }

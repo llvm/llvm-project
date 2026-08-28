@@ -189,6 +189,8 @@ required runtime libraries needed by C++ (e.g., for STL) to the linker invocatio
 In this case, one has to explicitly provide the Fortran runtime library
 `flang_rt.runtime`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
+Clang with the `--driver-mode=flang` option behaves like Flang for linking.
+In this case, too, C++ runtime libraries may have to be provided explicitly.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
@@ -235,6 +237,23 @@ action flags, only the last one will be taken into account. The default action
 is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 <input-file>`.
+
+## Dependency File Generation
+Flang can emit Makefile-style dependency rules with `-M`, `-MM`, `-MD` and
+`-MMD` (paired with `-MF`, `-MT` and `-MQ` to control the output file and the
+rule target).
+
+Both `-M`/`-MM` and `-MD`/`-MMD` run through semantic analysis (equivalent to
+`-fsyntax-only`), so `use` statements are resolved and the `.mod` files opened
+during semantic analysis are recorded and appear in the dependency rule.
+
+The one behavioural difference between `-M`/`-MM` and `-MD`/`-MMD` is the
+output destination and whether object code is emitted:
+
+* `-MD` and `-MMD` run a full compilation and emit object code; the dependency
+  file is written alongside the object file.
+* `-M` and `-MM` skip code generation and write the dependency rule to stdout
+  (or to the file named by `-MF` / `-o`).
 
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
@@ -463,9 +482,9 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
 ### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
 frontend driver, `flang -fc1`:
-* [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
+* [`-load <dsopath>`](#the-load-dsopath-option) for loading the dynamic shared
   object of the plugin
-* [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
+* [`-plugin <name>`](#the-plugin-name-option) for calling the registered plugin
 
 Invocation of the example plugin is done through:
 ```bash
@@ -524,6 +543,27 @@ invocations `invokeFIROptEarlyEPCallbacks`, `invokeFIRInlinerCallback`, and
 passes at different points of the default pass pipeline. An example use of these
 extension point callbacks is shown in `registerDefaultInlinerPass` to invoke the
 default inliner pass in `flang`.
+
+These extension points all run after HLFIR has been lowered to FIR, so the HLFIR
+intrinsic operations (`hlfir.sum`, `hlfir.matmul`, ...) are already gone. For
+transformations that need to see them, `createHLFIRToFIRPassPipeline` provides
+two more extension points:
+
+* `invokeHLFIROptEarlyEPCallbacks` runs at the start of the pipeline, before any
+  HLFIR simplification or inlining.
+* `invokeHLFIROptLastEPCallbacks` runs just before `createLowerHLFIRIntrinsics`,
+  the last point at which HLFIR intrinsic operations still exist.
+
+Drivers register passes with `registerHLFIROptEarlyEPCallbacks` and
+`registerHLFIROptLastEPCallbacks` on the `MLIRToLLVMPassPipelineConfig` (defined
+in `flang/include/flang/Tools/CrossToolHelpers.h`), for example:
+
+```c++
+config.registerHLFIROptEarlyEPCallbacks(
+    [](mlir::PassManager &pm, llvm::OptimizationLevel) {
+      pm.addPass(createMyHLFIRPass());
+    });
+```
 
 ## LLVM Pass Plugins
 

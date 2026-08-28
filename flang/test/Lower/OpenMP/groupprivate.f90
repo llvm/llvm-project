@@ -14,7 +14,7 @@ module m
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -40,7 +40,7 @@ module m2
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_common_block_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @blk_ device_type (any) : !fir.ref<!fir.array<12xi8>>
 ! CHECK:             %[[DECL_X:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][0]) {uniq_name = "_QMm2Ecb_x"}
@@ -87,7 +87,7 @@ module m_multi
 end module
 
 ! CHECK-LABEL: func.func @_QPtest_multiple_groupprivate
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP_A:.*]] = omp.groupprivate @_QMm_multiEgp_a device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL_A:.*]]:2 = hlfir.declare %[[GP_A]] {uniq_name = "_QMm_multiEgp_a"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -156,7 +156,7 @@ end subroutine
 ! result rather than the original host global.
 ! CHECK-LABEL: func.func @_QPtest_target_skip_map_groupprivate
 ! CHECK-NOT:     omp.map.info
-! CHECK:         omp.target {
+! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
 ! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -274,3 +274,57 @@ module m_late
   integer, save :: gp_late
   !$omp groupprivate(gp_late) device_type(host)
 end module
+
+! Test 12: groupprivate used in a plain 'target' with no enclosing 'teams'. The
+! per-contention-group copy is materialised on the 'target' construct itself
+! CHECK-LABEL: func.func @_QPtest_target_no_teams_groupprivate
+! CHECK:         omp.target kernel_type(generic) {
+! CHECK-NOT:       omp.teams
+! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[C10:.*]] = arith.constant 10 : i32
+! CHECK:           hlfir.assign %[[C10]] to %[[DECL]]#0 : i32, !fir.ref<i32>
+subroutine test_target_no_teams_groupprivate()
+  use m
+
+  !$omp target
+    x = 10
+  !$omp end target
+end subroutine
+
+! Test 13: separated 'target' with a nested 'teams'. The copy is materialised on
+! the 'teams' construct only; no omp.groupprivate is emitted directly on the
+! 'target' construct.
+! CHECK-LABEL: func.func @_QPtest_target_nested_teams_groupprivate
+! CHECK:         omp.target kernel_type(generic) {
+! CHECK-NOT:       omp.groupprivate
+! CHECK:           omp.teams {
+! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-NOT:       omp.groupprivate @_QMmEx
+subroutine test_target_nested_teams_groupprivate()
+  use m
+
+  !$omp target
+    !$omp teams
+      x = 10
+    !$omp end teams
+  !$omp end target
+end subroutine
+
+! Test 14: combined 'target teams num_teams(1)'. The copy is materialised on the
+! 'teams' leaf only; no omp.groupprivate is emitted on the 'target' leaf.
+! CHECK-LABEL: func.func @_QPtest_target_teams_one_groupprivate
+! CHECK:         omp.target kernel_type(generic) host_eval(
+! CHECK-NOT:       omp.groupprivate
+! CHECK:           omp.teams
+! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-NOT:       omp.groupprivate @_QMmEx
+subroutine test_target_teams_one_groupprivate()
+  use m
+
+  !$omp target teams num_teams(1)
+    x = 10
+  !$omp end target teams
+end subroutine

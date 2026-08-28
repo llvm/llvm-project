@@ -155,6 +155,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2f128
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -166,6 +167,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.cos
     libc.src.math.cosf
@@ -197,15 +199,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminf128
     libc.src.math.fminl
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf128
     libc.src.math.fmaxl
     libc.src.math.fmaximum
     libc.src.math.fmaximumf
@@ -245,14 +250,19 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
+    libc.src.math.llroundf128
     libc.src.math.llroundl
     libc.src.math.log10
     libc.src.math.log10f
@@ -267,9 +277,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logbl
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
+    libc.src.math.lroundf128
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
@@ -279,6 +291,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
+    libc.src.math.nearbyintf128
     libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
@@ -296,9 +309,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.round
+    libc.src.math.roundevenf128
     libc.src.math.roundf
+    libc.src.math.roundf128
     libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
@@ -313,6 +329,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf
+    libc.src.math.sqrtf128
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
@@ -320,6 +337,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanpif
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
 )
 
@@ -346,6 +364,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -393,6 +412,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16

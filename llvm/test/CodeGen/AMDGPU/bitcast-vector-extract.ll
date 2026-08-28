@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; The bitcast should be pushed through the bitcasts so the vectors can
 ; be broken down and the shared components can be CSEd
@@ -67,27 +67,6 @@ define amdgpu_kernel void @store_bitcast_constant_v8i32_to_v16i16(ptr addrspace(
   store volatile <8 x float> %vec1.bc, ptr addrspace(1) %out
   ret void
 }
-
-; GCN-LABEL: {{^}}store_value_lowered_to_undef_bitcast_source:
-; GCN-NOT: store_dword
-define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 999) #1
-  %bc = bitcast i64 %undef to <2 x i32>
-  store <2 x i32> %bc, ptr addrspace(1) %out
-  ret void
-}
-
-; GCN-LABEL: {{^}}store_value_lowered_to_undef_bitcast_source_extractelt:
-; GCN-NOT: store_dword
-define amdgpu_kernel void @store_value_lowered_to_undef_bitcast_source_extractelt(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-  %undef = call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 9999) #1
-  %bc = bitcast i64 %undef to <2 x i32>
-  %elt1 = extractelement <2 x i32> %bc, i32 1
-  store i32 %elt1, ptr addrspace(1) %out
-  ret void
-}
-
-declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone convergent }

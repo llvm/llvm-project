@@ -14,6 +14,8 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -109,7 +111,8 @@ static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
 /// when its register either (a) has not been redefined by any preceding
 /// non-debug instruction (i.e. it still holds the caller-passed value), or
 /// (b) was most recently loaded from the stack via $r11 (a stack-passed
-/// argument beyond the first five register args).
+/// argument beyond the first five register args). For each argument only the
+/// first eligible DBG_VALUE is recorded, since that is its entry location.
 ///
 /// There is another case where DBG_VALUE is not emitted due to
 /// AssignmentTrackingAnalysis which determines that a variable is
@@ -155,7 +158,7 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
 
       if (!DefinedRegs.contains(MO.getReg()) ||
           StackLoadRegs.contains(MO.getReg()))
-        EntryRegMap[Arg] = MO.getReg();
+        EntryRegMap.try_emplace(Arg, MO.getReg());
       continue;
     }
 
@@ -519,9 +522,11 @@ void BTFTypeArray::emitType(MCStreamer &OS) {
 }
 
 /// Represent either a struct or a union.
-BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy, bool IsStruct,
+BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy,
+                             ArrayRef<const DINode *> Elements, bool IsStruct,
                              bool HasBitField, uint32_t Vlen)
-    : STy(STy), HasBitField(HasBitField) {
+    : STy(STy), Elements(Elements.begin(), Elements.end()),
+      HasBitField(HasBitField) {
   Kind = IsStruct ? BTF::BTF_KIND_STRUCT : BTF::BTF_KIND_UNION;
   BTFType.Size = roundupToBytes(STy->getSizeInBits());
   BTFType.Info = (HasBitField << 31) | (Kind << 24) | Vlen;
@@ -557,7 +562,6 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
   }
 
   // Add struct/union members.
-  const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
 
@@ -910,7 +914,7 @@ uint32_t BTFDebug::processDISubprogram(
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
 
   // Process argument annotations.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       uint32_t Arg = DV->getArg();
       if (Arg) {
@@ -972,7 +976,14 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  const DINodeArray Elements = CTy->getElements();
+  DINodeArray DIElements = CTy->getElements();
+  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
+  // Structure elements must have nondecreasing offsets in BTF. Preserve DI
+  // order for union and variant-part records.
+  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
+      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+    });
   uint32_t VLen = Elements.size();
   // Variant parts might have a discriminator. LLVM DI doesn't consider it as
   // an element and instead keeps it as a separate reference. But we represent
@@ -999,8 +1010,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
     }
   }
 
-  auto TypeEntry =
-      std::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
+  auto TypeEntry = std::make_unique<BTFTypeStruct>(CTy, Elements, IsStruct,
+                                                   HasBitField, VLen);
   StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
 
@@ -1574,7 +1585,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
   SmallDenseMap<uint32_t, StringRef> FuncArgNames;
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();

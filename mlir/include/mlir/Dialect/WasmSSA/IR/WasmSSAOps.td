@@ -16,6 +16,7 @@ include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td"
 
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -149,6 +150,7 @@ def WasmSSA_ConstOp : WasmSSA_Op<"const", [
 
 def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     AffineScope, AutomaticAllocationScope,
+    SymbolName,
     DeclareOpInterfaceMethods<FunctionOpInterface, ["verifyBody"]>,
     IsolatedFromAbove,
     Symbol]> {
@@ -212,7 +214,15 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
 
   let builders = [
@@ -239,7 +249,7 @@ def WasmSSA_FuncCallOp : WasmSSA_Op<"call"> {
 }
 
 def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
-    Symbol,
+    SymbolName, Symbol,
     CallableOpInterface,
     ImportOpInterface]> {
   let summary = "Importing a function variable";
@@ -274,7 +284,12 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
 
     ::mlir::SymbolTable::Visibility getVisibility() {
       return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
   let builders = [
     OpBuilder<(ins "StringRef":$symbol,
@@ -282,12 +297,15 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
                    "StringRef":$importName,
                    "FunctionType": $type)>
   ];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name `:` $type "
+                       "(`arg_attrs` `=` $arg_attrs^)? "
+                       "(`res_attrs` `=` $res_attrs^)? attr-dict";
 }
 
 def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
   AffineScope, AutomaticAllocationScope,
-  IsolatedFromAbove, Symbol, ConstantExpressionInitializerOpTrait]> {
+  IsolatedFromAbove, SymbolName, Symbol,
+  ConstantExpressionInitializerOpTrait]> {
   let summary= "WebAssembly global value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_ValTypeAttr: $type,
@@ -318,20 +336,31 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
     }
     ```
   }];
-  let regions = (region AnyRegion: $initializer);
+  let regions = (region SizedRegion<1>: $initializer);
 
   let extraClassDeclaration = [{
     ::mlir::SymbolTable::Visibility getVisibility() {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
+
+    wasmssa::ReturnOp getInitTerminator();
   }];
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
-    Symbol,
+    SymbolName, Symbol,
     ImportOpInterface]> {
   let summary = "Importing a global variable";
   let description = [{
@@ -354,7 +383,12 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
 
     ::mlir::SymbolTable::Visibility getVisibility() {
       return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -376,6 +410,25 @@ def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<Sy
   let arguments = (ins FlatSymbolRefAttr: $global);
   let results = (outs WasmSSA_ValType: $global_val);
   let assemblyFormat = "$global attr-dict `:` type($global_val)";
+}
+
+def WasmSSA_GlobalSetOp : WasmSSA_Op<"global_set", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Sets the value of the mutable global passed as argument.";
+  let description = [{
+     Sets the value of the mutable global referenced by the symbol to the given
+     value.
+
+     Example:
+
+     ```mlir
+     // Sets the value of `@global_0` to `%v`.
+     wasmssa.global_set @global_0 to %v : i32
+     ```
+    }];
+  let arguments = (ins FlatSymbolRefAttr: $global,
+                       WasmSSA_ValType: $value);
+  let assemblyFormat = "$global `to` $value `:` type($value) attr-dict";
 }
 
 def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
@@ -497,7 +550,7 @@ def WasmSSA_LocalTeeOp : WasmSSA_Op<"local_tee", [
   let assemblyFormat = "$localVar `:` type($localVar) `to` $value `:` type($value) attr-dict";
 }
 
-def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
+def WasmSSA_MemOp : WasmSSA_Op<"memory", [SymbolName, Symbol]> {
   let summary= "WebAssembly memory definition";
   let description = [{
     Define a memory to be used by the program.
@@ -526,13 +579,22 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
 
   let assemblyFormat = "(`exported` $exported^)? $sym_name $limits attr-dict";
 }
 
-def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> {
+def WasmSSA_MemImportOp
+    : WasmSSA_Op<"import_mem", [SymbolName, Symbol, ImportOpInterface]> {
   let summary = "Importing a memory";
   let description = [{
     Import a memory from another module.
@@ -552,12 +614,17 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
       bool isDeclaration() const { return true; }
       ::mlir::SymbolTable::Visibility getVisibility() {
        return ::mlir::SymbolTable::Visibility::Nested;
-      };
+      }
+
+      void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+        if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+          emitOpError("Wasm imports must have nested visibility");
+      }
    }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $limits attr-dict";
 }
 
-def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
+def WasmSSA_TableOp : WasmSSA_Op<"table", [SymbolName, Symbol]> {
   let summary= "WebAssembly table value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_TableTypeAttr: $type,
@@ -567,12 +634,21 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
   let assemblyFormat = "(`exported` $exported^)? $sym_name $type attr-dict";
 }
 
-def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterface]> {
+def WasmSSA_TableImportOp
+    : WasmSSA_Op<"import_table", [SymbolName, Symbol, ImportOpInterface]> {
   let summary = "Importing a table";
   let description = [{
     Import a table from another module.
@@ -592,9 +668,14 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
     bool isDeclaration() const { return true; }
     ::mlir::SymbolTable::Visibility getVisibility() {
        return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $type attr-dict";
 }
 
 def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
@@ -604,6 +685,29 @@ def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
   let builders = [
     OpBuilder<(ins)>
   ];
+}
+
+def WasmSSA_SelectOp : WasmSSA_Op<"select", [
+    AllTypesMatch<["true_value", "false_value", "result"]>,
+    Pure]> {
+  let summary = "Select between two values based on a condition.";
+  let description = [{
+     Returns `true_value` if `condition` is non-zero, `false_value` otherwise.
+     Both operands and the result must share the same Wasm value type.
+
+     Example:
+
+     ```mlir
+     // Returns %a if %cond is non-zero, otherwise %b.
+     %r = wasmssa.select %cond, %a, %b : i32
+     ```
+    }];
+  let arguments = (ins WasmSSA_ValType: $true_value,
+                       WasmSSA_ValType: $false_value,
+                       I32: $condition);
+  let results = (outs WasmSSA_ValType: $result);
+  let assemblyFormat =
+      "$condition `,` $true_value `,` $false_value attr-dict `:` type($result)";
 }
 
 // ---- Numeric ops
@@ -1050,6 +1154,36 @@ def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
 
      ```mlir
      %a = wasmssa.trunc_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncSatSIOp : WasmSSA_ConversionOp<"trunc_sat_si",
+    [{Truncate floating point value to signed integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    NaN is mapped to 0, infinities are mapped to minimal and maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncSatUIOp : WasmSSA_ConversionOp<"trunc_sat_ui",
+    [{Truncate floating point value to unsigned integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Negative infinity and NaN are mapped to 0, positive infinity is mapped to maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_ui %b : f32 to i32
      ```
     }],
     [WasmSSA_FPType],

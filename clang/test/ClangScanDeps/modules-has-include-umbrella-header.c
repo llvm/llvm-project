@@ -47,7 +47,9 @@ module Dependency { header "dependency.h" }
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/deps.json
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=translation-units.commands.clang-context-hash,translation-units.commands.clang-module-deps,translation-units.commands.file-deps,translation-units.commands.input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // Let's check that the TU actually depends on `FW_Private` (and does not treat FW/B.h as textual).
 // CHECK:      {
@@ -61,8 +63,6 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:               "context-hash": "{{.*}}",
 // CHECK-NEXT:               "module-name": "FW_Private"
 // CHECK-NEXT:             }
-// CHECK:                ],
-// CHECK-NEXT:           "command-line": [
 // CHECK:                ],
 // CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.c",

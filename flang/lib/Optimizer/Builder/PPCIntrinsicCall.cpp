@@ -777,6 +777,7 @@ static constexpr IntrinsicHandler ppcHandlers[]{
      {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
      /*isElemental=*/false},
 };
+static_assert(fir::isSorted(ppcHandlers) && "map must be sorted");
 
 static constexpr MathOperation ppcMathOperations[] = {
     // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
@@ -932,7 +933,10 @@ static constexpr MathOperation ppcMathOperations[] = {
      genLibCall},
 };
 
-const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name) {
+const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name,
+                                                bool isBindcCall) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &ppcHandler, llvm::StringRef name) {
     return name.compare(ppcHandler.name) > 0;
   };

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -32,6 +31,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -80,6 +80,11 @@ namespace {
     Align Alignment;            // CP alignment.
     unsigned char SymbolFlags = X86II::MO_NO_FLAG;  // X86II::MO_*
     bool NegateIndex = false;
+    // True when this address is being matched to be emitted as a LEA rather
+    // than folded into a memory operand. Unlike a memory operand, a LEA turns
+    // the folded arithmetic into real instructions, so it is not profitable to
+    // split an already-materialized (multi-use) value here. (Issue #51707)
+    bool IsForLEA = false;
 
     X86ISelAddressMode() = default;
 
@@ -207,6 +212,7 @@ namespace {
     bool matchAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchVectorAddress(SDValue N, X86ISelAddressMode &AM);
     bool matchAdd(SDValue &N, X86ISelAddressMode &AM, unsigned Depth);
+    bool hasMaterializingUse(SDValue V) const;
     SDValue matchIndexRecursively(SDValue N, X86ISelAddressMode &AM,
                                   unsigned Depth);
     bool matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
@@ -927,22 +933,31 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
   }
 }
 
-static bool isEndbrImm64(uint64_t Imm) {
-// There may be some other prefix bytes between 0xF3 and 0x0F1EFA.
-// i.g: 0xF3660F1EFA, 0xF3670F1EFA
-  if ((Imm & 0x00FFFFFF) != 0x0F1EFA)
+static bool isEndbrImm(uint64_t Imm, unsigned BitWidth) {
+  if (BitWidth > 64 || BitWidth % 8 != 0)
     return false;
 
-  uint8_t OptionalPrefixBytes [] = {0x26, 0x2e, 0x36, 0x3e, 0x64,
-                                    0x65, 0x66, 0x67, 0xf0, 0xf2};
-  int i = 24; // 24bit 0x0F1EFA has matched
-  while (i < 64) {
-    uint8_t Byte = (Imm >> i) & 0xFF;
-    if (Byte == 0xF3)
+  const unsigned NumBytes = BitWidth / 8;
+  if (NumBytes < 4)
+    return false;
+
+  const uint8_t OptionalPrefixBytes[] = {0x26, 0x2e, 0x36, 0x3e, 0x64,
+                                         0x65, 0x66, 0x67, 0xf0, 0xf2};
+  uint8_t Bytes[8];
+  for (unsigned I = 0; I != NumBytes; ++I)
+    Bytes[I] = (Imm >> (I * 8)) & 0xFF;
+
+  for (unsigned I = 0; I + 3 < NumBytes; ++I) {
+    if (Bytes[I] != 0xf3)
+      continue;
+
+    unsigned J = I + 1;
+    while (J < NumBytes && llvm::is_contained(OptionalPrefixBytes, Bytes[J]))
+      ++J;
+
+    if (J + 2 < NumBytes && Bytes[J] == 0x0f && Bytes[J + 1] == 0x1e &&
+        (Bytes[J + 2] == 0xfa || Bytes[J + 2] == 0xfb))
       return true;
-    if (!llvm::is_contained(OptionalPrefixBytes, Byte))
-      return false;
-    i += 8;
   }
 
   return false;
@@ -963,28 +978,34 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     // ENDBR32 and ENDBR64 have specific opcodes:
     // ENDBR32: F3 0F 1E FB
     // ENDBR64: F3 0F 1E FA
-    // And we want that attackers won’t find unintended ENDBR32/64
-    // opcode matches in the binary
-    // Here’s an example:
+    // We want to prevent attackers from finding unintended ENDBR32/64 opcode
+    // matches in executable code. Here's an example:
     // If the compiler had to generate asm for the following code:
-    // a = 0xF30F1EFA
+    // a = 0xFA1E0FF3
     // it could, for example, generate:
-    // mov 0xF30F1EFA, dword ptr[a]
-    // In such a case, the binary would include a gadget that starts
-    // with a fake ENDBR64 opcode. Therefore, we split such generation
-    // into multiple operations, let it not shows in the binary
+    // mov 0xFA1E0FF3, dword ptr[a]
+    // In such a case, the binary would include a gadget that starts with a
+    // fake ENDBR64 opcode. Split such constants into multiple operations so
+    // the byte sequence does not appear in executable code.
     if (N->getOpcode() == ISD::Constant) {
       MVT VT = N->getSimpleValueType(0);
-      int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
-      int32_t EndbrImm = Subtarget->is64Bit() ? 0xF30F1EFA : 0xF30F1EFB;
-      if (Imm == EndbrImm || isEndbrImm64(Imm)) {
+      assert(VT.isScalarInteger() &&
+             "ISD::Constant must have a scalar integer type");
+      if (!VT.isScalarInteger() || VT.getSizeInBits() > 64)
+        continue;
+
+      uint64_t Imm = cast<ConstantSDNode>(N)->getZExtValue();
+      if (isEndbrImm(Imm, VT.getSizeInBits())) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
             MF->getFunction().getParent()->getModuleFlag(
                 "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
-          SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
+          uint64_t ComplementImm =
+              (~Imm) & maskTrailingOnes<uint64_t>(VT.getSizeInBits());
+          SDValue Complement =
+              CurDAG->getConstant(ComplementImm, dl, VT, false, true);
           Complement = CurDAG->getNOT(dl, Complement, VT);
           --I;
           CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Complement);
@@ -2031,8 +2052,11 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   }
 
   // Post-processing: Convert lea(,%reg,2) to lea(%reg,%reg), which has
-  // a smaller encoding and avoids a scaled-index.
-  if (AM.Scale == 2 &&
+  // a smaller encoding and avoids a scaled-index. Not valid when the index is
+  // negated: this copies the index into the base, but only the index is negated
+  // when the address is emitted, so the result would be index + (-index) - that
+  // is, zero - rather than (-index) * 2.
+  if (AM.Scale == 2 && !AM.NegateIndex &&
       AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr) {
     AM.Base_Reg = AM.IndexReg;
@@ -2062,22 +2086,120 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
+// Returns true if V has a use that materializes it in a register as a value -
+// a stored value operand or a CopyToReg (a return value, call argument, or a
+// value that is live out of the block). Such a use means V will be in a
+// register regardless, so reusing it when forming an LEA is free. Uses where V
+// is only an address (a load/store pointer, or folded into another address
+// computation) do not materialize it. This is a more precise replacement for
+// the !hasOneUse() proxy: an address-only multi-use value is not materialized.
+bool X86DAGToDAGISel::hasMaterializingUse(SDValue V) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  for (SDUse &U : V->uses()) {
+    if (U.getResNo() != V.getResNo())
+      continue;
+    SDNode *User = U.getUser();
+    // A return value, call argument, or a value live out of the block.
+    if (User->getOpcode() == ISD::CopyToReg)
+      return true;
+    // A stored value materializes V (V as a store *address* does not).
+    if (auto *St = dyn_cast<StoreSDNode>(User)) {
+      if (St->getValue() == V)
+        return true;
+      continue;
+    }
+    // Selection may already have turned the ISD::STORE into a machine store by
+    // the time we get here. V materializes it if it is a stored value, i.e. an
+    // operand that is neither part of the memory reference (the address
+    // operands) nor the chain/glue. The memory reference is not always the
+    // first operand, so locate it via the instruction's memory-operand info
+    // rather than assuming a fixed layout. (No getOperandBias() is needed:
+    // unlike a MachineInstr, an SDNode's operand list has no leading defs.)
+    if (!User->isMachineOpcode())
+      continue;
+    const MCInstrDesc &Desc = TII->get(User->getMachineOpcode());
+    if (!Desc.mayStore())
+      continue;
+    int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+    if (MemRefBegin < 0)
+      continue;
+    unsigned MemRefEnd = MemRefBegin + X86::AddrNumOperands;
+    for (unsigned I = 0, E = User->getNumOperands(); I != E; ++I) {
+      if (I >= static_cast<unsigned>(MemRefBegin) && I < MemRefEnd)
+        continue; // an address operand
+      SDValue Opnd = User->getOperand(I);
+      if (Opnd.getValueType() == MVT::Other || Opnd.getValueType() == MVT::Glue)
+        continue; // chain / glue
+      if (Opnd == V)
+        return true; // a stored value operand
+    }
+  }
+  return false;
+}
+
 bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
                                unsigned Depth) {
   // Add an artificial use to this node so that we can keep track of
   // it if it gets CSE'd with a different node.
   HandleSDNode Handle(N);
 
+  auto IsAddOrAddLike = [&](SDValue V) {
+    return V.getOpcode() == ISD::ADD || CurDAG->isADDLike(V);
+  };
+
+  // When forming a LEA, avoid splitting an already-materialized value: use the
+  // operand directly as a base/index register instead. hasMaterializingUse()
+  // decides whether the operand is genuinely materialized - it has a use that
+  // puts it in a register as a value. A value used only as an address is not
+  // materialized, and splitting it there would only add a redundant
+  // materialization (see the two_ptrs test).
+  auto SplitsMaterializedValue = [&](SDValue Op) {
+    if (!AM.IsForLEA || !hasMaterializingUse(Op))
+      return false;
+
+    // add-like: decomposes to base + index (+ disp)
+    if (IsAddOrAddLike(Op))
+      return IsAddOrAddLike(Op.getOperand(0)) ||
+             IsAddOrAddLike(Op.getOperand(1));
+
+    // shl by 1/2/3 folds to a scaled index
+    if (Op.getOpcode() == ISD::SHL)
+      if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+        return C->getZExtValue() >= 1 && C->getZExtValue() <= 3 &&
+               IsAddOrAddLike(Op.getOperand(0));
+
+    return false;
+  };
+
+  // The check is applied here, per add operand, rather than inside
+  // matchAddressRecursively, so that it only fires when an add directly
+  // consumes the value. matchAddressRecursively is also entered for the LEA
+  // root itself and from the SUB case's operand fold.
+  // Firing there produces worse code.
+  auto MatchOperand = [&](SDValue Op) {
+    // The reuse shortcut places Op directly as a base/index register via
+    // matchAddressBase. That is illegal once AM is already %rip-relative:
+    // [%rip + disp32] takes no register beyond RIP itself (its implicit base) -
+    // no additional base and no index - so adding one would form an invalid
+    // address (folding a RIP-relative global and a materialized value into a
+    // single LEA, which asserts "Invalid rip-relative address" in the MC
+    // encoder). matchAddressRecursively correctly refuses to fold a register
+    // into a %rip-relative address, so fall back to it and let matchAdd keep
+    // the operands separate.
+    if (SplitsMaterializedValue(Op) && !AM.isRIPRelative())
+      return matchAddressBase(Op, AM);
+    return matchAddressRecursively(Op, AM, Depth + 1);
+  };
+
   X86ISelAddressMode Backup = AM;
-  if (!matchAddressRecursively(N.getOperand(0), AM, Depth+1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(1), AM, Depth+1))
+  if (!MatchOperand(N.getOperand(0)) &&
+      !MatchOperand(Handle.getValue().getOperand(1)))
     return false;
   AM = Backup;
 
   // Try again after commutating the operands.
-  if (!matchAddressRecursively(Handle.getValue().getOperand(1), AM,
-                               Depth + 1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(0), AM, Depth + 1))
+  if (!MatchOperand(Handle.getValue().getOperand(1)) &&
+      !MatchOperand(Handle.getValue().getOperand(0)))
     return false;
   AM = Backup;
 
@@ -2686,12 +2808,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     break;
 
   case ISD::SUB: {
-    // Given A-B, if A can be completely folded into the address and
-    // the index field with the index field unused, use -B as the index.
-    // This is a win if a has multiple parts that can be folded into
-    // the address. Also, this saves a mov if the base register has
-    // other uses, since it avoids a two-address sub instruction, however
-    // it costs an additional mov if the index register has other uses.
+    // Given A-B, if A can be completely folded into the address leaving the
+    // index field unused, use -B as the index. This is a win if A has multiple
+    // parts that can be folded into the address. Also, this saves a mov if the
+    // base register has other uses, since it avoids a two-address sub
+    // instruction, however it costs an additional mov if the index register
+    // has other uses.
+    // B may itself be a constant shift, in which case the shift folds into
+    // the scale - see below.
 
     // Add an artificial use to this node so that we can keep track of
     // it if it gets CSE'd with a different node.
@@ -2713,21 +2837,56 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     int Cost = 0;
     SDValue RHS = N.getOperand(1);
+
+    // A-(B<<C) can use -B as a scaled index for C in [1,3], which folds the
+    // shift into the address as well as the subtract. When B is not a foldable
+    // shift, NegScale stays empty and this is the plain A-B fold, which only
+    // breaks even on instruction count - a-b is mov+sub either way. Absorbing
+    // the shift saves one:
+    //
+    //   a - (b << 2)    movq %rdi, %rax     ->   negq %rsi
+    //                   shlq $2, %rsi            leaq (%rdi,%rsi,4), %rax
+    //                   subq %rsi, %rax
+    //
+    // That pays for the negate, so drop the cost by one.
+    std::optional<unsigned> NegScale;
+    if (RHS.getOpcode() == ISD::SHL && RHS.hasOneUse()) {
+      if (auto *ShAmt = dyn_cast<ConstantSDNode>(RHS.getOperand(1))) {
+        uint64_t ShVal = ShAmt->getZExtValue();
+        if (ShVal >= 1 && ShVal <= 3) {
+          NegScale = 1u << ShVal;
+          RHS = RHS.getOperand(0);
+          --Cost;
+        }
+      }
+    }
+
     // If the RHS involves a register with multiple uses, this
     // transformation incurs an extra mov, due to the neg instruction
-    // clobbering its operand.
+    // clobbering its operand. The CopyFromReg part of that is a guess -
+    // SelectionDAG is per-block, so uses elsewhere are invisible - and it is
+    // not applied to a folded shift, where it is wrong often enough to matter.
+    // The multiple-use part still is; see @y_outlives_lea.
     if (!RHS.getNode()->hasOneUse() ||
-        RHS.getNode()->getOpcode() == ISD::CopyFromReg ||
+        (!NegScale && RHS.getNode()->getOpcode() == ISD::CopyFromReg) ||
         RHS.getNode()->getOpcode() == ISD::TRUNCATE ||
         RHS.getNode()->getOpcode() == ISD::ANY_EXTEND ||
         (RHS.getNode()->getOpcode() == ISD::ZERO_EXTEND &&
          RHS.getOperand(0).getValueType() == MVT::i32))
       ++Cost;
-    // If the base is a register with multiple uses, this
-    // transformation may save a mov.
-    if ((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
-         !AM.Base_Reg.getNode()->hasOneUse()) ||
-        AM.BaseType == X86ISelAddressMode::FrameIndexBase)
+    // A - (A << C), where the base is itself the value being negated.
+    bool BaseIsNegatedValue = NegScale &&
+                              AM.BaseType == X86ISelAddressMode::RegBase &&
+                              AM.Base_Reg == RHS;
+    // If the base is a register with multiple uses, this transformation may
+    // save a mov - but not for BaseIsNegatedValue, where the baseline emits the
+    // shift non-destructively into another register and the SUB writes A in
+    // place, so there is no copy for the LEA to save. The copy the NEG needs
+    // there is charged by the multiple-use test above.
+    if (((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
+          !AM.Base_Reg.getNode()->hasOneUse()) ||
+         AM.BaseType == X86ISelAddressMode::FrameIndexBase) &&
+        !BaseIsNegatedValue)
       --Cost;
     // If the folded LHS was interesting, this transformation saves
     // address arithmetic.
@@ -2746,7 +2905,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // was an unprofitable LEA.
     AM.IndexReg = RHS;
     AM.NegateIndex = true;
-    AM.Scale = 1;
+    AM.Scale = NegScale.value_or(1);
     return false;
   }
 
@@ -3154,6 +3313,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
                                     SDValue &Index, SDValue &Disp,
                                     SDValue &Segment) {
   X86ISelAddressMode AM;
+  AM.IsForLEA = true;
 
   // Save the DL and VT before calling matchAddress, it can invalidate N.
   SDLoc DL(N);
@@ -3562,7 +3722,8 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
-      assert(!getTargetMachine().isPositionIndependent());
+      if (getTargetMachine().isPositionIndependent())
+        return false;
       LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
                      // reg needed.
     }
@@ -6316,7 +6477,21 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         } else if (TrailingZeros == 0 && SavesBytes) {
           // If the mask covers the least significant bit, then we can replace
           // TEST+AND with a SHL and check eflags.
-          // This emits a redundant TEST which is subsequently eliminated.
+          // This emits a redundant TEST which is subsequently eliminated,
+          // except for shift amounts 1 to 3: isDefConvertible() rejects those
+          // SHLs to keep them convertible to LEA, so the TEST would survive.
+          if (LeadingZeros == 1) {
+            // Shift out the top bit by doubling with ADD reg,reg instead: it
+            // is the same length and sets ZF identically, but the peephole
+            // does fold the TEST into it, and it runs on more ports.
+            MachineSDNode *Add = CurDAG->getMachineNode(
+                GET_ND_IF_ENABLED(X86::ADD64rr), dl, MVT::i64, MVT::i32,
+                N0.getOperand(0), N0.getOperand(0));
+            MachineSDNode *Test = CurDAG->getMachineNode(
+                X86::TEST64rr, dl, MVT::i32, SDValue(Add, 0), SDValue(Add, 0));
+            ReplaceNode(Node, Test);
+            return;
+          }
           ShiftOpcode = GET_ND_IF_ENABLED(X86::SHL64ri);
           ShiftAmt = LeadingZeros;
           SubRegIdx = 0;

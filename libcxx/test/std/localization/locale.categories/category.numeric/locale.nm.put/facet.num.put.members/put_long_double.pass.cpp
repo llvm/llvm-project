@@ -22626,6 +22626,52 @@ void test10() {
   }
 }
 
+void test11() {
+  char str[200];
+  std::locale lc = std::locale::classic();
+  const my_facet f(1);
+
+  {
+    long double v = INFINITY;
+    std::ios ios(0);
+    std::fixed(ios);
+    ios.imbue(lc);
+
+    {
+      std::nouppercase(ios);
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex.substr(0, 3) == "inf");
+    }
+    {
+      std::uppercase(ios);
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex.substr(0, 3) == "INF");
+    }
+  }
+
+  {
+    long double v = NAN;
+    std::ios ios(0);
+    std::fixed(ios);
+    ios.imbue(lc);
+
+    {
+      std::nouppercase(ios);
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex.substr(0, 3) == "nan");
+    }
+    {
+      std::uppercase(ios);
+      cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
+      std::string ex(str, base(iter));
+      assert(ex.substr(0, 3) == "NAN");
+    }
+  }
+}
+
 int main(int, char**) {
   test1();
   test2();
@@ -22637,6 +22683,10 @@ int main(int, char**) {
   test8();
   test9();
   test10();
+#if !defined(_AIX)
+  // TODO: AIX system libc seems to yield wrong capitalization for Infinity and NaN.
+  test11();
+#endif
   std::locale lc = std::locale::classic();
   std::locale lg(lc, new my_numpunct);
   const my_facet f(1);

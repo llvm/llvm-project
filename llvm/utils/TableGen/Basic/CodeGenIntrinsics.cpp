@@ -17,10 +17,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 using namespace llvm;
 
 // As the type of more than one return values is represented as an anonymous
@@ -29,6 +31,38 @@ using namespace llvm;
 // (encoded as 255). So, the maximum number of values that an intrinsic can
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
+
+using ImmArgRange = CodeGenIntrinsic::ImmArgRangeSet::Range;
+using ImmArgRangeList = CodeGenIntrinsic::ImmArgRangeSet::RangeList;
+
+static ImmArgRange getHalfOpenRange(const Record *R, const ListInit *Range,
+                                    StringRef AttrName) {
+  auto GetBound = [&](const Init *Bound) -> int64_t {
+    if (const auto *II = dyn_cast<IntInit>(Bound))
+      return II->getValue();
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) +
+                        " bound is not an integer: " + Bound->getAsString());
+  };
+
+  int64_t Lower = GetBound(Range->getElement(0));
+  int64_t Upper = GetBound(Range->getElement(1));
+  if (Upper == std::numeric_limits<int64_t>::max())
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " closed upper bound is too large");
+  return ImmArgRange(Lower, Upper + 1);
+}
+
+static void appendHalfOpenRange(SmallVectorImpl<ImmArgRange> &Ranges,
+                                ImmArgRange Range) {
+  if (!Ranges.empty()) {
+    if (Range.first == Ranges.back().second) {
+      Ranges.back().second = Range.second;
+      return;
+    }
+  }
+  Ranges.push_back(Range);
+}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -276,6 +310,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
       R->getValueAsOptionalString("ClangBuiltinName").value_or("");
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
+  TargetFeatures = R->getValueAsString("TargetFeatures");
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
@@ -385,6 +420,58 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
+
+  for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+    if (!isParamImmArg(RangeSet.ArgNo))
+      PrintFatalError(
+          TheDef->getLoc(),
+          formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
+
+  // Default values are not yet supported for overloaded intrinsics
+  // (overloaded support will come in a follow-up).
+  if (isOverloaded &&
+      llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
+        return DV.has_value();
+      }))
+    PrintFatalError(TheDef->getLoc(),
+                    "default argument values are not supported for "
+                    "overloaded intrinsics");
+
+  // Validate: defaults must form a contiguous trailing block ending at
+  // the last parameter (mirrors C++ default-argument rules).
+  unsigned NumParams = IS.ParamTys.size();
+  bool SeenDefault = false;
+  for (unsigned i = 0; i < NumParams; ++i) {
+    bool HasDefault =
+        (i < ParamDefaultValues.size() && ParamDefaultValues[i].has_value());
+    if (HasDefault) {
+      SeenDefault = true;
+    } else if (SeenDefault) {
+      PrintFatalError(TheDef->getLoc(),
+                      "missing default argument on parameter " + Twine(i));
+    }
+  }
+
+  // Validate each declared default: the parameter must be an integer type and
+  // the value (an unsigned bit pattern) must fit in the declared width.
+  for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
+    if (!ParamDefaultValues[i].has_value())
+      continue;
+    const Record *VT = IS.ParamTys[i]->getValueAsDef("VT");
+    if (!VT->getValueAsBit("isInteger")) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument on parameter " + Twine(i) +
+                          " requires an integer parameter type");
+    }
+    unsigned Width = VT->getValueAsInt("Size");
+    uint64_t Value = *ParamDefaultValues[i];
+    if (!isUIntN(Width, Value)) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument value " + Twine(Value) +
+                          " out of range for i" + Twine(Width) + " parameter " +
+                          Twine(i));
+    }
+  }
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -489,6 +576,22 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, ImmArg);
+
+    // If a DefaultValue (not the NoDefault sentinel) was supplied, record it.
+    // NoDefault is recognized by its Value field being unset (?).
+    const Record *DefaultField = R->getValueAsDef("Default");
+    const RecordVal *ValueField = DefaultField->getValue("Value");
+    if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
+      int64_t Value = DefaultField->getValueAsInt("Value");
+      // Defaults are stored as an unsigned bit pattern; a negative literal
+      // would silently wrap, so reject it with a clear message.
+      if (Value < 0)
+        PrintFatalError(TheDef->getLoc(), "default argument value " +
+                                              Twine(Value) + " on parameter " +
+                                              Twine(ArgNo - 1) +
+                                              " must be non-negative");
+      addDefaultArgValue(ArgNo - 1, Value);
+    }
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
@@ -502,6 +605,28 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("RangeSet")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    const ListInit *RangeList = R->getValueAsListInit("Ranges");
+    ImmArgRangeList Ranges;
+
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
+    unsigned ParamNo = ArgNo - 1;
+
+    for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+      if (RangeSet.ArgNo == ParamNo)
+        PrintFatalError(
+            R->getLoc(),
+            formatv("RangeSet for argument {} already specified", ParamNo));
+
+    for (const Init *Range : RangeList->getElements())
+      appendHalfOpenRange(
+          Ranges, getHalfOpenRange(R, cast<ListInit>(Range), "RangeSet"));
+    addImmArgRangeSet(ParamNo, std::move(Ranges));
+  } else if (R->isSubClassOf("NoFreeObj")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, NoFreeObj);
   } else if (R->isSubClassOf("ArgInfo")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     if (ArgNo < 1)
@@ -570,6 +695,11 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
 }
 
+void CodeGenIntrinsic::addImmArgRangeSet(unsigned ArgNo,
+                                         ImmArgRangeSet::RangeList Ranges) {
+  ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
+}
+
 void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
                                               StringRef ArgName,
                                               StringRef FuncName) {
@@ -581,4 +711,16 @@ void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
                                           " is already defined as '" +
                                           It->FuncName + "'");
   PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
+}
+
+void CodeGenIntrinsic::addDefaultArgValue(unsigned ArgIdx, uint64_t Value) {
+  if (ArgIdx >= ParamDefaultValues.size())
+    ParamDefaultValues.resize(ArgIdx + 1, std::nullopt);
+
+  if (ParamDefaultValues[ArgIdx].has_value())
+    PrintFatalError(TheDef->getLoc(), "Default value for argument " +
+                                          Twine(ArgIdx) +
+                                          " is already defined");
+
+  ParamDefaultValues[ArgIdx] = Value;
 }

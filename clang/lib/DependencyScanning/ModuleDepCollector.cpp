@@ -294,6 +294,18 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
   }
 
+  // Remove any header search paths that are explicitly ignored.
+  if (!CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.empty()) {
+    llvm::erase_if(
+        CI.getHeaderSearchOpts().UserEntries,
+        [&CI](const HeaderSearchOptions::Entry &E) {
+          return CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.contains(
+              llvm::CachedHashString(E.Path));
+        });
+    // Remove the now unused option.
+    CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.clear();
+  }
+
   return CI;
 }
 
@@ -471,9 +483,9 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // command line inputs use relative paths.
   bool AnyRelative = false;
   CI.visitPaths([&](StringRef Path) {
-    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    assert(!AnyRelative && "Continuing path visitation despite relative path");
     AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
-    return AnyRelative;
+    return CowCompilerInvocation::VisitConstResult{/*Terminate=*/AnyRelative};
   });
   return !AnyRelative;
 }

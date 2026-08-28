@@ -133,6 +133,8 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #      if defined(_CRT_CONST_CORRECT_OVERLOADS)
 #        define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
 #      endif
+#    elif _LIBCPP_LIBC_LLVM_LIBC
+#      define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
 #    endif
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -193,7 +195,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD wchar_t* wmemchr(wchar_t
 }
 #      endif
 
-#      if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
+#      if defined(__cplusplus) && (defined(_WIN32) || defined(__MVS__))
 extern "C" {
 size_t mbsnrtowcs(
     wchar_t* __restrict __dst, const char** __restrict __src, size_t __nmc, size_t __len, mbstate_t* __restrict __ps);

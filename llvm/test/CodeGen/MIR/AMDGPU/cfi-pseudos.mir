@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=none -o - %s | \
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -x=mir -run-pass=none -o - | \
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=none -o - %s | \
+# RUN: llc -mtriple=amdgpu9.08 -x=mir -run-pass=none -o - | \
 # RUN: FileCheck %s
 
 # Verify we can parse and emit these CFI pseudos.

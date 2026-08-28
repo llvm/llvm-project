@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -47,6 +46,18 @@ public:
     FIROptLastEPCallbacks.push_back(C);
   }
 
+  void registerHLFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerHLFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptLastEPCallbacks.push_back(C);
+  }
+
   void invokeFIROptEarlyEPCallbacks(
       mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
@@ -65,6 +76,18 @@ public:
       C(pm, optLevel);
   };
 
+  void invokeHLFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeHLFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
 private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
@@ -77,6 +100,14 @@ private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptLastEPCallbacks;
 };
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
@@ -140,6 +171,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenACC = false; ///< Enable OpenACC lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.

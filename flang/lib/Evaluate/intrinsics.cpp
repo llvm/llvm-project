@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -2799,7 +2797,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+      if (const Expr<SomeType> *expr{arg->GetArgExpr()}) {
         std::string kw{d.keyword};
         if (arg->keyword()) {
           kw = arg->keyword()->ToString();
