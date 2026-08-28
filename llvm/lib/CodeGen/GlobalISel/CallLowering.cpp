@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -20,17 +19,11 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TypeSize.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <cstdint>
 
 #define DEBUG_TYPE "call-lowering"
 
