@@ -5312,7 +5312,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
-                                                 VPCostContext &CostCtx) {
+                                                 VPCostContext &CostCtx,
+                                                 DominatorTree &DT) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -5489,12 +5490,20 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VPValue *Addr = VPI->getOperand(0);
         if (!vputils::isUniformAcrossVFsAndUFs(Addr))
           return false;
+        ScalarEvolution &SE = *CostCtx.PSE.getSE();
+        Loop *L = const_cast<Loop *>(CostCtx.L);
+        const SCEV *PtrSCEV =
+            vputils::getSCEVExprForVPValue(Addr, CostCtx.PSE, CostCtx.L);
+        if (isa<SCEVCouldNotCompute>(PtrSCEV))
+          return false;
+        const DataLayout &DL = Plan.getDataLayout();
+        Type *ScalarTy = VPI->getScalarType();
+        APInt EltSize(DL.getIndexTypeSizeInBits(Addr->getScalarType()),
+                      DL.getTypeStoreSize(ScalarTy).getFixedValue());
         auto &LI = cast<LoadInst>(*VPI->getUnderlyingInstr());
-        Value *Underlying = Addr->getUnderlyingValue();
-        if (!Underlying || !isSafeToLoadUnconditionally(
-                               Underlying, LI.getType(), LI.getAlign(),
-                               Plan.getDataLayout(), &LI,
-                               /*AC=*/nullptr, /*DT=*/nullptr, &CostCtx.TLI))
+
+        if (!isDereferenceableAndAlignedInLoop(
+                PtrSCEV, LI.getAlign(), SE.getConstant(EltSize), L, SE, DT))
           return false;
         auto *Recipe = VPBuilder::createSingleScalarOp(
             VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr,
