@@ -590,6 +590,8 @@ public:
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
   bool Pre(const parser::DoConstruct &);
+  bool Pre(const parser::InputImpliedDo &);
+  bool Pre(const parser::OutputImpliedDo &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -2211,6 +2213,28 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
         // TODO: conflict checks with explicitly determined DSA
       }
     }
+  }
+  return true;
+}
+
+static const parser::Name &GetIoImpliedDoIndex(
+    const parser::IoImpliedDoControl &control) {
+  return parser::UnwrapRef<parser::Name>(control.Name());
+}
+
+// [OMP-5.2] 5.1.1 - Implied-DO indices are predetermined private.
+bool OmpAttributeVisitor::Pre(const parser::InputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OutputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
   }
   return true;
 }
