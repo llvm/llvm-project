@@ -1349,3 +1349,11 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.tcflag_t
 )
+
+add_proxy_header_library(
+  id_t
+  HDRS
+    id_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.id_t
+)

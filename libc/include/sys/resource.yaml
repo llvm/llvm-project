@@ -12,6 +12,12 @@ macros:
     macro_header: sys-resource-macros.h
     standards:
       - gnu
+  - macro_name: PRIO_PROCESS
+    macro_header: sys-resource-macros.h
+  - macro_name: PRIO_PGRP
+    macro_header: sys-resource-macros.h
+  - macro_name: PRIO_USER
+    macro_header: sys-resource-macros.h
 types:
   - type_name: struct_rlimit
   - type_name: rlim_t
