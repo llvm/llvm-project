@@ -197,7 +197,7 @@ def test_sequence_region():
     # CHECK:   transform.sequence  failures(propagate) {
     # CHECK:   ^{{.*}}(%[[VAL_0:.*]]: !transform.any_op):
     # CHECK:     %[[VAL_1:.*]] = transform.structured.match ops{["arith.addi"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
-    # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] op_name = "scf.for" : (!transform.any_op) -> !pdl.operation
+    # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] <op_name = "scf.for"> : (!transform.any_op) -> !pdl.operation
     # CHECK:     transform.loop.unroll %[[VAL_2]] factor = 4 : !pdl.operation
     # CHECK:   }
     @sequence([], FailurePropagationMode.Propagate, [])
@@ -213,7 +213,7 @@ def test_apply_patterns():
     # CHECK:   transform.sequence  failures(propagate) {
     # CHECK:   ^{{.*}}(%[[VAL_0:.*]]: !transform.any_op):
     # CHECK:     %[[VAL_1:.*]] = transform.structured.match ops{["linalg.matmul"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
-    # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] op_name = "func.func" : (!transform.any_op) -> !pdl.operation
+    # CHECK:     %[[VAL_2:.*]] = get_parent_op %[[VAL_1]] <op_name = "func.func"> : (!transform.any_op) -> !pdl.operation
     # CHECK:     apply_patterns to %[[VAL_2]] {
     # CHECK:       transform.apply_patterns.canonicalization
     # CHECK:     } : !pdl.operation

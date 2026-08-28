@@ -22,7 +22,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1:4 = transform.structured.split_reduction %0
-      split_factor = 4 insert_split_dimension = 2 use_scaling_algorithm use_alloc
+      <split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc>
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }

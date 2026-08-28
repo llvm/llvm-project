@@ -183,7 +183,7 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2 = transform.get_parent_op %1 deduplicate : (!transform.any_op) -> !transform.any_op
+    %2 = transform.get_parent_op %1 <deduplicate> : (!transform.any_op) -> !transform.any_op
     %symbol_a = transform.param.constant "a" -> !transform.any_param
     %symbol_b = transform.param.constant "b" -> !transform.any_param
     %multiple_symbol_names = transform.merge_handles %symbol_a, %symbol_b : !transform.any_param
@@ -215,7 +215,7 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2 = transform.get_parent_op %1 deduplicate : (!transform.any_op) -> !transform.any_op
+    %2 = transform.get_parent_op %1 <deduplicate> : (!transform.any_op) -> !transform.any_op
     transform.apply_registered_pass "symbol-privatize"
         with options = { exclude = ["a", "b"] } to %2
         : (!transform.any_op) -> !transform.any_op
@@ -244,7 +244,7 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2 = transform.get_parent_op %1 deduplicate : (!transform.any_op) -> !transform.any_op
+    %2 = transform.get_parent_op %1 <deduplicate> : (!transform.any_op) -> !transform.any_op
     %multiple_symbol_names = transform.param.constant ["a","b"] -> !transform.any_param
     transform.apply_registered_pass "symbol-privatize"
         with options = { exclude = %multiple_symbol_names } to %2
@@ -274,7 +274,7 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %2 = transform.get_parent_op %1 deduplicate : (!transform.any_op) -> !transform.any_op
+    %2 = transform.get_parent_op %1 <deduplicate> : (!transform.any_op) -> !transform.any_op
     %symbol_a = transform.param.constant "a" -> !transform.any_param
     %symbol_b = transform.param.constant "b" -> !transform.any_param
     transform.apply_registered_pass "symbol-privatize"

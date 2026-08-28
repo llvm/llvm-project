@@ -64,10 +64,10 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-        <{index_bitwidth = 32}> {use_opaque_pointers = true}
-    } legal_dialects = ["llvm", "memref", "nvvm"] legal_ops = ["gpu.module", "gpu.yield"] illegal_dialects = ["gpu"] illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
+        index_bitwidth = 32 {use_opaque_pointers = true}
+    } <legal_dialects = ["llvm", "memref", "nvvm"], legal_ops = ["gpu.module", "gpu.yield"], illegal_dialects = ["gpu"], illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
-                    "llvm.sin", "llvm.sqrt"] partial_conversion : !transform.any_op
+                    "llvm.sin", "llvm.sqrt"], partial_conversion> : !transform.any_op
     transform.yield
   }
 }

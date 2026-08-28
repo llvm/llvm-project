@@ -1390,7 +1390,7 @@ module attributes {transform.with_named_sequence} {
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
          {use_opaque_pointers = true}
-    } legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"] partial_conversion : !transform.any_op
+    } <legal_dialects = ["arith", "func", "llvm", "memref", "nvvm", "vector", "scf"], partial_conversion> : !transform.any_op
     transform.yield
   }
 }

@@ -71,7 +71,7 @@ def MatchStructuredOp : Op<Transform_Dialect, "match.structured", [
   let assemblyFormat =
     "(`failures` `(` $failure_propagation_mode^ `)`)?"
     "$current `:` custom<SemiFunctionType>(type($current), type($outputs))"
-    " attr-dict-with-keyword regions";
+    "attr-dict-with-keyword regions";
   let hasVerifier = 1;
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{
@@ -590,7 +590,7 @@ def MatchStructuredResultOp : Op<Transform_Dialect, "match.structured.result", [
   let results = (outs TransformAnyHandle:$result);
   let assemblyFormat =
       "$operand_handle `[` $position `]` (`any` $any^)? (`single` $single^)?"
-      " attr-dict `:` functional-type(operands, results)";
+      "attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{

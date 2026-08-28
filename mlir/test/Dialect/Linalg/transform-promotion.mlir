@@ -61,7 +61,7 @@ func.func @promote_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], offset:
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 operands_to_promote = [0, 1, 2] use_full_tiles_by_default : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [0, 1, 2], use_full_tiles_by_default> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -123,7 +123,7 @@ func.func @promote_first_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], o
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 operands_to_promote = [0] use_full_tiles_by_default : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [0], use_full_tiles_by_default> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -155,7 +155,7 @@ func.func @aligned_promote_fill(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 operands_to_promote = [1] use_full_tile_buffers = [false, true] alignment = 32 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -188,7 +188,7 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 operands_to_promote = [1] use_full_tile_buffers = [false, true] alignment = 32 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

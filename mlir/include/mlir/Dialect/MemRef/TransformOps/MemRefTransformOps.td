@@ -31,10 +31,10 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       machine word.
     - `use_generic_functions`: Use generic allocation and deallocation functions
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
-    // TODO: the following two options don't really make sense for 
+    // TODO: the following two options don't really make sense for
     // memref_to_llvm_type_converter specifically.
     // We should have a single to_llvm_type_converter.
-    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare
       pointers to the MemRef element types.
     - `data-layout`: String description (LLVM format) of the data layout that is
       expected on the produced module.
@@ -46,7 +46,14 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
       OptionalAttr<StrAttr>:$data_layout);
-  let assemblyFormat = "prop-dict attr-dict";
+  let assemblyFormat = [{
+    custom<LLVMTypeConverterOptions>(
+      $use_aligned_alloc,
+      $index_bitwidth,
+      $use_generic_functions,
+      $use_bare_ptr_call_conv,
+      $data_layout) attr-dict
+  }];
 }
 
 def ApplyAllocToAllocaOp : Op<Transform_Dialect,

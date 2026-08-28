@@ -146,7 +146,7 @@ module @transforms attributes { transform.with_named_sequence } {
     //  %inserted_slice = tensor.insert_slice %slice_of_A into %fill[0, 0] [%4, %5] [1, 1] :
     //    tensor<?x?xi32> into tensor<8x1xi32>
     //
-    %func_op = transform.get_parent_op %tiled_pack_op_p isolated_from_above : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.linalg.decompose_pack_unpack
       transform.apply_patterns.linalg.decompose_pad
@@ -164,7 +164,7 @@ module @transforms attributes { transform.with_named_sequence } {
 
     // 3. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
-      <{bufferize_function_boundaries = true}> : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
     // 4. Canonicalize + rank-reducing patters (to get rid of the trailing unit
     // dim).

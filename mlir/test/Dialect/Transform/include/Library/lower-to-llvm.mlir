@@ -24,8 +24,8 @@ transform.named_sequence @lower_to_llvm(
     transform.apply_conversion_patterns.dialect_to_llvm "cf"
   } with type_converter {
     transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-      <{index_bitwidth = 64}> {use_bare_ptr = false, use_bare_ptr_memref_call_conv = false, use_opaque_pointers = true}
-  } legal_dialects = ["llvm"] partial_conversion : !transform.any_op
+      index_bitwidth = 64 {use_bare_ptr = false, use_bare_ptr_memref_call_conv = false, use_opaque_pointers = true}
+  } <legal_dialects = ["llvm"], partial_conversion> : !transform.any_op
 
   // Need to rematch here because:
   //   1. applying reconcile-unrealized-casts on the whole module yields the

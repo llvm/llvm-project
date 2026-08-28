@@ -104,7 +104,7 @@ func.func private @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
    %mmt4d = transform.collect_matching @match_mmt4d in %module : (!transform.any_op) -> (!transform.any_op)
-   %func = transform.get_parent_op %mmt4d isolated_from_above : (!transform.any_op) -> !transform.op<"func.func">
+   %func = transform.get_parent_op %mmt4d <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
    // Step 1: Tile
    // Tile parallel dims

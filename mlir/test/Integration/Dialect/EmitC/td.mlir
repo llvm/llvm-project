@@ -8,14 +8,14 @@ module attributes {transform.with_named_sequence} {
 
     // 2. Bufferize
     %module_bufferized = transform.bufferization.one_shot_bufferize
-      layout{IdentityLayoutMap} %module <{bufferize_function_boundaries = true}>
+      layout{IdentityLayoutMap} %module <bufferize_function_boundaries = true>
       : (!transform.any_op) -> !transform.op<"builtin.module">
 
     // 3. Apply BufferResultsToOutParams - otherwise the following error is raised:
     //    * "error: 'emitc.func' op cannot return array type"
     // "hoist-static-allocs" is an optional optimization step.
     %func_h_2 = transform.structured.match ops{["func.func"]} in %module_bufferized : (!transform.op<"builtin.module">) -> !transform.any_op
-    %module_h_1 = transform.get_parent_op %func_h_2 isolated_from_above : (!transform.any_op) -> !transform.any_op
+    %module_h_1 = transform.get_parent_op %func_h_2 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %module_results_as_out_param = transform.apply_registered_pass "buffer-results-to-out-params"
       with options = { "hoist-static-allocs" = true }
       to %module_h_1 : (!transform.any_op) -> !transform.any_op
@@ -32,7 +32,7 @@ module attributes {transform.with_named_sequence} {
     //  * https://github.com/llvm/llvm-project/issues/179247
     // %func_h_3 = transform.structured.match ops{["func.func"]} in %module_final_no_linalg
     //   : (!transform.any_op) -> !transform.any_op
-    // %module_h_2 = transform.get_parent_op %func_h_3 isolated_from_above : (!transform.any_op) -> !transform.any_op
+    // %module_h_2 = transform.get_parent_op %func_h_3 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     // transform.apply_registered_pass "convert-to-emitc" to %module_h_2
     //   : (!transform.any_op) -> !transform.op<"builtin.module">
 

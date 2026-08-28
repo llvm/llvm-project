@@ -61,7 +61,7 @@ def EmitParamAsRemarkOp
                        Optional<TransformHandleTypeInterface>:$anchor,
                        OptionalAttr<StrAttr>:$message);
   let assemblyFormat = "$param (`,` $message^)?  (`at` $anchor^)?"
-                       " attr-dict `:` type($param) (`,` type($anchor)^)?";
+                       "attr-dict `:` type($param) (`,` type($anchor)^)?";
 }
 
 #endif // MLIR_DIALECT_TRANSFORM_DEBUGEXTENSION_DBEUGEXTENSIONOPS

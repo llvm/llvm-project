@@ -23,8 +23,8 @@ func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor(%input: tensor<1x8x3xi8>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 flatten_1d_depthwise_conv : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <flatten_1d_depthwise_conv> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -110,8 +110,8 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(%input: memref<3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 flatten_1d_depthwise_conv : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <flatten_1d_depthwise_conv> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -174,8 +174,8 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref_dilation_2(%input: memref<3x5
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 flatten_1d_depthwise_conv : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <flatten_1d_depthwise_conv> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -306,8 +306,8 @@ func.func @depthwise_conv1d_nwc_wc_3x9x4xi8_tensor_stride_2(%input: tensor<3x9x4
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc", "linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 flatten_1d_depthwise_conv : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <flatten_1d_depthwise_conv> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

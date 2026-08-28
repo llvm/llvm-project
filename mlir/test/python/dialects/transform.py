@@ -238,8 +238,8 @@ def testGetParentOp(module: Module):
     # CHECK-LABEL: TEST: testGetParentOp
     # CHECK: transform.sequence
     # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
-    # CHECK:   = get_parent_op %[[ARG1]] isolated_from_above nth_parent = 2
-    # CHECK:   = get_parent_op %[[ARG1]] isolated_from_above allow_empty_results op_name = "func.func" deduplicate nth_parent = 2
+    # CHECK:   = get_parent_op %[[ARG1]] <isolated_from_above, nth_parent = 2>
+    # CHECK:   = get_parent_op %[[ARG1]] <isolated_from_above, allow_empty_results, op_name = "func.func", deduplicate, nth_parent = 2>
 
 
 @run

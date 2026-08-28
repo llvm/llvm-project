@@ -264,7 +264,7 @@ func.func @multi_buffer(%in: memref<16xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2> : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
@@ -301,7 +301,7 @@ func.func @multi_buffer_on_affine_loop(%in: memref<16xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2> : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
@@ -341,7 +341,7 @@ func.func @multi_buffer_uses_with_no_loop_dominator(%in: memref<16xf32>, %cond: 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2> : (!transform.op<"memref.alloc">) -> !transform.any_op
     transform.yield
   }
 }
@@ -379,7 +379,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloca">
     // expected-error @below {{'transform.memref.multibuffer' op operand #0 must be Transform IR handle to memref.alloc operations, but got '!transform.op<"memref.alloca">'}}
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64}> : (!transform.op<"memref.alloca">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2> : (!transform.op<"memref.alloca">) -> !transform.any_op
     transform.yield
   }
 }
@@ -422,7 +422,7 @@ func.func @multi_buffer_one_alloc_with_use_outside_of_loop(%in: memref<16xf32>) 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2> : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
@@ -458,7 +458,7 @@ func.func @multi_buffer_no_analysis(%in: memref<16xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64, skip_analysis}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2, skip_analysis> : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
@@ -497,7 +497,7 @@ func.func @multi_buffer_dealloc(%in: memref<16xf32>) {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
-    %1 = transform.memref.multibuffer %0 <{factor = 2 : i64, skip_analysis}> : (!transform.op<"memref.alloc">) -> !transform.any_op
+    %1 = transform.memref.multibuffer %0 <factor = 2, skip_analysis> : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
     transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
@@ -677,7 +677,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-    } legal_dialects = ["func", "llvm"] : !transform.any_op
+    } <legal_dialects = ["func", "llvm"]> : !transform.any_op
     transform.yield
   }
 }

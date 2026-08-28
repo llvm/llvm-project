@@ -89,7 +89,7 @@ module @transforms attributes { transform.with_named_sequence } {
        : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // 2. Decompose the tiled unpack Op into tensor.extract_slice + tensor.insert_slice:
-    %func_op = transform.get_parent_op %tiled_pack_op_p isolated_from_above : (!transform.any_op) -> !transform.op<"func.func">
+    %func_op = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.linalg.decompose_pack_unpack
       transform.apply_patterns.canonicalization
@@ -102,7 +102,7 @@ module @transforms attributes { transform.with_named_sequence } {
 
     // 4. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
-      <{bufferize_function_boundaries = true}> : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
     // 5. Canonicalize
     %func_op_bufferized = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">

@@ -211,7 +211,7 @@ def TestRemoveTestExtensionOp
   : Op<Transform_Dialect, "test_remove_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         NoMemoryEffect]> {
-  let assemblyFormat = " attr-dict";
+  let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
 
@@ -230,7 +230,7 @@ def TestTransformOpWithRegions
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let regions = (region AnyRegion:$first, AnyRegion:$second);
-  let assemblyFormat = " attr-dict-with-keyword regions";
+  let assemblyFormat = "attr-dict-with-keyword regions";
   let cppNamespace = "::mlir::test";
 }
 
@@ -428,7 +428,7 @@ def TestProduceNullPayloadOp
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let results = (outs TransformHandleTypeInterface:$out);
-  let assemblyFormat = " attr-dict `:` type($out)";
+  let assemblyFormat = "attr-dict `:` type($out)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -437,7 +437,7 @@ def TestProduceEmptyPayloadOp
       [DeclareOpInterfaceMethods<TransformOpInterface>,
        MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
   let results = (outs TransformHandleTypeInterface:$out);
-  let assemblyFormat = " attr-dict `:` type($out)";
+  let assemblyFormat = "attr-dict `:` type($out)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -446,7 +446,7 @@ def TestProduceNullParamOp
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let results = (outs TransformParamTypeInterface:$out);
-  let assemblyFormat = " attr-dict `:` type($out)";
+  let assemblyFormat = "attr-dict `:` type($out)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -455,7 +455,7 @@ def TestProduceNullValueOp
        [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let results = (outs TransformValueHandleTypeInterface:$out);
-  let assemblyFormat = " attr-dict `:` type($out)";
+  let assemblyFormat = "attr-dict `:` type($out)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -513,7 +513,7 @@ def ApplyTestPatternsOp
       [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let arguments = (ins);
   let results = (outs);
-  let assemblyFormat = " attr-dict";
+  let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
 
@@ -522,7 +522,7 @@ def ApplyTestConversionPatternsOp
       [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface>]> {
   let arguments = (ins);
   let results = (outs);
-  let assemblyFormat = " attr-dict";
+  let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
 
@@ -532,7 +532,7 @@ def TestTypeConverterOp
                                  ["getTypeConverter"]>]> {
   let arguments = (ins);
   let results = (outs);
-  let assemblyFormat = " attr-dict";
+  let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
 

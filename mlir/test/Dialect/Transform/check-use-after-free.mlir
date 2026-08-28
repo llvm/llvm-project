@@ -219,7 +219,7 @@ module attributes {transform.with_named_sequence} {
       sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = transform.pdl_match @match_const in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.any_op
+        %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.any_op
         alternatives %1 : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
         }

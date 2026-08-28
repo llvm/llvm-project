@@ -261,7 +261,8 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        UnitAttr:$emit_dealloc);
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
-  let assemblyFormat = "$target oilist(`memory_space` `=` qualified($memory_space) | `memcpy_op` `=` $memcpy_op | `alloc_op` `=` $alloc_op | `bufferize_destination_only` $bufferize_destination_only | `emit_dealloc` $emit_dealloc) attr-dict `:` type($target)";
+  let assemblyFormat =
+      "$target prop-dict attr-dict `:` type($target)";
   let hasVerifier = 1;
 }
 
@@ -1277,7 +1278,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let assemblyFormat = [{
     $target
     (`pad_to_multiple_of` custom<DynamicIndexList>($pad_to_multiple_of, $static_pad_to_multiple_of)^)?
-    (`use_prescribed_tensor_shapes` $use_prescribed_tensor_shapes^)? oilist(`padding_values` `=` $padding_values | `padding_dimensions` `=` $padding_dimensions | `nofold_flags` `=` $nofold_flags | `transpose_paddings` `=` $transpose_paddings | `copy_back_op` `=` $copy_back_op) attr-dict
+    (`use_prescribed_tensor_shapes` $use_prescribed_tensor_shapes^)? prop-dict attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -1540,7 +1541,7 @@ def PromoteOp : Op<Transform_Dialect, "structured.promote",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = [{
-    $target oilist(`operands_to_promote` `=` $operands_to_promote | `use_full_tile_buffers` `=` $use_full_tile_buffers | `use_full_tiles_by_default` $use_full_tiles_by_default | `use_original_subview_size` $use_original_subview_size | `use_alloca` $use_alloca | `memory_space` `(` qualified($memory_space) `)` | `mapping` `=` $mapping | `alignment` `=` $alignment) attr-dict `:`
+    $target prop-dict attr-dict `:`
     custom<SemiFunctionType>(type($target), type($transformed), "false")
   }];
 
@@ -1955,7 +1956,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
                       TransformHandleTypeInterface:$combining_linalg_op);
 
   let assemblyFormat =
-      "$target oilist(`split_factor` `=` $split_factor | `insert_split_dimension` `=` $insert_split_dimension | `inner_parallel` $inner_parallel | `use_scaling_algorithm` $use_scaling_algorithm | `use_alloc` $use_alloc) attr-dict `:`"
+      "$target prop-dict attr-dict `:`"
       "functional-type(operands, results)";
 
   let builders = [
@@ -2571,7 +2572,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-      "$target oilist(`fold_type_extensions_into_contract` $fold_type_extensions_into_contract | `vectorize_padding` $vectorize_padding | `vectorize_nd_extract` $vectorize_nd_extract | `flatten_1d_depthwise_conv` $flatten_1d_depthwise_conv | `disable_multi_reduction_to_contract_patterns` $disable_multi_reduction_to_contract_patterns | `disable_transfer_permutation_map_lowering_patterns` $disable_transfer_permutation_map_lowering_patterns) attr-dict `:`"
+      "$target prop-dict attr-dict `:`"
       "functional-type(operands, results)";
 
   let builders = [
@@ -2644,7 +2645,10 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
       `vector_sizes` custom<DynamicIndexList>(
         $vector_sizes,
         $static_vector_sizes,
-        $scalable_sizes)) oilist(`vectorize_nd_extract` $vectorize_nd_extract | `assume_dynamic_dims_match_vec_sizes` $assume_dynamic_dims_match_vec_sizes | `create_named_contraction` $create_named_contraction) attr-dict
+        $scalable_sizes) |
+      `vectorize_nd_extract` $vectorize_nd_extract |
+      `assume_dynamic_dims_match_vec_sizes` $assume_dynamic_dims_match_vec_sizes |
+      `create_named_contraction` $create_named_contraction) attr-dict
     `:` type($target)(`,`type($vector_sizes)^)?
   }];
 
@@ -2693,7 +2697,7 @@ def HoistRedundantVectorTransfersOp :
                    UnitAttr:$verify_non_zero_trip);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = "$target oilist(`verify_non_zero_trip` $verify_non_zero_trip) attr-dict `:` functional-type(operands, results) ";
+  let assemblyFormat = "$target oilist(`verify_non_zero_trip` $verify_non_zero_trip) attr-dict `:` functional-type(operands, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

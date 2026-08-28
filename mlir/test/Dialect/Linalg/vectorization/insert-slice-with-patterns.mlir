@@ -22,8 +22,8 @@ func.func @insert_static_slice_default_pad(%arg0: tensor<1x2x3xf32>, %arg1: tens
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 vectorize_padding : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <vectorize_padding> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -51,7 +51,7 @@ func.func @insert_static_slice_non_zero_pad(%arg0: tensor<1x2x3xf32>, %pad : f32
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
@@ -83,7 +83,7 @@ func.func @insert_dynamic_slice_non_zero_pad(%arg0: tensor<1x?x3xf32>, %pad : f3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

@@ -99,7 +99,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
 
   let assemblyFormat =
     "($scope^ `:` type($scope))? (`->` type($results)^)? "
-    " attr-dict-with-keyword regions";
+    "attr-dict-with-keyword regions";
   let hasVerifier = 1;
 }
 
@@ -222,7 +222,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
 
   let assemblyFormat = [{
     `to` $target $patterns
-    (`with` `type_converter` $default_type_converter_region^)? oilist(`legal_ops` `=` $legal_ops | `illegal_ops` `=` $illegal_ops | `legal_dialects` `=` $legal_dialects | `illegal_dialects` `=` $illegal_dialects | `partial_conversion` $partial_conversion | `preserve_handles` $preserve_handles) attr-dict `:` type($target)
+    (`with` `type_converter` $default_type_converter_region^)? prop-dict attr-dict `:` type($target)
   }];
   let hasVerifier = 1;
 
@@ -757,7 +757,7 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
                                          "1">:$nth_parent);
   let results = (outs TransformHandleTypeInterface:$parent);
   let assemblyFormat =
-    "$target oilist(`isolated_from_above` $isolated_from_above | `allow_empty_results` $allow_empty_results | `op_name` `=` $op_name | `deduplicate` $deduplicate | `nth_parent` `=` $nth_parent) attr-dict `:` functional-type(operands, results)";
+    "$target prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",

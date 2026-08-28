@@ -198,7 +198,7 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     // expected-error @below {{expects either a dynamic or a static split point to be provided}}
-    %0 = "transform.structured.split"(%arg1) {dimension = 1, static_chunk_sizes = -9223372036854775808} : (!transform.any_op) -> (!transform.any_op)
+    %0 = "transform.structured.split"(%arg1) <{dimension = 1, static_chunk_sizes = -9223372036854775808}> : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -340,4 +340,3 @@ func.func @split_one_but_not_other(
 
   return %0, %1 : tensor<100xf32>, tensor<200xf32>
 }
-

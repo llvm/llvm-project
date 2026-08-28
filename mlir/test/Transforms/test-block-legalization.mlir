@@ -35,7 +35,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.scf.scf_to_control_flow
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-    } legal_dialects = ["llvm"] partial_conversion : !transform.any_op
+    } <legal_dialects = ["llvm"], partial_conversion> : !transform.any_op
     transform.yield
   }
 }

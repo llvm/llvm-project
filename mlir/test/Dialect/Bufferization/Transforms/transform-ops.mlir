@@ -135,7 +135,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
-      <{bufferize_function_boundaries = true}> : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -221,7 +221,7 @@ module attributes {transform.with_named_sequence} {
     %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
       : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
     %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor
-      alloc_op = "memref.alloca"
+      <alloc_op = "memref.alloca">
         : !transform.op<"bufferization.alloc_tensor">
     transform.yield
   }

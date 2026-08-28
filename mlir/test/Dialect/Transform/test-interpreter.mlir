@@ -125,7 +125,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %f = pdl_match @const in %arg1 : (!transform.any_op) -> !transform.any_op
-        %m = get_parent_op %f isolated_from_above : (!transform.any_op) -> !transform.any_op
+        %m = get_parent_op %f <isolated_from_above> : (!transform.any_op) -> !transform.any_op
         transform.debug.emit_remark_at %m, "parent function" : !transform.any_op
       }
     }
@@ -152,9 +152,9 @@ func.func @test_get_nth_parent() {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
     %f = transform.structured.match ops{["test.bar"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %parent = transform.get_parent_op %f nth_parent = 1 op_name = "test.foo" : (!transform.any_op) -> !transform.any_op
+    %parent = transform.get_parent_op %f <nth_parent = 1, op_name = "test.foo"> : (!transform.any_op) -> !transform.any_op
     transform.debug.emit_remark_at %parent, "1st parent" : !transform.any_op
-    %parent2 = transform.get_parent_op %f nth_parent = 2 op_name = "test.foo" : (!transform.any_op) -> !transform.any_op
+    %parent2 = transform.get_parent_op %f <nth_parent = 2, op_name = "test.foo"> : (!transform.any_op) -> !transform.any_op
     transform.debug.emit_remark_at %parent2, "2nd parent" : !transform.any_op
     transform.yield
   }
@@ -224,7 +224,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
         // expected-error @below {{all alternatives failed}}
         transform.alternatives %1 : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
@@ -262,7 +262,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
         transform.alternatives %1 : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
           %2 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -308,7 +308,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
         transform.alternatives %1 : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
           %2 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -349,7 +349,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = get_parent_op %0 isolated_from_above : (!transform.any_op) -> !transform.any_op
+        %1 = get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
         %2 = transform.alternatives %1 : !transform.any_op -> !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
           %3 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -428,7 +428,7 @@ module attributes {transform.with_named_sequence} {
       sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = transform.pdl_match @match_const in %arg1 : (!transform.any_op) -> !transform.any_op
-        %1 = transform.get_parent_op %0 op_name = "scf.for" : (!transform.any_op) -> !transform.any_op
+        %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.any_op
         // expected-error @below {{only isolated-from-above ops can be alternative scopes}}
         alternatives %1 : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
@@ -2364,7 +2364,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["test.qux"]} in %arg1 : (!transform.any_op) -> !transform.any_op
 
     // Get parent by name.
-    %1 = transform.get_parent_op %0 op_name = "test.foo" : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <op_name = "test.foo"> : (!transform.any_op) -> !transform.any_op
     transform.debug.emit_remark_at %1, "found test.foo parent" : !transform.any_op
 
     // Get immediate parent.
@@ -2376,7 +2376,7 @@ module attributes {transform.with_named_sequence} {
 
     // Deduplicate results.
     %3 = transform.structured.match ops{["test.qux"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %4 = transform.get_parent_op %3 deduplicate : (!transform.any_op) -> !transform.any_op
+    %4 = transform.get_parent_op %3 <deduplicate> : (!transform.any_op) -> !transform.any_op
     %p2 = transform.num_associations %4 : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
     transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
@@ -2391,7 +2391,7 @@ module attributes {transform.with_named_sequence} {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
     // expected-error @below{{could not find a parent op that matches all requirements}}
-    %3 = transform.get_parent_op %arg0 op_name = "builtin.module" : (!transform.any_op) -> !transform.any_op
+    %3 = transform.get_parent_op %arg0 <op_name = "builtin.module"> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -2572,7 +2572,7 @@ module @named_inclusion attributes { transform.with_named_sequence } {
   transform.named_sequence @match_constant_not_under_scf_for(%root: !transform.any_op {transform.readonly})
     -> !transform.any_op {
     transform.match.operation_name %root ["arith.constant"] : !transform.any_op
-    %for = transform.get_parent_op %root op_name = "scf.for" allow_empty_results
+    %for = transform.get_parent_op %root <op_name = "scf.for", allow_empty_results>
       : (!transform.any_op) -> (!transform.any_op)
     transform.match.operation_empty %for : !transform.any_op
     transform.yield %root : !transform.any_op
@@ -2606,7 +2606,7 @@ module @named_inclusion attributes { transform.with_named_sequence } {
   transform.named_sequence @match_constant_not_under_scf_for(%root: !transform.any_op {transform.readonly})
     -> !transform.any_op {
     transform.match.operation_name %root ["arith.constant"] : !transform.any_op
-    %for = transform.get_parent_op %root op_name = "scf.for" allow_empty_results
+    %for = transform.get_parent_op %root <op_name = "scf.for", allow_empty_results>
       : (!transform.any_op) -> (!transform.any_op)
     transform.match.operation_empty %for : !transform.any_op
     transform.yield %root : !transform.any_op
