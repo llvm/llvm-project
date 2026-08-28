@@ -2237,6 +2237,14 @@ void CodeGenRegBank::computeRegUnitSets() {
     RegUnitSet RUSet(RC.getName());
     RC.buildRegUnitSet(*this, RUSet.Units);
 
+    if (RUSet.Units.empty()) {
+      std::string Message = "allocatable register class '" + RC.getName() +
+                            "' has no non-artificial register units";
+      if (const Record *Def = RC.getDef())
+        PrintFatalError(Def->getLoc(), Message);
+      PrintFatalError(Message);
+    }
+
     // Find an existing RegUnitSet.
     if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end())
       RegUnitSets.push_back(std::move(RUSet));
