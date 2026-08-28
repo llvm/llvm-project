@@ -712,8 +712,8 @@ Module *Context::createModule(llvm::Module *LLVMM) {
 }
 
 void Context::runEraseInstrCallbacks(Instruction *I) {
-  for (const auto &CBEntry : EraseInstrCallbacks)
-    CBEntry.second(I);
+  for (const auto &[ID, CB] : EraseInstrCallbacks)
+    CB(I);
 }
 
 void Context::runCreateInstrCallbacks(Instruction *I) {
@@ -740,13 +740,15 @@ Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "EraseInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  EraseInstrCallbacks[ID] = std::move(CB);
+  EraseInstrCallbacks.emplace_back(ID, std::move(CB));
   return ID;
 }
 void Context::unregisterEraseInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = EraseInstrCallbacks.erase(ID);
-  assert(Erased &&
+  [[maybe_unused]] auto It = find_if(
+      EraseInstrCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
+  assert(It != EraseInstrCallbacks.end() &&
          "Callback ID not found in EraseInstrCallbacks during deregistration");
+  EraseInstrCallbacks.erase(It);
 }
 
 Context::CallbackID
@@ -754,39 +756,45 @@ Context::registerCreateInstrCallback(CreateInstrCallback CB) {
   assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "CreateInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  CreateInstrCallbacks[ID] = std::move(CB);
+  CreateInstrCallbacks.emplace_back(ID, std::move(CB));
   return ID;
 }
 void Context::unregisterCreateInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = CreateInstrCallbacks.erase(ID);
-  assert(Erased &&
+  auto It = find_if(CreateInstrCallbacks,
+                    [ID](const auto &Pair) { return Pair.first == ID; });
+  assert(It != CreateInstrCallbacks.end() &&
          "Callback ID not found in CreateInstrCallbacks during deregistration");
+  CreateInstrCallbacks.erase(It);
 }
 
 Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "MoveInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  MoveInstrCallbacks[ID] = std::move(CB);
+  MoveInstrCallbacks.emplace_back(ID, std::move(CB));
   return ID;
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
-  assert(Erased &&
+  [[maybe_unused]] auto It = find_if(
+      MoveInstrCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
+  assert(It != MoveInstrCallbacks.end() &&
          "Callback ID not found in MoveInstrCallbacks during deregistration");
+  MoveInstrCallbacks.erase(It);
 }
 
 Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
   assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
          "SetUseCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  SetUseCallbacks[ID] = std::move(CB);
+  SetUseCallbacks.emplace_back(ID, std::move(CB));
   return ID;
 }
 void Context::unregisterSetUseCallback(CallbackID ID) {
-  [[maybe_unused]] bool Erased = SetUseCallbacks.erase(ID);
-  assert(Erased &&
+  [[maybe_unused]] auto It = find_if(
+      SetUseCallbacks, [ID](const auto &Pair) { return Pair.first == ID; });
+  assert(It != SetUseCallbacks.end() &&
          "Callback ID not found in SetUseCallbacks during deregistration");
+  SetUseCallbacks.erase(It);
 }
 
 } // namespace llvm::sandboxir

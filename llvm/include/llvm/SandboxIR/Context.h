@@ -62,6 +62,7 @@ public:
 
   public:
     CallbackID() = default;
+    bool operator==(const CallbackID &Other) const { return Val == Other.Val; }
     friend class Context;
     friend struct DenseMapInfo<CallbackID>;
   };
@@ -95,18 +96,18 @@ protected:
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
-  /// Callbacks called when an IR instruction is about to get erased. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, EraseInstrCallback> EraseInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get created. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, CreateInstrCallback> CreateInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get moved. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
-  /// Callbacks called when a Use gets its source set. Keys are used as IDs for
-  /// deregistration.
-  MapVector<CallbackID, SetUseCallback> SetUseCallbacks;
+  /// Callbacks called when an IR instruction is about to get erased. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, EraseInstrCallback>> EraseInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get created.
+  /// CallbackID is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, CreateInstrCallback>> CreateInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get moved. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, MoveInstrCallback>> MoveInstrCallbacks;
+  /// Callbacks called when a Use gets its source set. CallbackID is used as an
+  /// identifier for deregistration.
+  SmallVector<std::pair<CallbackID, SetUseCallback>> SetUseCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
