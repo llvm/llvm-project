@@ -1548,6 +1548,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timespec_get
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
 
     # locale.h entrypoints
     libc.src.locale.localeconv
