@@ -13571,15 +13571,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //
       //   If "Start - Stride < Start" holds, we have
       //   "RHS > Start > Start - Stride". As such
-      //   "RHS - (Start - Stride) - 1" does not overflow, which reassociates to
-      //   "((RHS - 1) - (Start - Stride))".
+      //   "RHS - (Start - Stride) - 1" does not overflow, which is the
+      //   reassociated numerator.
       //
-      //   Otherwise !IVMayOverflow guarantees
-      //   "RHS <= max unsigned value - (Stride - 1)".
-      //   With "RHS > Start" we have
-      //   "RHS - Start < RHS <= max unsigned value - (Stride - 1)".
-      //   As such "(RHS - Start) + (Stride - 1)" does not overflow, which
-      //   reassociates to "((RHS - 1) - (Start - Stride))".
+      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV ",
+      //   where MaxV is the maximum signed/unsigned value. Let MinV be the
+      //   matching minimum value. "Start >= MinV" gives
+      //   "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV" is
+      //   the largest unsigned value, the reassociated numerator does not
+      //   overflow.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
