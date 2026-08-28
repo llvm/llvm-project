@@ -2000,6 +2000,30 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
 
+  case TargetOpcode::G_SCALAR_TO_VECTOR: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+
+    if (!DstTy.isFixedVector()) {
+      report("Destination type must be a fixed vector", MI);
+      break;
+    }
+
+    if (!SrcTy.isScalar()) {
+      report("Source type must be a scalar", MI);
+      break;
+    }
+
+    if (DstTy.getElementType().getSizeInBits() > SrcTy.getSizeInBits()) {
+      report("Element type of the destination must be the same size or smaller "
+             "than the source type",
+             MI);
+      break;
+    }
+
+    break;
+  }
+
   case TargetOpcode::G_SPLAT_VECTOR: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());

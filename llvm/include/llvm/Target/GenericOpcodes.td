@@ -1750,6 +1750,15 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
   let GISelMatchGenericTypes = 1;
 }
 
+// Generic scalar_to_vector. Loads a scalar value into element 0 of the
+// resultant vector type. The top elements 1 to N-1 are poison.
+def G_SCALAR_TO_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+  let GISelMatchGenericTypes = 1;
+}
+
 // Generic splatvector.
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);

@@ -809,6 +809,11 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildScalarToVector(const DstOp &Res,
+                                                          const SrcOp &Src) {
+  return buildInstr(TargetOpcode::G_SCALAR_TO_VECTOR, Res, Src);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
                                                        const SrcOp &Src) {
   assert(Src.getLLTTy(*getMRI()) == Res.getLLTTy(*getMRI()).getElementType() &&

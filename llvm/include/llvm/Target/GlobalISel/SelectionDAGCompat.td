@@ -167,6 +167,7 @@ def : GINodeEquiv<G_INSERT_VECTOR_ELT, vector_insert>;
 def : GINodeEquiv<G_CONCAT_VECTORS, concat_vectors>;
 def : GINodeEquiv<G_BUILD_VECTOR, build_vector>;
 def : GINodeEquiv<G_EXTRACT_SUBVECTOR, extract_subvector>;
+def : GINodeEquiv<G_SCALAR_TO_VECTOR, scalar_to_vector>;
 def : GINodeEquiv<G_SPLAT_VECTOR, splat_vector>;
 def : GINodeEquiv<G_FCEIL, fceil>;
 def : GINodeEquiv<G_FCOS, fcos>;
