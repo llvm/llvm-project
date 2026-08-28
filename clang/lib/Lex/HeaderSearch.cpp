@@ -460,6 +460,7 @@ OptionalFileEntryRef HeaderSearch::getFileAndSuggestModule(
     std::error_code EC = llvm::errorToErrorCode(File.takeError());
     if (EC != llvm::errc::no_such_file_or_directory &&
         EC != llvm::errc::invalid_argument &&
+        EC != llvm::errc::permission_denied &&
         EC != llvm::errc::is_a_directory && EC != llvm::errc::not_a_directory) {
       Diags.Report(IncludeLoc, diag::err_cannot_open_file)
           << FileName << EC.message();
