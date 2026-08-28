@@ -1,4 +1,6 @@
 
+#ifndef SUPPORT_CONSTEXPR_HASH_H
+#define SUPPORT_CONSTEXPR_HASH_H
 
 #include <__type_traits/is_unqualified.h>
 #include <__type_traits/underlying_type.h>
@@ -49,8 +51,8 @@ struct constexpr_hash<_Tp> {
       if constexpr (sizeof(_Tp) <= sizeof(size_t)) {
         return static_cast<size_t>(__v);
       } else {
-        constexpr size_t multiple = sizeof(_Tp) / sizeof(size_t);
-        char region[multiple];
+        constexpr size_t multiple           = sizeof(_Tp) / sizeof(size_t);
+        std::array<size_t, multiple> region = std::bit_cast<std::array<size_t, multiple>>(__v);
 
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
@@ -96,3 +98,5 @@ struct constexpr_hash {
 } // namespace support
 
 #endif
+
+#endif // SUPPORT_CONSTEXPR_HASH_H

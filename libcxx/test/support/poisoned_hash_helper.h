@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 #include "type_algorithms.h"
 
@@ -128,9 +129,9 @@ using LibraryHashTypes =
                          types::type_list<Enum, EnumClass, void*, void const*, Class*, std::nullptr_t>>;
 
 struct TestHashEnabled {
-  template <class T>
+  template <class Key>
   void operator()() const {
-    test_hash_enabled<T>();
+    test_hash_enabled<Key>();
   }
 };
 
@@ -140,5 +141,30 @@ template <class Types = LibraryHashTypes>
 void test_library_hash_specializations_available() {
   types::for_each(Types(), TestHashEnabled());
 }
+
+#if TEST_STD_VER >= 26
+
+struct TestConstexprHashEnabled {
+  template <class Key>
+  constexpr void operator()() const {
+    test_hash_enabled<Key, support::constexpr_hash<Key>>();
+  }
+};
+
+// We use the same types that std::hash uses, except for pointers since pointers can't be hashed during constant evaluation
+using SupportedConstexprHashTypes =
+    types::concatenate_t<types::arithmetic_types,
+                         types::type_list<Enum,
+                                          EnumClass, //void*, void const*, Class*,
+                                          std::nullptr_t>>;
+
+// Test that each of the library hash specializations for arithmetic types,
+// enum types, and pointer types are available and enabled.
+template <class Types = SupportedConstexprHashTypes>
+constexpr bool test_constexpr_hash_specializations_available() {
+  types::for_each(Types(), TestConstexprHashEnabled());
+  return true;
+}
+#endif
 
 #endif // SUPPORT_POISONED_HASH_HELPER_H
