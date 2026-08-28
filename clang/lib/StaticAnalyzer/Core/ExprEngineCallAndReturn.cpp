@@ -773,7 +773,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
     std::tie(State, Target) =
-        handleConstructionContext(Call.getOriginExpr(), State, currBldrCtx, SF,
+        handleConstructionContext(Call.getOriginExpr(), State, SF,
                                   RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
