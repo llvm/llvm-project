@@ -39,7 +39,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/openmp-utils.h"
@@ -66,7 +65,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
-#include "llvm/TargetParser/Triple.h"
 #include <atomic>
 
 using namespace Fortran::lower::omp;
@@ -4308,17 +4306,6 @@ struct TargetUpdateKernelEntry {
   mlir::Type componentType;
 };
 
-static bool hasAMDGCNTarget(mlir::ModuleOp module) {
-  auto offloadModule = llvm::cast<mlir::omp::OffloadModuleInterface>(*module);
-  if (offloadModule.getIsTargetDevice())
-    return fir::getTargetTriple(module).isAMDGCN();
-  return llvm::any_of(
-      offloadModule.getTargetTriples(), [](mlir::Attribute attr) {
-        auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
-        return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
-      });
-}
-
 static std::optional<TargetUpdateKernelEntry>
 getTargetUpdateKernelEntry(mlir::Value mapVar) {
   auto mapInfo = mapVar.getDefiningOp<mlir::omp::MapInfoOp>();
@@ -4353,6 +4340,10 @@ getTargetUpdateKernelEntry(mlir::Value mapVar) {
   return TargetUpdateKernelEntry{mapInfo, hostPtr, componentType};
 }
 
+/// Replace several scalar H2D updates with one packed transfer and a target
+/// region that scatters the values to their original device addresses. The
+/// source tuple has one `to` map, while each destination uses a `storage` map
+/// so it resolves an existing device association without copying host data.
 static mlir::omp::TargetOp
 genTargetUpdateKernel(lower::AbstractConverter &converter, mlir::Location loc,
                       llvm::ArrayRef<TargetUpdateKernelEntry> entries) {
@@ -4372,9 +4363,7 @@ genTargetUpdateKernel(lower::AbstractConverter &converter, mlir::Location loc,
       mlir::TupleType::get(builder.getContext(), sourceTypes);
   mlir::Value sourcePack = builder.createTemporary(loc, sourceType);
 
-  for (auto indexedEntry : llvm::enumerate(entries)) {
-    std::size_t i = indexedEntry.index();
-    const TargetUpdateKernelEntry &entry = indexedEntry.value();
+  for (auto [i, entry] : llvm::enumerate(entries)) {
     mlir::Value sourceValue = fir::LoadOp::create(builder, loc, entry.hostPtr);
     mlir::Value index =
         builder.createIntegerConstant(loc, builder.getI32Type(), i);
@@ -4411,11 +4400,11 @@ genTargetUpdateKernel(lower::AbstractConverter &converter, mlir::Location loc,
   assert(mapBlockArgs.size() == entries.size() + 1 &&
          "expected source and destination map arguments");
   builder.setInsertionPointToEnd(&targetOp.getRegion().front());
-  for (unsigned i = 0; i < entries.size(); ++i) {
+  for (auto [i, entry] : llvm::enumerate(entries)) {
     mlir::Value index =
         builder.createIntegerConstant(loc, builder.getI32Type(), i);
     mlir::Value sourceAddr = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(entries[i].componentType),
+        builder, loc, builder.getRefType(entry.componentType),
         mapBlockArgs.front(), index);
     mlir::Value sourceValue = fir::LoadOp::create(builder, loc, sourceAddr);
     fir::StoreOp::create(builder, loc, sourceValue, mapBlockArgs[i + 1]);
@@ -4426,16 +4415,20 @@ genTargetUpdateKernel(lower::AbstractConverter &converter, mlir::Location loc,
 }
 
 static mlir::Operation *tryGenTargetUpdateKernel(
-    lower::AbstractConverter &converter, mlir::Location loc,
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    mlir::Location loc,
     mlir::omp::TargetEnterExitUpdateDataOperands &clauseOps) {
   // Updating several small, discontiguous fields issues one device transfer
   // for every map entry. Pack their host values and use one target region so
   // that the runtime performs one H2D transfer followed by the scalar stores.
   // This addresses the AMDGPU runtime transfer cost and is only enabled when
   // an AMDGPU image will actually be emitted.
-  if (!hasAMDGCNTarget(converter.getModuleOp()) || clauseOps.mapVars.empty() ||
-      !clauseOps.dependVars.empty() || !clauseOps.dependIterated.empty() ||
-      !clauseOps.mapIterated.empty() || clauseOps.nowait || clauseOps.device)
+  mlir::ModuleOp module = converter.getModuleOp();
+  if (!hasAMDGCNTarget(module) ||
+      requiresUnifiedSharedMemory(module, semaCtx) ||
+      clauseOps.mapVars.size() < 2 || !clauseOps.dependVars.empty() ||
+      !clauseOps.dependIterated.empty() || !clauseOps.mapIterated.empty() ||
+      clauseOps.nowait || clauseOps.device)
     return nullptr;
 
   llvm::SmallVector<TargetUpdateKernelEntry> entries;
@@ -4508,7 +4501,8 @@ genTargetUpdateDataOp(lower::AbstractConverter &converter,
       converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
       llvm::omp::Directive::OMPD_target_update, clauseOps);
 
-  if (mlir::Operation *op = tryGenTargetUpdateKernel(converter, loc, clauseOps))
+  if (mlir::Operation *op =
+          tryGenTargetUpdateKernel(converter, semaCtx, loc, clauseOps))
     return op;
 
   return mlir::omp::TargetUpdateOp::create(firOpBuilder, loc, clauseOps);
