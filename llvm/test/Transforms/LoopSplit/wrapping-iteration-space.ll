@@ -137,3 +137,54 @@ exit:
 ret:
   ret void
 }
+
+; An eq/ne latch with both nsw and nuw needs a bounded SCEV range to pick
+; signedness. A small fixed trip count narrows the signed range, so splitting
+; still succeeds (contrast @ambiguous_signedness in unsupported-forms.ll).
+
+define void @nuw_nsw_bounded_still_splits(ptr %a) {
+; CHECK-LABEL: define void @nuw_nsw_bounded_still_splits(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[LS_GUARD0:.*:]]
+; CHECK-NEXT:    br i1 true, label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
+; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp slt i64 [[IV]], 2
+; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LS_GUARD1]]
+; CHECK:       [[LS_GUARD1]]:
+; CHECK-NEXT:    br i1 true, label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
+; CHECK:       [[ENTRY_LS1]]:
+; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
+; CHECK:       [[LOOP_LS1]]:
+; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i64 [ 3, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS1]]
+; CHECK-NEXT:    store i64 [[IV_LS1]], ptr [[P_LS1]], align 4
+; CHECK-NEXT:    [[IV_NEXT_LS1]] = add nuw nsw i64 [[IV_LS1]], 1
+; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp slt i64 [[IV_LS1]], 10
+; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
+; CHECK:       [[LS_EXIT1]]:
+; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
+; CHECK:       [[LS_FINAL_EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add nuw nsw i64 %iv, 1
+  %c = icmp ne i64 %iv.next, 11
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

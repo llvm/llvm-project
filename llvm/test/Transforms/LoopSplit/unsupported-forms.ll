@@ -288,7 +288,7 @@ exit:
 }
 
 ; rewriteLatch expects a conditional latch terminator. An unconditional backedge
-; has no latch compare, so isLegal() rejects the loop before splitting.
+; has no latch compare, so legality analysis rejects the loop before splitting.
 
 define void @uncond_latch() {
 ; CHECK-LABEL: define void @uncond_latch() {

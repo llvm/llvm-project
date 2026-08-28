@@ -48,22 +48,23 @@ static cl::opt<unsigned> SplitDepth(
 // the transform. Returns true if the loop was split.
 static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                       LoopInfo &LI) {
-  LoopSplit LS(L, &LI, &SE, &DT);
-  if (!LS.isLegal()) {
+  std::optional<LoopSplit> LS = LoopSplit::get(L, &LI, &SE, &DT);
+  if (!LS) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop is not legal for splitting\n");
     return false;
   }
 
-  // isLegal() has already established this shape.
-  const SCEV *IndVarSCEV = SE.getSCEV(LS.getInductionVariable());
+  // Legality analysis has already established this shape.
+  const SCEV *IndVarSCEV = SE.getSCEV(LS->getInductionVariable());
   const SCEV *Start;
   const APInt *StepC;
   [[maybe_unused]] bool Matched = match(
       IndVarSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(StepC)));
-  assert(Matched && "isLegal() guarantees a unit-step affine induction");
+  assert(Matched && (StepC->isOne() || StepC->isAllOnes()) &&
+         "expected unit-step affine induction");
 
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
-  const SCEV *End = LS.getInductionEnd();
+  const SCEV *End = LS->getInductionEnd();
   Type *Ty = Start->getType();
   unsigned BitWidth = Ty->getIntegerBitWidth();
   // The backedge-taken count is a separate expression and need not share the
@@ -90,23 +91,23 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   for (unsigned Offset : Offsets) {
     // Clamp into [1, BTC] so each boundary stays in the space; Start +/- BTC is
     // the last iteration. The umax reaches one past it when BTC is zero, which
-    // isLegal() proved representable.
+    // Legality analysis proved representable.
     const SCEV *Off = SE.getConstant(Ty, Offset);
     Off = SE.getUMaxExpr(One, SE.getUMinExpr(Off, Count));
     const SCEV *Point =
         Descending ? SE.getMinusSCEV(Start, Off) : SE.getAddExpr(Start, Off);
     const SCEV *PrevEnd =
         Descending ? SE.getAddExpr(Point, One) : SE.getMinusSCEV(Point, One);
-    LS.addPartition(PrevStart, PrevEnd);
+    LS->addPartition(PrevStart, PrevEnd);
     PrevStart = Point;
   }
   // The final partition runs to the iteration-space end.
-  LS.addPartition(PrevStart, End);
+  LS->addPartition(PrevStart, End);
 
-  if (LS.getNumPartitions() < 2)
+  if (LS->getNumPartitions() < 2)
     return false;
 
-  return LS.split();
+  return LS->split();
 }
 
 // Split the selected loops in \p F at the command-line offsets.
