@@ -2638,7 +2638,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEARBYINT, MVT::bf16, Custom);
     setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
 
-
     if (Subtarget.useAVX512Regs()) {
       setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
       setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
