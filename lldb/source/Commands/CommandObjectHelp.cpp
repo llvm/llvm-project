@@ -128,7 +128,7 @@ void CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           for (size_t match_idx = 0; match_idx < num_matches; match_idx++) {
             s.Printf("\n\t%s", matches.GetStringAtIndex(match_idx));
           }
-          s.Printf("\n");
+          s.PutCString("\n");
           result.AppendError(s.GetString());
           return;
         } else if (!sub_cmd_obj) {

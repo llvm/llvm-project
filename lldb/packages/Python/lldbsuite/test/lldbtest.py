@@ -8,14 +8,14 @@ common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 entire of part of the test suite .  Example:
 
 # Exercises the test suite in the types directory....
-/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py types
 ...
 
 Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-Command invoked: python ./dotest.py -A x86_64 types
+Command invoked: python ./dotest.py types
 compilers=['clang']
 
-Configuration: arch=x86_64 compiler=clang
+Configuration: compiler=clang
 ----------------------------------------------------------------------
 Collected 72 tests
 
@@ -63,6 +63,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.skip_reason import UnsupportedReason
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -302,12 +303,13 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
 class ValueCheck:
     def __init__(
         self,
-        name=None,
-        value=None,
-        type=None,
-        summary=None,
-        children=None,
-        dereference=None,
+        name: str = None,
+        value: str = None,
+        type: str = None,
+        summary: str = None,
+        children: [ValueCheck] = None,
+        dereference: bool = None,
+        valobj: lldb.SBValue = None,
     ):
         """
         :param name: The name that the SBValue should have. None if the summary
@@ -325,13 +327,33 @@ class ValueCheck:
                          children.
         :param dereference: A ValueCheck for the SBValue returned by the
                             `Dereference` function.
+        :param valobj: If supplied, ignore the other arguments and build a
+                       ValueCheck that matches valobj except for the name
+                       of the toplevel valobj.
         """
-        self.expect_name = name
-        self.expect_value = value
-        self.expect_type = type
-        self.expect_summary = summary
-        self.children = children
-        self.dereference = dereference
+        if valobj:
+            # SBValues so we don't need to dereference
+            self.dereference = None
+            # We don't want to compare the top-level VO
+            # name as the reference object may come from
+            # a different source.  So we pass that in in
+            # the recursive part by hand below.
+
+            self.expect_name = name
+            # Copy everything else from the incoming valobj:
+            self.expect_summary = valobj.GetSummary()
+            self.expect_type = valobj.GetDisplayTypeName()
+            self.expect_value = valobj.GetValue()
+            self.children: [ValueCheck] = []
+            for child in valobj.children:
+                self.children.append(ValueCheck(valobj=child, name=child.name))
+        else:
+            self.expect_name = name
+            self.expect_value = value
+            self.expect_type = type
+            self.expect_summary = summary
+            self.children = children
+            self.dereference = dereference
 
     def check_value(self, test_base, val, error_msg=""):
         """
@@ -347,13 +369,10 @@ class ValueCheck:
 
         test_base.assertSuccess(val.GetError())
 
-        # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-        pattern_type = type(re.compile(""))
-
         if self.expect_name:
             test_base.assertEqual(self.expect_name, val.GetName(), this_error_msg)
         if self.expect_value:
-            if isinstance(self.expect_value, pattern_type):
+            if isinstance(self.expect_value, re.Pattern):
                 test_base.assertRegex(val.GetValue(), self.expect_value, this_error_msg)
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
@@ -362,7 +381,7 @@ class ValueCheck:
                 self.expect_type, val.GetDisplayTypeName(), this_error_msg
             )
         if self.expect_summary:
-            if isinstance(self.expect_summary, pattern_type):
+            if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
                     val.GetSummary(), self.expect_summary, this_error_msg
                 )
@@ -453,6 +472,11 @@ class _LocalProcess(_BaseProcess):
         self._delayafterterminate = 0.1
 
     @property
+    def args(self):
+        assert self._proc is not None, "No process"
+        return self._proc.args
+
+    @property
     def pid(self):
         assert self._proc is not None, "No process"
         return self._proc.pid
@@ -534,7 +558,12 @@ class _LocalProcess(_BaseProcess):
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
         self._pid = None
+        self._args = None
         self._install_remote = install_remote
+
+    @property
+    def args(self):
+        assert self._args
 
     @property
     def pid(self):
@@ -577,6 +606,7 @@ class _RemoteProcess(_BaseProcess):
                 "remote_platform.Launch('%s', '%s') failed: %s" % (dst_path, args, err)
             )
         self._pid = launch_info.GetProcessID()
+        self._args = args
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
@@ -824,42 +854,13 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
-        if sys.platform == "win32" and len(bdir) > 256:
-            import warnings
-
-            warnings.warn(
-                "Test build directory path exceeds 256 characters (Windows "
-                "MAX_PATH limit): {}".format(bdir)
-            )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            # Tolerate files vanishing mid-walk. Clang's implicit module
-            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
-            # tied to the holding process; a concurrent or just-exited
-            # clang can unlink one between rmtree's scandir and unlink,
-            # raising ENOENT. The dir is going away anyway, so treat
-            # already-gone entries as success.
-            def _ignore_enoent(func, path, exc_info):
-                if (
-                    isinstance(exc_info[1], OSError)
-                    and exc_info[1].errno == errno.ENOENT
-                ):
-                    return
-                raise exc_info[1]
-
-            shutil.rmtree(bdir, onerror=_ignore_enoent)
+            lldbutil.remove_tree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        artifact_path = os.path.join(self.getBuildDir(), name)
-        if sys.platform == "win32" and len(artifact_path) > 256:
-            import warnings
-
-            warnings.warn(
-                "Test artifact path exceeds 256 characters (Windows "
-                "MAX_PATH limit): {}".format(artifact_path)
-            )
-        return artifact_path
+        return os.path.join(self.getBuildDir(), name)
 
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
@@ -1309,6 +1310,15 @@ class Base(unittest.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("expected failure", file=sbuf)
 
+    def skipTest(self, reason):
+        """Skip the test, reporting an `UnsupportedReason` as UNSUPPORTED.
+
+        `unittest` records a raised `SkipTest` as `str(exception)`, so the reason
+        type never reaches the result; remember the distinction on the test."""
+        if isinstance(reason, UnsupportedReason):
+            self._skipped_as_unsupported = True
+        super().skipTest(reason)
+
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""
         self.__skipped__ = True
@@ -1608,18 +1618,6 @@ class Base(unittest.TestCase):
 
         return False
 
-    def getRunOptions(self):
-        """Command line option for -A and -C to run this test again, called from
-        self.dumpSessionInfo()."""
-        arch = self.getArchitecture()
-        comp = self.getCompiler()
-        option_str = ""
-        if arch:
-            option_str = "-A " + arch
-        if comp:
-            option_str += " -C " + comp
-        return option_str
-
     def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)
         return getattr(method, variant_name, None)
@@ -1703,8 +1701,11 @@ class Base(unittest.TestCase):
 
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))
+        env = dict(os.environ)
+        if configuration.sdkroot:
+            env["SDKROOT"] = configuration.sdkroot
         try:
-            output = check_output(command, stderr=STDOUT, errors="replace")
+            output = check_output(command, stderr=STDOUT, errors="replace", env=env)
         except CalledProcessError as cpe:
             raise build_exception.BuildError(cpe)
         self.trace(output)
@@ -1751,7 +1752,8 @@ class Base(unittest.TestCase):
                 "EXE": exe_name,
                 "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
-                "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
+                "LD_EXTRAS": "%s -Wl,-rpath,%s -Wl,-rpath,%s"
+                % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
             d = {
@@ -2324,7 +2326,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         with open(src, "w") as f:
             f.write(new_content)
 
-        self.addTearDownHook(lambda: os.remove(src))
+        self.addTearDownHook(lambda: os.remove(lldbutil.get_extended_windows_path(src)))
 
     def setUp(self):
         # Works with the test driver to conditionally skip tests via
@@ -2995,7 +2997,6 @@ FileCheck output:
         )
 
         frame = self.frame()
-
         if not options:
             options = lldb.SBExpressionOptions()
 
@@ -3186,7 +3187,7 @@ FileCheck output:
 def remove_file(file, num_retries=1, sleep_duration=0.5):
     for i in range(num_retries + 1):
         try:
-            os.remove(file)
+            os.remove(lldbutil.get_extended_windows_path(file))
             return True
         except:
             time.sleep(sleep_duration)

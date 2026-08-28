@@ -383,6 +383,9 @@ private:
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
+  /// Whether to record lexer check points for diagnostic snippet highlighting.
+  bool RecordCheckPoints = false;
+
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
 
@@ -707,6 +710,25 @@ private:
   ///
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
+
+  /// Implicit input directives waiting to be entered after a global module
+  /// fragment introducer, if the main file starts a module unit.
+  std::string DeferredGMFInputs;
+
+  /// The synthesized buffer used to enter deferred implicit input files.
+  FileID DeferredGMFInputsFileID;
+
+  /// Whether the predefines buffer contains a synthesized GMF introducer.
+  bool HasSynthesizedGMF = false;
+
+  /// Whether setPredefines() replaced a previously initialized buffer.
+  bool PredefinesWereReplaced = false;
+  bool PredefinesInitialized = false;
+
+  bool hasDeferredGMFInputs() const { return !DeferredGMFInputs.empty(); }
+
+  /// Enter implicit input files after the global module fragment introducer.
+  void EnterDeferredGMFInputs(SourceLocation IncludeLoc);
 
   /// Whether we hit an error due to reaching max allowed include depth. Allows
   /// to avoid hitting the same error over and over again.
@@ -1566,7 +1588,18 @@ public:
   /// Set the predefines for this Preprocessor.
   ///
   /// These predefines are automatically injected when parsing the main file.
-  void setPredefines(std::string P) { Predefines = std::move(P); }
+  void setPredefines(std::string P) {
+    PredefinesWereReplaced |= PredefinesInitialized;
+    PredefinesInitialized = true;
+    Predefines = std::move(P);
+  }
+
+  /// Record implicit macro, PCH, and regular include directives to be entered
+  /// before the main file or inside its global module fragment.
+  void setDeferredGMFInputs(std::string Inputs) {
+    assert(DeferredGMFInputs.empty());
+    DeferredGMFInputs = std::move(Inputs);
+  }
 
   /// Return information about the specified preprocessor
   /// identifier token.
@@ -2546,6 +2579,15 @@ public:
   /// in ""'s.
   bool GetIncludeFilenameSpelling(SourceLocation Loc,StringRef &Buffer);
 
+  /// Turn the specified lexer token into a fully checked and spelled
+  /// filename, e.g. as an operand of \#line and \#.
+  ///
+  /// The caller is expected to provide a buffer that is large enough to hold
+  /// the spelling of the filename, but is also expected to handle the case
+  /// when this method decides to use a different buffer.
+  ///
+  void GetLineDirectiveFilenameSpelling(SourceLocation Loc, StringRef &Buffer);
+
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///
   /// Returns std::nullopt on failure.  \p isAngled indicates whether the file
@@ -2815,6 +2857,7 @@ private:
 
 public:
   std::optional<std::uint64_t> getStdLibCxxVersion();
+  void setStdLibCxxVersion(std::uint64_t Version);
   bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion);
 
 private:
@@ -2975,6 +3018,9 @@ private:
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);
 
+  // Cached identifiers used to implement __set_pp_state.
+  IdentifierInfo *Ident__GLIBCXX__;
+
 public:
   void HandlePragmaOnce(Token &OnceTok);
   void HandlePragmaMark(Token &MarkTok);
@@ -2986,7 +3032,12 @@ public:
   void HandlePragmaIncludeAlias(Token &Tok);
   void HandlePragmaModuleBuild(Token &Tok);
   void HandlePragmaHdrstop(Token &Tok);
+  void HandlePragmaSetPPState(PragmaIntroducer Introducer, Token &Tok);
   IdentifierInfo *ParsePragmaPushOrPopMacro(Token &Tok);
+
+  /// Check whether this is a macro name that can be used as an argument to
+  /// '#pragma clang __set_pp_state'.
+  bool isPragmaSetPPStateMacro(IdentifierInfo *II);
 
   // Return true and store the first token only if any CommentHandler
   // has inserted some tokens and getCommentRetentionState() is false.

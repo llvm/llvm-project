@@ -258,6 +258,15 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(myint_type)
         self.assertEqual(myint_arr_element_type, myint_type)
 
+        # Verify 'first_ref' is a reference and not a function.
+        first_ref: lldb.SBValue = frame0.FindVariable("first_ref")
+        self.assertTrue(first_ref, VALID_VARIABLE)
+        self.DebugSBValue(first_ref)
+        first_ref_type: lldb.SBType = first_ref.type
+        self.assertTrue(first_ref_type, VALID_TYPE)
+        self.assertTrue(first_ref_type.is_reference)
+        self.assertFalse(first_ref_type.is_function)
+
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
         if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
@@ -299,6 +308,47 @@ class TypeAndTypeListTestCase(TestBase):
         the_typedef = with_nested_typedef.FindDirectNestedType("TheTypedef")
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
+
+    @expectedFailureWindows  # Dynamic type resolution not implemented
+    def test_dynamic_values(self):
+        """Test FindDirectNestedType on dynamic values"""
+
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
+        polymorphic = (
+            self.frame()
+            .FindVariable("polymorphic")
+            .GetDynamicValue(lldb.eDynamicDontRunTarget)
+        )
+        self.DebugSBValue(polymorphic)
+        polymorphic_type = polymorphic.GetType().GetPointeeType()
+        self.DebugSBType(polymorphic_type)
+        nested = polymorphic_type.FindDirectNestedType("Nested")
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "float")
+
+        static = polymorphic.GetStaticValue()
+        self.DebugSBValue(static)
+        static_type: lldb.SBType = static.GetType().GetPointeeType()
+        self.DebugSBType(static_type)
+        nested: lldb.SBType = static_type.FindDirectNestedType("Nested")
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicBase::Nested")
+        self.assertEqual(nested.GetTypedefedType().GetName(), "int")
+
+        # Verify PolymorphicBase 'get' function type is a function and not a reference.
+        get_function = lldb.SBTypeMemberFunction()
+        self.assertFalse(get_function, "get_function should not be valid")
+        for i in range(0, static_type.GetNumberOfMemberFunctions()):
+            mem_func = static_type.GetMemberFunctionAtIndex(i)
+            if mem_func.GetName() == "get":
+                get_function = mem_func
+                break
+        self.assertEqual(get_function.GetName(), "get")
+        get_function_type: lldb.SBType = get_function.GetType()
+        self.assertTrue(get_function_type.is_function)
+        self.assertFalse(get_function_type.is_reference)
 
     def test_GetByteAlign(self):
         """Exercise SBType::GetByteAlign"""

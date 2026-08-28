@@ -78,14 +78,19 @@ def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;
 def FIRfuncNonRecursive  : I32BitEnumAttrCaseBit<"non_recursive", 2>;
 def FIRfuncSimple        : I32BitEnumAttrCaseBit<"simple", 3>;
 def FIRfuncBind_c        : I32BitEnumAttrCaseBit<"bind_c", 4>;
-def FIRfuncRecursive : I32BitEnumAttrCaseBit<"recursive", 5>;
+def FIRfuncRecursive     : I32BitEnumAttrCaseBit<"recursive", 5>;
+/// We also track whether a procedure call is to an "intrinsic", meaning that the
+/// callee was found in an instrinsic module. This allows us to make sure calls are
+/// to known intrinsic functions and not user-defined functions with the same
+/// name when optimizing.
+def FIRfuncIntrinsic     : I32BitEnumAttrCaseBit<"intrinsic", 6>;
 
 def fir_FortranProcedureFlagsEnum
     : I32BitEnumAttr<"FortranProcedureFlagsEnum",
                      "Fortran procedure attributes",
                      [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure,
                       FIRfuncNonRecursive, FIRfuncSimple, FIRfuncBind_c,
-                      FIRfuncRecursive]> {
+                      FIRfuncRecursive, FIRfuncIntrinsic]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let genSpecializedAttr = 0;

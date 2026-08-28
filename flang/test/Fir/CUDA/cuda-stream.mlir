@@ -10,7 +10,7 @@ module attributes {gpu.container_module} {
     %0 = fir.alloca i64
     %1 = arith.constant 1 : index
     %asyncTok = cuf.stream_cast %0 : !fir.ref<i64>
-    gpu.launch_func [%asyncTok] @cuda_device_mod::@_QMmod1Psub1 blocks in (%1, %1, %1) threads in (%1, %1, %1) args() {cuf.proc_attr = #cuf.cuda_proc<grid_global>}
+    %res_token = gpu.launch_func async [%asyncTok] @cuda_device_mod::@_QMmod1Psub1 blocks in (%1, %1, %1) threads in (%1, %1, %1) args() {cuf.proc_attr = #cuf.cuda_proc<grid_global>}
     return
   }
 }
@@ -18,4 +18,4 @@ module attributes {gpu.container_module} {
 // CHECK-LABEL: func.func @_QMmod1Phost_sub()
 // CHECK: %[[STREAM:.*]] = fir.alloca i64
 // CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[STREAM]] : !fir.ref<i64>
-// CHECK: gpu.launch_func [%[[TOKEN]]] @cuda_device_mod::@_QMmod1Psub1
+// CHECK: %[[RES_TOKEN:.*]] = gpu.launch_func async [%[[TOKEN]]] @cuda_device_mod::@_QMmod1Psub1

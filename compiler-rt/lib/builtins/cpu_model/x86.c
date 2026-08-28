@@ -42,7 +42,8 @@ enum VendorSignatures {
 enum ProcessorVendors {
   VENDOR_INTEL = 1,
   VENDOR_AMD,
-  VENDOR_HYGON,
+  // VENDOR_ZHAOXIN
+  VENDOR_HYGON = 4,
   VENDOR_OTHER,
   VENDOR_MAX
 };
@@ -107,10 +108,12 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE,
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
-  AMDFAM1AH_ZNVER5,
-  AMDFAM1AH_ZNVER6,
-  INTEL_COREI7_DIAMONDRAPIDS,
+  // ZHAOXIN_FAM7H_YONGFENG
+  AMDFAM1AH_ZNVER5 = 36,
+  // ZHAOXIN_FAM7H_SHIJIDADAO
+  INTEL_COREI7_DIAMONDRAPIDS = 38,
   INTEL_COREI7_NOVALAKE,
+  AMDFAM1AH_ZNVER6,
   HYGONFAM18H_C86_4G_M4,
   HYGONFAM18H_C86_4G_M6,
   HYGONFAM18H_C86_4G_M7,
@@ -235,7 +238,6 @@ enum ProcessorFeatures {
   FEATURE_AVX10_1 = 114,
   FEATURE_AVX10_2 = 116,
   FEATURE_AMX_AVX512,
-  FEATURE_AMX_TF32,
   FEATURE_AMX_FP8 = 120,
   FEATURE_MOVRS,
   FEATURE_AMX_MOVRS,
@@ -1146,8 +1148,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf1E && (EAX & 0x10))
     setFeature(FEATURE_AMX_FP8);
-  if (HasLeaf1E && (EAX & 0x40))
-    setFeature(FEATURE_AMX_TF32);
   if (HasLeaf1E && (EAX & 0x80))
     setFeature(FEATURE_AMX_AVX512);
   if (HasLeaf1E && (EAX & 0x100))

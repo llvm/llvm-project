@@ -60,3 +60,5 @@ enum ForwardE : int;
 enum class ForwardEC : int;
 
 enum struct ForwardES : int;
+
+enum { A };

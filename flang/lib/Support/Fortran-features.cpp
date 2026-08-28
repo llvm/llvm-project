@@ -135,6 +135,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);
   disable_.set(LanguageFeature::CudaPinned);
+  disable_.set(LanguageFeature::CUDAInit);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
   disable_.set(LanguageFeature::ImplicitNoneExternal);
@@ -221,6 +222,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ImpureFinalInPure);
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
+  warnUsage_.set(UsageWarning::BOZLiteralTruncation);
+  warnLanguage_.set(LanguageFeature::PreferIntrinsicModuleUseAssociation);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);

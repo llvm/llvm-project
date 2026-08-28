@@ -16,6 +16,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 
@@ -303,5 +304,44 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
   default:
     return false;
   }
+  return true;
+}
+
+bool lldb_private::formatters::IsMsvcStlSourceLocation(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_File") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP file_sp = valobj.GetChildMemberWithName("_File");
+  ValueObjectSP function_sp = valobj.GetChildMemberWithName("_Function");
+  ValueObjectSP line_sp = valobj.GetChildMemberWithName("_Line");
+  ValueObjectSP column_sp = valobj.GetChildMemberWithName("_Column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  // Default-constructed source_location is empty; don't invent a summary.
+  if (line == 0 && column == 0 &&
+      (!file || file[0] == '\0' || llvm::StringRef(file) == "\"\""))
+    return false;
+
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
   return true;
 }

@@ -2646,9 +2646,9 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       assert(!OpStr.empty() && "Expected valid opcode");
 
       Out << FS << OpStr;
-      if (Op.getOp() == dwarf::DW_OP_LLVM_convert) {
-        Out << FS << Op.getArg(0);
-        Out << FS << dwarf::AttributeEncodingString(Op.getArg(1));
+      if (auto Convert = dyn_cast<DIExpression::ConvertOp>(Op)) {
+        Out << FS << Convert.getBitSize();
+        Out << FS << dwarf::AttributeEncodingString(Convert.getEncoding());
       } else {
         for (unsigned A = 0, AE = Op.getNumArgs(); A != AE; ++A)
           Out << FS << Op.getArg(A);
@@ -2697,6 +2697,18 @@ static void writeDIObjCProperty(raw_ostream &Out, const DIObjCProperty *N,
   Printer.printString("getter", N->getGetterName());
   Printer.printInt("attributes", N->getAttributes());
   Printer.printMetadata("type", N->getRawType());
+  Out << ")";
+}
+
+static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DIProperty(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadata("type", N->getRawType());
+  Printer.printMetadata("backing_storage", N->getRawBackingStorage());
   Out << ")";
 }
 
@@ -4372,9 +4384,15 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  if (Value *BasePtr = Relocate.getBasePtr())
+    writeOperand(BasePtr, false);
+  else
+    Out << "invalid";
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  if (Value *DerivedPtr = Relocate.getDerivedPtr())
+    writeOperand(DerivedPtr, false);
+  else
+    Out << "invalid";
   Out << ")";
 }
 
@@ -4473,6 +4491,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicCmpXchgInst>(I) && cast<AtomicCmpXchgInst>(I).isVolatile()) ||
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
+
+  // Print the elementwise marker for atomic loads and stores.
+  if ((isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise()) ||
+      (isa<StoreInst>(I) && cast<StoreInst>(I).isElementwise()))
+    Out << " elementwise";
 
   // Print out optimization information.
   writeOptimizationInfo(Out, &I);
@@ -4644,7 +4667,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
       const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-      if (!ConstArg)
+      if (!ConstArg || !CalledFunc)
         return;
       std::string ArgComment;
       raw_string_ostream ArgCommentStream(ArgComment);

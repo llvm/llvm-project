@@ -195,7 +195,14 @@ if (LIBCXXABI_SUPPORTS_SHARED_LIBRARY)
   # Build with -fsized-deallocation, which is default in recent versions of Clang.
   # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
   target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
-  target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fvisibility=hidden)
+  if (NOT WIN32)
+    # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+    # used, can trigger a Clang error (if Clang is built with asserts enabled),
+    # https://github.com/llvm/llvm-project/issues/207963
+    # Once fixed, we could consider allowing -fvisibility=hidden on
+    # Windows too (as it can be beneficial for static libraries).
+    target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fvisibility=hidden)
+  endif()
 
   add_library(cxxabi_shared SHARED)
   set_target_properties(cxxabi_shared
@@ -286,7 +293,14 @@ target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COM
 # Build with -fsized-deallocation, which is default in recent versions of Clang.
 # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
 target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
-target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
+if (NOT WIN32)
+  # Building libcxxabi with -fvisibility=hidden on Windows, if dllexport is
+  # used, can trigger a Clang error (if Clang is built with asserts enabled),
+  # https://github.com/llvm/llvm-project/issues/207963
+  # Once fixed, we could consider allowing -fvisibility=hidden on
+  # Windows too (as it can be beneficial for static libraries).
+  target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
+endif()
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   # If the hermetic library doesn't define the operator new/delete functions

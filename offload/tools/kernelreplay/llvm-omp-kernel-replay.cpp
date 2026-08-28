@@ -68,6 +68,11 @@ static cl::opt<bool>
                     cl::desc("Ignore thread and team limits (unrecommended)."),
                     cl::init(false), cl::cat(ReplayOptions));
 
+static cl::opt<bool>
+    LoadBitcodeOpt("load-bitcode",
+                   cl::desc("Load the recorded IR bitcode image file."),
+                   cl::init(false), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -300,7 +305,7 @@ Error replayKernel() {
   }
 
   // Load the device image file.
-  Filepath.replace_extension("image");
+  Filepath.replace_extension(LoadBitcodeOpt ? "bc" : "image");
   auto ImageBufferOrErr =
       MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);

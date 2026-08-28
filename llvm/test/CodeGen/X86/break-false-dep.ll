@@ -1318,7 +1318,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-LINUX-NEXT:    leaq 1(%rax), %r8
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
 ; SSE-LINUX-NEXT:    cvtsi2sd %r8, %xmm4
-; SSE-LINUX-NEXT:    movapd %xmm0, %xmm5
+; SSE-LINUX-NEXT:    movaps %xmm0, %xmm5
 ; SSE-LINUX-NEXT:    subsd %xmm4, %xmm5
 ; SSE-LINUX-NEXT:    mulsd %xmm1, %xmm5
 ; SSE-LINUX-NEXT:    leaq -1(%rcx), %r9
@@ -1390,7 +1390,7 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-WIN-NEXT:    leaq 1(%r8), %r10
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
 ; SSE-WIN-NEXT:    cvtsi2sd %r10, %xmm4
-; SSE-WIN-NEXT:    movapd %xmm2, %xmm5
+; SSE-WIN-NEXT:    movaps %xmm2, %xmm5
 ; SSE-WIN-NEXT:    subsd %xmm4, %xmm5
 ; SSE-WIN-NEXT:    mulsd %xmm3, %xmm5
 ; SSE-WIN-NEXT:    leaq -1(%r9), %r11

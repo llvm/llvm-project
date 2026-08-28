@@ -1398,17 +1398,17 @@ implicit none
   ! Time function
 
   interface
-    attributes(device) integer function clock()
+    attributes(device) pure integer function clock()
     end function
   end interface
 
   interface
-    attributes(device) integer(8) function clock64()
+    attributes(device) pure integer(8) function clock64()
     end function
   end interface
 
   interface
-    attributes(device) integer(8) function globalTimer()
+    attributes(device) pure integer(8) function globalTimer()
     end function
   end interface
 

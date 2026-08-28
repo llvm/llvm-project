@@ -113,7 +113,7 @@ public:
       const Instruction *CxtI = nullptr) const override;
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   InstructionCost
@@ -146,8 +146,6 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              ArrayRef<Type *> Types) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;

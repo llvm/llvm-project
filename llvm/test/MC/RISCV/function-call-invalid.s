@@ -9,7 +9,7 @@ call %hi(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %lo(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %hi(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %lo(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
-call foo, bar # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
+call foo, bar # CHECK: :[[@LINE]]:6: error: register must be a GPR
 call t0, %lo(foo) # CHECK: :[[@LINE]]:10: error: operand must be a bare symbol name
 call foo@pls # CHECK: :[[@LINE]]:10: error: @ (except the deprecated/ignored @plt) is disallowed
 call foo@3 # CHECK: :[[@LINE]]:10: error: @ (except the deprecated/ignored @plt) is disallowed

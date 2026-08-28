@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.dev -x hip %s
 // RUN: cat %t.nocuid.dev | FileCheck -check-prefixes=DEV,INT-DEV %s
 
@@ -9,7 +9,7 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.host -x hip %s
 // RUN: cat %t.nocuid.host | FileCheck -check-prefixes=HOST,INT-HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=DEV,EXT-DEV %s
 
@@ -25,7 +25,7 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=DEV-NEG %s
 
@@ -33,7 +33,7 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=HOST-NEG %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefix=DEV-NEG %s
 

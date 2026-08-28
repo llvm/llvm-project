@@ -64,6 +64,7 @@
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -1320,8 +1321,13 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasNeedsAligned2addrDS() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
     offsetsCanBeCombined(CI, *STM, Paired, true);
+  }
 
   if (CI.InstClass == DS_WRITE) {
     // Both data operands must be AGPR or VGPR, so the data registers needs to
@@ -2271,7 +2277,7 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 
   const MachineOperand *BaseOp = nullptr;
 
-  auto Offset = TII->getImmOrMaterializedImm(*Src1);
+  auto Offset = TII->getImmOrMaterializedImm(*MRI, *Src1);
 
   if (Offset) {
     BaseOp = Src0;
@@ -2335,11 +2341,11 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   MachineOperand *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
 
-  auto Offset0P = TII->getImmOrMaterializedImm(*Src0);
+  auto Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src0);
   if (Offset0P)
     BaseLo = *Src1;
   else {
-    if (!(Offset0P = TII->getImmOrMaterializedImm(*Src1)))
+    if (!(Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src1)))
       return;
     BaseLo = *Src0;
   }
@@ -2668,12 +2674,28 @@ SILoadStoreOptimizer::collectMergeableInsts(
       continue;
 
     if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      if (!STM->hasRelaxedTBufferOOBMode()) {
+        LLVM_DEBUG(
+            dbgs() << "Skip tbuffer combine: relaxed OOB mode not enabled\n");
+        continue;
+      }
+
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
       }
+    } else if (InstClass == MIMG) {
+      // Do not merge MIMG instructions with tfe or lwe enabled.
+      // TFE/LWE add a status result that the image merge path does not model.
+      const auto *TFEOp = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+      if (TFEOp && TFEOp->getImm())
+        continue;
+
+      const auto *LWEOp = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+      if (LWEOp && LWEOp->getImm())
+        continue;
     }
 
     CombineInfo CI;

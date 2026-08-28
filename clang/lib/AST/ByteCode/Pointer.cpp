@@ -26,8 +26,8 @@ using namespace clang;
 using namespace clang::interp;
 
 Pointer::Pointer(Block *Pointee)
-    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
-              Pointee->getDescriptor()->getMetadataSize()) {}
+    : Pointer(Pointee, Pointee->getMetadataSize(), Pointee->getMetadataSize()) {
+}
 
 Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -36,7 +36,7 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert(Pointee);
   assert(Base % alignof(void *) == 0 && "wrong base");
-  assert(Base >= Pointee->getDescriptor()->getMetadataSize());
+  assert(Base >= Pointee->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
   Pointee->addPointer(this);
@@ -59,6 +59,9 @@ Pointer::Pointer(const Pointer &P)
   case Storage::Typeid:
     Typeid = P.Typeid;
     break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
 }
 
@@ -77,6 +80,9 @@ Pointer::Pointer(Pointer &&P) : Offset(P.Offset), StorageKind(P.StorageKind) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
     break;
   }
 }
@@ -127,6 +133,10 @@ Pointer &Pointer::operator=(const Pointer &P) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
   return *this;
 }
@@ -166,38 +176,60 @@ Pointer &Pointer::operator=(Pointer &&P) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
   return *this;
+}
+
+static bool validRecordDecl(const RecordDecl *D) {
+  D = D->getDefinition();
+  return D && !D->isInvalidDecl() && D->isCompleteDefinition();
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
-  if (isIntegralPointer())
+
+  switch (StorageKind) {
+  case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
-  if (isFunctionPointer()) {
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn: {
     const FunctionPointer &FP = asFunctionPointer();
     if (const FunctionDecl *FD = FP.Func->getDecl())
       return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
     return APValue(FP.Func->getExpr(), CharUnits::fromQuantity(Offset), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
-  }
-
-  if (isTypeidPointer()) {
+  } break;
+  case Storage::Typeid: {
     TypeInfoLValue TypeInfo(Typeid.TypePtr);
     return APValue(APValue::LValueBase::getTypeInfo(
                        TypeInfo, QualType(Typeid.TypeInfoType, 0)),
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  } break;
+  case Storage::String:
+    if (Offset != 0 || Str.Decayed)
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
+
+    return APValue(APValue::LValueBase(Str.Base),
+                   CharUnits::fromQuantity(Offset * elemSize()), Path,
+                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
+  assert(isBlockPointer());
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
   APValue::LValueBase Base;
@@ -216,11 +248,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
 
   CharUnits Offset = CharUnits::Zero();
 
-  auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {
-    // This shouldn't happen, but if it does, don't crash inside
-    // getASTRecordLayout.
-    if (FD->getParent()->isInvalidDecl())
-      return CharUnits::Zero();
+  auto getFieldOffset = [&](const FieldDecl *FD) -> std::optional<CharUnits> {
+    if (!validRecordDecl(FD->getParent()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
     unsigned FieldIndex = FD->getFieldIndex();
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
@@ -248,8 +278,12 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         const auto *Dcl = Desc->asDecl();
         Path.push_back(APValue::LValuePathEntry({Dcl, /*IsVirtual=*/false}));
 
-        if (const auto *FD = dyn_cast_if_present<FieldDecl>(Dcl))
-          Offset += getFieldOffset(FD);
+        if (const auto *FD = dyn_cast_if_present<FieldDecl>(Dcl)) {
+          if (std::optional<CharUnits> FieldOffset = getFieldOffset(FD))
+            Offset += *FieldOffset;
+          else
+            return APValue();
+        }
 
         Ptr = Ptr.getBase();
       }
@@ -281,11 +315,17 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         bool IsVirtual = false;
         if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
           Ptr = Ptr.getBase();
-          Offset += getFieldOffset(FD);
+          if (std::optional<CharUnits> FieldOffset = getFieldOffset(FD))
+            Offset += *FieldOffset;
+          else
+            return APValue();
         } else if (const auto *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
           IsVirtual = Ptr.isVirtualBaseClass();
           Ptr = Ptr.getBase();
           const Record *BaseRecord = Ptr.getRecord();
+
+          if (!validRecordDecl(BaseRecord->getDecl()))
+            return APValue();
 
           const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(
               cast<CXXRecordDecl>(BaseRecord->getDecl()));
@@ -347,6 +387,11 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
        << (const void *)asTypeidPointer().TypeInfoType << " + " << Offset
        << "}";
+    break;
+  case Storage::String:
+    OS << "(String) { " << (const void *)Str.getLiteral() << ' ';
+    Str.getLiteral()->outputString(OS);
+    OS << ". ID: " << Str.ID << " + " << Offset << "}";
   }
 }
 
@@ -371,6 +416,8 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  case Storage::String:
+    return reinterpret_cast<uintptr_t>(Str.getLiteral()) + Offset;
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -417,6 +464,8 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     const Record *R = P.getBase().getRecord();
     assert(R);
 
+    if (!ASTContext::hasLayout(R->getDecl()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
     Result += ASTCtx
                   .toCharUnitsFromBits(
@@ -449,6 +498,8 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
     return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  case Storage::String:
+    return Offset * Str.getLiteral()->getCharByteWidth();
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -475,8 +526,10 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   PtrView P = view();
   while (true) {
     if (P.isBaseClass()) {
-      const ASTRecordLayout &Layout =
-          ASTCtx.getASTRecordLayout(getRecordDecl(P.getBase()));
+      const CXXRecordDecl *BaseRD = getRecordDecl(P.getBase());
+      if (!ASTContext::hasLayout(BaseRD))
+        return std::nullopt;
+      const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(BaseRD);
       const CXXRecordDecl *RD = getRecordDecl(P);
       if (P.isVirtualBaseClass())
         Result += Layout.getVBaseClassOffset(RD).getQuantity();
@@ -516,6 +569,8 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
 
     assert(P.getField());
     const FieldDecl *F = P.getField();
+    if (!ASTContext::hasLayout(F->getParent()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(F->getParent());
     Result +=
         ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(F->getFieldIndex()))
@@ -801,7 +856,9 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isFunctionPointer() && B.isFunctionPointer())
     return true;
   if (A.isTypeidPointer() && B.isTypeidPointer())
-    return true;
+    return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
+  if (A.isStringPointer() && B.isStringPointer())
+    return A.Str.ID == B.Str.ID && A.Str.getLiteral() == B.Str.getLiteral();
 
   if (A.StorageKind != B.StorageKind)
     return false;
@@ -815,9 +872,45 @@ bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
   return A.block() == B.block();
 }
 
-bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return hasSameBase(A, B) && A.BS.Base == B.BS.Base &&
-         A.getFieldDesc()->IsArray;
+bool Pointer::elemsOfSameArray(const Pointer &A, const Pointer &B) {
+  assert(hasSameBase(A, B));
+  assert(A.isBlockPointer());
+  assert(B.isBlockPointer());
+
+  if (A.BS.Base == B.BS.Base)
+    return true;
+
+  if (A.isBaseClass() || B.isBaseClass())
+    return false;
+
+  if (A.getField() || B.getField())
+    return false;
+
+  auto closestArray = [](const Pointer &P) -> PtrView {
+    if (P.isArrayRoot())
+      return P.view();
+
+    PtrView V = P.view();
+    if (V.isArrayElement() || V.isOnePastEnd())
+      V = V.expand().getArray();
+
+    if (P.isRoot())
+      return P.view();
+
+    while (!V.isRoot() && !V.getFieldDesc()->IsArray) {
+      if (V.isArrayElement()) {
+        V = V.expand().getArray();
+        break;
+      }
+      V = V.getBase();
+    }
+    return V;
+  };
+
+  if (closestArray(A) != closestArray(B))
+    return false;
+
+  return true;
 }
 
 bool Pointer::pointsToLiteral() const {
@@ -829,17 +922,6 @@ bool Pointer::pointsToLiteral() const {
 
   const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
-}
-
-bool Pointer::pointsToStringLiteral() const {
-  if (isZero() || !isBlockPointer())
-    return false;
-
-  if (block()->isDynamic())
-    return false;
-
-  const Expr *E = block()->getDescriptor()->asExpr();
-  return isa_and_nonnull<StringLiteral>(E);
 }
 
 bool Pointer::pointsToLabel() const {
@@ -949,7 +1031,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         unsigned NB = Record->getNumBases();
         unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
 
-        R = APValue(APValue::UninitStruct(), NB, NF);
+        R = APValue(APValue::UninitStruct(), NB, NF, NV);
 
         for (unsigned I = 0; I != NF; ++I) {
           const Record::Field *FD = Record->getField(I);
@@ -978,7 +1060,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           QualType VirtBaseTy =
               Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           PtrView VP = Ptr.atField(VD->Offset);
-          Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
+          Ok &= Composite(VirtBaseTy, VP, R.getStructVirtualBase(I));
         }
       }
       return Ok;
@@ -1087,8 +1169,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   if (OptPrimType T = Ctx.classify(ResultType)) {
     if (!canDeref(*T))
       return std::nullopt;
-    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
+    TYPE_SWITCH(*T, return this->load<T>().toAPValue(ASTCtx));
   }
+
+  if (!isBlockPointer())
+    return std::nullopt;
 
   // Return the composite type.
   APValue Result;
@@ -1103,6 +1188,14 @@ const VarDecl *Pointer::getRootVarDecl() const {
   return nullptr;
 }
 
+const Expr *Pointer::getRootExpr() const {
+  if (isBlockPointer())
+    return getDeclDesc()->asExpr();
+  if (isStringPointer())
+    return Str.getLiteral();
+  return nullptr;
+}
+
 std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
                                                unsigned Offset) const {
   QualType CurType = getPointeeType();
@@ -1113,13 +1206,7 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
   if (!R)
     return *this;
 
-  const Record::Field *F = nullptr;
-  for (auto &It : R->fields()) {
-    if (It.Offset == Offset) {
-      F = &It;
-      break;
-    }
-  }
+  const Record::Field *F = R->findField(Offset);
   if (!F)
     return *this;
 
@@ -1147,18 +1234,14 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
-  const Descriptor *BaseDesc = nullptr;
 
   // This iterates over bases and checks for the proper offset. That's
   // potentially slow but this case really shouldn't happen a lot.
-  for (const Record::Base &B : R->bases()) {
-    if (B.Offset == BaseOffset) {
-      BaseDesc = B.Desc;
-      break;
-    }
-  }
-  assert(BaseDesc);
+  const Record::Base *B = R->findBase(BaseOffset);
+  if (!B)
+    return *this;
 
+  const Descriptor *BaseDesc = B->Desc;
   // Adjust the offset value based on the information from the record layout.
   const ASTContext &ASTCtx = Ctx.getASTContext();
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());

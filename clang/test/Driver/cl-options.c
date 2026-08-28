@@ -624,6 +624,9 @@
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23PREVIEW %s
 // STDCXX23PREVIEW: -std=c++23
 
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++26preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX26PREVIEW %s
+// STDCXX26PREVIEW: -std=c++26
+
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
 // STDCXXLATEST: -std=c++2d
 
@@ -847,7 +850,7 @@
 // EXTERNAL_W0: "-Wno-system-headers"
 // EXTERNAL_Wn: "-Wsystem-headers"
 
-// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s 
+// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
 // ARM64EC-NOT: /arm64EC has been overridden by specified target
 // ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.33.0"
 // ARM64EC-SAME: "--dependent-lib=softintrin"

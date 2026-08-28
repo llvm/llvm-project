@@ -11,8 +11,8 @@ define { <2 x float>, <2 x float> } @foo(ptr %v) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[V:%.*]], align 16
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float undef, float poison, float poison, float undef>, float [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float undef, float poison, float poison, float undef>, float [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[SHUFFLE]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], undef
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], undef

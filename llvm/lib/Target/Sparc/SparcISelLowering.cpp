@@ -223,6 +223,7 @@ static bool RetCC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                  State);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "SparcGenCallingConv.inc"
 
 // The calling conventions in SparcCallingConv.td are described in terms of the
@@ -327,7 +328,13 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
     Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(SP::I0, PtrVT));
-    RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
+
+    // A zero-sized return value, e.g. an empty struct or union, is returned
+    // without an unimp instruction after the call, so there is nothing for the
+    // return to skip over.
+    Type *RetType = MF.getFunction().getParamStructRetType(0);
+    if (!RetType->isEmptyTy())
+      RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
   }
 
   RetOps[0] = Chain;  // Update chain.

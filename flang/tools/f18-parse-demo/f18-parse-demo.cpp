@@ -189,7 +189,7 @@ std::string CompileFortran(
     }
     return {};
   }
-  parsing.Parse(llvm::outs());
+  parsing.Parse(llvm::outs(), driver.langOpts);
   auto stop{CPUseconds()};
   if (driver.timeParse) {
     if (canTime) {

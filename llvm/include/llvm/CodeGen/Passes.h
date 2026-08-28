@@ -279,6 +279,13 @@ LLVM_ABI extern char &PostRASchedulerID;
 /// branches.
 LLVM_ABI extern char &BranchFolderPassID;
 
+/// createBranchFolder - Create the BranchFolder pass, optionally disabling the
+/// common-code hoisting and/or basic-block reordering sub-phases. Default
+/// enables both (full BranchFolding behavior).
+LLVM_ABI FunctionPass *
+createBranchFolder(bool EnableCommonHoist = true,
+                   bool EnableBasicBlockReordering = true);
+
 /// BranchRelaxation - This pass replaces branches that need to jump further
 /// than is supported by a branch instruction.
 LLVM_ABI extern char &BranchRelaxationPassID;
@@ -565,7 +572,7 @@ LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
-LLVM_ABI FunctionPass *createCFIInstrInserter();
+LLVM_ABI FunctionPass *createCFIInstrInserterLegacy();
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -573,7 +580,7 @@ LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp
-LLVM_ABI FunctionPass *createEHContGuardTargetsPass();
+LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 
 /// Create Hardware Loop pass. \see HardwareLoops.cpp
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();

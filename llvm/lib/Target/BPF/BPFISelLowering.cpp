@@ -387,6 +387,7 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 }
 
 // Calling Convention Implementation
+#define GET_CALLING_CONV_IMPL
 #include "BPFGenCallingConv.inc"
 
 // Apply AssertSext/AssertZext and truncate based on VA's LocInfo.

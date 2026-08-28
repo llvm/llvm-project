@@ -255,6 +255,26 @@ enum ScriptLanguage {
   eScriptLanguageDefault = eScriptLanguagePython
 };
 
+/// Scripting extension types.
+enum ScriptedExtension {
+  eScriptedExtensionInvalid = 0,
+  eScriptedExtensionOperatingSystem,
+  eScriptedExtensionScriptedPlatform,
+  eScriptedExtensionScriptedProcess,
+  eScriptedExtensionScriptedBreakpointResolver,
+  eScriptedExtensionScriptedThreadPlan,
+  eScriptedExtensionScriptedFrameProvider,
+  eScriptedExtensionScriptedHook,
+  eScriptedExtensionScriptedThread,
+  eScriptedExtensionScriptedFrame,
+  eScriptedExtensionScriptedStackFrameRecognizer,
+  eScriptedExtensionScriptedCommand,
+  eScriptedExtensionParsedCommand,
+  eScriptedExtensionScriptedStringSummary,
+  eScriptedExtensionScriptedSyntheticChildren,
+  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
+};
+
 /// Register numbering types.
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
 // these to the lldb internal register numbering scheme (eRegisterKindLLDB).
@@ -641,7 +661,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
-  eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
+  eInstrumentationRuntimeTypeUnused = 0x0005, // Free to reuse
   eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
 };
@@ -782,6 +802,7 @@ enum CommandArgumentType {
   eArgTypeNameMatchStyle,
   eArgTypePluginDomain,
   eArgTypeBreakpointResolverMask,
+  eArgTypeScriptedExtension,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -906,6 +927,7 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
+  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -1462,10 +1484,11 @@ enum CompletionType {
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
   eManagedPluginCompletion = (1ul << 27),
+  eScriptedExtensionCompletion = (1ul << 28),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 28)
+  eTerminatorCompletion = (1ul << 29)
 };
 
 /// Specifies if children need to be re-computed after a call to \ref
