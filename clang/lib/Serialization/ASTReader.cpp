@@ -3243,7 +3243,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};
