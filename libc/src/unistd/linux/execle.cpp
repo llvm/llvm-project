@@ -35,7 +35,7 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvla"
-#ifdef __clang__
+#if __has_warning("-Wvla-cxx-extension")
 #pragma GCC diagnostic ignored "-Wvla-cxx-extension"
 #endif
   char *argv[argc + 1];
