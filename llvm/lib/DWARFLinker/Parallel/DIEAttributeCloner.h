@@ -140,6 +140,9 @@ protected:
   /// is constrained as well.
   uint64_t constrainHighPC(uint64_t HighPC, bool IsLength);
 
+  /// Returns true if the DIE being cloned is the unit root, whatever its tag.
+  bool isUnitRootDIE() const { return InputDIEIdx == 0; }
+
   /// Returns true if attribute should be skipped.
   bool
   shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec);
