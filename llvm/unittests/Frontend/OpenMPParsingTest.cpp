@@ -45,13 +45,15 @@ TEST(OpenMPParsingTest, getOpenMPClauseName) {
 }
 
 TEST(OpenMPParsingTest, isAllowedClauseForDirective) {
-  EXPECT_TRUE(isAllowedClauseForDirective(OMPD_for, OMPC_schedule, 30));
-  EXPECT_FALSE(isAllowedClauseForDirective(OMPD_for, OMPC_num_teams, 30));
+  EXPECT_TRUE(
+      isAllowedClauseForDirective(OMPD_for, OMPC_schedule, Version(30)));
+  EXPECT_FALSE(
+      isAllowedClauseForDirective(OMPD_for, OMPC_num_teams, Version(30)));
 
-  EXPECT_FALSE(isAllowedClauseForDirective(OMPD_for, OMPC_order, 30));
-  EXPECT_FALSE(isAllowedClauseForDirective(OMPD_for, OMPC_order, 45));
-  EXPECT_TRUE(isAllowedClauseForDirective(OMPD_for, OMPC_order, 50));
-  EXPECT_TRUE(isAllowedClauseForDirective(OMPD_for, OMPC_order, 51));
+  EXPECT_FALSE(isAllowedClauseForDirective(OMPD_for, OMPC_order, Version(30)));
+  EXPECT_FALSE(isAllowedClauseForDirective(OMPD_for, OMPC_order, Version(45)));
+  EXPECT_TRUE(isAllowedClauseForDirective(OMPD_for, OMPC_order, Version(50)));
+  EXPECT_TRUE(isAllowedClauseForDirective(OMPD_for, OMPC_order, Version(51)));
 }
 
 TEST(OpenMPParsingTest, getOrderKind) {
