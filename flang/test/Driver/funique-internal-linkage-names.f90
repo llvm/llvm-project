@@ -12,4 +12,3 @@
 
 ! ENABLED: "-fc1"
 ! ENABLED-SAME: "-funique-internal-linkage-names"
-

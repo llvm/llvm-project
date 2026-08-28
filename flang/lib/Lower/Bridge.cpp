@@ -1223,7 +1223,7 @@ public:
     std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
-    const auto &hash = bridge.getModuleNameHash();
+    const std::string &hash = bridge.getModuleNameHash();
     if (!hash.empty() &&
         Fortran::semantics::ClassifyProcedure(symbol) ==
             Fortran::semantics::ProcedureDefinitionClass::Internal)
