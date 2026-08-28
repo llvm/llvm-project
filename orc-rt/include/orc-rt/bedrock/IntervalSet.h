@@ -13,7 +13,7 @@
 #ifndef ORC_RT_INTERVALSET_H
 #define ORC_RT_INTERVALSET_H
 
-#include "IntervalMap.h"
+#include "orc-rt/bedrock/IntervalMap.h"
 
 #include <variant> // For std::monostate.
 
