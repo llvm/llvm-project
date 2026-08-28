@@ -817,15 +817,28 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp =
-        llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
+    mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
+    mlir::Operation *sourceOp = sourceVal.getDefiningOp();
     bool unknownAllocOp = false;
     if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
     else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
       name = alloc.getUniqName();
-    else
+    else if (mlir::StringAttr nameAttr =
+                 sourceOp ? sourceOp->getAttrOfType<mlir::StringAttr>(
+                                fir::AllocaOp::getUniqNameAttrName())
+                          : mlir::StringAttr{}) {
+      // Keep a view into the StringAttr storage; str() returns a temporary.
+      name = nameAttr.getValue();
+    } else if (!fir::isNewAllocationResult(
+                    mlir::dyn_cast<mlir::OpResult>(sourceVal))
+                    .value_or(false)) {
+      // Anonymous allocations of other dialects (e.g. memref.alloca for
+      // a compiler generated temporary) are still recognizable as allocations
+      // through their memory effects, and can use the unnamed
+      // "allocated data" tag below.
       unknownAllocOp = true;
+    }
 
     // Check if this allocation is a local copy of a VALUE dummy argument.
     // A VALUE dummy arg is lowered as a local alloca declared with the
@@ -837,7 +850,6 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // which then incorrectly eliminates the copy stores.
     bool isValueDummyCopy = false;
     if (!unknownAllocOp) {
-      mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
       if (fir::DeclareOp declareOp = getDeclareOp(sourceVal)) {
         auto varIf = mlir::cast<fir::FortranVariableOpInterface>(
             declareOp.getOperation());
