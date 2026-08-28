@@ -731,17 +731,10 @@ void Context::runSetUseCallbacks(const Use &U, Value *NewSrc) {
     CBEntry.second(U, NewSrc);
 }
 
-// An arbitrary limit, to check for accidental misuse. We expect a small number
-// of callbacks to be registered at a time, but we can increase this number if
-// we discover we needed more.
-[[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
-
-Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
-  assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
-         "EraseInstrCallbacks size limit exceeded");
-  CallbackID ID{NextCallbackID++};
-  EraseInstrCallbacks.emplace_back(ID, std::move(CB));
-  return ID;
+Context::CallbackID
+Context::registerEraseInstrCallback(EraseInstrCallback CB,
+                                    std::optional<CallbackID> BeforeID) {
+  return registerCallbackCommon(CB, EraseInstrCallbacks, BeforeID);
 }
 void Context::unregisterEraseInstrCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
@@ -752,12 +745,9 @@ void Context::unregisterEraseInstrCallback(CallbackID ID) {
 }
 
 Context::CallbackID
-Context::registerCreateInstrCallback(CreateInstrCallback CB) {
-  assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
-         "CreateInstrCallbacks size limit exceeded");
-  CallbackID ID{NextCallbackID++};
-  CreateInstrCallbacks.emplace_back(ID, std::move(CB));
-  return ID;
+Context::registerCreateInstrCallback(CreateInstrCallback CB,
+                                     std::optional<CallbackID> BeforeID) {
+  return registerCallbackCommon(CB, CreateInstrCallbacks, BeforeID);
 }
 void Context::unregisterCreateInstrCallback(CallbackID ID) {
   auto It = find_if(CreateInstrCallbacks,
@@ -767,12 +757,10 @@ void Context::unregisterCreateInstrCallback(CallbackID ID) {
   CreateInstrCallbacks.erase(It);
 }
 
-Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
-  assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
-         "MoveInstrCallbacks size limit exceeded");
-  CallbackID ID{NextCallbackID++};
-  MoveInstrCallbacks.emplace_back(ID, std::move(CB));
-  return ID;
+Context::CallbackID
+Context::registerMoveInstrCallback(MoveInstrCallback CB,
+                                   std::optional<CallbackID> BeforeID) {
+  return registerCallbackCommon(CB, MoveInstrCallbacks, BeforeID);
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
@@ -782,12 +770,10 @@ void Context::unregisterMoveInstrCallback(CallbackID ID) {
   MoveInstrCallbacks.erase(It);
 }
 
-Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
-  assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
-         "SetUseCallbacks size limit exceeded");
-  CallbackID ID{NextCallbackID++};
-  SetUseCallbacks.emplace_back(ID, std::move(CB));
-  return ID;
+Context::CallbackID
+Context::registerSetUseCallback(SetUseCallback CB,
+                                std::optional<CallbackID> BeforeID) {
+  return registerCallbackCommon(CB, SetUseCallbacks, BeforeID);
 }
 void Context::unregisterSetUseCallback(CallbackID ID) {
   [[maybe_unused]] auto It = find_if(
