@@ -1488,6 +1488,39 @@ static Type *findCommonTypeThroughPHI(PHINode &PN) {
   return cast<LoadInst>(PN.user_back())->getType();
 }
 
+/// Find a common load/store type used through a pointer select.
+///
+/// A select is an immediate user of each pointer operand, so looking only at
+/// the select itself loses the types of the memory operations that actually
+/// access the pointers. Look through a select when all of its users are loads
+/// or stores of one common type. This mirrors the uses that SROA can later
+/// rewrite when speculating the select.
+static Type *findCommonTypeThroughSelect(SelectInst &SI) {
+  Type *Ty = nullptr;
+
+  for (User *U : SI.users()) {
+    Value *Ptr = &SI;
+    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse()) {
+      Ptr = BC;
+      U = *BC->user_begin();
+    }
+
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U);
+        LI && LI->getPointerOperand() == Ptr) {
+      UserTy = LI->getType();
+    } else if (auto *Store = dyn_cast<StoreInst>(U);
+               Store && Store->getPointerOperand() == Ptr) {
+      UserTy = Store->getValueOperand()->getType();
+    }
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+  return Ty;
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1511,6 +1544,8 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (auto *SI = dyn_cast<SelectInst>(U->getUser())) {
+      UserTy = findCommonTypeThroughSelect(*SI);
     } else if (auto *PN = dyn_cast<PHINode>(U->getUser())) {
       UserTy = findCommonTypeThroughPHI(*PN);
     }
