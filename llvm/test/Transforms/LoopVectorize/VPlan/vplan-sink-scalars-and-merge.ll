@@ -485,7 +485,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:    Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then.0.0:
-; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/vp<[[VP9]]>
+; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/ir<%c.1>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
@@ -604,7 +604,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:    Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then.0.0:
-; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/vp<[[VP9]]>
+; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/ir<%c.0>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.1>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -731,7 +731,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:    Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then.0.0:
-; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/vp<[[VP9]]>
+; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/ir<%c.0>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.0>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
