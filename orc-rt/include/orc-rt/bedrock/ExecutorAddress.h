@@ -14,7 +14,7 @@
 #ifndef ORC_RT_EXECUTORADDRESS_H
 #define ORC_RT_EXECUTORADDRESS_H
 
-#include "span.h"
+#include "orc-rt/bedrock/span.h"
 
 #include <cassert>
 #include <cstdint>
