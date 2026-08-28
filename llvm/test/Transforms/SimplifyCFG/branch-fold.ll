@@ -122,10 +122,11 @@ define i8 @common_pred(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COMMONPRED:%.*]], label [[SUCC:%.*]]
 ; CHECK:       CommonPred:
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2:%.*]], i8 4, i8 1
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[SUCC]], label [[BB:%.*]]
+; CHECK:       BB:
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[COMMONPRED]] ], [ 0, [[PRED:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[COMMONPRED]] ], [ 0, [[PRED:%.*]] ], [ 1, [[BB]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 Pred:

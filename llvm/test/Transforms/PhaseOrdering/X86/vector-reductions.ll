@@ -277,13 +277,13 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP7]], splat (double f0x3EB0C6F7A0B5ED8D)
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = or <2 x i1> [[TMP8]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i1> [[TMP8]] to i2
+; CHECK-NEXT:    [[OR_COND:%.*]] = icmp eq i2 [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[SHIFT3:%.*]] = shufflevector <2 x i1> [[TMP9]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i1> [[TMP9]], [[SHIFT3]]
-; CHECK-NEXT:    [[FOLDEXTEXTBINOP4:%.*]] = and <2 x i1> [[FOLDEXTEXTBINOP]], [[TMP10]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = extractelement <2 x i1> [[FOLDEXTEXTBINOP4]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x i1> [[TMP9]] to i2
+; CHECK-NEXT:    [[OR_COND1:%.*]] = icmp eq i2 [[TMP11]], 0
+; CHECK-NEXT:    [[OR_COND5:%.*]] = or i1 [[OR_COND]], [[OR_COND1]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND5]], i1 false, i1 true
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:

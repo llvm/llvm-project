@@ -12,8 +12,8 @@ define i32 @test1(i1 %C) {
 ; DBGINFO-LABEL: @test1(
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:      #dbg_value(i32 0, [[META9:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
-; DBGINFO-NEXT:    [[DOT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
-; DBGINFO-NEXT:    ret i32 [[DOT]], !dbg [[DBG12:![0-9]+]]
+; DBGINFO-NEXT:    [[DOT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0, !dbg [[DBG12:![0-9]+]]
+; DBGINFO-NEXT:    ret i32 [[DOT]], !dbg [[DBG12]]
 ;
 entry:
   br i1 %C, label %T, label %F
@@ -49,13 +49,14 @@ define i32 @test3(i1 %C0, i1 %C1, i32 %v0, i32 %v1, i32 %v2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sideeffect0()
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T.cont:
+; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[V2:%.*]], [[F]] ], [ [[SPEC_SELECT:%.*]], [[T]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[V0:%.*]], [[TCONT:%.*]] ], [ [[V1:%.*]], [[T]] ], [ [[V2:%.*]], [[F]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @sideeffect1()
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]]
-; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[TCONT]], label [[END]]
 ; CHECK:       F:
 ; CHECK-NEXT:    call void @sideeffect2()
 ; CHECK-NEXT:    br label [[END]]
@@ -64,17 +65,18 @@ define i32 @test3(i1 %C0, i1 %C1, i32 %v0, i32 %v1, i32 %v2) {
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:    call void @sideeffect0(), !dbg [[DBG21:![0-9]+]]
 ; DBGINFO-NEXT:    br i1 [[C0:%.*]], label [[T:%.*]], label [[F:%.*]], !dbg [[DBG22:![0-9]+]]
+; DBGINFO:       T.cont:
+; DBGINFO-NEXT:    br label [[END:%.*]], !dbg [[DBG23:![0-9]+]]
 ; DBGINFO:       end:
-; DBGINFO-NEXT:    [[R:%.*]] = phi i32 [ [[V2:%.*]], [[F]] ], [ [[SPEC_SELECT:%.*]], [[T]] ], !dbg [[DBG23:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i32 [[R]], [[META20:![0-9]+]], !DIExpression(), [[DBG23]])
-; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG24:![0-9]+]]
+; DBGINFO-NEXT:    [[R:%.*]] = phi i32 [ [[V0:%.*]], [[T_CONT:%.*]] ], [ [[V1:%.*]], [[T]] ], [ [[V2:%.*]], [[F]] ], !dbg [[DBG24:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[R]], [[META20:![0-9]+]], !DIExpression(), [[DBG24]])
+; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG25:![0-9]+]]
 ; DBGINFO:       T:
-; DBGINFO-NEXT:    call void @sideeffect1(), !dbg [[DBG25:![0-9]+]]
-; DBGINFO-NEXT:    [[SPEC_SELECT]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]], !dbg [[DBG26:![0-9]+]]
-; DBGINFO-NEXT:    br label [[END:%.*]], !dbg [[DBG26]]
+; DBGINFO-NEXT:    call void @sideeffect1(), !dbg [[DBG26:![0-9]+]]
+; DBGINFO-NEXT:    br i1 [[C1:%.*]], label [[T_CONT]], label [[END]], !dbg [[DBG27:![0-9]+]]
 ; DBGINFO:       F:
-; DBGINFO-NEXT:    call void @sideeffect2(), !dbg [[DBG27:![0-9]+]]
-; DBGINFO-NEXT:    br label [[END]], !dbg [[DBG28:![0-9]+]]
+; DBGINFO-NEXT:    call void @sideeffect2(), !dbg [[DBG28:![0-9]+]]
+; DBGINFO-NEXT:    br label [[END]], !dbg [[DBG29:![0-9]+]]
 ;
 entry:
   call void @sideeffect0()
