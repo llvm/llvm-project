@@ -293,33 +293,70 @@ struct CUFDataTransferOpConversion
           return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
         return {};
       };
+      // Address of the host shadow when val designates a scalar CUDA constant,
+      // null otherwise.
+      auto getShadowAddrOf = [&](mlir::Value val) -> fir::AddrOfOp {
+        fir::AddrOfOp addrOfOp = getAddrOf(val);
+        if (!addrOfOp)
+          return {};
+        auto global = symtab.lookup<fir::GlobalOp>(
+            addrOfOp.getSymbol().getRootReference().getValue());
+        if (!isScalarCudaConstantGlobal(global))
+          return {};
+        return addrOfOp;
+      };
       if (op.getTransferKind() == cuf::DataTransferKind::DeviceHost) {
-        if (fir::AddrOfOp addrOfOp = getAddrOf(src)) {
-          auto global = symtab.lookup<fir::GlobalOp>(
-              addrOfOp.getSymbol().getRootReference().getValue());
-          if (isScalarCudaConstantGlobal(global) &&
-              fir::isa_ref_type(dst.getType())) {
-            mlir::Value hostValue = fir::LoadOp::create(builder, loc, src);
-            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
-            fir::StoreOp::create(builder, loc, hostValue, dst);
-            rewriter.eraseOp(op);
-            return mlir::success();
-          }
+        if (getShadowAddrOf(src) && fir::isa_ref_type(dst.getType())) {
+          mlir::Value hostValue = fir::LoadOp::create(builder, loc, src);
+          hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+          fir::StoreOp::create(builder, loc, hostValue, dst);
+          rewriter.eraseOp(op);
+          return mlir::success();
         }
       }
       if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
-        if (fir::AddrOfOp addrOfOp = getAddrOf(dst)) {
-          auto global = symtab.lookup<fir::GlobalOp>(
-              addrOfOp.getSymbol().getRootReference().getValue());
-          if (isScalarCudaConstantGlobal(global)) {
-            mlir::Value hostValue = src;
-            if (fir::isa_ref_type(src.getType()))
-              hostValue = fir::LoadOp::create(builder, loc, src);
-            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
-            fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
+        if (fir::AddrOfOp addrOfOp = getShadowAddrOf(dst)) {
+          mlir::Value hostValue = src;
+          if (fir::isa_ref_type(src.getType()))
+            hostValue = fir::LoadOp::create(builder, loc, src);
+          hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+          fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
+          dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
+                                             addrOfOp.getSymbol());
+        }
+      }
+      if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
+        // A scalar CUDA constant is designated by its host shadow, which lives
+        // in host memory and cannot take part in a device to device copy. Route
+        // the transfer through the shadow instead.
+        fir::AddrOfOp srcShadow = getShadowAddrOf(src);
+        fir::AddrOfOp dstShadow = getShadowAddrOf(dst);
+        if (srcShadow || dstShadow) {
+          if (dstShadow) {
+            if (srcShadow) {
+              mlir::Value hostValue =
+                  fir::LoadOp::create(builder, loc, srcShadow);
+              hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+              fir::StoreOp::create(builder, loc, hostValue, dstShadow);
+            } else {
+              // Bring the device value into the host shadow first so that later
+              // host reads of the destination see it.
+              mlir::Value deviceToHost = builder.createIntegerConstant(
+                  loc, builder.getI32Type(), kDeviceToHost);
+              llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+                  builder, loc, fTy, dstShadow, src, bytes, deviceToHost,
+                  sourceFile, sourceLine)};
+              fir::CallOp::create(builder, loc, func, args);
+            }
+            // The shadow now holds the value to push to constant memory.
+            src = dstShadow;
             dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
-                                               addrOfOp.getSymbol());
+                                               dstShadow.getSymbol());
+          } else {
+            src = srcShadow;
           }
+          modeValue = builder.createIntegerConstant(loc, builder.getI32Type(),
+                                                    kHostToDevice);
         }
       }
       // Materialize the src if constant.
