@@ -50,10 +50,11 @@ public:
   /// Verify the clauses of a directive to make sure all legal cases are either
   /// implemented or give a NYI error. The \p SupportedClauses and \p
   /// NYIClauses type lists must be disjoint and cover all clauses eligible for
-  /// the directive being processed.
+  /// the directive being processed. Returns failure if any not-yet-implemented
+  /// clause was present (and an error was emitted), success otherwise.
   template <typename... SupportedClauses, typename... NYIClauses>
-  void emitNYI(OpenMPNYIClauseList<NYIClauses...> nyi,
-               llvm::omp::Directive directive) const;
+  mlir::LogicalResult emitNYI(OpenMPNYIClauseList<NYIClauses...> nyi,
+                              llvm::omp::Directive directive) const;
 
 private:
   /// True if T is the same type as any of Ts.
@@ -62,12 +63,14 @@ private:
 };
 
 template <typename... SupportedClauses, typename... NYIClauses>
-void OpenMPClauseEmitter::emitNYI(OpenMPNYIClauseList<NYIClauses...>,
-                                  llvm::omp::Directive directive) const {
+mlir::LogicalResult
+OpenMPClauseEmitter::emitNYI(OpenMPNYIClauseList<NYIClauses...>,
+                             llvm::omp::Directive directive) const {
   static_assert(
       (!isAnyOf<NYIClauses, SupportedClauses...> && ...),
       "the supported and not-yet-implemented clause lists must be disjoint");
 
+  mlir::LogicalResult result = mlir::success();
   for (const OMPClause *c : clauses) {
     if (isa<NYIClauses...>(c)) {
       std::string msg =
@@ -76,11 +79,13 @@ void OpenMPClauseEmitter::emitNYI(OpenMPNYIClauseList<NYIClauses...>,
            llvm::omp::getOpenMPClauseName(c->getClauseKind()) + "' clause")
               .str();
       cgm.errorNYI(c->getBeginLoc(), msg);
+      result = mlir::failure();
     } else if (!isa<SupportedClauses...>(c)) {
       // Unknown/illegal clause encountered.
       llvm_unreachable("unexpected OpenMP clause");
     }
   }
+  return result;
 }
 
 } // namespace clang::CIRGen

@@ -1,3 +1,5 @@
+// REQUIRES: amdgpu-registered-target
+
 // Host compilation (x86 host, AMDGPU offload target).
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -emit-cir -fclangir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-HOST
@@ -14,7 +16,7 @@ void use(int);
 // 'target' and 'parallel' directives.
 void target_parallel(int x) {
   // CIR-HOST: cir.func{{.*}}@target_parallel
-  // CIR-HOST: %[[MAP:.*]] = omp.map.info {{.*}} map_clauses(tofrom) {{.*}} {name = "x"}
+  // CIR-HOST: %[[MAP:.*]] = omp.map.info {{.*}} map_clauses(tofrom) {{.*}} name("x")
   // CIR-HOST: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %[[ARG:.*]] : !cir.ptr<!s32i>) {
   // CIR-HOST: omp.parallel {
   // CIR-HOST: %[[LOAD:.*]] = cir.load align(4) %[[ARG]]
@@ -22,7 +24,8 @@ void target_parallel(int x) {
   // CIR-HOST: omp.terminator
   // CIR-HOST: }
   // CIR-HOST: omp.terminator
-  // CIR-HOST: }
+  // The target is the non-innermost leaf of the combined construct.
+  // CIR-HOST: } {omp.combined}
 
   // CIR-DEVICE: cir.func{{.*}}@target_parallel
   // CIR-DEVICE: omp.target kernel_type(generic) {{.*}} {
@@ -31,7 +34,7 @@ void target_parallel(int x) {
   // CIR-DEVICE: omp.terminator
   // CIR-DEVICE: }
   // CIR-DEVICE: omp.terminator
-  // CIR-DEVICE: }
+  // CIR-DEVICE: } {omp.combined}
 #pragma omp target parallel map(tofrom : x)
   {
     use(x);
@@ -47,7 +50,7 @@ void target_parallel_proc_bind(int x) {
   // CIR-HOST: omp.terminator
   // CIR-HOST: }
   // CIR-HOST: omp.terminator
-  // CIR-HOST: }
+  // CIR-HOST: } {omp.combined}
 #pragma omp target parallel proc_bind(spread) map(tofrom : x)
   {
     use(x);
