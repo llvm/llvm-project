@@ -661,7 +661,6 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   // budget for VGPRs.
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
-    unsigned VGPRCap = ~0u;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
@@ -672,7 +671,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
-    VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",
+    unsigned VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",
                                               DefaultAccumOffset);
     if (VGPRCap == DefaultAccumOffset) {
       MaxNumVGPRs = MaxVectorRegs / 2;

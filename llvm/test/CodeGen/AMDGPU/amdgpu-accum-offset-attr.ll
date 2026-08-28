@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck --implicit-check-not=warning -check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -filetype=null %s 2>&1 | FileCheck --implicit-check-not=warning -check-prefix=WARN %s
 
 ; Consumer test for the "amdgpu-accum-offset" register-file split
 ; cap applied in GCNSubtarget::getMaxNumVectorRegs.
