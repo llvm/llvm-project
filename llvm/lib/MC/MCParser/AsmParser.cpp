@@ -2519,7 +2519,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
         I += 2;
         continue;
       }
-      if (Body[I + 1] == '(' && Body[I + 2] == ')') {
+      if (Body[I + 1] == '(' && I + 2 != End && Body[I + 2] == ')') {
         I += 3;
         continue;
       }
@@ -2577,7 +2577,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
     }
 
     const size_t Start = I;
-    while (++I && isIdentifierChar(Body[I])) {
+    while (++I != End && isIdentifierChar(Body[I])) {
     }
     StringRef Token(Body.data() + Start, I - Start);
     if (AltMacroMode) {
@@ -4902,8 +4902,8 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
       }
       Pos += 2;
     } else {
-      unsigned I = Pos + 1;
-      while (isIdentifierChar(Body[I]) && I + 1 != End)
+      size_t I = Pos + 1;
+      while (I != End && isIdentifierChar(Body[I]))
         ++I;
 
       const char *Begin = Body.data() + Pos + 1;
@@ -4914,7 +4914,7 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
           break;
 
       if (Index == NParameters) {
-        if (Body[Pos + 1] == '(' && Body[Pos + 2] == ')')
+        if (Body[Pos + 1] == '(' && Pos + 2 != End && Body[Pos + 2] == ')')
           Pos += 3;
         else {
           Pos = I;
