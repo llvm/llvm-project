@@ -112,13 +112,13 @@ func.func @reciprocal_fold() -> tensor<4x6xf32> {
   // CHECK-SAME{LITERAL}:  [2.02880907, -1.53280187, 0.552730501, 7.15819644, 0.64495325, -0.973709881]]
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() { values = dense<[
+  %0 = "tosa.const"() <{ values = dense<[
                         [ 0.1758,  0.0874,  0.5924,  1.4700, -1.1424,  2.9213],
                         [-0.2078,  1.4325,  1.5283, -0.0121, -0.2306, -1.3377],
                         [-0.0804,  0.0761,  0.5277,  1.1292,  0.2446,  0.6946],
                         [ 0.4929, -0.6524,  1.8092,  0.1397,  1.5505, -1.0270]]>
                         : tensor<4x6xf32>
-                      } : () -> tensor<4x6xf32>
+                      }> : () -> tensor<4x6xf32>
   %1 = "tosa.reciprocal"(%0) : (tensor<4x6xf32>) -> tensor<4x6xf32>
   return %1 : tensor<4x6xf32>
 }
@@ -128,10 +128,10 @@ func.func @reciprocal_fold() -> tensor<4x6xf32> {
 func.func @reciprocal_of_const_sparse() -> tensor<32xbf16> {
   // CHECK: tosa.const
   // CHECK: tosa.reciprocal
-    %0 = "tosa.const"() { values = sparse<
+    %0 = "tosa.const"() <{ values = sparse<
           [[0], [3], [11], [17], [20], [23], [25], [30], [31]],
           [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]>
-          : tensor<32xbf16> } : () -> tensor<32xbf16>
+          : tensor<32xbf16> }> : () -> tensor<32xbf16>
     %1 = "tosa.reciprocal"(%0) : (tensor<32xbf16>) -> tensor<32xbf16>
     return %1 : tensor<32xbf16>
 }

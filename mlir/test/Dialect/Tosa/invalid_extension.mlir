@@ -277,7 +277,7 @@ func.func @test_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) ->
 
 // -----
 func.func @test_row_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xbf16> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xbf16>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xbf16>
   return %0 : tensor<13x52x3xbf16>
@@ -285,7 +285,7 @@ func.func @test_row_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>
 
 // -----
 func.func @test_row_gather_mxfp(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<13x26xi32>) -> tensor<13x52x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op illegal: requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<13x52x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
@@ -471,7 +471,7 @@ func.func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1
 
 // -----
 func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
-  %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %0 = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
   // expected-error@+1 {{'tosa.while_loop' op illegal: requires any of [controlflow] profiles/extensions to be specified in the target environment}}
   %1:3 = tosa.while_loop (%arg2 = %0, %arg3 = %0, %arg4 = %arg0) : (tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<10xi32>) {
     %2 = tosa.greater_equal %arg3, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -620,7 +620,7 @@ func.func @test_matmul_t_non_const_a_zp(%arg0: tensor<1x14x19xf32>, %arg1: tenso
 // -----
 
 func.func @test_matmul_t_non_const_b_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %b_zp: tensor<1xf32>) -> tensor<1x14x28xf32> {
-  %a_zp = "tosa.const"() {values = dense<0.0> : tensor<1xf32> } : () -> tensor<1xf32>
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32> }> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul_t' op expected compile time resolvable constant, but got variable value for operand #3}}
   %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
   return %0 : tensor<1x14x28xf32>

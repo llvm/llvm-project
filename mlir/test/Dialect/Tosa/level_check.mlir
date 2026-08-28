@@ -2,7 +2,7 @@
 
 func.func @test_argmax_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
   // expected-error@+1 {{'tosa.argmax' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.argmax"(%arg0) {axis = 4 : i32} : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
+  %0 = "tosa.argmax"(%arg0) <{axis = 4 : i32}> : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
   return %0 : tensor<1x1x1x1x29x4xi32>
 }
 
@@ -340,7 +340,7 @@ func.func @test_reduce_any_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xi1>) -> te
 
 func.func @test_reduce_max_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
   // expected-error@+1 {{'tosa.reduce_max' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.reduce_max"(%arg0) {axis = 0 : i32} : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
+  %0 = "tosa.reduce_max"(%arg0) <{axis = 0 : i32}> : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
   return %0 : tensor<1x1x1x1x13x21x3xf32>
 }
 
@@ -348,7 +348,7 @@ func.func @test_reduce_max_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> t
 
 func.func @test_reduce_min_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
   // expected-error@+1 {{'tosa.reduce_min' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.reduce_min"(%arg0) {axis = 0 : i32} : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
+  %0 = "tosa.reduce_min"(%arg0) <{axis = 0 : i32}> : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
   return %0 : tensor<1x1x1x1x13x21x3xf32>
 }
 
@@ -932,7 +932,7 @@ func.func @test_fft2d_imag_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32
 
 func.func @test_maxpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
   // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
-  %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 8193, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+  %0 = "tosa.max_pool2d"(%arg0) <{kernel = array<i64: 8193, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>}> :
          (tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
 }
@@ -941,7 +941,7 @@ func.func @test_maxpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2
 
 func.func @test_maxpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
   // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
-  %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 8193>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+  %0 = "tosa.max_pool2d"(%arg0) <{kernel = array<i64: 1, 8193>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>}> :
          (tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
 }
@@ -950,7 +950,7 @@ func.func @test_maxpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x3
 
 func.func @test_maxpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
   // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
-  %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 8193, 1>} :
+  %0 = "tosa.max_pool2d"(%arg0) <{kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 8193, 1>}> :
          (tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
 }
@@ -959,7 +959,7 @@ func.func @test_maxpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2
 
 func.func @test_maxpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
   // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
-  %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 8193>} :
+  %0 = "tosa.max_pool2d"(%arg0) <{kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 8193>}> :
          (tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
 }
@@ -1279,7 +1279,7 @@ func.func @test_matmul_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %a
 // -----
 
 func.func @test_matmul_t_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %arg1: tensor<23178x28x19xf32>) -> tensor<23178x20000x28xf32> {
-  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<23178x20000x19xf32>, tensor<23178x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<23178x20000x28xf32>
   return %0 : tensor<23178x20000x28xf32>
@@ -1296,7 +1296,7 @@ func.func @test_gather_tensor_size_invalid(%arg0: tensor<536870912x21x3xf32>, %a
 // -----
 
 func.func @test_row_gather_tensor_size_invalid(%arg0: tensor<536870912x21x3xf32>, %arg1: tensor<536870912x26xi32>) -> tensor<536870912x52x3xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<536870912x21x3xf32>, tensor<536870912x26xi32>, tensor<1xi32>) -> tensor<536870912x52x3xf32>
   return %0 : tensor<536870912x52x3xf32>

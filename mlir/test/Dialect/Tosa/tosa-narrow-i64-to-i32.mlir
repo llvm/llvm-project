@@ -8,7 +8,7 @@ func.func @test_i64_argmax(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi
   // COMMON: %[[ARGMAX:.*]] = tosa.argmax %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
   %0 = tosa.argmax %arg0 axis(3) : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64>
 
-  // DEFAULT: %[[CAST:.*]] = tosa.cast %[[ARGMAX]] : (tensor<1x513x513xi32>) -> tensor<1x513x513xi64>
+  // DEFAULT: %[[CAST:.*]] = tosa.cast %[[ARGMAX]] input_unsigned(false) : (tensor<1x513x513xi32>) -> tensor<1x513x513xi64>
   // FUNCBOUND: return %[[ARGMAX]] : tensor<1x513x513xi32>
   return %0 : tensor<1x513x513xi64>
 }
@@ -19,7 +19,7 @@ func.func @test_i64_argmax(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi
 func.func @test_i64_const() -> tensor<2xi64> {
   // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
   %0 = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi64>}> : () -> tensor<2xi64>
-  // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] : (tensor<2xi32>) -> tensor<2xi64>
+  // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<2xi32>) -> tensor<2xi64>
   // DEFAULT: return %[[OUT]] : tensor<2xi64>
   // FUNCBOUND: return %[[CONST]] : tensor<2xi32>
   return %0 : tensor<2xi64>
@@ -172,7 +172,7 @@ func.func @test_transition_to_i64(%arg0: tensor<1xi32>) -> tensor<1xi64> {
   %1 = tosa.identity %0 : (tensor<1xi64>) -> tensor<1xi64>
   // COMMON: %[[IDENTITY2:.*]] = tosa.identity %[[IDENTITY1]] : (tensor<1xi32>) -> tensor<1xi32>
   %2 = tosa.identity %1 : (tensor<1xi64>) -> tensor<1xi64>
-  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY2]] : (tensor<1xi32>) -> tensor<1xi64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY2]] input_unsigned(false) : (tensor<1xi32>) -> tensor<1xi64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1xi64>
   // FUNCBOUND: return %[[IDENTITY2]] : tensor<1xi32>
   return %2 : tensor<1xi64>
@@ -182,7 +182,7 @@ func.func @test_transition_to_i64(%arg0: tensor<1xi32>) -> tensor<1xi64> {
 
 // CHECK-LABEL: test_transition_from_i64
 func.func @test_transition_from_i64(%arg0: tensor<1xi64>) -> tensor<1xi32> {
-  // DEFAULT: %[[CAST:.*]] = tosa.cast %arg0 : (tensor<1xi64>) -> tensor<1xi32>
+  // DEFAULT: %[[CAST:.*]] = tosa.cast %arg0 input_unsigned(false) : (tensor<1xi64>) -> tensor<1xi32>
   // DEFAULT: %[[IDENTITY1:.*]] = tosa.identity %[[CAST]] : (tensor<1xi32>) -> tensor<1xi32>
   // FUNCBOUND: %[[IDENTITY1:.*]] = tosa.identity %arg0 : (tensor<1xi32>) -> tensor<1xi32>
   %0 = tosa.identity %arg0 : (tensor<1xi64>) -> tensor<1xi64>
@@ -202,7 +202,7 @@ func.func @test_transition_from_i64_input_unsigned(%arg0: tensor<1xui64>) -> ten
   // FUNCBOUND: %[[IDENTITY:.*]] = tosa.identity %arg0 : (tensor<1xi32>) -> tensor<1xi32>
   // DEFAULT: %[[IDENTITY:.*]] = tosa.identity %[[CAST]] : (tensor<1xi32>) -> tensor<1xi32>
   %0 = tosa.identity %arg0 : (tensor<1xui64>) -> tensor<1xui64>
-  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY]] : (tensor<1xi32>) -> tensor<1xui64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[IDENTITY]] input_unsigned(false) : (tensor<1xi32>) -> tensor<1xui64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1xui64>
   // FUNCBOUND: return %[[IDENTITY]] : tensor<1xi32>
   return %0 : tensor<1xui64>
@@ -241,7 +241,7 @@ func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<10
 func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
   // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
   %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
-  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xi32>) -> tensor<1x2xi64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<1x2xi32>) -> tensor<1x2xi64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>
   // FUNCBOUND: return %[[CONST]] : tensor<1x2xi32>
   return %1 : tensor<1x2xi64>

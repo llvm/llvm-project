@@ -228,7 +228,7 @@ func.func @fold_dynamic_add_broadcast_zero_rhs(%arg0: tensor<?x17xi32>) -> tenso
 
 // CHECK-LABEL: @no_fold_div_zero_lhs_i32
 func.func @no_fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
-  %zero = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %zero = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
   // CHECK: tosa.intdiv
   %div = tosa.intdiv %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
   return %div : tensor<i32>
@@ -238,8 +238,8 @@ func.func @no_fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 
 // CHECK-LABEL: @fold_div_zero_lhs_nonzero_splat_rhs_i32
 func.func @fold_div_zero_lhs_nonzero_splat_rhs_i32() -> tensor<i32> {
-  %lhs = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
-  %rhs = "tosa.const"() {values = dense<2> : tensor<i32>} : () -> tensor<i32>
+  %lhs = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
+  %rhs = "tosa.const"() <{values = dense<2> : tensor<i32>}> : () -> tensor<i32>
   // CHECK: %[[ZERO:.+]] = "tosa.const"() <{values = dense<0>
   %div = tosa.intdiv %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[ZERO]]
@@ -260,7 +260,7 @@ func.func @no_fold_dynamic_div_zero_lhs(%arg0: tensor<?x4xi32>) -> tensor<?x4xi3
 
 // CHECK-LABEL: @no_fold_div_zero_lhs_broadcast
 func.func @no_fold_div_zero_lhs_broadcast(%arg0: tensor<2x4xi32>) -> tensor<2x4xi32> {
-  %zero = "tosa.const"() {values = dense<0> : tensor<1x1xi32>} : () -> tensor<1x1xi32>
+  %zero = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
   // CHECK: tosa.intdiv
   %div = tosa.intdiv %zero, %arg0 : (tensor<1x1xi32>, tensor<2x4xi32>) -> tensor<2x4xi32>
   return %div : tensor<2x4xi32>
@@ -322,8 +322,8 @@ func.func @fold_div_splat_i32() -> tensor<i32> {
 
 // CHECK-LABEL: @no_fold_div_splat_i32_overflow
 func.func @no_fold_div_splat_i32_overflow() -> tensor<i32> {
-  %lhs = "tosa.const"() {values = dense<-2147483648> : tensor<i32>} : () -> tensor<i32>
-  %rhs = "tosa.const"() {values = dense<-1> : tensor<i32>} : () -> tensor<i32>
+  %lhs = "tosa.const"() <{values = dense<-2147483648> : tensor<i32>}> : () -> tensor<i32>
+  %rhs = "tosa.const"() <{values = dense<-1> : tensor<i32>}> : () -> tensor<i32>
   // CHECK: tosa.intdiv
   %div = tosa.intdiv %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   return %div : tensor<i32>
@@ -333,8 +333,8 @@ func.func @no_fold_div_splat_i32_overflow() -> tensor<i32> {
 
 // CHECK-LABEL: @no_fold_div_zero_lhs_zero_rhs_i32
 func.func @no_fold_div_zero_lhs_zero_rhs_i32() -> tensor<i32> {
-  %lhs = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
-  %rhs = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %lhs = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
+  %rhs = "tosa.const"() <{values = dense<0> : tensor<i32>}> : () -> tensor<i32>
   // CHECK: tosa.intdiv
   %div = tosa.intdiv %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   return %div : tensor<i32>
@@ -344,8 +344,8 @@ func.func @no_fold_div_zero_lhs_zero_rhs_i32() -> tensor<i32> {
 
 // CHECK-LABEL: @no_fold_div_zero_lhs_non_splat_rhs_i32
 func.func @no_fold_div_zero_lhs_non_splat_rhs_i32() -> tensor<2xi32> {
-  %lhs = "tosa.const"() {values = dense<0> : tensor<2xi32>} : () -> tensor<2xi32>
-  %rhs = "tosa.const"() {values = dense<[1, 2]> : tensor<2xi32>} : () -> tensor<2xi32>
+  %lhs = "tosa.const"() <{values = dense<0> : tensor<2xi32>}> : () -> tensor<2xi32>
+  %rhs = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
   // CHECK: tosa.intdiv
   %div = tosa.intdiv %lhs, %rhs : (tensor<2xi32>, tensor<2xi32>) -> tensor<2xi32>
   return %div : tensor<2xi32>
@@ -840,8 +840,8 @@ func.func @fold_eq_splat_f32() -> (tensor<10xi1>, tensor<10xi1>) {
 
 // CHECK-LABEL: @fold_compare_nan_f32
 func.func @fold_compare_nan_f32() -> (tensor<10xi1>, tensor<10xi1>, tensor<10xi1>) {
-  %nan = "tosa.const"() {values = dense<0x7FC00000> : tensor<10xf32>} : () -> tensor<10xf32>
-  %one = "tosa.const"() {values = dense<1.0> : tensor<10xf32>} : () -> tensor<10xf32>
+  %nan = "tosa.const"() <{values = dense<0x7FC00000> : tensor<10xf32>}> : () -> tensor<10xf32>
+  %one = "tosa.const"() <{values = dense<1.0> : tensor<10xf32>}> : () -> tensor<10xf32>
   %gt = tosa.greater %nan, %one : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xi1>
   %ge = tosa.greater_equal %one, %nan : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xi1>
   %eq = tosa.equal %nan, %nan : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xi1>
@@ -979,7 +979,7 @@ func.func @cast_int_to_float() -> tensor<f16> {
 
 // CHECK: func.func @cast_signless_to_float_input_unsigned
 func.func @cast_signless_to_float_input_unsigned() -> tensor<f16> {
-  %splat = "tosa.const"() {values = dense<200> : tensor<i8>} : () -> tensor<i8>
+  %splat = "tosa.const"() <{values = dense<200> : tensor<i8>}> : () -> tensor<i8>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<2.000000e+02> : tensor<f16>}
   %cast = tosa.cast %splat input_unsigned(true) : (tensor<i8>) -> tensor<f16>
   // CHECK: return %[[SPLAT]]
@@ -990,7 +990,7 @@ func.func @cast_signless_to_float_input_unsigned() -> tensor<f16> {
 
 // CHECK: func.func @cast_int_to_int_input_unsigned
 func.func @cast_int_to_int_input_unsigned() -> tensor<i32> {
-  %splat = "tosa.const"() {values = dense<200> : tensor<i8>} : () -> tensor<i8>
+  %splat = "tosa.const"() <{values = dense<200> : tensor<i8>}> : () -> tensor<i8>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<200> : tensor<i32>}
   %cast = tosa.cast %splat input_unsigned(true) : (tensor<i8>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
@@ -1023,7 +1023,7 @@ func.func @cast_float_to_int_round() -> tensor<i16> {
 
 // CHECK: func.func @cast_float_to_int_saturates_high
 func.func @cast_float_to_int_saturates_high() -> tensor<i8> {
-  %splat = "tosa.const"() {values = dense<1.000000e+20> : tensor<f32>} : () -> tensor<f32>
+  %splat = "tosa.const"() <{values = dense<1.000000e+20> : tensor<f32>}> : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<127> : tensor<i8>}
   %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i8>
   // CHECK: return %[[SPLAT]]
@@ -1034,7 +1034,7 @@ func.func @cast_float_to_int_saturates_high() -> tensor<i8> {
 
 // CHECK: func.func @cast_float_to_int_saturates_low
 func.func @cast_float_to_int_saturates_low() -> tensor<i8> {
-  %splat = "tosa.const"() {values = dense<-1.000000e+20> : tensor<f32>} : () -> tensor<f32>
+  %splat = "tosa.const"() <{values = dense<-1.000000e+20> : tensor<f32>}> : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-128> : tensor<i8>}
   %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i8>
   // CHECK: return %[[SPLAT]]
@@ -1045,7 +1045,7 @@ func.func @cast_float_to_int_saturates_low() -> tensor<i8> {
 
 // CHECK: func.func @cast_float_to_unsigned_int_saturates_low
 func.func @cast_float_to_unsigned_int_saturates_low() -> tensor<ui8> {
-  %splat = "tosa.const"() {values = dense<-1.000000e+20> : tensor<f32>} : () -> tensor<f32>
+  %splat = "tosa.const"() <{values = dense<-1.000000e+20> : tensor<f32>}> : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<0> : tensor<ui8>}
   %cast = tosa.cast %splat : (tensor<f32>) -> tensor<ui8>
   // CHECK: return %[[SPLAT]]
@@ -1056,7 +1056,7 @@ func.func @cast_float_to_unsigned_int_saturates_low() -> tensor<ui8> {
 
 // CHECK: func.func @cast_float_to_unsigned_int_saturates_high
 func.func @cast_float_to_unsigned_int_saturates_high() -> tensor<ui8> {
-  %splat = "tosa.const"() {values = dense<1.000000e+20> : tensor<f32>} : () -> tensor<f32>
+  %splat = "tosa.const"() <{values = dense<1.000000e+20> : tensor<f32>}> : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<255> : tensor<ui8>}
   %cast = tosa.cast %splat : (tensor<f32>) -> tensor<ui8>
   // CHECK: return %[[SPLAT]]

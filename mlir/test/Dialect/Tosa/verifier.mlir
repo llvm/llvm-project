@@ -553,7 +553,7 @@ func.func @test_gather_invalid_out_C(%arg0: tensor<13x21x3xf32>, %arg1: tensor<1
 // -----
 // CHECK-LABEL: @test_row_gather_invalid_indices_N
 func.func @test_row_gather_invalid_indices_N(%arg0: tensor<13x21x3xf32>, %arg1: tensor<12x26xi32>) -> tensor<13x52x3xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op expected batch of indices to match size 13, got 12}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<12x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
   return %0 : tensor<13x52x3xf32>
@@ -562,7 +562,7 @@ func.func @test_row_gather_invalid_indices_N(%arg0: tensor<13x21x3xf32>, %arg1: 
 // -----
 // CHECK-LABEL: test_row_gather_invalid_out_N
 func.func @test_row_gather_invalid_out_N(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<12x52x3xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op expected batch of output to match size 13, got 12}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<12x52x3xf32>
   return %0 : tensor<12x52x3xf32>
@@ -571,7 +571,7 @@ func.func @test_row_gather_invalid_out_N(%arg0: tensor<13x21x3xf32>, %arg1: tens
 // -----
 // CHECK-LABEL: test_row_gather_invalid_out_W
 func.func @test_row_gather_invalid_out_W(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x53x3xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op requires output dimension to be equal to indices[1]*row_count (52), got 53}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x53x3xf32>
   return %0 : tensor<13x53x3xf32>
@@ -580,7 +580,7 @@ func.func @test_row_gather_invalid_out_W(%arg0: tensor<13x21x3xf32>, %arg1: tens
 // -----
 // CHECK-LABEL: test_row_gather_invalid_out_C
 func.func @test_row_gather_invalid_out_C(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x8xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op expected channels of output to match size 3, got 8}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x8xf32>
   return %0 : tensor<13x52x8xf32>
@@ -589,7 +589,7 @@ func.func @test_row_gather_invalid_out_C(%arg0: tensor<13x21x3xf32>, %arg1: tens
 // -----
 // CHECK-LABEL: test_row_gather_invalid_row_count
 func.func @test_row_gather_invalid_row_count(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
-  %row_count = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op requires row_count to be > 0, got 0}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf32>
   return %0 : tensor<13x26x3xf32>
@@ -598,7 +598,7 @@ func.func @test_row_gather_invalid_row_count(%arg0: tensor<13x21x3xf32>, %arg1: 
 // -----
 // CHECK-LABEL: test_row_gather_invalid_row_count_negative
 func.func @test_row_gather_invalid_row_count_negative(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
-  %row_count = "tosa.const"() {values = dense<-1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<-1> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op requires row_count to be > 0, got -1}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf32>
   return %0 : tensor<13x26x3xf32>
@@ -607,7 +607,7 @@ func.func @test_row_gather_invalid_row_count_negative(%arg0: tensor<13x21x3xf32>
 // -----
 // CHECK-LABEL: test_row_gather_input_output_mismatch
 func.func @test_row_gather_input_output_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf16> {
-  %row_count = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op expect input and output to have same element type, got 'f32' and 'f16'}}
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf16>
   return %0 : tensor<13x26x3xf16>
@@ -1363,8 +1363,8 @@ func.func @test_matmul_output_channel_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: 
 // -----
 
 func.func @test_matmul_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<2x4x6xf32>) -> tensor<2x5x6xf32> {
-  %azp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
-  %bzp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op expected output shape 2, 5, 6 to be compatible with inferred shape 2, 3, 6}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<2x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x6xf32>
   return %0 : tensor<2x5x6xf32>
@@ -1394,8 +1394,8 @@ func.func @test_matmul_dynamic_channel_mismatch(%arg0: tensor<?x3x4xf32>, %arg1:
 // -----
 
 func.func @test_matmul_dynamic_output_shape_mismatch(%arg0: tensor<?x3x4xf32>, %arg1: tensor<2x4x6xf32>) -> tensor<5x3x6xf32> {
-  %azp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
-  %bzp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op expected output shape 5, 3, 6 to be compatible with inferred shape 2, 3, 6}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x3x4xf32>, tensor<2x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<5x3x6xf32>
   return %0 : tensor<5x3x6xf32>
@@ -1405,8 +1405,8 @@ func.func @test_matmul_dynamic_output_shape_mismatch(%arg0: tensor<?x3x4xf32>, %
 
 
 func.func @test_matmul_unranked_b_output_shape_mismatch(%arg0: tensor<2x3x4xf32>, %arg1: tensor<*xf32>) -> tensor<2x5x?xf32> {
-  %azp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
-  %bzp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op expected output shape 2, 5, ? to be compatible with inferred shape 2, 3, ?}}
   %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<*xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x?xf32>
   return %0 : tensor<2x5x?xf32>
@@ -1436,8 +1436,8 @@ func.func @test_matmul_quantized_width_mismatch(%arg0: tensor<2x3x4x!quant.unifo
 // -----
 
 func.func @test_matmul_t_quantized_mixed_operands(%arg0: tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, %arg1: tensor<2x6x4xf32>) -> tensor<2x3x6xi32> {
-  %azp0 = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
-  %bzp0 = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  %azp0 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul_t' op expect operands to be both quantized or both not quantized, got '!quant.uniform<i8:f32, 1.250000e-01>' and 'f32'}}
   %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, tensor<2x6x4xf32>, tensor<1xi8>, tensor<1xf32>) -> tensor<2x3x6xi32>
   return %0 : tensor<2x3x6xi32>
@@ -1446,8 +1446,8 @@ func.func @test_matmul_t_quantized_mixed_operands(%arg0: tensor<2x3x4x!quant.uni
 // -----
 
 func.func @test_matmul_t_quantized_width_mismatch(%arg0: tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, %arg1: tensor<2x6x4x!quant.uniform<i16:f32, 0.125>>) -> tensor<2x3x6xi32> {
-  %azp0 = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
-  %bzp0 = "tosa.const"() {values = dense<0> : tensor<1xi16>} : () -> tensor<1xi16>
+  %azp0 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %bzp0 = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
   // expected-error@+1 {{'tosa.matmul_t' op expect quantized operands to have same widths, got 8 and 16}}
   %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4x!quant.uniform<i8:f32, 0.125>>, tensor<2x6x4x!quant.uniform<i16:f32, 0.125>>, tensor<1xi8>, tensor<1xi16>) -> tensor<2x3x6xi32>
   return %0 : tensor<2x3x6xi32>
@@ -2334,7 +2334,7 @@ func.func @test_maxpool2d_adaptive_unexpected_output_width(%arg0: tensor<1x32x32
 
 func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
   // expected-error@+1 {{incompatible attribute for element type}}
-  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127: ui8, 245: ui8]>} : () -> tensor<2x!tosa.mxint8>
+  %0 = "tosa.const"() <{values = dense<tensor<2x!tosa.mxint8> : [127: ui8, 245: ui8]>}> : () -> tensor<2x!tosa.mxint8>
   return %0 : tensor<2x!tosa.mxint8>
 }
 
@@ -2342,7 +2342,7 @@ func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
 
 func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
   // expected-error@+1 {{incompatible attribute for element type}}
-  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127, 245]>} : () -> tensor<2x!tosa.mxint8>
+  %0 = "tosa.const"() <{values = dense<tensor<2x!tosa.mxint8> : [127, 245]>}> : () -> tensor<2x!tosa.mxint8>
   return %0 : tensor<2x!tosa.mxint8>
 }
 

@@ -39,8 +39,8 @@ func.func @depthwise_conv2d_as_mul_q(%arg0: tensor<4x10x10x2xi8>, %arg1: tensor<
   // CHECK-DAG: %[[CONST5:.+]] = tosa.const_shape values(dense<[1, 1, 1, 6]> : tensor<4xindex>)
   // CHECK-DAG: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   // CHECK: %[[RESHAPE_I:.+]] = tosa.reshape %arg0, %[[CONST0]]
-  // CHECK: %[[CAST_I:.+]] = tosa.cast %[[RESHAPE_I]] : (tensor<4x10x10x2x1xi8>) -> tensor<4x10x10x2x1xi32>
-  // CHECK: %[[CAST_W:.+]] = tosa.cast %arg1 : (tensor<1x1x2x3xi8>) -> tensor<1x1x2x3xi32>
+// CHECK: %[[CAST_I:.+]] = tosa.cast %[[RESHAPE_I]] input_unsigned(false) : (tensor<4x10x10x2x1xi8>) -> tensor<4x10x10x2x1xi32>
+// CHECK: %[[CAST_W:.+]] = tosa.cast %arg1 input_unsigned(false) : (tensor<1x1x2x3xi8>) -> tensor<1x1x2x3xi32>
   // CHECK: %[[SUB_I:.+]] = tosa.sub %[[CAST_I]], %[[INPUT_ZP]]
   // CHECK: %[[SUB_W:.+]] = tosa.sub %[[CAST_W]], %[[WEIGHT_ZP]]
   // CHECK: %[[RESHAPE_W:.+]] = tosa.reshape %[[SUB_W]], %[[CONST3]]

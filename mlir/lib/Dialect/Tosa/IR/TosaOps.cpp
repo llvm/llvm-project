@@ -5883,5 +5883,42 @@ LogicalResult tosa::SliceShapeOp::verify() {
 // TOSA Operator Definitions.
 //===----------------------------------------------------------------------===//
 
+static ParseResult parseOptionalBoolClause(OpAsmParser &parser,
+                                           StringRef keyword,
+                                           BoolAttr &result) {
+  if (failed(parser.parseOptionalKeyword(keyword)))
+    return success();
+  if (parser.parseLParen() || parser.parseAttribute(result) ||
+      parser.parseRParen())
+    return failure();
+  return success();
+}
+
+static void printOptionalBoolClause(OpAsmPrinter &printer, StringRef keyword,
+                                    BoolAttr attr) {
+  if (!attr)
+    return;
+  printer << keyword << '(';
+  printer.printAttribute(attr);
+  printer << ')';
+}
+
+static ParseResult parseLocalBound(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "local_bound", result);
+}
+
+static void printLocalBound(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printOptionalBoolClause(printer, "local_bound", attr);
+}
+
+static ParseResult parseInputUnsigned(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "input_unsigned", result);
+}
+
+static void printInputUnsigned(OpAsmPrinter &printer, Operation *,
+                               BoolAttr attr) {
+  printOptionalBoolClause(printer, "input_unsigned", attr);
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"

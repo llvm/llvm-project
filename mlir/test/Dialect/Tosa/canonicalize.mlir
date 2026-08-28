@@ -20,7 +20,7 @@ func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
 
 // CHECK-LABEL: @row_gather_row_count_one_to_gather
 func.func @row_gather_row_count_one_to_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
-  %row_count = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK-NOT: tosa.row_gather
   // CHECK: tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<13x26x3xf32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf32>
@@ -31,7 +31,7 @@ func.func @row_gather_row_count_one_to_gather(%arg0: tensor<13x21x3xf32>, %arg1:
 
 // CHECK-LABEL: @row_gather_row_count_two_no_fold
 func.func @row_gather_row_count_two_no_fold(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK: tosa.row_gather %arg0, %arg1, %{{.*}} : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
   return %0 : tensor<13x52x3xf32>
@@ -1279,8 +1279,8 @@ func.func @equal_quant_fold() -> tensor<i1> {
 // CHECK-LABEL: @cast_quant_nofold
 func.func @cast_quant_nofold() -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:3>> {
   // CHECK: tosa.cast
-   %0 = "tosa.const"() {values = dense<0> : tensor<i8>} : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
-   %1 = "tosa.cast"(%0) {input_unsigned = false} : (tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:3>>
+   %0 = "tosa.const"() <{values = dense<0> : tensor<i8>}> : () -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>
+   %1 = "tosa.cast"(%0) <{input_unsigned = false}> : (tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>) -> tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:3>>
    return %1 : tensor<!quant.uniform<i8:f32, 3.0757404601899907E-5:3>>
 }
 
@@ -1471,7 +1471,7 @@ func.func @no_fold_intdiv_dynamic_result() -> tensor<?xi32> {
 // CHECK: return %[[OUT]] : tensor<i32>
 func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
   %0 = "tosa.const"() <{values = dense<1> : tensor<i1>}> : () -> tensor<i1>
-  %1 = "tosa.cast"(%0) {input_unsigned = false} : (tensor<i1>) -> tensor<i32>
+  %1 = "tosa.cast"(%0) <{input_unsigned = false}> : (tensor<i1>) -> tensor<i32>
   return %1 : tensor<i32>
 }
 
@@ -1482,14 +1482,14 @@ func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
 // CHECK: return %[[OUT]] : tensor<i1>
 func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
   %0 = "tosa.const"() <{values = dense<10> : tensor<i32>}> : () -> tensor<i32>
-  %1 = "tosa.cast"(%0) {input_unsigned = false} : (tensor<i32>) -> tensor<i1>
+  %1 = "tosa.cast"(%0) <{input_unsigned = false}> : (tensor<i32>) -> tensor<i1>
   return %1 : tensor<i1>
 }
 
 // -----
 
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_i8_to_i32
-// CHECK: %[[OUT:.*]] = tosa.cast %arg0  : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
+// CHECK: %[[OUT:.*]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
 // CHECK: return %[[OUT]] : tensor<13x21x3xi32>
 func.func @test_canonicalize_non_narrowing_cast_i8_to_i32(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi32> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xi16>
@@ -1587,7 +1587,7 @@ func.func @test_canonicalize_non_narrowing_cast_f8_to_f16_to_f8(%arg0: tensor<13
 // -----
 
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_f8_to_f8E4M3FN_to_f16
-// CHECK: %[[OUT:.+]] = tosa.cast %arg0 : (tensor<13x21x3xf8E4M3FN>)
+// CHECK: %[[OUT:.+]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xf8E4M3FN>)
 // CHECK: return %[[OUT]] : tensor<13x21x3xf16>
 func.func @test_canonicalize_non_narrowing_cast_f8_to_f8E4M3FN_to_f16(%arg0: tensor<13x21x3xf8E4M3FN>) -> tensor<13x21x3xf16> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xf8E4M3FN>) -> tensor<13x21x3xf32>
@@ -1598,7 +1598,7 @@ func.func @test_canonicalize_non_narrowing_cast_f8_to_f8E4M3FN_to_f16(%arg0: ten
 // -----
 
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_f8_to_f32_to_f16
-// CHECK: %[[OUT:.+]] = tosa.cast %arg0 : (tensor<13x21x3xf8E5M2>) -> tensor<13x21x3xf16>
+// CHECK: %[[OUT:.+]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xf8E5M2>) -> tensor<13x21x3xf16>
 // CHECK: return %[[OUT]] : tensor<13x21x3xf16>
 func.func @test_canonicalize_non_narrowing_cast_f8_to_f32_to_f16(%arg0: tensor<13x21x3xf8E5M2>) -> tensor<13x21x3xf16> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xf8E5M2>) -> tensor<13x21x3xf32>
@@ -1609,7 +1609,7 @@ func.func @test_canonicalize_non_narrowing_cast_f8_to_f32_to_f16(%arg0: tensor<1
 // -----
 
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_f16_to_f32_to_f8
-// CHECK: %[[OUT:.+]] = tosa.cast %arg0 : (tensor<13x21x3xf16>) -> tensor<13x21x3xf8E5M2>
+// CHECK: %[[OUT:.+]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xf16>) -> tensor<13x21x3xf8E5M2>
 // CHECK: return %[[OUT]] : tensor<13x21x3xf8E5M2>
 func.func @test_canonicalize_non_narrowing_cast_f16_to_f32_to_f8(%arg0: tensor<13x21x3xf16>) -> tensor<13x21x3xf8E5M2> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xf16>) -> tensor<13x21x3xf32>
@@ -1620,7 +1620,7 @@ func.func @test_canonicalize_non_narrowing_cast_f16_to_f32_to_f8(%arg0: tensor<1
 // -----
 
 // CHECK-LABEL: @test_canonicalize_non_narrowing_cast_i8_to_i32_to_f16
-// CHECK: %[[OUT:.+]] = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xf16>
+// CHECK: %[[OUT:.+]] = tosa.cast %arg0 input_unsigned(false) : (tensor<13x21x3xi8>) -> tensor<13x21x3xf16>
 // CHECK: return %[[OUT]] : tensor<13x21x3xf16>
 func.func @test_canonicalize_non_narrowing_cast_i8_to_i32_to_f16(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xf16> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
