@@ -483,7 +483,7 @@ bool X86PassConfig::addRegBankSelect() {
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
   if (isGlobalISelAbortEnabled())
     addPass(createX86GlobalBaseRegLegacyPass());
@@ -609,7 +609,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
   addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 

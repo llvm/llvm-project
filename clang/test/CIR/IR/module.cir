@@ -1,11 +1,19 @@
 // RUN: cir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
 
-// Should parse and print C source language attribute.
-module attributes {cir.lang = #cir.lang<c>} { }
 // CHECK: module attributes {cir.lang = #cir.lang<c>}
+module attributes {cir.lang = #cir.lang<c>} { }
 
 // -----
 
-// Should parse and print C++ source language attribute.
-module attributes {cir.lang = #cir.lang<cxx>} { }
 // CHECK: module attributes {cir.lang = #cir.lang<cxx>}
+module attributes {cir.lang = #cir.lang<cxx>} { }
+
+// -----
+
+// CHECK: module attributes {cir.lang = #cir.lang<opencl_c>}
+module attributes {cir.lang = #cir.lang<opencl_c>} { }
+
+// -----
+
+// CHECK: module attributes {cir.lang = #cir.lang<opencl_cxx>}
+module attributes {cir.lang = #cir.lang<opencl_cxx>} { }

@@ -66,7 +66,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
-#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -3618,7 +3617,7 @@ public:
   void getSortedUnusedLocalTypedefNameCandidates(
       SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
-  typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
+  typedef LazyVector<const DeclaratorDecl *,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
       UnusedFileScopedDeclsType;
 
@@ -3626,8 +3625,8 @@ public:
   /// and must warn if not used. Only contains the first declaration.
   UnusedFileScopedDeclsType UnusedFileScopedDecls;
 
-  typedef LazyVector<VarDecl *, ExternalSemaSource,
-                     &ExternalSemaSource::ReadTentativeDefinitions, 2, 2>
+  typedef LazyVector<VarDecl *, &ExternalSemaSource::ReadTentativeDefinitions,
+                     2, 2>
       TentativeDefinitionsType;
 
   /// All the tentative definitions encountered in the TU.
@@ -4961,8 +4960,8 @@ public:
   /// WeakTopLevelDeclDecls - access to \#pragma weak-generated Decls
   SmallVectorImpl<Decl *> &WeakTopLevelDecls() { return WeakTopLevelDecl; }
 
-  typedef LazyVector<TypedefNameDecl *, ExternalSemaSource,
-                     &ExternalSemaSource::ReadExtVectorDecls, 2, 2>
+  typedef LazyVector<TypedefNameDecl *, &ExternalSemaSource::ReadExtVectorDecls,
+                     2, 2>
       ExtVectorDeclsType;
 
   /// ExtVectorDecls - This is a list all the extended vector types. This allows
@@ -6538,7 +6537,7 @@ public:
   /// same list more than once.
   std::unique_ptr<RecordDeclSetTy> PureVirtualClassDiagSet;
 
-  typedef LazyVector<CXXConstructorDecl *, ExternalSemaSource,
+  typedef LazyVector<CXXConstructorDecl *,
                      &ExternalSemaSource::ReadDelegatingConstructors, 2, 2>
       DelegatingCtorDeclsType;
 
@@ -15075,6 +15074,9 @@ public:
   void
   DiagnoseUnsatisfiedConstraint(const ConceptSpecializationExpr *ConstraintExpr,
                                 bool First = true);
+
+  void DiagnoseUnsatisfiedRequiresExpr(const RequiresExpr *RequiresExpr,
+                                       bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
       ConstrainedDeclOrNestedRequirement Entity,

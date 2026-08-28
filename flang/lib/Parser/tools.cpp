@@ -223,6 +223,8 @@ std::optional<Label> GetFinalLabel(const Block &x) {
     const ExecutionPartConstruct &last{x.back()};
     if (auto *omp{Unwrap<OpenMPConstruct>(last)}) {
       return GetFinalLabel(*omp);
+    } else if (auto *acc{Unwrap<OpenACCConstruct>(last)}) {
+      return GetFinalLabel(*acc);
     } else if (auto *doLoop{Unwrap<DoConstruct>(last)}) {
       return GetFinalLabel(std::get<Block>(doLoop->t));
     } else {

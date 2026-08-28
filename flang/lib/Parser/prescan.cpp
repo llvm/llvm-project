@@ -196,19 +196,21 @@ void Prescanner::Statement() {
       }
       tokens.CloseToken();
       SkipSpaces();
-      if (InConditionalLine() && inFixedForm_ && !tabInCurrentLine_ &&
-          column_ == 6 && *at_ != '\n') {
-        // !$   0   - turn '0' into a space
-        // !$   1   - turn '1' into '&'
+      if ((InConditionalLine() || IsOpenMPDirective()) && inFixedForm_ &&
+          !tabInCurrentLine_ && column_ == 6 && *at_ != '\n') {
         if (int n{IsSpace(at_)}; n || *at_ == '0') {
+          // !$   0   - turn '0' into a space
           at_ += n ? n : 1;
-        } else {
+          ++column_;
+          SkipSpaces();
+        } else if (InConditionalLine()) {
+          // !$   1   - turn '1' into '&'
           ++at_;
           EmitChar(tokens, '&');
           tokens.CloseToken();
+          ++column_;
+          SkipSpaces();
         }
-        ++column_;
-        SkipSpaces();
       }
     }
     break;
@@ -1793,7 +1795,16 @@ const char *Prescanner::IsCompilerDirectiveSentinel(
     return nullptr;
   }
   const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
-  return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
+  if (iter == compilerDirectiveSentinels_.end()) {
+    return nullptr;
+  }
+  // OpenMP 5.2, 3.1: "omx" is an extension sentinel for fixed source form only
+  // (the free-form extension sentinel is "ompx"), so a free-form "!$omx" is an
+  // ordinary comment rather than a directive.
+  if (!inFixedForm_ && *iter == "$omx") {
+    return nullptr;
+  }
+  return iter->c_str();
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {

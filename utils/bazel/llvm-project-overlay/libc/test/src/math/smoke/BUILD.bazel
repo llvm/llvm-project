@@ -87,6 +87,14 @@ math_test(
     hdrs = ["IsCanonicalTest.h"],
 )
 
+math_test(
+    name = "iscanonicalf128",
+    hdrs = ["IsCanonicalTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
 math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
@@ -1023,6 +1031,9 @@ math_test(
 math_test(
     name = "isnanf128",
     hdrs = ["IsNanTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1674,6 +1685,9 @@ math_test(
 math_test(
     name = "truncf128",
     hdrs = ["TruncTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1759,6 +1773,14 @@ math_test(name = "expm1f16")
 math_test(
     name = "issignalingf16",
     hdrs = ["IsSignalingTest.h"],
+)
+
+math_test(
+    name = "issignalingf128",
+    hdrs = ["IsSignalingTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(name = "log10f16")
