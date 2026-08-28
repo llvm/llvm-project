@@ -26,6 +26,12 @@ struct Struct {
 };
 
 static_assert(!__is_polymorphic(Struct), "");
+
+class A {
+  virtual void A::foo() {} // expected-error {{extra qualification on member 'foo'}}
+};
+
+static_assert(__is_polymorphic(A), "");
 } // namespace reduced
 
 // Verbatim reproducer from GH213854; the missing closing brace is intentional.
