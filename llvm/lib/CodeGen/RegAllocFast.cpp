@@ -1454,10 +1454,9 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
 
 // Returns true if MO is tied and the operand it's tied to is not Undef (not
 // Undef is not the same thing as Def).
-static bool isTiedToNotUndef(const MachineOperand &MO) {
+static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
   if (!MO.isTied())
     return false;
-  const MachineInstr &MI = *MO.getParent();
   unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
   const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
   return !TiedMO.isUndef();
@@ -1505,7 +1504,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             HasEarlyClobber = true;
             NeedToAssignLiveThroughs = true;
           }
-          if (isTiedToNotUndef(MO) || (MO.getSubReg() != 0 && !MO.isUndef()))
+          if (isTiedToNotUndef(MI, MO) ||
+              (MO.getSubReg() != 0 && !MO.isUndef()))
             NeedToAssignLiveThroughs = true;
         }
       } else if (Reg.isPhysical()) {
@@ -1549,7 +1549,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
             Register Reg = MO.getReg();
-            if (MO.isEarlyClobber() || isTiedToNotUndef(MO) ||
+            if (MO.isEarlyClobber() || isTiedToNotUndef(MI, MO) ||
                 (MO.getSubReg() && !MO.isUndef())) {
               ReArrangedImplicitOps = defineLiveThroughVirtReg(MI, OpIdx, Reg);
             } else {
@@ -1595,7 +1595,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
              "tied def assigned to clobbered register");
 
       // Do not free tied operands and early clobbers.
-      if (isTiedToNotUndef(MO) || MO.isEarlyClobber())
+      if (isTiedToNotUndef(MI, MO) || MO.isEarlyClobber())
         continue;
       if (!Reg)
         continue;
