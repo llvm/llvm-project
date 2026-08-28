@@ -237,8 +237,8 @@ public:
                                      ? Name.rsplit('-')
                                      : Name.split('-');
     return llvm::formatv(
-        "https://clang.llvm.org/extra/clang-tidy/checks/{0}/{1}.html",
-        Module, Check);
+        "https://clang.llvm.org/extra/clang-tidy/checks/{0}/{1}.html", Module,
+        Check);
   }
 
   void exportSarifResult(const ClangTidyError &Error,
@@ -248,8 +248,9 @@ public:
 
     const std::pair<llvm::StringMap<size_t>::iterator, bool> RuleIndexEntry =
         SarifRuleIdx.try_emplace(Error.DiagnosticName, 0);
-    llvm::StringMap<size_t>::iterator RuleIndexEntryIt = RuleIndexEntry.first;
-    bool Inserted = RuleIndexEntry.second;
+    const llvm::StringMap<size_t>::iterator RuleIndexEntryIt =
+        RuleIndexEntry.first;
+    const bool Inserted = RuleIndexEntry.second;
     size_t &RuleIndex = RuleIndexEntryIt->second;
 
     const DiagnosticsEngine::Level EffectiveLevel =
@@ -267,17 +268,17 @@ public:
         Rule = Rule.setHelpURI(buildClangTidyHelpURI(Name));
 
       Rule = addDiagnosticLevelToRule(Rule, EffectiveLevel);
-      RuleIndex = SarifWriter->createRule(Rule);
+      RuleIndex = SarifWriter.value().createRule(Rule);
     }
 
-    SarifResult Result =
+    const SarifResult Result =
         SarifResult::create(RuleIndex)
             .setDiagnosticMessage(Error.Message.Message)
             .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel))
             .setThreadFlows(createThreadFlows(Error))
             .addLocations(getResultRanges(Error, Loc));
 
-    SarifWriter->appendResult(Result);
+    SarifWriter.value().appendResult(Result);
   }
 
   SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error,
@@ -378,7 +379,7 @@ private:
     assert(SarifWriter &&
            "SarifWriter must be initialized to export SARIF results");
     assert(SarifOS && "SarifOS must be initialized to export SARIF results");
-    llvm::json::Value Document = SarifWriter->createDocument();
+    llvm::json::Value Document = SarifWriter.value().createDocument();
     *SarifOS << llvm::formatv("{0:2}", Document);
   }
 
