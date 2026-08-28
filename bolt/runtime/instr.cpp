@@ -53,6 +53,12 @@
   {}
 #endif
 
+#ifdef __x86_64__
+#define ALIGN_ARG_POINTER __attribute__((force_align_arg_pointer))
+#else
+#define ALIGN_ARG_POINTER
+#endif
+
 #pragma GCC visibility push(hidden)
 
 extern "C" {
@@ -1559,10 +1565,9 @@ extern "C" void __bolt_instr_clear_counters() {
 ///    to get a pointer to this function and call through the acquired
 ///    function pointer to dump profile data.
 ///
-extern "C" void __attribute((force_align_arg_pointer))
-__bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
-                       const uint8_t *LibContents = nullptr,
-                       uint64_t LibSize = 0) {
+extern "C" void ALIGN_ARG_POINTER __bolt_instr_data_dump(
+    int FD, const char *LibPath = nullptr, const uint8_t *LibContents = nullptr,
+    uint64_t LibSize = 0) {
   if (LibPath)
     strCopy(TargetPath, LibPath, NameMax);
 
@@ -1658,7 +1663,7 @@ extern "C" void __bolt_instr_indirect_call();
 extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
-extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
+extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
   TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
@@ -1710,8 +1715,8 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   }
 }
 
-extern "C" __attribute((force_align_arg_pointer)) void
-instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
+extern "C" ALIGN_ARG_POINTER void instrumentIndirectCall(uint64_t Target,
+                                                         uint64_t IndCallID) {
   GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
 }
 

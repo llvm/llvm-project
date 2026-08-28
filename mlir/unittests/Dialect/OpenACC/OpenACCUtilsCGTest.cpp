@@ -161,7 +161,7 @@ TEST_F(OpenACCUtilsCGTest, getDataLayoutWithSpec) {
   auto indexEntry = DataLayoutEntryAttr::get(IndexType::get(&context),
                                              b.getI32IntegerAttr(32));
   auto spec = DataLayoutSpecAttr::get(&context, {indexEntry});
-  (*module)->setAttr(DLTIDialect::kDataLayoutAttrName, spec);
+  (*module)->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName, spec);
 
   // With explicit spec, should return DataLayout regardless of allowDefault
   auto dl1 = getDataLayout(module->getOperation(), /*allowDefault=*/false);

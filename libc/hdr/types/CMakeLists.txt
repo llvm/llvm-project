@@ -162,6 +162,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_itimerspec
+  HDRS
+    struct_itimerspec.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_itimerspec
+)
+
+add_proxy_header_library(
   struct_tm
   HDRS
     struct_tm.h
@@ -675,6 +683,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_addrinfo
+  HDRS
+    struct_addrinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_addrinfo
+)
+
+add_proxy_header_library(
   struct_sockaddr_storage
   HDRS
     struct_sockaddr_storage.h
@@ -717,6 +733,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_udphdr
     libc.include.netinet_udp
+)
+
+add_proxy_header_library(
+  struct_sysinfo
+  HDRS
+    struct_sysinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sysinfo
+    libc.include.sys_sysinfo
 )
 
 add_proxy_header_library(
