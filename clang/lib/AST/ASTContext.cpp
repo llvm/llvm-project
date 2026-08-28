@@ -6926,7 +6926,7 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   llvm::FoldingSetNodeID ID;
   AutoType::Profile(ID, *this, DK, DeducedAsType, Keyword,
                     TypeConstraintConcept, TypeConstraintArgs);
-  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+  if (auto const AT_iter = AutoTypes.find_as(ID); AT_iter != AutoTypes.end())
     return QualType(AT_iter->getSecond(), 0);
 
   if (DK == DeducedKind::Deduced) {
@@ -6956,7 +6956,7 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   assert(InsertedID == ID && "ID does not match");
 #endif
   Types.push_back(AT);
-  AutoTypes.try_emplace(ID, AT);
+  AutoTypes.try_emplace(ID.Intern(BumpAlloc), AT);
   return QualType(AT, 0);
 }
 
@@ -15170,15 +15170,6 @@ LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
 
   return getLangASFromTargetAS(AS);
 }
-
-// Explicitly instantiate this in case a Redeclarable<T> is used from a TU that
-// doesn't include ASTContext.h
-template
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::ValueType
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::makeValue(
-        const clang::ASTContext &Ctx, Decl *Value);
 
 unsigned char ASTContext::getFixedPointScale(QualType Ty) const {
   assert(Ty->isFixedPointType());

@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_BOOTSTRAPINFO_H
-#define ORC_RT_BOOTSTRAPINFO_H
+#ifndef ORC_RT_BEDROCK_BOOTSTRAPINFO_H
+#define ORC_RT_BEDROCK_BOOTSTRAPINFO_H
 
-#include "orc-rt/bedrock/Error.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/move_only_function.h"
-#include "orc-rt/bedrock/sps-ci/AllSPSCI.h"
+#include "orc-rt/bedrock/sps/AllSPSCI.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -69,4 +69,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_BOOTSTRAPINFO_H
+#endif // ORC_RT_BEDROCK_BOOTSTRAPINFO_H

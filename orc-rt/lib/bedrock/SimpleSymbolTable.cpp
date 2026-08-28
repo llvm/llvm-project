@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/SimpleSymbolTable.h
+// Contains the implementation of APIs in the orc-rt/bedrock/SimpleSymbolTable.h
 // header.
 //
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/iterator_range.h"
+#include "orc-rt/support/iterator_range.h"
 
 #include <algorithm>
 
