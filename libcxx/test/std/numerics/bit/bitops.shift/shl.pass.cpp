@@ -21,6 +21,40 @@
 #include "test_macros.h"
 #include "type_algorithms.h"
 
+struct A {};
+enum E1 : unsigned char { rEd };
+enum class E2 : unsigned char { red };
+
+template <class T>
+concept can_shl_value = requires(T value) { std::shl(value, 1); };
+
+static_assert(can_shl_value<int>, "Concept is broken. We should be able to shift int.");
+static_assert(!can_shl_value<bool>);
+static_assert(!can_shl_value<char>);
+static_assert(!can_shl_value<wchar_t>);
+static_assert(!can_shl_value<char8_t>);
+static_assert(!can_shl_value<char16_t>);
+static_assert(!can_shl_value<char32_t>);
+static_assert(!can_shl_value<A>);
+static_assert(!can_shl_value<A*>);
+static_assert(!can_shl_value<E1>);
+static_assert(!can_shl_value<E2>);
+
+template <class T>
+concept can_shl_shift = requires(T shift) { std::shl(1, shift); };
+
+static_assert(can_shl_shift<int>, "Concept is broken. We should be able to shift by int.");
+static_assert(!can_shl_shift<bool>);
+static_assert(!can_shl_shift<char>);
+static_assert(!can_shl_shift<wchar_t>);
+static_assert(!can_shl_shift<char8_t>);
+static_assert(!can_shl_shift<char16_t>);
+static_assert(!can_shl_shift<char32_t>);
+static_assert(!can_shl_shift<A>);
+static_assert(!can_shl_shift<A*>);
+static_assert(!can_shl_shift<E1>);
+static_assert(!can_shl_shift<E2>);
+
 template <class T>
 constexpr bool test() {
   using U               = std::make_unsigned_t<T>;
@@ -32,22 +66,36 @@ constexpr bool test() {
     ASSERT_NOEXCEPT(std::shl(T(), 0));
 
     assert(std::shl(T(1), 0) == T(1));
+    assert(std::shl(T(1), 0u) == T(1));
     assert(std::shl(T(1), 1) == T(2));
+    assert(std::shl(T(1), 1u) == T(2));
     assert(std::shl(T(1), 2) == T(4));
+    assert(std::shl(T(1), 2u) == T(4));
     assert(std::shl(T(1), 3) == T(8));
+    assert(std::shl(T(1), 3u) == T(8));
     assert(std::shl(T(1), 4) == T(16));
+    assert(std::shl(T(1), 4u) == T(16));
     assert(std::shl(T(1), 5) == T(32));
+    assert(std::shl(T(1), 5u) == T(32));
     assert(std::shl(T(1), 6) == T(64));
-    assert(std::shl(T(1), 7) == static_cast<T>(U(128)));
+    assert(std::shl(T(1), 6u) == T(64));
+    assert(std::shl(T(1), 7) == T(128));
+    assert(std::shl(T(1), 7u) == T(128));
 
     // Overlong shifts return 0
     assert(std::shl(T(1), width) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width)) == T(0));
     assert(std::shl(T(1), width + 1) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width + 1)) == T(0));
     assert(std::shl(T(1), width + 100) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width + 100)) == T(0));
     assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
+    assert(std::shl(T(1), static_cast<U>(std::numeric_limits<int>::max())) == T(0));
 
     assert(std::shl(T(-1), width) == T(0));
+    assert(std::shl(T(-1), static_cast<U>(width)) == T(0));
     assert(std::shl(T(-1), width + 5) == T(0));
+    assert(std::shl(T(-1), static_cast<U>(width + 5)) == T(0));
 
     // Negative shift amounts shift right arithmetically (bidirectional)
     T highbit = static_cast<T>(highbit_u);
@@ -68,11 +116,35 @@ constexpr bool test() {
     assert(std::shl(T(42), -(width + 1)) == T(0));
 
     if constexpr (width == 128) {
+      assert(std::shl(T(1), 64) == U(1) << 64);
+      assert(std::shl(T(1), 64u) == U(1) << 64);
+      assert(std::shl(T(1), 127) == U(1) << 127);
+      assert(std::shl(T(1), 127u) == U(1) << 127);
+      assert(std::shl(T(1), 128) == T(0));
+      assert(std::shl(T(1), 128u) == T(0));
+      assert(std::shl(T(1), 200) == T(0));
+      assert(std::shl(T(1), 200u) == T(0));
+
       assert(std::shl(highbit, -64) == (highbit >> 64));
       assert(std::shl(highbit, -127) == (highbit >> 127));
       assert(std::shl(highbit, -128) == T(-1));
       assert(std::shl(highbit, -200) == T(-1));
     } else if constexpr (width == 256) {
+      assert(std::shl(T(1), 64) == U(1) << 64);
+      assert(std::shl(T(1), 64u) == U(1) << 64);
+      assert(std::shl(T(1), 127) == U(1) << 127);
+      assert(std::shl(T(1), 127u) == U(1) << 127);
+      assert(std::shl(T(1), 128) == U(1) << 128);
+      assert(std::shl(T(1), 128u) == U(1) << 128);
+      assert(std::shl(T(1), 200) == U(1) << 200);
+      assert(std::shl(T(1), 200u) == U(1) << 200);
+      assert(std::shl(T(1), 255) == U(1) << 255);
+      assert(std::shl(T(1), 255u) == U(1) << 255);
+      assert(std::shl(T(1), 256) == T(0));
+      assert(std::shl(T(1), 256u) == T(0));
+      assert(std::shl(T(1), 300) == T(0));
+      assert(std::shl(T(1), 300u) == T(0));
+
       assert(std::shl(highbit, -64) == (highbit >> 64));
       assert(std::shl(highbit, -127) == (highbit >> 127));
       assert(std::shl(highbit, -128) == (highbit >> 128));
@@ -85,22 +157,36 @@ constexpr bool test() {
     ASSERT_NOEXCEPT(std::shl(T(), 0));
 
     assert(std::shl(T(1), 0) == T(1));
+    assert(std::shl(T(1), 0u) == T(1));
     assert(std::shl(T(1), 1) == T(2));
+    assert(std::shl(T(1), 1u) == T(2));
     assert(std::shl(T(1), 2) == T(4));
+    assert(std::shl(T(1), 2u) == T(4));
     assert(std::shl(T(1), 3) == T(8));
+    assert(std::shl(T(1), 3u) == T(8));
     assert(std::shl(T(1), 4) == T(16));
+    assert(std::shl(T(1), 4u) == T(16));
     assert(std::shl(T(1), 5) == T(32));
+    assert(std::shl(T(1), 5u) == T(32));
     assert(std::shl(T(1), 6) == T(64));
+    assert(std::shl(T(1), 6u) == T(64));
     assert(std::shl(T(1), 7) == T(128));
+    assert(std::shl(T(1), 7u) == T(128));
 
     // Overlong shifts return 0
     assert(std::shl(T(1), width) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width)) == T(0));
     assert(std::shl(T(1), width + 1) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width + 1)) == T(0));
     assert(std::shl(T(1), width + 100) == T(0));
+    assert(std::shl(T(1), static_cast<U>(width + 100)) == T(0));
     assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
+    assert(std::shl(T(1), static_cast<U>(std::numeric_limits<int>::max())) == T(0));
 
     assert(std::shl(T(~T(0)), width) == T(0));
+    assert(std::shl(T(~T(0)), static_cast<U>(width)) == T(0));
     assert(std::shl(T(~T(0)), width + 5) == T(0));
+    assert(std::shl(T(~T(0)), static_cast<U>(width + 5)) == T(0));
 
     // Negative shift amounts shift right (bidirectional)
     T highbit = highbit_u;
@@ -120,63 +206,43 @@ constexpr bool test() {
 
     if constexpr (width == 128) {
       assert(std::shl(T(1), 64) == T(1) << 64);
+      assert(std::shl(T(1), 64u) == T(1) << 64);
       assert(std::shl(T(1), 127) == T(1) << 127);
+      assert(std::shl(T(1), 127u) == T(1) << 127);
       assert(std::shl(T(1), 128) == T(0));
+      assert(std::shl(T(1), 128u) == T(0));
       assert(std::shl(T(1), 200) == T(0));
+      assert(std::shl(T(1), 200u) == T(0));
+
       assert(std::shl(T(1) << 127, -1) == T(1) << 126);
       assert(std::shl(T(1) << 127, -127) == T(1));
       assert(std::shl(T(1) << 127, -128) == T(0));
       assert(std::shl(T(1) << 127, -200) == T(0));
     } else if constexpr (width == 256) {
       assert(std::shl(T(1), 64) == T(1) << 64);
+      assert(std::shl(T(1), 64u) == T(1) << 64);
       assert(std::shl(T(1), 127) == T(1) << 127);
+      assert(std::shl(T(1), 127u) == T(1) << 127);
       assert(std::shl(T(1), 128) == T(1) << 128);
+      assert(std::shl(T(1), 128u) == T(1) << 128);
       assert(std::shl(T(1), 200) == T(1) << 200);
+      assert(std::shl(T(1), 200u) == T(1) << 200);
+
       assert(std::shl(T(1) << 127, -1) == T(1) << 126);
       assert(std::shl(T(1) << 127, -127) == T(1));
       assert(std::shl(T(1) << 127, -128) == T(0));
       assert(std::shl(T(1) << 127, -200) == T(0));
       assert(std::shl(T(1), 256) == T(0));
+      assert(std::shl(T(1), 256u) == T(0));
       assert(std::shl(T(1), 300) == T(0));
+      assert(std::shl(T(1), 300u) == T(0));
     }
   }
 
   return true;
 }
 
-struct A {};
-enum E1 : unsigned char { rEd };
-enum class E2 : unsigned char { red };
-
-template <class T>
-concept can_shl_value = requires(T value) { std::shl(value, 1); };
-
-template <class T>
-concept can_shl_shift = requires(T shift) { std::shl(1, shift); };
-
 int main(int, char**) {
-  static_assert(!can_shl_value<bool>);
-  static_assert(!can_shl_value<char>);
-  static_assert(!can_shl_value<wchar_t>);
-  static_assert(!can_shl_value<char8_t>);
-  static_assert(!can_shl_value<char16_t>);
-  static_assert(!can_shl_value<char32_t>);
-  static_assert(!can_shl_value<A>);
-  static_assert(!can_shl_value<A*>);
-  static_assert(!can_shl_value<E1>);
-  static_assert(!can_shl_value<E2>);
-
-  static_assert(!can_shl_shift<bool>);
-  static_assert(!can_shl_shift<char>);
-  static_assert(!can_shl_shift<wchar_t>);
-  static_assert(!can_shl_shift<char8_t>);
-  static_assert(!can_shl_shift<char16_t>);
-  static_assert(!can_shl_shift<char32_t>);
-  static_assert(!can_shl_shift<A>);
-  static_assert(!can_shl_shift<A*>);
-  static_assert(!can_shl_shift<E1>);
-  static_assert(!can_shl_shift<E2>);
-
   constexpr auto test_type = []<class T> {
     static_assert(test<T>());
     test<T>();
