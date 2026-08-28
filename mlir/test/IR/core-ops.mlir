@@ -212,6 +212,14 @@ func.func @calls(%arg0: i32) {
   %5 = call_indirect %f_0(%arg0) res_attrs = [{test.res = 42 : i64}],
       arg_attrs = [{test.arg}] : (i32) -> i32
 
+  // CHECK: call @affine_apply() <arg_attrs = [], res_attrs = []>
+  // CHECK-SAME: {test.marker} : () -> ()
+  call @affine_apply() <arg_attrs = [], res_attrs = []> {test.marker} : () -> ()
+
+  // CHECK: call_indirect %f() arg_attrs = [], res_attrs = []
+  // CHECK-SAME: {test.marker} : () -> ()
+  call_indirect %f() arg_attrs = [], res_attrs = [] {test.marker} : () -> ()
+
   return
 }
 
