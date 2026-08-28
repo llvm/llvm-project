@@ -536,6 +536,10 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Fixed an assertion when an ill-formed qualified member function definition
+  inside a union caused the union to be treated as a polymorphic class.
+  (#GH213854)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
