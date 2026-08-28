@@ -78,8 +78,8 @@
 // of another dimension only requires new RUN lines.
 //
 //   ENTRY_TYPE         the entry point's own coordinate type
-//   HAS_OFFSET         defined for read-only (SRV) textures, which have a
-//                      second Load overload taking an offset
+//   HAS_OFFSET         defined for types whose Load has an overload taking an
+//                      offset
 //   OFFSET_ARG         a literal offset argument
 //   TEXTURE            resource type name
 //   LOAD_ARG           the Load location, built from the entry point's `loc`
