@@ -318,7 +318,7 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
       // In append mode, we will open the file for writing which will need write
       // permission. Fail now if it is already clear that we can't write to the
       // final destination.
-      // In non-append more, we will delete and replace the file. Permission
+      // In non-append mode, we will delete and replace the file. Permission
       // bits of the file itself are irrelevant in this case.
       if (Config.getAppend() && !sys::fs::can_write(OutputPath))
         return make_error<OutputError>(
