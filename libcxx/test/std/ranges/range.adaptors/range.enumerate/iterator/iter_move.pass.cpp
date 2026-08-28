@@ -28,6 +28,7 @@
 #include "test_iterators.h"
 
 #include "../types.h"
+#include "../../range_adaptor_types.h"
 
 struct ThrowingMove {
   ThrowingMove() = default;
@@ -44,6 +45,7 @@ constexpr void test() {
   std::array array{0, 1, 2, 3, 4};
 
   {
+    // underlying iter_move noexcept
     View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
     EnumerateView ev{std::move(mv)};
     EnumerateIterator const it = ev.begin();
@@ -66,6 +68,22 @@ constexpr void test() {
     std::ranges::enumerate_view v(throwingMoveRange);
     auto it = v.begin();
     static_assert(!noexcept(std::ranges::iter_move(it)));
+  }
+
+  {
+    // underlying iterator iter_move is called through ranges::iter_move
+    adltest::IterMoveSwapRange r1{};
+    assert(r1.iter_move_called_times == 0);
+    std::ranges::enumerate_view v(r1);
+    auto it = v.begin();
+    {
+      [[maybe_unused]] auto&& i = std::ranges::iter_move(it);
+      assert(r1.iter_move_called_times == 1);
+    }
+    {
+      [[maybe_unused]] auto&& i = std::ranges::iter_move(it);
+      assert(r1.iter_move_called_times == 2);
+    }
   }
 }
 
