@@ -54,10 +54,10 @@ public:
   llvm::Error matchesDecl(const Decl *D, const NamedDecl *RootDecl);
 
 private:
-  llvm::Error addEdges(Expected<DeclPointerLevels> &&LHS,
-                       Expected<DeclPointerLevels> &&RHS);
+  llvm::Error addEdges(Expected<DeclPointerLevelVec> &&LHS,
+                       Expected<DeclPointerLevelVec> &&RHS);
 
-  Expected<DeclPointerLevels> toDPL(const Expr *N) const {
+  Expected<DeclPointerLevelVec> toDPL(const Expr *N) const {
     return translateDeclPointerLevel(N, Ctx, Extractor);
   }
 
@@ -75,7 +75,7 @@ private:
          ++ArgIdx, ++ParmIdx) {
       if (const ParmVarDecl *PD = PP->getParamDecl(ParmIdx);
           PD && hasPtrOrArrType(PD)) {
-        if (auto Err = addEdges(DeclPointerLevels{toDPL(PD)},
+        if (auto Err = addEdges(DeclPointerLevelVec{toDPL(PD)},
                                 toDPL(AP->getArg(ArgIdx))))
           return Err;
       }
@@ -84,8 +84,8 @@ private:
   }
 };
 
-llvm::Error PointerFlowMatcher::addEdges(Expected<DeclPointerLevels> &&LHS,
-                                         Expected<DeclPointerLevels> &&RHS) {
+llvm::Error PointerFlowMatcher::addEdges(Expected<DeclPointerLevelVec> &&LHS,
+                                         Expected<DeclPointerLevelVec> &&RHS) {
   if (!LHS && !RHS)
     return llvm::joinErrors(LHS.takeError(), RHS.takeError());
   if (!LHS)
@@ -95,10 +95,12 @@ llvm::Error PointerFlowMatcher::addEdges(Expected<DeclPointerLevels> &&LHS,
   if (RHS->empty())
     return llvm::Error::success();
 
-  std::vector<DeclPointerLevels> LVecs, RVecs;
+  std::vector<DeclPointerLevelVec> LVecs, RVecs;
 
+  LVecs.reserve(LHS->size());
   for (const auto &L : *LHS)
     LVecs.push_back(elaborateHigherDeclPointerLevels(L));
+  RVecs.reserve(RHS->size());
   for (const auto &R : *RHS)
     RVecs.push_back(elaborateHigherDeclPointerLevels(R));
 
@@ -113,10 +115,11 @@ llvm::Error PointerFlowMatcher::addEdges(Expected<DeclPointerLevels> &&LHS,
   // Note that type checking ensures that 'p' and 'q' have
   // identical pointer levels, but '(a, n)' and '(b, m)' may have different
   // upper bounds on their pointer levels, when, for example, 'q' is a
-  // cast-expression.
+  // reinterpret-cast expression, which can have different pointer level than
+  // its sub-expression.
 
-  for (const DeclPointerLevels &L : LVecs)
-    for (const DeclPointerLevels &R : RVecs)
+  for (const DeclPointerLevelVec &L : LVecs)
+    for (const DeclPointerLevelVec &R : RVecs)
       for (const auto &[LDPL, RDPL] : llvm::zip(L, R)) {
         auto LEPL = toEntityPointerLevel(LDPL, Ctx, Extractor);
         if (!LEPL)
@@ -185,7 +188,7 @@ llvm::Error PointerFlowMatcher::matchesStmt(const Stmt *S,
     const Expr *RetExpr = RS->getRetValue();
     if (!RetExpr || !hasPtrOrArrType(RetExpr))
       return llvm::Error::success();
-    return addEdges(DeclPointerLevels{toDPL(RootDecl, true)}, toDPL(RetExpr));
+    return addEdges(DeclPointerLevelVec{toDPL(RootDecl, true)}, toDPL(RetExpr));
   }
   return llvm::Error::success();
 }
@@ -206,7 +209,7 @@ llvm::Error PointerFlowMatcher::matchesDecl(const Decl *D,
 
     // Match initializers to variables/fields of a pointer type:
     if (InitExpr && hasPtrOrArrType(VD))
-      return addEdges(DeclPointerLevels{toDPL(VD)}, toDPL(InitExpr));
+      return addEdges(DeclPointerLevelVec{toDPL(VD)}, toDPL(InitExpr));
   }
 
   // Match C++ constructor member-initializers:
@@ -215,7 +218,7 @@ llvm::Error PointerFlowMatcher::matchesDecl(const Decl *D,
       if (E->isDelegatingInitializer())
         return matches(DynTypedNode::create(*E->getInit()), RootDecl);
       if (const FieldDecl *FD = E->getMember(); FD && hasPtrOrArrType(FD)) {
-        if (auto Err = addEdges(DeclPointerLevels{toDPL(E->getMember())},
+        if (auto Err = addEdges(DeclPointerLevelVec{toDPL(E->getMember())},
                                 toDPL(E->getInit())))
           return Err;
       }
@@ -295,7 +298,7 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
     auto BaseDPL = toDPL(Base);
     // Apply ArrayElementIndirectLevel to BaseDPL
     BaseDPL.PointerLevel += ArrayElementIndirectLevel;
-    return addEdges(DeclPointerLevels{BaseDPL}, toDPL(InitExpr));
+    return addEdges(DeclPointerLevelVec{BaseDPL}, toDPL(InitExpr));
   }
   // Note that `Base`'s type is NOT the real LHS type when
   // ArrayElementIndirectLevel > 0:
