@@ -4319,6 +4319,29 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(Or, C01);
         }
       }
+
+      // (trunc (lshr X, S) & C0) | (lshr (trunc X), S & C1)
+      // --> (trunc (lshr X, S) & (C0 | C1) (and similar cases) 
+      // A = trunc (lshr X, S) B = lshr (trunc X), S
+      const APInt *ShiftAmt;
+      if (match(A, m_OneUse(m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt))))) &&
+          match(B, m_LShr(m_Trunc(m_Specific(X)),
+                          m_SpecificInt(ShiftAmt->getZExtValue())))) {
+        APInt CombinedMask = *C0 | *C1;
+        return BinaryOperator::CreateAnd(
+            A, ConstantInt::get(I.getType(), CombinedMask));
+      }
+      // A = lshr (trunc X), S
+      // B = trunc (lshr X, S)
+      const APInt *ReverseShiftAmt;
+      if (match(B, m_OneUse(m_Trunc(
+                       m_LShr(m_Value(X), m_APInt(ReverseShiftAmt))))) &&
+          match(A, m_LShr(m_Trunc(m_Specific(X)),
+                          m_SpecificInt(ReverseShiftAmt->getZExtValue())))) {
+        APInt CombinedMask = *C0 | *C1;
+        return BinaryOperator::CreateAnd(
+            B, ConstantInt::get(I.getType(), CombinedMask));
+      }
     }
 
     // Don't try to form a select if it's unlikely that we'll get rid of at
