@@ -59829,6 +59829,13 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
                        LHS.getOperand(1), CarryIn);
 
+  // Fold ADC(SHL(X,1),0,Carry) -> ADC(X,X,Carry)
+  // iff the flag result is dead.
+  if (LHS.getOpcode() == ISD::SHL && isOneConstant(LHS.getOperand(1)) && RHSC &&
+      RHSC->isZero() && !needCarryOrOverflowFlag(SDValue(N, 1)))
+    return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
+                       LHS.getOperand(0), CarryIn);
+
   return SDValue();
 }
 
