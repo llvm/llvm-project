@@ -3787,17 +3787,19 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     ConstantRange VLRange = VLMAXRange;
     if (HasAVL) {
       APInt MaxVL = VLMAXRange.getUnsignedMax();
-      if (auto *AVL = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
-        const APInt &C = AVL->getValue();
+      Value *AVL = II.getArgOperand(0);
+      // vl > 0 if AVL > 0
+      APInt MinVL = APInt(BitWidth, isKnownNonZero(AVL, DL) ? 1 : 0);
+      if (auto *AVLC = dyn_cast<ConstantInt>(AVL)) {
+        const APInt &C = AVLC->getValue();
         // A constant AVL not exceeding the smallest possible VLMAX means vl is
         // exactly AVL, so replace the intrinsic with that constant.
         if (C.ule(VLMAXRange.getUnsignedMin()))
           return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), C));
-        VLRange = ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
-                                             APIntOps::umin(C, MaxVL) + 1);
-      } else {
         VLRange =
-            ConstantRange::getNonEmpty(APInt::getZero(BitWidth), MaxVL + 1);
+            ConstantRange::getNonEmpty(MinVL, APIntOps::umin(C, MaxVL) + 1);
+      } else {
+        VLRange = ConstantRange::getNonEmpty(MinVL, MaxVL + 1);
       }
     }
 
