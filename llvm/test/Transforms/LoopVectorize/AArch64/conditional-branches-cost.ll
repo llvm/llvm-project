@@ -1336,7 +1336,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i8> @llvm.masked.udiv.nxv4i8(<vscale x 4 x i8> [[TMP21]], <vscale x 4 x i8> [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP11]])
 ; PRED-NEXT:    [[TMP22:%.*]] = icmp ugt <vscale x 4 x i8> [[TMP13]], splat (i8 1)
 ; PRED-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[TMP22]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> splat (i32 255)
-; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> zeroinitializer
+; PRED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP16:%.*]] = zext <vscale x 4 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 4 x i32>
 ; PRED-NEXT:    [[TMP17:%.*]] = sub <vscale x 4 x i32> [[PREDPHI]], [[TMP16]]
 ; PRED-NEXT:    [[TMP18:%.*]] = sitofp <vscale x 4 x i32> [[TMP17]] to <vscale x 4 x float>

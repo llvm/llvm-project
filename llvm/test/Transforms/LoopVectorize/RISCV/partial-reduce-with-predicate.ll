@@ -447,7 +447,7 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP8]], <vscale x 4 x i1> [[TMP2]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 4 x i32> [[VEC_PHI]], [[TMP6]]
-; CHECK-NEXT:    [[PARTIAL_REDUCE8:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[TMP5]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE8:%.*]] = select <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[TMP5]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC_B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[PARTIAL_REDUCE7:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD2]] to <vscale x 4 x i32>
@@ -566,7 +566,7 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP12]], <vscale x 4 x i1> [[TMP5]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[PARTIAL_REDUCE7:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD2]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE8]], [[PARTIAL_REDUCE7]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE8]], i32 [[TMP0]])
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE8]]
 ; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP10]], [[INDEX]]
