@@ -6544,8 +6544,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
 
   if (MO.getSubReg()) {
-    const MachineFunction *MF = MO.getParent()->getMF();
-    const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
+    const TargetRegisterClass *SuperRC =
+        RI.getLargestLegalSuperClass(RC, MRI.getMF());
     if (!SuperRC)
       return false;
     return RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg()) != nullptr;
