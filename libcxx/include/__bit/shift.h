@@ -27,8 +27,12 @@ template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
   constexpr auto __n = static_cast<_Shift>(numeric_limits<make_unsigned_t<_Tp>>::digits);
   if constexpr (__is_signed_integer_v<_Shift>) {
     if (__cnt < 0) {
-      if (__cnt <= -__n)
-        return static_cast<_Tp>(__t < 0 ? -1 : 0);
+      if (__cnt <= -__n) {
+        if constexpr (__is_signed_integer_v<_Tp>)
+          return static_cast<_Tp>(__t < 0 ? -1 : 0);
+        else
+          return static_cast<_Tp>(0);
+      }
       return __t >> -__cnt;
     }
   }
@@ -46,10 +50,13 @@ template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
         return static_cast<_Tp>(0);
       return __t << -__cnt;
     }
-    if (__cnt >= __n)
+  }
+  if (__cnt >= __n) {
+    if constexpr (__is_signed_integer_v<_Tp>)
       return static_cast<_Tp>(__t < 0 ? -1 : 0);
-  } else if (__cnt >= __n)
-    return static_cast<_Tp>(0);
+    else
+      return static_cast<_Tp>(0);
+  }
   return __t >> __cnt;
 }
 
