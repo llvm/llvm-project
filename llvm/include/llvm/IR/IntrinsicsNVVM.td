@@ -1432,6 +1432,17 @@ class NVVM_EVICT_POLICY_RANGED_ARGPROP<int argNo, int upperBound = 2> {
   ];
 }
 
+// Helper that emits the intrinsic-property set for the `validate_pattern`
+// immediate argument used by the TMA g2s (global-to-shared copy) intrinsics.
+// The allowed values correspond to `TMAValidateDataPattern`, i.e. [0, 6).
+class NVVM_TMA_VALIDATE_PATTERN_ARGPROP<int argNo> {
+  list<IntrinsicProperty> Prop = [
+    Range<ArgIndex<argNo>, 0, 6>,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"validate_pattern">,
+                              ImmArgPrinter<"printTMAValidateDataPattern">]>
+  ];
+}
+
 class CP_ASYNC_BULK_TENSOR_PREFETCH_OVERRIDE_INTR<int dim, string mode,
                                                   string override,
                                                   bit IsEvict = 0>
@@ -1453,6 +1464,54 @@ class CP_ASYNC_BULK_TENSOR_PREFETCH_OVERRIDE_INTR<int dim, string mode,
       !if(IsEvict,
           NVVM_EVICT_POLICY_RANGED_ARGPROP<PolicyIdx>.Prop,
          [NVVM_ARG_NAME_PROP<!size(ArgsTy), "flag_cache_hint">.Prop]));
+}
+
+class CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, string override>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "g2s" # Suffix;
+  // The override_addr_dim/dim_stride variants support only 32-bit multicast masks.
+  LLVMType MulticastTy = !if(!eq(override, "override_addr"), llvm_anyint_ty,
+                             llvm_i32_ty);
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_shared_cluster_ptr_ty, // dst_dsmem_ptr
+       llvm_shared_ptr_ty,         // mbarrier_smem_ptr
+       llvm_ptr_ty],               // tensormap_ptr
+      OverrideTypes,               // override_addr
+      TensorDimsTy,                // actual tensor dims
+      Im2ColOffsetsTy,             // im2col offsets
+      [MulticastTy,                // cta_mask
+       llvm_i64_ty]);              // cache_hint
+  list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cta_mask
+                            llvm_i1_ty,   // Flag for cache_hint
+                            llvm_i32_ty,  // cta_group
+                            llvm_i32_ty]; // validate_pattern
+  defvar CtaGroupIdx = !add(!size(ArgsTy), 2);
+  defvar ValidateIdx = !add(!size(ArgsTy), 3);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       ReadOnly<ArgIndex<3>>,
+       Range<ArgIndex<CtaGroupIdx>, 0, 3>],
+      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<ValidateIdx>.Prop);
+}
+
+class CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode, string override>
+    : CP_ASYNC_BULK_TENSOR_OVERRIDE_BASE<dim, mode, override> {
+  string Name = Prefix # "g2s_cta" # Suffix;
+  list<LLVMType> ArgsTy = !listconcat(
+      [llvm_shared_ptr_ty,  // dst_smem_ptr
+       llvm_shared_ptr_ty,  // mbarrier_smem_ptr
+       llvm_ptr_ty],        // tensormap_ptr
+      OverrideTypes,        // override_addr
+      TensorDimsTy,         // actual tensor dims
+      Im2ColOffsetsTy,      // im2col offsets
+      [llvm_i64_ty]);       // cache_hint
+  list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cache_hint
+                            llvm_i32_ty]; // validate_pattern
+  defvar ValidateIdx = !add(!size(ArgsTy), 1);
+  list<IntrinsicProperty> IntrProp = !listconcat(
+      [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       ReadOnly<ArgIndex<3>>],
+      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<ValidateIdx>.Prop);
 }
 
 // Applypriority TMA variants.
@@ -3186,18 +3245,22 @@ foreach dim = 1...5 in {
                            llvm_ptr_ty],        // tensormap_ptr
                           tensor_dim_args,      // actual tensor dims
                           im2col_offsets_args,  // im2col offsets
-                          [llvm_i16_ty,         // cta_mask
+                          [llvm_anyint_ty,      // cta_mask
                            llvm_i64_ty]);       // cache_hint
     defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
                         llvm_i1_ty,             // Flag for cache_hint
-                        llvm_i32_ty];           // Flag for cta_group
+                        llvm_i32_ty,            // cta_group
+                        llvm_i32_ty];           // validate_pattern
     defvar cta_group_idx = !add(
                              !size(g2s_params),
-                             !sub(!size(g2s_flags), 1));
-    defvar g2s_props = [IntrConvergent,
-                        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-                        // Allowed values for cta_group are {0,1,2} i.e [0, 3).
-                        Range<ArgIndex<cta_group_idx>, 0, 3>];
+                             !sub(!size(g2s_flags), 2));
+    defvar validate_idx = !add(cta_group_idx, 1);
+    defvar g2s_props = !listconcat(
+        [IntrConvergent,
+         WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+         // Allowed values for cta_group are [0, 3).
+         Range<ArgIndex<cta_group_idx>, 0, 3>],
+        NVVM_TMA_VALIDATE_PATTERN_ARGPROP<validate_idx>.Prop);
     def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[], g2s_params, g2s_flags, g2s_props>;
 
@@ -3236,8 +3299,24 @@ foreach dim = 1...5 in {
             : DefaultAttrsIntrinsicFlags<[], prefetch_evict_override.ArgsTy,
                                           prefetch_evict_override.FlagsTy,
                                           prefetch_evict_override.IntrProp>;
+      // G2S + Override
+      foreach g2s_override =
+          [CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<dim, mode, override>] in
+        def g2s_override.Name
+            : DefaultAttrsIntrinsicFlags<[], g2s_override.ArgsTy,
+                                         g2s_override.FlagsTy,
+                                         g2s_override.IntrProp>;
+      // G2S CTA + Override
+      foreach g2s_cta_override =
+          [CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<dim, mode, override>] in
+        def g2s_cta_override.Name
+            : DefaultAttrsIntrinsicFlags<[], g2s_cta_override.ArgsTy,
+                                         g2s_cta_override.FlagsTy,
+                                         g2s_cta_override.IntrProp>;
     }
 
+    defvar g2s_cta_validate_idx = !add(!size(tensor_dim_args),
+                                       !add(!size(im2col_offsets_args), 5));
     def int_nvvm_cp_async_bulk_tensor_g2s_cta_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_shared_ptr_ty,  // dst_ptr
@@ -3246,8 +3325,11 @@ foreach dim = 1...5 in {
                        tensor_dim_args,     // actual tensor dims
                        im2col_offsets_args, // im2col offsets
                        [llvm_i64_ty]),      // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+          [llvm_i1_ty,                      // Flag for cache_hint
+           llvm_i32_ty],                    // validate_pattern
+          !listconcat([IntrConvergent, WriteOnly<ArgIndex<0>>,
+                       ReadOnly<ArgIndex<2>>],
+                      NVVM_TMA_VALIDATE_PATTERN_ARGPROP<g2s_cta_validate_idx>.Prop)>;
   }
 }
 
@@ -3259,15 +3341,17 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d
        llvm_shared_ptr_ty,         // mbarrier_ptr
        llvm_ptr_ty],               // tensormap_ptr
        !listsplat(llvm_i32_ty, 5), // co-ordinates
-      [llvm_i16_ty,                // cta_mask
+      [llvm_anyint_ty,             // cta_mask
        llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // Flag for cta_group
-      [IntrConvergent,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-       // Allowed values for cta_group are {0,1,2} i.e [0, 3).
-       Range<ArgIndex<12>, 0, 3>]>;
+       llvm_i32_ty,                // cta_group
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   // Allowed values for cta_group are [0, 3).
+                   Range<ArgIndex<12>, 0, 3>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<13>.Prop)>;
 
 def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
   : DefaultAttrsIntrinsicFlags<[],
@@ -3277,9 +3361,50 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
        llvm_ptr_ty],               // tensormap_ptr
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
-      [llvm_i1_ty],                // Flag for cache_hint
-      [IntrConvergent,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+      [llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
+
+// G2S + Gather4 + Override
+def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty,                // tensormap_ptr
+       llvm_global_ptr_ty],        // override_addr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_anyint_ty,             // cta_mask
+       llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty,                // cta_group
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   ReadOnly<ArgIndex<3>>,
+                   // Allowed values for cta_group are [0, 3).
+                   Range<ArgIndex<13>, 0, 3>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<14>.Prop)>;
+
+// G2S CTA + Gather4 + Override
+def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_override_addr_2d
+  : DefaultAttrsIntrinsicFlags<[],
+      !listconcat(
+      [llvm_shared_ptr_ty,         // dst_shared_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_ptr_ty,                // tensormap_ptr
+       llvm_global_ptr_ty],        // override_addr
+       !listsplat(llvm_i32_ty, 5), // co-ordinates
+      [llvm_i64_ty]),              // cache_hint
+      [llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // validate_pattern
+      !listconcat([IntrConvergent,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+                   ReadOnly<ArgIndex<3>>],
+                  NVVM_TMA_VALIDATE_PATTERN_ARGPROP<11>.Prop)>;
 
 // TMA prefetch for tile::gather4
 def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d

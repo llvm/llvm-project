@@ -567,6 +567,19 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
   llvm_unreachable("Invalid cta_group in printCTAGroup");
 }
 
+void NVPTXInstPrinter::printTMAValidateDataFlags(const MCInst *MI, int OpNum,
+                                                 const MCSubtargetInfo &,
+                                                 raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using VDTy = nvvm::TMAValidateDataPattern;
+  const VDTy Pattern = static_cast<VDTy>(MO.getImm());
+  // Qualifier omitted for disabled pattern
+  if (Pattern == VDTy::DISABLED)
+    return;
+  O << ".mbarrier::report::validity::"
+    << nvvm::getTMAValidateDataPatternName(Pattern);
+}
+
 void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &, raw_ostream &O,
                                         StringRef Modifier) {
