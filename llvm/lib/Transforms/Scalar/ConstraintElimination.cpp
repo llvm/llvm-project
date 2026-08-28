@@ -1319,9 +1319,11 @@ static bool canStrengthenFlags(Instruction *I) {
 /// a signed range if \p Signed is set and as an unsigned range otherwise.
 static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
                             const ConstantRange &R, bool Signed) {
-  if (R.isFullSet() || R.isEmptySet() ||
-      (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
     return false;
+
+  if (R.isFullSet())
+    return true;
 
   unsigned BitWidth = R.getBitWidth();
   APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();

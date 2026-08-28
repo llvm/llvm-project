@@ -1360,7 +1360,7 @@ define i1 @shl_nsw_by_bw_minus_1(i64 %x) {
 ; Shift returns poison in this case, just make sure we don't crash.
 define i1 @shl_nsw_by_bw(i64 %x) {
 ; CHECK-LABEL: @shl_nsw_by_bw(
-; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 64
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nuw nsw i64 [[X:%.*]], 64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
@@ -1377,7 +1377,7 @@ define i1 @shl_nsw_by_bw(i64 %x) {
 ; Shift returns poison in this case, just make sure we don't crash.
 define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
 ; CHECK-LABEL: @shl_nsw_by_bw_plus_1(
-; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 65
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nuw nsw i64 [[X:%.*]], 65
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
@@ -1464,7 +1464,7 @@ define i1 @shl_nuw_signed_shift_zero(i8 %x) {
 ; CHECK-LABEL: @shl_nuw_signed_shift_zero(
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 32
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 0
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i8 [[X]], 0
 ; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[T]]
 ;
