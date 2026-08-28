@@ -1899,23 +1899,6 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   }
 }
 
-/// Try to see if all of \p Blend's masks share a common value logically and'ed
-/// and remove it from the masks.
-static void removeCommonBlendMask(VPBlendRecipe *Blend) {
-  if (Blend->isNormalized())
-    return;
-  VPValue *CommonEdgeMask;
-  if (!match(Blend->getMask(0),
-             m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
-    return;
-  for (unsigned I = 0; I < Blend->getNumIncomingValues(); I++)
-    if (!match(Blend->getMask(I),
-               m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue())))
-      return;
-  for (unsigned I = 0; I < Blend->getNumIncomingValues(); I++)
-    Blend->setMask(I, Blend->getMask(I)->getDefiningRecipe()->getOperand(1));
-}
-
 /// Normalize and simplify VPBlendRecipes. Should be run after combineRecipes
 /// to make sure the masks are simplified.
 static void simplifyBlends(VPlan &Plan) {
@@ -1923,8 +1906,6 @@ static void simplifyBlends(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPBlendRecipe &Blend :
          make_early_inc_range(make_isa_range<VPBlendRecipe>(*VPBB))) {
-      removeCommonBlendMask(&Blend);
-
       // Try to remove redundant blend recipes.
       SmallPtrSet<VPValue *, 4> UniqueValues;
       if (Blend.isNormalized() || !match(Blend.getMask(0), m_False()))
