@@ -10113,7 +10113,7 @@ uint32x2_t test_pnclipup_u32x2(uint64_t rs1, uint64_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqacc_h00_i32(
@@ -10121,7 +10121,7 @@ uint32x2_t test_pnclipup_u32x2(uint64_t rs1, uint64_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 
@@ -10133,7 +10133,7 @@ int32_t test_mqacc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqacc_h01_i32(
@@ -10141,7 +10141,7 @@ int32_t test_mqacc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mqacc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
@@ -10153,7 +10153,7 @@ int32_t test_mqacc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqacc_h11_i32(
@@ -10161,7 +10161,7 @@ int32_t test_mqacc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.h11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqacc.11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mqacc_h11_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
@@ -10173,7 +10173,7 @@ int32_t test_mqacc_h11_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqracc_h00_i32(
@@ -10181,7 +10181,7 @@ int32_t test_mqacc_h11_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.00.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mqracc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
@@ -10193,7 +10193,7 @@ int32_t test_mqracc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqracc_h01_i32(
@@ -10201,7 +10201,7 @@ int32_t test_mqracc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.01.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mqracc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
@@ -10213,7 +10213,7 @@ int32_t test_mqracc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV32-NEXT:    ret i32 [[TMP2]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mqracc_h11_i32(
@@ -10221,7 +10221,7 @@ int32_t test_mqracc_h01_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.h11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.mqracc.11.i32.v2i16(i32 [[RD]], <2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 // RV64-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mqracc_h11_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
@@ -10379,7 +10379,7 @@ int32x2_t test_pmqracc_h11_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqacc_w00_i64(
@@ -10387,7 +10387,7 @@ int32x2_t test_pmqracc_h11_i32x2(int32x2_t rd, int16x4_t rs1, int16x4_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqacc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
@@ -10399,7 +10399,7 @@ int64_t test_mqacc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqacc_w01_i64(
@@ -10407,7 +10407,7 @@ int64_t test_mqacc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqacc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
@@ -10419,7 +10419,7 @@ int64_t test_mqacc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqacc_w11_i64(
@@ -10427,7 +10427,7 @@ int64_t test_mqacc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.w11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqacc.11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqacc_w11_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
@@ -10439,7 +10439,7 @@ int64_t test_mqacc_w11_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqracc_w00_i64(
@@ -10447,7 +10447,7 @@ int64_t test_mqacc_w11_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.00.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqracc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
@@ -10459,7 +10459,7 @@ int64_t test_mqracc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqracc_w01_i64(
@@ -10467,7 +10467,7 @@ int64_t test_mqracc_w00_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.01.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
@@ -10479,7 +10479,7 @@ int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV32-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV32-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV32-NEXT:    ret i64 [[TMP2]]
 //
 // RV64-LABEL: define dso_local i64 @test_mqracc_w11_i64(
@@ -10487,7 +10487,7 @@ int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
 // RV64-NEXT:    [[TMP1:%.*]] = bitcast i64 [[RS2_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.w11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
+// RV64-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.mqracc.11.i64.v2i32(i64 [[RD]], <2 x i32> [[TMP0]], <2 x i32> [[TMP1]])
 // RV64-NEXT:    ret i64 [[TMP2]]
 //
 int64_t test_mqracc_w11_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {

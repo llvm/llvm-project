@@ -12270,28 +12270,22 @@ static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_h00:
-  case Intrinsic::riscv_mqacc_w00:
+  case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
     return RISCVISD::MQACC_00;
-  case Intrinsic::riscv_mqacc_h01:
-  case Intrinsic::riscv_mqacc_w01:
+  case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
     return RISCVISD::MQACC_01;
-  case Intrinsic::riscv_mqacc_h11:
-  case Intrinsic::riscv_mqacc_w11:
+  case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
     return RISCVISD::MQACC_11;
-  case Intrinsic::riscv_mqracc_h00:
-  case Intrinsic::riscv_mqracc_w00:
+  case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
     return RISCVISD::MQRACC_00;
-  case Intrinsic::riscv_mqracc_h01:
-  case Intrinsic::riscv_mqracc_w01:
+  case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
     return RISCVISD::MQRACC_01;
-  case Intrinsic::riscv_mqracc_h11:
-  case Intrinsic::riscv_mqracc_w11:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::MQRACC_11;
   }
@@ -12301,22 +12295,22 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_h00:
+  case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
     return RISCVISD::PMQACC_W_H00;
-  case Intrinsic::riscv_mqacc_h01:
+  case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
     return RISCVISD::PMQACC_W_H01;
-  case Intrinsic::riscv_mqacc_h11:
+  case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
     return RISCVISD::PMQACC_W_H11;
-  case Intrinsic::riscv_mqracc_h00:
+  case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
     return RISCVISD::PMQRACC_W_H00;
-  case Intrinsic::riscv_mqracc_h01:
+  case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
     return RISCVISD::PMQRACC_W_H01;
-  case Intrinsic::riscv_mqracc_h11:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::PMQRACC_W_H11;
   }
@@ -12535,36 +12529,25 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     llvm_unreachable("unexpected VT for pnclipp/pnclipup on RV32");
   }
-  case Intrinsic::riscv_mqacc_h00:
-  case Intrinsic::riscv_mqacc_h01:
-  case Intrinsic::riscv_mqacc_h11:
-  case Intrinsic::riscv_mqracc_h00:
-  case Intrinsic::riscv_mqracc_h01:
-  case Intrinsic::riscv_mqracc_h11:
+  case Intrinsic::riscv_mqacc_00:
+  case Intrinsic::riscv_mqacc_01:
+  case Intrinsic::riscv_mqacc_11:
+  case Intrinsic::riscv_mqracc_00:
+  case Intrinsic::riscv_mqracc_01:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqacc_h00:
   case Intrinsic::riscv_pmqacc_h01:
   case Intrinsic::riscv_pmqacc_h11:
   case Intrinsic::riscv_pmqracc_h00:
   case Intrinsic::riscv_pmqracc_h01:
-  case Intrinsic::riscv_pmqracc_h11:
-  case Intrinsic::riscv_mqacc_w00:
-  case Intrinsic::riscv_mqacc_w01:
-  case Intrinsic::riscv_mqacc_w11:
-  case Intrinsic::riscv_mqracc_w00:
-  case Intrinsic::riscv_mqracc_w01:
-  case Intrinsic::riscv_mqracc_w11: {
+  case Intrinsic::riscv_pmqracc_h11: {
     EVT VT = Op.getValueType();
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
     MVT XLenVT = Subtarget.getXLenVT();
 
-    bool IsScalarHalfword = IntNo == Intrinsic::riscv_mqacc_h00 ||
-                            IntNo == Intrinsic::riscv_mqacc_h01 ||
-                            IntNo == Intrinsic::riscv_mqacc_h11 ||
-                            IntNo == Intrinsic::riscv_mqracc_h00 ||
-                            IntNo == Intrinsic::riscv_mqracc_h01 ||
-                            IntNo == Intrinsic::riscv_mqracc_h11;
+    bool IsScalarHalfword = VT == MVT::i32;
     if (Subtarget.is64Bit() && IsScalarHalfword)
       return SDValue();
 
@@ -17092,56 +17075,52 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
-    case Intrinsic::riscv_mqacc_h00:
-    case Intrinsic::riscv_mqacc_h01:
-    case Intrinsic::riscv_mqacc_h11:
-    case Intrinsic::riscv_mqracc_h00:
-    case Intrinsic::riscv_mqracc_h01:
-    case Intrinsic::riscv_mqracc_h11: {
+    case Intrinsic::riscv_mqacc_00:
+    case Intrinsic::riscv_mqacc_01:
+    case Intrinsic::riscv_mqacc_11:
+    case Intrinsic::riscv_mqracc_00:
+    case Intrinsic::riscv_mqracc_01:
+    case Intrinsic::riscv_mqracc_11: {
       EVT VT = N->getValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
+      if (Subtarget.is64Bit() && VT == MVT::i32) {
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        auto WidenSrc = [&](SDValue V) {
+          return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                             {V, DAG.getUNDEF(MVT::v2i16)});
+        };
+        SDValue Rs1 = WidenSrc(N->getOperand(2));
+        SDValue Rs2 = WidenSrc(N->getOperand(3));
+        unsigned Opc = getRVPQFormatAccOpcode(IntNo);
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
         return;
-      SDValue Rd =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      auto WidenSrc = [&](SDValue V) {
-        return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
-                           {V, DAG.getUNDEF(MVT::v2i16)});
-      };
-      SDValue Rs1 = WidenSrc(N->getOperand(2));
-      SDValue Rs2 = WidenSrc(N->getOperand(3));
-      unsigned Opc = getRVPQFormatAccOpcode(IntNo);
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
-      return;
-    }
-    case Intrinsic::riscv_mqacc_w00:
-    case Intrinsic::riscv_mqacc_w01:
-    case Intrinsic::riscv_mqacc_w11:
-    case Intrinsic::riscv_mqracc_w00:
-    case Intrinsic::riscv_mqracc_w01:
-    case Intrinsic::riscv_mqracc_w11: {
-      if (Subtarget.is64Bit() || N->getValueType(0) != MVT::i64)
+      }
+
+      if (!Subtarget.is64Bit() && VT == MVT::i64) {
+        bool IsRound = IntNo == Intrinsic::riscv_mqracc_00 ||
+                       IntNo == Intrinsic::riscv_mqracc_01 ||
+                       IntNo == Intrinsic::riscv_mqracc_11;
+        bool Hi1 = IntNo == Intrinsic::riscv_mqacc_11 ||
+                   IntNo == Intrinsic::riscv_mqracc_11;
+        bool Hi2 = IntNo == Intrinsic::riscv_mqacc_01 ||
+                   IntNo == Intrinsic::riscv_mqacc_11 ||
+                   IntNo == Intrinsic::riscv_mqracc_01 ||
+                   IntNo == Intrinsic::riscv_mqracc_11;
+        MVT XLenVT = Subtarget.getXLenVT();
+        SDValue Rs1 = N->getOperand(2);
+        SDValue Rs2 = N->getOperand(3);
+        SDValue A = DAG.getExtractVectorElt(DL, XLenVT, Rs1, Hi1 ? 1 : 0);
+        SDValue B = DAG.getExtractVectorElt(DL, XLenVT, Rs2, Hi2 ? 1 : 0);
+        auto [RdLo, RdHi] =
+            DAG.SplitScalar(N->getOperand(1), DL, XLenVT, XLenVT);
+        unsigned Opc = IsRound ? RISCVISD::MQRWACC : RISCVISD::MQWACC;
+        SDVTList VTs = DAG.getVTList(XLenVT, XLenVT);
+        SDValue Acc = DAG.getNode(Opc, DL, VTs, {RdLo, RdHi, A, B});
+        Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                                      Acc.getValue(0), Acc.getValue(1)));
         return;
-      bool IsRound = IntNo == Intrinsic::riscv_mqracc_w00 ||
-                     IntNo == Intrinsic::riscv_mqracc_w01 ||
-                     IntNo == Intrinsic::riscv_mqracc_w11;
-      bool Hi1 = IntNo == Intrinsic::riscv_mqacc_w11 ||
-                 IntNo == Intrinsic::riscv_mqracc_w11;
-      bool Hi2 = IntNo == Intrinsic::riscv_mqacc_w01 ||
-                 IntNo == Intrinsic::riscv_mqacc_w11 ||
-                 IntNo == Intrinsic::riscv_mqracc_w01 ||
-                 IntNo == Intrinsic::riscv_mqracc_w11;
-      MVT XLenVT = Subtarget.getXLenVT();
-      SDValue Rs1 = N->getOperand(2);
-      SDValue Rs2 = N->getOperand(3);
-      SDValue A = DAG.getExtractVectorElt(DL, XLenVT, Rs1, Hi1 ? 1 : 0);
-      SDValue B = DAG.getExtractVectorElt(DL, XLenVT, Rs2, Hi2 ? 1 : 0);
-      auto [RdLo, RdHi] = DAG.SplitScalar(N->getOperand(1), DL, XLenVT, XLenVT);
-      unsigned Opc = IsRound ? RISCVISD::MQRWACC : RISCVISD::MQWACC;
-      SDVTList VTs = DAG.getVTList(XLenVT, XLenVT);
-      SDValue Acc = DAG.getNode(Opc, DL, VTs, {RdLo, RdHi, A, B});
-      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
-                                    Acc.getValue(0), Acc.getValue(1)));
+      }
       return;
     }
     case Intrinsic::riscv_orc_b:
