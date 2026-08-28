@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/MemoryFlags.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/MemoryFlags.h"
 
 #include <fcntl.h>
 #include <string.h>

@@ -1205,7 +1205,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
         Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
-    if (!Status)
+    if (Status != Legalized)
       return {};
 
     // Compare temp with #0 to get the final result.
