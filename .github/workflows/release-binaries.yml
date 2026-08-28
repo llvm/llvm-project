@@ -287,9 +287,9 @@ jobs:
         WIX_VERSION: 3.14
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
       run: |
-        choco install wixtoolset --version $env:WIX_VERSION.1.20250415
+        choco install wixtoolset --version $($env:WIX_VERSION).1.20250415
         # Add wix install directory to PATH.
-        echo "C:\Program Files (x86)\WiX Toolset v$env:WIX_VERSION\bin" >> $env:GITHUB_PATH
+        echo "C:\Program Files (x86)\WiX Toolset v$($env:WIX_VERSION\bin)" >> $env:GITHUB_PATH
 
     - name: Build Windows
       id: build-windows
