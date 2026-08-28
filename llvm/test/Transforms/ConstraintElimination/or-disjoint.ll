@@ -16,19 +16,15 @@ define void @test_or_disjoint_as_add_slt(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[I_1]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[I_4:%.*]] = or disjoint i8 [[A]], 4
-; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i8 [[I_4]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[A_1:%.*]] = or disjoint i8 [[A]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[A_1]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[A_2:%.*]] = or disjoint i8 [[A]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[A_2]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[A_3:%.*]] = or disjoint i8 [[A]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[A_3]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[A_4:%.*]] = or disjoint i8 [[A]], 4
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i8 [[A_4]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
@@ -73,13 +69,11 @@ define void @test_or_disjoint_as_add_variable_operands(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i8 [[OR_1]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[OR_2:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[OR_2]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -109,8 +103,7 @@ define void @test_or_disjoint_as_add_fact(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sle i8 [[A_OR_4]], [[B]]
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[A]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[A]], [[B]]
