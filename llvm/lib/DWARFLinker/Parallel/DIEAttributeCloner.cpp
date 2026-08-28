@@ -133,6 +133,25 @@ void DIEAttributeCloner::clone() {
                                 OutUnit->getDebugStrOffsetsHeaderSize())
             .second;
   }
+
+  // No DW_AT_addr_base seen, as GCC emits; add one for the addrx-indexed
+  // entries. Not in update mode, where HasAddrBaseAttr is never set.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasAddrBaseAttr &&
+      !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
+            true},
+        PatchesOffsets);
+
+    AttrOutOffset += Generator
+                         .addScalarAttribute(dwarf::DW_AT_addr_base,
+                                             dwarf::DW_FORM_sec_offset,
+                                             OutUnit->getDebugAddrHeaderSize())
+                         .second;
+  }
 }
 
 bool DIEAttributeCloner::shouldSkipAttribute(
@@ -532,6 +551,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
     // Use size of .debug_addr header as attribute value. The offset to
     // .debug_addr would be added later while patching.
+    AttrInfo.HasAddrBaseAttr = true;
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
                             OutUnit->getDebugAddrHeaderSize())
