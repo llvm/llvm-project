@@ -2483,7 +2483,8 @@ StmtResult Parser::ParseReturnStatement() {
     if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus) {
       R = ParseInitializer();
       if (R.isUsable())
-        DiagCompat(R.get()->getBeginLoc(), diag_compat::generalized_initializer_lists);
+        DiagCompat(R.get()->getBeginLoc(),
+                   diag_compat::generalized_initializer_lists);
     } else
       R = ParseExpression();
     if (R.isInvalid()) {
