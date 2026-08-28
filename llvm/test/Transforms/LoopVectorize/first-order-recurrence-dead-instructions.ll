@@ -8,13 +8,13 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i8> poison, i8 [[FOR_START]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[FOR_START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i8> poison, i8 [[FOR_START]], i32 3
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i8> [[VECTOR_RECUR_INIT]], <4 x i8> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i8> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[BROADCAST_SPLAT]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 2
@@ -23,8 +23,6 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 5
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i8> [[VECTOR_RECUR]], <4 x i8> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLAT]], <4 x i8> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP3]]
@@ -33,21 +31,17 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i8> [[TMP0]], i64 0
-; CHECK-NEXT:    store i8 [[TMP17]], ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i8> [[TMP0]], i64 1
-; CHECK-NEXT:    store i8 [[TMP18]], ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i8> [[TMP0]], i64 2
-; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP11]], align 1
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i8> [[TMP0]], i64 3
-; CHECK-NEXT:    store i8 [[TMP20]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i8> [[TMP26]], i64 0
-; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP13]], align 1
+; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i8> [[TMP26]], i64 1
-; CHECK-NEXT:    store i8 [[TMP23]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    store i8 [[TMP23]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i8> [[TMP26]], i64 2
-; CHECK-NEXT:    store i8 [[TMP24]], ptr [[TMP15]], align 1
+; CHECK-NEXT:    store i8 [[TMP24]], ptr [[TMP11]], align 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i8> [[TMP26]], i64 3
+; CHECK-NEXT:    store i8 [[TMP25]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP13]], align 1
+; CHECK-NEXT:    store i8 [[TMP23]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    store i8 [[TMP24]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    store i8 [[TMP25]], ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], -8
