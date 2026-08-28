@@ -91,7 +91,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeFactors
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::expandSCEVsToVPInstructions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::cse
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes@3
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes@4
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeBranchOnConst@4
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyKnownEVL
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::expandSCEVs

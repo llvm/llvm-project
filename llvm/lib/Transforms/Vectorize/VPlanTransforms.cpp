@@ -1751,8 +1751,8 @@ void VPlanTransforms::narrowScatters(VPlan &Plan, VPCostContext &Ctx,
                               {}, nullptr, ElementCount::getFixed(1), Ctx) +
                               VPInstruction::getCostForRecipeWithOpcodeAndTypes(
                                   Instruction::ZExt, IndexTy,
-                                  {Type::getInt32Ty(Ctx.LLVMCtx)}, nullptr, VF,
-                                  Ctx)
+                                  {Type::getInt32Ty(Ctx.LLVMCtx)}, nullptr,
+                                  ElementCount::getFixed(1), Ctx)
                         : VPInstruction::getCostForRecipeWithOpcodeAndTypes(
                               VPInstruction::LastActiveLane, IndexTy,
                               {Type::getInt1Ty(Ctx.LLVMCtx)}, nullptr, VF, Ctx);
