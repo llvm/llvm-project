@@ -256,12 +256,12 @@ jobs:
       id: setup-stage
       shell: bash
       run: |
-        build_prefix=`pwd`
-        if [ "${{ runner.os }}" = "Linux" ]; then
-          sudo chown $USER:$USER /mnt/
+        build_prefix="$GITHUB_WORKSPACE"
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo chown "$USER:$USER" /mnt/
           build_prefix=/mnt/
         fi
-        echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
+        echo "build-prefix=$build_prefix" >> "$GITHUB_OUTPUT"
 
     - name: Configure Linux/MacOS
       id: build
@@ -325,14 +325,25 @@ jobs:
       run: |
         cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
+    # The release ref may predate the compression utility, so check it out
+    # from the same revision as this workflow.
+    - name: Checkout release compression utility
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        repository: ${{ job.workflow_repository }}
+        ref: ${{ job.workflow_sha }}
+        persist-credentials: false
+        path: release-compression
+        sparse-checkout: llvm/utils/release/repack-zstd.py
+        sparse-checkout-cone-mode: false
+
     - name: Create zstd compressed tarball
-      shell: bash
-      env:
-        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
-        RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
-        ZSTD: ${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}
-      run: |
-        xz -dc "$RELEASE_BINARY_FILENAME" | "$ZSTD" --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
+      run: >-
+        python release-compression/llvm/utils/release/repack-zstd.py
+        --input "${{ needs.prepare.outputs.release-binary-filename }}"
+        --output "${{ needs.prepare.outputs.release-binary-filename-zstd }}"
+        --work-dir "${{ steps.setup-stage.outputs.build-prefix }}"
+        --zstd "${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}"
 
     - name: Generate sha256 digest for binaries
       id: digest
