@@ -2260,6 +2260,29 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64: {
+    auto *CrcArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    auto *DataArg = dyn_cast<ConstantInt>(II.getArgOperand(1));
+    if (!CrcArg || !DataArg)
+      break;
+
+    // If both operands are constant, we can completely constant fold this.
+    uint64_t Crc = CrcArg->getZExtValue() & 0xffffffff;
+    uint64_t Data = DataArg->getZExtValue();
+    unsigned BitWidth = DataArg->getBitWidth();
+    Crc ^= Data;
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    const uint32_t Poly = 0x82F63B78;
+    for (unsigned Bit = 0; Bit != BitWidth; ++Bit) {
+      Crc = (Crc >> 1) ^ ((Crc & 1) ? Poly : 0);
+    }
+    Crc &= 0xffffffff;
+    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Crc));
+  }
+
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
