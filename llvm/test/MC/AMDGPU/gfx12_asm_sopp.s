@@ -35,6 +35,30 @@ s_cbranch_execnz 0x0
 s_cbranch_execnz 0x1234
 // GFX12: s_cbranch_execnz 4660                   ; encoding: [0x34,0x12,0xa6,0xbf]
 
+s_cbranch_cdbgsys 0x0
+// GFX12: s_cbranch_cdbgsys 0                     ; encoding: [0x00,0x00,0xa7,0xbf]
+
+s_cbranch_cdbgsys 0x1234
+// GFX12: s_cbranch_cdbgsys 4660                  ; encoding: [0x34,0x12,0xa7,0xbf]
+
+s_cbranch_cdbguser 0x0
+// GFX12: s_cbranch_cdbguser 0                    ; encoding: [0x00,0x00,0xa8,0xbf]
+
+s_cbranch_cdbguser 0x1234
+// GFX12: s_cbranch_cdbguser 4660                 ; encoding: [0x34,0x12,0xa8,0xbf]
+
+s_cbranch_cdbgsys_or_user 0x0
+// GFX12: s_cbranch_cdbgsys_or_user 0             ; encoding: [0x00,0x00,0xa9,0xbf]
+
+s_cbranch_cdbgsys_or_user 0x1234
+// GFX12: s_cbranch_cdbgsys_or_user 4660          ; encoding: [0x34,0x12,0xa9,0xbf]
+
+s_cbranch_cdbgsys_and_user 0x0
+// GFX12: s_cbranch_cdbgsys_and_user 0            ; encoding: [0x00,0x00,0xaa,0xbf]
+
+s_cbranch_cdbgsys_and_user 0x1234
+// GFX12: s_cbranch_cdbgsys_and_user 4660         ; encoding: [0x34,0x12,0xaa,0xbf]
+
 s_cbranch_execz 0x0
 // GFX12: s_cbranch_execz 0                       ; encoding: [0x00,0x00,0xa5,0xbf]
 
