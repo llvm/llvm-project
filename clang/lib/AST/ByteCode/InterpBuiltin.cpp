@@ -2134,26 +2134,39 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
     }
   }
 
-  const Descriptor *Desc = Ptr.getFieldDesc();
-  bool IsArray = Desc->isArray();
-  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+  // A string pointer has no Descriptor; treat it as an array of its
+  // character type.
+  bool IsArray;
+  QualType ElemTy;
+  if (Ptr.isStringPointer()) {
+    IsArray = true;
+    ElemTy = Ptr.asStringPointer()
+                 .getLiteral()
+                 ->getType()
+                 ->getAsArrayTypeUnsafe()
+                 ->getElementType();
+  } else {
+    const Descriptor *Desc = Ptr.getFieldDesc();
+    IsArray = Desc->isArray();
+    ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+  }
 
   if (IsArray)
     Ptr = Ptr.expand();
 
-  size_t BaseIdx = Ptr.getIndex();
-  size_t ArraySize = Ptr.getNumElems();
-  size_t RemainingElems = ArraySize - BaseIdx;
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
 
   unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
   if (ByteWidth > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, uint64_t(ByteWidth - 1));
     if (IsArray)
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << (uint64_t)(BaseIdx + ByteWidth - 1) << /*array*/ 0
-          << (uint64_t)ArraySize;
+          << LastIndex << /*array*/ 0 << ArraySize;
     else
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << (uint64_t)(BaseIdx + ByteWidth - 1) << /*non-array*/ 1;
+          << LastIndex << /*non-array*/ 1;
     return false;
   }
 
@@ -2170,7 +2183,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
       return false;
     uint64_t B;
     INT_TYPE_SWITCH_NO_BOOL(
-        ElemT, { B = static_cast<uint64_t>(BytePtr.deref<T>().toUnsigned()); });
+        ElemT, { B = static_cast<uint64_t>(BytePtr.load<T>().toUnsigned()); });
     Result |= APInt(BitWidth, B) << (8 * I);
   }
 
