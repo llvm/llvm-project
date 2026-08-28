@@ -122,10 +122,15 @@ func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i:
   return
 }
 
+// COM: Native i16 storage is supported by this test module's target.
 // CHECK-LABEL: @load_i16
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<i16, #spirv.storage_class<StorageBuffer>>)
 func.func @load_i16(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) {
   // CHECK-NOT: spirv.SDiv
-  //     CHECK: spirv.Load
+  //     CHECK: %[[BASE:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<i16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i16, stride=2> [0])>, StorageBuffer>
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %[[BASE]][%[[ZERO]], %[[ZERO]]] : {{.+}} -> !spirv.ptr<i16, StorageBuffer>
+  //     CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" %[[PTR]] : i16
   // CHECK-NOT: spirv.ShiftRightArithmetic
   %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
   return
