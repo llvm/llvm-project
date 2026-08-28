@@ -8,7 +8,7 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -44,7 +44,7 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericDylibManager::Create(ES);
+  auto Result = sps::createEPCGenericDylibManager(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());

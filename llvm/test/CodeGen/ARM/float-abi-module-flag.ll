@@ -14,9 +14,9 @@
 ; The triple default applies with no module flag.
 ; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 < %t/none.ll | FileCheck %s --check-prefix=SOFT
 
-; An explicit module flag takes precedence over a conflicting -float-abi option.
-; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=soft < %t/hard.ll | FileCheck %s --check-prefix=HARD
-; RUN: llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=hard < %t/soft.ll | FileCheck %s --check-prefix=SOFT
+; A -float-abi option conflicting with the module flag is an error.
+; RUN: not llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=soft < %t/hard.ll -filetype=null 2>&1 | FileCheck %s --check-prefix=CONFLICT-SOFT
+; RUN: not llc -mtriple=armv7-none-eabi -mattr=+vfp3 -float-abi=hard < %t/soft.ll -filetype=null 2>&1 | FileCheck %s --check-prefix=CONFLICT-HARD
 
 ;--- hard.ll
 define float @f(float %x) {
@@ -26,6 +26,7 @@ define float @f(float %x) {
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"hard"}
 ; HARD: vadd.f32 s0,
+; CONFLICT-SOFT: -float-abi=soft conflicts with the "float-abi" module flag "hard"
 
 ;--- soft.ll
 define float @f(float %x) {
@@ -35,6 +36,7 @@ define float @f(float %x) {
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"soft"}
 ; SOFT: vmov {{s[0-9]+}}, r0
+; CONFLICT-HARD: -float-abi=hard conflicts with the "float-abi" module flag "soft"
 
 ;--- none.ll
 define float @f(float %x) {

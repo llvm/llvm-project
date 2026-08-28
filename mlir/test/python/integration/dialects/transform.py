@@ -2,7 +2,7 @@
 
 from mlir.passmanager import PassManager
 from mlir.ir import Context, Location, Module, InsertionPoint, UnitAttr
-from mlir.dialects import scf, pdl, func, arith, linalg
+from mlir.dialects import scf, pdl, func, arith, linalg, tensor
 from mlir.dialects.transform import (
     get_parent_op,
     apply_patterns_canonicalization,
@@ -10,7 +10,7 @@ from mlir.dialects.transform import (
     any_op_t,
 )
 from mlir.dialects.transform.structured import structured_match
-from mlir.dialects.transform.loop import loop_unroll
+from mlir.dialects.transform.loop import loop_unroll, loop_unroll_full
 from mlir.dialects.transform.extras import named_sequence, apply_patterns
 from mlir.extras import types as T
 from mlir.dialects.builtin import module, ModuleOp
@@ -156,4 +156,73 @@ def test_apply_patterns(module_):
     # CHECK:           %[[VAL_3:.*]] = linalg.batch_reduce_matmul ins(%[[VAL_0]], %[[VAL_1]] : tensor<1x3x5xf32>, tensor<1x5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
     # CHECK:           return %[[VAL_3]] : tensor<3x3xf32>
     # CHECK:         }
+    print(module_)
+
+
+# CHECK-LABEL: TEST: test_loop_unroll_full
+@construct_and_print_in_module
+def test_loop_unroll_full(module_):
+    # CHECK-LABEL:   func.func @loop_unroll_full_op(
+    # CHECK-SAME:           %[[VAL_0:.*]]: tensor<4xf32>) -> f32 {
+    # CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+    # CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
+    # CHECK:           %[[VAL_3:.*]] = arith.constant 2 : index
+    # CHECK:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
+    # CHECK:           %[[VAL_5:.*]] = scf.for %[[VAL_6:.*]] = %[[VAL_1]] to %[[VAL_2]] step
+    # CHECK-SAME:           %[[VAL_3]] iter_args(%[[VAL_7:.*]] = %[[VAL_4]]) -> (f32) {
+    # CHECK:             %[[VAL_8:.*]] = tensor.extract %[[VAL_0]][%[[VAL_6]]] : tensor<4xf32>
+    # CHECK:             %[[VAL_9:.*]] = arith.addf %[[VAL_7]], %[[VAL_8]] : f32
+    # CHECK:             scf.yield %[[VAL_9]] : f32
+    # CHECK:           }
+    # CHECK:           return %[[VAL_5]] : f32
+    # CHECK:         }
+    @func.func(T.tensor(4, T.f32()))
+    def loop_unroll_full_op(arg0):
+        c0 = arith.constant(T.index(), 0)
+        c4 = arith.constant(T.index(), 4)
+        c2 = arith.constant(T.index(), 2)
+        c0_f32 = arith.constant(T.f32(), 0.0)
+
+        for i, acc, res in scf.for_(c0, c4, c2, [c0_f32]):
+            val = tensor.extract(arg0, [i])
+            add = arith.addf(acc, val)
+            scf.yield_([add])
+
+        return res
+
+    # CHECK-LABEL:   module attributes {transform.with_named_sequence} {
+    # CHECK:           transform.named_sequence @__transform_main(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK:             %[[VAL_1:.*]] = transform.structured.match ops{["scf.for"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
+    # CHECK:             transform.loop.unroll_full %[[VAL_1]] : !transform.any_op
+    # CHECK:             transform.yield
+    # CHECK:           }
+    # CHECK:         }
+    @module(attrs={"transform.with_named_sequence": UnitAttr.get()})
+    def mod():
+        @named_sequence("__transform_main", [any_op_t()], [])
+        def basic(target: any_op_t()):
+            loop = structured_match(any_op_t(), target, ops=["scf.for"])
+            loop_unroll_full(loop)
+
+    print(module_)
+
+    pm = PassManager.parse("builtin.module(transform-interpreter)")
+    pm.run(module_.operation)
+
+    # CHECK-LABEL: func.func @loop_unroll_full_op(
+    # CHECK-SAME:       %[[VAL_0:.*]]: tensor<4xf32>) -> f32 {
+    # CHECK:         %[[VAL_1:.*]] = arith.constant 0 : index
+    # CHECK:         %[[VAL_2:.*]] = arith.constant 4 : index
+    # CHECK:         %[[VAL_3:.*]] = arith.constant 2 : index
+    # CHECK:         %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
+    # CHECK:         %[[VAL_5:.*]] = arith.constant 4 : index
+    # CHECK:         %[[VAL_6:.*]] = tensor.extract %[[VAL_0]][%[[VAL_1]]] : tensor<4xf32>
+    # CHECK:         %[[VAL_7:.*]] = arith.addf %[[VAL_4]], %[[VAL_6]] : f32
+    # CHECK:         %[[VAL_8:.*]] = arith.constant 1 : index
+    # CHECK:         %[[VAL_9:.*]] = arith.muli %[[VAL_3]], %[[VAL_8]] : index
+    # CHECK:         %[[VAL_10:.*]] = arith.addi %[[VAL_1]], %[[VAL_9]] : index
+    # CHECK:         %[[VAL_11:.*]] = tensor.extract %[[VAL_0]][%[[VAL_10]]] : tensor<4xf32>
+    # CHECK:         %[[VAL_12:.*]] = arith.addf %[[VAL_7]], %[[VAL_11]] : f32
+    # CHECK:         return %[[VAL_12]] : f32
+    # CHECK:       }
     print(module_)

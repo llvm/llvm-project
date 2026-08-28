@@ -27,6 +27,7 @@
 #include <flang/Optimizer/Builder/BoxValue.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
+#include <flang/Optimizer/Support/InternalNames.h>
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
@@ -75,15 +76,16 @@ namespace lower {
 namespace omp {
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
-  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
-  // default mappers available so that OpenMP offloading can correctly map them.
-  if (semantics::IsIsoCType(&typeSpec))
-    return true;
-
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
       [&](const semantics::DerivedTypeSpec &spec) -> bool {
+    // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have
+    // implicit default mappers available so that OpenMP offloading can
+    // correctly map them.
+    if (semantics::IsIsoCType(&spec))
+      return true;
+
     if (!visited.insert(&spec).second)
       return false;
 
@@ -1096,6 +1098,33 @@ getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
 
   std::string mapperIdName =
       typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (!semantics::IsIsoCType(typeSpec) && !typeSpec->parameters().empty()) {
+    if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+            converter.genType(*typeSpec))) {
+      mapperIdName =
+          Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+              recordType);
+
+      auto [nameKind, deconstructed] =
+          fir::NameUniquer::deconstruct(recordType.getName());
+      if (nameKind == fir::NameUniquer::NameKind::DERIVED_TYPE) {
+        llvm::SmallVector<llvm::StringRef> modules;
+        llvm::SmallVector<llvm::StringRef> procs;
+        for (const std::string &module : deconstructed.modules)
+          modules.emplace_back(module);
+        for (const std::string &proc : deconstructed.procs)
+          procs.emplace_back(proc);
+        std::string kindlessMapperName = fir::NameUniquer::doGenerated(
+            modules, procs, deconstructed.blockId,
+            deconstructed.name + llvm::omp::OmpDefaultMapperName);
+        if (auto explicitMapper = converter.getModuleOp()
+                                      .lookupSymbol<mlir::omp::DeclareMapperOp>(
+                                          kindlessMapperName);
+            explicitMapper && explicitMapper.getType() == recordType)
+          return kindlessMapperName;
+      }
+    }
+  }
   if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
     mapperIdName =
         converter.mangleName(mapperIdName, sym->GetUltimate().owner());
@@ -1207,7 +1236,6 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
       bool needsDefaultMapper =
-          isAllocOrPointer ||
           requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
