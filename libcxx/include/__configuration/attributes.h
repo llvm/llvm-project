@@ -118,7 +118,7 @@
 // artificial allows for the instructions in an inlined function to be considered as part of its caller in debug
 // information. This allows for greater QoL for utilities like std::breakpoint(), because users won't break inside the
 // standard library.
-#define _LIBCPP_ARTIFICIAL [[__gnu__::__artificial__]]
+#define _LIBCPP_ARTIFICIAL __attribute__((__artificial__))
 
 #if __has_attribute(exclude_from_explicit_instantiation)
 #  define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))

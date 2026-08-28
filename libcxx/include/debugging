@@ -20,6 +20,7 @@ namespace std {
 }
 */
 
+#include "__configuration/attributes.h"
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/__config>
 #else
@@ -45,7 +46,7 @@ is_debugger_present() noexcept;
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ARTIFICIAL inline void breakpoint() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ARTIFICIAL _LIBCPP_ALWAYS_INLINE inline void breakpoint() noexcept {
 #    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #    else
@@ -53,7 +54,7 @@ _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ARTIFICIAL inline void breakpoint() noexc
 #    endif
 }
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ARTIFICIAL inline void breakpoint_if_debugging() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ARTIFICIAL _LIBCPP_ALWAYS_INLINE inline void breakpoint_if_debugging() noexcept {
   if (is_debugger_present())
     breakpoint();
 }

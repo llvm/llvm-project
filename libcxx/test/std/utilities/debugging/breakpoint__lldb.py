@@ -68,6 +68,8 @@ def run_test(debugger):
     for frame in stopped_thread:
         if not frame.IsValid():
             fail(f"Frame is not valid")
+        if "breakpoint" in frame.GetFunctionName():
+            fail("Stopped in breakpoint function")
         if frame.GetFunctionName() == "main":
             found_main = True
             break
