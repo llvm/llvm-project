@@ -551,6 +551,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed an assertion failure when instantiating a block that captures
+  `this` via a member access through a dependent base class.
 
 ### OpenACC Specific Changes
 
