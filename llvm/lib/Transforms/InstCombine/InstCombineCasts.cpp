@@ -2581,9 +2581,57 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
                   : BinaryOperator::CreateUDiv(X, C);
 }
 
+// fptoui (fadd (uitofp X), C) --> X
+//
+// X is already an integer, so if 0 <= C < 1 and X fits exactly in the float,
+// adding C can't reach the next integer and fptoui just gives X back. This is
+// the (unsigned)((float)x + 0.5f) rounding trick.
+static Value *foldFPToUIOfUIToFPInc(FPToUIInst &FI) {
+  Value *X;
+  const APFloat *C;
+  if (!match(FI.getOperand(0), m_c_FAdd(m_UIToFP(m_Value(X)), m_APFloat(C))))
+    return nullptr;
+
+  Type *IntTy = FI.getType();
+  if (X->getType() != IntTy)
+    return nullptr;
+
+  const fltSemantics &Sem = C->getSemantics();
+
+  // Need a finite C in [0, 1).
+  if (!C->isFinite() || C->isNegative() ||
+      C->compare(APFloat(Sem, 1)) != APFloat::cmpLessThan)
+    return nullptr;
+
+  // The uitofp has to be lossless, so the whole int type must fit in the
+  // mantissa.
+  unsigned Width = IntTy->getScalarSizeInBits();
+  int Mantissa =
+      FI.getOperand(0)->getType()->getScalarType()->getFPMantissaWidth();
+  if (Mantissa < 0 || Width > static_cast<unsigned>(Mantissa))
+    return nullptr;
+
+  // Also check the biggest value + C doesn't round up to 2^Width. Testing the
+  // top of the range is enough since the spacing between floats only grows.
+  APFloat Top(Sem);
+  Top.convertFromAPInt(APInt::getMaxValue(Width), /*IsSigned=*/false,
+                       APFloat::rmNearestTiesToEven);
+  Top.add(*C, APFloat::rmNearestTiesToEven);
+  APFloat Bound(Sem);
+  Bound.convertFromAPInt(APInt::getOneBitSet(Width + 1, Width),
+                         /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
+  if (Top.compare(Bound) != APFloat::cmpLessThan)
+    return nullptr;
+
+  return X;
+}
+
 Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
     return I;
+
+  if (Value *V = foldFPToUIOfUIToFPInc(FI))
+    return replaceInstUsesWith(FI, V);
 
   if (Instruction *I = foldFPtoI(FI, *this))
     return I;
