@@ -116,7 +116,6 @@ constexpr bool test() {
   { // non-simple bases -- ++ must instantiate __iterator<false>, whose underlying
     // iterator types differ from __iterator<true>'s
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
-    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
 
     auto it    = v.begin();

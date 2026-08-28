@@ -87,7 +87,6 @@ constexpr bool test() {
   { // non-simple bases -- -- must instantiate __iterator<false>; __prev calls
     // __cartesian_common_arg_end on a *non-const* base
     std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
-    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
     static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
 
     auto it    = v.end();
@@ -131,8 +130,6 @@ constexpr bool test() {
   }
 
   { // LWG3820: "cartesian_product_view::iterator::prev is not quite right".
-    // `prev` must not apply cartesian-common-arg-end to the first range, which is required to
-    // model neither common_range nor sized_range. This is the example from the issue.
     auto v  = std::views::cartesian_product(std::views::iota(0));
     auto it = v.begin() + 3;
     assert(*it == std::tuple(3));

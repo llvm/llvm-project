@@ -54,8 +54,6 @@ static_assert(std::default_initializable<cp_iter<IterDefaultCtrView, IterDefault
 static_assert(std::default_initializable<cp_iter<IterDefaultCtrView, IterDefaultCtrView, IterDefaultCtrView>>);
 
 // LWG3849: "cartesian_product_view::iterator's default constructor is overconstrained".
-// The default constructor used to require `forward_range<maybe-const<Const, First>>`; it is now
-// unconstrained, so a non-forward first range whose iterator is default-initializable still gets one.
 static_assert(!std::ranges::forward_range<InputCommonView>);
 static_assert(std::default_initializable<std::ranges::iterator_t<InputCommonView>>);
 static_assert(std::default_initializable<cp_iter<InputCommonView>>);

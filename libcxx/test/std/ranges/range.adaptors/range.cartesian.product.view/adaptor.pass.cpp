@@ -38,10 +38,7 @@ static_assert(!std::is_invocable_v<decltype((std::views::cartesian_product)), Ou
 
 static_assert(std::same_as<decltype(std::views::cartesian_product), decltype(std::ranges::views::cartesian_product)>);
 
-// [range.cartesian.overview]/2 makes views::cartesian_product(Es...) expression-equivalent to the expression it
-// returns, and [defns.expression-equivalent] requires expression-equivalent expressions to be either all
-// potentially-throwing or all not. Neither single_view's nor cartesian_product_view's constructor is noexcept, so
-// both forms are potentially-throwing today; the comparisons below keep holding if that ever changes.
+// views::cartesian_product(args) is expression-equivalent to the expression it returns.
 static_assert(!noexcept(std::views::cartesian_product()));
 static_assert(noexcept(std::views::cartesian_product()) == noexcept(std::views::single(std::tuple())));
 

@@ -13,22 +13,26 @@
 #include <ranges>
 #include <utility>
 
-// Non-simple, so the non-const begin()/end() overloads are viable. Not a common range, but sized and random access,
-// which is enough for cartesian_product_view to return an iterator from end() rather than default_sentinel_t.
-struct View : std::ranges::view_interface<View> {
+// Tests non-const begin()/end() overloads. Returns iterator from end().
+struct NonSimpleNonCommonView : std::ranges::view_interface<NonSimpleNonCommonView> {
   int* begin();
   const int* begin() const;
   volatile int* end();
   const volatile int* end() const;
   unsigned size() const;
 };
-static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
-static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
-static_assert(!std::ranges::common_range<View> && !std::ranges::common_range<const View>);
-static_assert(std::ranges::sized_range<View> && std::ranges::random_access_range<View>);
-static_assert(std::ranges::sized_range<const View> && std::ranges::random_access_range<const View>);
+static_assert(!std::same_as<std::ranges::iterator_t<NonSimpleNonCommonView>,
+                            std::ranges::iterator_t<const NonSimpleNonCommonView>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<NonSimpleNonCommonView>,
+                            std::ranges::sentinel_t<const NonSimpleNonCommonView>>);
+static_assert(!std::ranges::common_range<NonSimpleNonCommonView> &&
+              !std::ranges::common_range<const NonSimpleNonCommonView>);
+static_assert(std::ranges::sized_range<NonSimpleNonCommonView> &&
+              std::ranges::random_access_range<NonSimpleNonCommonView>);
+static_assert(std::ranges::sized_range<const NonSimpleNonCommonView> &&
+              std::ranges::random_access_range<const NonSimpleNonCommonView>);
 
-// Neither a common range nor sized and random access, so end() yields default_sentinel_t.
+// Non-sized and random access range so end() yields default_sentinel_t.
 struct NonCommonView : std::ranges::view_base {
   struct Sentinel {
     friend bool operator==(int*, Sentinel) noexcept;
@@ -42,7 +46,7 @@ static_assert(!std::ranges::sized_range<const NonCommonView>);
 void test() {
   // [range.cartesian.view]
 
-  std::ranges::cartesian_product_view<View> v{View{}};
+  std::ranges::cartesian_product_view<NonSimpleNonCommonView> v{NonSimpleNonCommonView{}};
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   v.begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -56,7 +60,6 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v).size();
 
-  // Not a common range: end() returns default_sentinel_t.
   const std::ranges::cartesian_product_view<NonCommonView> non_common{NonCommonView{}};
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   non_common.end();

@@ -82,11 +82,6 @@ constexpr bool test() {
   }
 
   { // size() folds mixed-width range_size_t values through their common type.
-    // The return type is the regression guard here: dropping the static_cast, or picking the
-    // first range's range_size_t instead of the common type, changes it. The *value* cannot
-    // be made to differ at constexpr-feasible extents, since integral promotion widens any
-    // narrow-typed multiply to int before it can wrap.
-    // The exact type is implementation-defined, so only libc++ pins it.
     std::array<int, 4> buf4{};
     std::array<int, 7> buf7{};
     SizeTypeView<unsigned short> narrow{buf4};

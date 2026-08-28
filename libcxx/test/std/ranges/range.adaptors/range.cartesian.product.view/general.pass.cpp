@@ -66,7 +66,6 @@ constexpr bool test() {
 
     {
       auto v = std::views::cartesian_product(a, t);
-      // Pin the specialisation: a simple base would silently drop this coverage.
       static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
       int seen = 0;
       for (auto _ : v)

@@ -64,7 +64,6 @@ constexpr bool test() {
   }
 
   { // LWG3761: "cartesian_product_view::iterator::operator- should pass by reference".
-    // distance-from is const-qualified, so operator- works on const iterator lvalues.
     std::ranges::cartesian_product_view v(ForwardSizedNonCommon{a}, ForwardSizedView{b});
     const auto it = v.begin();
 
