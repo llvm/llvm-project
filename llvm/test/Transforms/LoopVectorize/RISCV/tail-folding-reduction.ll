@@ -1665,15 +1665,12 @@ for.end:
 
 
 ; Test for multiuse-reductions that are tailfolded using strict predicates.
-define i64 @argmin_first_index(ptr %arr, i64 %N) {
+define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-LABEL: @argmin_first_index(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; IF-EVL:       for.body.preheader:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1687,7 +1684,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
+; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp slt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
@@ -1713,9 +1710,6 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ;
 ; NO-VP-LABEL: @argmin_first_index(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; NO-VP:       for.body.preheader:
-; NO-VP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
@@ -1723,7 +1717,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
@@ -1734,7 +1728,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
@@ -1755,14 +1749,14 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       for.body:
-; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; NO-VP-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP16]], [[MIN_017]]
@@ -1776,39 +1770,32 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body.preheader
-
-for.body.preheader:
-  %0 = load i64, ptr %arr, align 8
   br label %for.body
 
 for.body:
-  %i.018 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %min.017 = phi i64 [ %spec.select14, %for.body ], [ %0, %for.body.preheader ]
-  %minloc.016 = phi i64 [ %spec.select, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx2 = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %i.018
-  %2 = load i64, ptr %arrayidx2, align 8
-  %cmp3 = icmp slt i64 %2, %min.017
-  %spec.select = select i1 %cmp3, i64 %i.018, i64 %minloc.016
-  %spec.select14 = tail call i64 @llvm.smin.i64(i64 %2, i64 %min.017)
-  %inc = add nuw nsw i64 %i.018, 1
-  %exitcond.not = icmp eq i64 %inc, %N
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ %start, %entry ], [ %min, %for.body ]
+  %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
+  %0 = load i64, ptr %arrayidx
+  %cmp = icmp slt i64 %0, %rdx
+  %select = select i1 %cmp, i64 %iv, i64 %rdx2
+  %min = tail call i64 @llvm.smin.i64(i64 %0, i64 %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:
-  ret i64 %spec.select
+  ret i64 %select
 }
 
 
-define i64 @argmin_last_index(ptr %arr, i64 %N) {
+define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-LABEL: @argmin_last_index(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; IF-EVL:       for.body.preheader:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1822,7 +1809,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
+; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sle <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
@@ -1848,9 +1835,6 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ;
 ; NO-VP-LABEL: @argmin_last_index(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; NO-VP:       for.body.preheader:
-; NO-VP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
@@ -1858,7 +1842,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
@@ -1869,7 +1853,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sle <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
@@ -1890,14 +1874,14 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       for.body:
-; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; NO-VP-NEXT:    [[CMP3:%.*]] = icmp sle i64 [[TMP16]], [[MIN_017]]
@@ -1911,39 +1895,32 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body.preheader
-
-for.body.preheader:
-  %0 = load i64, ptr %arr, align 8
   br label %for.body
 
 for.body:
-  %i.018 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %min.017 = phi i64 [ %spec.select14, %for.body ], [ %0, %for.body.preheader ]
-  %minloc.016 = phi i64 [ %spec.select, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx2 = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %i.018
-  %2 = load i64, ptr %arrayidx2, align 8
-  %cmp3 = icmp sle i64 %2, %min.017 ; tests `sle` instead of strict `slt` from previous test
-  %spec.select = select i1 %cmp3, i64 %i.018, i64 %minloc.016
-  %spec.select14 = tail call i64 @llvm.smin.i64(i64 %2, i64 %min.017)
-  %inc = add nuw nsw i64 %i.018, 1
-  %exitcond.not = icmp eq i64 %inc, %N
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ %start, %entry ], [ %min, %for.body ]
+  %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
+  %0 = load i64, ptr %arrayidx
+  %cmp = icmp sle i64 %0, %rdx ; tests `sle` instead of strict `slt` from previous test
+  %select = select i1 %cmp, i64 %iv, i64 %rdx2
+  %min = tail call i64 @llvm.smin.i64(i64 %0, i64 %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:
-  ret i64 %spec.select
+  ret i64 %select
 }
 
 
-define i64 @argmax_first_index(ptr %arr, i64 %N) {
+define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-LABEL: @argmax_first_index(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; IF-EVL:       for.body.preheader:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1957,7 +1934,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
+; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
@@ -1983,9 +1960,6 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ;
 ; NO-VP-LABEL: @argmax_first_index(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; NO-VP:       for.body.preheader:
-; NO-VP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
@@ -1993,7 +1967,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
@@ -2004,7 +1978,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
@@ -2025,14 +1999,14 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       for.body:
-; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; NO-VP-NEXT:    [[CMP3:%.*]] = icmp sgt i64 [[TMP16]], [[MAX_017]]
@@ -2046,39 +2020,32 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body.preheader
-
-for.body.preheader:
-  %0 = load i64, ptr %arr, align 8
   br label %for.body
 
 for.body:
-  %i.018 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %max.017 = phi i64 [ %spec.select14, %for.body ], [ %0, %for.body.preheader ]
-  %max.016 = phi i64 [ %spec.select, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx2 = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %i.018
-  %2 = load i64, ptr %arrayidx2, align 8
-  %cmp3 = icmp sgt i64 %2, %max.017
-  %spec.select = select i1 %cmp3, i64 %i.018, i64 %max.016
-  %spec.select14 = tail call i64 @llvm.smax.i64(i64 %2, i64 %max.017)
-  %inc = add nuw nsw i64 %i.018, 1
-  %exitcond.not = icmp eq i64 %inc, %N
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ %start, %entry ], [ %max, %for.body ]
+  %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
+  %0 = load i64, ptr %arrayidx
+  %cmp = icmp sgt i64 %0, %rdx
+  %select = select i1 %cmp, i64 %iv, i64 %rdx2
+  %max = tail call i64 @llvm.smax.i64(i64 %0, i64 %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:
-  ret i64 %spec.select
+  ret i64 %select
 }
 
 
-define i64 @argmax_last_index(ptr %arr, i64 %N) {
+define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-LABEL: @argmax_last_index(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; IF-EVL:       for.body.preheader:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2092,7 +2059,7 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
+; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sge <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
@@ -2118,9 +2085,6 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ;
 ; NO-VP-LABEL: @argmax_last_index(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br label [[FOR_BODY_PREHEADER:%.*]]
-; NO-VP:       for.body.preheader:
-; NO-VP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
@@ -2128,7 +2092,7 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
@@ -2139,7 +2103,7 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[INDEX]]
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sge <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
@@ -2160,14 +2124,14 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]
 ; NO-VP:       for.body:
-; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; NO-VP-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[I_018:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ]
+; NO-VP-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
 ; NO-VP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; NO-VP-NEXT:    [[CMP3:%.*]] = icmp sge i64 [[TMP16]], [[MAX_017]]
@@ -2181,27 +2145,23 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; NO-VP-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body.preheader
-
-for.body.preheader:
-  %0 = load i64, ptr %arr, align 8
   br label %for.body
 
 for.body:
-  %i.018 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %max.017 = phi i64 [ %spec.select14, %for.body ], [ %0, %for.body.preheader ]
-  %max.016 = phi i64 [ %spec.select, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx2 = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %i.018
-  %2 = load i64, ptr %arrayidx2, align 8
-  %cmp3 = icmp sge i64 %2, %max.017
-  %spec.select = select i1 %cmp3, i64 %i.018, i64 %max.016
-  %spec.select14 = tail call i64 @llvm.smax.i64(i64 %2, i64 %max.017)
-  %inc = add nuw nsw i64 %i.018, 1
-  %exitcond.not = icmp eq i64 %inc, %N
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i64 [ %start, %entry ], [ %max, %for.body ]
+  %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
+  %0 = load i64, ptr %arrayidx
+  %cmp = icmp sge i64 %0, %rdx
+  %select = select i1 %cmp, i64 %iv, i64 %rdx2
+  %max = tail call i64 @llvm.smax.i64(i64 %0, i64 %rdx)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:
-  ret i64 %spec.select
+  ret i64 %select
 }
 
 
