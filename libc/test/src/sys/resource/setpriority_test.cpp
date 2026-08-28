@@ -29,3 +29,10 @@ TEST_F(LlvmLibcSetpriorityTest,  BasicTest) {
   ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, 0, nice), Succeeds());
 }
 
+TEST_F(LlvmLibcSetpriorityTest, TestBadPid) {
+  ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, -1, 19), Fails(ESRCH, -1));
+}
+
+TEST_F(LlvmLibcSetpriorityTest, TestBadWho) {
+  ASSERT_THAT(LIBC_NAMESPACE::setpriority(99, 0, 19), Fails(EINVAL, -1));
+}

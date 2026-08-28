@@ -10,7 +10,9 @@ add_libc_test(
     libc.hdr.sys_resource_macros
     libc.hdr.types.id_t
     libc.src.sys.resource.getpriority
+    libc.src.sys.resource.setpriority
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
