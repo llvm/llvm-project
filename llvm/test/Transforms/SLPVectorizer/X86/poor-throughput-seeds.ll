@@ -129,25 +129,17 @@ define void @prim_v4(double %x0, double %x1, double %x2, double %x3, double %d0,
 ; DISABLED-NEXT:    [[A1:%.*]] = fadd double [[X1]], [[D1]]
 ; DISABLED-NEXT:    [[A2:%.*]] = fsub double [[X2]], [[D2]]
 ; DISABLED-NEXT:    [[A3:%.*]] = fadd double [[X3]], [[D3]]
-; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[A1]], i64 0
-; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[A3]], i64 1
-; DISABLED-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A0]], i64 2
-; DISABLED-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2]], i64 3
-; DISABLED-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[D1]], i64 0
-; DISABLED-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[D3]], i64 1
-; DISABLED-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[D0]], i64 2
-; DISABLED-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[D2]], i64 3
-; DISABLED-NEXT:    [[TMP8:%.*]] = fdiv <4 x double> [[TMP3]], [[TMP7]]
-; DISABLED-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP8]], [[TMP7]]
-; DISABLED-NEXT:    [[TMP10:%.*]] = fsub <4 x double> [[TMP8]], [[TMP7]]
-; DISABLED-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; DISABLED-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[TMP11]], i64 2
+; DISABLED-NEXT:    [[Q0:%.*]] = fdiv double [[A0]], [[D0]]
+; DISABLED-NEXT:    [[Q1:%.*]] = fdiv double [[A1]], [[D1]]
+; DISABLED-NEXT:    [[Q2:%.*]] = fdiv double [[A2]], [[D2]]
+; DISABLED-NEXT:    [[Q3:%.*]] = fdiv double [[A3]], [[D3]]
+; DISABLED-NEXT:    [[TMP12:%.*]] = fsub double [[Q0]], [[D0]]
+; DISABLED-NEXT:    [[TMP13:%.*]] = fadd double [[Q1]], [[D1]]
+; DISABLED-NEXT:    [[TMP14:%.*]] = fsub double [[Q2]], [[D2]]
+; DISABLED-NEXT:    [[TMP15:%.*]] = fadd double [[Q3]], [[D3]]
 ; DISABLED-NEXT:    store double [[TMP12]], ptr [[P0]], align 8
-; DISABLED-NEXT:    [[TMP13:%.*]] = extractelement <4 x double> [[TMP11]], i64 0
 ; DISABLED-NEXT:    store double [[TMP13]], ptr [[P1]], align 8
-; DISABLED-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[TMP11]], i64 3
 ; DISABLED-NEXT:    store double [[TMP14]], ptr [[P2]], align 8
-; DISABLED-NEXT:    [[TMP15:%.*]] = extractelement <4 x double> [[TMP11]], i64 1
 ; DISABLED-NEXT:    store double [[TMP15]], ptr [[P3]], align 8
 ; DISABLED-NEXT:    ret void
 ;

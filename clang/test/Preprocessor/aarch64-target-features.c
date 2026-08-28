@@ -541,6 +541,7 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
+// RUN: %clang -target aarch64-windows-msvc -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS %s
 //
 // Note: PAUTH-OFF - pac-ret is disabled
 //       CPU-NOPAUTH - FEAT_PAUTH support is disabled (but pac-ret can still use HINT-encoded instructions)
@@ -553,6 +554,9 @@
 // CHECK-PAUTH-BKEY-ALL:  #define __ARM_FEATURE_PAC_DEFAULT 6
 // CHECK-CPU-PAUTH:       #define __ARM_FEATURE_PAUTH 1
 // CHECK-CPU-NOPAUTH-NOT: __ARM_FEATURE_PAUTH
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_BTI_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_GCS_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_PAC_DEFAULT 2
 
 // ================== Check Branch Target Identification (BTI).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s

@@ -68,11 +68,11 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
                                               uint32_t permissions) override;
@@ -181,6 +181,8 @@ private:
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
   bool m_initial_stop_seen = false;
+
+  bool m_expecting_loader_int3 = false;
 
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;

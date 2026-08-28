@@ -31,7 +31,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 !1 = !{!1, !2, !3, !4}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
 !3 = !{!"llvm.loop.unroll.count", i32 4}
 !4 = !{!"llvm.loop.vectorize.width", i32 8}
 
@@ -139,7 +139,7 @@ for.inc5.1:                                       ; preds = %for.body3.1
 
 
 ; CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[VEC_ENABLE:.*]], ![[WIDTH_8:.*]], ![[UNROLL_DISABLE:.*]]}
-; CHECK: ![[VEC_ENABLE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: ![[VEC_ENABLE]] = !{!"llvm.loop.vectorize.enable"}
 ; CHECK: ![[WIDTH_8]] = !{!"llvm.loop.vectorize.width", i32 8}
 ; CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[UNROLL_FULL:.*]]}

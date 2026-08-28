@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -382,8 +383,8 @@ private:
   bool isUndefRegAtInput(const MachineOperand &MO,
                          const DeadLaneDetector::VRegInfo &RegInfo) const;
 
-  bool isUndefInput(const DeadLaneDetector &DLD, const MachineOperand &MO,
-                    bool *CrossCopy) const;
+  bool isUndefInput(const DeadLaneDetector &DLD, const MachineInstr &MI,
+                    const MachineOperand &MO, bool *CrossCopy) const;
 
   const MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -421,11 +422,11 @@ bool DetectDeadLanes::isUndefRegAtInput(
 }
 
 bool DetectDeadLanes::isUndefInput(const DeadLaneDetector &DLD,
+                                   const MachineInstr &MI,
                                    const MachineOperand &MO,
                                    bool *CrossCopy) const {
   if (!MO.isUse())
     return false;
-  const MachineInstr &MI = *MO.getParent();
   if (!lowersToCopies(MI))
     return false;
   const MachineOperand &Def = MI.getOperand(0);
@@ -520,7 +521,7 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
             Changed = true;
-          } else if (isUndefInput(DLD, MO, &CrossCopy)) {
+          } else if (isUndefInput(DLD, MI, MO, &CrossCopy)) {
             LLVM_DEBUG(dbgs()
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();

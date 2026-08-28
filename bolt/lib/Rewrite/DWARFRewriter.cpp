@@ -250,7 +250,9 @@ private:
     llvm::AsmPrinter &Asm = getAsmPrinter();
 
     // Emit size of content not including length itself
-    Asm.emitInt32(Unit.getHeaderSize() + UnitDIE.getSize() - 4);
+    Asm.emitDwarfUnitLength(Unit.getHeaderSize() + UnitDIE.getSize() -
+                                Asm.getUnitLengthFieldByteSize(),
+                            "Length of Unit");
     Asm.emitInt16(Version);
 
     // DWARF v5 reorders the address size and adds a unit type.
@@ -259,7 +261,7 @@ private:
       Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
 
-    Asm.emitInt32(0);
+    Asm.emitDwarfLengthOrOffset(0);
     if (Version <= 4) {
       Asm.emitInt8(Asm.MAI.getCodePointerSize());
     }
@@ -499,6 +501,8 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
 static void emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer,
                      DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
+  Streamer.getAsmPrinter().OutContext.setDwarfFormat(
+      Unit.getFormParams().Format);
   Streamer.emitUnit(Unit, *UnitDIE);
 }
 
@@ -585,40 +589,28 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
         }
     if (RefAddrAbbrevs.empty())
       continue;
-    // Track CUs involved in cross-CU references via DW_FORM_ref_addr.
-    uint64_t DIEOffset = CU->getOffset() + CU->getHeaderSize();
-    const uint64_t NextCUOffset = CU->getNextUnitOffset();
-    DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
-    DWARFDebugInfoEntry DIEEntry;
-    // extractFast() here only attributes are inspected here, so ParentIdx is
-    // passed as a dummy value.
-    while (DIEOffset < NextCUOffset) {
-      if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
-                                /*ParentIdx=*/0))
-        break;
-      const DWARFAbbreviationDeclaration *Abbrev =
-          DIEEntry.getAbbreviationDeclarationPtr();
-      if (Abbrev) {
-        if (RefAddrAbbrevs.count(Abbrev)) {
-          DWARFDie Die(CU, &DIEEntry);
-          for (const DWARFAttribute &Attr : Die.attributes()) {
-            if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
-              continue;
-            auto OptRef = Attr.Value.getAsDebugInfoReference();
-            if (!OptRef)
-              continue;
-            DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
-            if (!TargetCU || TargetCU == CU)
-              continue;
-            if (CrossRefSet.insert(CU).second)
-              EC.insert(CU);
-            if (CrossRefSet.insert(TargetCU).second)
-              EC.insert(TargetCU);
-            EC.unionSets(CU, TargetCU);
-          }
-        }
+    // Track CUs involved in cross-CU references via DW_FORM_ref_addr. Only DIE
+    // attributes are inspected, so forEachDIEInUnit streams the DIEs without
+    // materializing the unit's full DIE vector.
+    forEachDIEInUnit(*CU, [&](const DWARFDie &Die) {
+      if (!RefAddrAbbrevs.count(Die.getAbbreviationDeclarationPtr()))
+        return;
+      for (const DWARFAttribute &Attr : Die.attributes()) {
+        if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
+          continue;
+        auto OptRef = Attr.Value.getAsDebugInfoReference();
+        if (!OptRef)
+          continue;
+        DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
+        if (!TargetCU || TargetCU == CU)
+          continue;
+        if (CrossRefSet.insert(CU).second)
+          EC.insert(CU);
+        if (CrossRefSet.insert(TargetCU).second)
+          EC.insert(TargetCU);
+        EC.unionSets(CU, TargetCU);
       }
-    }
+    });
   }
 
   DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;
@@ -835,7 +827,8 @@ void DWARFRewriter::createRangeLocListAndAddressWriters() {
     const uint16_t DwarfVersion = CU.getVersion();
     if (DwarfVersion >= 5) {
       auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
-          &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase());
+          &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase(),
+          CU.getFormParams().Format);
       RangeListsSectionWriter->setAddressWriter(AddrW.get());
       LocListWritersByCU[CU.getOffset()] =
           std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false, *AddrW);
@@ -902,7 +895,7 @@ void DWARFRewriter::processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
   if (DWARFVersion >= 5) {
     LocalWriter.RngListsWriter->setAddressWriter(&AddressWriter);
     RangesBase = RangesSectionWriter.getSectionOffset() +
-                 getDWARF5RngListLocListHeaderSize();
+                 getDWARF5RngListLocListHeaderSize(Unit.getFormParams().Format);
     RangesSectionWriter.initSection(Unit);
   } else if (SplitCU) {
     // DWARF4: only split-dwarf CUs need a ranges base
@@ -1068,6 +1061,9 @@ void DWARFRewriter::updateDebugInfo() {
     BucketDIEBlders[Idx].reset();
     LocalWriters[Idx].RngListsWriter.reset();
     LocalWriters[Idx].LegacyRangesWriter.reset();
+    for (DWARFUnit *CU : SortedCUs)
+      if (std::optional<uint64_t> DWOId = CU->getDWOId())
+        BC.releaseDWOCU(*DWOId);
   };
 
   for (size_t I = 0; I < TotalTasks; ++I) {
@@ -1624,8 +1620,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
         RangesWriterIterator->second->setDie(&Die);
       } else {
         DIEBldr.replaceValue(&Die, RangesBaseInfo.getAttribute(),
-                             RangesBaseInfo.getForm(),
-                             DIEInteger(static_cast<uint32_t>(*RangesBase)));
+                             RangesBaseInfo.getForm(), DIEInteger(*RangesBase));
       }
       RangesBase = std::nullopt;
     }
@@ -1810,11 +1805,15 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
       continue;
     updateLineTable(*CU);
     emitUnit(DIEBlder, Streamer, *CU);
-    uint32_t StartOffset = CUOffset;
+    uint64_t StartOffset = CUOffset;
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
     CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    const dwarf::DwarfFormat Format = CU->getFormParams().Format;
+    CUMap[CU->getOffset()] = {StartOffset,
+                              CUOffset - StartOffset -
+                                  dwarf::getUnitLengthFieldByteSize(Format),
+                              Format};
   }
 
   // Emit Type Unit of DWARF 4 to .debug_type section
@@ -2012,11 +2011,15 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
   // generate debug_info and CUMap
   for (DWARFUnit *CU : CUs) {
     emitUnit(DIEBlder, Streamer, *CU);
-    const uint32_t StartOffset = CUOffset;
+    const uint64_t StartOffset = CUOffset;
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
     CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    const dwarf::DwarfFormat Format = CU->getFormParams().Format;
+    CUMap[CU->getOffset()] = {StartOffset,
+                              CUOffset - StartOffset -
+                                  dwarf::getUnitLengthFieldByteSize(Format),
+                              Format};
   }
 }
 
@@ -2077,11 +2080,15 @@ static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
                                    StringRef StrOffsetsContent,
                                    SmallVectorImpl<StringRef> &StrDWOOutData,
                                    std::string &StrOffsetsOutData,
-                                   unsigned DwarfVersion, bool IsLittleEndian) {
+                                   const DWARFUnit &CU, bool IsLittleEndian) {
   const llvm::endianness Endian =
       IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
-  const uint64_t HeaderOffset = (DwarfVersion >= 5) ? 8 : 0;
-  constexpr size_t SizeOfOffset = sizeof(int32_t);
+  const dwarf::DwarfFormat Format = CU.getFormParams().Format;
+  uint64_t HeaderOffset = 0;
+  if (CU.getVersion() >= 5) {
+    HeaderOffset = dwarf::getUnitLengthFieldByteSize(Format) + 4;
+  }
+  const size_t SizeOfOffset = dwarf::getDwarfOffsetByteSize(Format);
   const uint64_t NumOffsets =
       (StrOffsetsContent.size() - HeaderOffset) / SizeOfOffset;
 
@@ -2101,7 +2108,8 @@ static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
   std::optional<StringFragment> CurrentFragment;
   uint64_t AccumulatedStrLen = 0;
   for (uint64_t I = 0; I < NumOffsets; ++I) {
-    const uint64_t StrOffset = Extractor.getU32(&ExtractionOffset);
+    const uint64_t StrOffset =
+        Extractor.getUnsigned(&ExtractionOffset, SizeOfOffset);
     const uint64_t StringLength = getStringLength(StrDWOContent, StrOffset);
     if (!CurrentFragment) {
       // First init.
@@ -2121,9 +2129,14 @@ static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
       // Updating str offsets.
       if (StrOffsetsOutData.empty())
         StrOffsetsOutData = StrOffsetsContent.str();
-      llvm::support::endian::write32(
-          &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
-          static_cast<uint32_t>(AccumulatedStrLen), Endian);
+      if (Format == dwarf::DwarfFormat::DWARF64)
+        llvm::support::endian::write64(
+            &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+            AccumulatedStrLen, Endian);
+      else
+        llvm::support::endian::write32(
+            &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+            static_cast<uint32_t>(AccumulatedStrLen), Endian);
     }
     AccumulatedStrLen += StringLength;
   }
@@ -2240,15 +2253,7 @@ void DWARFRewriter::writeDWOFiles(
     const std::string &DWOName, DebugLocWriter &LocWriter,
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
     DebugRangesSectionWriter &TempRangesSectionWriter) {
-  // Setup DWP code once.
-  DWARFContext *DWOCtx = BC.getDWOContext();
   const uint64_t DWOId = *CU.getDWOId();
-  const DWARFUnitIndex *CUIndex = nullptr;
-  bool IsDWP = false;
-  if (DWOCtx) {
-    CUIndex = &DWOCtx->getCUIndex();
-    IsDWP = !CUIndex->getRows().empty();
-  }
 
   // Skipping CUs that we failed to load.
   std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(DWOId);
@@ -2274,9 +2279,9 @@ void DWARFRewriter::writeDWOFiles(
   std::unique_ptr<ToolOutputFile> TempOut =
       std::make_unique<ToolOutputFile>(AbsolutePath, EC, sys::fs::OF_None);
 
-  const DWARFUnitIndex::Entry *CUDWOEntry = nullptr;
-  if (IsDWP)
-    CUDWOEntry = CUIndex->getFromHash(DWOId);
+  const DWARFUnitIndex::Entry *CUDWOEntry =
+      !BC.usesDWP() ? nullptr
+                    : (*DWOCU)->getContext().getCUIndex().getFromHash(DWOId);
 
   const object::ObjectFile *File =
       (*DWOCU)->getContext().getDWARFObj().getFile();
@@ -2314,7 +2319,7 @@ void DWARFRewriter::writeDWOFiles(
       continue;
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
-    if (IsDWP && SectionName == "debug_str.dwo") {
+    if (BC.usesDWP() && SectionName == "debug_str.dwo") {
       if (StrWriter.isInitialized())
         StrDWOContent = StrWriter.getBufferStr();
       else
@@ -2325,7 +2330,7 @@ void DWARFRewriter::writeDWOFiles(
             (*DWOCU)->getContext(), SectionName, *ContentsExp, KnownSections,
             *Streamer, *this, CUDWOEntry, DWOId, OutputData, RangeListssWriter,
             LocWriter, StrOffstsWriter, StrWriter, OverridenSections)) {
-      if (IsDWP && SectionName == "debug_str_offsets.dwo") {
+      if (BC.usesDWP() && SectionName == "debug_str_offsets.dwo") {
         StrOffsetsContent = *OutData;
         continue;
       }
@@ -2333,13 +2338,13 @@ void DWARFRewriter::writeDWOFiles(
     }
   }
 
-  if (IsDWP) {
+  if (BC.usesDWP()) {
     // Handling both .debug_str.dwo and .debug_str_offsets.dwo concurrently. In
     // the original DWP, .debug_str is a deduplicated global table, and the
     // .debug_str.dwo slice for a single CU needs to be extracted according to
     // .debug_str_offsets.dwo.
     UpdateStrAndStrOffsets(StrDWOContent, StrOffsetsContent, StrDWOOutData,
-                           StrOffsetsOutData, CU.getVersion(),
+                           StrOffsetsOutData, CU,
                            (*DWOCU)->getContext().isLittleEndian());
     auto SectionIter = KnownSections.find("debug_str.dwo");
     if (SectionIter != KnownSections.end()) {

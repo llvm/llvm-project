@@ -1,14 +1,14 @@
 // RUN: %clang -### --target=amdgcn-amdhsa -mcpu=gfx900:xnack+ -nogpulib %s 2>&1 | FileCheck --check-prefix=XNACK %s
-// XNACK: "-target-feature" "+xnack"
+// XNACK: "-mxnack"
 
 // RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx900:xnack- %s 2>&1 | FileCheck --check-prefix=NO-XNACK %s
-// NO-XNACK: "-target-feature" "-xnack"
+// NO-XNACK: "-mno-xnack"
 
 // RUN: %clang -### -target amdgcn-mesa3d -mcpu=gfx908:sramecc+ %s 2>&1 | FileCheck --check-prefix=SRAM-ECC %s
-// SRAM-ECC: "-target-feature" "+sramecc"
+// SRAM-ECC: "-msramecc"
 
 // RUN: %clang -### --target=amdgcn-amdhsa -mcpu=gfx908:sramecc- -nogpulib %s 2>&1 | FileCheck --check-prefix=NO-SRAM-ECC %s
-// NO-SRAM-ECC: "-target-feature" "-sramecc"
+// NO-SRAM-ECC: "-mno-sramecc"
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx90a -mtgsplit %s 2>&1 | FileCheck --check-prefix=TGSPLIT %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx90a -mno-tgsplit %s 2>&1 | FileCheck --check-prefix=NO-TGSPLIT %s

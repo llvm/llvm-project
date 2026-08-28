@@ -64,6 +64,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -81,6 +83,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -298,9 +302,6 @@ T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
   return dyn_cast_or_null<T>(DefMI);
 }
-
-/// Returns an APFloat from Val converted to the appropriate size.
-LLVM_ABI APFloat getAPFloatFromSize(double Val, unsigned Size);
 
 /// Modify analysis usage so it preserves passes required for the SelectionDAG
 /// fallback.

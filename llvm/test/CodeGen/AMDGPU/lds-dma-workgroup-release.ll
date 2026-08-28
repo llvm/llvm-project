@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s --check-prefixes=GFX900
 ; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck %s --check-prefixes=GFX90A
 ; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgpu9.0a-amd-amdhsa | FileCheck %s --check-prefixes=GFX90A-TGSPLIT
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck %s --check-prefixes=GFX942
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck %s --check-prefixes=GFX942
 ; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgpu9.42-amd-amdhsa | FileCheck %s --check-prefixes=GFX942-TGSPLIT
 ; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa < %s | FileCheck %s -check-prefixes=GFX10WGP
 ; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -mattr=+cumode < %s | FileCheck %s -check-prefixes=GFX10CU

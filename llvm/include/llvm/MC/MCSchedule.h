@@ -137,12 +137,12 @@ struct MCSchedClassDesc {
   uint16_t BeginGroup : 1;
   uint16_t EndGroup : 1;
   uint16_t RetireOOO : 1;
+  uint16_t ReadAdvanceIdx;  // First index into ReadAdvanceTable.
   uint16_t WriteProcResIdx; // First index into WriteProcResTable.
-  uint16_t NumWriteProcResEntries;
   uint16_t WriteLatencyIdx; // First index into WriteLatencyTable.
-  uint16_t NumWriteLatencyEntries;
-  uint16_t ReadAdvanceIdx; // First index into ReadAdvanceTable.
   uint16_t NumReadAdvanceEntries;
+  uint8_t NumWriteProcResEntries;
+  uint8_t NumWriteLatencyEntries;
 
   bool isValid() const {
     return NumMicroOps != InvalidNumMicroOps;
@@ -151,6 +151,15 @@ struct MCSchedClassDesc {
     return NumMicroOps == VariantNumMicroOps;
   }
 };
+
+// Guard against accidental growth. If either assertion fails, try to repack
+// MCSchedClassDesc to preserve the compact layout; remove the assertion if the
+// layout can no longer be kept.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static_assert(sizeof(MCSchedClassDesc) == 16);
+#else
+static_assert(sizeof(MCSchedClassDesc) == 12);
+#endif
 
 /// Specify the cost of a register definition in terms of number of physical
 /// register allocated at register renaming stage. For example, AMD Jaguar.

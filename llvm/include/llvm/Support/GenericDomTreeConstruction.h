@@ -69,7 +69,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     unsigned Parent = 0;
     unsigned Semi = 0;
     unsigned Label = 0;
-    NodePtr IDom = nullptr;
+    unsigned IDom = 0;
     // Head index + 1 into ReverseChildren; 0: empty list.
     unsigned ReverseChildrenStart = 0;
   };
@@ -77,11 +77,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // Map a 0-based DFS number to the node. 0 is the DFS root, or the virtual
   // root for postdominators.
   SmallVector<NodePtr, 32> NumToNode;
-  // If blocks have numbers (e.g., BasicBlock, MachineBasicBlock), store node
-  // infos in a vector. Otherwise, store them in a map.
-  std::conditional_t<GraphHasNodeNumbers<NodePtr>, SmallVector<InfoRec, 32>,
-                     DenseMap<NodePtr, InfoRec>>
-      NodeInfos;
+  SmallVector<InfoRec, 32> NodeInfos;
 
   /// Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
   /// forms a linked list in this vector.
@@ -107,11 +103,15 @@ template <typename DomTreeT> struct SemiNCAInfo {
   using BatchUpdatePtr = BatchUpdateInfo *;
 
   // If BUI is a nullptr, then there's no batch update in progress.
-  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {}
+  SemiNCAInfo(const DomTreeT &DT, BatchUpdatePtr BUI) : BatchUpdates(BUI) {
+    unsigned MaxNodeNumber =
+        GraphTraits<typename DomTreeT::ParentPtr>::getMaxNumber(DT.Parent);
+    NodeInfos.resize(MaxNodeNumber + IsPostDom); // post-dom null block is zero.
+  }
 
   void clear() {
     NumToNode.clear();
-    NodeInfos.clear();
+    NodeInfos.assign(NodeInfos.size(), InfoRec{});
     ReverseChildren.clear();
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
@@ -134,38 +134,10 @@ template <typename DomTreeT> struct SemiNCAInfo {
   }
 
   InfoRec &getNodeInfo(NodePtr BB) {
-    if constexpr (GraphHasNodeNumbers<NodePtr>) {
-      unsigned Idx = BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0;
-      if (Idx >= NodeInfos.size()) {
-        unsigned Max = 0;
-        if (BB)
-          Max = GraphTraits<decltype(BB->getParent())>::getMaxNumber(
-              BB->getParent());
-        // Max might be zero, graphs might not support getMaxNumber().
-        NodeInfos.resize(Max ? Max + 1 : Idx + 1);
-      }
-      return NodeInfos[Idx];
-    } else {
-      return NodeInfos[BB];
-    }
-  }
-
-  NodePtr getIDom(NodePtr BB) { return getNodeInfo(BB).IDom; }
-
-  TreeNodePtr getNodeForBlock(NodePtr BB, DomTreeT &DT) {
-    if (TreeNodePtr Node = DT.getNode(BB))
-      return Node;
-
-    // Haven't calculated this node yet?  Get or calculate the node for the
-    // immediate dominator.
-    NodePtr IDom = getIDom(BB);
-
-    assert(IDom || DT.getNode(nullptr));
-    TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
-
-    // Add a new tree node for this NodeT, and link it as a child of
-    // IDomNode
-    return DT.createNode(BB, IDomNode);
+    // For post-dominator trees, index 0 is the null block.
+    if constexpr (IsPostDom)
+      return NodeInfos[BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0];
+    return NodeInfos[GraphTraits<NodePtr>::getNumber(BB)];
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -297,16 +269,14 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // This function requires DFS to be run before calling it.
   void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
-    // NumToInfo and IDoms are indexed by DFS number; 0 is the root. IDoms holds
+    // NumToInfo is indexed by DFS number; 0 is the root. IDoms holds
     // immediate dominators in DFS-number space, initialized below to spanning
     // tree parents.
     SmallVector<InfoRec *, 32> NumToInfo;
     NumToInfo.resize_for_overwrite(NextDFSNum);
-    SmallVector<unsigned, 32> IDoms;
-    IDoms.resize_for_overwrite(NextDFSNum);
     for (unsigned i = 0; i < NextDFSNum; ++i) {
       auto &VInfo = getNodeInfo(NumToNode[i]);
-      IDoms[i] = VInfo.Parent;
+      VInfo.IDom = VInfo.Parent;
       NumToInfo[i] = &VInfo;
     }
 
@@ -333,11 +303,10 @@ template <typename DomTreeT> struct SemiNCAInfo {
     // SDom[i]'s DFS number is just Semi.
     for (unsigned i = 1; i < NextDFSNum; ++i) {
       auto &WInfo = *NumToInfo[i];
-      unsigned WIDom = IDoms[i];
+      unsigned WIDom = WInfo.IDom;
       while (WIDom > WInfo.Semi)
-        WIDom = IDoms[WIDom];
-      IDoms[i] = WIDom;
-      WInfo.IDom = NumToNode[WIDom];
+        WIDom = NumToInfo[WIDom]->IDom;
+      WInfo.IDom = WIDom;
     }
   }
 
@@ -383,7 +352,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return Roots;
     }
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
 
     // PostDominatorTree always has a virtual root.
     SNCA.addVirtualRoot();
@@ -534,7 +503,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     assert(IsPostDom && "This function is for postdominators only");
     LLVM_DEBUG(dbgs() << "Removing redundant roots\n");
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
 
     for (unsigned i = 0; i < Roots.size(); ++i) {
       auto &Root = Roots[i];
@@ -596,7 +565,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     }
     // This is rebuilding the whole tree, not incrementally, but PostViewBUI is
     // used in case the caller needs a DT update with a CFGView.
-    SemiNCAInfo SNCA(PostViewBUI);
+    SemiNCAInfo SNCA(DT, PostViewBUI);
 
     // Step #0: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
@@ -619,35 +588,31 @@ template <typename DomTreeT> struct SemiNCAInfo {
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
     DT.RootNode = DT.createNode(Root);
-    SNCA.attachNewSubtree(DT, DT.RootNode);
+    SNCA.attachNewSubtree(DT);
   }
 
-  void attachNewSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
-    // Attach the first unreachable block to AttachTo.
-    getNodeInfo(NumToNode[0]).IDom = AttachTo->getBlock();
-    // Loop over all of the discovered blocks in the function...
-    for (NodePtr W : NumToNode) {
-      if (DT.getNode(W))
-        continue; // Already calculated the node before
-
-      NodePtr ImmDom = getIDom(W);
-
-      // Get or calculate the node for the immediate dominator.
-      TreeNodePtr IDomNode = getNodeForBlock(ImmDom, DT);
-
-      // Add a new tree node for this BasicBlock, and link it as a child of
-      // IDomNode.
-      DT.createNode(W, IDomNode);
+  // For each non-root node in a subtree, attach it to the immediate dominator.
+  // Link nodes in reverse: addChild prepends, so this leaves the children of
+  // each node in DFS order.
+  void attachNewSubtree(DomTreeT &DT) {
+    const unsigned E = NumToNode.size();
+    for (unsigned Num = 1; Num != E; ++Num) {
+      NodePtr W = NumToNode[Num];
+      assert(!DT.getNode(W) && "node was already attached");
+      DT.createNodeUnlinked(W, DT.getNode(NumToNode[getNodeInfo(W).IDom]));
+    }
+    for (unsigned Num = E; --Num;) {
+      const TreeNodePtr TN = DT.getNode(NumToNode[Num]);
+      TN->getIDom()->addChild(TN);
     }
   }
 
   void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
-    getNodeInfo(NumToNode[0]).IDom = AttachTo->getBlock();
-    for (const NodePtr N : NumToNode) {
-      const TreeNodePtr TN = DT.getNode(N);
-      assert(TN);
-      const TreeNodePtr NewIDom = DT.getNode(getNodeInfo(N).IDom);
-      TN->setIDom(NewIDom);
+    DT.getNode(NumToNode[0])->setIDom(AttachTo);
+    for (unsigned Num = 1, E = NumToNode.size(); Num != E; ++Num) {
+      NodePtr N = NumToNode[Num];
+      auto IDomNode = DT.getNode(NumToNode[getNodeInfo(N).IDom]);
+      DT.getNode(N)->setIDom(IDomNode);
     }
   }
 
@@ -932,10 +897,11 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return false;
     };
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     SNCA.runDFS(Root, 0, UnreachableDescender, 0);
     SNCA.runSemiNCA();
-    SNCA.attachNewSubtree(DT, Incoming);
+    DT.createNode(SNCA.NumToNode[0], Incoming);
+    SNCA.attachNewSubtree(DT);
 
     LLVM_DEBUG(dbgs() << "After adding unreachable nodes\n");
   }
@@ -1027,7 +993,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "\tTop of subtree: " << BlockNamePrinter(ToIDomTN)
                       << "\n");
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     SNCA.runDFS(ToIDom, 0, DescendBelow, 0);
     LLVM_DEBUG(dbgs() << "\tRunning Semi-NCA\n");
     SNCA.runSemiNCA();
@@ -1096,7 +1062,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return false;
     };
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     unsigned LastDFSNum =
         SNCA.runDFS(ToTN->getBlock(), 0, DescendAndCollect, 0);
 
@@ -1630,7 +1596,7 @@ void ApplyUpdates(DomTreeT &DT,
 
 template <class DomTreeT>
 bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
-  SemiNCAInfo<DomTreeT> SNCA(nullptr);
+  SemiNCAInfo<DomTreeT> SNCA(DT, nullptr);
 
   // Simplist check is to compare against a new tree. This will also
   // usefully print the old and new trees, if they are different.
@@ -1655,6 +1621,76 @@ bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
 }
 
 } // namespace DomTreeBuilder
+
+// Defined here so that a translation unit including only
+// GenericDomTree.h calls these out of line, and needs no instantiation
+// of the algorithms above.
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::applyUpdates(
+    ArrayRef<UpdateType> Updates) {
+  GraphDiff<NodePtr, IsPostDominator> PreViewCFG(Updates,
+                                                 /*ReverseApplyUpdates=*/true);
+  DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, nullptr);
+}
+
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::applyUpdates(
+    ArrayRef<UpdateType> Updates, ArrayRef<UpdateType> PostViewUpdates) {
+  if (Updates.empty()) {
+    GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
+    DomTreeBuilder::ApplyUpdates(*this, PostViewCFG, &PostViewCFG);
+    return;
+  }
+  // PreViewCFG needs to merge Updates and PostViewCFG. The updates in Updates
+  // need to be reversed, and match the direction in PostViewCFG. The
+  // PostViewCFG is created with updates reversed (equivalent to changes made
+  // to the CFG), so the PreViewCFG needs all the updates reverse applied.
+  SmallVector<UpdateType> AllUpdates(Updates);
+  append_range(AllUpdates, PostViewUpdates);
+  GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
+                                           /*ReverseApplyUpdates=*/true);
+  GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
+  DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, &PostViewCFG);
+}
+
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::insertEdge(NodeT *From, NodeT *To) {
+  assert(From);
+  assert(To);
+  assert(NodeTrait::getParent(From) == Parent);
+  assert(NodeTrait::getParent(To) == Parent);
+  DomTreeBuilder::InsertEdge(*this, From, To);
+}
+
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::deleteEdge(NodeT *From, NodeT *To) {
+  assert(From);
+  assert(To);
+  assert(NodeTrait::getParent(From) == Parent);
+  assert(NodeTrait::getParent(To) == Parent);
+  DomTreeBuilder::DeleteEdge(*this, From, To);
+}
+
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::recalculate(ParentType &Func) {
+  Parent = &Func;
+  updateBlockNumberEpoch();
+  DomTreeBuilder::Calculate(*this);
+}
+
+template <typename NodeT, bool IsPostDom>
+void DominatorTreeBase<NodeT, IsPostDom>::recalculate(
+    ParentType &Func, ArrayRef<UpdateType> Updates) {
+  Parent = &Func;
+  updateBlockNumberEpoch();
+  DomTreeBuilder::CalculateWithUpdates(*this, Updates);
+}
+
+template <typename NodeT, bool IsPostDom>
+bool DominatorTreeBase<NodeT, IsPostDom>::verify(VerificationLevel VL) const {
+  return DomTreeBuilder::Verify(*this, VL);
+}
+
 } // namespace llvm
 
 #undef DEBUG_TYPE

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 # Note: gfx11+ rejection of llvm.amdgcn.exp.compr is now enforced at IR translation (see llvm.amdgcn.exp.compr.ll), not during instruction selection.
 

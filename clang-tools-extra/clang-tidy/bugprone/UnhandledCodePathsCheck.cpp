@@ -94,9 +94,7 @@ void UnhandledCodePathsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switch");
-  std::size_t SwitchCaseCount = 0;
-  bool SwitchHasDefault = false;
-  std::tie(SwitchCaseCount, SwitchHasDefault) = countCaseLabels(Switch);
+  const auto [SwitchCaseCount, SwitchHasDefault] = countCaseLabels(Switch);
 
   if (SwitchHasDefault || SwitchCaseCount <= 1)
     return;
