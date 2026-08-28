@@ -1709,6 +1709,52 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
+
+  :ref:`llvm.is.debugging.enabled <llvm.is.debugging.enabled>`
+                                                   Supported on GFX11.5, GFX12, and GFX13 targets. Other
+                                                   subtargets lower the result to ``false``.
+
+                                                   The target-defined execution context is the current wave.
+                                                   The result is uniform across the active lanes of that
+                                                   wave, including when the intrinsic is executed in
+                                                   divergent control flow. Each call remains a distinct
+                                                   observation of the wave's debugging-enabled state.
+
+                                                   A wave executes in debugging mode when either the
+                                                   ``COND_DBG_SYS`` or ``COND_DBG_USER`` bit is set.
+                                                   ``COND_DBG_SYS`` reflects a system-wide debugger
+                                                   attach, while ``COND_DBG_USER`` reflects per-dispatch
+                                                   launch control, configured through
+                                                   :ref:`CDBG_USER <amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table>`
+                                                   in the kernel descriptor. The driver sets these
+                                                   bits, and provides an interface allowing the user
+                                                   mode runtime or an external debugger to control
+                                                   the setting.
+
+                                                   The intrinsic lowers in one of two forms.
+                                                   When the query feeds a single conditional branch in the
+                                                   same basic block, with no intervening observable
+                                                   operations, it may fuse into a single
+                                                   ``s_cbranch_cdbgsys_or_user``. Branch-hint and
+                                                   negated-condition forms are supported; other uses of
+                                                   the query value prevent fusion.
+
+                                                   Any other use materializes an ``i1`` by reading the
+                                                   adjacent ``COND_DBG_USER`` and ``COND_DBG_SYS`` bits
+                                                   and testing them against zero. The register holding
+                                                   them differs by generation:
+
+                                                   .. code-block:: none
+
+                                                     ; GFX11.5
+                                                     s_getreg_b32 s0, hwreg(HW_REG_STATUS, 20, 2)
+                                                     ; GFX12
+                                                     s_getreg_b32 s0, hwreg(HW_REG_WAVE_STATE_PRIV, 16, 2)
+                                                     ; GFX13
+                                                     s_getreg_b32 s0, hwreg(HW_REG_WAVE_STATUS, 20, 2)
+                                                     ; all generations
+                                                     s_cmp_lg_u32 s0, 0
+
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -20990,6 +21036,35 @@ address. The *spill table* itself represents a set of 32-bit values
 managed by the PAL runtime in GPU-accessible memory that can be made
 indirectly accessible to a hardware shader.
 
+.. _amdgpu-amdpal-trap-handler-abi:
+
+Trap Handler ABI
+~~~~~~~~~~~~~~~~
+
+For code objects generated for the AMDPAL OS, the runtime installs a trap
+handler that supports the ``s_trap`` instruction only when the ``trap-handler``
+target feature is enabled. The handler must be resumable and must define trap
+ID 3 as the LLVM debug trap. For usage see
+:ref:`amdgpu-trap-handler-for-amdpal-os-table`.
+
+  .. table:: AMDGPU Trap Handler for AMDPAL OS
+     :name: amdgpu-trap-handler-for-amdpal-os-table
+
+     ================== =============== =============== ======================================
+     Usage              Code Sequence   Trap Handler    Description
+                                        Inputs
+     ================== =============== =============== ======================================
+     ``llvm.trap``      ``s_endpgm``    *none*          Causes the wavefront to be terminated.
+     ``llvm.debugtrap`` ``s_trap 0x03`` *none*          Causes the wave to enter the PAL debug
+                                                        trap handler. Execution resumes after
+                                                        the configured debug action completes.
+     ================== =============== =============== ======================================
+
+The ``trap-handler`` feature is not enabled by the AMDPAL target triple; a
+frontend must enable it only when the PAL runtime implements this ABI. If the
+feature is disabled, ``llvm.debugtrap`` produces a compiler warning and no trap
+instruction.
+
 Unspecified OS
 --------------
 
@@ -20999,9 +21074,9 @@ empty (see :ref:`amdgpu-target-triples`).
 Trap Handler ABI
 ~~~~~~~~~~~~~~~~
 
-For code objects generated by AMDGPU backend for non-amdhsa OS, the runtime does
-not install a trap handler. The ``llvm.trap`` and ``llvm.debugtrap``
-instructions are handled as follows:
+For code objects whose target OS has no recognized trap-handler ABI, the
+runtime does not install a trap handler. The ``llvm.trap`` and
+``llvm.debugtrap`` instructions are handled as follows:
 
   .. table:: AMDGPU Trap Handler for Non-AMDHSA OS
      :name: amdgpu-trap-handler-for-non-amdhsa-os-table
