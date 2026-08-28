@@ -8059,7 +8059,9 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
 }
 
-static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG, bool Signed) {
+static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG,
+                                 Intrinsic::ID IntrinsicID) {
+  bool Signed = IntrinsicID == Intrinsic::amdgcn_sbfe;
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue Src = Op.getOperand(1);
@@ -8069,8 +8071,7 @@ static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG, bool Signed) {
   if (VT != MVT::i32) {
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
-        Twine("llvm.amdgcn.") + (Signed ? "sbfe" : "ubfe") +
-            " only supports i32",
+        Twine(Intrinsic::getBaseName(IntrinsicID)) + " only supports i32",
         DL.getDebugLoc()));
     return DAG.getPOISON(VT);
   }
@@ -11480,7 +11481,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(2));
   case Intrinsic::amdgcn_sbfe:
   case Intrinsic::amdgcn_ubfe:
-    return lowerBFEIntrinsic(Op, DAG, IntrinsicID == Intrinsic::amdgcn_sbfe);
+    return lowerBFEIntrinsic(Op, DAG, IntrinsicID);
   case Intrinsic::amdgcn_cvt_pkrtz:
   case Intrinsic::amdgcn_cvt_pknorm_i16:
   case Intrinsic::amdgcn_cvt_pknorm_u16:
