@@ -663,7 +663,7 @@ define i32 @trunc_nuw_shl_nuw_nsw_3_i32_i64(i64 %val) {
 
 define i32 @trunc_nuw_nsw_shl_nsw_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_nsw_shl_nsw_3_i32_i64(
-; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw nsw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nsw i64 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw nsw i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
@@ -675,7 +675,7 @@ define i32 @trunc_nuw_nsw_shl_nsw_3_i32_i64(i64 %val) {
 ; Missing flags on shl.
 define i32 @trunc_nuw_shl_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_shl_3_i32_i64(
-; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
@@ -699,7 +699,7 @@ define i32 @trunc_shl_nuw_nsw_3_i32_i64(i64 %val) {
 ; Mismatched flags on shl/trunc.
 define i32 @trunc_nuw_shl_nsw_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_shl_nsw_3_i32_i64(
-; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
