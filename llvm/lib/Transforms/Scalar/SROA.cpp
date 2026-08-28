@@ -1480,29 +1480,26 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 /// Find a common load/store type used through a pointer select.
 ///
-/// A select is an immediate user of each pointer operand, so looking only at
-/// the select itself loses the types of the memory operations that actually
-/// access the pointers. Look through a select when all of its users are loads
-/// or stores of one common type. This mirrors the uses that SROA can later
-/// rewrite when speculating the select.
+/// Look through a select to see if all of its users are loads or stores of one
+/// common type. If there is a common type that matches a common type for the
+/// rest of the alloca slices, then we can transform this select to use branched
+/// control flow, with direct loads/stores to the alloca, and promote through
+// the common type.
 static Type *findCommonTypeThroughSelect(SelectInst &SI) {
   Type *Ty = nullptr;
 
   for (User *U : SI.users()) {
-    Value *Ptr = &SI;
-    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse()) {
-      Ptr = BC;
+    // Look through bitcasting the select result
+    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
       U = *BC->user_begin();
-    }
 
     Type *UserTy = nullptr;
-    if (auto *LI = dyn_cast<LoadInst>(U);
-        LI && LI->getPointerOperand() == Ptr) {
+    if (auto *LI = dyn_cast<LoadInst>(U))
       UserTy = LI->getType();
-    } else if (auto *Store = dyn_cast<StoreInst>(U);
-               Store && Store->getPointerOperand() == Ptr) {
+    else if (auto *Store = dyn_cast<StoreInst>(U))
+      // Slice building rejects stores of the select-derived pointer, so it must
+      // be the store's pointer operand here.
       UserTy = Store->getValueOperand()->getType();
-    }
 
     if (!UserTy || (Ty && Ty != UserTy))
       return nullptr;
