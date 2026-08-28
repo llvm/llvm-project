@@ -221,7 +221,6 @@ jobs:
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
     # Start of parallel block
-    # Wix is not installed by default on Windows ARM64
     - name: Setup crlf
       id: setup-crlf
       background: true
@@ -265,6 +264,7 @@ jobs:
     # For some reason this Install Wix step fails if it is running at the same time as setup-python.
     # I've tested running it with the setup-python step disabled and it installs fine, but running
     # it with setup-python causes some kind of issue.  That is why we run it after setup-python.
+    # Wix is not installed by default on Windows ARM64
     - name: Install Wix (Windows ARM64)
       background: true
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
