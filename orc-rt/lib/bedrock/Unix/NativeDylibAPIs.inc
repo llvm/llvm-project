@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/Error.h"
-#include "orc-rt/support/StringExtras.h"
 
 #include <dlfcn.h>
 

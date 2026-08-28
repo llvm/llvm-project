@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
-#include "bedrock/TargetDetails.h"
+#include "orc-rt-internal/bedrock/TargetDetails.h"
 #include "orc-rt/support/Math.h"
 #include "gtest/gtest.h"
 

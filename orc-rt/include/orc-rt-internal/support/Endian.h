@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_ENDIAN_H
-#define ORC_RT_SUPPORT_ENDIAN_H
+#ifndef ORC_RT_INTERNAL_SUPPORT_ENDIAN_H
+#define ORC_RT_INTERNAL_SUPPORT_ENDIAN_H
 
 #include "orc-rt/support/bit.h"
 #include <cstring>
@@ -41,4 +41,4 @@ endian_write(void *Dst, T Val, orc_rt::endian E) noexcept {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_ENDIAN_H
+#endif // ORC_RT_INTERNAL_SUPPORT_ENDIAN_H

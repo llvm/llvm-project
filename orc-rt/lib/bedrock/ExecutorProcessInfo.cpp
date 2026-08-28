@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/Math.h"
-#include "orc-rt/support/StringExtras.h"
 
 #include <cassert>
 #include <cstring>

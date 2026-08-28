@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_UTILS_COMMANDLINE_H
-#define ORC_RT_UTILS_COMMANDLINE_H
+#ifndef ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
+#define ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
 
 #include <algorithm>
 #include <charconv>
@@ -22,8 +22,8 @@
 #include <string_view>
 #include <vector>
 
+#include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/Error.h"
-#include "orc-rt/support/StringExtras.h"
 
 namespace orc_rt {
 namespace detail {
@@ -261,4 +261,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_UTILS_COMMANDLINE_H
+#endif // ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H

@@ -75,7 +75,6 @@ target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})
 target_include_directories(CoreTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(CoreTests PRIVATE
   orc-rt-bedrock
-  orc-rt-bedrock-impl-headers
   )
 
 # Build a shared library for NativeDylibManager tests.
