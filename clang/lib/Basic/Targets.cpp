@@ -873,8 +873,8 @@ bool TargetInfo::checkHostPointerRelatedTypes(DiagnosticsEngine &Diags,
   // The device data layout fixes the width of every one of these types.
   unsigned Required = getTriple().getArchPointerBitWidth();
   // The order matches the %select in the diagnostic below.
-  unsigned Widths[] = {getPointerWidth(LangAS::Default),
-                       getPointerAlign(LangAS::Default),
+  unsigned Widths[] = {static_cast<unsigned>(getPointerWidth(LangAS::Default)),
+                       static_cast<unsigned>(getPointerAlign(LangAS::Default)),
                        getTypeWidth(getSizeType()),
                        getTypeWidth(getPtrDiffType(LangAS::Default)),
                        getTypeWidth(getIntPtrType())};
