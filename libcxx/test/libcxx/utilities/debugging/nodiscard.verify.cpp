@@ -17,5 +17,5 @@
 
 void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  is_debugger_present();
+  std::is_debugger_present();
 }
