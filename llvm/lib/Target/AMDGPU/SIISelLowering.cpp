@@ -18906,27 +18906,28 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   SDValue ZeroVal;
   bool CondSelectsZero; // If true, condition=true selects zero
 
-  // Check if FrexpVal comes from ISD::FFREXP or amdgcn_frexp_exp/mant
-  // intrinsics.
+  // Check if FrexpVal comes from ISD::FFREXP (exponent result only) or
+  // amdgcn_frexp_exp intrinsic. We cannot optimize frexp_mant because
+  // V_FREXP_MANT returns its input for Inf/NaN, not zero.
   SDValue FrexpInput;
-  auto isFrexp = [&FrexpInput](SDValue V) {
-    if (V.getOpcode() == ISD::FFREXP) {
+  auto isFrexpExp = [&FrexpInput](SDValue V) {
+    // ISD::FFREXP returns {mant, exp} - only optimize if using the exp result
+    // (result number 1).
+    if (V.getOpcode() == ISD::FFREXP && V.getResNo() == 1) {
       FrexpInput = V.getOperand(0);
       return true;
     }
     if (sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
-                        m_Value(FrexpInput))) ||
-        sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
                         m_Value(FrexpInput))))
       return true;
     return false;
   };
 
-  if (isFrexp(FalseVal)) {
+  if (isFrexpExp(FalseVal)) {
     FrexpVal = FalseVal;
     ZeroVal = TrueVal;
     CondSelectsZero = true;
-  } else if (isFrexp(TrueVal)) {
+  } else if (isFrexpExp(TrueVal)) {
     FrexpVal = TrueVal;
     ZeroVal = FalseVal;
     CondSelectsZero = false;
@@ -18934,12 +18935,8 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
     return SDValue();
   }
 
-  // Check for the appropriate zero type based on frexp result type.
-  // frexp_mant returns FP, frexp_exp returns integer.
-  bool IsZero = FrexpVal.getValueType().isFloatingPoint()
-                    ? isNullFPConstant(ZeroVal)
-                    : isNullConstant(ZeroVal);
-  if (!IsZero)
+  // frexp_exp returns integer, so check for integer zero.
+  if (!isNullConstant(ZeroVal))
     return SDValue();
 
   // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
@@ -18966,7 +18963,13 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
 
     if (CC == ISD::SETUO) {
       // fcmp uno x, y - true if either x or y is NaN
-      if (LHSMatchesFrexp || RHSMatchesFrexp)
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be true due to the other operand.
+      // Special case: fcmp uno x, x (same operand) is a valid NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp && (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
         IsNonFiniteTest = CondSelectsZero;
     } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) && LHSMatchesFrexp &&
                LHSIsFabs &&
@@ -18984,7 +18987,13 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
       IsNonFiniteTest = !CondSelectsZero;
     } else if (CC == ISD::SETO) {
       // fcmp ord x, y - true if both are NOT NaN
-      if (LHSMatchesFrexp || RHSMatchesFrexp)
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be false due to the other operand.
+      // Special case: fcmp ord x, x (same operand) is a valid not-NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp && (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = !CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
         IsNonFiniteTest = !CondSelectsZero;
     }
   }

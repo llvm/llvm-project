@@ -235,25 +235,35 @@ define float @frexp_nan_clamp_mant_f32(float %x) {
 ; GFX9-LABEL: frexp_nan_clamp_mant_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX9-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: frexp_nan_clamp_mant_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX10-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: frexp_nan_clamp_mant_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX11-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-LABEL: frexp_nan_clamp_mant_f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX950-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: frexp_nan_clamp_mant_f32:
@@ -644,25 +654,35 @@ define float @frexp_nan_clamp_amdgcn_mant_f32(float %x) {
 ; GFX9-LABEL: frexp_nan_clamp_amdgcn_mant_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX9-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: frexp_nan_clamp_amdgcn_mant_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX10-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: frexp_nan_clamp_amdgcn_mant_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX11-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-LABEL: frexp_nan_clamp_amdgcn_mant_f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v0
+; GFX950-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: frexp_nan_clamp_amdgcn_mant_f32:
@@ -684,14 +704,17 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_frexp_mant_f32_e32 v2, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: frexp_nan_clamp_both_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_frexp_mant_f32_e32 v2, v0
+; GFX10-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -699,9 +722,11 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
 ; GFX11-LABEL: frexp_nan_clamp_both_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_frexp_mant_f32_e32 v2, v0
+; GFX11-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -709,8 +734,10 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_frexp_mant_f32_e32 v2, v0
+; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; GFX950-NEXT:    v_mov_b32_e32 v0, v2
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-LABEL: frexp_nan_clamp_both_f32:
@@ -939,5 +966,60 @@ define i32 @frexp_lt_zero_not_folded(float %x) {
   %exp = extractvalue { float, i32 } %frexp, 1
   %is_lt_zero = fcmp olt float %x, 0.0
   %result = select i1 %is_lt_zero, i32 0, i32 %exp
+  ret i32 %result
+}
+
+; Negative test: fcmp uno with possibly-NaN other operand
+; The other operand %y could be NaN, so we cannot fold this.
+; If %y is NaN, the comparison is true regardless of %x, so we must return 0.
+define i32 @frexp_nan_other_operand_may_be_nan(float %x, float %y) {
+; GFX9-LABEL: frexp_nan_other_operand_may_be_nan:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: frexp_nan_other_operand_may_be_nan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v1
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: frexp_nan_other_operand_may_be_nan:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: frexp_nan_other_operand_may_be_nan:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX6-LABEL: frexp_nan_other_operand_may_be_nan:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b32 s4, 0x7f800000
+; GFX6-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; GFX6-NEXT:    v_cmp_o_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
+; GFX6-NEXT:    s_and_b64 vcc, vcc, s[4:5]
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+  %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
+  %exp = extractvalue { float, i32 } %frexp, 1
+  %is_nan = fcmp uno float %x, %y
+  %result = select i1 %is_nan, i32 0, i32 %exp
   ret i32 %result
 }
