@@ -12,10 +12,12 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cassert>
 #include <map>
@@ -39,77 +41,91 @@ namespace Fortran::semantics {
 // Argument defaults: Required,     Unique, Compatible, Free
 // Modifier defaults: Optional,     Unique, Compatible, Free
 //
-// ---
-// Each modifier is used as either pre-modifier (i.e. modifier: item),
-// or post-modifier (i.e. item: modifier). The default is pre-.
-// Add an additional property that reflects the type of modifier.
+template <typename SpecificTy> llvm::omp::Modifier OmpGetModifierId();
+template <typename SpecificTy>
+const llvm::omp::descriptor::Modifier &OmpGetDescriptor();
 
-ENUM_CLASS(OmpProperty, Required, Unique, Exclusive, Ultimate, Post)
-using OmpProperties = common::EnumSet<OmpProperty, OmpProperty_enumSize>;
-using OmpClauses =
-    llvm::omp::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+#define DECLARE_DESCRIPTOR(name, id) \
+  template <> inline llvm::omp::Modifier OmpGetModifierId<name>() { \
+    return id; \
+  } \
+  template <> \
+  inline const llvm::omp::descriptor::Modifier &OmpGetDescriptor<name>() { \
+    return llvm::omp::getDescriptor(OmpGetModifierId<name>()); \
+  }
 
-struct OmpModifierDescriptor {
-  // Modifier name for use in diagnostic messages.
-  const OmpProperties &props(unsigned version) const;
-  const OmpClauses &clauses(unsigned version) const;
-  unsigned since(llvm::omp::Clause id) const;
-
-  const llvm::StringRef name;
-  // Version-dependent properties of the modifier.
-  const std::map<unsigned, OmpProperties> props_;
-  // Version-dependent set of clauses to which the modifier can apply.
-  const std::map<unsigned, OmpClauses> clauses_;
-};
-
-template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
-
-#define DECLARE_DESCRIPTOR(name) \
-  template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
-
-DECLARE_DESCRIPTOR(parser::OmpAccessGroup);
-DECLARE_DESCRIPTOR(parser::OmpAlignment);
-DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
-DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
-DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
-DECLARE_DESCRIPTOR(parser::OmpAlwaysModifier);
-DECLARE_DESCRIPTOR(parser::OmpAttachModifier);
-DECLARE_DESCRIPTOR(parser::OmpAutomapModifier);
-DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
-DECLARE_DESCRIPTOR(parser::OmpCloseModifier);
-DECLARE_DESCRIPTOR(parser::OmpContextSelector);
-DECLARE_DESCRIPTOR(parser::OmpDeleteModifier);
-DECLARE_DESCRIPTOR(parser::OmpDependenceType);
-DECLARE_DESCRIPTOR(parser::OmpDepinfoModifier);
-DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
-DECLARE_DESCRIPTOR(parser::OmpDimsModifier);
-DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
-DECLARE_DESCRIPTOR(parser::OmpExpectation);
-DECLARE_DESCRIPTOR(parser::OmpFallbackModifier);
-DECLARE_DESCRIPTOR(parser::OmpInteropType);
-DECLARE_DESCRIPTOR(parser::OmpIterator);
-DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
-DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
-DECLARE_DESCRIPTOR(parser::OmpLinearStep);
-DECLARE_DESCRIPTOR(parser::OmpLoopModifier);
-DECLARE_DESCRIPTOR(parser::OmpLowerBound);
-DECLARE_DESCRIPTOR(parser::OmpMapper);
-DECLARE_DESCRIPTOR(parser::OmpMapType);
-DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
-DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
-DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
-DECLARE_DESCRIPTOR(parser::OmpPreferType);
-DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
-DECLARE_DESCRIPTOR(parser::OmpPresentModifier);
-DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
-DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
-DECLARE_DESCRIPTOR(parser::OmpRefModifier);
-DECLARE_DESCRIPTOR(parser::OmpSelfModifier);
-DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
-DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
-DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
-DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
-DECLARE_DESCRIPTOR(parser::OmpxHoldModifier);
+DECLARE_DESCRIPTOR(parser::OmpAccessGroup, llvm::omp::Modifier::AccessGroup)
+DECLARE_DESCRIPTOR(parser::OmpAlignment, llvm::omp::Modifier::Alignment)
+DECLARE_DESCRIPTOR(parser::OmpAlignModifier, llvm::omp::Modifier::AlignModifier)
+DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier,
+    llvm::omp::Modifier::AllocatorComplexModifier)
+DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier,
+    llvm::omp::Modifier::AllocatorSimpleModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpAlwaysModifier, llvm::omp::Modifier::AlwaysModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpAttachModifier, llvm::omp::Modifier::AttachModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpAutomapModifier, llvm::omp::Modifier::AutomapModifier)
+DECLARE_DESCRIPTOR(parser::OmpChunkModifier, llvm::omp::Modifier::ChunkModifier)
+DECLARE_DESCRIPTOR(parser::OmpCloseModifier, llvm::omp::Modifier::CloseModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpContextSelector, llvm::omp::Modifier::ContextSelector)
+DECLARE_DESCRIPTOR(
+    parser::OmpDeleteModifier, llvm::omp::Modifier::DeleteModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpDependenceType, llvm::omp::Modifier::DependenceType)
+DECLARE_DESCRIPTOR(
+    parser::OmpDepinfoModifier, llvm::omp::Modifier::DepinfoModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpDeviceModifier, llvm::omp::Modifier::DeviceModifier)
+DECLARE_DESCRIPTOR(parser::OmpDimsModifier, llvm::omp::Modifier::DimsModifier)
+DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier,
+    llvm::omp::Modifier::DirectiveNameModifier)
+DECLARE_DESCRIPTOR(parser::OmpExpectation, llvm::omp::Modifier::Expectation)
+DECLARE_DESCRIPTOR(
+    parser::OmpFallbackModifier, llvm::omp::Modifier::FallbackModifier)
+DECLARE_DESCRIPTOR(parser::OmpInteropType, llvm::omp::Modifier::InteropType)
+DECLARE_DESCRIPTOR(parser::OmpIterator, llvm::omp::Modifier::Iterator)
+DECLARE_DESCRIPTOR(
+    parser::OmpLastprivateModifier, llvm::omp::Modifier::LastprivateModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpLinearModifier, llvm::omp::Modifier::LinearModifier)
+DECLARE_DESCRIPTOR(parser::OmpLinearStep, llvm::omp::Modifier::LinearStep)
+DECLARE_DESCRIPTOR(parser::OmpLoopModifier, llvm::omp::Modifier::LoopModifier)
+DECLARE_DESCRIPTOR(parser::OmpLowerBound, llvm::omp::Modifier::LowerBound)
+DECLARE_DESCRIPTOR(parser::OmpMapper, llvm::omp::Modifier::Mapper)
+DECLARE_DESCRIPTOR(parser::OmpMapType, llvm::omp::Modifier::MapType)
+DECLARE_DESCRIPTOR(
+    parser::OmpMapTypeModifier, llvm::omp::Modifier::MapTypeModifier)
+DECLARE_DESCRIPTOR(parser::OmpMemSpace, llvm::omp::Modifier::MemSpace)
+DECLARE_DESCRIPTOR(
+    parser::OmpMotionModifier, llvm::omp::Modifier::MotionModifier)
+DECLARE_DESCRIPTOR(parser::OmpOrderModifier, llvm::omp::Modifier::OrderModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpOrderingModifier, llvm::omp::Modifier::OrderingModifier)
+DECLARE_DESCRIPTOR(parser::OmpPreferType, llvm::omp::Modifier::PreferType)
+DECLARE_DESCRIPTOR(
+    parser::OmpPrescriptiveness, llvm::omp::Modifier::Prescriptiveness)
+DECLARE_DESCRIPTOR(
+    parser::OmpPresentModifier, llvm::omp::Modifier::PresentModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpReductionIdentifier, llvm::omp::Modifier::ReductionIdentifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpReductionModifier, llvm::omp::Modifier::ReductionModifier)
+DECLARE_DESCRIPTOR(parser::OmpRefModifier, llvm::omp::Modifier::RefModifier)
+DECLARE_DESCRIPTOR(parser::OmpSelfModifier, llvm::omp::Modifier::SelfModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpStepComplexModifier, llvm::omp::Modifier::StepComplexModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpStepSimpleModifier, llvm::omp::Modifier::StepSimpleModifier)
+DECLARE_DESCRIPTOR(
+    parser::OmpTaskDependenceType, llvm::omp::Modifier::TaskDependenceType)
+DECLARE_DESCRIPTOR(parser::OmpTraitsArray, llvm::omp::Modifier::TraitsArray)
+DECLARE_DESCRIPTOR(
+    parser::OmpVariableCategory, llvm::omp::Modifier::VariableCategory)
+DECLARE_DESCRIPTOR(
+    parser::OmpxHoldModifier, llvm::omp::Modifier::OmpxHoldModifier)
 
 #undef DECLARE_DESCRIPTOR
 
@@ -140,7 +156,8 @@ DECLARE_DESCRIPTOR(parser::OmpxHoldModifier);
 //               "Specific2".
 
 template <typename UnionTy>
-const OmpModifierDescriptor &OmpGetDescriptor(const UnionTy &modifier) {
+const llvm::omp::descriptor::Modifier &OmpGetDescriptor(
+    const UnionTy &modifier) {
   return common::visit(
       [](auto &&m) -> decltype(auto) {
         using SpecificTy = llvm::remove_cvref_t<decltype(m)>;
@@ -281,18 +298,40 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
   unsigned version{semaCtx.langOptions().OpenMPVersion};
   bool result{true};
   for (auto &m : *modifiers) {
-    const OmpModifierDescriptor &desc{OmpGetDescriptor(m)};
-    unsigned since{desc.since(id)};
-    if (since == ~0u) {
+    const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor(m)};
+    if (desc.getClauses(version).test(id)) {
+      continue;
+    }
+    // Find the next higher version that allows this modifier on this clause.
+    const auto &versions{desc.getVersions()};
+    unsigned since{~0u}, until{0u};
+    for (unsigned v : versions) {
+      if (desc.getClauses(v).test(id)) {
+        if (v < version) {
+          until = std::max(until, v);
+        } else if (v > version) {
+          since = std::min(since, v);
+        }
+      }
+    }
+    if (since == ~0u && until == 0u) {
       // This shouldn't really happen, but have it just in case.
       semaCtx.Say(m.source,
           "'%s' modifier is not supported on %s clause"_err_en_US,
-          desc.name.str(),
+          desc.getName().str(),
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-    } else if (version < since) {
+    } else if (since != ~0u && version < since) {
       semaCtx.Say(m.source,
-          "'%s' modifier is not supported in OpenMP v%d.%d, try -fopenmp-version=%d"_warn_en_US,
-          desc.name.str(), version / 10, version % 10, since);
+          "'%s' modifier is not supported in %s on %s clause, %s"_warn_en_US,
+          desc.getName().str(), omp::ThisVersion(version),
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)),
+          omp::TryVersion(since));
+      result = false;
+    } else if (until != 0u && version > until) {
+      semaCtx.Say(m.source,
+          "'%s' modifier is no longer supported in %s on %s clause"_warn_en_US,
+          desc.getName().str(), omp::ThisVersion(version),
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
       result = false;
     }
   }
@@ -308,8 +347,8 @@ bool verifyIfRequired(const SpecificTy *,
     const std::optional<std::list<UnionTy>> &modifiers,
     parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
   unsigned version{semaCtx.langOptions().OpenMPVersion};
-  const OmpModifierDescriptor &desc{OmpGetDescriptor<SpecificTy>()};
-  if (!desc.props(version).test(OmpProperty::Required)) {
+  const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
+  if (!desc.getProperties(version).test(llvm::omp::Property::Required)) {
     // If the modifier is not required, there is nothing to do.
     return true;
   }
@@ -318,8 +357,8 @@ bool verifyIfRequired(const SpecificTy *,
     return std::holds_alternative<SpecificTy>(m.u);
   });
   if (!present) {
-    semaCtx.Say(
-        clauseSource, "'%s' modifier is required"_err_en_US, desc.name.str());
+    semaCtx.Say(clauseSource, "'%s' modifier is required"_err_en_US,
+        desc.getName().str());
   }
   return present;
 }
@@ -362,10 +401,10 @@ bool verifyIfUnique(const SpecificTy *,
   assert(specific != end && "`specific` must be a valid location");
 
   unsigned version{semaCtx.langOptions().OpenMPVersion};
-  const OmpModifierDescriptor &desc{OmpGetDescriptor<SpecificTy>()};
+  const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
   // Ultimate implies Unique.
-  if (!desc.props(version).test(OmpProperty::Unique) &&
-      !desc.props(version).test(OmpProperty::Ultimate)) {
+  if (!desc.getProperties(version).test(llvm::omp::Property::Unique) &&
+      !desc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
     return true;
   }
   if (std::next(specific) != end) {
@@ -374,7 +413,7 @@ bool verifyIfUnique(const SpecificTy *,
     if (next != end) {
       semaCtx.Say(next->source,
           "'%s' modifier cannot occur multiple times"_err_en_US,
-          desc.name.str());
+          desc.getName().str());
     }
   }
   return true;
@@ -421,28 +460,30 @@ bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
   // Walk over the list, and if a given item has the Ultimate property but is
   // not at the right position, mark it as an error.
   for (auto it{first}, end{modifiers->cend()}; it != end; ++it) {
-    result =
-        common::visit(
-            [&](auto &&m) {
-              using SpecificTy = llvm::remove_cvref_t<decltype(m)>;
-              const OmpModifierDescriptor &desc{OmpGetDescriptor<SpecificTy>()};
-              auto &props{desc.props(version)};
+    result = common::visit(
+                 [&](auto &&m) {
+                   using SpecificTy = llvm::remove_cvref_t<decltype(m)>;
+                   const llvm::omp::descriptor::Modifier &desc{
+                       OmpGetDescriptor<SpecificTy>()};
+                   const auto &props{desc.getProperties(version)};
 
-              if (props.test(OmpProperty::Ultimate)) {
-                bool isPre = !props.test(OmpProperty::Post);
-                if (it == (isPre ? last : first)) {
-                  // Skip, since this is the correct place for this modifier.
-                  return true;
-                }
-                llvm::StringRef where{isPre ? "last" : "first"};
-                semaCtx.Say(it->source,
-                    "'%s' should be the %s modifier"_err_en_US, desc.name.str(),
-                    where.str());
-                return false;
-              }
-              return true;
-            },
-            it->u) &&
+                   if (props.test(llvm::omp::Property::Ultimate)) {
+                     bool isPre = !llvm::omp::getProperties(id, version)
+                                       .test(llvm::omp::Property::PostModified);
+                     if (it == (isPre ? last : first)) {
+                       // Skip, since this is the correct place for this
+                       // modifier.
+                       return true;
+                     }
+                     llvm::StringRef where{isPre ? "last" : "first"};
+                     semaCtx.Say(it->source,
+                         "'%s' should be the %s modifier"_err_en_US,
+                         desc.getName().str(), where.str());
+                     return false;
+                   }
+                   return true;
+                 },
+                 it->u) &&
         result;
   }
   return result;
@@ -459,24 +500,24 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
   }
   unsigned version{semaCtx.langOptions().OpenMPVersion};
   const UnionTy &front{modifiers->front()};
-  const OmpModifierDescriptor &frontDesc{OmpGetDescriptor(front)};
+  const llvm::omp::descriptor::Modifier &frontDesc{OmpGetDescriptor(front)};
 
   auto second{std::next(modifiers->cbegin())};
   auto end{modifiers->end()};
 
   auto emitErrorMessage{[&](const UnionTy &excl, const UnionTy &other) {
-    const OmpModifierDescriptor &descExcl{OmpGetDescriptor(excl)};
-    const OmpModifierDescriptor &descOther{OmpGetDescriptor(other)};
+    const llvm::omp::descriptor::Modifier &descExcl{OmpGetDescriptor(excl)};
+    const llvm::omp::descriptor::Modifier &descOther{OmpGetDescriptor(other)};
     parser::MessageFormattedText txt(
         "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
-        descExcl.name.str());
+        descExcl.getName().str());
     parser::Message message(excl.source, txt);
     message.Attach(
-        other.source, "'%s' provided here"_en_US, descOther.name.str());
+        other.source, "'%s' provided here"_en_US, descOther.getName().str());
     semaCtx.Say(std::move(message));
   }};
 
-  if (frontDesc.props(version).test(OmpProperty::Exclusive)) {
+  if (frontDesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
     // If the first item has the Exclusive property, then check if there is
     // another item in the rest of the list with a different SpecificTy as
     // the alternative, and mark it as an error. This allows multiple Exclusive
@@ -497,8 +538,8 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
     // mark it as an error if so.
     bool result{true};
     for (auto it{second}; it != end; ++it) {
-      const OmpModifierDescriptor &desc{OmpGetDescriptor(*it)};
-      if (desc.props(version).test(OmpProperty::Exclusive)) {
+      const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor(*it)};
+      if (desc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
         emitErrorMessage(*it, front);
         result = false;
         break;

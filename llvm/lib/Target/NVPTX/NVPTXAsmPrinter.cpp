@@ -1021,7 +1021,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires reqntid and cluster_dim attributes",
             F.getSubprogram()));
-      else if (STI->getPTXVersion() < 90)
+      else if (!STI->hasFeature(NVPTX::PTX90))
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires PTX version >= 9.0",
             F.getSubprogram()));
@@ -1236,7 +1236,7 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
   if (M.alias_size() &&
-      (STI.getPTXVersion() < 63 || !STI.hasFeature(NVPTX::SM30)))
+      (!STI.hasFeature(NVPTX::PTX63) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
   // We need to call the parent's one explicitly.
@@ -1420,7 +1420,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       O << ".visible ";
     else
       O << ".extern ";
-  } else if (STI.getPTXVersion() >= 50 && GVar->hasCommonLinkage() &&
+  } else if (STI.hasFeature(NVPTX::PTX50) && GVar->hasCommonLinkage() &&
              GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) {
     O << ".common ";
   } else if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
@@ -1544,7 +1544,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
     O << " .attribute(.managed)";
@@ -1843,7 +1843,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
 

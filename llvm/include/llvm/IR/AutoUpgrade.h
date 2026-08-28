@@ -121,7 +121,9 @@ namespace llvm {
       {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
       {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
       {"llvm.loop.vectorize.predicate.enable",
-       "llvm.loop.vectorize.predicate.disable"}};
+       "llvm.loop.vectorize.predicate.disable"},
+      {"llvm.loop.vectorize.scalable.enable",
+       "llvm.loop.vectorize.scalable.disable"}};
 
   /// Return the replacement tags for the enable tag \p Name, or nullptr.
   inline const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {

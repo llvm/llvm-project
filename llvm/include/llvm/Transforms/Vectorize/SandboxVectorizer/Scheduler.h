@@ -66,12 +66,7 @@ public:
   void insert(DGNode *N) {
 #ifndef NDEBUG
     assert(!N->scheduled() && "Don't insert a scheduled node!");
-    auto ListCopy = List;
-    while (!ListCopy.empty()) {
-      DGNode *Top = ListCopy.top();
-      ListCopy.pop();
-      assert(Top != N && "Node already exists in ready list!");
-    }
+    assert(!contains(N) && "Node already exists in ready list!");
 #endif
     List.push(N);
   }
@@ -82,6 +77,17 @@ public:
   }
   bool empty() const { return List.empty(); }
   void clear() { List = {}; }
+  bool contains(DGNode *N) const {
+    // TODO: We should update the data structure to make this O(1).
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      if (Top == N)
+        return true;
+      ListCopy.pop();
+    }
+    return false;
+  }
   /// \Removes \p N if found in the ready list.
   void remove(DGNode *N) {
     // TODO: Use a more efficient data-structure for the ready list because the
@@ -152,10 +158,7 @@ public:
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
   bool ready(SchedDirection Dir) const {
-    return all_of(Nodes, [Dir](const auto *N) {
-      return Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                             : N->readyTopDown();
-    });
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
