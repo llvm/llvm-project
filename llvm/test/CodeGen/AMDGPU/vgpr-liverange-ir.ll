@@ -266,7 +266,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI4]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI4]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.3, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5:
@@ -303,7 +303,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI7]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI7]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.7, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.9:
@@ -387,7 +387,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI3]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI3]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.3, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5:
@@ -423,7 +423,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE3]], 0, csr_amdgpu_si_gfx, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit-def $vgpr0
   ; SI-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SI-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI5]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI5]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.7, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.9:
@@ -624,14 +624,14 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[IMAGE_SAMPLE_V1_V2_nsa_gfx10_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V2_nsa_gfx10 undef %29:vgpr_32, undef %31:vgpr_32, [[REG_SEQUENCE5]], killed [[REG_SEQUENCE8]], 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.4, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.6:
   ; SI-NEXT:   successors: %bb.2(0x40000000), %bb.7(0x40000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_1]]
-  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 killed [[PHI]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   [[S_ANDN2_WREXEC_B32_term1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term killed [[PHI]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7:

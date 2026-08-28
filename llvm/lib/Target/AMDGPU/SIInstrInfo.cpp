@@ -2104,6 +2104,13 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
     break;
 
+  case AMDGPU::S_ANDN2_WREXEC_B64_term:
+    MI.setDesc(get(AMDGPU::S_ANDN2_WREXEC_B64));
+    break;
+  case AMDGPU::S_ANDN2_WREXEC_B32_term:
+    MI.setDesc(get(AMDGPU::S_ANDN2_WREXEC_B32));
+    break;
+
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
     MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
     break;
@@ -3255,6 +3262,8 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::S_AND_SAVEEXEC_B32_term:
     case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
     case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    case AMDGPU::S_ANDN2_WREXEC_B32_term:
+    case AMDGPU::S_ANDN2_WREXEC_B64_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
@@ -7475,9 +7484,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
     }
   }
 
-  // Instructions AndSaveExecOpc and AndN2WrExecOpc that modify EXEC mask
-  // should have isTerminator=1 but terminators that define
-  // virtual registers are not supported.
+  // AndSaveExecOpc modifies EXEC but can't be isTerminator=1: terminators
+  // that define virtual registers aren't supported.
   Register SaveExec;
   if (!UseNewExecInstructions) {
     SaveExec = MRI.createVirtualRegister(BoolXExecRC);
@@ -7492,8 +7500,14 @@ static void emitLoadScalarOpsFromVGPRLoop(
   I = BodyBB.end();
 
   if (UseNewExecInstructions) {
+    // Terminator form lets PHI elimination fold this into the exec PHI's
+    // def. Skip it at -O0: RegAllocFast spills live-out defs right after
+    // them, not at the first terminator.
+    bool UseTermForm = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
     MRI.setSimpleHint(NewExec, PhiExec);
-    BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2WrExecOpc), NewExec)
+    BuildMI(BodyBB, I, DL,
+            TII.get(UseTermForm ? LMC.AndN2WrExecTermOpc : LMC.AndN2WrExecOpc),
+            NewExec)
         .addReg(PhiExec);
   } else {
     // Update EXEC, switch all done bits to 0 and all todo bits to 1.

@@ -351,6 +351,12 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  // See the comment in emitLoadScalarOpsFromVGPRLoop.
+  bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
+    return MI->getOpcode() == AMDGPU::S_ANDN2_WREXEC_B32_term ||
+           MI->getOpcode() == AMDGPU::S_ANDN2_WREXEC_B64_term;
+  }
+
   void
   reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                 Register DestReg, unsigned SubIdx, const MachineInstr &Orig,

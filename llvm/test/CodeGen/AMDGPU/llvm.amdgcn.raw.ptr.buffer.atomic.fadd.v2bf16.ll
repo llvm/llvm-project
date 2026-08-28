@@ -120,10 +120,10 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1200-NEXT:    v_cmpx_eq_u32_e32 s6, v6
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_pk_add_bf16 v0, v5, s[0:3], s6 offen offset:128 th:TH_ATOMIC_RETURN
-; GFX1200-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr6
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5
+; GFX1200-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1200-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX1200-NEXT:  ; %bb.2:
 ; GFX1200-NEXT:    s_mov_b32 exec_lo, s4
@@ -154,11 +154,11 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen th:TH_ATOMIC_RETURN
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11
 ; GFX1250-NEXT:    ; implicit-def: $vgpr6
 ; GFX1250-NEXT:    ; implicit-def: $vgpr1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX1250-NEXT:  ; %bb.2:
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s4

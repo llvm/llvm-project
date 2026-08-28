@@ -101,7 +101,7 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_term:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
@@ -142,7 +142,7 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
@@ -251,7 +251,7 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_term:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
@@ -292,7 +292,7 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
@@ -402,7 +402,7 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_term:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
@@ -443,7 +443,7 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
@@ -671,7 +671,7 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W64-NEXT: [[S_ANDN2_WREXEC_B64_term:%[0-9]+]]:sreg_64_xexec = S_ANDN2_WREXEC_B64_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
@@ -712,7 +712,7 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; W32-NEXT: [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
     ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:

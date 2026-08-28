@@ -95,7 +95,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -199,7 +199,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -303,7 +303,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -407,7 +407,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -511,7 +511,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 1, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -615,7 +615,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 2, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -719,7 +719,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 4, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -823,7 +823,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 6, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -927,7 +927,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 5, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1031,7 +1031,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 7, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1138,7 +1138,7 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN:%[0-9]+]]:vreg_64_align2 = BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1249,7 +1249,7 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN:%[0-9]+]]:vreg_96_align2 = BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1364,7 +1364,7 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1475,7 +1475,7 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1579,7 +1579,7 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1685,7 +1685,7 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN:%[0-9]+]]:vreg_64_align2 = BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1791,7 +1791,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_UBYTE_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -1896,7 +1896,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_SBYTE_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2001,7 +2001,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2106,7 +2106,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_SSHORT_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2213,7 +2213,7 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2318,7 +2318,7 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_UBYTE_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2421,7 +2421,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2522,7 +2522,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2624,7 +2624,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFSET killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 4096, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2721,7 +2721,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset0(ptr a
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE5]], $sgpr_null, 8388604, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2826,7 +2826,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -2932,7 +2932,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3040,7 +3040,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3139,7 +3139,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3237,7 +3237,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3344,7 +3344,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3452,7 +3452,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3560,7 +3560,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3669,7 +3669,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
@@ -3778,7 +3778,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_OFFEN [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32 [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX1250-NEXT:   [[S_ANDN2_WREXEC_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_WREXEC_B32_term [[PHI]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
