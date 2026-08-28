@@ -13554,8 +13554,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
-    // Can we prove Start - Stride < Start and Start - Stride < RHS?
-    if (isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart) &&
+    // Can we prove Start - Stride < RHS, and either Start - Stride < Start or
+    // (via !IVMayOverflow) that RHS + Stride - 1 does not overflow?
+    if ((!IVMayOverflow ||
+         isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart)) &&
         isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
       // In this case, we can use a refined formula for computing backedge
       // taken count.  The general formula remains:
@@ -13563,7 +13565,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // We want to use the alternate formula:
       //   "((RHS - 1) - (Start - Stride)) /u Stride"
       // Let's do a quick case analysis to show these are equivalent under
-      // our preconditions that Start - Stride is below both Start and RHS.
+      // our preconditions.
       // * For RHS <= Start (End is Start), the backedge-taken count must be
       //   zero. Together with the precondition "Start - Stride < RHS", we have
       //   "Start - Stride < RHS <= Start". Subtracting Start - Stride from
@@ -13572,9 +13574,20 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //   So dividing that by Stride gives zero.
       //
       // * For RHS > Start (End is RHS), the backedge count must be
-      //   "RHS-Start /uceil Stride". Together with the precondition
-      //   "Start - Stride < Start", we have "RHS > Start > Start - Stride".
-      //   As such RHS - (Start - Stride) - 1 does not overflow.
+      //   "RHS-Start /uceil Stride", so it is sufficient to show that the
+      //   numerator "((RHS - 1) - (Start - Stride))" does not overflow.
+      //
+      //   If "Start - Stride < Start" holds, we have
+      //   "RHS > Start > Start - Stride". As such
+      //   "RHS - (Start - Stride) - 1" does not overflow, which is the
+      //   reassociated numerator.
+      //
+      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV",
+      //   where MaxV is the maximum signed/unsigned value. Let MinV be the
+      //   matching minimum value. "Start >= MinV" gives
+      //   "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV" is
+      //   the largest unsigned value, the reassociated numerator does not
+      //   overflow.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
