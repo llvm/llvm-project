@@ -89,117 +89,111 @@ static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg, object_error::parse_failed);
 }
 
-static Error readUint8(WasmObjectFile::ReadContext &Ctx, uint8_t &Result) {
+static Expected<uint8_t> readUint8(WasmObjectFile::ReadContext &Ctx) {
   if (Ctx.Ptr == Ctx.End)
     return parseFailed("EOF while reading uint8");
-  Result = *Ctx.Ptr++;
-  return Error::success();
+  return *Ctx.Ptr++;
 }
 
-static Error readUint32(WasmObjectFile::ReadContext &Ctx, uint32_t &Result) {
+static Expected<uint32_t> readUint32(WasmObjectFile::ReadContext &Ctx) {
   if (Ctx.Ptr + 4 > Ctx.End)
     return parseFailed("EOF while reading uint32");
-  Result = support::endian::read32le(Ctx.Ptr);
+  uint32_t Result = support::endian::read32le(Ctx.Ptr);
   Ctx.Ptr += 4;
-  return Error::success();
+  return Result;
 }
 
-static Error readFloat32(WasmObjectFile::ReadContext &Ctx, int32_t &Result) {
+static Expected<int32_t> readFloat32(WasmObjectFile::ReadContext &Ctx) {
   if (Ctx.Ptr + 4 > Ctx.End)
-    return parseFailed("EOF while reading float64");
-  Result = 0;
+    return parseFailed("EOF while reading float32");
+  int32_t Result = 0;
   memcpy(&Result, Ctx.Ptr, sizeof(Result));
   Ctx.Ptr += sizeof(Result);
-  return Error::success();
+  return Result;
 }
 
-static Error readFloat64(WasmObjectFile::ReadContext &Ctx, int64_t &Result) {
+static Expected<int64_t> readFloat64(WasmObjectFile::ReadContext &Ctx) {
   if (Ctx.Ptr + 8 > Ctx.End)
     return parseFailed("EOF while reading float64");
-  Result = 0;
+  int64_t Result = 0;
   memcpy(&Result, Ctx.Ptr, sizeof(Result));
   Ctx.Ptr += sizeof(Result);
-  return Error::success();
+  return Result;
 }
 
-static Error readULEB128(WasmObjectFile::ReadContext &Ctx, uint64_t &Result) {
+static Expected<uint64_t> readULEB128(WasmObjectFile::ReadContext &Ctx) {
   unsigned Count;
   const char *ErrorStr = nullptr;
-  Result = decodeULEB128(Ctx.Ptr, &Count, Ctx.End, &ErrorStr);
+  uint64_t Result = decodeULEB128(Ctx.Ptr, &Count, Ctx.End, &ErrorStr);
   if (ErrorStr)
     return parseFailed(ErrorStr);
   Ctx.Ptr += Count;
-  return Error::success();
+  return Result;
 }
 
-static Error readString(WasmObjectFile::ReadContext &Ctx, StringRef &Result) {
-  uint64_t StringLen;
-  if (Error E = readULEB128(Ctx, StringLen))
-    return E;
-
-  if (StringLen > static_cast<uint64_t>(Ctx.End - Ctx.Ptr))
-    return parseFailed("EOF while reading string");
-
-  Result = StringRef(reinterpret_cast<const char *>(Ctx.Ptr), StringLen);
-  Ctx.Ptr += StringLen;
-  return Error::success();
-}
-
-static Error readLEB128(WasmObjectFile::ReadContext &Ctx, int64_t &Result) {
+static Expected<int64_t> readLEB128(WasmObjectFile::ReadContext &Ctx) {
   unsigned Count;
   const char *ErrorStr = nullptr;
   uint64_t Decoded = decodeSLEB128(Ctx.Ptr, &Count, Ctx.End, &ErrorStr);
   if (ErrorStr)
     return parseFailed(ErrorStr);
-  Result = static_cast<int64_t>(Decoded);
   Ctx.Ptr += Count;
-  return Error::success();
+  return static_cast<int64_t>(Decoded);
 }
 
-static Error readVaruint1(WasmObjectFile::ReadContext &Ctx, uint8_t &Result) {
-  int64_t Value;
-  if (Error E = readLEB128(Ctx, Value))
-    return E;
-  if (Value > VARUINT1_MAX || Value < 0)
+static Expected<uint8_t> readVaruint1(WasmObjectFile::ReadContext &Ctx) {
+  Expected<int64_t> Value = readLEB128(Ctx);
+  if (!Value)
+    return Value.takeError();
+  if (*Value > VARUINT1_MAX || *Value < 0)
     return parseFailed("LEB is outside Varuint1 range");
-  Result = Value;
-  return Error::success();
+  return *Value;
 }
 
-static Error readVarint32(WasmObjectFile::ReadContext &Ctx, int32_t &Result) {
-  int64_t Value;
-  if (Error E = readLEB128(Ctx, Value))
-    return E;
-  if (Value > INT32_MAX || Value < INT32_MIN)
+static Expected<int32_t> readVarint32(WasmObjectFile::ReadContext &Ctx) {
+  Expected<int64_t> Value = readLEB128(Ctx);
+  if (!Value)
+    return Value.takeError();
+  if (*Value > INT32_MAX || *Value < INT32_MIN)
     return parseFailed("LEB is outside Varint32 range");
-  Result = Value;
-  return Error::success();
+  return *Value;
 }
 
-static Error readVaruint32(WasmObjectFile::ReadContext &Ctx, uint32_t &Result) {
-  uint64_t Value;
-  if (Error E = readULEB128(Ctx, Value))
-    return E;
-  if (Value > UINT32_MAX)
+static Expected<uint32_t> readVaruint32(WasmObjectFile::ReadContext &Ctx) {
+  Expected<uint64_t> Value = readULEB128(Ctx);
+  if (!Value)
+    return Value.takeError();
+  if (*Value > UINT32_MAX)
     return parseFailed("LEB is outside Varuint32 range");
-  Result = Value;
-  return Error::success();
+  return *Value;
 }
 
-static Error readVarint64(WasmObjectFile::ReadContext &Ctx, int64_t &Result) {
-  return readLEB128(Ctx, Result);
+static Expected<int64_t> readVarint64(WasmObjectFile::ReadContext &Ctx) {
+  return readLEB128(Ctx);
 }
 
-static Error readVaruint64(WasmObjectFile::ReadContext &Ctx, uint64_t &Result) {
-  return readULEB128(Ctx, Result);
+static Expected<uint64_t> readVaruint64(WasmObjectFile::ReadContext &Ctx) {
+  return readULEB128(Ctx);
 }
 
-static Error readOpcode(WasmObjectFile::ReadContext &Ctx, uint8_t &Result) {
-  return readUint8(Ctx, Result);
+static Expected<StringRef> readString(WasmObjectFile::ReadContext &Ctx) {
+  Expected<uint32_t> StringLen = readVaruint32(Ctx);
+  if (!StringLen)
+    return StringLen.takeError();
+  if (*StringLen > static_cast<uint64_t>(Ctx.End - Ctx.Ptr))
+    return parseFailed("EOF while reading string");
+
+  StringRef Result(reinterpret_cast<const char *>(Ctx.Ptr), *StringLen);
+  Ctx.Ptr += *StringLen;
+  return Result;
 }
 
-static Error parseValType(WasmObjectFile::ReadContext &Ctx, uint32_t Code,
-                          wasm::ValType &Out) {
+static Expected<uint8_t> readOpcode(WasmObjectFile::ReadContext &Ctx) {
+  return readUint8(Ctx);
+}
+
+static Expected<wasm::ValType> parseValType(WasmObjectFile::ReadContext &Ctx,
+                                            uint32_t Code) {
   // only directly encoded FUNCREF/EXTERNREF/EXNREF are supported
   // (not ref null func, ref null extern, or ref null exn)
   switch (Code) {
@@ -211,16 +205,14 @@ static Error parseValType(WasmObjectFile::ReadContext &Ctx, uint32_t Code,
   case wasm::WASM_TYPE_FUNCREF:
   case wasm::WASM_TYPE_EXTERNREF:
   case wasm::WASM_TYPE_EXNREF:
-    Out = wasm::ValType(Code);
-    return Error::success();
+    return wasm::ValType(Code);
   }
   if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
-    int64_t HeapType;
-    if (Error E = readVarint64(Ctx, HeapType))
-      return E;
+    Expected<int64_t> HeapType = readVarint64(Ctx);
+    if (!HeapType)
+      return HeapType.takeError();
   }
-  Out = wasm::ValType(wasm::ValType::OTHERREF);
-  return Error::success();
+  return wasm::ValType(wasm::ValType::OTHERREF);
 }
 
 static Error readInitExpr(wasm::WasmInitExpr &Expr,
@@ -228,45 +220,58 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   auto Start = Ctx.Ptr;
 
   Expr.Extended = false;
-  if (Error E = readOpcode(Ctx, Expr.Inst.Opcode))
-    return E;
+  if (auto Value = readOpcode(Ctx))
+    Expr.Inst.Opcode = *Value;
+  else
+    return Value.takeError();
   switch (Expr.Inst.Opcode) {
   case wasm::WASM_OPCODE_I32_CONST:
-    if (Error E = readVarint32(Ctx, Expr.Inst.Value.Int32))
-      return E;
+    if (auto Value = readVarint32(Ctx))
+      Expr.Inst.Value.Int32 = *Value;
+    else
+      return Value.takeError();
     break;
   case wasm::WASM_OPCODE_I64_CONST:
-    if (Error E = readVarint64(Ctx, Expr.Inst.Value.Int64))
-      return E;
+    if (auto Value = readVarint64(Ctx))
+      Expr.Inst.Value.Int64 = *Value;
+    else
+      return Value.takeError();
     break;
   case wasm::WASM_OPCODE_F32_CONST: {
     int32_t Float32;
-    if (Error E = readFloat32(Ctx, Float32))
-      return E;
+    if (auto Value = readFloat32(Ctx))
+      Float32 = *Value;
+    else
+      return Value.takeError();
     Expr.Inst.Value.Float32 = Float32;
     break;
   }
   case wasm::WASM_OPCODE_F64_CONST: {
     int64_t Float64;
-    if (Error E = readFloat64(Ctx, Float64))
-      return E;
+    if (auto Value = readFloat64(Ctx))
+      Float64 = *Value;
+    else
+      return Value.takeError();
     Expr.Inst.Value.Float64 = Float64;
     break;
   }
   case wasm::WASM_OPCODE_GLOBAL_GET: {
     uint64_t Global;
-    if (Error E = readULEB128(Ctx, Global))
-      return E;
+    if (auto Value = readULEB128(Ctx))
+      Global = *Value;
+    else
+      return Value.takeError();
     Expr.Inst.Value.Global = Global;
     break;
   }
   case wasm::WASM_OPCODE_REF_NULL: {
     uint32_t TypeCode;
-    if (Error E = readVaruint32(Ctx, TypeCode))
-      return E;
-    wasm::ValType Type;
-    if (Error E = parseValType(Ctx, TypeCode, Type))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      TypeCode = *Value;
+    else
+      return Value.takeError();
+    if (Expected<wasm::ValType> Type = parseValType(Ctx, TypeCode); !Type)
+      return Type.takeError();
     break;
   }
   default:
@@ -275,8 +280,10 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 
   if (!Expr.Extended) {
     uint8_t EndOpcode;
-    if (Error E = readOpcode(Ctx, EndOpcode))
-      return E;
+    if (auto Value = readOpcode(Ctx))
+      EndOpcode = *Value;
+    else
+      return Value.takeError();
     if (EndOpcode != wasm::WASM_OPCODE_END)
       Expr.Extended = true;
   }
@@ -285,29 +292,28 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     Ctx.Ptr = Start;
     while (true) {
       uint8_t Opcode;
-      if (Error E = readOpcode(Ctx, Opcode))
-        return E;
+      if (auto Value = readOpcode(Ctx))
+        Opcode = *Value;
+      else
+        return Value.takeError();
       switch (Opcode) {
       case wasm::WASM_OPCODE_I32_CONST:
       case wasm::WASM_OPCODE_GLOBAL_GET:
       case wasm::WASM_OPCODE_REF_NULL:
       case wasm::WASM_OPCODE_REF_FUNC:
       case wasm::WASM_OPCODE_I64_CONST: {
-        uint64_t Discard;
-        if (Error E = readULEB128(Ctx, Discard))
-          return E;
+        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
+          return Value.takeError();
         break;
       }
       case wasm::WASM_OPCODE_F32_CONST: {
-        int32_t Discard;
-        if (Error E = readFloat32(Ctx, Discard))
-          return E;
+        if (Expected<int32_t> Value = readFloat32(Ctx); !Value)
+          return Value.takeError();
         break;
       }
       case wasm::WASM_OPCODE_F64_CONST: {
-        int64_t Discard;
-        if (Error E = readFloat64(Ctx, Discard))
-          return E;
+        if (Expected<int64_t> Value = readFloat64(Ctx); !Value)
+          return Value.takeError();
         break;
       }
       case wasm::WASM_OPCODE_I32_ADD:
@@ -326,17 +332,15 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
       case wasm::WASM_OPCODE_STRUCT_NEW_DEFAULT:
       case wasm::WASM_OPCODE_ARRAY_NEW:
       case wasm::WASM_OPCODE_ARRAY_NEW_DEFAULT: {
-        uint64_t Discard;
-        if (Error E = readULEB128(Ctx, Discard))
-          return E;
+        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
+          return Value.takeError();
         break;
       }
       case wasm::WASM_OPCODE_ARRAY_NEW_FIXED: {
-        uint64_t Discard;
-        if (Error E = readULEB128(Ctx, Discard))
-          return E;
-        if (Error E = readULEB128(Ctx, Discard))
-          return E;
+        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
+          return Value.takeError();
+        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
+          return Value.takeError();
         break;
       }
       case wasm::WASM_OPCODE_REF_I31:
@@ -355,53 +359,72 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   return Error::success();
 }
 
-static Error readLimits(WasmObjectFile::ReadContext &Ctx,
-                        wasm::WasmLimits &Result) {
-  uint32_t Flags;
-  if (Error E = readVaruint32(Ctx, Flags))
-    return E;
-  Result.Flags = Flags;
-  if (Error E = readVaruint64(Ctx, Result.Minimum))
-    return E;
-  if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
-    if (Error E = readVaruint64(Ctx, Result.Maximum))
-      return E;
-  if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE) {
-    uint32_t PageSizeLog2;
-    if (Error E = readVaruint32(Ctx, PageSizeLog2))
-      return E;
-    if (PageSizeLog2 >= 32)
-      return parseFailed("log2(wasm page size) too large");
-    Result.PageSize = 1 << PageSizeLog2;
+static Expected<wasm::WasmLimits> readLimits(WasmObjectFile::ReadContext &Ctx) {
+  wasm::WasmLimits Result;
+  Expected<uint32_t> Flags = readVaruint32(Ctx);
+  if (!Flags)
+    return Flags.takeError();
+  Result.Flags = *Flags;
+
+  Expected<uint64_t> Minimum = readVaruint64(Ctx);
+  if (!Minimum)
+    return Minimum.takeError();
+  Result.Minimum = *Minimum;
+
+  if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX) {
+    Expected<uint64_t> Maximum = readVaruint64(Ctx);
+    if (!Maximum)
+      return Maximum.takeError();
+    Result.Maximum = *Maximum;
   }
-  return Error::success();
+  if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE) {
+    Expected<uint32_t> PageSizeLog2 = readVaruint32(Ctx);
+    if (!PageSizeLog2)
+      return PageSizeLog2.takeError();
+    if (*PageSizeLog2 >= 32)
+      return parseFailed("log2(wasm page size) too large");
+    Result.PageSize = 1U << *PageSizeLog2;
+  }
+  return Result;
 }
 
-static Error readTableType(WasmObjectFile::ReadContext &Ctx,
-                           wasm::WasmTableType &TableType) {
-  uint32_t ElemTypeCode;
-  if (Error E = readVaruint32(Ctx, ElemTypeCode))
-    return E;
-  if (Error E = parseValType(Ctx, ElemTypeCode, TableType.ElemType))
-    return E;
-  if (Error E = readLimits(Ctx, TableType.Limits))
-    return E;
-  return Error::success();
+static Expected<wasm::WasmTableType>
+readTableType(WasmObjectFile::ReadContext &Ctx) {
+  Expected<uint32_t> ElemTypeCode = readVaruint32(Ctx);
+  if (!ElemTypeCode)
+    return ElemTypeCode.takeError();
+
+  Expected<wasm::ValType> ElemType = parseValType(Ctx, *ElemTypeCode);
+  if (!ElemType)
+    return ElemType.takeError();
+
+  Expected<wasm::WasmLimits> Limits = readLimits(Ctx);
+  if (!Limits)
+    return Limits.takeError();
+
+  wasm::WasmTableType TableType;
+  TableType.ElemType = *ElemType;
+  TableType.Limits = *Limits;
+  return TableType;
 }
 
 static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
                          WasmSectionOrderChecker &Checker) {
   uint8_t SectionType;
-  if (Error E = readUint8(Ctx, SectionType))
-    return E;
+  if (auto Value = readUint8(Ctx))
+    SectionType = *Value;
+  else
+    return Value.takeError();
   Section.Type = SectionType;
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
   // When reading the section's size, store the size of the LEB used to encode
   // it. This allows objcopy/strip to reproduce the binary identically.
   const uint8_t *PreSizePtr = Ctx.Ptr;
   uint32_t Size;
-  if (Error E = readVaruint32(Ctx, Size))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Size = *Value;
+  else
+    return Value.takeError();
   Section.HeaderSecSizeEncodingLen = Ctx.Ptr - PreSizePtr;
   Section.Offset = Ctx.Ptr - Ctx.Start;
   if (Size == 0)
@@ -416,8 +439,10 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
     SectionCtx.Ptr = Ctx.Ptr;
     SectionCtx.End = Ctx.Ptr + Size;
 
-    if (Error E = readString(SectionCtx, Section.Name))
-      return E;
+    if (auto Value = readString(SectionCtx))
+      Section.Name = *Value;
+    else
+      return Value.takeError();
 
     uint32_t SectionNameSize = SectionCtx.Ptr - SectionCtx.Start;
     Ctx.Ptr += SectionNameSize;
@@ -456,10 +481,12 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     return;
   }
 
-  if (Error E = readUint32(Ctx, Header.Version)) {
-    Err = std::move(E);
+  Expected<uint32_t> Version = readUint32(Ctx);
+  if (!Version) {
+    Err = Version.takeError();
     return;
   }
+  Header.Version = *Version;
   if (Header.Version != wasm::WasmVersion) {
     Err = make_error<StringError>("invalid version number: " +
                                       Twine(Header.Version),
@@ -523,22 +550,34 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
   // Legacy "dylink" section support.
   // See parseDylink0Section for the current "dylink.0" section parsing.
   HasDylinkSection = true;
-  if (Error E = readVaruint32(Ctx, DylinkInfo.MemorySize))
-    return E;
-  if (Error E = readVaruint32(Ctx, DylinkInfo.MemoryAlignment))
-    return E;
-  if (Error E = readVaruint32(Ctx, DylinkInfo.TableSize))
-    return E;
-  if (Error E = readVaruint32(Ctx, DylinkInfo.TableAlignment))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    DylinkInfo.MemorySize = *Value;
+  else
+    return Value.takeError();
+  if (auto Value = readVaruint32(Ctx))
+    DylinkInfo.MemoryAlignment = *Value;
+  else
+    return Value.takeError();
+  if (auto Value = readVaruint32(Ctx))
+    DylinkInfo.TableSize = *Value;
+  else
+    return Value.takeError();
+  if (auto Value = readVaruint32(Ctx))
+    DylinkInfo.TableAlignment = *Value;
+  else
+    return Value.takeError();
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   while (Count--) {
-    StringRef __Name;
-    if (Error E = readString(Ctx, __Name))
-      return E;
-    DylinkInfo.Needed.push_back(__Name);
+    StringRef Name;
+    if (auto Value = readString(Ctx))
+      Name = *Value;
+    else
+      return Value.takeError();
+    DylinkInfo.Needed.push_back(Name);
   }
 
   if (Ctx.Ptr != Ctx.End)
@@ -556,78 +595,112 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
   while (Ctx.Ptr < OrigEnd) {
     Ctx.End = OrigEnd;
     uint8_t Type;
-    if (Error E = readUint8(Ctx, Type))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Type = *Value;
+    else
+      return Value.takeError();
     uint32_t Size;
-    if (Error E = readVaruint32(Ctx, Size))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Size = *Value;
+    else
+      return Value.takeError();
     LLVM_DEBUG(dbgs() << "readSubsection type=" << int(Type) << " size=" << Size
                       << "\n");
     Ctx.End = Ctx.Ptr + Size;
     uint32_t Count;
     switch (Type) {
     case wasm::WASM_DYLINK_MEM_INFO:
-      if (Error E = readVaruint32(Ctx, DylinkInfo.MemorySize))
-        return E;
-      if (Error E = readVaruint32(Ctx, DylinkInfo.MemoryAlignment))
-        return E;
-      if (Error E = readVaruint32(Ctx, DylinkInfo.TableSize))
-        return E;
-      if (Error E = readVaruint32(Ctx, DylinkInfo.TableAlignment))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        DylinkInfo.MemorySize = *Value;
+      else
+        return Value.takeError();
+      if (auto Value = readVaruint32(Ctx))
+        DylinkInfo.MemoryAlignment = *Value;
+      else
+        return Value.takeError();
+      if (auto Value = readVaruint32(Ctx))
+        DylinkInfo.TableSize = *Value;
+      else
+        return Value.takeError();
+      if (auto Value = readVaruint32(Ctx))
+        DylinkInfo.TableAlignment = *Value;
+      else
+        return Value.takeError();
       break;
     case wasm::WASM_DYLINK_NEEDED:
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       while (Count--) {
-        StringRef __Name;
-        if (Error E = readString(Ctx, __Name))
-          return E;
-        DylinkInfo.Needed.push_back(__Name);
+        StringRef Name;
+        if (auto Value = readString(Ctx))
+          Name = *Value;
+        else
+          return Value.takeError();
+        DylinkInfo.Needed.push_back(Name);
       }
       break;
     case wasm::WASM_DYLINK_EXPORT_INFO: {
       uint32_t Count;
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       while (Count--) {
         StringRef ExportName;
-        if (Error E = readString(Ctx, ExportName))
-          return E;
+        if (auto Value = readString(Ctx))
+          ExportName = *Value;
+        else
+          return Value.takeError();
         uint32_t ExportFlags;
-        if (Error E = readVaruint32(Ctx, ExportFlags))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          ExportFlags = *Value;
+        else
+          return Value.takeError();
         DylinkInfo.ExportInfo.push_back({ExportName, ExportFlags});
       }
       break;
     }
     case wasm::WASM_DYLINK_IMPORT_INFO: {
       uint32_t Count;
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       while (Count--) {
         StringRef ImportModule;
-        if (Error E = readString(Ctx, ImportModule))
-          return E;
+        if (auto Value = readString(Ctx))
+          ImportModule = *Value;
+        else
+          return Value.takeError();
         StringRef ImportField;
-        if (Error E = readString(Ctx, ImportField))
-          return E;
+        if (auto Value = readString(Ctx))
+          ImportField = *Value;
+        else
+          return Value.takeError();
         uint32_t ImportFlags;
-        if (Error E = readVaruint32(Ctx, ImportFlags))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          ImportFlags = *Value;
+        else
+          return Value.takeError();
         DylinkInfo.ImportInfo.push_back(
             {ImportModule, ImportField, ImportFlags});
       }
       break;
     }
     case wasm::WASM_DYLINK_RUNTIME_PATH: {
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       while (Count--) {
-        StringRef __Name;
-        if (Error E = readString(Ctx, __Name))
-          return E;
-        DylinkInfo.RuntimePath.push_back(__Name);
+        StringRef Name;
+        if (auto Value = readString(Ctx))
+          Name = *Value;
+        else
+          return Value.takeError();
+        DylinkInfo.RuntimePath.push_back(Name);
       }
       break;
     }
@@ -664,11 +737,15 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
 
   while (Ctx.Ptr < Ctx.End) {
     uint8_t Type;
-    if (Error E = readUint8(Ctx, Type))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Type = *Value;
+    else
+      return Value.takeError();
     uint32_t Size;
-    if (Error E = readVaruint32(Ctx, Size))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Size = *Value;
+    else
+      return Value.takeError();
     const uint8_t *SubSectionEnd = Ctx.Ptr + Size;
 
     switch (Type) {
@@ -676,15 +753,21 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
     case wasm::WASM_NAMES_GLOBAL:
     case wasm::WASM_NAMES_DATA_SEGMENT: {
       uint32_t Count;
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       while (Count--) {
         uint32_t Index;
-        if (Error E = readVaruint32(Ctx, Index))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          Index = *Value;
+        else
+          return Value.takeError();
         StringRef Name;
-        if (Error E = readString(Ctx, Name))
-          return E;
+        if (auto Value = readString(Ctx))
+          Name = *Value;
+        else
+          return Value.takeError();
         wasm::NameType nameType = wasm::NameType::FUNCTION;
         wasm::WasmSymbolInfo Info{Name,
                                   /*Kind */ wasm::WASM_SYMBOL_TYPE_FUNCTION,
@@ -771,8 +854,10 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
   HasLinkingSection = true;
 
-  if (Error E = readVaruint32(Ctx, LinkingData.Version))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    LinkingData.Version = *Value;
+  else
+    return Value.takeError();
   if (LinkingData.Version != wasm::WasmMetadataVersion) {
     return make_error<GenericBinaryError>(
         "unexpected metadata version: " + Twine(LinkingData.Version) +
@@ -784,11 +869,15 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
   while (Ctx.Ptr < OrigEnd) {
     Ctx.End = OrigEnd;
     uint8_t Type;
-    if (Error E = readUint8(Ctx, Type))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Type = *Value;
+    else
+      return Value.takeError();
     uint32_t Size;
-    if (Error E = readVaruint32(Ctx, Size))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Size = *Value;
+    else
+      return Value.takeError();
     LLVM_DEBUG(dbgs() << "readSubsection type=" << int(Type) << " size=" << Size
                       << "\n");
     Ctx.End = Ctx.Ptr + Size;
@@ -799,41 +888,52 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_SEGMENT_INFO: {
       uint32_t Count;
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       if (Count > DataSegments.size())
         return make_error<GenericBinaryError>("too many segment names",
                                               object_error::parse_failed);
       for (uint32_t I = 0; I < Count; I++) {
-        if (Error E = readString(Ctx, DataSegments[I].Data.Name))
-          return E;
-        if (Error E = readVaruint32(Ctx, DataSegments[I].Data.Alignment))
-          return E;
-        if (Error E = readVaruint32(Ctx, DataSegments[I].Data.LinkingFlags))
-          return E;
-        DataSegments[I].Data.Name = readString(Ctx);
-        DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        if (auto Value = readString(Ctx))
+          DataSegments[I].Data.Name = *Value;
+        else
+          return Value.takeError();
+        if (auto Value = readVaruint32(Ctx))
+          DataSegments[I].Data.Alignment = *Value;
+        else
+          return Value.takeError();
         if (DataSegments[I].Data.Alignment > 32)
           return make_error<GenericBinaryError>(
               "invalid data segment alignment: `" + DataSegments[I].Data.Name +
                   "` (alignment: " + Twine(DataSegments[I].Data.Alignment) +
                   ")",
               object_error::parse_failed);
-        DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
+        if (auto Value = readVaruint32(Ctx))
+          DataSegments[I].Data.LinkingFlags = *Value;
+        else
+          return Value.takeError();
       }
       break;
     }
     case wasm::WASM_INIT_FUNCS: {
       uint32_t Count;
-      if (Error E = readVaruint32(Ctx, Count))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Count = *Value;
+      else
+        return Value.takeError();
       LinkingData.InitFunctions.reserve(Count);
       for (uint32_t I = 0; I < Count; I++) {
         wasm::WasmInitFunc Init;
-        if (Error E = readVaruint32(Ctx, Init.Priority))
-          return E;
-        if (Error E = readVaruint32(Ctx, Init.Symbol))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          Init.Priority = *Value;
+        else
+          return Value.takeError();
+        if (auto Value = readVaruint32(Ctx))
+          Init.Symbol = *Value;
+        else
+          return Value.takeError();
         if (!isValidFunctionSymbol(Init.Symbol))
           return make_error<GenericBinaryError>("invalid function symbol: " +
                                                     Twine(Init.Symbol),
@@ -862,8 +962,10 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   // Clear out any symbol information that was derived from the exports
   // section.
   Symbols.clear();
@@ -895,23 +997,31 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     const wasm::WasmGlobalType *GlobalType = nullptr;
     const wasm::WasmTableType *TableType = nullptr;
 
-    if (Error E = readUint8(Ctx, Info.Kind))
-      return E;
-    if (Error E = readVaruint32(Ctx, Info.Flags))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Info.Kind = *Value;
+    else
+      return Value.takeError();
+    if (auto Value = readVaruint32(Ctx))
+      Info.Flags = *Value;
+    else
+      return Value.takeError();
     bool IsDefined = (Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0;
 
     switch (Info.Kind) {
     case wasm::WASM_SYMBOL_TYPE_FUNCTION:
-      if (Error E = readVaruint32(Ctx, Info.ElementIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Info.ElementIndex = *Value;
+      else
+        return Value.takeError();
       if (!isValidFunctionIndex(Info.ElementIndex) ||
           IsDefined != isDefinedFunctionIndex(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid function symbol index",
                                               object_error::parse_failed);
       if (IsDefined) {
-        if (Error E = readString(Ctx, Info.Name))
-          return E;
+        if (auto Value = readString(Ctx))
+          Info.Name = *Value;
+        else
+          return Value.takeError();
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
         wasm::WasmFunction &Function = Functions[FuncIndex];
         Signature = &Signatures[Function.SigIndex];
@@ -920,8 +1030,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       } else {
         wasm::WasmImport &Import = *ImportedFunctions[Info.ElementIndex];
         if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
-          if (Error E = readString(Ctx, Info.Name))
-            return E;
+          if (auto Value = readString(Ctx))
+            Info.Name = *Value;
+          else
+            return Value.takeError();
           Info.ImportName = Import.Field;
         } else {
           Info.Name = Import.Field;
@@ -932,8 +1044,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       break;
 
     case wasm::WASM_SYMBOL_TYPE_GLOBAL:
-      if (Error E = readVaruint32(Ctx, Info.ElementIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Info.ElementIndex = *Value;
+      else
+        return Value.takeError();
       if (!isValidGlobalIndex(Info.ElementIndex) ||
           IsDefined != isDefinedGlobalIndex(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid global symbol index",
@@ -943,8 +1057,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         return make_error<GenericBinaryError>("undefined weak global symbol",
                                               object_error::parse_failed);
       if (IsDefined) {
-        if (Error E = readString(Ctx, Info.Name))
-          return E;
+        if (auto Value = readString(Ctx))
+          Info.Name = *Value;
+        else
+          return Value.takeError();
         unsigned GlobalIndex = Info.ElementIndex - NumImportedGlobals;
         wasm::WasmGlobal &Global = Globals[GlobalIndex];
         GlobalType = &Global.Type;
@@ -953,8 +1069,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       } else {
         wasm::WasmImport &Import = *ImportedGlobals[Info.ElementIndex];
         if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
-          if (Error E = readString(Ctx, Info.Name))
-            return E;
+          if (auto Value = readString(Ctx))
+            Info.Name = *Value;
+          else
+            return Value.takeError();
           Info.ImportName = Import.Field;
         } else {
           Info.Name = Import.Field;
@@ -965,8 +1083,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       break;
 
     case wasm::WASM_SYMBOL_TYPE_TABLE:
-      if (Error E = readVaruint32(Ctx, Info.ElementIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Info.ElementIndex = *Value;
+      else
+        return Value.takeError();
       if (!isValidTableNumber(Info.ElementIndex) ||
           IsDefined != isDefinedTableNumber(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid table symbol index",
@@ -976,8 +1096,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         return make_error<GenericBinaryError>("undefined weak table symbol",
                                               object_error::parse_failed);
       if (IsDefined) {
-        if (Error E = readString(Ctx, Info.Name))
-          return E;
+        if (auto Value = readString(Ctx))
+          Info.Name = *Value;
+        else
+          return Value.takeError();
         unsigned TableNumber = Info.ElementIndex - NumImportedTables;
         wasm::WasmTable &Table = Tables[TableNumber];
         TableType = &Table.Type;
@@ -986,8 +1108,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       } else {
         wasm::WasmImport &Import = *ImportedTables[Info.ElementIndex];
         if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
-          if (Error E = readString(Ctx, Info.Name))
-            return E;
+          if (auto Value = readString(Ctx))
+            Info.Name = *Value;
+          else
+            return Value.takeError();
           Info.ImportName = Import.Field;
         } else {
           Info.Name = Import.Field;
@@ -998,33 +1122,27 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       break;
 
     case wasm::WASM_SYMBOL_TYPE_DATA:
-      if (Error E = readString(Ctx, Info.Name))
-        return E;
+      if (auto Value = readString(Ctx))
+        Info.Name = *Value;
+      else
+        return Value.takeError();
       if (IsDefined) {
-        uint32_t Index;
-        if (Error E = readVaruint32(Ctx, Index))
-          return E;
-        uint64_t Offset;
-        if (Error E = readVaruint64(Ctx, Offset))
-          return E;
-        uint64_t Size;
-        if (Error E = readVaruint64(Ctx, Size))
-          return E;
-        if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (Index >= DataSegments.size())
-            return make_error<GenericBinaryError>(
-                "invalid data segment index: " + Twine(Index),
-                object_error::parse_failed);
-          size_t SegmentSize = DataSegments[Index].Data.Content.size();
-          if (Offset > SegmentSize)
         if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
             wasm::WASM_SYMBOL_BINDING_COMMON) {
           if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
             return make_error<GenericBinaryError>(
                 "common symbols cannot be absolute: " + Info.Name,
                 object_error::parse_failed);
-          auto Size = readVaruint64(Ctx);
-          auto Alignment = readUint8(Ctx);
+          uint64_t Size;
+          if (auto Value = readVaruint64(Ctx))
+            Size = *Value;
+          else
+            return Value.takeError();
+          uint8_t Alignment;
+          if (auto Value = readUint8(Ctx))
+            Alignment = *Value;
+          else
+            return Value.takeError();
           if (Alignment > 32)
             return make_error<GenericBinaryError>(
                 "invalid common symbol alignment: `" + Info.Name +
@@ -1032,9 +1150,21 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                 object_error::parse_failed);
           Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
         } else {
-          auto Index = readVaruint32(Ctx);
-          auto Offset = readVaruint64(Ctx);
-          auto Size = readVaruint64(Ctx);
+          uint32_t Index;
+          if (auto Value = readVaruint32(Ctx))
+            Index = *Value;
+          else
+            return Value.takeError();
+          uint64_t Offset;
+          if (auto Value = readVaruint64(Ctx))
+            Offset = *Value;
+          else
+            return Value.takeError();
+          uint64_t Size;
+          if (auto Value = readVaruint64(Ctx))
+            Size = *Value;
+          else
+            return Value.takeError();
           if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
             if (Index >= DataSegments.size())
               return make_error<GenericBinaryError>(
@@ -1059,8 +1189,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         return make_error<GenericBinaryError>(
             "section symbols must have local binding",
             object_error::parse_failed);
-      if (Error E = readVaruint32(Ctx, Info.ElementIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Info.ElementIndex = *Value;
+      else
+        return Value.takeError();
       // Use somewhat unique section name as symbol name.
       StringRef SectionName = Sections[Info.ElementIndex].Name;
       Info.Name = SectionName;
@@ -1068,8 +1200,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     }
 
     case wasm::WASM_SYMBOL_TYPE_TAG: {
-      if (Error E = readVaruint32(Ctx, Info.ElementIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Info.ElementIndex = *Value;
+      else
+        return Value.takeError();
       if (!isValidTagIndex(Info.ElementIndex) ||
           IsDefined != isDefinedTagIndex(Info.ElementIndex))
         return make_error<GenericBinaryError>("invalid tag symbol index",
@@ -1079,8 +1213,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         return make_error<GenericBinaryError>("undefined weak global symbol",
                                               object_error::parse_failed);
       if (IsDefined) {
-        if (Error E = readString(Ctx, Info.Name))
-          return E;
+        if (auto Value = readString(Ctx))
+          Info.Name = *Value;
+        else
+          return Value.takeError();
         unsigned TagIndex = Info.ElementIndex - NumImportedTags;
         wasm::WasmTag &Tag = Tags[TagIndex];
         Signature = &Signatures[Tag.SigIndex];
@@ -1090,8 +1226,10 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       } else {
         wasm::WasmImport &Import = *ImportedTags[Info.ElementIndex];
         if ((Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0) {
-          if (Error E = readString(Ctx, Info.Name))
-            return E;
+          if (auto Value = readString(Ctx))
+            Info.Name = *Value;
+          else
+            return Value.takeError();
           Info.ImportName = Import.Field;
         } else {
           Info.Name = Import.Field;
@@ -1123,35 +1261,47 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
   uint32_t ComdatCount;
-  if (Error E = readVaruint32(Ctx, ComdatCount))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    ComdatCount = *Value;
+  else
+    return Value.takeError();
   StringSet<> ComdatSet;
   for (unsigned ComdatIndex = 0; ComdatIndex < ComdatCount; ++ComdatIndex) {
     StringRef Name;
-    if (Error E = readString(Ctx, Name))
-      return E;
+    if (auto Value = readString(Ctx))
+      Name = *Value;
+    else
+      return Value.takeError();
     if (Name.empty() || !ComdatSet.insert(Name).second)
       return make_error<GenericBinaryError>("bad/duplicate COMDAT name " +
                                                 Twine(Name),
                                             object_error::parse_failed);
     LinkingData.Comdats.emplace_back(Name);
     uint32_t Flags;
-    if (Error E = readVaruint32(Ctx, Flags))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Flags = *Value;
+    else
+      return Value.takeError();
     if (Flags != 0)
       return make_error<GenericBinaryError>("unsupported COMDAT flags",
                                             object_error::parse_failed);
 
     uint32_t EntryCount;
-    if (Error E = readVaruint32(Ctx, EntryCount))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      EntryCount = *Value;
+    else
+      return Value.takeError();
     while (EntryCount--) {
       unsigned Kind;
-      if (Error E = readVaruint32(Ctx, Kind))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Kind = *Value;
+      else
+        return Value.takeError();
       unsigned Index;
-      if (Error E = readVaruint32(Ctx, Index))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Index = *Value;
+      else
+        return Value.takeError();
       switch (Kind) {
       default:
         return make_error<GenericBinaryError>("invalid COMDAT entry type",
@@ -1192,12 +1342,16 @@ Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
 Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
   llvm::SmallSet<StringRef, 3> FieldsSeen;
   uint32_t Fields;
-  if (Error E = readVaruint32(Ctx, Fields))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Fields = *Value;
+  else
+    return Value.takeError();
   for (size_t I = 0; I < Fields; ++I) {
     StringRef FieldName;
-    if (Error E = readString(Ctx, FieldName))
-      return E;
+    if (auto Value = readString(Ctx))
+      FieldName = *Value;
+    else
+      return Value.takeError();
     if (!FieldsSeen.insert(FieldName).second)
       return make_error<GenericBinaryError>(
           "producers section does not have unique fields",
@@ -1216,16 +1370,22 @@ Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
           object_error::parse_failed);
     }
     uint32_t ValueCount;
-    if (Error E = readVaruint32(Ctx, ValueCount))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      ValueCount = *Value;
+    else
+      return Value.takeError();
     llvm::SmallSet<StringRef, 8> ProducersSeen;
     for (size_t J = 0; J < ValueCount; ++J) {
       StringRef Name;
-      if (Error E = readString(Ctx, Name))
-        return E;
+      if (auto Value = readString(Ctx))
+        Name = *Value;
+      else
+        return Value.takeError();
       StringRef Version;
-      if (Error E = readString(Ctx, Version))
-        return E;
+      if (auto Value = readString(Ctx))
+        Version = *Value;
+      else
+        return Value.takeError();
       if (!ProducersSeen.insert(Name).second) {
         return make_error<GenericBinaryError>(
             "producers section contains repeated producer",
@@ -1243,12 +1403,16 @@ Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
   llvm::SmallSet<std::string, 8> FeaturesSeen;
   uint32_t FeatureCount;
-  if (Error E = readVaruint32(Ctx, FeatureCount))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    FeatureCount = *Value;
+  else
+    return Value.takeError();
   for (size_t I = 0; I < FeatureCount; ++I) {
     wasm::WasmFeatureEntry Feature;
-    if (Error E = readUint8(Ctx, Feature.Prefix))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Feature.Prefix = *Value;
+    else
+      return Value.takeError();
     switch (Feature.Prefix) {
     case wasm::WASM_FEATURE_PREFIX_USED:
     case wasm::WASM_FEATURE_PREFIX_DISALLOWED:
@@ -1258,8 +1422,10 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
                                             object_error::parse_failed);
     }
     StringRef FeatureName;
-    if (Error E = readString(Ctx, FeatureName))
-      return E;
+    if (auto Value = readString(Ctx))
+      FeatureName = *Value;
+    else
+      return Value.takeError();
     Feature.Name = std::string(FeatureName);
     if (!FeaturesSeen.insert(Feature.Name).second)
       return make_error<GenericBinaryError>(
@@ -1277,26 +1443,34 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
   uint32_t SectionIndex;
-  if (Error E = readVaruint32(Ctx, SectionIndex))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    SectionIndex = *Value;
+  else
+    return Value.takeError();
   if (SectionIndex >= Sections.size())
     return make_error<GenericBinaryError>("invalid section index",
                                           object_error::parse_failed);
   WasmSection &Section = Sections[SectionIndex];
   uint32_t RelocCount;
-  if (Error E = readVaruint32(Ctx, RelocCount))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    RelocCount = *Value;
+  else
+    return Value.takeError();
   uint32_t EndOffset = Section.Content.size();
   uint32_t PreviousOffset = 0;
   while (RelocCount--) {
     wasm::WasmRelocation Reloc = {};
     uint32_t type;
-    if (Error E = readVaruint32(Ctx, type))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      type = *Value;
+    else
+      return Value.takeError();
     Reloc.Type = type;
     uint32_t Offset;
-    if (Error E = readVaruint32(Ctx, Offset))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Offset = *Value;
+    else
+      return Value.takeError();
     Reloc.Offset = Offset;
     if (Reloc.Offset < PreviousOffset)
       return make_error<GenericBinaryError>("relocations not in offset order",
@@ -1313,8 +1487,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     };
 
     PreviousOffset = Reloc.Offset;
-    if (Error E = readVaruint32(Ctx, Reloc.Index))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Reloc.Index = *Value;
+    else
+      return Value.takeError();
     switch (type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
     case wasm::R_WASM_FUNCTION_INDEX_I32:
@@ -1361,8 +1537,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         return badReloc("invalid data relocation");
       {
         int32_t Addend;
-        if (Error E = readVarint32(Ctx, Addend))
-          return E;
+        if (auto Value = readVarint32(Ctx))
+          Addend = *Value;
+        else
+          return Value.takeError();
         Reloc.Addend = Addend;
       }
       break;
@@ -1374,32 +1552,40 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       if (!isValidDataSymbol(Reloc.Index))
         return badReloc("invalid data relocation");
-      if (Error E = readVarint64(Ctx, Reloc.Addend))
-        return E;
+      if (auto Value = readVarint64(Ctx))
+        Reloc.Addend = *Value;
+      else
+        return Value.takeError();
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
       if (!isValidFunctionSymbol(Reloc.Index))
         return badReloc("invalid function relocation");
       {
         int32_t Addend;
-        if (Error E = readVarint32(Ctx, Addend))
-          return E;
+        if (auto Value = readVarint32(Ctx))
+          Addend = *Value;
+        else
+          return Value.takeError();
         Reloc.Addend = Addend;
       }
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
       if (!isValidFunctionSymbol(Reloc.Index))
         return badReloc("invalid function relocation");
-      if (Error E = readVarint64(Ctx, Reloc.Addend))
-        return E;
+      if (auto Value = readVarint64(Ctx))
+        Reloc.Addend = *Value;
+      else
+        return Value.takeError();
       break;
     case wasm::R_WASM_SECTION_OFFSET_I32:
       if (!isValidSectionSymbol(Reloc.Index))
         return badReloc("invalid section relocation");
       {
         int32_t Addend;
-        if (Error E = readVarint32(Ctx, Addend))
-          return E;
+        if (auto Value = readVarint32(Ctx))
+          Addend = *Value;
+        else
+          return Value.takeError();
         Reloc.Addend = Addend;
       }
       break;
@@ -1471,32 +1657,38 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
 Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   auto parseFieldDef = [&]() -> Error {
     uint32_t TypeCode;
-    if (Error E = readVaruint32(Ctx, TypeCode))
-      return E;
-    wasm::ValType DiscardType;
-    if (Error E = parseValType(Ctx, TypeCode, DiscardType))
-      return E;
-    uint32_t DiscardMut;
-    if (Error E = readVaruint32(Ctx, DiscardMut))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      TypeCode = *Value;
+    else
+      return Value.takeError();
+    if (Expected<wasm::ValType> Type = parseValType(Ctx, TypeCode); !Type)
+      return Type.takeError();
+    if (Expected<uint32_t> Mutability = readVaruint32(Ctx); !Mutability)
+      return Mutability.takeError();
     return Error::success();
   };
 
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Signatures.reserve(Count);
   while (Count--) {
     wasm::WasmSignature Sig;
     uint8_t Form;
-    if (Error E = readUint8(Ctx, Form))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Form = *Value;
+    else
+      return Value.takeError();
     if (Form == wasm::WASM_TYPE_REC) {
       // Rec groups expand the type index space (beyond what was declared at
       // the top of the section, and also consume one element in that space.
       uint32_t RecSize;
-      if (Error E = readVaruint32(Ctx, RecSize))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        RecSize = *Value;
+      else
+        return Value.takeError();
       if (RecSize == 0)
         return make_error<GenericBinaryError>("Rec group size cannot be 0",
                                               object_error::parse_failed);
@@ -1513,25 +1705,30 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       // them in the binary.
       if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
         uint32_t Supers;
-        if (Error E = readVaruint32(Ctx, Supers))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          Supers = *Value;
+        else
+          return Value.takeError();
         if (Supers > 0) {
           if (Supers != 1)
             return make_error<GenericBinaryError>(
                 "Invalid number of supertypes", object_error::parse_failed);
-          uint32_t __Discard;
-          if (Error E = readVaruint32(Ctx, __Discard))
-            return E;
+          if (Expected<uint32_t> Supertype = readVaruint32(Ctx); !Supertype)
+            return Supertype.takeError();
         }
         uint32_t FormVal;
-        if (Error E = readVaruint32(Ctx, FormVal))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          FormVal = *Value;
+        else
+          return Value.takeError();
         Form = FormVal;
       }
       if (Form == wasm::WASM_TYPE_STRUCT) {
         uint32_t FieldCount;
-        if (Error E = readVaruint32(Ctx, FieldCount))
-          return E;
+        if (auto Value = readVaruint32(Ctx))
+          FieldCount = *Value;
+        else
+          return Value.takeError();
         while (FieldCount--) {
           if (Error E = parseFieldDef())
             return E;
@@ -1550,28 +1747,40 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
     }
 
     uint32_t ParamCount;
-    if (Error E = readVaruint32(Ctx, ParamCount))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      ParamCount = *Value;
+    else
+      return Value.takeError();
     Sig.Params.reserve(ParamCount);
     while (ParamCount--) {
       uint8_t ParamType;
-      if (Error E = readUint8(Ctx, ParamType))
-        return E;
+      if (auto Value = readUint8(Ctx))
+        ParamType = *Value;
+      else
+        return Value.takeError();
       wasm::ValType ParamValType;
-      if (Error E = parseValType(Ctx, ParamType, ParamValType))
-        return E;
+      if (auto Value = parseValType(Ctx, ParamType))
+        ParamValType = *Value;
+      else
+        return Value.takeError();
       Sig.Params.push_back(ParamValType);
     }
     uint32_t ReturnCount;
-    if (Error E = readVaruint32(Ctx, ReturnCount))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      ReturnCount = *Value;
+    else
+      return Value.takeError();
     while (ReturnCount--) {
       uint8_t ReturnType;
-      if (Error E = readUint8(Ctx, ReturnType))
-        return E;
+      if (auto Value = readUint8(Ctx))
+        ReturnType = *Value;
+      else
+        return Value.takeError();
       wasm::ValType ReturnValType;
-      if (Error E = parseValType(Ctx, ReturnType, ReturnValType))
-        return E;
+      if (auto Value = parseValType(Ctx, ReturnType))
+        ReturnValType = *Value;
+      else
+        return Value.takeError();
       Sig.Returns.push_back(ReturnValType);
     }
 
@@ -1587,30 +1796,40 @@ Error WasmObjectFile::parseImport(ReadContext &Ctx, wasm::WasmImport &Im) {
   switch (Im.Kind) {
   case wasm::WASM_EXTERNAL_FUNCTION:
     NumImportedFunctions++;
-    if (Error E = readVaruint32(Ctx, Im.SigIndex))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Im.SigIndex = *Value;
+    else
+      return Value.takeError();
     if (Im.SigIndex >= Signatures.size())
       return make_error<GenericBinaryError>("invalid function type",
                                             object_error::parse_failed);
     break;
   case wasm::WASM_EXTERNAL_GLOBAL:
     NumImportedGlobals++;
-    if (Error E = readUint8(Ctx, Im.Global.Type))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Im.Global.Type = *Value;
+    else
+      return Value.takeError();
     uint8_t Mutable;
-    if (Error E = readVaruint1(Ctx, Mutable))
-      return E;
+    if (auto Value = readVaruint1(Ctx))
+      Mutable = *Value;
+    else
+      return Value.takeError();
     Im.Global.Mutable = Mutable;
     break;
   case wasm::WASM_EXTERNAL_MEMORY:
-    if (Error E = readLimits(Ctx, Im.Memory))
-      return E;
+    if (auto Value = readLimits(Ctx))
+      Im.Memory = *Value;
+    else
+      return Value.takeError();
     if (Im.Memory.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
       HasMemory64 = true;
     break;
   case wasm::WASM_EXTERNAL_TABLE: {
-    if (Error E = readTableType(Ctx, Im.Table))
-      return E;
+    if (auto Value = readTableType(Ctx))
+      Im.Table = *Value;
+    else
+      return Value.takeError();
     NumImportedTables++;
     auto ElemType = Im.Table.ElemType;
     if (ElemType != wasm::ValType::FUNCREF &&
@@ -1624,13 +1843,17 @@ Error WasmObjectFile::parseImport(ReadContext &Ctx, wasm::WasmImport &Im) {
   case wasm::WASM_EXTERNAL_TAG:
     NumImportedTags++;
     uint8_t Attr;
-    if (Error E = readUint8(Ctx, Attr))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Attr = *Value;
+    else
+      return Value.takeError();
     if (Attr != 0) // Reserved 'attribute' field
       return make_error<GenericBinaryError>("invalid attribute",
                                             object_error::parse_failed);
-    if (Error E = readVaruint32(Ctx, Im.SigIndex))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Im.SigIndex = *Value;
+    else
+      return Value.takeError();
     if (Im.SigIndex >= Signatures.size())
       return make_error<GenericBinaryError>("invalid tag type",
                                             object_error::parse_failed);
@@ -1646,18 +1869,26 @@ Error WasmObjectFile::parseImport(ReadContext &Ctx, wasm::WasmImport &Im) {
 
 Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Imports.reserve(Count);
   uint32_t I = 0;
   while (I < Count) {
     wasm::WasmImport Im;
-    if (Error E = readString(Ctx, Im.Module))
-      return E;
-    if (Error E = readString(Ctx, Im.Field))
-      return E;
-    if (Error E = readUint8(Ctx, Im.Kind))
-      return E;
+    if (auto Value = readString(Ctx))
+      Im.Module = *Value;
+    else
+      return Value.takeError();
+    if (auto Value = readString(Ctx))
+      Im.Field = *Value;
+    else
+      return Value.takeError();
+    if (auto Value = readUint8(Ctx))
+      Im.Kind = *Value;
+    else
+      return Value.takeError();
     // 0x7E/0x7F along with an empty Field signals a block of compact imports.
     if (Im.Kind == 0x7E && Im.Field == "") {
       return make_error<GenericBinaryError>(
@@ -1665,13 +1896,19 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
           object_error::parse_failed);
     } else if (Im.Kind == 0x7F && Im.Field == "") {
       uint32_t NumCompactImports;
-      if (Error E = readVaruint32(Ctx, NumCompactImports))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        NumCompactImports = *Value;
+      else
+        return Value.takeError();
       while (NumCompactImports--) {
-        if (Error E = readString(Ctx, Im.Field))
-          return E;
-        if (Error E = readUint8(Ctx, Im.Kind))
-          return E;
+        if (auto Value = readString(Ctx))
+          Im.Field = *Value;
+        else
+          return Value.takeError();
+        if (auto Value = readUint8(Ctx))
+          Im.Kind = *Value;
+        else
+          return Value.takeError();
         Error rtn = parseImport(Ctx, Im);
         if (rtn)
           return rtn;
@@ -1692,14 +1929,18 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseFunctionSection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Functions.reserve(Count);
   uint32_t NumTypes = Signatures.size();
   while (Count--) {
     uint32_t Type;
-    if (Error E = readVaruint32(Ctx, Type))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Type = *Value;
+    else
+      return Value.takeError();
     if (Type >= NumTypes)
       return make_error<GenericBinaryError>("invalid function type",
                                             object_error::parse_failed);
@@ -1716,13 +1957,17 @@ Error WasmObjectFile::parseFunctionSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
   TableSection = Sections.size();
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Tables.reserve(Count);
   while (Count--) {
     wasm::WasmTable T;
-    if (Error E = readTableType(Ctx, T.Type))
-      return E;
+    if (auto Value = readTableType(Ctx))
+      T.Type = *Value;
+    else
+      return Value.takeError();
     T.Index = NumImportedTables + Tables.size();
     Tables.push_back(T);
     auto ElemType = Tables.back().Type.ElemType;
@@ -1742,13 +1987,17 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseMemorySection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Memories.reserve(Count);
   while (Count--) {
     wasm::WasmLimits Limits;
-    if (Error E = readLimits(Ctx, Limits))
-      return E;
+    if (auto Value = readLimits(Ctx))
+      Limits = *Value;
+    else
+      return Value.takeError();
     if (Limits.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
       HasMemory64 = true;
     Memories.push_back(Limits);
@@ -1762,20 +2011,26 @@ Error WasmObjectFile::parseMemorySection(ReadContext &Ctx) {
 Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
   TagSection = Sections.size();
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Tags.reserve(Count);
   uint32_t NumTypes = Signatures.size();
   while (Count--) {
     uint8_t Attr;
-    if (Error E = readUint8(Ctx, Attr))
-      return E;
+    if (auto Value = readUint8(Ctx))
+      Attr = *Value;
+    else
+      return Value.takeError();
     if (Attr != 0) // Reserved 'attribute' field
       return make_error<GenericBinaryError>("invalid attribute",
                                             object_error::parse_failed);
     uint32_t Type;
-    if (Error E = readVaruint32(Ctx, Type))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Type = *Value;
+    else
+      return Value.takeError();
     if (Type >= NumTypes)
       return make_error<GenericBinaryError>("invalid tag type",
                                             object_error::parse_failed);
@@ -1796,8 +2051,10 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
   GlobalSection = Sections.size();
   const uint8_t *SectionStart = Ctx.Ptr;
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Globals.reserve(Count);
   while (Count--) {
     wasm::WasmGlobal Global;
@@ -1805,15 +2062,21 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
     const uint8_t *GlobalStart = Ctx.Ptr;
     Global.Offset = static_cast<uint32_t>(GlobalStart - SectionStart);
     uint32_t GlobalOpcode;
-    if (Error E = readVaruint32(Ctx, GlobalOpcode))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      GlobalOpcode = *Value;
+    else
+      return Value.takeError();
     wasm::ValType GlobalValType;
-    if (Error E = parseValType(Ctx, GlobalOpcode, GlobalValType))
-      return E;
+    if (auto Value = parseValType(Ctx, GlobalOpcode))
+      GlobalValType = *Value;
+    else
+      return Value.takeError();
     Global.Type.Type = (uint8_t)GlobalValType;
     uint8_t Mutable;
-    if (Error E = readVaruint1(Ctx, Mutable))
-      return E;
+    if (auto Value = readVaruint1(Ctx))
+      Mutable = *Value;
+    else
+      return Value.takeError();
     Global.Type.Mutable = Mutable;
     if (Error Err = readInitExpr(Global.InitExpr, Ctx))
       return Err;
@@ -1828,8 +2091,10 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   Exports.reserve(Count);
   Symbols.reserve(Count);
 
@@ -1843,12 +2108,18 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
 
   for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmExport Ex;
-    if (Error E = readString(Ctx, Ex.Name))
-      return E;
-    if (Error E = readUint8(Ctx, Ex.Kind))
-      return E;
-    if (Error E = readVaruint32(Ctx, Ex.Index))
-      return E;
+    if (auto Value = readString(Ctx))
+      Ex.Name = *Value;
+    else
+      return Value.takeError();
+    if (auto Value = readUint8(Ctx))
+      Ex.Kind = *Value;
+    else
+      return Value.takeError();
+    if (auto Value = readVaruint32(Ctx))
+      Ex.Index = *Value;
+    else
+      return Value.takeError();
     const wasm::WasmSignature *Signature = nullptr;
     const wasm::WasmGlobalType *GlobalType = nullptr;
     const wasm::WasmTableType *TableType = nullptr;
@@ -2012,8 +2283,10 @@ wasm::WasmTag &WasmObjectFile::getDefinedTag(uint32_t Index) {
 }
 
 Error WasmObjectFile::parseStartSection(ReadContext &Ctx) {
-  if (Error E = readVaruint32(Ctx, StartFunction))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    StartFunction = *Value;
+  else
+    return Value.takeError();
   if (!isValidFunctionIndex(StartFunction))
     return make_error<GenericBinaryError>("invalid start function",
                                           object_error::parse_failed);
@@ -2023,8 +2296,10 @@ Error WasmObjectFile::parseStartSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
   CodeSection = Sections.size();
   uint32_t FunctionCount;
-  if (Error E = readVaruint32(Ctx, FunctionCount))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    FunctionCount = *Value;
+  else
+    return Value.takeError();
   if (FunctionCount != Functions.size()) {
     return make_error<GenericBinaryError>("invalid function count",
                                           object_error::parse_failed);
@@ -2034,8 +2309,10 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
     wasm::WasmFunction& Function = Functions[i];
     const uint8_t *FunctionStart = Ctx.Ptr;
     uint32_t Size;
-    if (Error E = readVaruint32(Ctx, Size))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Size = *Value;
+    else
+      return Value.takeError();
     const uint8_t *FunctionEnd = Ctx.Ptr + Size;
 
     Function.CodeOffset = Ctx.Ptr - FunctionStart;
@@ -2044,15 +2321,21 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
     Function.Size = FunctionEnd - FunctionStart;
 
     uint32_t NumLocalDecls;
-    if (Error E = readVaruint32(Ctx, NumLocalDecls))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      NumLocalDecls = *Value;
+    else
+      return Value.takeError();
     Function.Locals.reserve(NumLocalDecls);
     while (NumLocalDecls--) {
       wasm::WasmLocalDecl Decl;
-      if (Error E = readVaruint32(Ctx, Decl.Count))
-        return E;
-      if (Error E = readUint8(Ctx, Decl.Type))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Decl.Count = *Value;
+      else
+        return Value.takeError();
+      if (auto Value = readUint8(Ctx))
+        Decl.Type = *Value;
+      else
+        return Value.takeError();
       Function.Locals.push_back(Decl);
     }
 
@@ -2076,13 +2359,17 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   ElemSegments.reserve(Count);
   while (Count--) {
     wasm::WasmElemSegment Segment;
-    if (Error E = readVaruint32(Ctx, Segment.Flags))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Segment.Flags = *Value;
+    else
+      return Value.takeError();
 
     uint32_t SupportedFlags = wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER |
                               wasm::WASM_ELEM_SEGMENT_IS_PASSIVE |
@@ -2111,11 +2398,14 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     bool HasInitExprs =
         (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
 
-    if (HasTableNumber)
-      if (Error E = readVaruint32(Ctx, Segment.TableNumber))
-        return E;
+    if (HasTableNumber) {
+      if (auto Value = readVaruint32(Ctx))
+        Segment.TableNumber = *Value;
       else
-        Segment.TableNumber = 0;
+        return Value.takeError();
+    } else {
+      Segment.TableNumber = 0;
+    }
 
     if (!isValidTableNumber(Segment.TableNumber))
       return make_error<GenericBinaryError>("invalid TableNumber",
@@ -2132,11 +2422,15 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
 
     if (HasElemKind) {
       uint32_t ElemKind;
-      if (Error E = readVaruint32(Ctx, ElemKind))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        ElemKind = *Value;
+      else
+        return Value.takeError();
       if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
-        if (Error E = parseValType(Ctx, ElemKind, Segment.ElemKind))
-          return E;
+        if (auto Value = parseValType(Ctx, ElemKind))
+          Segment.ElemKind = *Value;
+        else
+          return Value.takeError();
         if (Segment.ElemKind != wasm::ValType::FUNCREF &&
             Segment.ElemKind != wasm::ValType::EXTERNREF &&
             Segment.ElemKind != wasm::ValType::EXNREF &&
@@ -2152,17 +2446,23 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       }
     } else if (HasElemType) {
       uint32_t ElemTypeCode;
-      if (Error E = readVaruint32(Ctx, ElemTypeCode))
-        return E;
-      if (Error E = parseValType(Ctx, ElemTypeCode, Segment.ElemKind))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        ElemTypeCode = *Value;
+      else
+        return Value.takeError();
+      if (auto Value = parseValType(Ctx, ElemTypeCode))
+        Segment.ElemKind = *Value;
+      else
+        return Value.takeError();
     } else {
       Segment.ElemKind = wasm::ValType::FUNCREF;
     }
 
     uint32_t NumElems;
-    if (Error E = readVaruint32(Ctx, NumElems))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      NumElems = *Value;
+    else
+      return Value.takeError();
 
     if (HasInitExprs) {
       while (NumElems--) {
@@ -2172,10 +2472,12 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       }
     } else {
       while (NumElems--) {
-        uint32_t __Idx;
-        if (Error E = readVaruint32(Ctx, __Idx))
-          return E;
-        Segment.Functions.push_back(__Idx);
+        uint32_t Index;
+        if (auto Value = readVaruint32(Ctx))
+          Index = *Value;
+        else
+          return Value.takeError();
+        Segment.Functions.push_back(Index);
       }
     }
     ElemSegments.push_back(Segment);
@@ -2189,19 +2491,25 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
   DataSection = Sections.size();
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   if (DataCount && Count != *DataCount)
     return make_error<GenericBinaryError>(
         "number of data segments does not match DataCount section");
   DataSegments.reserve(Count);
   while (Count--) {
     WasmSegment Segment;
-    if (Error E = readVaruint32(Ctx, Segment.Data.InitFlags))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Segment.Data.InitFlags = *Value;
+    else
+      return Value.takeError();
     if (Segment.Data.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX) {
-      if (Error E = readVaruint32(Ctx, Segment.Data.MemoryIndex))
-        return E;
+      if (auto Value = readVaruint32(Ctx))
+        Segment.Data.MemoryIndex = *Value;
+      else
+        return Value.takeError();
     } else {
       Segment.Data.MemoryIndex = 0;
     }
@@ -2214,8 +2522,10 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
       Segment.Data.Offset.Inst.Value.Int32 = 0;
     }
     uint32_t Size;
-    if (Error E = readVaruint32(Ctx, Size))
-      return E;
+    if (auto Value = readVaruint32(Ctx))
+      Size = *Value;
+    else
+      return Value.takeError();
     if (Size > (size_t)(Ctx.End - Ctx.Ptr))
       return make_error<GenericBinaryError>("invalid segment size",
                                             object_error::parse_failed);
@@ -2237,8 +2547,10 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseDataCountSection(ReadContext &Ctx) {
   uint32_t Count;
-  if (Error E = readVaruint32(Ctx, Count))
-    return E;
+  if (auto Value = readVaruint32(Ctx))
+    Count = *Value;
+  else
+    return Value.takeError();
   DataCount = Count;
   return Error::success();
 }
