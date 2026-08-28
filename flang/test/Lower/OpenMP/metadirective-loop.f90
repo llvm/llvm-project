@@ -1,6 +1,7 @@
 ! Test lowering of metadirectives with ordinary loop-associated variants.
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 %s -o - | \
+! RUN:   FileCheck %s --implicit-check-not=omp.parallel
 
 ! CHECK: #[[UNROLL:loop_unroll[0-9]*]] =
 ! CHECK-SAME: #llvm.loop_unroll<disable = false, count = 4 : i64>
@@ -12,29 +13,34 @@
 ! CHECK-SAME: #llvm.loop_annotation<vectorize = #[[VECTORIZE]]>
 
 ! CHECK-LABEL: func.func @_QPtest_do(
-! CHECK-NOT:     omp.parallel
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         omp.wsloop private(@_QFtest_doEi_private_i32 {{.*}} ->
 ! CHECK-SAME:      %[[DO_PRIVATE:.*]] : !fir.ref<i32>)
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.loop_nest (%[[DO_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             %[[DO_PRIVATE_DECL:.*]]:2 =
 ! CHECK-SAME:          hlfir.declare %[[DO_PRIVATE]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             hlfir.assign %[[DO_IV]] to %[[DO_PRIVATE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             %[[DO_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[DO_PRIVATE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             %[[DO_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[DO_PRIVATE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             %[[DO_INDEX_I64:.*]] = fir.convert %[[DO_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:             %[[DO_ELEMENT:.*]] = hlfir.designate
 ! CHECK-SAME:          (%[[DO_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
 ! CHECK:             hlfir.assign %[[DO_VALUE]] to %[[DO_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.yield
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_do(n, a)
   integer :: n, a(n), i
@@ -47,14 +53,34 @@ subroutine test_do(n, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_simd(
-! CHECK-NOT:     omp.wsloop
+! CHECK:         %[[SIMD_AFTER:.*]]:2 = hlfir.declare %arg2
+! CHECK-SAME:      uniq_name = "_QFtest_simdEafter"
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         omp.simd linear(
-! CHECK:           omp.loop_nest
-! CHECK:             hlfir.assign
+! CHECK-SAME:      val(%[[SIMD_LINEAR:.*]] : !fir.ref<i32> =
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           omp.loop_nest (%[[SIMD_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             hlfir.assign %[[SIMD_IV]] to %[[SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             %[[SIMD_VALUE:.*]] = fir.load %[[SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             %[[SIMD_INDEX:.*]] = fir.load %[[SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             %[[SIMD_INDEX_I64:.*]] =
+! CHECK-SAME:          fir.convert %[[SIMD_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SIMD_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:          (%[[SIMD_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             hlfir.assign %[[SIMD_VALUE]] to %[[SIMD_ELEMENT]]
 ! CHECK:             omp.yield
-! CHECK-NOT:     fir.do_loop
-! CHECK:         fir.load
-! CHECK:         hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:         %[[SIMD_AFTER_VALUE:.*]] = fir.load %[[SIMD_LINEAR]]
+! CHECK:         hlfir.assign %[[SIMD_AFTER_VALUE]] to %[[SIMD_AFTER]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_simd(n, a, after)
   integer :: n, a(n), after, i
@@ -68,12 +94,35 @@ subroutine test_simd(n, a, after)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_do_simd(
-! CHECK-NOT:     omp.parallel
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         omp.wsloop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.simd linear(
-! CHECK:             omp.loop_nest
-! CHECK:               hlfir.assign
+! CHECK-SAME:        val(%[[DO_SIMD_LINEAR:.*]] : !fir.ref<i32> =
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest (%[[DO_SIMD_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               hlfir.assign %[[DO_SIMD_IV]] to
+! CHECK-SAME:            %[[DO_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DO_SIMD_VALUE:.*]] =
+! CHECK-SAME:            fir.load %[[DO_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DO_SIMD_INDEX:.*]] =
+! CHECK-SAME:            fir.load %[[DO_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DO_SIMD_INDEX_I64:.*]] =
+! CHECK-SAME:            fir.convert %[[DO_SIMD_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DO_SIMD_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[DO_SIMD_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign %[[DO_SIMD_VALUE]] to
+! CHECK-SAME:            %[[DO_SIMD_ELEMENT]]
 ! CHECK:               omp.yield
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_do_simd(n, a)
   integer :: n, a(n), i
@@ -86,63 +135,59 @@ subroutine test_do_simd(n, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_do(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop private(@_QFtest_begin_doEi_private_i32 {{.*}} ->
 ! CHECK-SAME:        %[[BEGIN_DO_PRIVATE:.*]] : !fir.ref<i32>)
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[BEGIN_DO_IV:.*]]) :
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[BEGIN_DO_PRIVATE_DECL:.*]]:2 =
 ! CHECK-SAME:            hlfir.declare %[[BEGIN_DO_PRIVATE]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               hlfir.assign %[[BEGIN_DO_IV]] to
 ! CHECK-SAME:            %[[BEGIN_DO_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[BEGIN_DO_VALUE:.*]] =
 ! CHECK-SAME:            fir.load %[[BEGIN_DO_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[BEGIN_DO_INDEX:.*]] =
 ! CHECK-SAME:            fir.load %[[BEGIN_DO_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[BEGIN_DO_INDEX_I64:.*]] =
 ! CHECK-SAME:            fir.convert %[[BEGIN_DO_INDEX]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
 ! CHECK:               %[[BEGIN_DO_ELEMENT:.*]] = hlfir.designate
 ! CHECK-SAME:            (%[[BEGIN_DO_INDEX_I64]])
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
 ! CHECK:               hlfir.assign %[[BEGIN_DO_VALUE]] to
 ! CHECK-SAME:            %[[BEGIN_DO_ELEMENT]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK:               omp.yield
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[BEGIN_DO_FALLBACK_IV:.*]] =
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[BEGIN_DO_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[BEGIN_DO_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[BEGIN_DO_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[BEGIN_DO_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[BEGIN_DO_FALLBACK_INDEX]]
@@ -177,56 +222,56 @@ end subroutine
 
 ! The following loop must remain available when the PFT is reused for ENTRY.
 ! CHECK-LABEL: func.func @_QPtest_standalone_entry_no_directive(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop private({{.*}}Ei_private_i32 {{.*}} ->
 ! CHECK-SAME:        %[[ENTRY_PRIVATE:.*]] : !fir.ref<i32>)
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[ENTRY_IV:.*]]) :
 ! CHECK:               %[[ENTRY_PRIVATE_DECL:.*]]:2 =
 ! CHECK-SAME:            hlfir.declare %[[ENTRY_PRIVATE]]
 ! CHECK:               hlfir.assign %[[ENTRY_IV]] to
 ! CHECK-SAME:            %[[ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ENTRY_VALUE:.*]] =
 ! CHECK-SAME:            fir.load %[[ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ENTRY_INDEX:.*]] =
 ! CHECK-SAME:            fir.load %[[ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ENTRY_INDEX_I64:.*]] =
 ! CHECK-SAME:            fir.convert %[[ENTRY_INDEX]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               %[[ENTRY_ELEMENT:.*]] = hlfir.designate
 ! CHECK-SAME:            (%[[ENTRY_INDEX_I64]])
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               hlfir.assign %[[ENTRY_VALUE]] to %[[ENTRY_ELEMENT]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK:               omp.yield
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[ENTRY_FALLBACK_IV:.*]] =
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[ENTRY_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[ENTRY_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[ENTRY_FALLBACK_INDEX]]
@@ -248,57 +293,57 @@ end subroutine
 ! CHECK-NOT:     omp.
 ! CHECK:         return
 ! CHECK-LABEL: func.func @_QPtest_alt_standalone_entry_no_directive(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop private({{.*}}Ei_private_i32 {{.*}} ->
 ! CHECK-SAME:        %[[ALT_ENTRY_PRIVATE:.*]] : !fir.ref<i32>)
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest (%[[ALT_ENTRY_IV:.*]]) :
 ! CHECK:               %[[ALT_ENTRY_PRIVATE_DECL:.*]]:2 =
 ! CHECK-SAME:            hlfir.declare %[[ALT_ENTRY_PRIVATE]]
 ! CHECK:               hlfir.assign %[[ALT_ENTRY_IV]] to
 ! CHECK-SAME:            %[[ALT_ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ALT_ENTRY_VALUE:.*]] =
 ! CHECK-SAME:            fir.load %[[ALT_ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ALT_ENTRY_INDEX:.*]] =
 ! CHECK-SAME:            fir.load %[[ALT_ENTRY_PRIVATE_DECL]]#0
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:               %[[ALT_ENTRY_INDEX_I64:.*]] =
 ! CHECK-SAME:            fir.convert %[[ALT_ENTRY_INDEX]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               %[[ALT_ENTRY_ELEMENT:.*]] = hlfir.designate
 ! CHECK-SAME:            (%[[ALT_ENTRY_INDEX_I64]])
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               hlfir.assign %[[ALT_ENTRY_VALUE]] to
 ! CHECK-SAME:            %[[ALT_ENTRY_ELEMENT]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK:               omp.yield
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[ALT_ENTRY_FALLBACK_IV:.*]] =
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[ALT_ENTRY_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[ALT_ENTRY_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[ALT_ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[ALT_ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[ALT_ENTRY_FALLBACK_INDEX]]
@@ -344,11 +389,15 @@ end subroutine
 ! following loop sequential.
 ! CHECK-LABEL: func.func @_QPtest_inapplicable_do_in_parallel(
 ! CHECK:         omp.parallel
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:           fir.do_loop
-! CHECK:             hlfir.assign
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[INAPPLICABLE_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             hlfir.assign {{.*}} to %[[INAPPLICABLE_ELEMENT]]
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.terminator
 ! CHECK:         return
 subroutine test_inapplicable_do_in_parallel(n, a, after)
@@ -367,14 +416,17 @@ end subroutine
 ! An unreachable loop variant likewise does not turn a statically selected
 ! block variant into a mixed-association metadirective.
 ! CHECK-LABEL: func.func @_QPtest_unselected_do_with_block_variant(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         omp.masked
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:           fir.do_loop
-! CHECK:             hlfir.assign
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[UNSELECTED_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             hlfir.assign {{.*}} to %[[UNSELECTED_ELEMENT]]
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.terminator
 ! CHECK:         return
 subroutine test_unselected_do_with_block_variant(n, a)
@@ -393,20 +445,21 @@ end subroutine
 ! unreachable: when FLAG is true the higher-ranked BARRIER wins, and when it
 ! is false neither guarded candidate matches. Do not emit a dead OpenMP loop.
 ! CHECK-LABEL: func.func @_QPtest_unreachable_same_runtime_condition(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         fir.if {{.*}} {
 ! CHECK:           omp.barrier
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         } else {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         }
 ! CHECK:         fir.do_loop
-! CHECK:           hlfir.assign
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:           %[[UNREACHABLE_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:           hlfir.assign {{.*}} to %[[UNREACHABLE_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_unreachable_same_runtime_condition(flag, n, a)
   logical, intent(in) :: flag
@@ -423,17 +476,14 @@ end subroutine
 ! Parentheses do not make a repeatable condition distinct. The lower-ranked
 ! loop remains unreachable and must not be emitted.
 ! CHECK-LABEL: func.func @_QPtest_unreachable_parenthesized_condition(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         fir.if {{.*}} {
 ! CHECK:           omp.barrier
 ! CHECK:         } else {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         }
 ! CHECK:         fir.do_loop
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         return
 subroutine test_unreachable_parenthesized_condition(flag, n, a)
   logical, intent(in) :: flag
@@ -450,17 +500,14 @@ end subroutine
 ! Idempotent AND/OR spelling is normalized after proving that the condition is
 ! repeatable.
 ! CHECK-LABEL: func.func @_QPtest_unreachable_idempotent_condition(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         fir.if {{.*}} {
 ! CHECK:           omp.barrier
 ! CHECK:         } else {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         }
 ! CHECK:         fir.do_loop
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)}}
 ! CHECK:         return
 subroutine test_unreachable_idempotent_condition(flag, n, a)
   logical, intent(in) :: flag
@@ -545,15 +592,65 @@ subroutine test_pure_runtime_conditions(flag, n, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_dynamic_loop(
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK:           omp.wsloop
-! CHECK:             omp.loop_nest
-! CHECK:               hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           omp.wsloop private({{.*}} ->
+! CHECK-SAME:        %[[DYNAMIC_DO_PRIVATE:.*]] : !fir.ref<i32>)
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest (%[[DYNAMIC_DO_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_DO_DECL:.*]]:2 =
+! CHECK-SAME:            hlfir.declare %[[DYNAMIC_DO_PRIVATE]]
+! CHECK:               hlfir.assign %[[DYNAMIC_DO_IV]] to
+! CHECK-SAME:            %[[DYNAMIC_DO_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_DO_VALUE:.*]] =
+! CHECK-SAME:            fir.load %[[DYNAMIC_DO_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_DO_INDEX:.*]] =
+! CHECK-SAME:            fir.load %[[DYNAMIC_DO_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_DO_INDEX_I64:.*]] =
+! CHECK-SAME:            fir.convert %[[DYNAMIC_DO_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DYNAMIC_DO_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[DYNAMIC_DO_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign %[[DYNAMIC_DO_VALUE]] to
+! CHECK-SAME:            %[[DYNAMIC_DO_ELEMENT]]
+! CHECK:               omp.yield
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
-! CHECK:           omp.simd
-! CHECK:             omp.loop_nest
-! CHECK:               hlfir.assign
-! CHECK:         }
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           omp.simd linear(
+! CHECK-SAME:        val(%[[DYNAMIC_SIMD_LINEAR:.*]] : !fir.ref<i32> =
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest (%[[DYNAMIC_SIMD_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               hlfir.assign %[[DYNAMIC_SIMD_IV]] to
+! CHECK-SAME:            %[[DYNAMIC_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_SIMD_VALUE:.*]] =
+! CHECK-SAME:            fir.load %[[DYNAMIC_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_SIMD_INDEX:.*]] =
+! CHECK-SAME:            fir.load %[[DYNAMIC_SIMD_LINEAR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[DYNAMIC_SIMD_INDEX_I64:.*]] =
+! CHECK-SAME:            fir.convert %[[DYNAMIC_SIMD_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DYNAMIC_SIMD_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[DYNAMIC_SIMD_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign %[[DYNAMIC_SIMD_VALUE]] to
+! CHECK-SAME:            %[[DYNAMIC_SIMD_ELEMENT]]
+! CHECK:               omp.yield
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_dynamic_loop(flag, n, a)
   logical, intent(in) :: flag
@@ -569,15 +666,69 @@ end subroutine
 ! When the standalone fallback is selected at runtime, the following loop is
 ! lowered sequentially in that arm.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_standalone_fallback(
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK:           omp.wsloop
-! CHECK:             omp.loop_nest
-! CHECK:               hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           omp.wsloop private({{.*}} ->
+! CHECK-SAME:        %[[STANDALONE_PRIVATE:.*]] : !fir.ref<i32>)
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest (%[[STANDALONE_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[STANDALONE_DECL:.*]]:2 =
+! CHECK-SAME:            hlfir.declare %[[STANDALONE_PRIVATE]]
+! CHECK:               hlfir.assign %[[STANDALONE_IV]] to
+! CHECK-SAME:            %[[STANDALONE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[STANDALONE_VALUE:.*]] =
+! CHECK-SAME:            fir.load %[[STANDALONE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[STANDALONE_INDEX:.*]] =
+! CHECK-SAME:            fir.load %[[STANDALONE_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[STANDALONE_INDEX_I64:.*]] =
+! CHECK-SAME:            fir.convert %[[STANDALONE_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[STANDALONE_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[STANDALONE_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign %[[STANDALONE_VALUE]] to
+! CHECK-SAME:            %[[STANDALONE_ELEMENT]]
+! CHECK:               omp.yield
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.barrier
-! CHECK:           fir.do_loop
-! CHECK:             hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           fir.do_loop %[[STANDALONE_FB_IV:.*]] =
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             fir.store %[[STANDALONE_FB_IV]] to
+! CHECK-SAME:          %[[STANDALONE_FB_ADDR:.*]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[STANDALONE_FB_VALUE:.*]] =
+! CHECK-SAME:          fir.load %[[STANDALONE_FB_ADDR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[STANDALONE_FB_INDEX:.*]] =
+! CHECK-SAME:          fir.load %[[STANDALONE_FB_ADDR]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[STANDALONE_FB_INDEX_I64:.*]] =
+! CHECK-SAME:          fir.convert %[[STANDALONE_FB_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[STANDALONE_FB_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:          (%[[STANDALONE_FB_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             hlfir.assign %[[STANDALONE_FB_VALUE]] to
+! CHECK-SAME:          %[[STANDALONE_FB_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         }
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_dynamic_standalone_fallback(flag, n, a)
   logical, intent(in) :: flag
@@ -592,15 +743,75 @@ end subroutine
 
 ! When NOTHING is selected, the following loop is lowered normally.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_nothing_fallback(
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK:           omp.wsloop
-! CHECK:             omp.loop_nest
-! CHECK:               hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:           omp.wsloop private({{.*}} ->
+! CHECK-SAME:        %[[NOTHING_PRIVATE:.*]] : !fir.ref<i32>)
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest (%[[NOTHING_IV:.*]]) :
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[NOTHING_DECL:.*]]:2 =
+! CHECK-SAME:            hlfir.declare %[[NOTHING_PRIVATE]]
+! CHECK:               hlfir.assign %[[NOTHING_IV]] to
+! CHECK-SAME:            %[[NOTHING_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[NOTHING_VALUE:.*]] =
+! CHECK-SAME:            fir.load %[[NOTHING_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[NOTHING_INDEX:.*]] =
+! CHECK-SAME:            fir.load %[[NOTHING_DECL]]#0
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               %[[NOTHING_INDEX_I64:.*]] =
+! CHECK-SAME:            fir.convert %[[NOTHING_INDEX]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[NOTHING_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[NOTHING_INDEX_I64]])
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign %[[NOTHING_VALUE]] to
+! CHECK-SAME:            %[[NOTHING_ELEMENT]]
+! CHECK:               omp.yield
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
 ! CHECK-NOT:       omp.
-! CHECK:           fir.do_loop
-! CHECK:             hlfir.assign
+! CHECK-NOT:       fir.do_loop
+! CHECK:           fir.do_loop %[[NOTHING_FB_IV:.*]] =
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             fir.store %[[NOTHING_FB_IV]] to
+! CHECK-SAME:          %[[NOTHING_FB_ADDR:.*]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[NOTHING_FB_VALUE:.*]] =
+! CHECK-SAME:          fir.load %[[NOTHING_FB_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[NOTHING_FB_INDEX:.*]] =
+! CHECK-SAME:          fir.load %[[NOTHING_FB_ADDR]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[NOTHING_FB_INDEX_I64:.*]] =
+! CHECK-SAME:          fir.convert %[[NOTHING_FB_INDEX]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             %[[NOTHING_FB_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:          (%[[NOTHING_FB_INDEX_I64]])
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{^ *}}}
+! CHECK:             hlfir.assign %[[NOTHING_FB_VALUE]] to
+! CHECK-SAME:          %[[NOTHING_FB_ELEMENT]]
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK:         }
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_dynamic_nothing_fallback(flag, n, a)
   logical, intent(in) :: flag
@@ -615,12 +826,22 @@ end subroutine
 
 ! Compiler directives preceding the associated loop are processed before it.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_unroll_fallback(
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.loop_nest
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop
 ! CHECK-SAME:        attributes {loopAnnotation = #[[UNROLL_ANNOTATION]]}
+! CHECK-NOT:       omp.
+! CHECK-NOT:       fir.do_loop
 ! CHECK:         }
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_dynamic_unroll_fallback(flag, n, a)
   logical, intent(in) :: flag
@@ -638,27 +859,17 @@ end subroutine
 ! attached to the associated loop before runtime selection.
 ! CHECK-LABEL: func.func @_QPtest_begin_unroll_fallback(
 ! CHECK:         fir.if {{.*}} {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               %[[BEGIN_UNROLL_ELEMENT:.*]] = hlfir.designate
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
 ! CHECK:               hlfir.assign {{.*}} to %[[BEGIN_UNROLL_ELEMENT]]
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
@@ -695,43 +906,27 @@ end subroutine
 ! appear between the metadirective and its associated loop. Check a loop
 ! annotation, an inlining annotation, and an unrecognized no-op directive.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_intervening_compiler_directives(
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         fir.if {{.*}} {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.wsloop
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:             omp.loop_nest
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
 ! CHECK:               fir.call @_QPconsume
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         } else {
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           fir.do_loop
 ! CHECK-SAME:        attributes {loopAnnotation = #[[VECTOR_ANNOTATION]]}
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
 ! CHECK:             fir.call @_QPconsume
 ! CHECK-SAME:          inline_attr = #fir.inline_attrs<always_inline>
-! CHECK-NOT:       omp.wsloop
-! CHECK-NOT:       omp.loop_nest
-! CHECK-NOT:       fir.do_loop
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         }
-! CHECK-NOT:     omp.wsloop
-! CHECK-NOT:     omp.loop_nest
-! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_dynamic_intervening_compiler_directives(flag, n, a)
   logical, intent(in) :: flag
@@ -754,12 +949,28 @@ end subroutine
 ! CHECK:         fir.if {{.*}} {
 ! CHECK:           omp.simd {{.*}}private({{.*}}Ei_private_i32{{.*}}Ej_private_i32
 ! CHECK:             omp.loop_nest ({{.*}}, {{.*}}) : i32 {{.*}} collapse(2)
-! CHECK:               hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DYNAMIC_COLLAPSE_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign {{.*}} to
+! CHECK-SAME:            %[[DYNAMIC_COLLAPSE_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               omp.yield
 ! CHECK:         } else {
 ! CHECK:           omp.simd linear(
 ! CHECK:             omp.loop_nest ({{.*}}) : i32
 ! CHECK:               fir.do_loop
-! CHECK:                 hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:             {{^ *}}}
+! CHECK:                 %[[DYNAMIC_INNER_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:             {{^ *}}}
+! CHECK:                 hlfir.assign {{.*}} to
+! CHECK-SAME:              %[[DYNAMIC_INNER_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:               omp.yield
 ! CHECK:         }
 ! CHECK:         return
 subroutine test_dynamic_collapse(flag, n, a)
@@ -776,11 +987,16 @@ subroutine test_dynamic_collapse(flag, n, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_ordered_depth(
-! CHECK-NOT:     omp.parallel
 ! CHECK:         omp.wsloop {{.*}}private({{.*}}Ei_private_i32{{.*}}Ej_private_i32
 ! CHECK:           omp.loop_nest ({{.*}}) : i32
 ! CHECK:             fir.do_loop
-! CHECK:               hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[ORDERED_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               hlfir.assign {{.*}} to %[[ORDERED_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:         return
 subroutine test_ordered_depth(n, a)
   integer :: n, a(n, n), i, j
@@ -797,7 +1013,14 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_collapse(
 ! CHECK:         omp.wsloop
 ! CHECK:           omp.loop_nest ({{.*}}, {{.*}}) : i32 {{.*}} collapse(2)
-! CHECK:             hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[COLLAPSE_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             hlfir.assign {{.*}} to %[[COLLAPSE_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.yield
 ! CHECK:         return
 subroutine test_collapse(n, a)
   integer :: n, a(n, n), i, j
@@ -836,10 +1059,16 @@ subroutine test_simd_collapse_lastprivate(n, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_block_nested_do(
-! CHECK-NOT:     omp.parallel
 ! CHECK:         omp.wsloop {{.*}}private({{.*}}Ei_private_i32
 ! CHECK:           omp.loop_nest
-! CHECK:             hlfir.assign
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[BLOCK_ELEMENT:.*]] = hlfir.designate
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             hlfir.assign {{.*}} to %[[BLOCK_ELEMENT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK:             omp.yield
 ! CHECK:         return
 subroutine test_block_nested_do(n, a)
   integer :: n, a(n), i
