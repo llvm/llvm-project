@@ -1075,7 +1075,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     // AR is non-affine, because its predecessors are not modeled. A canonical
     // IV has start 0, and step 1, and hence cannot be pointer type.
     if (!AR->isAffine() || AR->getType()->isPointerTy())
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, S);
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
     auto FoundCanIV =
         find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
           if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
@@ -1087,17 +1087,14 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                  Candidate->getType() == AR->getType();
         });
     if (FoundCanIV == Plan.getEntry()->phis().end())
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, S);
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
     // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
     // Compute Offset = IV * Step.
     VPValue *Start = expand(AR->getStart());
     Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
-    VPValue *Offset = expand(SE.getTruncateOrNoop(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV),
-                      SE.getNoopOrAnyExtend(AR->getStepRecurrence(SE),
-                                            CanonicalIV->getType())),
-        AR->getType()));
+    VPValue *Offset = expand(
+        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
 
     // Compute Start + Offset with nuw from the AddRec.
     return Builder.createAdd(Start, Offset, DL, "",
