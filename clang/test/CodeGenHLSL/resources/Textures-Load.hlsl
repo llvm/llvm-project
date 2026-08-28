@@ -137,9 +137,9 @@ float4 test_load(ENTRY_TYPE loc : LOC) : SV_Target {
 // SRV: %[[COORD:.*]] = shufflevector <[[#LOAD_DIM]] x i32> %[[LOAD_VAL]], <[[#LOAD_DIM]] x i32> poison, <[[COORD_DIM]] x i32> [[COORD_MASK]]
 // SRV: %[[LOD:.*]] = extractelement <[[#LOAD_DIM]] x i32> %[[LOAD_VAL]], i64 [[COORD_DIM]]
 // DXIL-SRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <[[DIM]] x i32> zeroinitializer)
-// DXIL-UAV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[LOAD_VAL]], i32 0, <[[DIM]] x i32> zeroinitializer)
+// DXIL-UAV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[LOAD_VAL]], i32 poison, <[[DIM]] x i32> zeroinitializer)
 // SPIRV-SRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD]], i32 %[[LOD]], <[[DIM]] x i32> zeroinitializer)
-// SPIRV-UAV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[LOAD_VAL]], i32 0, <[[DIM]] x i32> zeroinitializer)
+// SPIRV-UAV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.load.level.v4f32.tspirv.Image_f32_{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[FORMAT1]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[LOAD_VAL]], i32 poison, <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret <4 x float> %[[RES]]
 
 // SRV: define hidden {{.*}} <4 x float> @test_load_offset(int vector[[[ENTRY_DIM]]])
