@@ -163,34 +163,18 @@ entry:
 }
 
 define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
-; NON-POW2-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
-; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
-; POW2-ONLY-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
-; POW2-ONLY-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
-;
-; NO-INST-COUNT-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
-; NO-INST-COUNT-NEXT:  entry:
-; NO-INST-COUNT-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
-; NO-INST-COUNT-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NO-INST-COUNT-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
-; NO-INST-COUNT-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
-; NO-INST-COUNT-NEXT:    ret void
+; CHECK-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 2
+; CHECK-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
+; CHECK-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %gep.src.0 = getelementptr inbounds float, ptr %src, i32 0
@@ -251,23 +235,13 @@ exit:
 }
 
 define void @store_try_reorder(ptr %dst) {
-; NON-POW2-LABEL: @store_try_reorder(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    store <3 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @store_try_reorder(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    store <2 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[ADD216:%.*]] = sub i32 0, 0
-; POW2-ONLY-NEXT:    [[ARRAYIDX_I1891:%.*]] = getelementptr i32, ptr [[DST]], i64 2
-; POW2-ONLY-NEXT:    store i32 [[ADD216]], ptr [[ARRAYIDX_I1891]], align 4
-; POW2-ONLY-NEXT:    ret void
-;
-; NO-INST-COUNT-LABEL: @store_try_reorder(
-; NO-INST-COUNT-NEXT:  entry:
-; NO-INST-COUNT-NEXT:    store <3 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
-; NO-INST-COUNT-NEXT:    ret void
+; CHECK-LABEL: @store_try_reorder(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[ADD216:%.*]] = sub i32 0, 0
+; CHECK-NEXT:    [[ARRAYIDX_I1891:%.*]] = getelementptr i32, ptr [[DST]], i64 2
+; CHECK-NEXT:    store i32 [[ADD216]], ptr [[ARRAYIDX_I1891]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add = add i32 0, 0
@@ -367,3 +341,61 @@ entry:
 declare float @llvm.fmuladd.f32(float, float, float)
 
 declare double @llvm.fmuladd.f64(double, double, double)
+
+define void @v3_fmuladd_splat_store_chain(ptr noalias %A, ptr noalias %B, i32 %n) #0 {
+; CHECK-LABEL: @v3_fmuladd_splat_store_chain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEPB_2:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 16
+; CHECK-NEXT:    [[GEPA_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[B]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x double> [[TMP1]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[A]], align 16
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[GEPB_2]], align 16
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[GEPA_2]], align 16
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[F2:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B2]], double [[A2]])
+; CHECK-NEXT:    store double [[F2]], ptr [[GEPA_2]], align 16
+; CHECK-NEXT:    call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IT]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %gepB.1 = getelementptr inbounds nuw i8, ptr %B, i64 8
+  %gepA.1 = getelementptr inbounds nuw i8, ptr %A, i64 8
+  %gepB.2 = getelementptr inbounds nuw i8, ptr %B, i64 16
+  %gepA.2 = getelementptr inbounds nuw i8, ptr %A, i64 16
+  br label %for.body
+
+for.body:
+  %it = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %a0 = load double, ptr %A, align 16
+  %b0 = load double, ptr %B, align 16
+  %f0 = call double @llvm.fmuladd.f64(double %a0, double %b0, double %a0)
+  store double %f0, ptr %A, align 16
+  %b1 = load double, ptr %gepB.1, align 8
+  %a1 = load double, ptr %gepA.1, align 8
+  %f1 = call double @llvm.fmuladd.f64(double %a0, double %b1, double %a1)
+  store double %f1, ptr %gepA.1, align 8
+  %b2 = load double, ptr %gepB.2, align 16
+  %a2 = load double, ptr %gepA.2, align 16
+  %f2 = call double @llvm.fmuladd.f64(double %a0, double %b2, double %a2)
+  store double %f2, ptr %gepA.2, align 16
+  call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"() #1
+  %inc = add nuw nsw i32 %it, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+attributes #0 = { "target-cpu"="x86-64-v3" }
+attributes #1 = { nounwind }

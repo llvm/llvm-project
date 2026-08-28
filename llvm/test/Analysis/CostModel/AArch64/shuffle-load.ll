@@ -392,11 +392,11 @@ define void @vld2(ptr %p) {
 
 define void @vld3(ptr %p) {
 ; CHECK-LABEL: 'vld3'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2i8 = load <6 x i8>, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %v2i8 = load <6 x i8>, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i8_0 = shufflevector <6 x i8> %v2i8, <6 x i8> undef, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i8_1 = shufflevector <6 x i8> %v2i8, <6 x i8> undef, <2 x i32> <i32 1, i32 4>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i8_2 = shufflevector <6 x i8> %v2i8, <6 x i8> undef, <2 x i32> <i32 2, i32 5>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i8 = load <12 x i8>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %v4i8 = load <12 x i8>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v4i8_0 = shufflevector <12 x i8> %v4i8, <12 x i8> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v4i8_1 = shufflevector <12 x i8> %v4i8, <12 x i8> undef, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v4i8_2 = shufflevector <12 x i8> %v4i8, <12 x i8> undef, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
@@ -408,7 +408,7 @@ define void @vld3(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8_0 = shufflevector <48 x i8> %v16i8, <48 x i8> undef, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8_1 = shufflevector <48 x i8> %v16i8, <48 x i8> undef, <16 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8_2 = shufflevector <48 x i8> %v16i8, <48 x i8> undef, <16 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2i16 = load <6 x i16>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %v2i16 = load <6 x i16>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i16_0 = shufflevector <6 x i16> %v2i16, <6 x i16> undef, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i16_1 = shufflevector <6 x i16> %v2i16, <6 x i16> undef, <2 x i32> <i32 1, i32 4>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v2i16_2 = shufflevector <6 x i16> %v2i16, <6 x i16> undef, <2 x i32> <i32 2, i32 5>

@@ -139,28 +139,36 @@ define void @storechain_1fmul(ptr %dst, ptr %srcB, float %p, float %q, float %r,
 ; DISABLED-LABEL: define void @storechain_1fmul(
 ; DISABLED-SAME: ptr [[DST:%.*]], ptr [[SRCB:%.*]], float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[N:%.*]], float [[M:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], float [[I:%.*]], float [[J:%.*]], float [[K:%.*]], float [[L:%.*]]) {
 ; DISABLED-NEXT:  [[ENTRY:.*:]]
-; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <3 x float> poison, float [[P]], i64 0
-; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> [[TMP0]], float [[R]], i64 1
-; DISABLED-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[I]], i64 2
-; DISABLED-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> poison, float [[Q]], i64 0
-; DISABLED-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> [[TMP3]], float [[S]], i64 1
-; DISABLED-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> [[TMP4]], float [[J]], i64 2
-; DISABLED-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP2]], [[TMP5]]
-; DISABLED-NEXT:    [[X:%.*]] = fmul float [[T]], [[U]]
-; DISABLED-NEXT:    [[TMP7:%.*]] = insertelement <3 x float> poison, float [[E]], i64 0
-; DISABLED-NEXT:    [[TMP8:%.*]] = insertelement <3 x float> [[TMP7]], float [[G]], i64 1
-; DISABLED-NEXT:    [[TMP9:%.*]] = insertelement <3 x float> [[TMP8]], float [[K]], i64 2
-; DISABLED-NEXT:    [[TMP10:%.*]] = insertelement <3 x float> poison, float [[F]], i64 0
-; DISABLED-NEXT:    [[TMP11:%.*]] = insertelement <3 x float> [[TMP10]], float [[H]], i64 1
-; DISABLED-NEXT:    [[TMP12:%.*]] = insertelement <3 x float> [[TMP11]], float [[L]], i64 2
-; DISABLED-NEXT:    [[TMP13:%.*]] = fadd <3 x float> [[TMP9]], [[TMP12]]
-; DISABLED-NEXT:    [[TMP14:%.*]] = fsub <3 x float> [[TMP9]], [[TMP12]]
-; DISABLED-NEXT:    [[TMP15:%.*]] = shufflevector <3 x float> [[TMP13]], <3 x float> [[TMP14]], <3 x i32> <i32 0, i32 4, i32 2>
+; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
+; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[R]], i64 1
+; DISABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
+; DISABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
+; DISABLED-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
+; DISABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[I]], i64 0
+; DISABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[T]], i64 1
+; DISABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[J]], i64 0
+; DISABLED-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[U]], i64 1
+; DISABLED-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP6]], [[TMP8]]
+; DISABLED-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[E]], i64 0
+; DISABLED-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> [[TMP10]], float [[G]], i64 1
+; DISABLED-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[F]], i64 0
+; DISABLED-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[H]], i64 1
+; DISABLED-NEXT:    [[TMP14:%.*]] = fadd <2 x float> [[TMP11]], [[TMP13]]
+; DISABLED-NEXT:    [[TMP15:%.*]] = fsub <2 x float> [[TMP11]], [[TMP13]]
+; DISABLED-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> [[TMP15]], <2 x i32> <i32 0, i32 3>
+; DISABLED-NEXT:    [[C2:%.*]] = fadd float [[K]], [[L]]
+; DISABLED-NEXT:    [[GEPB2:%.*]] = getelementptr float, ptr [[SRCB]], i32 2
+; DISABLED-NEXT:    [[B2:%.*]] = load float, ptr [[GEPB2]], align 4
+; DISABLED-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
+; DISABLED-NEXT:    [[FMA2:%.*]] = call float @llvm.fmuladd.f32(float [[TMP17]], float [[B2]], float [[C2]])
 ; DISABLED-NEXT:    [[D1:%.*]] = getelementptr float, ptr [[DST]], i32 1
-; DISABLED-NEXT:    [[TMP16:%.*]] = load <3 x float>, ptr [[SRCB]], align 4
-; DISABLED-NEXT:    [[TMP17:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP6]], <3 x float> [[TMP16]], <3 x float> [[TMP15]])
+; DISABLED-NEXT:    [[TMP18:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
+; DISABLED-NEXT:    [[TMP19:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP18]], <2 x float> [[TMP16]])
+; DISABLED-NEXT:    [[X:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
 ; DISABLED-NEXT:    store float [[X]], ptr [[DST]], align 4
-; DISABLED-NEXT:    store <3 x float> [[TMP17]], ptr [[D1]], align 4
+; DISABLED-NEXT:    store <2 x float> [[TMP19]], ptr [[D1]], align 4
+; DISABLED-NEXT:    [[D3:%.*]] = getelementptr float, ptr [[DST]], i32 3
+; DISABLED-NEXT:    store float [[FMA2]], ptr [[D3]], align 4
 ; DISABLED-NEXT:    ret void
 ;
 ; COST-LABEL: define void @storechain_1fmul(

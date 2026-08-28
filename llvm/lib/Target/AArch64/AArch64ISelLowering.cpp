@@ -7034,13 +7034,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_dupq_lane:
     return LowerDUPQLane(Op, DAG);
   case Intrinsic::aarch64_sve_convert_from_svbool:
-    if (Op.getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
     return getSVEPredicateBitCast(Op.getValueType(), Op.getOperand(1), DAG);
   case Intrinsic::aarch64_sve_convert_to_svbool:
-    if (Op.getOperand(1).getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Op.getOperand(1));
     return getSVEPredicateBitCast(MVT::nxv16i1, Op.getOperand(1), DAG);
+  case Intrinsic::aarch64_sve_convert_from_svcount:
+  case Intrinsic::aarch64_sve_convert_to_svcount:
+    return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
   case Intrinsic::aarch64_sve_fneg:
     return DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -24548,7 +24547,35 @@ static SDValue performSubNegAndOneCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   return DAG.getSetCC(DL, VT, And, DAG.getConstant(0, DL, VT), ISD::SETNE);
 }
+static SDValue performAddAddCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
 
+  EVT VT = N->getValueType(0);
+
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue A, B;
+
+  if (Op0.getOpcode() == ISD::ADD && Op0.hasOneUse() &&
+      (Op0.getOperand(0) == Op1 || Op0.getOperand(1) == Op1)) {
+    A = (Op0.getOperand(0) == Op1) ? Op0.getOperand(1) : Op0.getOperand(0);
+    B = Op1;
+  } else if (Op1.getOpcode() == ISD::ADD && Op1.hasOneUse() &&
+             (Op1.getOperand(0) == Op0 || Op1.getOperand(1) == Op0)) {
+    A = (Op1.getOperand(0) == Op0) ? Op1.getOperand(1) : Op1.getOperand(0);
+    B = Op0;
+  } else {
+    return SDValue();
+  }
+
+  SDLoc DL(N);
+  SDValue ShiftB = DAG.getNode(ISD::SHL, DL, VT, B, DAG.getConstant(1, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, A, ShiftB);
+}
 // Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
 // SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
 // Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
@@ -24577,6 +24604,8 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
+  if (SDValue Val = performAddAddCombine(N, DCI.DAG))
+    return Val;
   if (SDValue Val = performAddUADDVCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddDotCombine(N, DCI.DAG))
@@ -27391,9 +27420,9 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
 // iN, we can use a trick that extracts the i^th bit from the i^th element and
 // then performs a vector add to get a scalar bitmask. This requires that each
 // element's bits are either all 1 or all 0.
-static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue ComparisonResult(N, 0);
+static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(ComparisonResult);
   EVT VecVT = ComparisonResult.getValueType();
   assert(VecVT.isVector() && "Must be a vector type");
 
@@ -27618,7 +27647,7 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
     return SDValue();
 
   VecOp = DAG.getNode(ISD::TRUNCATE, DL, MemVT, VecOp);
-  SDValue VectorBits = vectorToScalarBitmask(VecOp.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(VecOp, DAG);
   if (!VectorBits)
     return SDValue();
 
@@ -32027,7 +32056,7 @@ static void replaceBoolVectorBitcast(SDNode *N,
       Op = Op.getOperand(0);
   }
 
-  SDValue VectorBits = vectorToScalarBitmask(Op.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(Op, DAG);
   if (VectorBits)
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }

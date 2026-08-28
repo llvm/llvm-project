@@ -182,7 +182,7 @@ private:
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
-                                          unsigned &Size);
+                                          unsigned &Size, unsigned &NumVec);
 
   /// Single vectorization attempt for a store chain. \p vectorizeStoreChain
   /// wraps this to retry once with runtime alias checks enabled when the
@@ -191,7 +191,7 @@ private:
   std::optional<bool> vectorizeStoreChainImpl(ArrayRef<Value *> Chain,
                                               slpvectorizer::BoUpSLP &R,
                                               unsigned Idx, unsigned MinVF,
-                                              unsigned &Size);
+                                              unsigned &Size, unsigned &NumVec);
 
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,

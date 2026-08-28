@@ -22,12 +22,12 @@ define void @vec3_i32(<3 x i32> %a, <3 x i32> %b, ptr %src, ptr %dst) {
 
 define void @vec3_i32_default_alignment(<3 x i32> %a, <3 x i32> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_i32_default_alignment'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %l = load <3 x i32>, ptr %src, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %l = load <3 x i32>, ptr %src, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %add = add <3 x i32> %l, %b
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cmp = icmp uge <3 x i32> %add, %a
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %sub = sub <3 x i32> %add, %a
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %sel = select <3 x i1> %cmp, <3 x i32> %add, <3 x i32> %sub
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: store <3 x i32> %sel, ptr %dst, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i32> %sel, ptr %dst, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %l = load <3 x i32>, ptr %src

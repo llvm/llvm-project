@@ -391,10 +391,10 @@ public:
   /// folded into the addressing mode of a load/store. If AccessType is null,
   /// then the resulting target type based off of PointeeType will be used as an
   /// approximation.
-  LLVM_ABI InstructionCost
-  getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands, Type *AccessType = nullptr,
-             TargetCostKind CostKind = TCK_SizeAndLatency) const;
+  LLVM_ABI InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                                      ArrayRef<const Value *> Operands,
+                                      TargetCostKind CostKind,
+                                      Type *AccessType = nullptr) const;
 
   /// Describe known properties for a set of pointers.
   struct PointersChainInfo {
@@ -1120,14 +1120,16 @@ public:
     // The list of available load sizes (in bytes), sorted in decreasing order.
     SmallVector<unsigned, 8> LoadSizes;
 
-    // For memcmp expansion when the memcmp result is only compared equal or
-    // not-equal to 0, allow up to this number of load pairs per block. As an
-    // example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
+    // For memcmp expansion, allow up to this number of load pairs per block.
+    // As an example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
     //   a0 = load2bytes &a[0]
     //   b0 = load2bytes &b[0]
     //   a2 = load1byte  &a[2]
     //   b2 = load1byte  &b[2]
     //   r  = cmp eq (a0 ^ b0 | a2 ^ b2), 0
+    // Equality comparisons combine the differences with xor/or. Ordering
+    // comparisons pack the loads in memory order into a wider integer before
+    // comparing, without exceeding the target's preferred load width.
     unsigned NumLoadsPerBlock = 1;
 
     // Set to true to allow overlapping loads. For example, 7-byte compares can
@@ -1700,11 +1702,11 @@ public:
   /// \return The cost of Load and Store instructions. The operand info
   /// \p OpdInfo should refer to the stored value for stores and the address
   /// for loads.
-  LLVM_ABI InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
-      const Instruction *I = nullptr) const;
+  LLVM_ABI InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
+                  const Instruction *I = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code

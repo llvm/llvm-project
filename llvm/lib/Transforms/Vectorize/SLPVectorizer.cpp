@@ -972,6 +972,7 @@ public:
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     ExternalUsesWithNonUsers.clear();
+    ExternalUseReplacements.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
     HasNonCheckableMemBlocker = false;
@@ -2527,6 +2528,7 @@ public:
         if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
+            !ExternalUseReplacements.contains(OpI) &&
             (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
                return Entry->VectorizedValue == OpI;
              })))
@@ -2576,6 +2578,7 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
+              !ExternalUseReplacements.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(
                    VectorValuesAndScales,
@@ -4000,6 +4003,11 @@ private:
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
 
+  /// Replacements emitted for the external uses without users, consumed after
+  /// the tree vectorization; must not be collected as dead operands of the
+  /// erased scalars.
+  SmallPtrSet<Value *, 4> ExternalUseReplacements;
+
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
 
@@ -5181,7 +5189,7 @@ private:
             for (const ScheduleBundle *Bundle : Bundles) {
               if (TotalOpCount == 0)
                 break;
-              const TreeEntry *TE = Bundle->getTreeEntry();
+              TreeEntry *TE = Bundle->getTreeEntry();
               if (!TE->hasReassocScalars())
                 continue;
               for (Value *V : TE->getReassocScalars()) {
@@ -5208,8 +5216,22 @@ private:
                       if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
                               .second)
                         DecrUnsched(CD, /*IsControl=*/false);
-                      ReleasedAsCopyable = true;
                     }
+                  }
+                  // The dep is released through copyable data only if this
+                  // very entry models the scalar as a copyable operand on one
+                  // of its edges, mirroring the dependency calculation;
+                  // copyable data on some other entry's edge does not cover
+                  // the dep registered for this entry.
+                  for (auto It = find(TE->Scalars, In);
+                       It != TE->Scalars.end() && !ReleasedAsCopyable;
+                       It = find(make_range(std::next(It), TE->Scalars.end()),
+                                 In)) {
+                    int Lane = std::distance(TE->Scalars.begin(), It);
+                    for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                      ReleasedAsCopyable |=
+                          TE->getOperand(OpIdx)[Lane] == OpI &&
+                          getScheduleCopyableData(EdgeInfo(TE, OpIdx), OpI);
                   }
                 }
                 if (!ReleasedAsCopyable) {
@@ -19604,6 +19626,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -19637,8 +19662,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   PriorityQueue<CostIndicesTy, SmallVector<CostIndicesTy>, FirstGreater>
       Worklist;
-  for (const auto [Idx, P] : enumerate(SubtreeCosts))
+  for (const auto [Idx, P] : enumerate(SubtreeCosts)) {
+    // Combined subnodes are not trimmed on their own, only as a whole combined
+    // node, so only the root nodes are checked and included into the worklist.
+    if (VectorizableTree[Idx]->State == TreeEntry::CombinedVectorize)
+      continue;
     Worklist.emplace(VectorizableTree[Idx].get(), P);
+  }
 
   // Narrow store trees with non-profitable immediate values - exit.
   if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&
@@ -25974,7 +26004,17 @@ Value *BoUpSLP::vectorizeTree(
         assert((!isa<ExtractElementInst>(Scalar) ||
                 !IgnoredExtracts.contains(cast<ExtractElementInst>(Scalar))) &&
                "Extractelements should not be replaced.");
+        // Reduced values that are not operands of the reduction ops (e.g.
+        // narrowed reduction leaves) lose all users once the tree scalars are
+        // erased; keep the replacement alive for the reduction epilogue.
+        bool NeedsProtection =
+            UserIgnoreList && none_of(Scalar->users(), [&](llvm::User *U) {
+              return UserIgnoreList->contains(U);
+            });
         Scalar->replaceAllUsesWith(NewInst);
+        if (NeedsProtection)
+          if (auto *I = dyn_cast<Instruction>(NewInst))
+            ExternalUseReplacements.insert(I);
       }
       continue;
     }
@@ -28890,8 +28930,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
-                                       unsigned &Size) {
-  std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+                                       unsigned &Size, unsigned &NumVec) {
+  std::optional<bool> Res =
+      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size, NumVec);
   assert(!R.isTryingRuntimeAliasChecks() &&
          "Unexpected nested runtime alias check attempt");
   // Retry once with runtime alias checks, but only when the normal attempt
@@ -28934,11 +28975,13 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   }
   R.setTryRuntimeAliasChecks(true);
   unsigned RTSize = Size;
+  unsigned RTNumVec = 0;
   std::optional<bool> RTRes =
-      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, RTSize);
+      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, RTSize, RTNumVec);
   R.setTryRuntimeAliasChecks(false);
   if (RTRes && *RTRes) {
     Size = RTSize;
+    NumVec = RTNumVec;
     return RTRes;
   }
   // The versioning attempt failed for this block, skip the (expensive) retry.
@@ -28949,8 +28992,9 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
                                            unsigned Idx, unsigned MinVF,
-                                           unsigned &Size) {
+                                           unsigned &Size, unsigned &NumVec) {
   Size = 0;
+  NumVec = 0;
   R.resetRuntimeAliasCheckState();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
@@ -29044,31 +29088,43 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
       return false;
     }
   }
-  R.buildTree(Chain);
-  // Check if tree tiny and store itself or its value is not vectorized.
-  if (R.isTreeTinyAndNotFullyVectorizable()) {
-    if (R.isGathered(Chain.front()) ||
-        R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
-      return std::nullopt;
+  // Builds the tree for the chain and computes its cost, keeping the tree
+  // loaded. Returns nullopt if the chain cannot be scheduled and false for a
+  // tiny, not fully vectorizable tree.
+  auto AnalyzeChain = [&](ArrayRef<Value *> Chain,
+                          InstructionCost &Cost) -> std::optional<bool> {
+    R.buildTree(Chain);
+    // Check if tree tiny and store itself or its value is not vectorized.
+    if (R.isTreeTinyAndNotFullyVectorizable()) {
+      if (R.isGathered(Chain.front()) ||
+          R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
+        return std::nullopt;
+      Size = R.getCanonicalGraphSize();
+      return false;
+    }
+    if (R.isProfitableToReorder()) {
+      R.reorderTopToBottom();
+      R.reorderBottomToTop();
+    }
+    if (R.isTryingRuntimeAliasChecks())
+      R.captureRuntimeCheckBodySnapshot();
+    R.transformNodes();
+    R.computeMinimumValueSizes();
+
+    InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+    R.buildExternalUses();
+
     Size = R.getCanonicalGraphSize();
-    return false;
-  }
-  if (R.isProfitableToReorder()) {
-    R.reorderTopToBottom();
-    R.reorderBottomToTop();
-  }
-  if (R.isTryingRuntimeAliasChecks())
-    R.captureRuntimeCheckBodySnapshot();
-  R.transformNodes();
-  R.computeMinimumValueSizes();
+    if (S && S.getOpcode() == Instruction::Load)
+      Size = 2; // cut off masked gather small trees
+    Cost = R.getTreeCost(TreeCost);
+    return true;
+  };
 
-  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-  R.buildExternalUses();
-
-  Size = R.getCanonicalGraphSize();
-  if (S && S.getOpcode() == Instruction::Load)
-    Size = 2; // cut off masked gather small trees
-  InstructionCost Cost = R.getTreeCost(TreeCost);
+  InstructionCost Cost;
+  std::optional<bool> Res = AnalyzeChain(Chain, Cost);
+  if (!Res || !*Res)
+    return Res;
 
   // When the tree was scheduled by dropping may-alias dependencies, account
   // for the runtime alias checks in the cost and make sure the region can
@@ -29098,6 +29154,33 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
+    NumVec = VF;
+    // The full-width non-power-of-2 chain covers all the stores at once, but
+    // the largest power-of-2 prefix may still be more profitable: the extra
+    // lanes may duplicate work or need an extra register. Compare the costs
+    // before committing.
+    if (!R.isTryingRuntimeAliasChecks() &&
+        !hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), VF)) {
+      const unsigned Pow2VF = getFloorFullVectorNumberOfElements(
+          *TTI, ValOps.front()->getType(), VF);
+      if (Pow2VF >= std::max(MinVF, 2u)) {
+        R.deleteTree();
+        InstructionCost Pow2Cost;
+        std::optional<bool> Pow2Res =
+            AnalyzeChain(Chain.take_front(Pow2VF), Pow2Cost);
+        if (Pow2Res && *Pow2Res && Pow2Cost.isValid() && Pow2Cost < Cost) {
+          NumVec = Pow2VF;
+          Cost = Pow2Cost;
+          LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
+                            << " for VF=" << Pow2VF << "\n");
+        } else {
+          R.deleteTree();
+          // Rebuild the winning non-power-of-2 tree.
+          std::optional<bool> ReRes = AnalyzeChain(Chain, Cost);
+          assert(ReRes && *ReRes && Cost.isValid() && "Must be vectorizable");
+        }
+      }
+    }
     LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
     using namespace ore;
@@ -29145,11 +29228,12 @@ public:
   unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
-  bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
-                      BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
-                      llvm::function_ref<std::optional<bool>(
-                          ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
-                          VectorizeStoreChain);
+  bool vectorizeOneVF(
+      const TargetTransformInfo &TTI, unsigned VF,
+      BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
+      llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
+                                             unsigned, unsigned &, unsigned &)>
+          VectorizeStoreChain);
   /// Add an additional store to the chain
   /// \p Store store too append to Operands
   /// \p Idx position within VectorizeStores::Stores
@@ -29343,14 +29427,35 @@ bool StoreChainContext::initializeContext(
       isAllowedNonPowerOf2VF(CandVF, isa<FixedVectorType>(StoreTy))) {
     auto GetStoreCost = [&](Type *Ty) {
       return TTI.getMemoryOpCost(Instruction::Store, Ty, Store->getAlign(),
-                                 Store->getPointerAddressSpace());
+                                 Store->getPointerAddressSpace(),
+                                 R.getCostKind());
+    };
+    // The stored values must not be computed from operands that also feed
+    // stores of another chain: vectorizing the smallest chain steals the
+    // operands from a potentially larger chain and leaves the other stores
+    // scalar.
+    auto SharesOpsWithOtherChains = [&]() {
+      SmallPtrSet<Value *, 4> ChainStores(Operands.begin(), Operands.end());
+      return any_of(Operands, [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(cast<StoreInst>(V)->getValueOperand());
+        return I && any_of(I->operand_values(), [&](Value *Op) {
+                 auto *OpI = dyn_cast<Instruction>(Op);
+                 // To save compilation time, bail out if the use list is huge.
+                 return OpI && (OpI->hasNUsesOrMore(UsesLimit) ||
+                                any_of(OpI->users(), [&](User *U) {
+                                  auto *SI = dyn_cast<StoreInst>(U);
+                                  return SI && !ChainStores.contains(SI);
+                                }));
+               });
+      });
     };
     // The smallest tree pays off only if the wide store itself is cheaper than
     // the scalar ones; with several chains in the function the extra shuffles
     // eat the gain.
-    if (SingleContext || CandVF != SmallestNonPowerOf2 ||
-        GetStoreCost(::getWidenedType(StoreTy, CandVF)) <
-            CandVF * GetStoreCost(StoreTy))
+    if (CandVF != SmallestNonPowerOf2 ||
+        ((SingleContext || GetStoreCost(::getWidenedType(StoreTy, CandVF)) <
+                               CandVF * GetStoreCost(StoreTy)) &&
+         !SharesOpsWithOtherChains()))
       NonPowerOf2VF = CandVF;
   }
 
@@ -29497,7 +29602,7 @@ bool StoreChainContext::vectorizeOneVF(
     const TargetTransformInfo &TTI, unsigned VF,
     BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
     llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
-                                           unsigned, unsigned &)>
+                                           unsigned, unsigned &, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
   unsigned FirstUnvecStore = getFirstUnvecStore();
@@ -29533,8 +29638,9 @@ bool StoreChainContext::vectorizeOneVF(
         }
       }
       unsigned TreeSize;
+      unsigned NumVec = VF;
       std::optional<bool> Res =
-          VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
+          VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize, NumVec);
       if (!Res) {
         // Update the range of non schedulable VFs for slices starting
         // at SliceStartIdx.
@@ -29544,16 +29650,17 @@ bool StoreChainContext::vectorizeOneVF(
       } else if (*Res) {
         // Mark the vectorized stores so that we don't vectorize them
         // again.
-        VectorizedStores.insert_range(Slice);
+        VectorizedStores.insert_range(Slice.take_front(NumVec));
         AnyProfitableGraph = RepeatChanged = Changed = true;
         // If we vectorized initial block, no need to try to vectorize
         // it again.
-        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
-        SliceStartIdx += VF;
+        markRangeVectorized(SliceStartIdx, NumVec, FirstUnvecStore,
+                            MaxSliceEnd);
+        SliceStartIdx += NumVec;
         ++NumStoreChains;
         if (Stride > 1)
           ++NumStridedStoreChains;
-        NumVectorizedStores += VF;
+        NumVectorizedStores += NumVec;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
@@ -29796,8 +29903,9 @@ bool SLPVectorizerPass::vectorizeStores(
           if (!Context.vectorizeOneVF(
                   *TTI, VF, VectorizedStores, Changed,
                   [this, &R](ArrayRef<Value *> Chain, unsigned Idx,
-                             unsigned MinVF, unsigned &Size) {
-                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size);
+                             unsigned MinVF, unsigned &Size, unsigned &NumVec) {
+                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size,
+                                               NumVec);
                   })) {
             CtxPtr.reset();
             break;
@@ -29932,9 +30040,10 @@ bool SLPVectorizerPass::vectorizeStores(
     return Changed;
 
   unsigned Size = 0;
-  if (vectorizeStoreChain(Sorted, R, /*Idx=*/0, /*MinVF=*/2, Size)
+  unsigned NumVec = 0;
+  if (vectorizeStoreChain(Sorted, R, /*Idx=*/0, /*MinVF=*/2, Size, NumVec)
           .value_or(false)) {
-    VectorizedStores.insert_range(Sorted);
+    VectorizedStores.insert_range(ArrayRef(Sorted).take_front(NumVec));
     Changed = true;
   }
   return Changed;
