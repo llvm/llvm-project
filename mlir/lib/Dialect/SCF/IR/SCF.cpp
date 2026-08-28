@@ -3474,17 +3474,31 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
 
     // Replace uses of ifOp results in the conditionOp with the yielded values
     // from the ifOp branches.
+    //
+    // The same ifOp result may be forwarded to several condition operands, so
+    // classify every operand before mutating anything: replacing an ifOp result
+    // rewrites *all* of its uses at once, including condition operands that
+    // have not been visited yet, which would hide them from this scan.
+    SmallVector<std::pair<size_t, size_t>> conditionToIfResult;
     for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
       auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end()) {
-        size_t ifOpIdx = it.getIndex();
-        Value thenValue = ifOp.thenYield()->getOperand(ifOpIdx);
-        Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
-
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx], elseValue);
-        rewriter.replaceAllUsesWith(op.getAfterArguments()[idx], thenValue);
-      }
+      if (it != ifOp->getResults().end())
+        conditionToIfResult.emplace_back(idx, it.getIndex());
     }
+
+    // The after-region arguments are distinct block arguments, so these
+    // replacements cannot interfere with one another.
+    for (auto [idx, ifOpIdx] : conditionToIfResult)
+      rewriter.replaceAllUsesWith(op.getAfterArguments()[idx],
+                                  ifOp.thenYield()->getOperand(ifOpIdx));
+
+    // Any remaining use of an ifOp result is on the false path, i.e. a result
+    // of the while op; collapse each one to its else value exactly once.
+    llvm::SmallDenseSet<size_t> collapsedIfResults;
+    for (auto [idx, ifOpIdx] : conditionToIfResult)
+      if (collapsedIfResults.insert(ifOpIdx).second)
+        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx],
+                                    ifOp.elseYield()->getOperand(ifOpIdx));
 
     // Collect additional used values from before region.
     SetVector<Value> additionalUsedValuesSet;
