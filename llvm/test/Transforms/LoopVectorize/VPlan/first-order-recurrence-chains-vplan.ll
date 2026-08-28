@@ -14,34 +14,40 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<22>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init>.1 = insertelement ir<poison>, ir<33>, vp<[[VP6]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6]]> = first-order splice ir<%for.1>, ir<%for.1.next>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%for.2>, vp<[[VP6]]>
-; CHECK-NEXT:      WIDEN ir<%add> = add vp<[[VP6]]>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi vp<%vector.recur.init>, ir<%for.1.next>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi vp<%vector.recur.init>.1, vp<[[VP10:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP8]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP10]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%for.2>, vp<[[VP10]]>
+; CHECK-NEXT:      WIDEN ir<%add> = add vp<[[VP10]]>, vp<[[VP11]]>
+; CHECK-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP12]]>, ir<%add>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP15]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -99,39 +105,48 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<22>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init>.1 = insertelement ir<poison>, ir<33>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = sub vp<[[VP7]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init>.2 = insertelement ir<poison>, ir<33>, vp<[[VP8]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP9:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<[[VP7:%[0-9]+]]>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6]]> = first-order splice ir<%for.1>, ir<%for.1.next>
-; CHECK-NEXT:      EMIT vp<[[VP7]]> = first-order splice ir<%for.2>, vp<[[VP6]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%for.3>, vp<[[VP7]]>
-; CHECK-NEXT:      WIDEN ir<%add.1> = add vp<[[VP6]]>, vp<[[VP7]]>
-; CHECK-NEXT:      WIDEN ir<%add.2> = add ir<%add.1>, vp<[[VP8]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%add.2>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi vp<%vector.recur.init>, ir<%for.1.next>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi vp<%vector.recur.init>.1, vp<[[VP12:%[0-9]+]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi vp<%vector.recur.init>.2, vp<[[VP13:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP9]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP10]]>
+; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP11]]>
+; CHECK-NEXT:      EMIT vp<[[VP12]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:      EMIT vp<[[VP13]]> = first-order splice ir<%for.2>, vp<[[VP12]]>
+; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = first-order splice ir<%for.3>, vp<[[VP13]]>
+; CHECK-NEXT:      WIDEN ir<%add.1> = add vp<[[VP12]]>, vp<[[VP13]]>
+; CHECK-NEXT:      WIDEN ir<%add.2> = add ir<%add.1>, vp<[[VP14]]>
+; CHECK-NEXT:      vp<[[VP15:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP15]]>, ir<%add.2>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP9]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.2 = extract-last-lane vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = extract-last-part vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP18]]>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = extract-last-part vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.2 = extract-last-lane vp<[[VP19]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -198,34 +213,40 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl ir<%x>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<0>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init>.1 = insertelement ir<poison>.1, ir<0>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = shl ir<%x>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP8:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, vp<[[VP3]]>
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%base>, vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP3]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP6]]> to i32
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP7]]> to i64
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%for.y.i64>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi vp<%vector.recur.init>, vp<[[VP7]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi vp<%vector.recur.init>.1, ir<%for.x.prev>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP8]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%base>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP7]]>
+; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP10]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
+; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP11]]> to i64
+; CHECK-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer i64, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP12]]>, ir<%for.y.i64>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP8]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP15]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4098>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<ret>, scalar.ph
@@ -285,36 +306,42 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<0>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init>.1 = insertelement ir<poison>.1, ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%base>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%gep>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6]]> = shl ir<%l>, ir<1>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP6]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP7]]> to i32
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP8]]> to i64
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi vp<%vector.recur.init>, vp<[[VP10:%[0-9]+]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi vp<%vector.recur.init>.1, ir<%for.x.prev>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%base>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i64, ir<%gep>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%for.y.i64>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP10]]> = shl ir<%l>, ir<1>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP10]]>
+; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP11]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
+; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP12]]> to i64
+; CHECK-NEXT:      vp<[[VP13:%[0-9]+]]> = vector-pointer i64, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP13]]>, ir<%for.y.i64>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP16]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4098>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<ret>, scalar.ph

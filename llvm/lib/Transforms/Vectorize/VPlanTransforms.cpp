@@ -4247,10 +4247,14 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder PHBuilder(Plan.getVectorPreheader());
 
   auto IsScalableOne = [](ElementCount VF) -> bool {
     return VF == ElementCount::getScalable(1);
   };
+  auto IsScalar = [](ElementCount VF) -> bool { return VF.isScalar(); };
+  bool ScalarVFOnly =
+      LoopVectorizationPlanner::getDecisionAndClampRange(IsScalar, Range);
 
   for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
     auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
@@ -4259,6 +4263,27 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
 
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
+
+    // Adjust start value of fixed-order recurrence phi to [poison, ... ,
+    // poison, start value] for vector VF plans.
+    if (!ScalarVFOnly) {
+      VPValue *StartV = FOR->getStartValue();
+      DebugLoc DL = FOR->getDebugLoc();
+      VPValue *Poison =
+          Plan.getOrAddLiveIn(PoisonValue::get(StartV->getScalarType()));
+      // TODO: Use the type of runtimeVF as index type.
+      Type *IdxTy = Type::getInt32Ty(Plan.getContext());
+      VPValue *RuntimeVF =
+          PHBuilder.createScalarZExtOrTrunc(&Plan.getVF(), IdxTy, DL);
+      // TODO: Set nowrap flag for LastIdx.
+      VPValue *LastIdx = PHBuilder.createOverflowingOp(
+          Instruction::Sub, {RuntimeVF, Plan.getConstantInt(IdxTy, 1)},
+          {false, false}, DL);
+      VPValue *NewStart = PHBuilder.createNaryOp(Instruction::InsertElement,
+                                                 {Poison, StartV, LastIdx}, DL,
+                                                 "vector.recur.init");
+      FOR->setOperand(0, NewStart);
+    }
 
     // Find the existing splice for this FOR, created in
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
@@ -4276,7 +4301,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
                [](VPUser *U) { return !cast<VPRecipeBase>(U)->getRegion(); }) &&
         LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
                                                            Range))
-      return;
+      continue;
 
     // This is the second phase of vectorizing first-order recurrences, creating
     // extracts for users outside the loop. An overview of the transformation is

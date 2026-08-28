@@ -1046,22 +1046,24 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub vp<[[VP0]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<0>, vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[VP10:%[0-9]+]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP9]]>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi vp<%vector.recur.init>, vp<[[VP11:%[0-9]+]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP6]]>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[VP10]]>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.load: {
 ; CHECK-NEXT:      pred.load.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
 ; CHECK-NEXT:      Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.if:
@@ -1069,22 +1071,22 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:      Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.load.continue:
-; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP10]]> = ir<%lv.a>
+; CHECK-NEXT:        PHI-PREDICATED-INSTRUCTION vp<[[VP11]]> = ir<%lv.a>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = first-order splice ir<%for>, vp<[[VP10]]>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = first-order splice ir<%for>, vp<[[VP11]]>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP8]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%div> = sdiv vp<[[VP11]]>, vp<[[VP10]]>
+; CHECK-NEXT:        REPLICATE ir<%div> = sdiv vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK-NEXT:        REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -1094,7 +1096,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:    Successor(s): loop.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.2:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }

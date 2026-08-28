@@ -4939,19 +4939,10 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
+  Value *VectorInit = State.get(getStartValue(), State.VF.isScalar());
+  Type *VecTy = VectorInit->getType();
   BasicBlock *VectorPH =
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  Value *VectorInit;
-  if (State.VF.isVector()) {
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(VectorPH->getTerminator());
-    VectorInit = State.get(getStartValue(), false);
-  } else {
-    VectorInit = State.get(getStartValue(), true);
-  }
-  Type *VecTy = VectorInit->getType();
-
   // Create a phi node for the new recurrence.
   PHINode *Phi = PHINode::Create(VecTy, 2, "vector.recur");
   Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
