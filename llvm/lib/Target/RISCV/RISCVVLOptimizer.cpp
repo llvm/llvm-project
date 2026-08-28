@@ -215,11 +215,11 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
 /// SEW comes from TSFlags of MI.
 static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
                                               const MachineInstr &MI,
-                                              const MachineOperand &MO) {
+                                              unsigned OpIdx) {
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
 
-  if (MO.getOperandNo() == 0)
+  if (OpIdx == 0)
     return MILog2SEW;
 
   unsigned MISEW = 1 << MILog2SEW;
@@ -242,8 +242,8 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
 #define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
 #define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
 
-static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
-  const MachineInstr &MI = *MO.getParent();
+static std::optional<unsigned> getOperandLog2EEW(const MachineInstr &MI,
+                                                 unsigned OpIdx) {
   const MCInstrDesc &Desc = MI.getDesc();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
@@ -256,11 +256,11 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
   const bool IsTied = RISCVII::isTiedPseudo(Desc.TSFlags);
 
-  bool IsMODef = MO.getOperandNo() == 0 ||
-                 (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
+  bool IsMODef =
+      OpIdx == 0 || (HasPassthru && OpIdx == MI.getNumExplicitDefs());
 
   // All mask operands have EEW=1
-  const MCOperandInfo &Info = Desc.operands()[MO.getOperandNo()];
+  const MCOperandInfo &Info = Desc.operands()[OpIdx];
   if (Info.OperandType == MCOI::OPERAND_REGISTER &&
       Info.RegClass == RISCV::VMV0RegClassID)
     return 0;
@@ -322,7 +322,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI8_V:
   case VSUXSEG_CASES(8):
   case VSOXSEG_CASES(8): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 3;
   }
@@ -332,7 +332,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI16_V:
   case VSUXSEG_CASES(16):
   case VSOXSEG_CASES(16): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 4;
   }
@@ -342,7 +342,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI32_V:
   case VSUXSEG_CASES(32):
   case VSOXSEG_CASES(32): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 5;
   }
@@ -352,7 +352,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI64_V:
   case VSUXSEG_CASES(64):
   case VSOXSEG_CASES(64): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 6;
   }
@@ -689,8 +689,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFWADD_WV:
   case RISCV::VFWSUB_WF:
   case RISCV::VFWSUB_WV: {
-    bool IsOp1 = (HasPassthru && !IsTied) ? MO.getOperandNo() == 2
-                                          : MO.getOperandNo() == 1;
+    bool IsOp1 = (HasPassthru && !IsTied) ? OpIdx == 2 : OpIdx == 1;
     bool TwoTimes = IsMODef || IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
@@ -698,13 +697,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // Vector Integer Extension
   case RISCV::VZEXT_VF2:
   case RISCV::VSEXT_VF2:
-    return getIntegerExtensionOperandEEW(2, MI, MO);
+    return getIntegerExtensionOperandEEW(2, MI, OpIdx);
   case RISCV::VZEXT_VF4:
   case RISCV::VSEXT_VF4:
-    return getIntegerExtensionOperandEEW(4, MI, MO);
+    return getIntegerExtensionOperandEEW(4, MI, OpIdx);
   case RISCV::VZEXT_VF8:
   case RISCV::VSEXT_VF8:
-    return getIntegerExtensionOperandEEW(8, MI, MO);
+    return getIntegerExtensionOperandEEW(8, MI, OpIdx);
 
   // Vector Narrowing Integer Right Shift Instructions
   // Destination EEW=SEW, Op 1 has EEW=2*SEW. Op2 has EEW=SEW
@@ -733,7 +732,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFNCVT_ROD_F_F_W:
   case RISCV::VFNCVTBF16_F_F_W: {
     assert(!IsTied);
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
+    bool IsOp1 = HasPassthru ? OpIdx == 2 : OpIdx == 1;
     bool TwoTimes = IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
@@ -765,13 +764,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
   // before this switch.
   case RISCV::VCOMPRESS_VM:
-    return MO.getOperandNo() == 3 ? 0 : MILog2SEW;
+    return OpIdx == 3 ? 0 : MILog2SEW;
 
   // Vector Iota Instruction
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
   // before this switch.
   case RISCV::VIOTA_M: {
-    if (IsMODef || MO.getOperandNo() == 1)
+    if (IsMODef || OpIdx == 1)
       return MILog2SEW;
     return 0;
   }
@@ -854,14 +853,14 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // Vector Widening Floating-Point Reduction Instructions
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
-    bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
+    bool TwoTimes = IsMODef || OpIdx == 3;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Register Gather with 16-bit Index Elements Instruction
   // Dest and source data EEW=SEW. Index vector EEW=16.
   case RISCV::VRGATHEREI16_VV: {
-    if (MO.getOperandNo() == 2)
+    if (OpIdx == 2)
       return 4;
     return MILog2SEW;
   }
@@ -871,13 +870,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   }
 }
 
-static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
-  const MachineInstr &MI = *MO.getParent();
+static std::optional<OperandInfo> getOperandInfo(const MachineInstr &MI,
+                                                 unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   assert(RVV && "Could not find MI in PseudoTable");
 
-  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO);
+  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MI, OpIdx);
   if (!Log2EEW)
     return std::nullopt;
 
@@ -900,7 +899,7 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   case RISCV::VWREDSUMU_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    if (MO.getOperandNo() != 2)
+    if (OpIdx != 2)
       return OperandInfo(*Log2EEW);
     break;
   };
@@ -1212,8 +1211,9 @@ bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
       return false;
     }
 
-    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp);
-    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI.getOperand(0));
+    std::optional<OperandInfo> ConsumerInfo =
+        getOperandInfo(UserMI, UserMI.getOperandNo(&UserOp));
+    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI, 0);
     if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
