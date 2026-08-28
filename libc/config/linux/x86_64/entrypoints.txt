@@ -1612,6 +1612,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex
 
+      # netdb.h entrypoints
+      libc.src.netdb.freeaddrinfo
+      libc.src.netdb.getaddrinfo
+
       # regex.h entrypoints
       libc.src.regex.regcomp
       libc.src.regex.regexec

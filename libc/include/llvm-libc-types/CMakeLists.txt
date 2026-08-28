@@ -256,6 +256,7 @@ add_header(wctype_t HDR wctype_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_addrinfo HDR struct_addrinfo.h DEPENDS .socklen_t .struct_sockaddr)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
 add_header(
   struct_sockaddr_in6

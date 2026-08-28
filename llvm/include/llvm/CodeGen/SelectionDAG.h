@@ -211,7 +211,6 @@ class SelectionDAG {
   /// Extended EVTs used for single value VTLists.
   std::set<EVT, EVT::compareRawBits> EVTs;
 
-  /// List of non-single value types.
   /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
   /// SDVTList points at, allocated from \p Allocator.
   struct VTListInfo {
