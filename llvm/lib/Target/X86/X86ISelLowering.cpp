@@ -2593,7 +2593,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
@@ -2607,7 +2609,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
@@ -2627,22 +2631,44 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
-    for (unsigned Opc : {ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                         ISD::FNEARBYINT, ISD::FROUNDEVEN})
-      setOperationAction(Opc, MVT::bf16, Custom);
+    setOperationAction(ISD::FFLOOR, MVT::bf16, Custom);
+    setOperationAction(ISD::FCEIL, MVT::bf16, Custom);
+    setOperationAction(ISD::FTRUNC, MVT::bf16, Custom);
+    setOperationAction(ISD::FRINT, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEARBYINT, MVT::bf16, Custom);
+    setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    SetFPMinMaxAction(MVT::v32bf16);
-    for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
-      for (unsigned Opc : {ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
-                           ISD::FNEARBYINT, ISD::FROUNDEVEN})
-        setOperationAction(Opc, VT, Legal);
+    setOperationAction(ISD::FFLOOR, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FCEIL, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FTRUNC, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FRINT, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FNEARBYINT, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v8bf16, Legal);
+    setOperationAction(ISD::FFLOOR, MVT::v16bf16, Legal);
+    setOperationAction(ISD::FCEIL, MVT::v16bf16, Legal);
+    setOperationAction(ISD::FTRUNC, MVT::v16bf16, Legal);
+    setOperationAction(ISD::FRINT, MVT::v16bf16, Legal);
+    setOperationAction(ISD::FNEARBYINT, MVT::v16bf16, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v16bf16, Legal);
+
+    if (Subtarget.useAVX512Regs()) {
+      setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      SetFPMinMaxAction(MVT::v32bf16);
+
+      setOperationAction(ISD::FFLOOR, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v32bf16, Legal);
+    }
+
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
