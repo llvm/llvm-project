@@ -2638,18 +2638,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEARBYINT, MVT::bf16, Custom);
     setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FFLOOR, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FCEIL, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FTRUNC, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FRINT, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FNEARBYINT, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FROUNDEVEN, MVT::v8bf16, Legal);
-    setOperationAction(ISD::FFLOOR, MVT::v16bf16, Legal);
-    setOperationAction(ISD::FCEIL, MVT::v16bf16, Legal);
-    setOperationAction(ISD::FTRUNC, MVT::v16bf16, Legal);
-    setOperationAction(ISD::FRINT, MVT::v16bf16, Legal);
-    setOperationAction(ISD::FNEARBYINT, MVT::v16bf16, Legal);
-    setOperationAction(ISD::FROUNDEVEN, MVT::v16bf16, Legal);
 
     if (Subtarget.useAVX512Regs()) {
       setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
@@ -2677,6 +2665,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FFLOOR, VT, Legal);
+      setOperationAction(ISD::FCEIL, VT, Legal);
+      setOperationAction(ISD::FTRUNC, VT, Legal);
+      setOperationAction(ISD::FRINT, VT, Legal);
+      setOperationAction(ISD::FNEARBYINT, VT, Legal);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       SetFPMinMaxAction(VT);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
