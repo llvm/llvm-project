@@ -84,14 +84,17 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(createBuiltinBitOp<Op>(cgf, e, arg, args...));
 }
 
-/// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg.
+/// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg and its
+/// elementwise variants.
 /// When a fallback is present, the result is the fallback value if the input is
 /// zero, otherwise the bit count.
 template <typename Op>
 static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
-                                           const CallExpr *e) {
+                                           const CallExpr *e,
+                                           bool isElementwise = false) {
   bool hasFallback = e->getNumArgs() > 1;
-  bool poisonZero = hasFallback || cgf.getTarget().isCLZForZeroUndef();
+  bool poisonZero =
+      hasFallback || isElementwise || cgf.getTarget().isCLZForZeroUndef();
 
   if (!hasFallback) {
     assert(!cir::MissingFeatures::builtinCheckKind());
@@ -105,8 +108,16 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   mlir::Value zero = builder.getNullValue(arg.getType(), loc);
-  mlir::Value isZero =
-      builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
+  mlir::Value isZero;
+  if (auto vectorTy = mlir::dyn_cast<cir::VectorType>(arg.getType())) {
+    auto conditionTy = cir::VectorType::get(
+        builder.getBoolTy(), vectorTy.getSize(), vectorTy.getIsScalable());
+    isZero = cir::VecCmpOp::create(builder, loc, conditionTy,
+                                   cir::CmpOpKind::eq, arg, zero);
+  } else {
+    isZero = builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
+  }
+
   mlir::Value fallbackValue = cgf.emitScalarExpr(e->getArg(1));
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
@@ -1451,7 +1462,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitBuiltinBitOp<cir::BitCtzOp>(*this, e,
                                            getTarget().isCLZForZeroUndef());
   case Builtin::BI__builtin_ctzg:
-    return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e);
+  case Builtin::BI__builtin_elementwise_ctzg:
+    return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(
+        *this, e,
+        builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctzg);
   case Builtin::BIstdc_trailing_zeros_uc:
   case Builtin::BIstdc_trailing_zeros_us:
   case Builtin::BIstdc_trailing_zeros_ui:
@@ -1582,14 +1596,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e,
                                            getTarget().isCLZForZeroUndef());
   case Builtin::BI__builtin_clzg:
-    return emitBuiltinBitOpWithFallback<cir::BitClzOp>(*this, e);
-
-  case Builtin::BI__builtin_elementwise_ctzg:
-    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_ctzg");
-    return RValue::get(nullptr);
   case Builtin::BI__builtin_elementwise_clzg:
-    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_clzg");
-    return RValue::get(nullptr);
+    return emitBuiltinBitOpWithFallback<cir::BitClzOp>(
+        *this, e,
+        builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_clzg);
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
