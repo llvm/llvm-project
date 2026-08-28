@@ -4251,7 +4251,7 @@ define i8 @trunc_nuw_trunc_nuw_xor(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_xor
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nuw i16 %x to i8
@@ -4264,7 +4264,7 @@ define i8 @trunc_nsw_trunc_nsw_xor(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_xor
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nsw i16 %x to i8
@@ -4316,7 +4316,7 @@ define i8 @trunc_nuw_trunc_nuw_or(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_or
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nuw i16 %x to i8
@@ -4329,7 +4329,7 @@ define i8 @trunc_nsw_trunc_nsw_or(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_or
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nsw i16 %x to i8
@@ -4381,7 +4381,7 @@ define i8 @trunc_nuw_trunc_nuw_and(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_and
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nuw i16 %x to i8
@@ -4394,7 +4394,7 @@ define i8 @trunc_nsw_trunc_nsw_and(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_and
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nsw i16 %x to i8
@@ -4407,7 +4407,7 @@ define i8 @trunc_nsw_trunc_nuw_and(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nuw_and
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nsw i16 %x to i8
@@ -4420,7 +4420,7 @@ define i8 @trunc_nuw_trunc_and(i16 %x, i16 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_and
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = trunc nuw i16 %x to i8
