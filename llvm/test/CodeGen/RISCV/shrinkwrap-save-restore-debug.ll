@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+save-restore -verify-machineinstrs < %s | FileCheck %s
 ;
-; Document the current shrink-wrapping behavior with and without a debug
-; instruction in the common return block.
+; Debug instructions in the common return block should not affect save/restore
+; shrink wrapping.
 
 declare ptr @llvm.stacksave.p0()
 declare void @llvm.stackrestore.p0(ptr)
@@ -36,13 +36,14 @@ if.end:
 define void @with_debug(i32 %n) nounwind !dbg !4 {
 ; CHECK-LABEL: with_debug:
 ; CHECK:       # %bb.0: # %entry
-; CHECK:         call t0, __riscv_save_{{[0-9]+}}
+; CHECK-NOT:     __riscv_save
 ; CHECK:         li a1, 32
 ; CHECK:         bltu a1, a0, .LBB1_2
 ; CHECK:       # %bb.1: # %if.then
-; CHECK-NOT:     __riscv_save
-; CHECK:       .LBB1_2: # %if.end
+; CHECK:         call t0, __riscv_save_{{[0-9]+}}
 ; CHECK:         tail __riscv_restore_{{[0-9]+}}
+; CHECK:       .LBB1_2: # %if.end
+; CHECK:         ret
 entry:
   %cmp = icmp ult i32 %n, 33
   br i1 %cmp, label %if.then, label %if.end
