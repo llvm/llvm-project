@@ -38,6 +38,8 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -4098,11 +4100,76 @@ void RewriteInstance::buildFunctionsCFG() {
   BC->postProcessSymbolTable();
 }
 
+namespace {
+
+bool isReachableFromPrimaryEntry(const BinaryFunction &Function,
+                                 const BinaryBasicBlock *TargetBB) {
+  SmallPtrSet<const BinaryBasicBlock *, 16> Visited;
+  SmallVector<const BinaryBasicBlock *, 16> Worklist;
+  Worklist.push_back(&Function.front());
+
+  while (!Worklist.empty()) {
+    const BinaryBasicBlock *BB = Worklist.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+    if (BB == TargetBB)
+      return true;
+    llvm::append_range(Worklist, BB->successors());
+  }
+
+  return false;
+}
+
+BinaryFunction *getInterproceduralFallThroughTarget(BinaryContext &BC,
+                                                    BinaryFunction &Function) {
+  if (!Function.hasCFG() || !Function.isSimple() || Function.isFragment() ||
+      Function.isIgnored() || Function.getLayout().block_empty())
+    return nullptr;
+
+  const BinaryBasicBlock *LastBB = Function.getLayout().block_back();
+  const MCInst *LastInst = LastBB->getLastNonPseudoInstr();
+  if (!LastInst || LastBB->succ_size() != 0 ||
+      BC.MIB->isTerminator(*LastInst) || BC.MIB->isCall(*LastInst) ||
+      LastBB->getEndOffset() != Function.getSize() ||
+      !BC.hasValidCodePadding(Function) ||
+      !isReachableFromPrimaryEntry(Function, LastBB))
+    return nullptr;
+
+  const uint64_t TargetAddress = Function.getAddress() + Function.getMaxSize();
+  BinaryFunction *Target = BC.getBinaryFunctionAtAddress(TargetAddress);
+  if (!Target || Target == &Function || Target->isPseudo() ||
+      Target->isFragment() || Target->isIgnored() ||
+      Target->getOriginSection() != Function.getOriginSection())
+    return nullptr;
+
+  return Target;
+}
+
+} // namespace
+
 void RewriteInstance::postProcessFunctions() {
   // We mark fragments as non-simple here, not during disassembly,
   // So we can build their CFGs.
   BC->skipMarkedFragments();
   BC->clearFragmentsToSkip();
+
+  // Function boundaries are not represented by CFG edges. Materialize an
+  // explicit tail call when a block reachable from the primary entry falls
+  // through the end of a function into the next function. The explicit
+  // transfer allows both functions to be optimized and moved independently.
+  for (auto &BFI : BC->getBinaryFunctions()) {
+    BinaryFunction &Function = BFI.second;
+    BinaryFunction *Target = getInterproceduralFallThroughTarget(*BC, Function);
+    if (!Target)
+      continue;
+
+    BC->errs() << "BOLT-WARNING: interprocedural fall-through detected from "
+               << Function.getPrintName() << " to " << Target->getPrintName()
+               << "; materializing an explicit tail call\n";
+    const BinaryBasicBlock *LastBB = Function.getLayout().block_back();
+    Function.getBasicBlockAtOffset(LastBB->getOffset())
+        ->addTailCallInstruction(Target->getSymbol());
+  }
 
   BC->TotalScore = 0;
   BC->SumExecutionCount = 0;
