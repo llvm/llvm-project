@@ -190,7 +190,7 @@ define void @test_btc_is_unknown_value(ptr %a, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,1}<nuw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<nuw><%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep = getelementptr i32, ptr %a, i32 %iv:
