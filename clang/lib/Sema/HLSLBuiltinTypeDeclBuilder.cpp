@@ -1671,13 +1671,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
 
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto AddLoads = [&](StringRef MethodName, QualType ReturnType) {
+  auto AddLoads = [&](StringRef MethodName, QualType ReturnType,
+                      bool TransposeResult = false) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
     addHandleAccessFunction(Load,
                             /*IsConstReturn=*/false, /*IsRef=*/false,
-                            AST.UnsignedIntTy, ReturnType);
+                            AST.UnsignedIntTy, ReturnType, TransposeResult);
     addLoadWithStatusFunction(Load, ReturnType);
   };
 
@@ -1685,7 +1686,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   AddLoads("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   AddLoads("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  AddLoads("Load", AST.DependentTy); // Templated version
+
+  // Templated Load<T>() needs buffer-order-aware handling for matrix T.
+  AddLoads("Load", AST.DependentTy, /*TransposeResult=*/true);
+
   return *this;
 }
 
@@ -1695,18 +1699,21 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto AddStore = [&](StringRef MethodName, QualType ValueType) {
+  auto AddStore = [&](StringRef MethodName, QualType ValueType,
+                      bool TransposeArg = false) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
-    addStoreFunction(Store, /*IsConst=*/false, ValueType);
+    addStoreFunction(Store, /*IsConst=*/false, ValueType, TransposeArg);
   };
 
   AddStore("Store", AST.UnsignedIntTy);
   AddStore("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   AddStore("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   AddStore("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  AddStore("Store", AST.DependentTy); // Templated version
+
+  // Templated Store<T>(); see addByteAddressBufferLoadMethods() above.
+  AddStore("Store", AST.DependentTy, /*TransposeArg=*/true);
 
   return *this;
 }
@@ -2453,7 +2460,7 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
-    QualType ElemTy) {
+    QualType ElemTy, bool TransposeResult) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2493,12 +2500,16 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     MMB.callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                     PH::_0);
 
-  return MMB.dereference(PH::LastStmt).finalize();
+  MMB.dereference(PH::LastStmt);
+  if (TransposeResult)
+    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ElemTy,
+                    PH::LastStmt, getConstantIntExpr(1));
+  return MMB.finalize();
 }
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
-                                         QualType ValueTy) {
+                                         QualType ValueTy, bool TransposeArg) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2511,13 +2522,15 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
       AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
 
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Value", ValueTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
-                   PH::Handle, PH::_0, ValueTy)
+  MMB.addParam("Index", AST.UnsignedIntTy).addParam("Value", ValueTy);
+  if (TransposeArg)
+    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ValueTy,
+                    PH::_1, getConstantIntExpr(0));
+  MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                  PH::Handle, PH::_0, ValueTy)
       .dereference(PH::LastStmt)
-      .assign(PH::LastStmt, PH::_1)
-      .finalize();
+      .assign(PH::LastStmt, TransposeArg ? PH::LastStmt : PH::_1);
+  return MMB.finalize();
 }
 
 BuiltinTypeDeclBuilder &

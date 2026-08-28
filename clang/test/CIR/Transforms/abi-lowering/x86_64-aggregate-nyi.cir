@@ -5,6 +5,7 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
 !rec_UOverAligned = !cir.union<"UOverAligned" {data !s32i}, padding = {!cir.array<!u8i x 12>}>
 !rec_UShortStorage = !cir.union<"UShortStorage" {data !s16i, data !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
 !rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
@@ -16,12 +17,13 @@
     !cir.struct<"NamedPlusZeroWidth" {bitfield !u8i, pad !cir.array<!u8i x 3>,
                                       bitfield !cir.array<!s32i x 0>,
                                       data !s32i, pad !cir.array<!u8i x 8>}>
-!rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
 !rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_UEmptyOnly = !cir.union<"UEmptyOnly" {data !rec_E}>
-!rec_UEmptyOver = !cir.union<"UEmptyOver" {data !rec_EOver, data !s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_UBitEmpty = !cir.union<"UBitEmpty" {data !cir.array<!rec_E x 4>, bitfield !u8i}>
+!rec_UBitUnnamed = !cir.union<"UBitUnnamed" {bitfield !u8i, empty !u64i}>
+!rec_UWideBitUnnamed =
+    !cir.union<"UWideBitUnnamed" {bitfield !cir.array<!u8i x 3>, empty !u64i}>
+!rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_BitPad = !cir.struct<"BitPad" {bitfield !u8i, pad !cir.array<!u8i x 15>}>
@@ -113,27 +115,44 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UPadByte"
 
-  // A union with an empty member coerces wider than classic, so it is left NYI
-  // rather than accepted along with the empty class itself.
-  cir.func @take_union_empty_over(%arg0: !rec_UEmptyOver) {
+  // A bit-field access unit's width can understate the bit-fields it holds.
+  // Here the only member that spans the union (the empty-record array)
+  // supplies no bytes, so the unit alone would coerce to i8 where classic
+  // gives i32.
+  cir.func @take_bitfield_empty_span(%arg0: !rec_UBitEmpty) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UEmptyOver"
+  // CHECK: not yet implemented for type '!cir.union<"UBitEmpty"
 
-  // Deferred with it, though this one holds no data at all.
-  cir.func @take_union_empty_only(%arg0: !rec_UEmptyOnly) {
+  // The spanning member here is an access unit holding only unnamed
+  // bit-fields, which supplies no data either, so the named unit alone would
+  // coerce to i8 where classic gives i64.
+  cir.func @take_bitfield_unnamed_span(%arg0: !rec_UBitUnnamed) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UEmptyOnly"
+  // CHECK: not yet implemented for type '!cir.union<"UBitUnnamed"
 
-  // An array of empty records supplies no bytes the union coercion can read.
-  cir.func @take_union_arr_empty(%arg0: !rec_UArrEmpty) {
+  // The same shape with a wider named unit, whose coercion happens to reach
+  // classic's i64 anyway once the union sizes its eightbyte.  The rule cannot
+  // tell that apart from the case above, where the narrower unit coerces to
+  // i8, so this one is NYI as well.
+  cir.func @take_wide_bitfield_unnamed_span(%arg0: !rec_UWideBitUnnamed) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UArrEmpty"
+  // CHECK: not yet implemented for type '!cir.union<"UWideBitUnnamed"
+
+  // An empty member does not exempt a union from the spanning rule above:
+  // as with take_short_storage_union, neither member reaches the union's
+  // 4 declared bytes.
+  cir.func @take_empty_narrow_union(%arg0: !rec_UEmptyNarrow) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
+
   // A bit-field access unit is narrower than the declaration it holds, so
   // classifying around this record's padding would coerce to i8 where classic
   // CodeGen widens to i64.

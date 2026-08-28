@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommonTestUtils.h"
-#include "orc-rt/bind.h"
-#include "orc-rt/move_only_function.h"
+#include "orc-rt/bedrock/bind.h"
+#include "orc-rt/bedrock/move_only_function.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

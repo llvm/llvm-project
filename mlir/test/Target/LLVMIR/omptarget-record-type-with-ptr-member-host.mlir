@@ -8,9 +8,9 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @main() {
-    %0 = llvm.mlir.constant(5 : index) : i64
-    %1 = llvm.mlir.constant(2 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(5 : i64) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.mlir.addressof @full_arr : !llvm.ptr
     %4 = llvm.mlir.constant(1 : i64) : i64
     %5 = llvm.alloca %4 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> : (i64) -> !llvm.ptr
