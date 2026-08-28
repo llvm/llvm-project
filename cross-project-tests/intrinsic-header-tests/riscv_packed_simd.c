@@ -3532,3 +3532,284 @@ int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t a, int32x2_t b) {
 int64_t test_mqracc_w11_i64(int64_t rd, int32x2_t a, int32x2_t b) {
   return __riscv_mqracc_w11_i64(rd, a, b);
 }
+
+// Packed Multiply Parts.
+// CHECK-LABEL: test_pmul_b00_i16x2:
+// RV32:        pmul.h.b00
+// RV64:        pmul.h.b00
+int16x2_t test_pmul_b00_i16x2(int8x4_t a, int8x4_t b) {
+  return __riscv_pmul_b00_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmul_b01_i16x2:
+// RV32:        pmul.h.b01
+// RV64:        pmul.h.b01
+int16x2_t test_pmul_b01_i16x2(int8x4_t a, int8x4_t b) {
+  return __riscv_pmul_b01_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmul_b11_i16x2:
+// RV32:        pmul.h.b11
+// RV64:        pmul.h.b11
+int16x2_t test_pmul_b11_i16x2(int8x4_t a, int8x4_t b) {
+  return __riscv_pmul_b11_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b00_u16x2:
+// RV32:        pmulu.h.b00
+// RV64:        pmulu.h.b00
+uint16x2_t test_pmulu_b00_u16x2(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pmulu_b00_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b01_u16x2:
+// RV32:        pmulu.h.b01
+// RV64:        pmulu.h.b01
+uint16x2_t test_pmulu_b01_u16x2(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pmulu_b01_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b11_u16x2:
+// RV32:        pmulu.h.b11
+// RV64:        pmulu.h.b11
+uint16x2_t test_pmulu_b11_u16x2(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pmulu_b11_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_b00_i16x2:
+// RV32:        pmulsu.h.b00
+// RV64:        pmulsu.h.b00
+int16x2_t test_pmulsu_b00_i16x2(int8x4_t a, uint8x4_t b) {
+  return __riscv_pmulsu_b00_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_b11_i16x2:
+// RV32:        pmulsu.h.b11
+// RV64:        pmulsu.h.b11
+int16x2_t test_pmulsu_b11_i16x2(int8x4_t a, uint8x4_t b) {
+  return __riscv_pmulsu_b11_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_mul_h00_i32:
+// RV32:        mul.h00
+// RV64:        pmul.w.h00
+int32_t test_mul_h00_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_mul_h00_i32(a, b);
+}
+
+// CHECK-LABEL: test_mul_h01_i32:
+// RV32:        mul.h01
+// RV64:        pmul.w.h01
+int32_t test_mul_h01_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_mul_h01_i32(a, b);
+}
+
+// CHECK-LABEL: test_mul_h11_i32:
+// RV32:        mul.h11
+// RV64:        pmul.w.h11
+int32_t test_mul_h11_i32(int16x2_t a, int16x2_t b) {
+  return __riscv_mul_h11_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulu_h00_u32:
+// RV32:        mulu.h00
+// RV64:        pmulu.w.h00
+uint32_t test_mulu_h00_u32(uint16x2_t a, uint16x2_t b) {
+  return __riscv_mulu_h00_u32(a, b);
+}
+
+// CHECK-LABEL: test_mulu_h01_u32:
+// RV32:        mulu.h01
+// RV64:        pmulu.w.h01
+uint32_t test_mulu_h01_u32(uint16x2_t a, uint16x2_t b) {
+  return __riscv_mulu_h01_u32(a, b);
+}
+
+// CHECK-LABEL: test_mulu_h11_u32:
+// RV32:        mulu.h11
+// RV64:        pmulu.w.h11
+uint32_t test_mulu_h11_u32(uint16x2_t a, uint16x2_t b) {
+  return __riscv_mulu_h11_u32(a, b);
+}
+
+// CHECK-LABEL: test_mulsu_h00_i32:
+// RV32:        mulsu.h00
+// RV64:        pmulsu.w.h00
+int32_t test_mulsu_h00_i32(int16x2_t a, uint16x2_t b) {
+  return __riscv_mulsu_h00_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulsu_h11_i32:
+// RV32:        mulsu.h11
+// RV64:        pmulsu.w.h11
+int32_t test_mulsu_h11_i32(int16x2_t a, uint16x2_t b) {
+  return __riscv_mulsu_h11_i32(a, b);
+}
+
+// CHECK-LABEL: test_pmul_b00_i16x4:
+// RV32-COUNT-2: pmul.h.b00
+// RV64:         pmul.h.b00
+int16x4_t test_pmul_b00_i16x4(int8x8_t a, int8x8_t b) {
+  return __riscv_pmul_b00_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmul_b01_i16x4:
+// RV32-COUNT-2: pmul.h.b01
+// RV64:         pmul.h.b01
+int16x4_t test_pmul_b01_i16x4(int8x8_t a, int8x8_t b) {
+  return __riscv_pmul_b01_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmul_b11_i16x4:
+// RV32-COUNT-2: pmul.h.b11
+// RV64:         pmul.h.b11
+int16x4_t test_pmul_b11_i16x4(int8x8_t a, int8x8_t b) {
+  return __riscv_pmul_b11_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b00_u16x4:
+// RV32-COUNT-2: pmulu.h.b00
+// RV64:         pmulu.h.b00
+uint16x4_t test_pmulu_b00_u16x4(uint8x8_t a, uint8x8_t b) {
+  return __riscv_pmulu_b00_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b01_u16x4:
+// RV32-COUNT-2: pmulu.h.b01
+// RV64:         pmulu.h.b01
+uint16x4_t test_pmulu_b01_u16x4(uint8x8_t a, uint8x8_t b) {
+  return __riscv_pmulu_b01_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_b11_u16x4:
+// RV32-COUNT-2: pmulu.h.b11
+// RV64:         pmulu.h.b11
+uint16x4_t test_pmulu_b11_u16x4(uint8x8_t a, uint8x8_t b) {
+  return __riscv_pmulu_b11_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_b00_i16x4:
+// RV32-COUNT-2: pmulsu.h.b00
+// RV64:         pmulsu.h.b00
+int16x4_t test_pmulsu_b00_i16x4(int8x8_t a, uint8x8_t b) {
+  return __riscv_pmulsu_b00_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_b11_i16x4:
+// RV32-COUNT-2: pmulsu.h.b11
+// RV64:         pmulsu.h.b11
+int16x4_t test_pmulsu_b11_i16x4(int8x8_t a, uint8x8_t b) {
+  return __riscv_pmulsu_b11_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmul_h00_i32x2:
+// RV32-COUNT-2: mul.h00
+// RV64:         pmul.w.h00
+int32x2_t test_pmul_h00_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pmul_h00_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmul_h01_i32x2:
+// RV32-COUNT-2: mul.h01
+// RV64:         pmul.w.h01
+int32x2_t test_pmul_h01_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pmul_h01_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmul_h11_i32x2:
+// RV32-COUNT-2: mul.h11
+// RV64:         pmul.w.h11
+int32x2_t test_pmul_h11_i32x2(int16x4_t a, int16x4_t b) {
+  return __riscv_pmul_h11_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_h00_u32x2:
+// RV32-COUNT-2: mulu.h00
+// RV64:         pmulu.w.h00
+uint32x2_t test_pmulu_h00_u32x2(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pmulu_h00_u32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_h01_u32x2:
+// RV32-COUNT-2: mulu.h01
+// RV64:         pmulu.w.h01
+uint32x2_t test_pmulu_h01_u32x2(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pmulu_h01_u32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulu_h11_u32x2:
+// RV32-COUNT-2: mulu.h11
+// RV64:         pmulu.w.h11
+uint32x2_t test_pmulu_h11_u32x2(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pmulu_h11_u32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_h00_i32x2:
+// RV32-COUNT-2: mulsu.h00
+// RV64:         pmulsu.w.h00
+int32x2_t test_pmulsu_h00_i32x2(int16x4_t a, uint16x4_t b) {
+  return __riscv_pmulsu_h00_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulsu_h11_i32x2:
+// RV32-COUNT-2: mulsu.h11
+// RV64:         pmulsu.w.h11
+int32x2_t test_pmulsu_h11_i32x2(int16x4_t a, uint16x4_t b) {
+  return __riscv_pmulsu_h11_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_mul_w00_i64:
+// RV32:        wmul{{[[:space:]]}}
+// RV64:        mul.w00
+int64_t test_mul_w00_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_mul_w00_i64(a, b);
+}
+
+// CHECK-LABEL: test_mul_w01_i64:
+// RV32:        wmul{{[[:space:]]}}
+// RV64:        mul.w01
+int64_t test_mul_w01_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_mul_w01_i64(a, b);
+}
+
+// CHECK-LABEL: test_mul_w11_i64:
+// RV32:        wmul{{[[:space:]]}}
+// RV64:        mul.w11
+int64_t test_mul_w11_i64(int32x2_t a, int32x2_t b) {
+  return __riscv_mul_w11_i64(a, b);
+}
+
+// CHECK-LABEL: test_mulu_w00_u64:
+// RV32:        wmulu{{[[:space:]]}}
+// RV64:        mulu.w00
+uint64_t test_mulu_w00_u64(uint32x2_t a, uint32x2_t b) {
+  return __riscv_mulu_w00_u64(a, b);
+}
+
+// CHECK-LABEL: test_mulu_w01_u64:
+// RV32:        wmulu{{[[:space:]]}}
+// RV64:        mulu.w01
+uint64_t test_mulu_w01_u64(uint32x2_t a, uint32x2_t b) {
+  return __riscv_mulu_w01_u64(a, b);
+}
+
+// CHECK-LABEL: test_mulu_w11_u64:
+// RV32:        wmulu{{[[:space:]]}}
+// RV64:        mulu.w11
+uint64_t test_mulu_w11_u64(uint32x2_t a, uint32x2_t b) {
+  return __riscv_mulu_w11_u64(a, b);
+}
+
+// CHECK-LABEL: test_mulsu_w00_i64:
+// RV32:        wmulsu{{[[:space:]]}}
+// RV64:        mulsu.w00
+int64_t test_mulsu_w00_i64(int32x2_t a, uint32x2_t b) {
+  return __riscv_mulsu_w00_i64(a, b);
+}
+
+// CHECK-LABEL: test_mulsu_w11_i64:
+// RV32:        wmulsu{{[[:space:]]}}
+// RV64:        mulsu.w11
+int64_t test_mulsu_w11_i64(int32x2_t a, uint32x2_t b) {
+  return __riscv_mulsu_w11_i64(a, b);
+}

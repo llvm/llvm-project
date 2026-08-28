@@ -2136,6 +2136,37 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
 
+  // Packed Multiply Parts. The packed forms multiply the selected element of
+  // every pair, so the operands are the result with each element split in two.
+  class RVPPackedMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMSubdivide2VectorType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmul_00   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_01   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_11   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_00  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_01  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_11  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_00 : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_11 : RVPPackedMulPartsIntrinsic;
+
+  // The scalar forms select one element from each packed operand and keep that
+  // single product: <2 x i16> pairs with i32 and <2 x i32> with i64.
+  class RVPScalarMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mul_00   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_01   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_11   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_00  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_01  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_11  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_00 : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_11 : RVPScalarMulPartsIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
