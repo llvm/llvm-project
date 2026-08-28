@@ -7,22 +7,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unittests for getpriority.
+/// Implementation header of setpriority
 ///
 //===----------------------------------------------------------------------===//
 
-#include "hdr/sys_resource_macros.h"
+#ifndef LLVM_LIBC_SRC_SYS_RESOURCE_SETPRIORITY_H
+#define LLVM_LIBC_SRC_SYS_RESOURCE_SETPRIORITY_H
+
 #include "hdr/types/id_t.h"
-#include "src/sys/resource/getpriority.h"
-#include "test/UnitTest/ErrnoCheckingTest.h"
-#include "test/UnitTest/Test.h"
+#include "src/__support/macros/config.h"
 
-using LlvmLibcGetpriorityTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+namespace LIBC_NAMESPACE_DECL {
 
-TEST_F(LlvmLibcGetpriorityTest, BasicTest) {
-  int nice = LIBC_NAMESPACE::getpriority(PRIO_PROCESS, 0);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GE(nice, -20);
-  ASSERT_LE(nice, 19);
-}
+int setpriority(int which, id_t who, int prio);
 
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif  // LLVM_LIBC_SRC_SYS_RESOURCE_SETPRIORITY_H

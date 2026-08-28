@@ -24,6 +24,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setpriority
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setpriority
+)
+
+add_entrypoint_object(
   setrlimit
   ALIAS
   DEPENDS

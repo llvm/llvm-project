@@ -39,6 +39,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setpriority
+  SRCS
+    setpriority.cpp
+  HDRS
+    ../setpriority.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setpriority
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   setrlimit
   SRCS
     setrlimit.cpp

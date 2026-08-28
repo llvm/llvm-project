@@ -46,6 +46,14 @@ functions:
     arguments:
       - type: int
       - type: struct rusage *
+  - name: setpriority
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: id_t
+      - type: int
   - name: setrlimit
     standards:
       - posix
