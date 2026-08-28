@@ -61,13 +61,6 @@ struct ImageOperands {
   std::optional<Register> Compare;
 };
 
-struct SplitParts {
-  SPIRVTypeInst Type = nullptr;
-  Register High;
-  Register Low;
-  bool IsScalar = false;
-};
-
 llvm::SPIRV::SelectionControl::SelectionControl
 getSelectionOperandForImm(int Imm) {
   if (Imm == 2)
@@ -543,11 +536,6 @@ private:
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
   void decorateUsesAsNonUniform(Register &NonUniformReg) const;
   bool errorIfInstrOutsideShader(MachineInstr &I) const;
-
-  std::optional<SplitParts> splitEvenOddLanes(Register PopCountReg,
-                                              unsigned ComponentCount,
-                                              MachineInstr &I,
-                                              SPIRVTypeInst I32Type) const;
 
   bool
   handle64BitOverflow(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
@@ -1794,66 +1782,6 @@ bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
   return true;
 }
 
-std::optional<SplitParts> SPIRVInstructionSelector::splitEvenOddLanes(
-    Register PopCountReg, unsigned ComponentCount, MachineInstr &I,
-    SPIRVTypeInst I32Type) const {
-  SplitParts Parts;
-
-  if (ComponentCount == 1) {
-    // ---- Scalar path: extract element 1 (high word) and element 0 (low word)
-    // ----
-    Parts.IsScalar = true;
-    Parts.Type = I32Type;
-    Parts.High = MRI->createVirtualRegister(GR.getRegClass(I32Type));
-    Parts.Low = MRI->createVirtualRegister(GR.getRegClass(I32Type));
-
-    bool ZeroAsNull = !STI.isShader();
-    Register IdxZero = GR.getOrCreateConstInt(0, I, I32Type, TII, ZeroAsNull);
-    Register IdxOne = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
-
-    if (!selectOpWithSrcs(Parts.High, I32Type, I, {PopCountReg, IdxOne},
-                          SPIRV::OpVectorExtractDynamic))
-      return std::nullopt;
-
-    if (!selectOpWithSrcs(Parts.Low, I32Type, I, {PopCountReg, IdxZero},
-                          SPIRV::OpVectorExtractDynamic))
-      return std::nullopt;
-
-  } else {
-    // ---- Vector path: shuffle odd lanes → High, even lanes → Low ----
-    MachineIRBuilder MIRBuilder(I);
-    Parts.IsScalar = false;
-    Parts.Type = GR.getOrCreateSPIRVVectorType(I32Type, ComponentCount,
-                                               MIRBuilder, /*IsSigned=*/false);
-    Parts.High = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
-    Parts.Low = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
-
-    // High = odd-indexed elements (1, 3, 5, …) — the upper 32-bit halves.
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                       TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(Parts.High)
-                   .addUse(GR.getSPIRVTypeID(Parts.Type))
-                   .addUse(PopCountReg)
-                   .addUse(PopCountReg);
-    for (unsigned J = 1; J < ComponentCount * 2; J += 2)
-      MIB.addImm(J);
-    MIB.constrainAllUses(TII, TRI, RBI);
-
-    // Low = even-indexed elements (0, 2, 4, …) — the lower 32-bit halves.
-    MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                  TII.get(SPIRV::OpVectorShuffle))
-              .addDef(Parts.Low)
-              .addUse(GR.getSPIRVTypeID(Parts.Type))
-              .addUse(PopCountReg)
-              .addUse(PopCountReg);
-    for (unsigned J = 0; J < ComponentCount * 2; J += 2)
-      MIB.addImm(J);
-    MIB.constrainAllUses(TII, TRI, RBI);
-  }
-
-  return Parts;
-}
-
 bool SPIRVInstructionSelector::selectPopCount16(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I,
@@ -1894,43 +1822,47 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
                                                 MachineInstr &I,
                                                 Register SrcReg,
                                                 unsigned Opcode) const {
-  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
-  if (ComponentCount > 2)
-    return handle64BitOverflow(
-        ResVReg, ResType, I, SrcReg, Opcode,
-        [this](Register R, SPIRVTypeInst T, MachineInstr &I, Register S,
-               unsigned O) { return this->selectPopCount64(R, T, I, S, O); });
-
   MachineIRBuilder MIRBuilder(I);
 
-  // ---- Types ----
+  SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(SrcType);
   SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
-      I32Type, 2 * ComponentCount, MIRBuilder, /*IsSigned=*/false);
+      I32Type, ComponentCount, MIRBuilder, /*IsSigned=*/false);
 
-  // Converts 64 bit into and array of 32 bit, containing 2 elements.
-  Register Vec32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(Vec32, VecI32Type, I, {SrcReg}, SPIRV::OpBitcast))
+  // Truncate and count the low bits.
+  Register Trunc = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(Trunc, VecI32Type, I, {SrcReg}, SPIRV::OpUConvert))
     return false;
 
-  // Apply popcount on each 32 bit lane
-  Register Pop32 = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectPopCount32(Pop32, VecI32Type, I, Vec32, Opcode))
+  Register LowCount = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(LowCount, VecI32Type, I, {Trunc}, SPIRV::OpBitCount))
     return false;
 
-  // Splits result into highbit lane and lowbit lane
-  auto MaybeParts = splitEvenOddLanes(Pop32, ComponentCount, I, I32Type);
-  if (!MaybeParts)
-    return false;
-  SplitParts &Parts = *MaybeParts;
-
-  // Sum high part and low part
-  unsigned OpAdd = Parts.IsScalar ? SPIRV::OpIAddS : SPIRV::OpIAddV;
-  Register Sum = MRI->createVirtualRegister(GR.getRegClass(Parts.Type));
-  if (!selectOpWithSrcs(Sum, Parts.Type, I, {Parts.High, Parts.Low}, OpAdd))
+  // Shift the high bits over and count them too.
+  Register ShiftAmount =
+      ComponentCount == 1 ? GR.getOrCreateConstInt(32, I, SrcType, TII)
+                          : GR.getOrCreateConstVector(32, I, SrcType, TII);
+  unsigned ShiftOp = ComponentCount == 1 ? SPIRV::OpShiftRightLogicalS
+                                         : SPIRV::OpShiftRightLogicalV;
+  Register Shift = MRI->createVirtualRegister(GR.getRegClass(SrcType));
+  if (!selectOpWithSrcs(Shift, SrcType, I, {SrcReg, ShiftAmount}, ShiftOp))
     return false;
 
-  // Convert 32 bit sum into 64 bit scalar
+  Trunc = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(Trunc, VecI32Type, I, {Shift}, SPIRV::OpUConvert))
+    return false;
+
+  Register HighCount = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(HighCount, VecI32Type, I, {Trunc}, SPIRV::OpBitCount))
+    return false;
+
+  // Add them up and zext or sext back to 64 bit values.
+  Register Sum = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
+  if (!selectOpWithSrcs(Sum, VecI32Type, I, {HighCount, LowCount},
+                        ComponentCount == 1 ? SPIRV::OpIAddS : SPIRV::OpIAddV))
+    return false;
+
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned ConvOp = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectOpWithSrcs(ResVReg, ResType, I, {Sum}, ConvOp);

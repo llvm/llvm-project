@@ -14,9 +14,10 @@
 ; CHECK-DAG: [[i64x4_t:%.+]] = OpTypeVector [[i64_t]] 4
 ; CHECK-DAG: [[i16x3_t:%.+]] = OpTypeVector [[i16_t]] 3
 
-; CHECK-DAG: [[zero:%.*]] = OpConstant [[i32_t]] 0
-; CHECK-DAG: [[one:%.*]] = OpConstant [[i32_t]] 1
-; CHECK-DAG: [[two:%.*]] = OpConstant [[i64_t]] 2
+; CHECK-DAG: [[i64_32:%.+]] = OpConstant [[i64_t]] 32
+; CHECK-DAG: [[i64x2_32:%.+]] = OpConstantComposite [[i64x2_t]] [[i64_32]] [[i64_32]]
+; CHECK-DAG: [[i64x3_32:%.+]] = OpConstantComposite [[i64x3_t]] [[i64_32]] [[i64_32]] [[i64_32]]
+; CHECK-DAG: [[i64x4_32:%.+]] = OpConstantComposite [[i64x4_t]] [[i64_32]] [[i64_32]] [[i64_32]] [[i64_32]]
 
 ; CHECK-LABEL:  ; -- Begin function test
 
@@ -44,60 +45,43 @@
 ; CHECK: [[p32_bitcount:%.+]] = OpBitCount [[i32_t]] [[p32]]
 
 ; p64
-; CHECK: [[p64_bitcast:%.+]] = OpBitcast [[i32x2_t]] [[p64]]
-; CHECK: [[p64_bitcount:%.+]] = OpBitCount [[i32x2_t]] [[p64_bitcast]]
-; CHECK: [[index_one:%.+]] = OpVectorExtractDynamic [[i32_t]] [[p64_bitcount]] [[one]]
-; CHECK: [[index_zero:%.+]] = OpVectorExtractDynamic [[i32_t]] [[p64_bitcount]] [[zero]]
-; CHECK: [[add:%.+]] = OpIAdd [[i32_t]] [[index_one]] [[index_zero]]
-; CHECK: [[#]] = OpUConvert [[i64_t]] [[add]]
+; CHECK: [[p64_trunc_low:%.+]] = OpUConvert [[i32_t]] [[p64]]
+; CHECK: [[p64_low:%.+]] = OpBitCount [[i32_t]] [[p64_trunc_low]]
+; CHECK: [[p64_shift_high:%.+]] = OpShiftRightLogical [[i64_t]] [[p64]] [[i64_32]]
+; CHECK: [[p64_trunc_high:%.+]] = OpUConvert [[i32_t]] [[p64_shift_high]]
+; CHECK: [[p64_high:%.+]] = OpBitCount [[i32_t]] [[p64_trunc_high]]
+; CHECK: [[p64_sum:%.+]] = OpIAdd [[i32_t]] [[p64_high]] [[p64_low]]
+; CHECK: %[[#]] = OpUConvert [[i64_t]] [[p64_sum]]
 
 ; p32x2
 ; CHECK: [[#]] = OpBitCount [[i32x2_t]] [[p32x2]]
 
 ; p64x2
-; CHECK: [[p64x2_bitcast:%.+]] = OpBitcast [[i32x4_t]] [[p64x2]]
-; CHECK: [[p64x2_bitcount:%.+]] = OpBitCount [[i32x4_t]] [[p64x2_bitcast]]
-; CHECK: [[odd_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 1 3
-; CHECK: [[even_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 0 2
-; CHECK: [[add:%.+]] = OpIAdd [[i32x2_t]] [[odd_indexes]] [[even_indexes]]
-; CHECK: [[#]] = OpUConvert [[i64x2_t]] [[add]]
+; CHECK: [[p64x2_trunc_low:%.+]] = OpUConvert [[i32x2_t]] [[p64x2]]
+; CHECK: [[p64x2_low:%.+]] = OpBitCount [[i32x2_t]] [[p64x2_trunc_low]]
+; CHECK: [[p64x2_shift_high:%.+]] = OpShiftRightLogical [[i64x2_t]] [[p64x2]] [[i64x2_32]]
+; CHECK: [[p64x2_trunc_high:%.+]] = OpUConvert [[i32x2_t]] [[p64x2_shift_high]]
+; CHECK: [[p64x2_high:%.+]] = OpBitCount [[i32x2_t]] [[p64x2_trunc_high]]
+; CHECK: [[p64x2_sum:%.+]] = OpIAdd [[i32x2_t]] [[p64x2_high]] [[p64x2_low]]
+; CHECK: %[[#]] = OpUConvert [[i64x2_t]] [[p64x2_sum]]
 
 ; p64x3
-; CHECK: [[first_half:%.+]] = OpVectorShuffle [[i64x2_t]] [[p64x3]] [[p64x3]] 0 1
-; CHECK: [[p64x2_bitcast:%.+]] = OpBitcast [[i32x4_t]] [[first_half]]
-; CHECK: [[p64x2_bitcount:%.+]] = OpBitCount [[i32x4_t]] [[p64x2_bitcast]]
-; CHECK: [[odd_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 1 3
-; CHECK: [[even_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 0 2
-; CHECK: [[add:%.+]] = OpIAdd [[i32x2_t]] [[odd_indexes]] [[even_indexes]]
-; CHECK: [[first_half_result:%.+]] = OpUConvert [[i64x2_t]] [[add]]
-
-; CHECK: [[second_half:%.+]] = OpVectorExtractDynamic [[i64_t]] [[p64x3]] [[two]]
-; CHECK: [[p64_bitcast:%.+]] = OpBitcast [[i32x2_t]] [[second_half]]
-; CHECK: [[p64_bitcount:%.+]] = OpBitCount [[i32x2_t]] [[p64_bitcast]]
-; CHECK: [[index_one:%.+]] = OpVectorExtractDynamic [[i32_t]] [[p64_bitcount]] [[one]]
-; CHECK: [[index_zero:%.+]] = OpVectorExtractDynamic [[i32_t]] [[p64_bitcount]] [[zero]]
-; CHECK: [[add:%.+]] = OpIAdd [[i32_t]] [[index_one]] [[index_zero]]
-; CHECK: [[second_half_result:%.+]] = OpUConvert [[i64_t]] [[add]]
-; CHECK: %[[#]] = OpCompositeConstruct [[i64x3_t]] [[first_half_result]] [[second_half_result]]
+; CHECK: [[p64x3_trunc_low:%.+]] = OpUConvert [[i32x3_t]] [[p64x3]]
+; CHECK: [[p64x3_low:%.+]] = OpBitCount [[i32x3_t]] [[p64x3_trunc_low]]
+; CHECK: [[p64x3_shift_high:%.+]] = OpShiftRightLogical [[i64x3_t]] [[p64x3]] [[i64x3_32]]
+; CHECK: [[p64x3_trunc_high:%.+]] = OpUConvert [[i32x3_t]] [[p64x3_shift_high]]
+; CHECK: [[p64x3_high:%.+]] = OpBitCount [[i32x3_t]] [[p64x3_trunc_high]]
+; CHECK: [[p64x3_sum:%.+]] = OpIAdd [[i32x3_t]] [[p64x3_high]] [[p64x3_low]]
+; CHECK: %[[#]] = OpUConvert [[i64x3_t]] [[p64x3_sum]]
 
 ; p64x4
-; CHECK: [[first_half:%.+]] = OpVectorShuffle [[i64x2_t]] [[p64x4]] [[p64x4]] 0 1
-; CHECK: [[p64x2_bitcast:%.+]] = OpBitcast [[i32x4_t]] [[first_half]]
-; CHECK: [[p64x2_bitcount:%.+]] = OpBitCount [[i32x4_t]] [[p64x2_bitcast]]
-; CHECK: [[odd_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 1 3
-; CHECK: [[even_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 0 2
-; CHECK: [[add:%.+]] = OpIAdd [[i32x2_t]] [[odd_indexes]] [[even_indexes]]
-; CHECK: [[first_half_result:%.+]] = OpUConvert [[i64x2_t]] [[add]]
-
-; CHECK: [[second_half:%.+]] = OpVectorShuffle [[i64x2_t]] [[p64x4]] [[p64x4]] 2 3
-; CHECK: [[p64x2_bitcast:%.+]] = OpBitcast [[i32x4_t]] [[second_half]]
-; CHECK: [[p64x2_bitcount:%.+]] = OpBitCount [[i32x4_t]] [[p64x2_bitcast]]
-; CHECK: [[odd_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 1 3
-; CHECK: [[even_indexes:%.+]] = OpVectorShuffle [[i32x2_t]] [[p64x2_bitcount]] [[p64x2_bitcount]] 0 2
-; CHECK: [[add:%.+]] = OpIAdd [[i32x2_t]] [[odd_indexes]] [[even_indexes]]
-; CHECK: [[second_half_result:%.+]] = OpUConvert [[i64x2_t]] [[add]]
-
-; CHECK: %[[#]] = OpCompositeConstruct [[i64x4_t]] [[first_half_result]] [[second_half_result]]
+; CHECK: [[p64x4_trunc_low:%.+]] = OpUConvert [[i32x4_t]] [[p64x4]]
+; CHECK: [[p64x4_low:%.+]] = OpBitCount [[i32x4_t]] [[p64x4_trunc_low]]
+; CHECK: [[p64x4_shift_high:%.+]] = OpShiftRightLogical [[i64x4_t]] [[p64x4]] [[i64x4_32]]
+; CHECK: [[p64x4_trunc_high:%.+]] = OpUConvert [[i32x4_t]] [[p64x4_shift_high]]
+; CHECK: [[p64x4_high:%.+]] = OpBitCount [[i32x4_t]] [[p64x4_trunc_high]]
+; CHECK: [[p64x4_sum:%.+]] = OpIAdd [[i32x4_t]] [[p64x4_high]] [[p64x4_low]]
+; CHECK: %[[#]] = OpUConvert [[i64x4_t]] [[p64x4_sum]]
 
 ; p16x3
 ; CHECK: [[p16_conversion_in:%.+]] = OpUConvert [[i32x3_t]] [[p16x3]]
