@@ -26,6 +26,7 @@ config.test_format = lit.formats.ShTest()
 config.suffixes = [
     ".td",
     ".mlir",
+    ".mir",
     ".toy",
     ".ll",
     ".tc",

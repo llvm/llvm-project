@@ -1,0 +1,28 @@
+# RUN: mlir-translate --import-mir %s | FileCheck %s
+
+# Import pre-RA (post-regbankselect) generic MachineIR into the mir dialect:
+# physical-register COPYs at the ABI boundary become copy_from_phys /
+# copy_to_phys, generic G_* opcodes map to mir.g_*, and LLT scalars become
+# !mir.scalar.
+
+--- |
+  define void @add(i64 %a, i64 %b) { ret void }
+...
+---
+name:            add
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = G_ADD %0, %1
+    %3:_(s64) = G_MUL %2, %0
+    $x0 = COPY %3
+...
+
+# CHECK-LABEL: mir.func @add
+# CHECK: %[[A:.*]] = mir.copy_from_phys #mir.physreg<"X0"> -> !mir.scalar<64>
+# CHECK: %[[B:.*]] = mir.copy_from_phys #mir.physreg<"X1"> -> !mir.scalar<64>
+# CHECK: %[[S:.*]] = mir.g_add %[[A]], %[[B]] : (!mir.scalar<64>, !mir.scalar<64>) -> !mir.scalar<64>
+# CHECK: %[[M:.*]] = mir.g_mul %[[S]], %[[A]] : (!mir.scalar<64>, !mir.scalar<64>) -> !mir.scalar<64>
+# CHECK: mir.copy_to_phys %[[M]] : !mir.scalar<64> to #mir.physreg<"X0">

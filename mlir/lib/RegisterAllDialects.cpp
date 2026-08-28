@@ -13,6 +13,7 @@
 
 #include "mlir/InitAllDialects.h"
 
+#include "mlir/Dialect/AArch64MIR/IR/AArch64MIRDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -52,6 +53,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/AllInterfaces.h"
 #include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
+#include "mlir/Dialect/MIR/IR/MIRDialect.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
@@ -115,6 +117,7 @@
 void mlir::registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
+                  aarch64_mir::AArch64MIRDialect,
                   affine::AffineDialect,
                   amdgpu::AMDGPUDialect,
                   arith::ArithDialect,
@@ -135,6 +138,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   LLVM::LLVMDialect,
                   math::MathDialect,
                   memref::MemRefDialect,
+                  mir::MIRDialect,
                   shard::ShardDialect,
                   ml_program::MLProgramDialect,
                   mpi::MPIDialect,

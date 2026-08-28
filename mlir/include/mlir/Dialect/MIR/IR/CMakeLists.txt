@@ -1,0 +1,5 @@
+set(LLVM_TARGET_DEFINITIONS MIROps.td)
+mlir_tablegen(MIROpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=mir)
+mlir_tablegen(MIROpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=mir)
+add_mlir_dialect(MIROps mir)
+add_mlir_doc(MIROps MIROps Dialects/ -gen-dialect-doc)
