@@ -66,15 +66,19 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 }
 
 // Base class for increment and decrement operations.
-class EmitC_IncDecOp<string mnemonic, string summaryStr, Type resultType,
-                     list<Trait> traits>
-    : EmitC_Op<mnemonic, !listconcat(traits, [CExpressionInterface])> {
+class EmitC_IncDecOp<string mnemonic, string summaryStr>
+    : EmitC_Op<mnemonic, [
+        CExpressionInterface,
+        TypesMatchWith<"input and result reference the same type",
+                       "operand", "result",
+                       "::llvm::cast<emitc::LValueType>($_self).getValueType()">
+      ]> {
   let summary = summaryStr;
   let arguments = (ins
     Res<EmitC_LValueType, "",
         [MemRead<DefaultResource, 0, FullEffect>,
          MemWrite<DefaultResource, 0, FullEffect>]>:$operand);
-  let results = (outs resultType:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "$operand attr-dict `:` type($operand)";
 
   let extraClassDeclaration = [{
@@ -83,19 +87,6 @@ class EmitC_IncDecOp<string mnemonic, string summaryStr, Type resultType,
     }
   }];
 }
-
-// Postfix increment and decrement yield the operand's value as an rvalue.
-class EmitC_PostIncDecOp<string mnemonic, string summaryStr>
-    : EmitC_IncDecOp<
-          mnemonic, summaryStr, EmitCType,
-          [TypesMatchWith<"input and result reference the same type",
-                          "operand", "result",
-                          "::llvm::cast<emitc::LValueType>($_self).getValueType()">]>;
-
-// Prefix increment and decrement yield an lvalue referring to their operand.
-class EmitC_PreIncDecOp<string mnemonic, string summaryStr>
-    : EmitC_IncDecOp<mnemonic, summaryStr, EmitC_LValueType,
-                      [AllTypesMatch<["operand", "result"]>]>;
 
 // Base class for compound assignment operations.
 class EmitC_CompoundAssignOp<string mnemonic, string summaryStr>
@@ -1306,10 +1297,10 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
 }
 
 def EmitC_PreIncrementOp
-    : EmitC_PreIncDecOp<"pre_increment", "Pre-increment operation"> {
+    : EmitC_IncDecOp<"pre_increment", "Pre-increment operation"> {
   let description = [{
-    This operation models the C/C++ pre-increment operator on an lvalue.
-    Its result is an lvalue referring to the incremented operand.
+    This operation models the C pre-increment operator on an lvalue. Its result
+    is an rvalue of the operand's underlying type.
 
     Example:
 
@@ -1320,9 +1311,9 @@ def EmitC_PreIncrementOp
 }
 
 def EmitC_PostIncrementOp
-    : EmitC_PostIncDecOp<"post_increment", "Post-increment operation"> {
+    : EmitC_IncDecOp<"post_increment", "Post-increment operation"> {
   let description = [{
-    This operation models the C/C++ post-increment operator on an lvalue.
+    This operation models the C post-increment operator on an lvalue.
     Its result is an rvalue of the operand's underlying type.
 
     Example:
@@ -1334,10 +1325,10 @@ def EmitC_PostIncrementOp
 }
 
 def EmitC_PreDecrementOp
-    : EmitC_PreIncDecOp<"pre_decrement", "Pre-decrement operation"> {
+    : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation"> {
   let description = [{
-    This operation models the C/C++ pre-decrement operator on an lvalue.
-    Its result is an lvalue referring to the decremented operand.
+    This operation models the C pre-decrement operator on an lvalue. Its result
+    is an rvalue of the operand's underlying type.
 
     Example:
 
@@ -1348,9 +1339,9 @@ def EmitC_PreDecrementOp
 }
 
 def EmitC_PostDecrementOp
-    : EmitC_PostIncDecOp<"post_decrement", "Post-decrement operation"> {
+    : EmitC_IncDecOp<"post_decrement", "Post-decrement operation"> {
   let description = [{
-    This operation models the C/C++ post-decrement operator on an lvalue.
+    This operation models the C post-decrement operator on an lvalue.
     Its result is an rvalue of the operand's underlying type.
 
     Example:
