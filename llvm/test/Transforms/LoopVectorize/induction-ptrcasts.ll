@@ -76,8 +76,8 @@ loop:
   %iv.ptr.next = getelementptr inbounds i32, ptr %iv.ptr, i64 1
   %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv.int
   store i8 0, ptr %gep.A
-  %iv.int.next = ptrtoint ptr %iv.ptr.next to i64
-  %sub.ptr.sub = sub i64 ptrtoint (ptr @f to i64), %iv.int.next
+  %iv.int.next = ptrtoaddr ptr %iv.ptr.next to i64
+  %sub.ptr.sub = sub i64 ptrtoaddr (ptr @f to i64), %iv.int.next
   %cmp = icmp sgt i64 %sub.ptr.sub, 0
   br i1 %cmp, label %loop, label %exit
 
