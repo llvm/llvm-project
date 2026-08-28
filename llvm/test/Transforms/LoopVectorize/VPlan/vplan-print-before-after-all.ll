@@ -26,6 +26,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] lowerMemoryIdioms
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] scalarizeMemOpsWithIrregularTypes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] widenConsecutiveMemOps
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] lowerSafeUniformLoads
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] delegateMemOpWideningToLegacyCM
 ; CHECK-AFTER: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::makeScalarizationDecisions

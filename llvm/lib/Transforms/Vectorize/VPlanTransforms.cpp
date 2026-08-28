@@ -5493,6 +5493,29 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         return ReplaceWith(VPI, StoreR);
       });
 
+  // Lower safe uniform (potentially masked) loads to unconditional scalar
+  // loads.
+  VPlanTransforms::runPass(
+      "lowerSafeUniformLoads", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        if (VPI->getOpcode() != Instruction::Load)
+          return false;
+        VPValue *Addr = VPI->getOperand(0);
+        if (!vputils::isUniformAcrossVFsAndUFs(Addr))
+          return false;
+        auto &LI = cast<LoadInst>(*VPI->getUnderlyingInstr());
+        Value *Underlying = Addr->getUnderlyingValue();
+        if (!Underlying || !isSafeToLoadUnconditionally(
+                               Underlying, LI.getType(), LI.getAlign(),
+                               Plan.getDataLayout(), &LI,
+                               /*AC=*/nullptr, /*DT=*/nullptr, &CostCtx.TLI))
+          return false;
+        auto *Recipe = VPBuilder::createSingleScalarOp(
+            VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr,
+            *VPI, *VPI, VPI->getDebugLoc(), &LI);
+        Recipe->insertBefore(VPI);
+        return ReplaceWith(VPI, Recipe);
+      });
+
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
                            Plan, [&](VPInstruction *VPI) {
                              if (VPRecipeBase *Recipe =
