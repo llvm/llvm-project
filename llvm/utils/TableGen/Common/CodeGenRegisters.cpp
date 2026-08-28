@@ -1295,15 +1295,27 @@ void CodeGenRegBank::computeRegSeqPositions() {
   }
 }
 
+// The sub-registers of the given register, in the order they are listed in.
+static std::vector<const CodeGenRegister *>
+getSubRegsInOrder(const CodeGenRegister &Reg, CodeGenRegBank &RegBank) {
+  SetVector<const CodeGenRegister *> SR;
+  Reg.addSubRegsPreOrder(SR, RegBank);
+  return {SR.begin(), SR.end()};
+}
+
 // Gather the registers that span consecutive members of a sequence into
 // blocks.
 //
 // The registers one RegisterTuples def produces from one sequence form a block
 // if they are enumerated one after another, begin at the start of the
-// sequence, and are evenly spaced along it. Then the first of them and their
-// number say what every one of them spans, and none of them needs a name of
-// its own. Registers that meet none of this get no block, and keep their
-// names.
+// sequence, are evenly spaced along it, and their sub-registers move in step
+// with them. Then the first of them says what every one of them looks like,
+// and none of them needs a name or a description of its own.
+//
+// A run is taken as far as all of this holds and no further, so that a
+// register that departs from the pattern merely ends the block rather than
+// denying one to the registers before it. Registers left outside a block keep
+// their names and are described one by one, as they always have been.
 void CodeGenRegBank::computeSeqBlocks() {
   // Walk the registers in enumeration order, collecting each run of registers
   // of common origin, so that runs are seen whole and in order.
@@ -1321,19 +1333,77 @@ void CodeGenRegBank::computeSeqBlocks() {
     // The registers must all come from the one sequence and tile it from its
     // first member on, so that the Index'th of them spans the members starting
     // at member Index * Step.
-    bool IsBlock = First.MemberIndex == 0 && Step != 0 &&
-                   all_of(enumerate(Run), [&](const auto &IndexAndReg) {
-                     const auto &[Index, Reg] = IndexAndReg;
-                     const RegisterSequencePos &Start =
-                         SeqRegOrigins.at(Reg->TheDef).Start;
-                     return Start.SeqIndex == First.SeqIndex &&
-                            Start.MemberIndex == Index * Step;
-                   });
+    auto TilesSequence = [&](unsigned Index) {
+      const RegisterSequencePos &Start =
+          SeqRegOrigins.at(Run[Index]->TheDef).Start;
+      return Start.SeqIndex == First.SeqIndex &&
+             Start.MemberIndex == Index * Step;
+    };
 
-    if (IsBlock) {
+    // Every register must have as many sub-registers as the first, under the
+    // same sub-register indices, each of them the same distance further along
+    // as in the register before, so that the sub-registers of the first
+    // register and those distances describe the sub-registers of them all.
+    //
+    // The indices must agree because the sub-registers of a register of a
+    // block are read alongside the indices that register keeps for itself. A
+    // register naming its sub-registers in another order would have each of
+    // them taken for one of a different index.
+    std::vector<const CodeGenRegister *> FirstSubRegs;
+    SmallVector<int16_t, 4> Slopes;
+    auto MovesInStep = [&](unsigned Index) {
+      const CodeGenRegister &Reg = *Run[Index];
+      std::vector<const CodeGenRegister *> SubRegs =
+          getSubRegsInOrder(Reg, *this);
+      if (SubRegs.size() != FirstSubRegs.size())
+        return false;
+
+      bool SameIndices =
+          all_of(zip_equal(SubRegs, FirstSubRegs), [&](auto Sub) {
+            const auto &[SR, FirstSR] = Sub;
+            return Reg.getSubRegIndex(SR) == Run[0]->getSubRegIndex(FirstSR);
+          });
+      if (!SameIndices)
+        return false;
+
+      // The second register of the run is what the distances are read from;
+      // there is nothing to compare them against yet.
+      if (Index == 1) {
+        for (const auto &[Sub, FirstSub] : zip_equal(SubRegs, FirstSubRegs)) {
+          int64_t Slope = int64_t(Sub->EnumValue) - FirstSub->EnumValue;
+
+          // A sub-register that stays put would leave the registers of the
+          // block sharing it, and a distance that does not fit the table it
+          // goes in cannot be recorded. Neither is expected of a sequence.
+          if (Slope <= 0 || !isInt<16>(Slope))
+            return false;
+          Slopes.push_back(Slope);
+        }
+        return true;
+      }
+
+      return all_of(zip_equal(SubRegs, FirstSubRegs, Slopes), [&](auto Sub) {
+        const auto &[SR, FirstSR, Slope] = Sub;
+        return SR->EnumValue == FirstSR->EnumValue + Index * Slope;
+      });
+    };
+
+    // Take the run as far as both hold, and no further.
+    if (First.MemberIndex == 0 && Step != 0) {
+      FirstSubRegs = getSubRegsInOrder(*Run[0], *this);
+      unsigned Count = 1;
+      while (Count < Run.size() && TilesSequence(Count) && MovesInStep(Count))
+        ++Count;
+      Run.resize(Count);
+    } else {
+      Run.clear();
+    }
+
+    if (Run.size() >= 2) {
       unsigned BlockIndex = SeqBlocks.size();
       SeqBlocks.push_back({SeqRegOrigins.at(Run.front()->TheDef).BlockName,
-                           Run.front(), unsigned(Run.size()), Step});
+                           Run.front(), unsigned(Run.size()), Step,
+                           std::move(Slopes)});
       for (const auto &[Index, Reg] : enumerate(Run))
         SeqBlockMembers.try_emplace(Reg->TheDef,
                                     SeqBlockPos{BlockIndex, unsigned(Index)});
@@ -1419,9 +1489,6 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
     }
   }
 
-  // Now that the tuples are numbered, see which of them form blocks.
-  computeSeqBlocks();
-
   // Now all the registers are known. Build the object graph of explicit
   // register-register references.
   for (CodeGenRegister &Reg : Registers)
@@ -1460,6 +1527,12 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   // ordered SuperRegs list.
   for (CodeGenRegister &Reg : Registers)
     Reg.computeSuperRegs(*this);
+
+  // Now that the registers are numbered and their sub-registers known, see
+  // which of them form blocks. Gathering registers into blocks is a way of
+  // saying what they have in common more briefly, so it comes once there is
+  // something to say.
+  computeSeqBlocks();
 
   // For each pair of Reg:SR, if both are non-artificial, mark the
   // corresponding sub-register index as non-artificial.

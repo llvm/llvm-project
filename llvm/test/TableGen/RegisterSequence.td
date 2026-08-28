@@ -65,10 +65,30 @@ def RX64 : RegisterTuples<[sub0, sub1],
                           [(decimate (shl OtherGPR32, 0), 2),
                            (decimate (shl OtherGPR32, 1), 2)]>;
 
+// A second sequence, whose last two registers follow one another the other way
+// round. Registers spanning them are still spanning consecutive members, so
+// they are still named after the first of them, but their sub-registers do not
+// sit where the ones before them do.
+foreach Index = Indices in {
+  def T#Index : Register <"t"#Index>;
+}
+
+def : RegisterSequence<[T0, T1, T2, T3, T4, T5, T7, T6]>;
+
+def TGPR32 : RegisterClass<"TestTarget", [i32], 32, (add (sequence "T%u", 0, 7))>;
+
+// Pairs of consecutive members, the last of them spanning T7 and T6 in that
+// order. Up to that pair each sub-register sits two registers further along
+// than in the pair before; that pair breaks the pattern.
+def T64 : RegisterTuples<[sub0, sub1],
+                         [(add T0, T2, T4, T7),
+                          (add T1, T3, T5, T6)]>;
+
 def GPR64 : RegisterClass<"TestTarget", [v2i32], 64, (add R64)>;
 def GPR128 : RegisterClass<"TestTarget", [v4i32], 128, (add R128)>;
 def GPR64Spaced : RegisterClass<"TestTarget", [v2i32], 64, (add R64Spaced)>;
 def OtherGPR64 : RegisterClass<"TestTarget", [v2i32], 64, (add RX64)>;
+def TGPR64 : RegisterClass<"TestTarget", [v2i32], 64, (add T64)>;
 
 #ifdef OVERLAP
 // A register sits in one place of one sequence, so it may belong to no more
@@ -95,11 +115,29 @@ def : RegisterSequence<[R2, R5]>;
 // CHECK-NEXT: RA_RB = {{[0-9]+}},
 // CHECK-NEXT: RC_RD = {{[0-9]+}},
 
+// A block goes as far as its registers keep to the pattern and no further. The
+// first three pairs of the second sequence have their sub-registers two
+// registers further along than the pair before, so the first of them describes
+// them all. T7_64 spans T7 and T6, whose sub-registers sit the other way
+// round, so it merely ends the block rather than denying one to the pairs
+// before it, and keeps a name and an enumerator of its own.
+// CHECK-NEXT: T_64_SEQ = {{[0-9]+}}, // 3 registers.
+// CHECK-NEXT: T7_64 = {{[0-9]+}},
+
 // The blocks themselves, through which their registers are reached. The step
 // is the member-index distance between the members that adjacent registers
 // begin at: every second member begins a pair, every fourth one a quad.
 // CHECK:      constexpr MCRegisterSequenceBlock R_64 = {R_64_SEQ, 4, 2};
 // CHECK-NEXT: constexpr MCRegisterSequenceBlock R_128 = {R_128_SEQ, 2, 4};
+// CHECK-NEXT: constexpr MCRegisterSequenceBlock T_64 = {T_64_SEQ, 3, 2};
+
+// What each register of a block has where the first of them has a
+// sub-register, said as how far along the one is from the other, so that the
+// registers after the first need no sub-register lists of their own. A quad
+// spans two pairs and four plain registers, and the pairs move half as far as
+// the plain registers do, there being two of the latter to each of the former.
+// CHECK:      extern const int16_t TestTargetRegDiffLists[]
+// CHECK:      /* 46 */ 4, 4, 4, 4, 2, 2, 2, 0,
 
 // The registers of a block still go by the shorter names, which is what a
 // register of a block prints as. Their asm names, given as r[0:1] and so on
@@ -108,7 +146,14 @@ def : RegisterSequence<[R2, R5]>;
 // CHECK: "R0_64\000"
 // CHECK: "R0_128\000"
 
+// The blocks as the register info sees them: the first register, how many
+// there are, and where the distances above start.
+// CHECK:      extern const MCSeqBlockDesc TestTargetSeqBlocks[]
+// CHECK-NEXT: { R_64_SEQ, 4, {{[0-9]+}} },
+// CHECK-NEXT: { R_128_SEQ, 2, 46 },
+// CHECK-NEXT: { T_64_SEQ, 3, {{[0-9]+}} },
+
 // Having no enumerators of their own, registers of a block are referred to by
 // the one that reserves the block and how far into it they sit. Here, the four
 // pairs among the members of GPR64.
-// CHECK:      /* 12 */ R_64_SEQ, R_64_SEQ + 1, R_64_SEQ + 2, R_64_SEQ + 3,
+// CHECK: /* {{[0-9]+}} */ R_64_SEQ, R_64_SEQ + 1, R_64_SEQ + 2, R_64_SEQ + 3,

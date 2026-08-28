@@ -1052,6 +1052,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   SequenceToOffsetTable<std::string> RegStrings;
 
+  // The registers of a sequence block share the sub-register list of the first
+  // of them, so only that one's goes in the table, along with how far each of
+  // its entries moves from one register of the block to the next.
+  auto GetSeqBlockMember = [&](const CodeGenRegister &Reg) {
+    return RegBank.getSeqBlockMember(Reg.TheDef);
+  };
+
   // Precompute register lists for the SequenceToOffsetTable.
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
@@ -1062,7 +1069,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     SetVector<const CodeGenRegister *> SR;
     Reg.addSubRegsPreOrder(SR, RegBank);
     diffEncode(SubRegLists[i], Reg.EnumValue, SR.begin(), SR.end());
-    DiffSeqs.add(SubRegLists[i]);
+    if (auto [Block, Index] = GetSeqBlockMember(Reg); !Block || Index == 0)
+      DiffSeqs.add(SubRegLists[i]);
 
     // Compute the corresponding sub-register indexes.
     SubRegIdxVec &SRIs = SubRegIdxLists[i];
@@ -1084,6 +1092,37 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     assert(LaneMaskVec.empty());
     llvm::append_range(LaneMaskVec, RUMasks);
     LaneMaskSeqs.add(LaneMaskVec);
+  }
+
+  // The slopes go in the same table as the lists they accompany. They are
+  // distances between registers just as the entries of a differential list
+  // are, and are terminated by a zero the same way.
+  ArrayRef<CodeGenRegisterSequenceBlock> SeqBlocks = RegBank.getSeqBlocks();
+  for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+    DiffVec Slopes(Block.SubRegSlopes);
+    DiffSeqs.add(Slopes);
+
+#ifndef NDEBUG
+    // The registers of the block are about to lose their own descriptions, so
+    // make sure the first register and the slopes describe them. This holds by
+    // construction, blocks being formed no further than it does.
+    SetVector<const CodeGenRegister *> FirstSubRegs;
+    Block.FirstReg->addSubRegsPreOrder(FirstSubRegs, RegBank);
+    for (unsigned Index = 1; Index != Block.Count; ++Index) {
+      const CodeGenRegister &Reg = Regs[Block.FirstReg->EnumValue - 1 + Index];
+      SetVector<const CodeGenRegister *> SubRegs;
+      Reg.addSubRegsPreOrder(SubRegs, RegBank);
+
+      assert(SubRegs.size() == FirstSubRegs.size() &&
+             all_of(zip_equal(SubRegs, FirstSubRegs, Slopes),
+                    [&](auto Sub) {
+                      const auto &[SR, FirstSR, Slope] = Sub;
+                      return SR->EnumValue ==
+                             FirstSR->EnumValue + Index * Slope;
+                    }) &&
+             "Sub-registers of a block register are not where the block says.");
+    }
+#endif
   }
 
   // Compute the final layout of the sequence table.
@@ -1128,15 +1167,38 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     constexpr unsigned RegUnitBits = 12;
     assert(isUInt<RegUnitBits>(FirstRU) && "Too many regunits");
     assert(isUInt<32 - RegUnitBits>(Offset) && "Offset is too big");
-    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", "
-       << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
-       << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
+
+    // The registers of a sequence block after the first are described by that
+    // first register and the slopes, so they list no sub-registers of their
+    // own. Point them at an empty list, so that reading one regardless says
+    // there are none rather than naming registers that have nothing to do
+    // with them.
+    auto [Block, Index] = GetSeqBlockMember(Reg);
+    unsigned SubRegs =
+        DiffSeqs.get(Block && Index != 0 ? DiffVec() : SubRegLists[i]);
+
+    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
+       << ", " << DiffSeqs.get(SuperRegLists[i]) << ", "
+       << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
        << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
        << Reg.Artificial << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...
+
+  // Emit the sequence blocks, so that the registers described by their first
+  // register can be told from those described on their own.
+  if (!SeqBlocks.empty()) {
+    OS << "extern const MCSeqBlockDesc " << TargetName
+       << "SeqBlocks[] = { // Sequence blocks\n";
+    for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+      DiffVec Slopes(Block.SubRegSlopes);
+      OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", " << Block.Count
+         << ", " << DiffSeqs.get(Slopes) << " },\n";
+    }
+    OS << "};\n\n";
+  }
 
   // Emit the table of register unit roots. Each regunit has one or two root
   // registers.
@@ -1415,7 +1477,9 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << TargetName << "RegEncodingTable, "
      << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
                                            : "nullptr")
-     << ");\n\n";
+     << ", "
+     << (SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks")
+     << ", " << SeqBlocks.size() << ");\n\n";
 
   EmitRegMapping(OS, Regs, false);
 
@@ -1949,6 +2013,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "extern const uint16_t " << TargetName << "RegEncodingTable[];\n";
   if (Target.getRegistersAreIntervals())
     OS << "extern const unsigned " << TargetName << "RegUnitIntervals[][2];\n";
+  ArrayRef<CodeGenRegisterSequenceBlock> SeqBlocks = RegBank.getSeqBlocks();
+  if (!SeqBlocks.empty())
+    OS << "extern const MCSeqBlockDesc " << TargetName << "SeqBlocks[];\n";
 
   EmitRegMappingTables(OS, Regs, true);
 
@@ -1967,14 +2034,16 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   InitMCRegisterInfo({0}RegDesc, {1}, RA, PC,
     &get{0}MCRegisterClass(0), {2}, {0}RegUnitRoots, {3}, {0}RegDiffLists,
     {0}LaneMaskLists, {0}RegStrings, {0}RegClassStrings, {0}SubRegIdxLists, {4},
-    {0}RegEncodingTable, {5});
+    {0}RegEncodingTable, {5}, {6}, {7});
 
 )",
                 TargetName, Regs.size() + 1, RegisterClasses.size(),
                 RegBank.getNumNativeRegUnits(), SubRegIndicesSize + 1,
                 Target.getRegistersAreIntervals()
                     ? TargetName + "RegUnitIntervals"
-                    : Twine("nullptr"));
+                    : Twine("nullptr"),
+                SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks",
+                SeqBlocks.size());
   EmitRegMapping(OS, Regs, true);
 
   OS << "}\n\n";

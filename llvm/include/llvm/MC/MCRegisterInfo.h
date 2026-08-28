@@ -257,6 +257,28 @@ struct MCRegisterDesc {
   bool IsArtificial;
 };
 
+/// MCSeqBlockDesc - Describes one sequence block: a run of registers that are
+/// numbered consecutively and each span the same number of consecutive members
+/// of one register sequence.
+///
+/// Registers of a block differ only in how far along the sequence they start,
+/// so what would otherwise be stored for each of them can be stored once for
+/// the block, together with how much each part of it changes from one register
+/// of the block to the next.
+struct MCSeqBlockDesc {
+  /// The first register of the block. The others are described relative to it.
+  MCPhysReg FirstReg;
+
+  /// The number of registers in the block.
+  uint16_t Count;
+
+  /// Offset into MCRegisterInfo::DiffLists of the amount by which each
+  /// sub-register of the first register changes from one register of the block
+  /// to the next. Runs parallel to the first register's sub-register list and
+  /// is terminated by a zero in the same way.
+  uint32_t SubRegSlopes;
+};
+
 /// MCRegisterInfo base class - We assume that the target defines a static
 /// array of MCRegisterDesc objects that represent all of the machine
 /// registers that the target has.  As such, we simply have to track a pointer
@@ -302,6 +324,9 @@ private:
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
   const unsigned (*RegUnitIntervals)[2]; // Pointer to regunit interval table.
+  const MCSeqBlockDesc *SeqBlocks;       // Pointer to the sequence blocks,
+                                         // ordered by their first register.
+  unsigned NumSeqBlocks;                 // Number of sequence blocks.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -316,6 +341,29 @@ private:
 
   mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
   ArrayRef<MCPhysReg> getCachedAliasesOf(MCRegister R) const;
+
+  /// Returns the sequence block the given register belongs to, or nullptr if
+  /// it belongs to none and so has a description of its own.
+  const MCSeqBlockDesc *getSeqBlockOf(MCRegister Reg) const {
+    // Most targets declare no sequences, and in those that do, most registers
+    // are below the first block. Reject those without searching.
+    if (NumSeqBlocks == 0 || Reg.id() < SeqBlocks[0].FirstReg)
+      return nullptr;
+
+    // Blocks are ordered by their first register, so the last block starting
+    // at or before Reg is the only one that can contain it.
+    unsigned Lo = 0, Hi = NumSeqBlocks;
+    while (Hi - Lo > 1) {
+      unsigned Mid = Lo + (Hi - Lo) / 2;
+      if (SeqBlocks[Mid].FirstReg <= Reg.id())
+        Lo = Mid;
+      else
+        Hi = Mid;
+    }
+
+    const MCSeqBlockDesc &Block = SeqBlocks[Lo];
+    return Reg.id() < unsigned(Block.FirstReg) + Block.Count ? &Block : nullptr;
+  }
 
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
@@ -409,7 +457,9 @@ public:
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
                           const uint16_t *RET,
-                          const unsigned (*RUI)[2] = nullptr) {
+                          const unsigned (*RUI)[2] = nullptr,
+                          const MCSeqBlockDesc *SB = nullptr,
+                          unsigned NSB = 0) {
     Desc = D;
     NumRegs = NR;
     RAReg = RA;
@@ -426,6 +476,8 @@ public:
     NumSubRegIndices = NumIndices;
     RegEncodingTable = RET;
     RegUnitIntervals = RUI;
+    SeqBlocks = SB;
+    NumSeqBlocks = NSB;
 
     // Initialize DWARF register mapping variables
     EHL2DwarfRegs = nullptr;
@@ -666,6 +718,14 @@ class MCSubRegIterator
   // Cache the current value, so that we can return a reference to it.
   MCPhysReg Val;
 
+  // For a register of a sequence block, the list walked is that of the block's
+  // first register, and Shift is how many registers past that one the register
+  // is. Slopes gives, for each sub-register in the list, how much it changes
+  // per register of the block, so the sub-register wanted is the one in the
+  // list plus Shift times its slope.
+  const int16_t *Slopes = nullptr;
+  unsigned Shift = 0;
+
 public:
   /// Constructs an end iterator.
   MCSubRegIterator() = default;
@@ -673,9 +733,19 @@ public:
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
     assert(Reg.isPhysical());
-    I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
+
+    // Registers of a sequence block have no sub-register lists of their own,
+    // so walk the first register's list and adjust each element by its slope.
+    MCRegister Described = Reg;
+    if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg)) {
+      Described = Block->FirstReg;
+      Shift = Reg.id() - Block->FirstReg;
+      Slopes = MCRI->DiffLists + Block->SubRegSlopes;
+    }
+
+    I.init(Described.id(), MCRI->DiffLists + MCRI->get(Described).SubRegs);
     // Initially, the iterator points to Reg itself.
-    Val = MCPhysReg(*I);
+    Val = MCPhysReg(Reg.id());
     if (!IncludeSelf)
       ++*this;
   }
@@ -684,7 +754,11 @@ public:
 
   using iterator_adaptor_base::operator++;
   MCSubRegIterator &operator++() {
-    Val = MCPhysReg(*++I);
+    unsigned Sub = *++I;
+    // Both lists are zero-terminated and of the same length, so the slopes do
+    // not run out before the sub-registers, and the terminating zero read at
+    // the end adds nothing.
+    Val = MCPhysReg(Slopes ? Sub + Shift * *Slopes++ : Sub);
     return *this;
   }
 

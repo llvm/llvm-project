@@ -341,8 +341,10 @@ struct RegisterSequencePos {
 /// the same number of its members. Register Index of the block spans the
 /// members starting at member Index * Step.
 ///
-/// Such a block needs no per-register names: naming its first register and
-/// saying how many follow describes them all.
+/// A block needs no per-register names: the name of its first register and the
+/// number of registers describe them all. The same holds for their
+/// sub-registers, which are given by those of the first register plus, for
+/// each, how much it changes from one register of the block to the next.
 struct CodeGenRegisterSequenceBlock {
   /// Name of the block, after its sequence and the width of its registers.
   std::string Name;
@@ -353,10 +355,22 @@ struct CodeGenRegisterSequenceBlock {
   /// Number of registers in the block.
   unsigned Count = 0;
 
-  /// Member-index distance between the members that adjacent registers begin
-  /// at. Not every member begins a register: with a step of four, only every
-  /// fourth one does.
+  /// The distance, in sequence members, between the members that adjacent
+  /// registers of the block start at. Not every member starts a register: with
+  /// a step of four, only every fourth one does.
   unsigned Step = 0;
+
+  /// The amount by which each sub-register changes from one register of the
+  /// block to the next, so that the sub-register list of register Index is
+  /// that of the first register with Index times the corresponding slope added
+  /// to each element. One slope per sub-register, in the order they are listed
+  /// in.
+  ///
+  /// A sub-register that itself belongs to a block changes by fewer register
+  /// numbers than the registers spanning it do, because several of the latter
+  /// share each of the former. One that belongs to no block changes by however
+  /// many registers of its kind there are.
+  SmallVector<int16_t, 4> SubRegSlopes;
 };
 
 /// Where a register sits among the registers of the block it belongs to.
