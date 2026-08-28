@@ -6725,6 +6725,129 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMADecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMADecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+
+  llvm::Value *DisableOutputLane =
+      mt.lookupValue(thisOp.getDisableOutputLane());
+  bool hasDisableOutputLane = DisableOutputLane != nullptr;
+
+  NVVM::CTAGroupKind ctaGroup = thisOp.getCtaGroup();
+
+  using namespace llvm::Intrinsic;
+  ID intrinsicID = not_intrinsic;
+
+  if (hasDisableOutputLane) {
+    if (ctaGroup == NVVM::CTAGroupKind::CTA_1) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b;
+    } else if (ctaGroup == NVVM::CTAGroupKind::CTA_2) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b;
+    } else {
+      llvm_unreachable("Unknown ctaGroup for tcgen05.mma.decompress_b");
+    }
+  } else {
+    intrinsicID = isATensor ? nvvm_tcgen05_mma_tensor_f8f6f4_decompress_b
+                            : nvvm_tcgen05_mma_shared_f8f6f4_decompress_b;
+  }
+
+  assert(intrinsicID != not_intrinsic &&
+         "Invalid intrinsic for Tcgen05MMADecompressBOp.");
+
+  if (hasDisableOutputLane)
+    args.push_back(DisableOutputLane);
+  else
+    args.push_back(
+        builder.getInt32(static_cast<unsigned>(getNVVMCtaGroupKind(ctaGroup))));
+
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  return {intrinsicID, args};
+}
+
+LogicalResult Tcgen05MMADecompressBOp::verify() {
+  mlir::Value disableOutputLane = getDisableOutputLane();
+
+  if (disableOutputLane) {
+    NVVM::CTAGroupKind ctaGroup = getCtaGroup();
+
+    mlir::VectorType disableOutputLaneType =
+        cast<mlir::VectorType>(disableOutputLane.getType());
+    if ((ctaGroup == NVVM::CTAGroupKind::CTA_1 &&
+         disableOutputLaneType.getNumElements() != 4) ||
+        (ctaGroup == NVVM::CTAGroupKind::CTA_2 &&
+         disableOutputLaneType.getNumElements() != 8))
+      return emitOpError() << "Disable Output Lane of length "
+                           << disableOutputLaneType.getNumElements()
+                           << " is incompatible with CtaGroupAttr";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.block_scale.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMABlockScaleDecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMABlockScaleDecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getScaleA()));
+  args.push_back(mt.lookupValue(thisOp.getScaleB()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  llvm::Intrinsic::ID intrinsicID =
+      isATensor
+          ? llvm::Intrinsic::
+                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32_decompress_b
+          : llvm::Intrinsic::
+                nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32_decompress_b;
+
+  return {intrinsicID, args};
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.ld.red functions
 //===----------------------------------------------------------------------===//
 
