@@ -209,16 +209,22 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // host. It must never be 2 (device to device) here, since a host shadow cannot
 // be an operand of a device to device copy.
 
-// constant = constant: copy through the shadows, then push to constant memory.
+// constant = constant: copy shadow to shadow, then push the destination shadow
+// to constant memory.
 // CHECK: %[[V:.*]] = fir.load %[[CSRC]] : !fir.ref<i32>
 // CHECK: fir.store %[[V]] to %[[CDST]] : !fir.ref<i32>
 // CHECK: fir.call @_FortranACUFGetDeviceAddress
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
+// CHECK: %[[S0:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S0]], %{{[^,]*}}, %c0_i32
 
-// constant = device: pull into the shadow first, then push to constant memory.
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c1_i32
+// constant = device: pull the device value into the destination shadow, then
+// push that shadow to constant memory.
+// CHECK: %[[D1:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[D1]], %{{[^,]*}}, %{{[^,]*}}, %c1_i32
 // CHECK: fir.call @_FortranACUFGetDeviceAddress
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
+// CHECK: %[[S1:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S1]], %{{[^,]*}}, %c0_i32
 
-// device = constant: the shadow is already the host source.
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
+// device = constant: the source shadow is already the host value to push.
+// CHECK: %[[S2:.*]] = fir.convert %[[CSRC]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S2]], %{{[^,]*}}, %c0_i32
