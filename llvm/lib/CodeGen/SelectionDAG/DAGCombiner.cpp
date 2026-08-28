@@ -546,6 +546,7 @@ namespace {
     SDValue visitVECTOR_INTERLEAVE(SDNode *N);
     SDValue visitEXTRACT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
+    SDValue visitVECTOR_SHUFFLE_VAR(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
@@ -2102,6 +2103,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECTOR_INTERLEAVE:  return visitVECTOR_INTERLEAVE(N);
   case ISD::EXTRACT_SUBVECTOR:  return visitEXTRACT_SUBVECTOR(N);
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
+  case ISD::VECTOR_SHUFFLE_VAR: return visitVECTOR_SHUFFLE_VAR(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
   case ISD::INSERT_SUBVECTOR:   return visitINSERT_SUBVECTOR(N);
   case ISD::MGATHER:            return visitMGATHER(N);
@@ -29270,6 +29272,49 @@ static SDValue simplifyShuffleOfShuffle(ShuffleVectorSDNode *Shuf) {
   // Every element of this shuffle is identical to the result of the previous
   // shuffle, so we can replace this value.
   return Shuf->getOperand(0);
+}
+
+SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
+  SDValue V = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // An undef or poison index yields poison, as for EXTRACT_VECTOR_ELT.
+  if (Mask.isUndef())
+    return DAG.getPOISON(VT);
+
+  // Shuffling poison or undef gives it back.
+  if (V.getOpcode() == ISD::POISON)
+    return DAG.getPOISON(VT);
+  if (V.isUndef())
+    return DAG.getUNDEF(VT);
+
+  auto *BV = dyn_cast<BuildVectorSDNode>(Mask.getNode());
+  if (!BV)
+    return SDValue();
+
+  // A constant mask makes this a regular VECTOR_SHUFFLE. getConstantRawBits
+  // truncates each operand to the mask's element width, which is what
+  // BUILD_VECTOR's implicit truncation means.
+  SmallVector<APInt> RawIndices;
+  BitVector UndefIndices;
+  if (!BV->getConstantRawBits(DAG.getDataLayout().isLittleEndian(),
+                              Mask.getValueType().getScalarSizeInBits(),
+                              RawIndices, UndefIndices))
+    return SDValue();
+
+  // Out-of-range indices produce poison.
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<int, 16> Indices;
+  Indices.reserve(NumElts);
+  for (auto [I, Idx] : enumerate(RawIndices))
+    Indices.push_back(
+        UndefIndices[I] || Idx.uge(NumElts) ? -1 : (int)Idx.getZExtValue());
+
+  // After legalization the target may not accept an arbitrary shuffle mask.
+  if (LegalOperations && !TLI.isShuffleMaskLegal(Indices, VT))
+    return SDValue();
+  return DAG.getVectorShuffle(VT, SDLoc(N), V, DAG.getPOISON(VT), Indices);
 }
 
 SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {

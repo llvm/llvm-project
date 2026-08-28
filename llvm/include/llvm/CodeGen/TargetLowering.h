@@ -5984,6 +5984,11 @@ public:
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand a VECTOR_SHUFFLE_VAR by storing the source vector to a stack
+  /// temporary and loading each result element through a variable-indexed
+  /// (clamped) element pointer.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.
   SDValue expandCttzElts(SDNode *Node, SelectionDAG &DAG) const;
