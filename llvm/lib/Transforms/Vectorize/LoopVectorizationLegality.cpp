@@ -1787,12 +1787,29 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   }
 
-  [[maybe_unused]] const SCEV *SymbolicMaxBTC =
-      PSE.getSymbolicMaxBackedgeTakenCount();
+  const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   // Since we have an exact exit count for the latch and the early exit
   // dominates the latch, then this should guarantee a computed SCEV value.
   assert(!isa<SCEVCouldNotCompute>(SymbolicMaxBTC) &&
          "Failed to get symbolic expression for backedge taken count");
+
+  // The symbolic max backedge-taken count is built from the countable exits
+  // only, which the original loop reaches only if no uncountable exit is taken
+  // first. Expanding it in the preheader therefore speculates it above those
+  // uncountable exits, so it must not cause UB on its own. Note that the
+  // sequential umin ScalarEvolution uses to keep the exit counts of multiple
+  // countable exits from short-circuiting does not help here, as uncountable
+  // exits contribute no operand to it.
+  // TODO: Rather than giving up, expand a divisor that may be zero or poison
+  // as freeze + umax(_, 1), like SCEVExpander does for the operands of a
+  // sequential umin.
+  if (!PSE.getSE()->isGuaranteedNotToCauseUB(SymbolicMaxBTC)) {
+    reportVectorizationFailure(
+        "Backedge taken count may cause UB when expanded into the preheader",
+        "PotentiallyUBBackedgeTakenCountEarlyExitLoop", ORE, TheLoop);
+    return false;
+  }
+
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
