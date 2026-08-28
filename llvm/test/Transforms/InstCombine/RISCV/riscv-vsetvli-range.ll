@@ -123,3 +123,16 @@ define i1 @vsetvli_runtime_avl_gt_max_folds(i64 %avl) {
   %c = icmp ugt i64 %vl, 8192
   ret i1 %c
 }
+
+; vl known > 0, so range must be 0
+define i64 @vsetvli_vl_known_nonzero(i64 %x) {
+; CHECK-LABEL: define i64 @vsetvli_vl_known_nonzero(
+; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[AVL:%.*]] = add nuw i64 [[X]], 1
+; CHECK-NEXT:    [[VL:%.*]] = call range(i64 0, 8193) i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 0)
+; CHECK-NEXT:    ret i64 [[VL]]
+;
+  %avl = add nuw i64 %x, 1
+  %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 0, i64 0)
+  ret i64 %vl
+}
