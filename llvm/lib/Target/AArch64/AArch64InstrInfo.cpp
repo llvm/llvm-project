@@ -53,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -1358,14 +1359,13 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 //===----------------------------------------------------------------------===//
 
 // Parse a condition code returned by analyzeBranch, and compute the CondCode
-// corresponding to TBB. Returns false for branch shapes that cannot be turned
-// into a ccmp + br.cond (e.g. tbz/tbnz and the newer compare-and-branch forms).
+// corresponding to TBB. Return false for branch types that can't be converted
+// to ccmp + br.cond (e.g. tbz/tbnz).
 static bool parseCCMPCond(ArrayRef<MachineOperand> Cond,
                           AArch64CC::CondCode &CC) {
   // A normal br.cond simply has the condition code.
   if (Cond[0].getImm() != -1) {
-    if (Cond.size() != 1)
-      return false;
+    assert(Cond.size() == 1 && "Unknown Cond array format");
     CC = (AArch64CC::CondCode)(int)Cond[0].getImm();
     return true;
   }
@@ -1377,14 +1377,12 @@ static bool parseCCMPCond(ArrayRef<MachineOperand> Cond,
     return false;
   case AArch64::CBZW:
   case AArch64::CBZX:
-    if (Cond.size() != 3)
-      return false;
+    assert(Cond.size() == 3 && "Unknown Cond array format");
     CC = AArch64CC::EQ;
     return true;
   case AArch64::CBNZW:
   case AArch64::CBNZX:
-    if (Cond.size() != 3)
-      return false;
+    assert(Cond.size() == 3 && "Unknown Cond array format");
     CC = AArch64CC::NE;
     return true;
 
@@ -1400,6 +1398,8 @@ static bool parseCCMPCond(ArrayRef<MachineOperand> Cond,
   }
 }
 
+// Conditional-compare formation runs before the AArch64DeadRegisterDefinitions
+// pass, so compares are still writing virtual registers without any uses.
 static bool isDeadDef(const MachineRegisterInfo &MRI, unsigned DstReg) {
   // Writes to the zero register are dead.
   if (DstReg == AArch64::WZR || DstReg == AArch64::XZR)
@@ -1430,6 +1430,7 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
       return &*I;
     }
     ++NumCmpTermRejs;
+    LLVM_DEBUG(dbgs() << "Flags not used by terminator: " << *I);
     return nullptr;
   }
 
@@ -1447,6 +1448,7 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
       // Check that the immediate operand is within range, ccmp wants a uimm5.
       // Rd = SUBSri Rn, imm, shift
       if (I->getOperand(3).getImm() || !isUInt<5>(I->getOperand(2).getImm())) {
+        LLVM_DEBUG(dbgs() << "Immediate out of range for ccmp: " << *I);
         ++NumImmRangeRejs;
         return nullptr;
       }
@@ -1457,6 +1459,8 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
     case AArch64::ADDSXrr:
       if (isDeadDef(MRI, I->getOperand(0).getReg()))
         return &*I;
+      LLVM_DEBUG(dbgs() << "Can't convert compare with live destination: "
+                        << *I);
       ++NumLiveDstRejs;
       return nullptr;
     case AArch64::FCMPSrr:
@@ -1473,33 +1477,35 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
       // The ccmp doesn't produce exactly the same flags as the original
       // compare, so reject the transform if there are uses of the flags
       // besides the terminators.
+      LLVM_DEBUG(dbgs() << "Can't create ccmp with multiple uses: " << *I);
       ++NumMultNZCVUses;
       return nullptr;
     }
 
     if (PRI.Defined || PRI.Clobbered) {
+      LLVM_DEBUG(dbgs() << "Not convertible compare: " << *I);
       ++NumUnknNZCVDefs;
       return nullptr;
     }
   }
+  LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
+                    << '\n');
   return nullptr;
 }
 
-// Layout of Info.TargetData for AArch64.
-enum { CCMP_HeadCC = 0, CCMP_TailCC = 1 };
+// Indices into Info.TargetData: the parsed Head->CmpBB and CmpBB->Tail
+// condition codes.
+enum { HeadCCIdx = 0, TailCCIdx = 1 };
 
 MCRegister AArch64InstrInfo::getConditionalCompareFlagReg() const {
   return AArch64::NZCV;
 }
 
-bool AArch64InstrInfo::canConvertToCCMP(MachineBasicBlock &Head,
-                                        MachineBasicBlock &CmpBB,
-                                        ArrayRef<MachineOperand> HeadCond,
-                                        bool HeadTBBIsCmpBB,
-                                        ArrayRef<MachineOperand> CmpBBCond,
-                                        bool CmpBBTBBIsTail,
-                                        const MachineRegisterInfo &MRI,
-                                        CCmpConvInfo &Info) const {
+bool AArch64InstrInfo::canConvertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+    ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+    ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+    const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
   AArch64CC::CondCode HeadCmpBBCC;
   if (!parseCCMPCond(HeadCond, HeadCmpBBCC))
     return false;
@@ -1519,23 +1525,20 @@ bool AArch64InstrInfo::canConvertToCCMP(MachineBasicBlock &Head,
     return false;
 
   Info.CmpMI = CmpMI;
-  Info.TargetData[CCMP_HeadCC] = HeadCmpBBCC;
-  Info.TargetData[CCMP_TailCC] = CmpBBTailCC;
+  Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
+  Info.TargetData[TailCCIdx] = CmpBBTailCC;
   return true;
 }
 
-MachineInstr *
-AArch64InstrInfo::convertToCCMP(MachineBasicBlock &Head,
-                                MachineBasicBlock::iterator SpliceLoc,
-                                const DebugLoc &HeadTermDL,
-                                ArrayRef<MachineOperand> HeadCond,
-                                const CCmpConvInfo &Info,
-                                MachineRegisterInfo &MRI) const {
+MachineInstr *AArch64InstrInfo::convertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock::iterator SpliceLoc,
+    const DebugLoc &HeadTermDL, ArrayRef<MachineOperand> HeadCond,
+    const CCmpConvInfo &Info, MachineRegisterInfo &MRI) const {
   MachineInstr *CmpMI = Info.CmpMI;
   auto HeadCmpBBCC =
-      static_cast<AArch64CC::CondCode>(Info.TargetData[CCMP_HeadCC]);
+      static_cast<AArch64CC::CondCode>(Info.TargetData[HeadCCIdx]);
   auto CmpBBTailCC =
-      static_cast<AArch64CC::CondCode>(Info.TargetData[CCMP_TailCC]);
+      static_cast<AArch64CC::CondCode>(Info.TargetData[TailCCIdx]);
 
   // If the Head terminator was one of the cbz / cbnz branches with built-in
   // compare, we need to insert an explicit compare instruction in its place.
@@ -1552,18 +1555,46 @@ AArch64InstrInfo::convertToCCMP(MachineBasicBlock &Head,
   switch (CmpMI->getOpcode()) {
   default:
     llvm_unreachable("Unknown compare opcode");
-  case AArch64::SUBSWri:    Opc = AArch64::CCMPWi; break;
-  case AArch64::SUBSWrr:    Opc = AArch64::CCMPWr; break;
-  case AArch64::SUBSXri:    Opc = AArch64::CCMPXi; break;
-  case AArch64::SUBSXrr:    Opc = AArch64::CCMPXr; break;
-  case AArch64::ADDSWri:    Opc = AArch64::CCMNWi; break;
-  case AArch64::ADDSWrr:    Opc = AArch64::CCMNWr; break;
-  case AArch64::ADDSXri:    Opc = AArch64::CCMNXi; break;
-  case AArch64::ADDSXrr:    Opc = AArch64::CCMNXr; break;
-  case AArch64::FCMPSrr:    Opc = AArch64::FCCMPSrr; FirstOp = 0; break;
-  case AArch64::FCMPDrr:    Opc = AArch64::FCCMPDrr; FirstOp = 0; break;
-  case AArch64::FCMPESrr:   Opc = AArch64::FCCMPESrr; FirstOp = 0; break;
-  case AArch64::FCMPEDrr:   Opc = AArch64::FCCMPEDrr; FirstOp = 0; break;
+  case AArch64::SUBSWri:
+    Opc = AArch64::CCMPWi;
+    break;
+  case AArch64::SUBSWrr:
+    Opc = AArch64::CCMPWr;
+    break;
+  case AArch64::SUBSXri:
+    Opc = AArch64::CCMPXi;
+    break;
+  case AArch64::SUBSXrr:
+    Opc = AArch64::CCMPXr;
+    break;
+  case AArch64::ADDSWri:
+    Opc = AArch64::CCMNWi;
+    break;
+  case AArch64::ADDSWrr:
+    Opc = AArch64::CCMNWr;
+    break;
+  case AArch64::ADDSXri:
+    Opc = AArch64::CCMNXi;
+    break;
+  case AArch64::ADDSXrr:
+    Opc = AArch64::CCMNXr;
+    break;
+  case AArch64::FCMPSrr:
+    Opc = AArch64::FCCMPSrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPDrr:
+    Opc = AArch64::FCCMPDrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPESrr:
+    Opc = AArch64::FCCMPESrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPEDrr:
+    Opc = AArch64::FCCMPEDrr;
+    FirstOp = 0;
+    break;
   case AArch64::CBZW:
   case AArch64::CBNZW:
     Opc = AArch64::CCMPWi;
