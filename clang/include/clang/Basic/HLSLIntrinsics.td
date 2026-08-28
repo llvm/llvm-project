@@ -1286,7 +1286,6 @@ def hlsl_max : HLSLTwoArgBuiltin<"max", "__builtin_elementwise_max"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the lesser of X and Y.
@@ -1299,7 +1298,6 @@ def hlsl_min : HLSLTwoArgBuiltin<"min", "__builtin_elementwise_min"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Marks a resource index as non-uniform (varying across wave threads).
