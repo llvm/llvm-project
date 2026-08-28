@@ -35,7 +35,6 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](DivOp) { return ElementwiseKind::div; })
       .Case([](DivUnsignedOp) { return ElementwiseKind::div_unsigned; })
       .Case([](PowFOp) { return ElementwiseKind::powf; })
-      .Case([](LogOp) { return ElementwiseKind::log; })
       .Case([](AbsOp) { return ElementwiseKind::abs; })
       .Case([](CeilOp) { return ElementwiseKind::ceil; })
       .Case([](FloorOp) { return ElementwiseKind::floor; })
@@ -78,7 +77,6 @@ void mlir::linalg::populateLinalgNamedToElementwisePatterns(
   patterns.add<NamedToElementwisePattern<DivOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<DivUnsignedOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<PowFOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<LogOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<AbsOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<CeilOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<FloorOp>>(patterns.getContext());

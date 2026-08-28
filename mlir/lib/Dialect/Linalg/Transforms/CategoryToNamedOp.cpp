@@ -46,8 +46,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     };
 
     switch (op.getKind()) {
-    case ElementwiseKind::log:
-      return replaceWith(LogOp{});
     case ElementwiseKind::abs:
       return replaceWith(AbsOp{});
     case ElementwiseKind::ceil:

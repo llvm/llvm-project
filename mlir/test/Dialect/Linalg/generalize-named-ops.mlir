@@ -531,27 +531,6 @@ func.func @generalize_divu(%lhs: memref<7x14x21xi32>, %rhs: memref<7x14x21xi32>,
 
 // -----
 
-func.func @generalize_log(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) {
-  linalg.log ins(%arg : memref<7x14x21xf32>) outs(%out : memref<7x14x21xf32>)
-  return
-}
-
-// CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK: func @generalize_log
-// CHECK-SAME: (%[[ARG:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
-
-// CHECK: linalg.generic
-// CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]]]
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:  ins(%[[LHS]] : memref<7x14x21xf32>) outs(%[[OUT]] : memref<7x14x21xf32>)
-
-// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32)
-// CHECK-NEXT:      %[[log:.+]] = math.log %[[BBARG0]] : f32
-// CHECK-NEXT:      linalg.yield %[[log]] : f32
-
-// -----
-
 func.func @generalize_abs(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) {
   linalg.abs ins(%arg : memref<7x14x21xf32>) outs(%out : memref<7x14x21xf32>)
   return

@@ -191,8 +191,6 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   };
 
   if (isUnary) {
-    if (isa<math::LogOp>(op))
-      return replaceOp(LogOp{}, ElementwiseKind::log);
     if (isa<math::AbsFOp>(op))
       return replaceOp(AbsOp{}, ElementwiseKind::abs);
     if (isa<math::CeilOp>(op))
@@ -245,6 +243,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
         return replaceOp(nullptr, ElementwiseKind::atan);
       if (isa<math::AtanhOp>(op))
         return replaceOp(nullptr, ElementwiseKind::atanh);
+      if (isa<math::LogOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::log);
       if (isa<math::Log10Op>(op))
         return replaceOp(nullptr, ElementwiseKind::log10);
       if (isa<math::Log1pOp>(op))
