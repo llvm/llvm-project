@@ -17,7 +17,10 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -194,20 +197,69 @@ private:
 template <typename T> class CallDescriptionMap {
   friend class CallDescriptionSet;
 
-  // Some call descriptions aren't easily hashable (eg., the ones with qualified
-  // names in which some sections are omitted), so let's put them
-  // in a simple vector and use linear lookup.
-  // TODO: Implement an actual map for fast lookup for "hashable" call
-  // descriptions (eg., the ones for C functions that just match the name).
+  // Some call descriptions aren't easily hashable (eg., the ones with
+  // qualified names in which some sections are omitted), so keep the complete
+  // descriptions in a vector.
   std::vector<std::pair<CallDescription, T>> LinearMap;
+
+  // Most callees have an ordinary identifier and can only match descriptions
+  // with that exact unqualified name. Index sufficiently large maps to avoid
+  // calling the full matcher for every differently named entry. Keep this
+  // optional so that the common small maps don't pay for the index.
+  using NameIndexTy = llvm::StringMap<llvm::SmallVector<unsigned, 1>>;
+  std::unique_ptr<NameIndexTy> NameIndex;
+
+  static constexpr unsigned MinNameIndexSize = 8;
+
+  void buildNameIndex() {
+    if (LinearMap.size() < MinNameIndexSize)
+      return;
+
+    NameIndex = std::make_unique<NameIndexTy>();
+    for (unsigned I = 0, E = LinearMap.size(); I != E; ++I)
+      (*NameIndex)[LinearMap[I].first.getFunctionName()].push_back(I);
+  }
+
+  template <typename Matcher>
+  [[nodiscard]] const T *lookupImpl(const FunctionDecl *FD,
+                                    Matcher Matches) const {
+    if (NameIndex && FD && FD->getBuiltinID() == 0 &&
+        FD->getDeclName().isIdentifier()) {
+      StringRef Name = FD->getName();
+
+      // Builtins and names beginning with "__" may be accepted by the fuzzy
+      // C-library and fortified-function matching rules. Special declaration
+      // names such as constructors and operators have no identifier name.
+      // Preserve the complete linear matcher for all of these cases.
+      if (!Name.empty() && !Name.starts_with("__")) {
+        auto It = NameIndex->find(Name);
+        if (It == NameIndex->end())
+          return nullptr;
+
+        for (unsigned I : It->second)
+          if (Matches(LinearMap[I].first))
+            return &LinearMap[I].second;
+        return nullptr;
+      }
+    }
+
+    for (const std::pair<CallDescription, T> &I : LinearMap)
+      if (Matches(I.first))
+        return &I.second;
+    return nullptr;
+  }
 
 public:
   CallDescriptionMap(
       std::initializer_list<std::pair<CallDescription, T>> &&List)
-      : LinearMap(List) {}
+      : LinearMap(List) {
+    buildNameIndex();
+  }
 
   template <typename InputIt>
-  CallDescriptionMap(InputIt First, InputIt Last) : LinearMap(First, Last) {}
+  CallDescriptionMap(InputIt First, InputIt Last) : LinearMap(First, Last) {
+    buildNameIndex();
+  }
 
   ~CallDescriptionMap() = default;
 
@@ -220,13 +272,9 @@ public:
   CallDescriptionMap &operator=(CallDescriptionMap &&) = default;
 
   [[nodiscard]] const T *lookup(const CallEvent &Call) const {
-    // Slow path: linear lookup.
-    // TODO: Implement some sort of fast path.
-    for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matches(Call))
-        return &I.second;
-
-    return nullptr;
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+    return lookupImpl(
+        FD, [&](const CallDescription &CD) { return CD.matches(Call); });
   }
 
   /// When available, always prefer lookup with a CallEvent! This function
@@ -242,13 +290,10 @@ public:
   /// CallEvent::getNumArgs), the called function if it was called through a
   /// function pointer, and other information not available syntactically.
   [[nodiscard]] const T *lookupAsWritten(const CallExpr &Call) const {
-    // Slow path: linear lookup.
-    // TODO: Implement some sort of fast path.
-    for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matchesAsWritten(Call))
-        return &I.second;
-
-    return nullptr;
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getCalleeDecl());
+    return lookupImpl(FD, [&](const CallDescription &CD) {
+      return CD.matchesAsWritten(Call);
+    });
   }
 };
 
