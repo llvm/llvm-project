@@ -273,9 +273,31 @@ static bool areLoadsReorderable(const LoadInst *Use,
 template <typename AliasAnalysisType>
 static bool
 instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
-                         const Instruction *UseInst, AliasAnalysisType &AA) {
+                         const Instruction *UseInst, AliasAnalysisType &AA,
+                         bool SkipNonAliasingReleaseStores = false) {
   Instruction *DefInst = MD->getMemoryInst();
   assert(DefInst && "Defining instruction not actually an instruction");
+
+  // A store with release (or weaker) ordering constrains program-order-earlier
+  // accesses only. It is reported as clobbering escaped locations it cannot
+  // alias (see getSyncEffects) solely so that accesses are not illegally
+  // moved below it or deleted above it. A walk on behalf of a client that
+  // only moves the queried access to an *earlier* program point may opt out
+  // of that ordering component for stores that provably have no data effect
+  // on the queried access; see getClobberingMemoryAccessForHoist.
+  if (SkipNonAliasingReleaseStores) {
+    if (auto *SI = dyn_cast<StoreInst>(DefInst);
+        SI && SI->getOrdering() == AtomicOrdering::Release &&
+        !SI->isVolatile()) {
+      // For a call, the store has no data effect if the call does not access
+      // the store's location; for a load, if the locations cannot alias.
+      if (auto *CB = dyn_cast_or_null<CallBase>(UseInst))
+        return isModOrRefSet(AA.getModRefInfo(CB, MemoryLocation::get(SI)));
+      if (UseLoc.Ptr &&
+          AA.alias(MemoryLocation::get(SI), UseLoc) == AliasResult::NoAlias)
+        return false;
+    }
+  }
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     // These intrinsics will show up as affecting memory, but they are just
@@ -348,6 +370,10 @@ struct UpwardsMemoryQuery {
   // The MemoryAccess we actually got called with, used to test local domination
   const MemoryAccess *OriginalAccess = nullptr;
   bool SkipSelfAccess = false;
+  // Treat release-or-weaker store defs with no data effect on the queried
+  // access as non-clobbering. Only valid for hoisting; results computed with
+  // this set must never be cached. See getClobberingMemoryAccessForHoist.
+  bool SkipNonAliasingReleaseStores = false;
 
   UpwardsMemoryQuery() = default;
 
@@ -423,7 +449,8 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
           FoundClobber = FoundClobber || MSSA.isLiveOnEntryDef(MD);
           if (!FoundClobber) {
             BatchAACrossIterationScope _(AA, MAP.MayBeCrossIteration);
-            if (instructionClobbersQuery(MD, MAP.Loc, Query.Inst, AA))
+            if (instructionClobbersQuery(MD, MAP.Loc, Query.Inst, AA,
+                                         Query.SkipNonAliasingReleaseStores))
               FoundClobber = true;
           }
         }
@@ -439,7 +466,8 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
           continue;
 
         BatchAACrossIterationScope _(AA, MAP.MayBeCrossIteration);
-        assert(!instructionClobbersQuery(MD, MAP.Loc, Query.Inst, AA) &&
+        assert(!instructionClobbersQuery(MD, MAP.Loc, Query.Inst, AA,
+                                         Query.SkipNonAliasingReleaseStores) &&
                "Found clobber before reaching ClobberAt!");
         continue;
       }
@@ -575,7 +603,8 @@ class ClobberWalker {
           return {Current, true};
 
         BatchAACrossIterationScope _(*AA, Desc.MayBeCrossIteration);
-        if (instructionClobbersQuery(MD, Desc.Loc, Query->Inst, *AA))
+        if (instructionClobbersQuery(MD, Desc.Loc, Query->Inst, *AA,
+                                     Query->SkipNonAliasingReleaseStores))
           return {MD, true};
       }
     }
@@ -1007,6 +1036,12 @@ public:
   MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, BatchAAResults &,
                                               unsigned &, bool,
                                               bool UseInvariantGroup = true);
+  // Uncached walk that skips non-aliasing release-or-weaker store defs; only
+  // valid for hoisting the queried access. See
+  // MemorySSAWalker::getClobberingMemoryAccessForHoist.
+  MemoryAccess *getClobberingMemoryAccessForHoistBase(MemoryUseOrDef *,
+                                                      BatchAAResults &,
+                                                      unsigned &);
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -1049,6 +1084,14 @@ public:
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
   }
 
+  MemoryAccess *
+  getClobberingMemoryAccessForHoist(MemoryUseOrDef *MA,
+                                    BatchAAResults &BAA) override {
+    unsigned UpwardWalkLimit = MaxCheckLimit;
+    return Walker->getClobberingMemoryAccessForHoistBase(MA, BAA,
+                                                         UpwardWalkLimit);
+  }
+
   void invalidateInfo(MemoryAccess *MA) override {
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
       MUD->resetOptimized();
@@ -1085,6 +1128,14 @@ public:
                                           BatchAAResults &BAA) override {
     unsigned UpwardWalkLimit = MaxCheckLimit;
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
+  }
+
+  MemoryAccess *
+  getClobberingMemoryAccessForHoist(MemoryUseOrDef *MA,
+                                    BatchAAResults &BAA) override {
+    unsigned UpwardWalkLimit = MaxCheckLimit;
+    return Walker->getClobberingMemoryAccessForHoistBase(MA, BAA,
+                                                         UpwardWalkLimit);
   }
 
   void invalidateInfo(MemoryAccess *MA) override {
@@ -2613,11 +2664,45 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
 }
 
 MemoryAccess *
+MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessForHoistBase(
+    MemoryUseOrDef *StartingAccess, BatchAAResults &BAA,
+    unsigned &UpwardWalkLimit) {
+  const Instruction *I = StartingAccess->getMemoryInst();
+
+  // We can't sanely do anything with a fence; conservatively return the
+  // access itself, like the location-based walk.
+  if (!isa<CallBase>(I) && I->isFenceLike())
+    return StartingAccess;
+
+  if (isUseTriviallyOptimizableToLiveOnEntry(BAA, I))
+    return MSSA->getLiveOnEntryDef();
+
+  MemoryAccess *DefiningAccess = StartingAccess->getDefiningAccess();
+  if (MSSA->isLiveOnEntryDef(DefiningAccess))
+    return DefiningAccess;
+
+  UpwardsMemoryQuery Q(I, StartingAccess);
+  Q.SkipNonAliasingReleaseStores = true;
+
+  // Deliberately bypass the isOptimized()/setOptimized() cache in both
+  // directions: results computed while skipping release stores are only
+  // valid for hoisting the queried access and must never be visible to any
+  // other client.
+  return Walker.findClobber(BAA, DefiningAccess, Q, UpwardWalkLimit);
+}
+
+MemoryAccess *
 DoNothingMemorySSAWalker::getClobberingMemoryAccess(MemoryAccess *MA,
                                                     BatchAAResults &) {
   if (auto *Use = dyn_cast<MemoryUseOrDef>(MA))
     return Use->getDefiningAccess();
   return MA;
+}
+
+MemoryAccess *
+DoNothingMemorySSAWalker::getClobberingMemoryAccessForHoist(MemoryUseOrDef *MA,
+                                                            BatchAAResults &) {
+  return MA->getDefiningAccess();
 }
 
 MemoryAccess *DoNothingMemorySSAWalker::getClobberingMemoryAccess(

@@ -2483,10 +2483,40 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
     // if the memory loaded is the phi node
 
     BatchAAResults BAA(MSSA->getAA());
+    // Fast path: this query is answered from MemorySSA's cache (uses are
+    // optimized at construction time), unlike the uncached
+    // getClobberingMemoryAccessForHoist walk below, which we therefore only
+    // run if this conservative verdict blocks hoisting.
     MemoryAccess *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, MU);
-    return !MSSA->isLiveOnEntryDef(Source) &&
-           CurLoop->contains(Source->getBlock()) &&
-           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() && isa<MemoryPhi>(Source));
+    bool Invalidated =
+        !MSSA->isLiveOnEntryDef(Source) &&
+        CurLoop->contains(Source->getBlock()) &&
+        !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() &&
+          isa<MemoryPhi>(Source));
+
+    // The walker treats release stores as clobbers of any escaped location
+    // (see getSyncEffects) because their ordering forbids moving
+    // program-order-earlier accesses below them; that blocks hoisting loads
+    // and read-only calls out of loops that publish unrelated data. Hoisting
+    // only moves the access to an earlier program point, which a
+    // release-or-weaker store does not constrain, so retry the walk with
+    // such stores skipped when they provably have no data effect on the
+    // access. This must only be done when hoisting: the sink path below
+    // stays conservative, as sinking below a release store is illegal.
+    if (Invalidated && !Flags.tooManyClobberingCalls()) {
+      auto *LI = dyn_cast<LoadInst>(&I);
+      if ((LI && LI->isUnordered()) || (!LI && isa<CallBase>(&I))) {
+        Source = MSSA->getWalker()->getClobberingMemoryAccessForHoist(MU, BAA);
+        Flags.incrementClobberingCalls();
+        Invalidated =
+            !MSSA->isLiveOnEntryDef(Source) &&
+            CurLoop->contains(Source->getBlock()) &&
+            !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() &&
+              isa<MemoryPhi>(Source));
+      }
+    }
+
+    return Invalidated;
   }
 
   // For sinking, we'd need to check all Defs below this use. The getClobbering
