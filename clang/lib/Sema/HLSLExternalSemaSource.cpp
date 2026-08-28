@@ -302,8 +302,8 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
 /// methods also have no offset overloads.
 static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl,
                                                    Sema &S) {
-  const ResourceDimension Dim = ResourceDimension::Cube;
-  const bool IsArray = false;
+  constexpr ResourceDimension Dim = ResourceDimension::Cube;
+  constexpr bool IsArray = false;
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
       .addDefaultHandleConstructor()
