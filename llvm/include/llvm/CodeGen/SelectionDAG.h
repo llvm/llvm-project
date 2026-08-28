@@ -208,9 +208,6 @@ class SelectionDAG {
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
 
-  /// Extended EVTs used for single value VTLists.
-  std::set<EVT, EVT::compareRawBits> EVTs;
-
   /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
   /// SDVTList points at, allocated from \p Allocator.
   struct VTListInfo {
