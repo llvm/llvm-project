@@ -58,10 +58,11 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   const SCEV *IndVarSCEV = SE.getSCEV(LS->getInductionVariable());
   const SCEV *Start;
   const APInt *StepC;
-  [[maybe_unused]] bool Matched = match(
-      IndVarSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(StepC)));
-  assert(Matched && (StepC->isOne() || StepC->isAllOnes()) &&
-         "expected unit-step affine induction");
+  [[maybe_unused]] bool Matched =
+      match(IndVarSCEV,
+            m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(StepC))) &&
+      (StepC->isOne() || StepC->isAllOnes());
+  assert(Matched && "expected unit-step affine induction");
 
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
   const SCEV *End = LS->getInductionEnd();
