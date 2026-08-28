@@ -159,6 +159,7 @@ private:
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
   bool foldBitOrderReverseAndSwap(Instruction &I);
+  bool foldDivRemOfSelect(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -6243,6 +6244,66 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   return true;
 }
 
+/// Split a div/rem by a select of constants, so each arm divides by a constant:
+///   X div/rem (select C, C1, C2) --> select C, (X div/rem C1), (X div/rem C2)
+/// A constant divisor lowers to a shift or magic multiply, not the divider.
+bool VectorCombine::foldDivRemOfSelect(Instruction &I) {
+  Value *X = I.getOperand(0), *Divisor = I.getOperand(1);
+  // The divisor is the select, or a splat of one when the vectorizer has
+  // already widened the division.
+  Value *Sel = Divisor;
+  if (Value *Splat = getSplatValue(Divisor))
+    Sel = Splat;
+
+  Value *Cond;
+  const APInt *C1, *C2;
+  if (!match(Sel, m_Select(m_Value(Cond), m_APInt(C1), m_APInt(C2))))
+    return false;
+
+  // Both arms are evaluated after the split, so neither may be zero, and a
+  // signed arm may not divide by -1.
+  unsigned Opcode = I.getOpcode();
+  bool IsSigned = Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+  if (C1->isZero() || C2->isZero() ||
+      (IsSigned && (C1->isAllOnes() || C2->isAllOnes())))
+    return false;
+
+  Type *Ty = I.getType();
+  Constant *D1 = ConstantInt::get(Ty, *C1), *D2 = ConstantInt::get(Ty, *C2);
+  TTI::OperandValueInfo XInfo = TTI::getOperandInfo(X);
+
+  InstructionCost OldCost = TTI.getArithmeticInstrCost(
+      Opcode, Ty, CostKind, XInfo, {TTI::OK_AnyValue, TTI::OP_None});
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(Opcode, Ty, CostKind, XInfo,
+                                 TTI::getOperandInfo(D1)) +
+      TTI.getArithmeticInstrCost(Opcode, Ty, CostKind, XInfo,
+                                 TTI::getOperandInfo(D2));
+  // A select with other users stays where it is, so the new one is an extra
+  // instruction to cost.
+  if (!Sel->hasOneUse())
+    NewCost += TTI.getCmpSelInstrCost(Instruction::Select, Ty, Cond->getType(),
+                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  LLVM_DEBUG(dbgs() << "VC: foldDivRemOfSelect OldCost=" << OldCost
+                    << " NewCost=" << NewCost << " for " << I << '\n');
+  if (NewCost >= OldCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  auto Op = (Instruction::BinaryOps)Opcode;
+  Value *Arm1 =
+      Builder.Insert(BinaryOperator::CreateWithCopiedFlags(Op, X, D1, &I));
+  Value *Arm2 =
+      Builder.Insert(BinaryOperator::CreateWithCopiedFlags(Op, X, D2, &I));
+  Value *NewSel = Builder.CreateSelect(Cond, Arm1, Arm2, "",
+                                       /*MDFrom=*/dyn_cast<Instruction>(Sel));
+  replaceValue(I, *NewSel);
+  Worklist.pushValue(Arm1);
+  Worklist.pushValue(Arm2);
+  return true;
+}
+
 /// Given the maximum shuffle index and load vector type, compute the number of
 /// elements for the shrunk load, rounding up to the next full vector register
 /// boundary to avoid scalar remainders that legalize poorly.
@@ -6567,6 +6628,10 @@ bool VectorCombine::run() {
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)
       return false;
+
+    if (I.isIntDivRem())
+      if (foldDivRemOfSelect(I))
+        return true;
 
     if (Opcode == Instruction::Call)
       if (foldBitOrderReverseAndSwap(I))

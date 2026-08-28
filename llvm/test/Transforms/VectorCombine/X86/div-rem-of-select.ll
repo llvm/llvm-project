@@ -3,8 +3,9 @@
 
 define i32 @udiv_scalar(i32 %x, i1 %c) {
 ; CHECK-LABEL: @udiv_scalar(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 15, i32 18
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[X]], 18
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 15, i32 18
@@ -14,8 +15,9 @@ define i32 @udiv_scalar(i32 %x, i1 %c) {
 
 define i32 @sdiv_scalar(i32 %x, i1 %c) {
 ; CHECK-LABEL: @sdiv_scalar(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 15, i32 18
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[X]], 18
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 15, i32 18
@@ -25,8 +27,9 @@ define i32 @sdiv_scalar(i32 %x, i1 %c) {
 
 define i32 @urem_scalar(i32 %x, i1 %c) {
 ; CHECK-LABEL: @urem_scalar(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 15, i32 18
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 [[X]], 18
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 15, i32 18
@@ -36,8 +39,9 @@ define i32 @urem_scalar(i32 %x, i1 %c) {
 
 define i32 @udiv_near_pow2(i32 %x, i1 %c) {
 ; CHECK-LABEL: @udiv_near_pow2(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 4, i32 5
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 4, i32 5
@@ -47,8 +51,9 @@ define i32 @udiv_near_pow2(i32 %x, i1 %c) {
 
 define i32 @udiv_exact(i32 %x, i1 %c) {
 ; CHECK-LABEL: @udiv_exact(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 4, i32 5
-; CHECK-NEXT:    [[R:%.*]] = udiv exact i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv exact i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv exact i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 4, i32 5
@@ -58,8 +63,9 @@ define i32 @udiv_exact(i32 %x, i1 %c) {
 
 define <8 x i32> @udiv_vector(<8 x i32> %x, <8 x i1> %c) {
 ; CHECK-LABEL: @udiv_vector(
-; CHECK-NEXT:    [[D:%.*]] = select <8 x i1> [[C:%.*]], <8 x i32> splat (i32 15), <8 x i32> splat (i32 18)
-; CHECK-NEXT:    [[R:%.*]] = udiv <8 x i32> [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <8 x i32> [[X]], splat (i32 18)
+; CHECK-NEXT:    [[R:%.*]] = select <8 x i1> [[C:%.*]], <8 x i32> [[TMP1]], <8 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = select <8 x i1> %c, <8 x i32> splat (i32 15), <8 x i32> splat (i32 18)
@@ -69,10 +75,9 @@ define <8 x i32> @udiv_vector(<8 x i32> %x, <8 x i1> %c) {
 
 define <8 x i32> @udiv_splat_of_select(<8 x i32> %x, i1 %c) {
 ; CHECK-LABEL: @udiv_splat_of_select(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 15, i32 18
-; CHECK-NEXT:    [[I:%.*]] = insertelement <8 x i32> poison, i32 [[D]], i64 0
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[I]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = udiv <8 x i32> [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <8 x i32> [[X]], splat (i32 18)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], <8 x i32> [[TMP1]], <8 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = select i1 %c, i32 15, i32 18
@@ -152,7 +157,9 @@ define i32 @udiv_select_multi_use(i32 %x, i1 %c, ptr %p) {
 ; CHECK-LABEL: @udiv_select_multi_use(
 ; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 15, i32 18
 ; CHECK-NEXT:    store i32 [[D]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[X]], 18
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %d = select i1 %c, i32 15, i32 18
