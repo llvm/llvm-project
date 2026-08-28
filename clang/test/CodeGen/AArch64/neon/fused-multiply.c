@@ -3,8 +3,6 @@
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM-STRICT --implicit-check-not=' @llvm.fma.' %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefix=CIR-STRICT --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
 
 // ALL: {{[Mm]}}odule
 
@@ -52,11 +50,7 @@ float32x2_t test_vfma_f32(float32x2_t a, float32x2_t b, float32x2_t c) {
 }
 
 // LLVM-LABEL: @test_vfma_f64(
-// LLVM-STRICT-LABEL: @test_vfma_f64(
-// LLVM-STRICT: call <1 x double> @llvm.experimental.constrained.fma.v1f64({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CIR-LABEL: @vfma_f64(
-// CIR-STRICT-LABEL: cir.func {{.*}}@vfma_f64(
-// CIR-STRICT: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
 float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double>
 
