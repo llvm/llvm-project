@@ -11,8 +11,8 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
+#include "llvm/ADT/SmallVector.h"
 #include <set>
-#include <vector>
 
 namespace clang::ssaf {
 class TUSummaryExtractor;
@@ -25,7 +25,7 @@ struct DeclPointerLevel {
   bool IsReturn;
 };
 
-using DeclPointerLevels = std::vector<DeclPointerLevel>;
+using DeclPointerLevelVec = llvm::SmallVector<DeclPointerLevel, 2>;
 
 /// An EntityPointerLevel is associated with a level of the declared
 /// pointer/array type of an entity.  In the fully-expanded spelling of the
@@ -107,21 +107,19 @@ llvm::Expected<EntityPointerLevelSet>
 translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
                             TUSummaryExtractor &Extractor);
 
-/// Same as `translateEntityPointerLevel`, except it returns raw
+/// Same as \c translateEntityPointerLevel, except it returns raw
 /// `(NamedDecl *, pointer level, is-return)` tuples (a.k.a. DeclPointerLevels)
 /// instead of assembling an `EntityPointerLevelSet` directly.
-llvm::Expected<DeclPointerLevels>
+llvm::Expected<DeclPointerLevelVec>
 translateDeclPointerLevel(const Expr *E, ASTContext &Ctx,
                           TUSummaryExtractor &Extractor);
 
-/// Assemble `(NamedDecl *, pointer level, is-return)` tuples (a.k.a.
-/// DeclPointerLevels) to `EntityPointerLevelSet`.
+/// Assemble `DeclPointerLevels` into an `EntityPointerLevelSet`.
 Expected<EntityPointerLevelSet>
-toEntityPointerLevels(const DeclPointerLevels &DPLs, ASTContext &Ctx,
+toEntityPointerLevels(const DeclPointerLevelVec &DPLs, ASTContext &Ctx,
                       TUSummaryExtractor &Extractor);
 
-/// Convert a single `(NamedDecl *, pointer level, is-return)` tuple (a.k.a.
-/// DeclPointerLevel) to an `EntityPointerLevel`.
+/// Convert a single `DeclPointerLevel` to an `EntityPointerLevel`.
 Expected<EntityPointerLevel>
 toEntityPointerLevel(const DeclPointerLevel &DPL, ASTContext &Ctx,
                      TUSummaryExtractor &Extractor);
@@ -149,11 +147,12 @@ llvm::Expected<EntityPointerLevel>
 createEntityPointerLevel(const NamedDecl *ND, TUSummaryExtractor &Extractor,
                          bool IsFunRet = false);
 
-/// \return an exhaustive vector of DeclPointerLevels, sorted in ascending order
-/// of pointer level, such that every element is identical to \p DPL except with
-/// a no-lower-than pointer level. The pointer level of each element is bounded
-/// by the type of the NamedDecl of \p DPL.
-DeclPointerLevels elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL);
+/// \return an exhaustive vector of unique DeclPointerLevels, sorted in
+/// ascending order of pointer levels. All elements are identical to \p DPL
+/// except with a pointer level greater than or equal to that of \p DPL. The
+/// pointer level of each element is bounded by the type of \p DPL's NamedDecl.
+DeclPointerLevelVec
+elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL);
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_ENTITYPOINTERLEVEL_ENTITYPOINTERLEVEL_H
