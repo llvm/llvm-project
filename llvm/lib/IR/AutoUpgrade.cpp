@@ -1047,6 +1047,28 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      if (Name.consume_front("convert.from.svbool")) {
+        // 'aarch64.sve.convert.from.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->getReturnType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_to_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
+      if (Name.consume_front("convert.to.svbool")) {
+        // 'aarch64.sve.convert.to.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->arg_begin()->getType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_from_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1275,6 +1297,27 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
         .Case("cg2", Intrinsic::nvvm_tcgen05_commit_mc_cg2)
         .Default(Intrinsic::not_intrinsic);
   }
+
+  return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+  if (F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("tcgen05.alloc.shared.") ||
+      Name.consume_front("tcgen05.alloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("tcgen05.dealloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
 
   return Intrinsic::not_intrinsic;
 }
@@ -1571,6 +1614,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -1892,6 +1940,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         NewFn = Intrinsic::getOrInsertDeclaration(
             F->getParent(), IID, F->getReturnType(),
             F->getFunctionType()->params());
+        return true;
+      }
+
+      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
+      // tcgen05.alloc shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        if (Intrinsic::isOverloaded(IID))
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getArg(0)->getType()});
+        else
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
       }
 
@@ -5055,7 +5116,6 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     return NewCall;
   };
@@ -5112,11 +5172,25 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     NewCall->takeName(CI);
     return NewCall;
   }
+  }
+
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
   }
 
   AtomicRMWInst::BinOp RMWOp =
@@ -5962,6 +6036,14 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   Builder.getFalse()});
+    break;
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:

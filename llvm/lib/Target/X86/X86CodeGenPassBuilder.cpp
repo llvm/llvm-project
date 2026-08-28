@@ -16,6 +16,8 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
+#include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -230,18 +232,15 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
-    // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
-    // ported.
-  }
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
     // ported.
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    // TODO(boomanaiden154): Add EHContGuardTargetsPass when it has been
-    // ported.
+    addMachineFunctionPass(EHContGuardTargetsPass(), PMW);
   }
 
   addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);

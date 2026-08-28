@@ -35,6 +35,6 @@ func.func @dot_f32_bf16_requires_gfx11_or_gfx950(%a: vector<2xbf16>, %b: vector<
 func.func @dot_mixed_sign_requires_gfx11(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
   // expected-error@below {{'amdgpu.dot' op no intrinsic matching dot on the given chipset}}
   // expected-error@below {{failed to legalize operation 'amdgpu.dot'}}
-  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %r = amdgpu.dot %a * %b + %c unsignedB : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }

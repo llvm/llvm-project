@@ -1277,11 +1277,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectWritelane(I);
   case Intrinsic::amdgcn_div_scale:
     return selectDivScale(I);
-  case Intrinsic::amdgcn_icmp:
-  case Intrinsic::amdgcn_fcmp:
-    if (selectImpl(I, *CoverageInfo))
-      return true;
-    return selectIntrinsicCmp(I);
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
@@ -1624,63 +1619,6 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
   constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
-  I.eraseFromParent();
-  return true;
-}
-
-bool AMDGPUInstructionSelector::selectIntrinsicCmp(MachineInstr &I) const {
-  Register Dst = I.getOperand(0).getReg();
-  if (isVCC(Dst, *MRI))
-    return false;
-
-  LLT DstTy = MRI->getType(Dst);
-  if (DstTy.getSizeInBits() != STI.getWavefrontSize())
-    return false;
-
-  MachineBasicBlock *BB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-  Register SrcReg = I.getOperand(2).getReg();
-  unsigned Size = RBI.getSizeInBits(SrcReg, *MRI, TRI);
-
-  // i1 inputs are not supported in GlobalISel.
-  if (Size == 1)
-    return false;
-
-  auto Pred = static_cast<CmpInst::Predicate>(I.getOperand(4).getImm());
-  if (!CmpInst::isIntPredicate(Pred) && !CmpInst::isFPPredicate(Pred)) {
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Dst);
-    I.eraseFromParent();
-    return RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI);
-  }
-
-  const int Opcode = getV_CMPOpcode(Pred, Size, *Subtarget);
-  if (Opcode == -1)
-    return false;
-
-  MachineInstrBuilder SelectedMI;
-  MachineOperand &LHS = I.getOperand(2);
-  MachineOperand &RHS = I.getOperand(3);
-  auto [Src0, Src0Mods] = selectVOP3ModsImpl(LHS.getReg());
-  auto [Src1, Src1Mods] = selectVOP3ModsImpl(RHS.getReg());
-  Register Src0Reg =
-      copyToVGPRIfSrcFolded(Src0, Src0Mods, LHS, &I, /*ForceVGPR*/ true);
-  Register Src1Reg =
-      copyToVGPRIfSrcFolded(Src1, Src1Mods, RHS, &I, /*ForceVGPR*/ true);
-  SelectedMI = BuildMI(*BB, &I, DL, TII.get(Opcode), Dst);
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers))
-    SelectedMI.addImm(Src0Mods);
-  SelectedMI.addReg(Src0Reg);
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1_modifiers))
-    SelectedMI.addImm(Src1Mods);
-  SelectedMI.addReg(Src1Reg);
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::clamp))
-    SelectedMI.addImm(0); // clamp
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel))
-    SelectedMI.addImm(0); // op_sel
-
-  RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI);
-  constrainSelectedInstRegOperands(*SelectedMI, TII, TRI, RBI);
-
   I.eraseFromParent();
   return true;
 }

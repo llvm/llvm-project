@@ -10,6 +10,7 @@
 
 #include "lldb-riscv-register-enums.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 
 #include <stddef.h>
@@ -20,10 +21,6 @@
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Plugins/Process/Utility/RegisterInfos_riscv32.h"
 #undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
-
-static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
-    g_register_infos_riscv32_csr_patches = {
-        {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
 
 RegisterInfoPOSIXDynamic_riscv32::RegisterInfoPOSIXDynamic_riscv32(
     const lldb_private::ArchSpec &target_arch)
@@ -149,6 +146,12 @@ void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
 void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
     llvm::StringRef feature,
     llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
+  // Initialized on first use so that the patch set does not depend on the
+  // initialization order of globals in other translation units.
+  static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
+      g_register_infos_riscv32_csr_patches = {
+          {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
+
   auto it = g_register_infos_riscv32_csr_patches.find(feature);
   if (it == g_register_infos_riscv32_csr_patches.end())
     return;
