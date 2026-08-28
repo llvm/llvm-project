@@ -325,25 +325,42 @@ jobs:
       run: |
         cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
-    # The release ref may predate the compression utility, so check it out
-    # from the same revision as this workflow.
-    - name: Checkout release compression utility
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      with:
-        repository: ${{ job.workflow_repository }}
-        ref: ${{ job.workflow_sha }}
-        persist-credentials: false
-        path: release-compression
-        sparse-checkout: llvm/utils/release/repack-zstd.py
-        sparse-checkout-cone-mode: false
-
     - name: Create zstd compressed tarball
-      run: >-
-        python release-compression/llvm/utils/release/repack-zstd.py
-        --input "${{ needs.prepare.outputs.release-binary-filename }}"
-        --output "${{ needs.prepare.outputs.release-binary-filename-zstd }}"
-        --work-dir "${{ steps.setup-stage.outputs.build-prefix }}"
-        --zstd "${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}"
+      shell: bash
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
+        RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
+        ZSTD: ${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}
+      run: |
+        package_dir="${RELEASE_BINARY_FILENAME%.tar.xz}"
+        repack_dir=$(mktemp -d "$BUILD_PREFIX/zstd-repack.XXXXXX")
+        trap 'rm -rf "$repack_dir"' EXIT
+
+        tar -xJf "$RELEASE_BINARY_FILENAME" -C "$repack_dir"
+        uncompressed_tar="$repack_dir/$package_dir.tar"
+        file_list="$repack_dir/file-list"
+        (
+          cd "$repack_dir" || exit 1
+          find "$package_dir" -print | LC_ALL=C sort > "$file_list"
+
+          tar_options=(--no-recursion --owner=0 --group=0 --numeric-owner \
+            --no-acls --no-xattrs)
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            tar_options+=(--no-mac-metadata)
+          fi
+          tar "${tar_options[@]}" -cf "$uncompressed_tar" -T "$file_list"
+        )
+
+        # A 1 GiB window captures duplicate code across the large statically
+        # linked tools. Match the job size to the window and cap the worker
+        # count to keep memory usage bounded.
+        zstd_threads=6
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          zstd_threads=4
+        fi
+        "$ZSTD" --ultra -21 --long=30 -T"$zstd_threads" -B1024M \
+          "$uncompressed_tar" -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
     - name: Generate sha256 digest for binaries
       id: digest
