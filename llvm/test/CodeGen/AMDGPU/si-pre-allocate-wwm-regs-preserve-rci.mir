@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN:   -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" \
+# RUN:   -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN:   -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
+
+# Verify that SIPreAllocateWWMRegsPass updates the
+# MachineRegisterClassAnalysis result in place. The second require must reuse
+# the result computed by the first.
+
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction{{.*}}> on test_wwm_reserved
+# CHECK-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction{{.*}}> on test_wwm_reserved
+# CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
+
+# MIR: wwmReservedRegs:
+# MIR-NEXT: - '$vgpr0'
+
+---
+name: test_wwm_reserved
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr1
+    %0:vgpr_32 = IMPLICIT_DEF
+    renamable $sgpr4_sgpr5 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_dpp %1, %0, 323, 12, 15, 0, implicit $exec
+    $exec = EXIT_STRICT_WWM killed renamable $sgpr4_sgpr5
+    %3:vgpr_32 = COPY %0
+    %4:vreg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %4
+...

@@ -442,16 +442,18 @@ defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
-multiclass StoreLanePat<Vec vec, SDPatternOperator kind> {
+multiclass StoreLanePat<Vec vec, Vec instVec, SDPatternOperator kind> {
   def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr),
                   (vec.vt V128:$vec),
                   (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, $offset, imm:$idx, $addr, $vec)>,
+            (!cast<NI>("STORE_LANE_"#instVec#"_A32") 0, $offset, imm:$idx,
+                                                       $addr, $vec)>,
         Requires<[HasAddr32]>;
   def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr),
                   (vec.vt V128:$vec),
                   (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, $offset, imm:$idx, $addr, $vec)>,
+            (!cast<NI>("STORE_LANE_"#instVec#"_A64") 0, $offset, imm:$idx,
+                                                       $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -462,18 +464,23 @@ def store16_lane :
   PatFrag<(ops node:$ptr, node:$vec, node:$idx),
           (truncstorei16 (i32 (vector_extract $vec, $idx)), $ptr)>;
 def store32_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (store (i32 (vector_extract $vec, $idx)), $ptr)>;
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (store (i32 (vector_extract $vec, $idx)), $ptr),
+           (store (f32 (vector_extract $vec, $idx)), $ptr)
+]>;
 def store64_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (store (i64 (vector_extract $vec, $idx)), $ptr)>;
-// TODO: floating point lanes as well
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (store (i64 (vector_extract $vec, $idx)), $ptr),
+           (store (f64 (vector_extract $vec, $idx)), $ptr)
+]>;
 
 let AddedComplexity = 1 in {
-defm : StoreLanePat<I8x16, store8_lane>;
-defm : StoreLanePat<I16x8, store16_lane>;
-defm : StoreLanePat<I32x4, store32_lane>;
-defm : StoreLanePat<I64x2, store64_lane>;
+defm : StoreLanePat<I8x16, I8x16, store8_lane>;
+defm : StoreLanePat<I16x8, I16x8, store16_lane>;
+defm : StoreLanePat<I32x4, I32x4, store32_lane>;
+defm : StoreLanePat<I64x2, I64x2, store64_lane>;
+defm : StoreLanePat<F32x4, I32x4, store32_lane>;
+defm : StoreLanePat<F64x2, I64x2, store64_lane>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1667,13 +1674,15 @@ defm "" : HalfPrecisionConvert<F32x4, I16x8, promote_low, "promote_low_f16x8",
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let MemoryVT = v2f32;
 }
-// Adapted from the body of LoadPatNoOffset
-// TODO: other addressing patterns
-def : Pat<(v2f64 (extloadv2f32 (i32 I32:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A32 0, 0, I32:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps32 offset32_op:$offset, I32:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A32 0, offset32_op:$offset, I32:$addr))>,
       Requires<[HasAddr32]>;
-def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A64 0, 0, I64:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps64 offset64_op:$offset, I64:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A64 0, offset64_op:$offset, I64:$addr))>,
       Requires<[HasAddr64]>;
 
 //===----------------------------------------------------------------------===//
