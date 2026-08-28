@@ -69,7 +69,7 @@ template <typename... Levels> auto hasPointerLevels(Levels... Ls) {
 /// belongs to that declaration.
 template <typename DeclT = NamedDecl>
 DeclPointerLevelVec elaborateFor(ASTContext &Ctx, StringRef Name,
-                               unsigned StartLevel, bool IsReturn = false) {
+                                 unsigned StartLevel, bool IsReturn = false) {
   const DeclT *ND = findDeclByName<DeclT>(Name, Ctx);
   EXPECT_TRUE(ND) << "decl not found: " << Name.str();
   if (!ND)

@@ -151,7 +151,8 @@ createEntityPointerLevel(const NamedDecl *ND, TUSummaryExtractor &Extractor,
 /// ascending order of pointer levels. All elements are identical to \p DPL
 /// except with a pointer level greater than or equal to that of \p DPL. The
 /// pointer level of each element is bounded by the type of \p DPL's NamedDecl.
-DeclPointerLevelVec elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL);
+DeclPointerLevelVec
+elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL);
 
 /// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s
 /// pointer level.

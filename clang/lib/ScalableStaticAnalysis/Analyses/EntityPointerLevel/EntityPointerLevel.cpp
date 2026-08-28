@@ -263,7 +263,8 @@ private:
   }
 
   // Unwrap ExprWithCleanups
-  Expected<DeclPointerLevelVec> VisitExprWithCleanups(const ExprWithCleanups *S) {
+  Expected<DeclPointerLevelVec>
+  VisitExprWithCleanups(const ExprWithCleanups *S) {
     return Visit(S->getSubExpr());
   }
 
@@ -320,7 +321,8 @@ private:
   // When a CXXConstructExpr has an array type, clang is initializing an array
   // of class-type objects with default values.  In this case, no entity is
   // associated with the initializer.
-  Expected<DeclPointerLevelVec> VisitCXXConstructExpr(const CXXConstructExpr *E) {
+  Expected<DeclPointerLevelVec>
+  VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (E->getType()->isArrayType()) {
       return DeclPointerLevelVec{};
     }
