@@ -38,7 +38,7 @@ define i64 @vsetvli_const_avl_at_min128() {
 define i64 @vsetvli_const_avl_mid() {
 ; VLEN128-LABEL: define i64 @vsetvli_const_avl_mid(
 ; VLEN128-SAME: ) #[[ATTR0]] {
-; VLEN128-NEXT:    [[VL:%.*]] = call range(i64 0, 21) i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
+; VLEN128-NEXT:    [[VL:%.*]] = call range(i64 1, 21) i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
 ; VLEN128-NEXT:    ret i64 [[VL]]
 ;
 ; VLEN512-LABEL: define i64 @vsetvli_const_avl_mid(
@@ -54,7 +54,7 @@ define i64 @vsetvli_const_avl_mid() {
 define i64 @vsetvli_const_avl_above_max() {
 ; CHECK-LABEL: define i64 @vsetvli_const_avl_above_max(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[VL:%.*]] = call range(i64 0, 8193) i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
+; CHECK-NEXT:    [[VL:%.*]] = call range(i64 1, 8193) i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
 ; CHECK-NEXT:    ret i64 [[VL]]
 ;
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
@@ -129,7 +129,7 @@ define i64 @vsetvli_vl_known_nonzero(i64 %x) {
 ; CHECK-LABEL: define i64 @vsetvli_vl_known_nonzero(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AVL:%.*]] = add nuw i64 [[X]], 1
-; CHECK-NEXT:    [[VL:%.*]] = call range(i64 0, 8193) i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 0)
+; CHECK-NEXT:    [[VL:%.*]] = call range(i64 1, 8193) i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 0)
 ; CHECK-NEXT:    ret i64 [[VL]]
 ;
   %avl = add nuw i64 %x, 1
