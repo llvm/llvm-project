@@ -88,7 +88,7 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<%c0> ir<%add2>/vp<[[VP4]]>
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<true> ir<%add2>/ir<%c1>
 ; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%c0>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
@@ -184,7 +184,7 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%c3>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP8]]>, vp<[[VP7]]>
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP6]]> ir<%add2>/vp<[[VP7]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP5]]> ir<%add2>/ir<%c1>
 ; CHECK-NEXT:      EMIT ir<%add4> = add ir<%phi4>, ir<4>, vp<[[VP9]]>
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:

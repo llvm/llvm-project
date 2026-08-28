@@ -6,39 +6,29 @@
 define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d) {
 ; CHECK-LABEL: define void @pr154103(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[LATCH:.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X]] to i64
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 0, [[CONV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[DIV]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[LATCH]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[B]], align 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[Y]] to i64
+; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[ZEXT]], 0
+; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[LATCH]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ -7905747460161236406, %[[LOOP]] ], [ [[IV:%.*]], %[[LATCH]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i8> @llvm.experimental.vp.strided.load.nxv4i8.p0.i64(ptr align 1 [[TMP3]], i64 7, <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 4 x i8> [[TMP4]] to <vscale x 4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.vp.sdiv.nxv4i64(<vscale x 4 x i64> zeroinitializer, <vscale x 4 x i64> [[TMP5]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <vscale x 4 x i64> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP7]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 4 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <vscale x 4 x i64> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1> [[TMP7]], <vscale x 4 x i64> [[TMP9]], <vscale x 4 x i64> zeroinitializer, i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <vscale x 4 x i64> [[TMP10]] to <vscale x 4 x i16>
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> [[TMP11]], <vscale x 4 x ptr> align 2 [[BROADCAST_SPLAT2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[NOT]], %[[THEN]] ], [ 0, %[[LOOP]] ]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i16
+; CHECK-NEXT:    store i16 [[TRUNC]], ptr [[C]], align 2
 ; CHECK-NEXT:    store i32 0, ptr [[D]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP12]], [[INDEX]]
-; CHECK-NEXT:    [[IV]] = sub nuw i64 [[AVL]], [[TMP12]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 7
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT1:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;

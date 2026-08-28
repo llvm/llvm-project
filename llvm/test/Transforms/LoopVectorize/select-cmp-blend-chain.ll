@@ -111,9 +111,8 @@ define i32 @anyof_three_blend_chain(i1 %c0, i1 %c1, i1 %c2, i32 %n) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT3]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
