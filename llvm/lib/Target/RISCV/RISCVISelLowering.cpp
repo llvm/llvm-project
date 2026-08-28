@@ -1127,14 +1127,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       if (Subtarget.hasStdExtZvabd()) {
         setOperationAction(ISD::ABS, VT, Legal);
-        // Only SEW=8/16 are supported in Zvabd.
-        if (VT.getVectorElementType() == MVT::i8 ||
-            VT.getVectorElementType() == MVT::i16)
-          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
-        else
-          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
-      } else
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+      } else {
         setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      }
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
@@ -9563,10 +9559,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ABDS:
   case ISD::ABDU: {
     EVT VT = Op->getValueType(0);
-    // Only SEW=8/16 are supported in Zvabd.
-    if (Subtarget.hasStdExtZvabd() && VT.isVector() &&
-        (VT.getVectorElementType() == MVT::i8 ||
-         VT.getVectorElementType() == MVT::i16))
+    if (Subtarget.hasStdExtZvabd() && VT.isVector())
       return lowerToScalableOp(Op, DAG);
 
     SDLoc dl(Op);
@@ -12277,28 +12270,22 @@ static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_h00:
-  case Intrinsic::riscv_mqacc_w00:
+  case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
     return RISCVISD::MQACC_00;
-  case Intrinsic::riscv_mqacc_h01:
-  case Intrinsic::riscv_mqacc_w01:
+  case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
     return RISCVISD::MQACC_01;
-  case Intrinsic::riscv_mqacc_h11:
-  case Intrinsic::riscv_mqacc_w11:
+  case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
     return RISCVISD::MQACC_11;
-  case Intrinsic::riscv_mqracc_h00:
-  case Intrinsic::riscv_mqracc_w00:
+  case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
     return RISCVISD::MQRACC_00;
-  case Intrinsic::riscv_mqracc_h01:
-  case Intrinsic::riscv_mqracc_w01:
+  case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
     return RISCVISD::MQRACC_01;
-  case Intrinsic::riscv_mqracc_h11:
-  case Intrinsic::riscv_mqracc_w11:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::MQRACC_11;
   }
@@ -12308,22 +12295,22 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_h00:
+  case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
     return RISCVISD::PMQACC_W_H00;
-  case Intrinsic::riscv_mqacc_h01:
+  case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
     return RISCVISD::PMQACC_W_H01;
-  case Intrinsic::riscv_mqacc_h11:
+  case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
     return RISCVISD::PMQACC_W_H11;
-  case Intrinsic::riscv_mqracc_h00:
+  case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
     return RISCVISD::PMQRACC_W_H00;
-  case Intrinsic::riscv_mqracc_h01:
+  case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
     return RISCVISD::PMQRACC_W_H01;
-  case Intrinsic::riscv_mqracc_h11:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::PMQRACC_W_H11;
   }
@@ -12542,36 +12529,25 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     llvm_unreachable("unexpected VT for pnclipp/pnclipup on RV32");
   }
-  case Intrinsic::riscv_mqacc_h00:
-  case Intrinsic::riscv_mqacc_h01:
-  case Intrinsic::riscv_mqacc_h11:
-  case Intrinsic::riscv_mqracc_h00:
-  case Intrinsic::riscv_mqracc_h01:
-  case Intrinsic::riscv_mqracc_h11:
+  case Intrinsic::riscv_mqacc_00:
+  case Intrinsic::riscv_mqacc_01:
+  case Intrinsic::riscv_mqacc_11:
+  case Intrinsic::riscv_mqracc_00:
+  case Intrinsic::riscv_mqracc_01:
+  case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqacc_h00:
   case Intrinsic::riscv_pmqacc_h01:
   case Intrinsic::riscv_pmqacc_h11:
   case Intrinsic::riscv_pmqracc_h00:
   case Intrinsic::riscv_pmqracc_h01:
-  case Intrinsic::riscv_pmqracc_h11:
-  case Intrinsic::riscv_mqacc_w00:
-  case Intrinsic::riscv_mqacc_w01:
-  case Intrinsic::riscv_mqacc_w11:
-  case Intrinsic::riscv_mqracc_w00:
-  case Intrinsic::riscv_mqracc_w01:
-  case Intrinsic::riscv_mqracc_w11: {
+  case Intrinsic::riscv_pmqracc_h11: {
     EVT VT = Op.getValueType();
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
     MVT XLenVT = Subtarget.getXLenVT();
 
-    bool IsScalarHalfword = IntNo == Intrinsic::riscv_mqacc_h00 ||
-                            IntNo == Intrinsic::riscv_mqacc_h01 ||
-                            IntNo == Intrinsic::riscv_mqacc_h11 ||
-                            IntNo == Intrinsic::riscv_mqracc_h00 ||
-                            IntNo == Intrinsic::riscv_mqracc_h01 ||
-                            IntNo == Intrinsic::riscv_mqracc_h11;
+    bool IsScalarHalfword = VT == MVT::i32;
     if (Subtarget.is64Bit() && IsScalarHalfword)
       return SDValue();
 
@@ -15142,14 +15118,14 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
+  SDValue SplatZero = DAG.getNode(
+      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
   SDValue Result;
   if (Subtarget.hasStdExtZvabd()) {
-    Result = DAG.getNode(RISCVISD::ABS_VL, DL, ContainerVT, X,
+    Result = DAG.getNode(RISCVISD::ABDS_VL, DL, ContainerVT, X, SplatZero,
                          DAG.getUNDEF(ContainerVT), Mask, VL);
   } else {
-    SDValue SplatZero = DAG.getNode(
-        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-        DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
     SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
                                DAG.getUNDEF(ContainerVT), Mask, VL);
     Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
@@ -17099,56 +17075,52 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
-    case Intrinsic::riscv_mqacc_h00:
-    case Intrinsic::riscv_mqacc_h01:
-    case Intrinsic::riscv_mqacc_h11:
-    case Intrinsic::riscv_mqracc_h00:
-    case Intrinsic::riscv_mqracc_h01:
-    case Intrinsic::riscv_mqracc_h11: {
+    case Intrinsic::riscv_mqacc_00:
+    case Intrinsic::riscv_mqacc_01:
+    case Intrinsic::riscv_mqacc_11:
+    case Intrinsic::riscv_mqracc_00:
+    case Intrinsic::riscv_mqracc_01:
+    case Intrinsic::riscv_mqracc_11: {
       EVT VT = N->getValueType(0);
-      if (!Subtarget.is64Bit() || VT != MVT::i32)
+      if (Subtarget.is64Bit() && VT == MVT::i32) {
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        auto WidenSrc = [&](SDValue V) {
+          return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                             {V, DAG.getUNDEF(MVT::v2i16)});
+        };
+        SDValue Rs1 = WidenSrc(N->getOperand(2));
+        SDValue Rs2 = WidenSrc(N->getOperand(3));
+        unsigned Opc = getRVPQFormatAccOpcode(IntNo);
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
         return;
-      SDValue Rd =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      auto WidenSrc = [&](SDValue V) {
-        return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
-                           {V, DAG.getUNDEF(MVT::v2i16)});
-      };
-      SDValue Rs1 = WidenSrc(N->getOperand(2));
-      SDValue Rs2 = WidenSrc(N->getOperand(3));
-      unsigned Opc = getRVPQFormatAccOpcode(IntNo);
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
-      return;
-    }
-    case Intrinsic::riscv_mqacc_w00:
-    case Intrinsic::riscv_mqacc_w01:
-    case Intrinsic::riscv_mqacc_w11:
-    case Intrinsic::riscv_mqracc_w00:
-    case Intrinsic::riscv_mqracc_w01:
-    case Intrinsic::riscv_mqracc_w11: {
-      if (Subtarget.is64Bit() || N->getValueType(0) != MVT::i64)
+      }
+
+      if (!Subtarget.is64Bit() && VT == MVT::i64) {
+        bool IsRound = IntNo == Intrinsic::riscv_mqracc_00 ||
+                       IntNo == Intrinsic::riscv_mqracc_01 ||
+                       IntNo == Intrinsic::riscv_mqracc_11;
+        bool Hi1 = IntNo == Intrinsic::riscv_mqacc_11 ||
+                   IntNo == Intrinsic::riscv_mqracc_11;
+        bool Hi2 = IntNo == Intrinsic::riscv_mqacc_01 ||
+                   IntNo == Intrinsic::riscv_mqacc_11 ||
+                   IntNo == Intrinsic::riscv_mqracc_01 ||
+                   IntNo == Intrinsic::riscv_mqracc_11;
+        MVT XLenVT = Subtarget.getXLenVT();
+        SDValue Rs1 = N->getOperand(2);
+        SDValue Rs2 = N->getOperand(3);
+        SDValue A = DAG.getExtractVectorElt(DL, XLenVT, Rs1, Hi1 ? 1 : 0);
+        SDValue B = DAG.getExtractVectorElt(DL, XLenVT, Rs2, Hi2 ? 1 : 0);
+        auto [RdLo, RdHi] =
+            DAG.SplitScalar(N->getOperand(1), DL, XLenVT, XLenVT);
+        unsigned Opc = IsRound ? RISCVISD::MQRWACC : RISCVISD::MQWACC;
+        SDVTList VTs = DAG.getVTList(XLenVT, XLenVT);
+        SDValue Acc = DAG.getNode(Opc, DL, VTs, {RdLo, RdHi, A, B});
+        Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                                      Acc.getValue(0), Acc.getValue(1)));
         return;
-      bool IsRound = IntNo == Intrinsic::riscv_mqracc_w00 ||
-                     IntNo == Intrinsic::riscv_mqracc_w01 ||
-                     IntNo == Intrinsic::riscv_mqracc_w11;
-      bool Hi1 = IntNo == Intrinsic::riscv_mqacc_w11 ||
-                 IntNo == Intrinsic::riscv_mqracc_w11;
-      bool Hi2 = IntNo == Intrinsic::riscv_mqacc_w01 ||
-                 IntNo == Intrinsic::riscv_mqacc_w11 ||
-                 IntNo == Intrinsic::riscv_mqracc_w01 ||
-                 IntNo == Intrinsic::riscv_mqracc_w11;
-      MVT XLenVT = Subtarget.getXLenVT();
-      SDValue Rs1 = N->getOperand(2);
-      SDValue Rs2 = N->getOperand(3);
-      SDValue A = DAG.getExtractVectorElt(DL, XLenVT, Rs1, Hi1 ? 1 : 0);
-      SDValue B = DAG.getExtractVectorElt(DL, XLenVT, Rs2, Hi2 ? 1 : 0);
-      auto [RdLo, RdHi] = DAG.SplitScalar(N->getOperand(1), DL, XLenVT, XLenVT);
-      unsigned Opc = IsRound ? RISCVISD::MQRWACC : RISCVISD::MQWACC;
-      SDVTList VTs = DAG.getVTList(XLenVT, XLenVT);
-      SDValue Acc = DAG.getNode(Opc, DL, VTs, {RdLo, RdHi, A, B});
-      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
-                                    Acc.getValue(0), Acc.getValue(1)));
+      }
       return;
     }
     case Intrinsic::riscv_orc_b:
@@ -18483,6 +18455,11 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+// (and (i1) f, (setcc a, b, eq)) -> (czero.nez f, (xor a, b))
+// (and (i1) f, (setcc a, b, ne)) -> (czero.eqz f, (xor a, b))
+// (and (setcc a, b, eq), (i1) g) -> (czero.nez g, (xor a, b))
+// (and (setcc a, b, ne), (i1) g) -> (czero.eqz g, (xor a, b))
+//
 // (and (i1) f, (setcc c, 0, ne)) -> (czero.nez f, c)
 // (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
 // (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
@@ -18495,8 +18472,8 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  auto IsEqualCompZero = [](SDValue &V) -> bool {
-    if (V.getOpcode() == ISD::SETCC && isNullConstant(V.getOperand(1))) {
+  auto IsSetCCEquality = [](SDValue &V) -> bool {
+    if (V.getOpcode() == ISD::SETCC) {
       ISD::CondCode CC = cast<CondCodeSDNode>(V.getOperand(2))->get();
       if (ISD::isIntEqualitySetCC(CC))
         return true;
@@ -18504,23 +18481,34 @@ static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
     std::swap(N0, N1);
-  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
     return SDValue();
 
   KnownBits Known = DAG.computeKnownBits(N1);
   if (Known.getMaxValue().ugt(1))
     return SDValue();
 
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   unsigned CzeroOpcode =
       (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
           ? RISCVISD::CZERO_EQZ
           : RISCVISD::CZERO_NEZ;
 
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-  return DAG.getNode(CzeroOpcode, DL, VT, N1, N0.getOperand(0));
+  // From here we have two cases:
+  // Either setcc is a comparision with zero, and we can lower directly to a
+  // czero instruction; Or it's not a constant zero, in which case we can still
+  // use a czero, but we first need to get a zero or one value comparing the two
+  // sides of setcc.
+  SDValue Rhs = N0.getOperand(0);
+  if (!isNullConstant(N0->getOperand(1))) {
+    Rhs = DAG.getNode(ISD::XOR, DL, N0.getValueType(), N0.getOperand(0),
+                      N0.getOperand(1));
+  }
+
+  return DAG.getNode(CzeroOpcode, DL, VT, N1, Rhs);
 }
 
 static SDValue reduceANDOfAtomicLoad(SDNode *N,

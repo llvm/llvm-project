@@ -7040,7 +7040,7 @@ define i64 @test_mqacc_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqacc.w00 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqacc.w00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqacc.00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
 
@@ -7054,7 +7054,7 @@ define i64 @test_mqacc_w01_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqacc.w01 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqacc.w01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqacc.01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
 
@@ -7068,7 +7068,7 @@ define i64 @test_mqacc_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqacc.w11 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqacc.w11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqacc.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
 
@@ -7082,7 +7082,7 @@ define i64 @test_mqracc_w00_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqracc.w00 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqracc.w00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqracc.00.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
 
@@ -7096,7 +7096,7 @@ define i64 @test_mqracc_w01_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqracc.w01 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqracc.w01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqracc.01.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
 
@@ -7110,6 +7110,6 @@ define i64 @test_mqracc_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    mqracc.w11 a0, a1, a2
 ; RV64-NEXT:    ret
-  %r = call i64 @llvm.riscv.mqracc.w11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
+  %r = call i64 @llvm.riscv.mqracc.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
 }
