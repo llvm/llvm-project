@@ -3,7 +3,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@imported_g = external addrspace(1) global i32 #0
+@imported_g = external addrspace(1) global i32 "wasm-import-module"="js" "wasm-import-name"="global_g"
 
 define i32 @get() {
   %v = load i32, ptr addrspace(1) @imported_g
@@ -21,6 +21,4 @@ define i32 @get() {
 ; OBJ-NEXT:       Kind:            GLOBAL
 ; OBJ-NEXT:       GlobalType:      I32
 ; OBJ-NEXT:       GlobalMutable:   true
-
-attributes #0 = { "wasm-import-module"="js" "wasm-import-name"="global_g" }
 

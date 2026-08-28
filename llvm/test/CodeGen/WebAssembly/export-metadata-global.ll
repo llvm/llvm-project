@@ -3,8 +3,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@exported_g = addrspace(1) global i32 42 #0
-@exported_mem = global i32 100 #1
+@exported_g = addrspace(1) global i32 42 "wasm-export-name"="global_g"
+@exported_mem = global i32 100 "wasm-export-name"="mem_g"
 
 ; ASM: .globaltype exported_g, i32
 ; ASM: exported_g:
@@ -32,6 +32,4 @@ target triple = "wasm32-unknown-unknown"
 ; OBJ:            Name:            exported_mem
 ; OBJ:            Flags:           [ EXPORTED ]
 
-attributes #0 = { "wasm-export-name"="global_g" }
-attributes #1 = { "wasm-export-name"="mem_g" }
 
