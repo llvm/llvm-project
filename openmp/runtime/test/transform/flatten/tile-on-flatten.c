@@ -1,4 +1,5 @@
-// RUN: %libomp-compile-and-run | FileCheck %s --match-full-lines
+// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 #ifndef HEADER
 #define HEADER

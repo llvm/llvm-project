@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-load-source local %s -fopenmp=libomp -fopenmp-version=60 | FileCheck %s
+// RUN: c-index-test -test-load-source local %s -fopenmp=libomp -fopenmp-version=61 | FileCheck %s
 
 void test(void) {
 #pragma omp flatten

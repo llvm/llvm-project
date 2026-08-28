@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -fsyntax-only -Wuninitialized -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -fsyntax-only -Wuninitialized -verify %s
 
 extern "C" void body(...);
 
@@ -50,8 +50,8 @@ void func(int n) {
     for (int j = 0; j / 3 < n; ++j)
       body(i, j);
 
-  // The affected loops must be rectangular: an inner bound may not depend on an
-  // outer loop counter.
+  // The spec allows non-rectangular nests, but this implementation does not
+  // yet: an inner bound that depends on an outer loop counter is diagnosed.
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     // expected-error@+1 {{expected loop invariant expression}}
@@ -79,17 +79,10 @@ void func(int n) {
     for (int j = 0; j < 9; ++j)
       body(i, j);
 
-  // The 'depth' clause is only available from OpenMP 6.1; it is rejected here
-  // under -fopenmp-version=60.
-  // expected-error@+1 {{unexpected OpenMP clause 'depth' in directive '#pragma omp flatten'}}
-  #pragma omp flatten depth(2)
-  for (int i = 0; i < 7; ++i)
-    for (int j = 0; j < 9; ++j)
-      body(i, j);
-
   // Without a depth clause, only the outermost two loops are flattened. Warn
   // when a deeper perfect nest is left partially unflattened.
-  // expected-warning@+1 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  // expected-note@+1 {{insert 'depth(2)' to flatten only the outermost 2 loops}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
@@ -109,7 +102,8 @@ void func(int n) {
   // Stacked flatten: the inner flatten injects helper statements, so the outer
   // flatten does not see a perfect nest of remaining loops.
   #pragma omp flatten
-  // expected-warning@+1 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  // expected-note@+1 {{insert 'depth(2)' to flatten only the outermost 2 loops}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)

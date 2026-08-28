@@ -1,5 +1,5 @@
-// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run | FileCheck %s
-// --match-full-lines
+// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 // A depth(2) clause on a three-deep loop nest flattens only the outermost two
 // loops; the innermost loop is left untouched and executes normally inside the

@@ -16586,8 +16586,11 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
           << Found;
       return StmtError();
     }
-    if (!DepthClause && Found >= 3)
+    if (!DepthClause && Found >= 3) {
       Diag(StartLoc, diag::warn_omp_flatten_omitted_depth);
+      Diag(StartLoc, diag::note_omp_flatten_insert_depth)
+          << FixItHint::CreateInsertion(EndLoc, " depth(2)");
+    }
   }
 
   // Defer when 'depth' is instantiation-dependent (concrete k unknown until
@@ -16690,10 +16693,11 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     return Product;
   };
 
-  bool AllCountsLessThan32Bits = true;
-  for (unsigned I = 0; I < NumLoops; ++I)
-    AllCountsLessThan32Bits &=
-        Context.getTypeSize(LoopHelpers[I].NumIterations->getType()) < 32;
+  bool AllCountsLessThan32Bits =
+      llvm::all_of(llvm::seq<unsigned>(NumLoops), [&](unsigned I) {
+        return Context.getTypeSize(LoopHelpers[I].NumIterations->getType()) <
+               32;
+      });
 
   ExprResult TripCount;
   if (AllCountsLessThan32Bits || NumLoops == 1) {

@@ -1,5 +1,5 @@
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -emit-llvm %s -o - | FileCheck %s
 
 // expected-no-diagnostics
 

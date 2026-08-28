@@ -1,4 +1,5 @@
-// RUN: %libomp-compile-and-run | FileCheck %s --match-full-lines
+// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 // Flatten changes which iterations a worksharing loop assigns to which
 // thread. With schedule(static,1) and two threads:

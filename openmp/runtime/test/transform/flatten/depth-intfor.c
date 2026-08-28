@@ -1,5 +1,5 @@
-// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run | FileCheck %s
-// --match-full-lines
+// RUN: %libomp-compile -fopenmp-version=61 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 // 'depth(3)' fully flattens a three-deep perfectly nested loop into one loop.
 // This verifies that the flattened loop preserves the exact row-major
