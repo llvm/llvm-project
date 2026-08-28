@@ -31,7 +31,8 @@ Operation *mlir::memoryslot::replaceWithNewResults(RewriterBase &rewriter,
   RewriterBase::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(op);
   OperationState state(op->getLoc(), op->getName(), op->getOperands(),
-                       resultTypes, op->getAttrs());
+                       resultTypes,
+                       op->getDiscardableAttrDictionary().getValue());
   state.propertiesAttr = op->getPropertiesAsAttribute();
   unsigned numRegions = op->getNumRegions();
   for (unsigned i = 0; i < numRegions; ++i)

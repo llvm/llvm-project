@@ -158,6 +158,14 @@ func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
 
 // -----
 
+func.func @test_cast_input_unsigned_true_wrong_version(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.cast' op failed attribute check: CAST attribute input_unsigned requires version 1.1.draft (got 1.0)}}
+  %0 = tosa.cast %arg0 {input_unsigned = true} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
 func.func @test_cast_bool_i64(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi64> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires any of [int64] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xi64>
@@ -285,6 +293,13 @@ func.func @test_block_scaled_concat(%arg0: tensor<13x21x32x!tosa.block_scaled<BL
 }
 
 // -----
+func.func @test_block_scaled_dim(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) {
+  // expected-error@+1 {{'tosa.dim' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3, shape] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> !tosa.shape<1>
+  return
+}
+
+// -----
 
 func.func @test_resize_fp8(%arg0: tensor<1x32x32x8xf8E4M3FN>) -> tensor<1x64x64x8xf8E4M3FN> {
   %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
@@ -304,4 +319,12 @@ func.func @test_resize_mxfp(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SH
   // expected-error@+1 {{'tosa.resize' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
   %0 = tosa.resize %arg0, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_transpose_block_scaled_f6E3M2FN(%input: tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>> {
+  // expected-error@+1 {{'tosa.transpose' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp6e3m2] profiles/extensions to be specified in the target environment}}
+  %transpose = tosa.transpose %input  { perms = array<i32: 2, 0, 1, 3> } : (tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  return %transpose : tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
 }

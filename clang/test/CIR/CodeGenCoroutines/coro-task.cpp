@@ -7,15 +7,15 @@
 
 #include "Inputs/coroutine.h"
 
-// CIR-DAG: ![[VoidTask:.*]] = !cir.struct<"folly::coro::Task<void>" padded {pad !u8i}>
-// CIR-DAG: ![[IntTask:.*]] = !cir.struct<"folly::coro::Task<int>" padded {pad !u8i}>
-// CIR-DAG: ![[VoidPromisse:.*]] = !cir.struct<"folly::coro::Task<void>::promise_type" padded {pad !u8i}>
-// CIR-DAG: ![[IntPromisse:.*]] = !cir.struct<"folly::coro::Task<int>::promise_type" padded {pad !u8i}>
-// CIR-DAG: ![[StdString:.*]] = !cir.struct<"std::string" padded {pad !u8i}>
-// CIR-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<"std::coroutine_handle<void>" padded {pad !u8i}>
-// CIR-DAG: ![[CoroHandlePromiseVoid:rec_.*]]  = !cir.struct<"std::coroutine_handle<folly::coro::Task<void>::promise_type>" padded {pad !u8i}>
-// CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.struct<"std::coroutine_handle<folly::coro::Task<int>::promise_type>" padded {pad !u8i}>
-// CIR-DAG: ![[SuspendAlways:.*]] = !cir.struct<"std::suspend_always" padded {pad !u8i}>
+// CIR-DAG: ![[VoidTask:.*]] = !cir.struct<"folly::coro::Task<void>" {pad !u8i}>
+// CIR-DAG: ![[IntTask:.*]] = !cir.struct<"folly::coro::Task<int>" {pad !u8i}>
+// CIR-DAG: ![[VoidPromisse:.*]] = !cir.struct<"folly::coro::Task<void>::promise_type" {pad !u8i}>
+// CIR-DAG: ![[IntPromisse:.*]] = !cir.struct<"folly::coro::Task<int>::promise_type" {pad !u8i}>
+// CIR-DAG: ![[StdString:.*]] = !cir.struct<"std::string" {pad !u8i}>
+// CIR-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<"std::coroutine_handle<void>" {pad !u8i}>
+// CIR-DAG: ![[CoroHandlePromiseVoid:rec_.*]]  = !cir.struct<"std::coroutine_handle<folly::coro::Task<void>::promise_type>" {pad !u8i}>
+// CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.struct<"std::coroutine_handle<folly::coro::Task<int>::promise_type>" {pad !u8i}>
+// CIR-DAG: ![[SuspendAlways:.*]] = !cir.struct<"std::suspend_always" {pad !u8i}>
 
 // OGCG-DAG: %[[VoidPromisse:"struct.folly::coro::Task<void>::promise_type"]] = type { i8 }
 // OGCG-DAG: %[[VoidTask:"struct.folly::coro::Task"]] = type { i8 }
@@ -460,23 +460,6 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENK3$_0clEv{{.*}} ![[IntTask]]
-// CIR: cir.cleanup.scope {
-// CIR:   cir.await(init, ready : {
-// CIR:   }, suspend : {
-// CIR:   }, resume : {
-// CIR:   },)
-// CIR:   cir.coro.body {
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE:.*]], %[[ONE]])
-// CIR:     cir.co_return
-// CIR:   }
-// CIR:   cir.await(final, ready : {
-// CIR:   }, suspend : {
-// CIR:   }, resume : {
-// CIR:   },)
-// CIR: } cleanup  normal {
-
 // CIR: cir.func coroutine {{.*}} @_Z10go1_lambdav() {{.*}} ![[IntTask]]
 // CIR: cir.cleanup.scope {
 // CIR:   cir.await(init, ready : {
@@ -501,20 +484,15 @@ folly::coro::Task<int> go1_lambda() {
 // CIR:   },)
 // CIR: } cleanup  normal {
 
-folly::coro::Task<int> go4() {
-  auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
-  auto task = fn(3);
-  co_return co_await std::move(task);
-}
-
-// CIR: cir.func coroutine{{.*}} @_ZZ3go4vENK3$_0clERKi(
+// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENK3$_0clEv{{.*}} ![[IntTask]]
 // CIR: cir.cleanup.scope {
 // CIR:   cir.await(init, ready : {
 // CIR:   }, suspend : {
 // CIR:   }, resume : {
 // CIR:   },)
 // CIR:   cir.coro.body {
-// CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE:.*]], %[[I:.*]])
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE:.*]], %[[ONE]])
 // CIR:     cir.co_return
 // CIR:   }
 // CIR:   cir.await(final, ready : {
@@ -522,6 +500,12 @@ folly::coro::Task<int> go4() {
 // CIR:   }, resume : {
 // CIR:   },)
 // CIR: } cleanup  normal {
+
+folly::coro::Task<int> go4() {
+  auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
+  auto task = fn(3);
+  co_return co_await std::move(task);
+}
 
 // CIR: cir.func coroutine {{.*}} @_Z3go4v() {{.*}} ![[IntTask]]
 
@@ -757,6 +741,22 @@ folly::coro::Task<int __complex__> complex_co_await() noexcept {
 
 // CIR: } cleanup  normal {
 // CIR: }
+
+// CIR: cir.func coroutine{{.*}} @_ZZ3go4vENK3$_0clERKi(
+// CIR: cir.cleanup.scope {
+// CIR:   cir.await(init, ready : {
+// CIR:   }, suspend : {
+// CIR:   }, resume : {
+// CIR:   },)
+// CIR:   cir.coro.body {
+// CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE:.*]], %[[I:.*]])
+// CIR:     cir.co_return
+// CIR:   }
+// CIR:   cir.await(final, ready : {
+// CIR:   }, suspend : {
+// CIR:   }, resume : {
+// CIR:   },)
+// CIR: } cleanup  normal {
 
 // OGCG: define dso_local void @_Z16complex_co_awaitv()
 

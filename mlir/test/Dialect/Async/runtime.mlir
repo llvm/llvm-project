@@ -154,14 +154,14 @@ func.func @add_to_group(%arg0: !async.token, %arg1: !async.value<f32>,
 
 // CHECK-LABEL: @add_ref
 func.func @add_ref(%arg0: !async.token) {
-  // CHECK: async.runtime.add_ref %arg0 {count = 1 : i64}
-  async.runtime.add_ref %arg0 {count = 1 : i64} : !async.token
+  // CHECK: async.runtime.add_ref %arg0 count = 1
+  async.runtime.add_ref %arg0 count = 1 : !async.token
   return
 }
 
 // CHECK-LABEL: @drop_ref
 func.func @drop_ref(%arg0: !async.token) {
-  // CHECK: async.runtime.drop_ref %arg0 {count = 1 : i64}
-  async.runtime.drop_ref %arg0 {count = 1 : i64} : !async.token
+  // CHECK: async.runtime.drop_ref %arg0 count = 1
+  async.runtime.drop_ref %arg0 count = 1 : !async.token
   return
 }

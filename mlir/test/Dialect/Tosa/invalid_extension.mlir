@@ -330,49 +330,49 @@ func.func @test_resize_mxfp(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SH
 // -----
 func.func @test_cast_i8_bf16(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xbf16> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xbf16>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi8>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_cast_bf16_i8(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xi8> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi8>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_f32_bf16(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xbf16> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xbf16>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xf32>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_cast_f32_block_scaled(%arg0: tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----
 func.func @test_cast_block_scaled_f32(%arg0: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32>
   return %0 : tensor<4x32xf32>
 }
 
 // -----
 func.func @test_cast_bf16_block_scaled(%arg0: tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires all of [bf16, mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----
 func.func @test_cast_fp8_block_scaled(%arg0: tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires all of [fp8e4m3, mx_common, mx_int8] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
 
@@ -443,7 +443,7 @@ module {
 // -----
 func.func @test_cast_bf16_i32(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 

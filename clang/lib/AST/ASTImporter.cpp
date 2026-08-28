@@ -682,6 +682,7 @@ namespace clang {
     ExpectedStmt VisitCXXMemberCallExpr(CXXMemberCallExpr *E);
     ExpectedStmt VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E);
     ExpectedStmt VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E);
+    ExpectedStmt VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E);
     ExpectedStmt VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E);
     ExpectedStmt VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E);
     ExpectedStmt VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E);
@@ -1747,10 +1748,14 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  Expected<TemplateDecl *> ToTypeConstraint =
-      import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraint)
-    return ToTypeConstraint.takeError();
+  TemplateName ToTypeConstraint;
+  if (TemplateName FromTypeConstraint = T->getTypeConstraintConcept();
+      !FromTypeConstraint.isNull()) {
+    Expected<TemplateName> ToTypeConstraintOrErr = import(FromTypeConstraint);
+    if (!ToTypeConstraintOrErr)
+      return ToTypeConstraintOrErr.takeError();
+    ToTypeConstraint = *ToTypeConstraintOrErr;
+  }
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1759,7 +1764,7 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
 
   return Importer.getToContext().getAutoType(
       T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
-      *ToTypeConstraint, ToTemplateArgs);
+      ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -2043,9 +2048,10 @@ ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
-  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  HLSLAttributedResourceType::Attributes ToAttrs = T->getAttrs();
   QualType ToWrappedType = importChecked(Err, T->getWrappedType());
   QualType ToContainedType = importChecked(Err, T->getContainedType());
+  ToAttrs.SampleCountExpr = importChecked(Err, T->getSampleCountExpr());
   if (Err)
     return std::move(Err);
 
@@ -8823,6 +8829,29 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
       Importer.getToContext(), ToBase, ToType, E->isArrow(), ToOperatorLoc,
       ToQualifierLoc, ToTemplateKeywordLoc, ToFirstQualifierFoundInScope,
       ToMemberNameInfo, ResInfo);
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  Error Err = Error::success();
+  auto ToName = importChecked(Err, E->getTemplateName());
+  auto ToDeclName = importChecked(Err, E->getName());
+  auto ToNameLoc = importChecked(Err, E->getNameLoc());
+  if (Err)
+    return std::move(Err);
+
+  DeclarationNameInfo ToNameInfo(ToDeclName, ToNameLoc);
+  if (Error Err = ImportDeclarationNameLoc(E->getNameInfo(), ToNameInfo))
+    return std::move(Err);
+
+  TemplateArgumentListInfo ToTAInfo;
+  if (Error Err =
+          ImportTemplateArgumentListInfo(E->getLAngleLoc(), E->getRAngleLoc(),
+                                         E->template_arguments(), ToTAInfo))
+    return std::move(Err);
+
+  return DependentTemplateIdExpr::Create(Importer.getToContext(), ToNameInfo,
+                                         ToName, ToTAInfo);
 }
 
 ExpectedStmt
