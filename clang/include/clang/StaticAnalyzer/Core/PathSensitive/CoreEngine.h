@@ -150,10 +150,10 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const { return wasBlocksExhausted() ||
-                                         WList->hasWork() ||
-                                         STUHadWorkRemaining ||
-                                         wasBlockAborted(); }
+  bool hasWorkRemaining() const {
+    return wasBlocksExhausted() || WList->hasWork() || STUHadWorkRemaining ||
+           wasBlockAborted();
+  }
 
   /// Inform the CoreEngine that a basic block was aborted because
   /// it could not be completely analyzed.
