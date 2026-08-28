@@ -40,6 +40,15 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       Int64Ty(C, 64), Int128Ty(C, 128), Byte1Ty(C, 1), Byte8Ty(C, 8),
       Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {}
 
+void LLVMContextImpl::getAllMetadataNodes(
+    SmallVectorImpl<MDNode *> &Nodes) const {
+  Nodes.append(DistinctMDNodes.begin(), DistinctMDNodes.end());
+#define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
+  Nodes.append(CLASS##s.begin(), CLASS##s.end());
+#include "llvm/IR/Metadata.def"
+  Nodes.append(TemporaryMDNodes.begin(), TemporaryMDNodes.end());
+}
+
 LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
   // Check that any variable location records that fell off the end of a block
