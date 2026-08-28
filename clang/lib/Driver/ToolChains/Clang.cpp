@@ -4537,6 +4537,8 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                     options::OPT_fno_caret_diagnostics, CaretDefault))
     CmdArgs.push_back("-fno-caret-diagnostics");
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_fdiagnostics_show_note_snippets,
+                     options::OPT_fno_diagnostics_show_note_snippets);
   Args.addOptOutFlag(CmdArgs, options::OPT_fdiagnostics_fixit_info,
                      options::OPT_fno_diagnostics_fixit_info);
   Args.addOptOutFlag(CmdArgs, options::OPT_fdiagnostics_show_option,

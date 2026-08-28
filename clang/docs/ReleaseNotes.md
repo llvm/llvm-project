@@ -236,6 +236,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- Added `-fno-diagnostics-show-note-snippets` (and corresponding
+  `-fdiagnostics-show-note-snippets`, the default) to suppress snippets on
+  notes. Errors and warnings keep printing snippets.  This makes output much
+  shorter for diagnostics with many notes, such as overload resolution failures.
+
 - More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only

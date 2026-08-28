@@ -2330,6 +2330,12 @@ def fdiagnostics_misexpect_tolerance_EQ : Joined<["-"], "fdiagnostics-misexpect-
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
     MetaVarName<"<value>">,
     HelpText<"Prevent misexpect diagnostics from being output if the profile counts are within N% of the expected. ">;
+defm diagnostics_show_note_snippets : BoolFOption<"diagnostics-show-note-snippets",
+    DiagnosticOpts<"ShowNoteSnippets">, DefaultTrue,
+    NegFlag<SetFalse, [], [ClangOption, CC1Option],
+            "Do not show source line and caret snippets for notes">,
+    PosFlag<SetTrue, [], [ClangOption],
+            "Show source line and caret snippets for notes (default)">>;
 defm diagnostics_show_option : BoolFOption<"diagnostics-show-option",
     DiagnosticOpts<"ShowOptionNames">, DefaultTrue,
     NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
