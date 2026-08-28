@@ -185,6 +185,10 @@ features cannot lower the translation-unit ABI level;
   them to an enumeration type with a fixed `bool` underlying type. This
   resolves [CWG1094](https://wg21.link/cwg1094).
 
+- Implemented [CWG3043](https://wg21.link/cwg3043): temporaries in an element
+  of the expansion-init-list of an enumerating expansion statement now persist
+  for the lifetime of the expansion variable initialized from that element.
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -650,7 +654,7 @@ features cannot lower the translation-unit ABI level;
   (`template for`) when an element of the expansion-init-list needed cleanups,
   e.g. a temporary bound to a reference parameter such as `{g(1), g(2)}` with
   `int g(const int&)`, or a temporary of a type with a non-trivial destructor.
-  (#GH212630)
+  Each element is now a full-expression of its own. (#GH212630)
 
 #### Bug Fixes to AST Handling
 

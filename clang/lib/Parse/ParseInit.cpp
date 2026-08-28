@@ -521,16 +521,40 @@ ExprResult Parser::ParseExpansionInitList() {
   T.consumeOpen();
 
   ExprVector InitExprs;
+  bool SawError = false;
+  while (Tok.isNot(tok::r_brace)) {
+    ExprResult Elem = Tok.is(tok::l_brace) ? ParseBraceInitializer()
+                                           : ParseAssignmentExpression();
 
-  if (!Tok.is(tok::r_brace) &&
-      ParseExpressionList(InitExprs, /*ExpressionStarts=*/{},
-                          /*FailImmediatelyOnInvalidExpr=*/false,
-                          /*ParsingExpansionStmtInitList=*/true)) {
-    T.consumeClose();
-    return ExprError();
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      SawError = true;
+      break;
+    }
+
+    // Each element is a full-expression of its own.
+    Elem = Actions.MaybeCreateExprWithCleanups(Elem);
+    if (Tok.is(tok::ellipsis))
+      Elem = Actions.ActOnPackExpansion(Elem.get(), ConsumeToken());
+
+    if (Elem.isInvalid()) {
+      SawError = true;
+      SkipUntil(tok::comma, tok::r_brace, StopAtSemi | StopBeforeMatch);
+    } else {
+      InitExprs.push_back(Elem.get());
+    }
+
+    if (Tok.isNot(tok::comma))
+      break;
+
+    // CWG 3061: A trailing comma is allowed.
+    ConsumeToken();
   }
 
   T.consumeClose();
+  if (SawError)
+    return ExprError();
+
   return Actions.ActOnCXXExpansionInitList(InitExprs, T.getOpenLocation(),
                                            T.getCloseLocation());
 }
