@@ -1667,13 +1667,15 @@ defm "" : HalfPrecisionConvert<F32x4, I16x8, promote_low, "promote_low_f16x8",
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let MemoryVT = v2f32;
 }
-// Adapted from the body of LoadPatNoOffset
-// TODO: other addressing patterns
-def : Pat<(v2f64 (extloadv2f32 (i32 I32:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A32 0, 0, I32:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps32 offset32_op:$offset, I32:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A32 0, offset32_op:$offset, I32:$addr))>,
       Requires<[HasAddr32]>;
-def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A64 0, 0, I64:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps64 offset64_op:$offset, I64:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A64 0, offset64_op:$offset, I64:$addr))>,
       Requires<[HasAddr64]>;
 
 //===----------------------------------------------------------------------===//
