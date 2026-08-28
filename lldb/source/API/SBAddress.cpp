@@ -110,7 +110,8 @@ lldb::addr_t SBAddress::GetLoadAddress(const SBTarget &target) const {
   TargetSP target_sp(target.GetSP());
   if (target_sp) {
     if (m_opaque_up->IsValid()) {
-      std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+      TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       addr = m_opaque_up->GetLoadAddress(target_sp.get());
     }
   }

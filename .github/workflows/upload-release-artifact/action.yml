@@ -125,9 +125,10 @@ runs:
       env:
         INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         ./upload-release-artifact/llvm/utils/release/github-upload-release.py \
-        --token ${{ github.token }} \
+        --token "$GITHUB_TOKEN" \
         --release "$INPUTS_RELEASE_VERSION" \
         upload \
         --files $DOWNLOAD_PATH/* *.jsonl

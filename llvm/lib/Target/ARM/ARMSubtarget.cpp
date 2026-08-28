@@ -89,12 +89,13 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           FloatABI::ABIType FloatABI, bool MinSize,
-                           DenormalMode DM)
+                           FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
+                           bool MinSize, DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
+      FloatABIType(FloatABI), ABI(ABI),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
@@ -333,9 +334,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (TM.isAAPCS_ABI())
+  if (isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (TM.isAAPCS16_ABI())
+  if (isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::

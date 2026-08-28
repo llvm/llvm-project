@@ -13,34 +13,21 @@ using namespace llvm;
 
 AnalysisKey RuntimeLibraryAnalysis::Key;
 
-RuntimeLibraryAnalysis::RuntimeLibraryAnalysis(const Triple &TT,
-                                               ExceptionHandling ExceptionModel,
-                                               FloatABI::ABIType FloatABI,
-                                               EABI EABIVersion,
-                                               StringRef ABIName,
-                                               VectorLibrary VecLib)
-    : LibcallsInfo(std::in_place, TT, ExceptionModel, FloatABI, EABIVersion,
-                   ABIName, VecLib) {}
-
 RTLIB::RuntimeLibcallsInfo
 RuntimeLibraryAnalysis::run(const Module &M, ModuleAnalysisManager &) {
-  if (!LibcallsInfo)
-    LibcallsInfo = RTLIB::RuntimeLibcallsInfo(M);
-  return *LibcallsInfo;
+  return RTLIB::RuntimeLibcallsInfo(M, ExceptionModel, EABIVersion, ABIName,
+                                    VecLib);
 }
 
 INITIALIZE_PASS(RuntimeLibraryInfoWrapper, "runtime-library-info",
                 "Runtime Library Function Analysis", false, true)
 
-RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper()
-    : ImmutablePass(ID), RTLA(RTLIB::RuntimeLibcallsInfo(Triple())) {}
+RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper() : ImmutablePass(ID) {}
 
 RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper(
-    const Triple &TT, ExceptionHandling ExceptionModel,
-    FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName,
+    ExceptionHandling ExceptionModel, EABI EABIVersion, StringRef ABIName,
     VectorLibrary VecLib)
-    : ImmutablePass(ID), RTLCI(std::in_place, TT, ExceptionModel, FloatABI,
-                               EABIVersion, ABIName, VecLib) {}
+    : ImmutablePass(ID), RTLA(ExceptionModel, EABIVersion, ABIName, VecLib) {}
 
 char RuntimeLibraryInfoWrapper::ID = 0;
 

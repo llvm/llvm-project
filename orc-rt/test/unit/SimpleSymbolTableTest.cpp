@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/SimpleSymbolTable.h"
+#include "orc-rt/bedrock/SimpleSymbolTable.h"
 #include "gtest/gtest.h"
 
 #include <set>

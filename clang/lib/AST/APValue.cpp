@@ -305,12 +305,10 @@ APValue::APValue(const APValue &RHS)
     Kind = RHS.getKind();
     break;
   case Int:
-    MakeInt();
-    setInt(RHS.getInt());
+    MakeInt(RHS.getInt());
     break;
   case Float:
-    MakeFloat();
-    setFloat(RHS.getFloat());
+    MakeFloat(RHS.getFloat());
     break;
   case FixedPoint: {
     APFixedPoint FXCopy = RHS.getFixedPoint();

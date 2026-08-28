@@ -27,6 +27,7 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let description = [{
     The `scf` (structured control flow) dialect contains operations that
@@ -78,7 +79,8 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+      "getRegionInvocationBounds", "getSuccessorInputs"]>,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
     RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";

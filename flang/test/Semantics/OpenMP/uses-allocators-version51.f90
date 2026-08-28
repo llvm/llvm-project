@@ -27,14 +27,14 @@ subroutine uses_allocators_51
   x = 2
   !$omp end target
 
-  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.1, try -fopenmp-version=52
+  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.1 on USES_ALLOCATORS clause, try -fopenmp-version=52
   !$omp target uses_allocators(traits(tr): my_alloc)
   x = 3
   !$omp end target
 
   ! Accepting the newer syntax with a warning does not skip the remaining
   ! checks on the specification.
-  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.1, try -fopenmp-version=52
+  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.1 on USES_ALLOCATORS clause, try -fopenmp-version=52
   !ERROR: The traits array must be a named constant array
   !$omp target uses_allocators(traits(1): my_alloc)
   x = 4

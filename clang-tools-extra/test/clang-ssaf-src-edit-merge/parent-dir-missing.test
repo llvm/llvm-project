@@ -1,0 +1,19 @@
+# Output path's parent directory does not exist → tool exits non-zero
+# with a clear "cannot write" diagnostic naming the path.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
+
+# Note: %t.dir/no-such-subdir does NOT exist. The output path therefore
+# cannot be opened and the tool must fail.
+# RUN: not clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/no-such-subdir/merged.yaml %t.dir/a.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# RUN: FileCheck --input-file=%t.dir/stderr.txt %s
+# CHECK: clang-ssaf-src-edit-merge:
+# CHECK-SAME: cannot write
+# CHECK-SAME: no-such-subdir

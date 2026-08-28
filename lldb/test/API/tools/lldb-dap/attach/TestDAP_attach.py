@@ -7,13 +7,7 @@ import uuid
 from pathlib import Path
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import (
-    expectedFailureWindows,
-    expectedFailureWindowsAndNoLLDBServer,
-    requireNotWasm,
-    skipIf,
-    skipIfWindowsAndLLDBServer,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     AttachArgs,
@@ -22,9 +16,11 @@ from lldbsuite.test.tools.lldb_dap.types import (
 )
 
 
-# Often fails on Arm Linux, but not specifically because it's Arm, something in
-# process scheduling can cause a massive (minutes) delay during this test.
-@skipIf(oslist=["linux"], archs=["arm$"])
+# Often fails on Arm/AArch64 Linux, but not specifically because of the
+# architecture, something in process scheduling can cause a massive (minutes)
+# delay during this test.
+# https://github.com/llvm/llvm-project/issues/137660
+@skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
 @requireNotWasm("no attach support")
 class TestDAP_attach(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False

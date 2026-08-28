@@ -66,6 +66,7 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  GlobalDecl.cpp
   InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp

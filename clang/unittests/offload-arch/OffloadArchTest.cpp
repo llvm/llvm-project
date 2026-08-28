@@ -9,6 +9,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -18,6 +22,9 @@
 bool compareVersions(llvm::StringRef A, llvm::StringRef B);
 llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 #endif
+
+// Defined in AMDGPUArchByKFD.cpp (non-static, compiled into this test).
+int printGPUsByKFD(llvm::StringRef NodePath);
 
 using namespace llvm;
 
@@ -112,3 +119,91 @@ TEST(CandidateBinPaths, NoDriveRootBin) {
 }
 
 #endif // _WIN32
+
+// --- printGPUsByKFD ---
+
+namespace {
+// Write <Dir>/<Node>/properties containing the given lines.
+void addNode(StringRef Dir, unsigned Node, StringRef Properties) {
+  SmallString<128> NodeDir(Dir);
+  sys::path::append(NodeDir, Twine(Node));
+  ASSERT_FALSE(sys::fs::create_directories(NodeDir));
+
+  SmallString<128> PropertiesPath(NodeDir);
+  sys::path::append(PropertiesPath, "properties");
+  std::error_code EC;
+  raw_fd_ostream OS(PropertiesPath, EC);
+  ASSERT_FALSE(EC);
+  OS << Properties;
+}
+
+// Write a node describing a GPU with the given gfx_target_version.
+void addGPUNode(StringRef Dir, unsigned Node, StringRef GFXVersion) {
+  addNode(Dir, Node, ("gfx_target_version " + GFXVersion + "\n").str());
+}
+
+// Run printGPUsByKFD, collecting what it writes to stdout.
+int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
+  testing::internal::CaptureStdout();
+  int Result = printGPUsByKFD(NodePath);
+  outs().flush();
+  Output = testing::internal::GetCapturedStdout();
+  return Result;
+}
+} // namespace
+
+// A topology directory that cannot be opened must be reported as a failure, so
+// that the caller falls back to enumerating with the HIP runtime.
+TEST(KFDTopology, MissingDirectoryFails) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path("does-not-exist"), Output),
+            1);
+  EXPECT_EQ(Output, "");
+}
+
+// A readable topology describing no GPUs is not an error, and prints nothing.
+TEST(KFDTopology, CPUOnlyTopologySucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+// A node whose properties do not mention gfx_target_version is a CPU too.
+TEST(KFDTopology, NodeWithoutGFXVersionSucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addNode(Dir.path(), 0, "cpu_cores_count 16\n");
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+TEST(KFDTopology, EmptyTopologySucceeds) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "");
+}
+
+TEST(KFDTopology, GPUNodeIsPrinted) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");      // CPU
+  addGPUNode(Dir.path(), 1, "110001"); // gfx1101
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1101\n");
+}
+
+// Devices are printed in node order, and the step is printed in hex so that
+// e.g. gfx90a renders correctly.
+TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNode(Dir.path(), 0, "0");      // CPU
+  addGPUNode(Dir.path(), 2, "90010");  // gfx90a
+  addGPUNode(Dir.path(), 1, "110001"); // gfx1101
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1101\ngfx90a\n");
+}

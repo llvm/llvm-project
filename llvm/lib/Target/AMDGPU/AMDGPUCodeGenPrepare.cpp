@@ -742,9 +742,13 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 
   // TODO: Handle other numerator values with arcp.
   if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
-    // Add in the sqrt flags.
+    // Add sqrt flags, but require both ninf and nsz from the div and the
+    // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(DivFMF | SqrtFMF);
+    FastMathFlags NewFMF = DivFMF | SqrtFMF;
+    NewFMF.setNoInfs(DivFMF.noInfs() && SqrtFMF.noInfs());
+    NewFMF.setNoSignedZeros(DivFMF.noSignedZeros() && SqrtFMF.noSignedZeros());
+    Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
       if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
@@ -2166,7 +2170,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
 bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Type *Ty = Sqrt.getType()->getScalarType();
-  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST.has16BitInsts()))
+  if (!Ty->isFloatTy())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);

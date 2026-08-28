@@ -1,7 +1,42 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | FileCheck %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture2D -DINDEX_SIZE=2
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY -DTEXTURE=Texture2DArray -DINDEX_SIZE=3
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC -DTEXTURE=RWTexture2D -DINDEX_SIZE=2
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC -DTEXTURE=RWTexture2DArray -DINDEX_SIZE=3
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture2D -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture2D \
+// RUN:   -DINDEX_DIM=2 -DDIM_NAME=2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=Texture2DArray -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY \
+// RUN:   -DTEXTURE=Texture2DArray -DINDEX_DIM=3 -DDIM_NAME=2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture2D -DRW=1 -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC \
+// RUN:   -DTEXTURE=RWTexture2D -DINDEX_DIM=2 -DDIM_NAME=2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC \
+// RUN:   -DTEXTURE=RWTexture2DArray -DINDEX_DIM=3 -DDIM_NAME=2D
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   INDEX_ARG_TYPE     the declared type of INDEX_ARG
+//   INDEX_ARG          a literal operator[] index
+//   TEXTURE            resource type name
+//   INDEX_DIM          operator[] index components
+//   DIM_NAME           hlsl::dimension spelling
+//   RW                 dx.Texture UAV operand
+//
+// Check prefixes:
+//   SRV                read-only (SRV) textures
+//   SRV-ARRAY          read-only array textures
+//   UAV                writable (UAV) textures
+//   UAV-STORE          the store through operator[]
+//   UAV-TRUNC          types whose index is narrower than INDEX_ARG_TYPE
+//   UAV-ARRAY          writable array textures
+//   UAV-NOTRUNC        types whose index matches INDEX_ARG_TYPE
 
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
@@ -13,10 +48,10 @@
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 
-// SRV: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, [[INDEX_SIZE]]>) const' inline
-// SRV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_SIZE]]>'
+// SRV: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, [[INDEX_DIM]]>) const' inline
+// SRV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_DIM]]>'
 // SRV-NEXT: CompoundStmt
 // SRV-NEXT: ReturnStmt
 // SRV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
@@ -27,14 +62,14 @@
 // SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // SRV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// SRV-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// SRV-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // SRV-SAME: ' lvalue .__handle
 // SRV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// SRV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_SIZE]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_SIZE]]>'
+// SRV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_DIM]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_DIM]]>'
 // SRV-NEXT: AlwaysInlineAttr
 
-// UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(vector<unsigned int, [[INDEX_SIZE]]>) const' inline
-// UAV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_SIZE]]>'
+// UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(vector<unsigned int, [[INDEX_DIM]]>) const' inline
+// UAV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_DIM]]>'
 // UAV-NEXT: CompoundStmt
 // UAV-NEXT: ReturnStmt
 // UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
@@ -45,10 +80,10 @@
 // UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// UAV-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// UAV-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // UAV-SAME: ' lvalue .__handle
 // UAV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// UAV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_SIZE]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_SIZE]]>'
+// UAV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_DIM]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_DIM]]>'
 // UAV-NEXT: AlwaysInlineAttr
 
 // CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int, out unsigned int)'
@@ -65,7 +100,7 @@
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
@@ -89,7 +124,7 @@
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
@@ -112,7 +147,7 @@
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
@@ -136,7 +171,7 @@
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
@@ -154,8 +189,8 @@
 // UAV-STORE-LABEL: FunctionDecl {{.*}} main 'void ()'
 // UAV-STORE: BinaryOperator {{.*}} 'hlsl_device float' lvalue '='
 // UAV-STORE-NEXT: CXXOperatorCallExpr {{.*}} 'hlsl_device float' lvalue '[]'
-// UAV-STORE-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(vector<unsigned int, [[INDEX_SIZE]]>) const' <FunctionToPointerDecay>
-// UAV-STORE-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(vector<unsigned int, [[INDEX_SIZE]]>) const' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(vector<unsigned int, [[INDEX_SIZE]]>) const'
+// UAV-STORE-NEXT: ImplicitCastExpr {{.*}} 'hlsl_device float &(*)(vector<unsigned int, [[INDEX_DIM]]>) const' <FunctionToPointerDecay>
+// UAV-STORE-NEXT: DeclRefExpr {{.*}} 'hlsl_device float &(vector<unsigned int, [[INDEX_DIM]]>) const' lvalue CXXMethod {{.*}} 'operator[]' 'hlsl_device float &(vector<unsigned int, [[INDEX_DIM]]>) const'
 // UAV-STORE-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[TEXTURE]]<float>' lvalue <NoOp>
 // UAV-STORE-NEXT: DeclRefExpr {{.*}} '[[TEXTURE]]<float>':'hlsl::[[TEXTURE]]<float>' lvalue Var {{.*}} 't' '[[TEXTURE]]<float>':'hlsl::[[TEXTURE]]<float>'
 // UAV-TRUNC-NEXT: ImplicitCastExpr {{.*}} 'vector<uint, 2>' <HLSLVectorTruncation>
@@ -168,7 +203,7 @@
 TEXTURE<float> t;
 
 void main() {
-  uint3 i = uint3(0, 0, 0);
+  INDEX_ARG_TYPE i = INDEX_ARG;
 #if RW
   t[i] = 1.0f;
 #endif

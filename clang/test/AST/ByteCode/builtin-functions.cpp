@@ -180,7 +180,7 @@ namespace WcsCmp {
 
 /// Copied from constant-expression-cxx11.cpp
 namespace strlen {
-constexpr const char *a = "foo\0quux";
+  constexpr const char *a = "foo\0quux";
   constexpr char b[] = "foo\0quux";
   constexpr int f() { return 'u'; }
   constexpr char c[] = { 'f', 'o', 'o', 0, 'q', f(), 'u', 'x', 0 };
@@ -339,6 +339,26 @@ namespace isfpclass {
   char isfpclass_snan_1   [!__builtin_isfpclass(__builtin_nans(""), 0x0002) ? 1 : -1]; // fcQNan
   char isfpclass_snan_2   [__builtin_isfpclass(__builtin_nansl(""), 0x0207) ? 1 : -1]; // ~fcFinite
   char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
+
+
+  int foo() {
+    int a = 1; // #decla
+    char A[__builtin_isfpclass(1.0f, a)];
+#if __cplusplus >= 202002L
+                                          // both-warning@-2 {{variable length arrays}} \
+                                          // both-note@-2 {{read of non-const variable 'a'}} \
+                                          // both-note@#decla {{declared here}}
+#endif
+  }
+
+  constexpr float a = 1.0f;
+  static_assert(__builtin_isfpclass(1.0f, a) == 0);
+
+  enum class EC { A, B };
+  static_assert(__builtin_isfpclass(1.0f, EC::A) == 0); // both-error {{passing 'isfpclass::EC' to parameter of incompatible type 'int'}}
+  struct foostruct {};
+  static_assert(__builtin_isfpclass(1.0f, foostruct{}) == 0); // both-error {{passing 'foostruct' to parameter of incompatible type 'int'}}
+
 }
 
 namespace signbit {
@@ -2121,4 +2141,9 @@ namespace SubCb {
     return 0;
   }
   static_assert(subcb2() == 0);
+}
+
+namespace ReduceMin {
+  typedef float v4f __attribute__((__vector_size__(16)));
+  static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
 }

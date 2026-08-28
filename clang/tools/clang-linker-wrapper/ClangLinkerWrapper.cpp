@@ -439,6 +439,18 @@ namespace amdgcn {
 // NOTE: copied from HIPUtility.cpp.
 static std::string normalizeForBundler(const llvm::Triple &T,
                                        bool HasTargetID) {
+  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
+  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
+  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
+  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
+  // not match, producing hipErrorInvalidImage at load time. Force the legacy
+  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
+  // hardcoding this.
+  if (HasTargetID && T.isAMDGCN())
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
@@ -603,14 +615,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
-  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
-  // will be communicated via the -Xlinker option.
-  if (ActiveOffloadKindMask & OFK_SYCL) {
+  // clang-sycl-linker.
+  if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
-    CmdArgs.append(
-        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
-    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
-  }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -1027,6 +1034,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   if (llvm::all_of(Input, ContainsBitcode))
     DAL.AddFlagArg(nullptr, Tbl.getOption(OPT_whole_program));
 
+  llvm::Triple CurrentTT(DAL.getLastArgValue(OPT_triple_EQ));
+
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
     auto [Triple, Value] = Arg.split('=');
@@ -1038,7 +1047,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Triple));
-    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
+    else if (TT.isCompatibleWith(CurrentTT))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Value));
   }
@@ -1054,7 +1063,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
                        Args.MakeArgString(Triple));
-    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
+    else if (TT.isCompatibleWith(CurrentTT))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
                        Args.MakeArgString(Value));
   }
@@ -1264,27 +1273,40 @@ findFromSearchPaths(StringRef Name, StringRef Root,
 
 std::optional<std::string>
 searchLibraryBaseName(StringRef Name, StringRef Root,
-                      ArrayRef<StringRef> SearchPaths) {
-  for (StringRef Dir : SearchPaths) {
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".so"))
-      return File;
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".a"))
-      return File;
-  }
+                      ArrayRef<StringRef> SearchPaths, bool IsWindows) {
+  SmallVector<std::string> Candidates;
+  if (IsWindows)
+    Candidates = {"lib" + Name.str() + ".dll.a", Name.str() + ".dll.a",
+                  "lib" + Name.str() + ".a", Name.str() + ".lib"};
+  else
+    Candidates = {"lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
+
+  for (StringRef Dir : SearchPaths)
+    for (StringRef Candidate : Candidates)
+      if (std::optional<std::string> File = findFile(Dir, Root, Candidate))
+        return File;
   return std::nullopt;
 }
 
 /// Search for static libraries in the linker's library path given input like
 /// `-lfoo` or `-l:libfoo.a`.
 std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
-                                         ArrayRef<StringRef> SearchPaths) {
+                                         ArrayRef<StringRef> SearchPaths,
+                                         bool IsWindows) {
   if (Input.starts_with(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   if (Input.ends_with(".lib"))
     return findFromSearchPaths(Input, Root, SearchPaths);
-  return searchLibraryBaseName(Input, Root, SearchPaths);
+  return searchLibraryBaseName(Input, Root, SearchPaths, IsWindows);
+}
+
+/// Search for an input file given by name, e.g. `foo.lib`. COFF linkers use
+/// this in place of `-lfoo` and look it up in \p SearchPaths.
+std::optional<std::string> searchInput(StringRef Input, StringRef Root,
+                                       ArrayRef<StringRef> SearchPaths) {
+  if (sys::fs::exists(Input))
+    return std::string(Input);
+  return findFromSearchPaths(Input, Root, SearchPaths);
 }
 
 /// In verbose mode we need to replay the extracted files so the user can
@@ -1356,10 +1378,18 @@ getDeviceInput(const ArgList &Args) {
   if (Args.hasArg(OPT_override_image))
     return SmallVector<SmallVector<OffloadFile>>();
 
+  const llvm::Triple HostTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
     LibraryPaths.push_back(Arg->getValue());
+
+  // Only `link.exe` style linkers search for their input files.
+  SmallVector<StringRef> InputPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_libpath))
+    InputPaths.push_back(Arg->getValue());
 
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
@@ -1369,8 +1399,9 @@ getDeviceInput(const ArgList &Args) {
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
-  for (const opt::Arg *Arg : Args.filtered(
-           OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
+  for (const opt::Arg *Arg :
+       Args.filtered(OPT_INPUT, OPT_library, OPT_wholearchive_file,
+                     OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
         Arg->getOption().matches(OPT_no_whole_archive)) {
       WholeArchive = Arg->getOption().matches(OPT_whole_archive);
@@ -1379,8 +1410,9 @@ getDeviceInput(const ArgList &Args) {
 
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), Root, LibraryPaths)
-            : std::string(Arg->getValue());
+            ? searchLibrary(Arg->getValue(), Root, LibraryPaths,
+                            HostTriple.isOSWindows())
+            : searchInput(Arg->getValue(), Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))
       return createStringError("unable to find library -l%s", Arg->getValue());
@@ -1388,6 +1420,10 @@ getDeviceInput(const ArgList &Args) {
     if (!Filename || !sys::fs::exists(*Filename) ||
         sys::fs::is_directory(*Filename))
       continue;
+
+    // Unlike `--whole-archive`, `/wholearchive:` applies to a single library.
+    bool ExtractWholeArchive =
+        WholeArchive || Arg->getOption().matches(OPT_wholearchive_file);
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(*Filename);
@@ -1408,7 +1444,7 @@ getDeviceInput(const ArgList &Args) {
             Binary.getBinary()->getMemoryBufferRef().getBufferIdentifier(),
             Saver.save(StringRef(*Filename)));
       if (identify_magic(Buffer.getBuffer()) == file_magic::archive &&
-          !WholeArchive)
+          !ExtractWholeArchive)
         ArchiveFilesToExtract.emplace_back(std::move(Binary));
       else
         ObjectFilesToExtract.emplace_back(std::move(Binary));

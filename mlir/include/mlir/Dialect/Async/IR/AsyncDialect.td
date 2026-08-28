@@ -21,6 +21,7 @@ include "mlir/IR/OpBase.td"
 
 def AsyncDialect : Dialect {
   let name = "async";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::async";
 
   let summary = "Types and operations for async dialect";

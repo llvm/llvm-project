@@ -7,7 +7,7 @@
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
 struct Empty {};
-// CIR-DAG: !rec_Empty = !cir.struct<"Empty" padded {pad !u8i}>
+// CIR-DAG: !rec_Empty = !cir.struct<"Empty" {pad !u8i}>
 // LLVMCIR-DAG: %struct.Empty = type { i8 }
 
 struct HasEmpty {
@@ -38,7 +38,7 @@ const HasEmpty2 globalHE2 = {{}, 1};
 
 // Not referenced enough to be emitted in 'after'.
 struct EmptyBase{};
-// CIR-BEFORE-DAG: !rec_EmptyBase = !cir.struct<"EmptyBase" padded {pad !u8i}>
+// CIR-BEFORE-DAG: !rec_EmptyBase = !cir.struct<"EmptyBase" {pad !u8i}>
 
 struct Base { int i; };
 // CIR-DAG: !rec_Base = !cir.struct<"Base" {data !s32i}>
@@ -87,7 +87,7 @@ struct hasNUA {
   [[no_unique_address]] EmptyBase eb6;
   int i;
 };
-// CIR-DAG: !rec_hasNUA = !cir.struct<"hasNUA" padded {data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: !rec_hasNUA = !cir.struct<"hasNUA" {data !s32i, pad !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.hasNUA = type { i32, [4 x i8] }
 
 const hasNUA nua = {{},{},{},{},{},{}, 1};
@@ -229,7 +229,7 @@ union U6 {
   EmptyBase eb2;
   int i;
 };
-// CIR-BEFORE-DAG: !rec_U6 = !cir.union<"U6" {data !rec_EmptyBase, data !rec_EmptyBase, data !s32i}>
+// CIR-BEFORE-DAG: !rec_U6 = !cir.union<"U6" {empty !rec_EmptyBase, empty !rec_EmptyBase, data !s32i}>
 int U6::* u6i = &U6::i;
 // CIR-BEFORE-DAG: cir.global external @u6i = #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_U6>
 // CIR-AFTER-DAG: cir.global external @u6i = #cir.int<0> : !s64i
@@ -251,7 +251,7 @@ union U7 {
   [[no_unique_address]]
   EmptyBase eb2;
 };
-// CIR-BEFORE-DAG: !rec_U7 = !cir.union<"U7" {data !s32i, data !rec_EmptyBase, data !rec_EmptyBase}>
+// CIR-BEFORE-DAG: !rec_U7 = !cir.union<"U7" {data !s32i, empty !rec_EmptyBase, empty !rec_EmptyBase}>
 int U7::* u7i = &U7::i;
 // CIR-BEFORE-DAG: cir.global external @u7i = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_U7>
 // CIR-AFTER-DAG: cir.global external @u7i = #cir.int<0> : !s64i

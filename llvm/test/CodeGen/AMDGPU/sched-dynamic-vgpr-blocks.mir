@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=machine-scheduler -amdgpu-stress-vgpr=18 -o - %s | FileCheck %s
+# RUN: %if asserts %{ llc -mtriple=amdgpu12.00 -run-pass=machine-scheduler -amdgpu-stress-vgpr=18 -debug-only=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
+
+# In dynamic VGPR mode we don't want to waste VGPR blocks, so we revert any
+# schedule that increases the number of blocks we need to allocate. The
+# scheduler will try to hoist the loads above the dependent adds, which will
+# increase the pressure in the region from 5 to 17 VGPRs, i.e. from one block of
+# 16 to 2. This should trigger the code that performs the revert based on the
+# number of VGPR blocks.
+# The -amdgpu-stress-vgpr flag is only there to keep the test small (the
+# scheduler bails out early for regions that stay well below the VGPR limit).
+
+--- |
+  define amdgpu_cs void @dvgpr_blocks() #0 { ret void }
+  attributes #0 = { "amdgpu-dynamic-vgpr-block-size"="16" }
+...
+---
+# DEBUG: Region register pressure: VGPRs: 5
+# DEBUG: Pressure after scheduling: VGPRs: 17
+# DEBUG-NEXT: Region: 0
+# DEBUG-NEXT: Occupancy before scheduling: 16, after 16.
+# DEBUG-NEXT: Reverting scheduling for region 0
+
+# CHECK-LABEL: name: dvgpr_blocks
+# CHECK:      %acc0:vgpr_32 = V_MOV_B32_e32
+# CHECK-NEXT: %l0:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 0,
+# CHECK-NEXT: %acc1:vgpr_32 = V_ADD_U32_e32 %acc0, %l0,
+# CHECK-NEXT: %l1:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 4,
+# CHECK-NEXT: %acc2:vgpr_32 = V_ADD_U32_e32 %acc1, %l1,
+# CHECK-NEXT: %l2:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 8,
+# CHECK-NEXT: %acc3:vgpr_32 = V_ADD_U32_e32 %acc2, %l2,
+name: dvgpr_blocks
+tracksRegLiveness: true
+machineFunctionInfo:
+  dynamicVGPRBlockSize: 16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %addr:vreg_64 = COPY $vgpr0_vgpr1
+    %acc0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %l0:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 0, 0, implicit $exec
+    %acc1:vgpr_32 = V_ADD_U32_e32 %acc0, %l0, implicit $exec
+    %l1:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 4, 0, implicit $exec
+    %acc2:vgpr_32 = V_ADD_U32_e32 %acc1, %l1, implicit $exec
+    %l2:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 8, 0, implicit $exec
+    %acc3:vgpr_32 = V_ADD_U32_e32 %acc2, %l2, implicit $exec
+    %l3:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 12, 0, implicit $exec
+    %acc4:vgpr_32 = V_ADD_U32_e32 %acc3, %l3, implicit $exec
+    %l4:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 16, 0, implicit $exec
+    %acc5:vgpr_32 = V_ADD_U32_e32 %acc4, %l4, implicit $exec
+    %l5:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 20, 0, implicit $exec
+    %acc6:vgpr_32 = V_ADD_U32_e32 %acc5, %l5, implicit $exec
+    %l6:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 24, 0, implicit $exec
+    %acc7:vgpr_32 = V_ADD_U32_e32 %acc6, %l6, implicit $exec
+    %l7:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 28, 0, implicit $exec
+    %acc8:vgpr_32 = V_ADD_U32_e32 %acc7, %l7, implicit $exec
+    %l8:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 32, 0, implicit $exec
+    %acc9:vgpr_32 = V_ADD_U32_e32 %acc8, %l8, implicit $exec
+    %l9:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 36, 0, implicit $exec
+    %acc10:vgpr_32 = V_ADD_U32_e32 %acc9, %l9, implicit $exec
+    %l10:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 40, 0, implicit $exec
+    %acc11:vgpr_32 = V_ADD_U32_e32 %acc10, %l10, implicit $exec
+    %l11:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 44, 0, implicit $exec
+    %acc12:vgpr_32 = V_ADD_U32_e32 %acc11, %l11, implicit $exec
+    %l12:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 48, 0, implicit $exec
+    %acc13:vgpr_32 = V_ADD_U32_e32 %acc12, %l12, implicit $exec
+    %l13:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 52, 0, implicit $exec
+    %acc14:vgpr_32 = V_ADD_U32_e32 %acc13, %l13, implicit $exec
+    %l14:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 56, 0, implicit $exec
+    %acc15:vgpr_32 = V_ADD_U32_e32 %acc14, %l14, implicit $exec
+    S_ENDPGM 0, implicit %acc15
+...

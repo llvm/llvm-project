@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/QueueingRunner.h"
-#include "orc-rt/move_only_function.h"
+#include "orc-rt/bedrock/QueueingRunner.h"
+#include "orc-rt/bedrock/move_only_function.h"
 #include "gtest/gtest.h"
 
 #include <cstdint>

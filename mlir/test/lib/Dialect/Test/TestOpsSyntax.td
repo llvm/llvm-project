@@ -137,6 +137,16 @@ def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
   }];
 }
 
+def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
+  let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
+                       UnitAttr:$diffNameUnitAttrKeyword);
+  let assemblyFormat = [{
+    oilist<`,`>( `keyword` $keyword
+               | `otherKeyword` $otherKeyword
+               | `thirdKeyword` $diffNameUnitAttrKeyword) attr-dict
+  }];
+}
+
 def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict

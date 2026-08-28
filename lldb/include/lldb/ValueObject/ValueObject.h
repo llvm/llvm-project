@@ -851,13 +851,15 @@ public:
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
-  /// Returns false when this value cannot be modified through
-  /// SetValueFromCString() or SetData() because it exists in the
-  /// target but has no writable storage, e.g., a constant or a
-  /// computed variable value.  A true result does not guarantee a
+  /// Check if the value may be writable. Returns an error describing
+  /// why this value cannot be modified. Success does not guarantee a
   /// write will succeed; other runtime conditions can still cause
   /// SetValue* to fail.
-  virtual bool CanSetValue() { return !GetIsConstant(); }
+  virtual llvm::Error CanSetValue() {
+    if (GetIsConstant())
+      return llvm::createStringError("value is not in a writable location");
+    return llvm::Error::success();
+  }
 
   bool NeedsUpdating() {
     const bool accept_invalid_exe_ctx =
@@ -1290,7 +1292,8 @@ public:
   lldb::ValueObjectSP GetRootSP() { return m_valobj_sp; }
 
   lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
-                            std::unique_lock<std::recursive_mutex> &lock,
+                            TargetAPIMutex &api_mutex,
+                            std::unique_lock<TargetAPIMutex> &lock,
                             Status &error);
 
   void SetUseDynamic(lldb::DynamicValueType use_dynamic) {
@@ -1335,14 +1338,15 @@ public:
   ValueLocker() = default;
 
   lldb::ValueObjectSP GetLockedSP(ValueImpl &in_value) {
-    return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
+    return in_value.GetSP(m_stop_locker, m_api_mutex, m_lock, m_lock_error);
   }
 
   Status &GetError() { return m_lock_error; }
 
 private:
   Process::StopLocker m_stop_locker;
-  std::unique_lock<std::recursive_mutex> m_lock;
+  TargetAPIMutex m_api_mutex;
+  std::unique_lock<TargetAPIMutex> m_lock;
   Status m_lock_error;
 };
 

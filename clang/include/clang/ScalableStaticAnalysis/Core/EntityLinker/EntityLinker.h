@@ -8,6 +8,8 @@
 //
 //  This file defines the EntityLinker class that combines multiple TU summaries
 //  into a unified LU summary by deduplicating entities and patching summaries.
+//  TU summaries may be supplied individually, bundled in a static library, or
+//  bundled in one architecture member of a multi-architecture static library.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +19,7 @@
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -24,17 +27,22 @@
 
 namespace clang::ssaf {
 
+class MultiArchStaticLibrary;
+class StaticLibrary;
 class TUSummaryEncoding;
 
 class EntityLinker {
   LUSummaryEncoding Output;
+
+  // Namespaces of the TU summaries folded in, supplied directly or as members
+  // of a library.
   std::set<BuildNamespace> ProcessedTUNamespaces;
 
 public:
   /// Constructs an EntityLinker to link TU summaries into a LU summary.
   ///
-  /// \param TargetTriple The target triple of the link unit. Every linked TU
-  ///        must report the same triple.
+  /// \param TargetTriple The target triple of the link unit. Every linked
+  ///        input must report the same triple.
   /// \param LUNamespace The namespace identifying this link unit.
   EntityLinker(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
       : Output(std::move(TargetTriple), std::move(LUNamespace)) {}
@@ -45,10 +53,39 @@ public:
   /// and merges them into a single data store.
   ///
   /// \param Summary The TU summary to link. Ownership is transferred.
-  /// \returns Error if the TU namespace has already been linked or if patching
-  ///          fails, success otherwise. Corrupted summary data (missing linkage
-  ///          information, duplicate entity IDs, etc.) triggers a fatal error.
+  /// \returns Error if \p Summary reports a different target triple than this
+  ///          link unit, if its TU namespace has already been linked, or if
+  ///          patching fails; success otherwise. Corrupted summary data
+  ///          (missing linkage information, duplicate entity IDs, etc.)
+  ///          triggers a fatal error.
   llvm::Error link(std::unique_ptr<TUSummaryEncoding> Summary);
+
+  /// Links every member of a static library into the LU summary.
+  ///
+  /// Members are folded in unconditionally, in an unspecified order, exactly as
+  /// if each had been passed as an individual TU summary.
+  ///
+  /// \param Library The static library to link. Ownership is transferred.
+  /// \returns Error if \p Library reports a different target triple than this
+  ///          link unit or if any member fails to link, success otherwise.
+  llvm::Error link(std::unique_ptr<StaticLibrary> Library);
+
+  /// Links the architecture member matching this link unit into the LU summary.
+  ///
+  /// Members for other architectures are discarded.
+  ///
+  /// \param Library The multi-arch static library to link. Ownership is
+  ///        transferred.
+  /// \returns Error if \p Library has no member whose target triple equals this
+  ///          link unit's, or if the selected member fails to link; success
+  ///          otherwise.
+  llvm::Error link(std::unique_ptr<MultiArchStaticLibrary> Library);
+
+  /// Returns the number of TU summaries folded in so far.
+  ///
+  /// Counts members expanded from libraries as well as TU summaries linked
+  /// directly, so it is not the number of link() calls.
+  size_t getLinkedTUCount() const { return ProcessedTUNamespaces.size(); }
 
   /// Returns the accumulated LU summary.
   ///
@@ -57,6 +94,15 @@ public:
   LUSummaryEncoding takeOutput() && { return std::move(Output); }
 
 private:
+  /// Checks that an input belongs to this link unit's target.
+  ///
+  /// \param TargetTriple The triple of the input being linked.
+  /// \param InputNamespace The namespace naming that input in the diagnostic.
+  /// \returns Error if \p TargetTriple differs from this link unit's, success
+  ///          otherwise.
+  llvm::Error checkTargetTriple(const llvm::Triple &TargetTriple,
+                                const BuildNamespace &InputNamespace) const;
+
   /// Resolves a TU entity name to an LU entity name and ID.
   ///
   /// \param OldName The entity name in the TU namespace.

@@ -183,8 +183,8 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
                                            const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
-  LibFunc Func;
-  if (!TLI.getLibFunc(*Callee, Func))
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func == NotLibFunc)
     return false;
   switch (Func) {
   case LibFunc_Znwm:

@@ -71,5 +71,5 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_tree %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTINC %s
 
-// HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // HOSTINC: "-internal-externc-isystem" "{{[^"]*}}Inputs/basic_linux_tree/usr/include"

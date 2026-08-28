@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class SelectionDAGISelPass;
 class FunctionPass;
 class MachineFunctionPass;
 class NVPTXTargetMachine;
@@ -93,7 +94,7 @@ void initializeNVPTXIRPeepholePass(PassRegistry &);
 void initializeNVPTXPrologEpilogLegacyPassPass(PassRegistry &);
 
 // Module passes
-class GenericToNVVMPass : public OptionalPassInfoMixin<GenericToNVVMPass> {
+class GenericToNVVMPass : public RequiredPassInfoMixin<GenericToNVVMPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
@@ -104,7 +105,13 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-class NVPTXLowerArgsPass : public OptionalPassInfoMixin<NVPTXLowerArgsPass> {
+class NVPTXCtorDtorLoweringPass
+    : public RequiredPassInfoMixin<NVPTXCtorDtorLoweringPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXLowerArgsPass : public RequiredPassInfoMixin<NVPTXLowerArgsPass> {
   TargetMachine &TM;
 
 public:
@@ -118,7 +125,7 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-class NVVMReflectPass : public OptionalPassInfoMixin<NVVMReflectPass> {
+class NVVMReflectPass : public RequiredPassInfoMixin<NVVMReflectPass> {
   unsigned SmVersion;
 
 public:

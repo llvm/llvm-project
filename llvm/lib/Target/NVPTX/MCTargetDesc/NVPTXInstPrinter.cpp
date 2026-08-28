@@ -563,6 +563,18 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
   llvm_unreachable("Invalid cta_group in printCTAGroup");
 }
 
+void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &, raw_ostream &O,
+                                        StringRef Modifier) {
+  const auto Policy =
+      static_cast<nvvm::EvictPolicyType>(MI->getOperand(OpNum).getImm());
+  // Evict normal is the default priority policy for prefetch and does not print
+  // a qualifier.
+  if (Policy == nvvm::EvictPolicyType::EVICT_NORMAL)
+    return;
+  O << "." << nvvm::getEvictPolicyName(Policy);
+}
+
 void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &, raw_ostream &O,
                                         StringRef Modifier) {

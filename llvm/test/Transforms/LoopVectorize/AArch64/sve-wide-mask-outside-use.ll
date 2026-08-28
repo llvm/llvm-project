@@ -57,7 +57,7 @@ define i64 @scalable_wide_lane_mask_outside_use(ptr noalias %dst, ptr readonly %
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-UF4-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-UF4-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N]])
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 2)
@@ -219,7 +219,7 @@ define i64 @scalable_wide_lane_mask_outside_load_use(ptr noalias %dst, ptr reado
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-UF4-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-UF4-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[N:%.*]])
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
 ; CHECK-UF4-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 2)

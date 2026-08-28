@@ -21,8 +21,6 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,17 +39,15 @@ using namespace mlir;
 namespace {
 
 using genFunctionType =
-    std::function<mlir::Value(mlir::PatternRewriter &, fir::CallOp op)>;
+    std::function<mlir::Value(mlir::RewriterBase &, fir::CallOp op)>;
 
-class CallConversion : public OpRewritePattern<fir::CallOp> {
+class CallConversion {
 public:
-  CallConversion(MLIRContext *context, bool deferAccRoutines)
-      : OpRewritePattern<fir::CallOp>(context),
-        deferAccRoutines_(deferAccRoutines) {}
+  explicit CallConversion(bool deferAccRoutines)
+      : deferAccRoutines_(deferAccRoutines) {}
 
-  LogicalResult
-  matchAndRewrite(fir::CallOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(fir::CallOp op,
+                                mlir::RewriterBase &rewriter) const {
     auto callee = op.getCallee();
     if (!callee)
       return failure();
@@ -87,6 +83,7 @@ public:
           return failure();
     }
 
+    rewriter.setInsertionPoint(op);
     mlir::Value result = fct->second(rewriter, op);
     if (!result)
       return failure();
@@ -95,8 +92,7 @@ public:
   }
 
 private:
-  static mlir::Value genOnDevice(mlir::PatternRewriter &rewriter,
-                                 fir::CallOp op) {
+  static mlir::Value genOnDevice(mlir::RewriterBase &rewriter, fir::CallOp op) {
     // Only fold calls that match the intrinsic's shape: no arguments and a
     // single logical result.
     if (!op.getArgs().empty() || op.getNumResults() != 1)
@@ -126,17 +122,11 @@ public:
   using CUFFunctionRewriteBase::CUFFunctionRewriteBase;
 
   void runOnOperation() override {
-    auto *ctx = &getContext();
-    mlir::RewritePatternSet patterns(ctx);
-
-    patterns.insert<CallConversion>(patterns.getContext(), deferAccRoutines);
-
-    if (mlir::failed(
-            mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(ctx),
-                      "error in CUFFunctionRewrite op conversion\n");
-      signalPassFailure();
-    }
+    CallConversion conversion(deferAccRoutines);
+    mlir::IRRewriter rewriter(&getContext());
+    getOperation()->walk([&](fir::CallOp op) {
+      (void)conversion.matchAndRewrite(op, rewriter);
+    });
   }
 };
 

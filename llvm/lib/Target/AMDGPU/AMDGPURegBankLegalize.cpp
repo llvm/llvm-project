@@ -32,7 +32,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -274,9 +274,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     return false;
 
   Register RALDst = Src;
-  MachineInstr &SrcMI = *MRI.getVRegDef(Src);
-  if (SrcMI.getOpcode() == AMDGPU::G_BITCAST)
-    RALDst = SrcMI.getOperand(1).getReg();
+  bool IsBitcast = mi_match(Src, MRI, m_GBitcast(m_Reg(RALDst)));
 
   B.setInstrAndDebugLoc(Copy);
   SmallVector<Register> ReadAnyLaneSrcRegs = getReadAnyLaneSrcs(RALDst);
@@ -293,7 +291,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     ReadAnyLaneSrc = Merge.getReg(0);
   }
 
-  if (SrcMI.getOpcode() != AMDGPU::G_BITCAST) {
+  if (!IsBitcast) {
     // Src = READANYLANE RALSrc     Src = READANYLANE RALSrc
     // Dst = Copy Src               $Dst = Copy Src
     // ->                           ->

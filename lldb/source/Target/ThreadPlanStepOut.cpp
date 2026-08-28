@@ -29,7 +29,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOut::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 /// Computes the target frame this plan should step out to.
 static StackFrameSP

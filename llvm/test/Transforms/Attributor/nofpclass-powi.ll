@@ -4,7 +4,7 @@
 declare float @llvm.powi.f32.i32(float, i32)
 declare float @llvm.powi.f32.i64(float, i64)
 
-declare <2 x float> @llvm.powi.v2f32.v2i32(<2 x float>, <2 x i32>)
+declare <2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32)
 declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
 
 define float @ret_powi_f32(float %arg0, i32 %arg1) #0 {
@@ -27,13 +27,13 @@ define float @ret_powi_f32_i64(float %arg0, i64 %arg1) #0 {
   ret float %call
 }
 
-define <2 x float> @ret_powi_v2f32(<2 x float> %arg0, <2 x i32> %arg1) #0 {
+define <2 x float> @ret_powi_v2f32(<2 x float> %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define <2 x float> @ret_powi_v2f32
-; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[ARG1]]) #[[ATTR6]]
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
-  %call = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> %arg0, <2 x i32> %arg1)
+  %call = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %arg0, i32 %arg1)
   ret <2 x float> %call
 }
 
@@ -269,23 +269,23 @@ define float @ret_powi_f32_no_nan_no_zero_nosub__arg1__daz(float nofpclass(nan z
   ret float %call
 }
 
-define <2 x float> @ret_powi_v2f32_even_nonsplat(<2 x float> %arg0) #0 {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_even_nonsplat
+define <2 x float> @ret_powi_v2f32_even_constant(<2 x float> %arg0) #0 {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_even_constant
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> noundef <i32 2, i32 4>) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[ARG0]], i32 noundef 4) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
-  %call = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> %arg0, <2 x i32> <i32 2, i32 4>)
+  %call = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %arg0, i32 4)
   ret <2 x float> %call
 }
 
-define <2 x float> @ret_powi_v2f32_odd_nonsplat(<2 x float> %arg0) #0 {
-; CHECK-LABEL: define <2 x float> @ret_powi_v2f32_odd_nonsplat
+define <2 x float> @ret_powi_v2f32_odd_constant(<2 x float> %arg0) #0 {
+; CHECK-LABEL: define <2 x float> @ret_powi_v2f32_odd_constant
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> noundef <i32 3, i32 4>) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[ARG0]], i32 noundef 3) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
-  %call = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> %arg0, <2 x i32> <i32 3, i32 4>)
+  %call = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %arg0, i32 3)
   ret <2 x float> %call
 }
 
@@ -313,15 +313,15 @@ define float @ret_powi_f32_masked_to_even_extrabits(float %arg0, i32 %arg1) #0 {
   ret float %call
 }
 
-define <2 x float> @ret_powi_v2f32_masked_to_even(<2 x float> %arg0, <2 x i32> %arg1) #0 {
+define <2 x float> @ret_powi_v2f32_masked_to_even(<2 x float> %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_masked_to_even
-; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and <2 x i32> [[ARG1]], splat (i32 -2)
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[KNOWN_EVEN]]) #[[ATTR6]]
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and i32 [[ARG1]], -2
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[ARG0]], i32 [[KNOWN_EVEN]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
-  %known.even = and <2 x i32> %arg1, <i32 -2, i32 -2>
-  %call = call <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> %arg0, <2 x i32> %known.even)
+  %known.even = and i32 %arg1, -2
+  %call = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %arg0, i32 %known.even)
   ret <2 x float> %call
 }
 

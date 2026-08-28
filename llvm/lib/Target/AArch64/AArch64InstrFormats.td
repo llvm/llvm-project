@@ -7686,8 +7686,8 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
 //----------------------------------------------------------------------------
 
 class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
-                             string asm, string kind>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, i32imm:$imm), asm,
+                             Operand immtype, string asm, string kind>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, immtype:$imm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $imm" #
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
@@ -7710,10 +7710,10 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
 
 
 multiclass SIMDBitwiseExtract<string asm> {
-  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, asm, ".8b"> {
+  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, imm32_0_7, asm, ".8b"> {
     let imm{3} = 0;
   }
-  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, asm, ".16b">;
+  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, imm32_0_15, asm, ".16b">;
 }
 
 //----------------------------------------------------------------------------

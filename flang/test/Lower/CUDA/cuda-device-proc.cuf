@@ -431,7 +431,7 @@ end subroutine
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
 ! CHECK: nvvm.mbarrier.init %[[SHARED_PTR]], %[[COUNT]] : !llvm.ptr<3>, i32
-! CHECK: nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
+! CHECK: nvvm.fence.proxy <async.shared>, space = <cta>
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
@@ -447,7 +447,7 @@ attributes(global) subroutine test_fence()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_fence()
-! CHECK: nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
+! CHECK: nvvm.fence.proxy <async.shared>, space = <cta>
 
 attributes(global) subroutine test_tma()
   call tma_bulk_commit_group()

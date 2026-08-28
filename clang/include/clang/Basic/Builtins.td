@@ -5317,6 +5317,12 @@ def HLSLResourceGetPointerTyped : Builtin {
   let Prototype = "void(...)";
 }
 
+def HLSLMaybeTransposeMatrix : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_transpose_if_memory_is_row_major"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_with_status"];
   let Attributes = [NoThrow];
@@ -5331,6 +5337,12 @@ def HLSLResourceLoadWithStatusTyped : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceLoadLevel : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_level"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceLoadMS : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_ms"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
@@ -5535,6 +5547,12 @@ def HLSLWaveActiveBitAnd : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_add"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedMin : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_min"];
   let Attributes = [NoThrow];
   let Prototype = "void (...)";
 }

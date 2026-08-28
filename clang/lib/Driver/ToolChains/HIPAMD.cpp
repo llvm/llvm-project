@@ -133,6 +133,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
+  TC.addProfileRTLibs(Args, LldArgs);
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.

@@ -9,11 +9,11 @@
 #ifndef ORC_RT_UNITTEST_COMMONTESTUTILS_H
 #define ORC_RT_UNITTEST_COMMONTESTUTILS_H
 
-#include "orc-rt/Error.h"
-#include "orc-rt/ExecutorProcessInfo.h"
-#include "orc-rt/Session.h"
-#include "orc-rt/WrapperFunction.h"
-#include "orc-rt/move_only_function.h"
+#include "orc-rt/bedrock/Error.h"
+#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt/bedrock/Session.h"
+#include "orc-rt/bedrock/WrapperFunction.h"
+#include "orc-rt/bedrock/move_only_function.h"
 
 #include "orc-rt-c/CoreTypes.h"
 #include "orc-rt-c/WrapperFunction.h"
@@ -50,7 +50,7 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
 
 /// DispatchFn for tests that should never dispatch a task. Records a test
 /// failure on invocation, then runs the task inline so that any caller
-/// awaiting a result unblocks (rather than hanging) and the managed-code token
+/// awaiting a result unblocks (rather than hanging) and the keepalive token
 /// is released, even in -Asserts builds or when the dispatch arrives on a
 /// non-test thread.
 inline void noDispatch(orc_rt::Session::Task T) {

@@ -10,8 +10,7 @@ define void @test(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[UMAX3:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:

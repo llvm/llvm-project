@@ -7,44 +7,44 @@ func.func @mfma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<16xf32>,
                     %arg10 : vector<32xf6E3M2FN>, %arg11 : vector<32xf4E2M1FN>) {
 
   // CHECK: rocdl.mfma.f32.32x32x16.f16{{.*}}: (vector<8xf16>, vector<8xf16>, vector<16xf32>) -> vector<16xf32>
-  amdgpu.mfma 32x32x16 %arg0 * %arg0 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<8xf16>, vector<8xf16>, vector<16xf32>
+  amdgpu.mfma 32x32x16 %arg0 * %arg0 + %arg1 : vector<8xf16>, vector<8xf16>, vector<16xf32>
   // CHECK: rocdl.mfma.f32.16x16x32.f16{{.*}}: (vector<8xf16>, vector<8xf16>, vector<4xf32>) -> vector<4xf32>
-  amdgpu.mfma 16x16x32 %arg0 * %arg0 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<8xf16>, vector<8xf16>, vector<4xf32>
+  amdgpu.mfma 16x16x32 %arg0 * %arg0 + %arg2 : vector<8xf16>, vector<8xf16>, vector<4xf32>
   // CHECK: rocdl.mfma.f32.32x32x16.bf16{{.*}}: (vector<8xbf16>, vector<8xbf16>, vector<16xf32>) -> vector<16xf32>
-  amdgpu.mfma 32x32x16 %arg3 * %arg3 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<8xbf16>, vector<8xbf16>, vector<16xf32>
+  amdgpu.mfma 32x32x16 %arg3 * %arg3 + %arg1 : vector<8xbf16>, vector<8xbf16>, vector<16xf32>
   // CHECK: rocdl.mfma.f32.16x16x32.bf16{{.*}}: (vector<8xbf16>, vector<8xbf16>, vector<4xf32>) -> vector<4xf32>
-  amdgpu.mfma 16x16x32 %arg3 * %arg3 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<8xbf16>, vector<8xbf16>, vector<4xf32>
+  amdgpu.mfma 16x16x32 %arg3 * %arg3 + %arg2 : vector<8xbf16>, vector<8xbf16>, vector<4xf32>
   // CHECK: rocdl.mfma.i32.32x32x32.i8{{.*}}: (vector<4xi32>, vector<4xi32>, vector<16xi32>) -> vector<16xi32>
-  amdgpu.mfma 32x32x32 %arg4 * %arg4 + %arg5 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<16xi8>, vector<16xi8>, vector<16xi32>
+  amdgpu.mfma 32x32x32 %arg4 * %arg4 + %arg5 : vector<16xi8>, vector<16xi8>, vector<16xi32>
   // CHECK: rocdl.mfma.i32.16x16x64.i8{{.*}}: (vector<4xi32>, vector<4xi32>, vector<4xi32>) -> vector<4xi32>
-  amdgpu.mfma 16x16x64 %arg4 * %arg4 + %arg6 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<16xi8>, vector<16xi8>, vector<4xi32>
+  amdgpu.mfma 16x16x64 %arg4 * %arg4 + %arg6 : vector<16xi8>, vector<16xi8>, vector<4xi32>
 
   // CHECK: %[[c0:.+]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %[[c0]], 0, %[[c0]] : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg7 * %arg7 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg7 * %arg7 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e4m3, fp8_e4m3, 0, %[[c0]], 0, %[[c0]] : (vector<8xi32>, vector<8xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg7 * %arg7 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg7 * %arg7 + %arg2 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e5m2, fp8_e5m2, 0, %[[c0]], 0, %[[c0]] : (vector<8xi32>, vector<8xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg8 * %arg8 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg8 * %arg8 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp8_e5m2, fp8_e5m2, 0, %[[c0]], 0, %[[c0]] : (vector<8xi32>, vector<8xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg8 * %arg8 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg8 * %arg8 + %arg2 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<4xf32>
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e2m3, fp6_e2m3, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<6xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg9 * %arg9 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E2M3FN>, vector<32xf6E2M3FN>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg9 * %arg9 + %arg1 : vector<32xf6E2M3FN>, vector<32xf6E2M3FN>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e2m3, fp6_e2m3, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<6xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg9 * %arg9 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E2M3FN>, vector<32xf6E2M3FN>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg9 * %arg9 + %arg2 : vector<32xf6E2M3FN>, vector<32xf6E2M3FN>, vector<4xf32>
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e3m2, fp6_e3m2, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<6xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg10 * %arg10 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E3M2FN>, vector<32xf6E3M2FN>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg10 * %arg10 + %arg1 : vector<32xf6E3M2FN>, vector<32xf6E3M2FN>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e3m2, fp6_e3m2, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<6xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg10 * %arg10 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E3M2FN>, vector<32xf6E3M2FN>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg10 * %arg10 + %arg2 : vector<32xf6E3M2FN>, vector<32xf6E3M2FN>, vector<4xf32>
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp4_e2m1, fp4_e2m1, 0, %[[c0]], 0, %[[c0]] : (vector<4xi32>, vector<4xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg11 * %arg11 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf4E2M1FN>, vector<32xf4E2M1FN>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg11 * %arg11 + %arg1 : vector<32xf4E2M1FN>, vector<32xf4E2M1FN>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp4_e2m1, fp4_e2m1, 0, %[[c0]], 0, %[[c0]] : (vector<4xi32>, vector<4xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg11 * %arg11 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf4E2M1FN>, vector<32xf4E2M1FN>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg11 * %arg11 + %arg2 : vector<32xf4E2M1FN>, vector<32xf4E2M1FN>, vector<4xf32>
 
   // CHECK: rocdl.mfma.scale.f32.32x32x64.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e2m3, fp4_e2m1, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<4xi32>, vector<16xf32>, i32, i32) -> vector<16xf32>
-  amdgpu.mfma 32x32x64 %arg9 * %arg11 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E2M3FN>, vector<32xf4E2M1FN>, vector<16xf32>
+  amdgpu.mfma 32x32x64 %arg9 * %arg11 + %arg1 : vector<32xf6E2M3FN>, vector<32xf4E2M1FN>, vector<16xf32>
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 %{{.*}}, %{{.*}}, %{{.*}}, fp6_e2m3, fp4_e2m1, 0, %[[c0]], 0, %[[c0]] : (vector<6xi32>, vector<4xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
-  amdgpu.mfma 16x16x128 %arg9 * %arg11 + %arg2 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<32xf6E2M3FN>, vector<32xf4E2M1FN>, vector<4xf32>
+  amdgpu.mfma 16x16x128 %arg9 * %arg11 + %arg2 : vector<32xf6E2M3FN>, vector<32xf4E2M1FN>, vector<4xf32>
 
   func.return
 }

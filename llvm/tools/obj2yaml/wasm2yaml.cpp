@@ -135,7 +135,12 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       Info.Flags = Symbol.Flags;
       switch (Symbol.Kind) {
       case wasm::WASM_SYMBOL_TYPE_DATA:
-        Info.DataRef = Symbol.DataRef;
+        if ((Symbol.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+            wasm::WASM_SYMBOL_BINDING_COMMON) {
+          Info.CommonRef = Symbol.CommonRef;
+        } else {
+          Info.DataRef = Symbol.DataRef;
+        }
         break;
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:

@@ -28,3 +28,79 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+
+// Verify that xegpu.lane_shuffle of a sub-byte element type is rejected: the
+// shuffle redistributes whole bytes between the lanes, so fp4 fragments cannot
+// be shuffled.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_f4(%a: vector<4xf4E2M1FN>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xf4E2M1FN>
+    gpu.return
+  }
+}
+
+// -----
+
+// Verify that a xegpu.lane_shuffle fragment wider than 64 bits is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_too_wide(%a: vector<4xi32>) {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a pack : vector<4xi32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A non-unit leading dim cannot be lowered to a 2D-block op.
+
+gpu.module @test_kernel {
+  gpu.func @load_nd_non_unit_batch(%src: memref<4x8x16xf32>, %z: index) kernel {
+    %c0 = arith.constant 0 : index
+    %t = xegpu.create_nd_tdesc %src : memref<4x8x16xf32> -> !xegpu.tensor_desc<2x8x16xf32>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %v = xegpu.load_nd %t[%z, %c0, %c0] : !xegpu.tensor_desc<2x8x16xf32> -> vector<16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// The payload has room for only 3 leading strides, so rank > 5 is rejected.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_rank_too_large(%src: memref<2x2x2x2x8x16xf32>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x2x2x2x8x16xf32> -> !xegpu.tensor_desc<1x1x1x1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A memref with gaps between planes has no exact flattened-plane view.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap(%src: memref<2x8x16xf32, strided<[200, 16, 1]>>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<2x8x16xf32, strided<[200, 16, 1]>> -> !xegpu.tensor_desc<1x8x16xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Same check applies to an integer source, whose strides are explicit.
+
+gpu.module @test_kernel {
+  gpu.func @create_nd_tdesc_plane_gap_ptr(%ptr: i64) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %ptr, shape: [2, 8, 16], strides: [200, 16, 1] : i64 -> !xegpu.tensor_desc<1x8x16xf32>
+    gpu.return
+  }
+}

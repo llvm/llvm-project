@@ -31,7 +31,7 @@ end program
 
 ! The op is owner-qualified to the module scope (_QQMm...) and carries the
 ! type/byref suffix. The use-site clause binds the same op.
-! CHECK: omp.declare_reduction @[[RED:_QQMmmyadd_byref_rec__QMmTt]] : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
+! CHECK: omp.declare_reduction @[[RED:_QQMmmyadd_byref_rec__QMmTt]] byref_element_type({{.*}}) : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
 ! CHECK-NOT: omp.declare_reduction @{{.*}}myadd{{.*}}myadd
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]

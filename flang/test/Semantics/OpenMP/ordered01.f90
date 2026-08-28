@@ -49,6 +49,10 @@ program main
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
     !$omp ordered depend(out: arrayC) depend(in: arrayB)
     arrayC(i) = baz(arrayB(i-1))
+    !ERROR: Iteration vector must be specified with SINK dependence type
+    !$omp ordered depend(sink)
+    !ERROR: Iteration vector may not be specified with SOURCE dependence type
+    !$omp ordered depend(source: i - 2)
   end do
   !$omp end do
 

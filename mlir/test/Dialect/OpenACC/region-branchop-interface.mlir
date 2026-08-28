@@ -82,7 +82,7 @@ func.func @last_mod_openacc_data(%arg0: memref<f32>, %mapped: memref<f32>) -> me
   memref.load %arg0[] {tag = "acc_data_before"} : memref<f32>
   acc.data {
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   memref.load %arg0[] {tag = "acc_data_after"} : memref<f32>
   return %arg0 : memref<f32>
 }
@@ -141,7 +141,7 @@ func.func @last_mod_openacc_loop(%arg0: memref<f32>) -> memref<f32> {
     memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
     memref.load %arg0[] {tag = "acc_loop_inside"} : memref<f32>
     acc.yield
-  } attributes {auto_ = [#acc.device_type<none>]}
+  } auto_
   memref.load %arg0[] {tag = "acc_loop_after"} : memref<f32>
   memref.store %zero, %arg0[] {tag_name = "post_loop"} : memref<f32>
   memref.load %arg0[] {tag = "acc_loop_post"} : memref<f32>
@@ -191,7 +191,7 @@ func.func @last_mod_openacc_loop_unstructured(%arg0: memref<f32>) -> memref<f32>
   ^normal_exit:
     memref.store %one, %arg0[] {tag_name = "loop_unstructured_normal"} : memref<f32>
     acc.yield
-  } attributes {auto_ = [#acc.device_type<none>], unstructured}
+  } auto_ unstructured
   memref.load %arg0[] {tag = "acc_loop_unstructured_after"} : memref<f32>
   return %arg0 : memref<f32>
 }

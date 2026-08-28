@@ -426,7 +426,7 @@ def testPrintIrTree():
                 entries = sorted(os.listdir(directory))
                 for i, entry in enumerate(entries):
                     path = os.path.join(directory, entry)
-                    connector = "\-- " if i == len(entries) - 1 else "|-- "
+                    connector = r"\-- " if i == len(entries) - 1 else "|-- "
                     log(f"{prefix}{connector}{entry}")
                     if os.path.isdir(path):
                         print_file_tree(

@@ -1841,6 +1841,17 @@ void affine::vectorizeChildAffineLoops(
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
   func::FuncOp f = getOperation();
+  if (vectorSizes.empty()) {
+    f.emitError("The 'virtual-vector-size' option must be specified.");
+    return signalPassFailure();
+  }
+
+  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
+    f.emitError(
+        "The 'virtual-vector-size' option must contain only positive values.");
+    return signalPassFailure();
+  }
+
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
     f.emitRemark("Fastest varying pattern specified with different size than "
@@ -1850,11 +1861,6 @@ void Vectorize::runOnOperation() {
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
-    return signalPassFailure();
-  }
-
-  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
-    f.emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 

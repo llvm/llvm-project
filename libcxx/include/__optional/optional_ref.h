@@ -32,7 +32,6 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/reference_constructs_from_temporary.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>

@@ -32,7 +32,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: %[[V:.*]] = load ptr, ptr @_QMtest_0Esp_decl_tgt_ref_ptr, align 8
     // CHECK-DAG: store i32 1, ptr %[[V]], align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map -> %arg0 : !llvm.ptr) {
       %1 = llvm.mlir.constant(1 : i32) : i32
       llvm.store %1, %arg0 : i32, !llvm.ptr
@@ -192,8 +192,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: store i32 10, ptr @_QMtest_0Evar_to, align 4
     // CHECK-DAG: store i32 20, ptr @_QMtest_0Evar_enter, align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map0 -> %arg0, %map1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %c10 = llvm.mlir.constant(10 : i32) : i32
       %c20 = llvm.mlir.constant(20 : i32) : i32
@@ -255,8 +255,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // CHECK-DAG: %[[ENTER_VAR:.*]] = load ptr, ptr @_QMtest_0Evar_enter_usm_decl_tgt_ref_ptr, align 8
     // CHECK-DAG: store i32 20, ptr %[[ENTER_VAR]], align 4
     // CHECK-DAG: call void @_QMtest_0Puse_global()
-    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map0 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map0 -> %arg0, %map1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %c10 = llvm.mlir.constant(10 : i32) : i32
       %c20 = llvm.mlir.constant(20 : i32) : i32

@@ -10,7 +10,7 @@
 #define ORC_RT_UNITTEST_ALLOCACTIONTESTUTILS_H
 
 #include "SimplePackedSerializationTestUtils.h"
-#include "orc-rt/AllocAction.h"
+#include "orc-rt/bedrock/AllocAction.h"
 
 #include <optional>
 

@@ -43,7 +43,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
     %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
     omp.parallel {
       omp.taskgroup task_reduction(@add_reduction_i32 %1 -> %arg0 : !llvm.ptr) {
-        %2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !llvm.ptr {name = "sum"}
+        %2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, tofrom) capture(ByRef) name("sum") -> !llvm.ptr
         omp.target kernel_type(generic) in_reduction(@add_reduction_i32 %arg0 : !llvm.ptr) map_entries(%2 -> %arg1 : !llvm.ptr) {
           %c1 = llvm.mlir.constant(1 : i32) : i32
           llvm.store %c1, %arg1 : i32, !llvm.ptr

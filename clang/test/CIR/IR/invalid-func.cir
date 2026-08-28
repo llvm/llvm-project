@@ -26,3 +26,39 @@ module {
     cir.return
   }
 }
+
+// -----
+
+module {
+  cir.func @l0() -> i32 // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+module {
+  cir.func @l0(i32) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+module {
+  cir.func @l0(!cir.ptr<i32>) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data i32}>
+
+module {
+  cir.func private @l0(!cir.ptr<!rec_S>) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_U = !cir.union<"U" {data !s32i, data i32}>
+
+module {
+  cir.func private @l0(!rec_U) // expected-error {{expected all types in the function signature to be CIR types}}
+}

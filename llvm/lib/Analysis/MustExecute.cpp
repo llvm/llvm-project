@@ -204,6 +204,14 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   if (BB == CurLoop->getHeader())
     return true;
 
+  auto [It, Inserted] = GuaranteedToExecute.try_emplace(BB, false);
+  if (Inserted)
+    It->second = allLoopPathsLeadToBlockImpl(CurLoop, BB, DT);
+  return It->second;
+}
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlockImpl(
+    const Loop *CurLoop, const BasicBlock *BB, const DominatorTree *DT) const {
   // Collect all transitive predecessors of BB in the same loop. This set will
   // be a subset of the blocks within the loop.
   SmallPtrSet<const BasicBlock *, 4> Predecessors;

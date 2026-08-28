@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <fstream>
 
 using namespace llvm;

@@ -603,16 +603,24 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
+  // Verify the reduction dimensions.
+  int64_t sourceRank = getSourceVectorType().getRank();
+  SmallVector<bool> isReduced(sourceRank, false);
+  for (int64_t dim : getReductionDims()) {
+    if (dim < 0 || dim >= sourceRank)
+      return emitOpError("reduction dimension out of range: ") << dim;
+    if (isReduced[dim])
+      return emitOpError("duplicate reduction dimension: ") << dim;
+    isReduced[dim] = true;
+  }
+
   SmallVector<int64_t> targetShape;
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto [dimIdx, dimSize] :
        llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims(),
-                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
-                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
-                      })) {
+    if (!isReduced[dimIdx]) {
       targetShape.push_back(dimSize);
       scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
@@ -6180,6 +6188,21 @@ TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
+
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
                                                  VectorType vecTy,
                                                  MemRefType memRefTy) {
@@ -6303,6 +6326,9 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
   // Negative strides are not supported on vector.maskedload. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
   // assume non-negative strides to avoid undefined behavior.
@@ -6368,6 +6394,9 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
 
   // Negative strides are not supported on vector.maskedstore. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
@@ -6652,6 +6681,15 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.expandload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
     return failure();
@@ -6708,6 +6746,15 @@ LogicalResult CompressStoreOp::verify() {
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.compressstore. The lowering
+  // to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))

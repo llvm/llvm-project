@@ -142,7 +142,7 @@ def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
   def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
 def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
-def TemplateName : DefaultValuePropertyType;
+def TemplateName : PropertyType;
 def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
 def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;

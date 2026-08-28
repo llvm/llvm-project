@@ -821,6 +821,9 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;
+    case Triple::systemz:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -912,7 +915,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -1107,7 +1110,10 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(TT);
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
@@ -1306,7 +1312,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));

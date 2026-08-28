@@ -32,21 +32,21 @@ func.func @dot_sdot4_gfx11_uniform_sign(%a: vector<4xi8>, %b: vector<4xi8>, %c: 
 
 // CHECK-LABEL: @dot_sudot4_signA_unsignedB
 func.func @dot_sudot4_signA_unsignedB(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
-  // CHECK: rocdl.sudot4 %{{.+}}, %{{.+}}, %{{.+}} {signA = true} : (i32, i32, i32) -> i32
-  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: rocdl.sudot4 %{{.+}}, %{{.+}}, %{{.+}} <signA = true> : (i32, i32, i32) -> i32
+  %r = amdgpu.dot %a * %b + %c unsignedB : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }
 
 // CHECK-LABEL: @dot_sudot4_unsignedA_signB_clamp
 func.func @dot_sudot4_unsignedA_signB_clamp(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
-  // CHECK: rocdl.sudot4 %{{.+}}, %{{.+}}, %{{.+}} {clamp = true, signB = true} : (i32, i32, i32) -> i32
-  %r = amdgpu.dot %a * %b + %c {unsignedA, clamp} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: rocdl.sudot4 %{{.+}}, %{{.+}}, %{{.+}} <signB = true, clamp = true> : (i32, i32, i32) -> i32
+  %r = amdgpu.dot %a * %b + %c unsignedA clamp : vector<4xi8>, vector<4xi8>, i32
   func.return %r : i32
 }
 
 // CHECK-LABEL: @dot_sudot8
 func.func @dot_sudot8(%a: vector<8xi4>, %b: vector<8xi4>, %c: i32) -> i32 {
-  // CHECK: rocdl.sudot8 %{{.+}}, %{{.+}}, %{{.+}} {signA = true} : (i32, i32, i32) -> i32
-  %r = amdgpu.dot %a * %b + %c {unsignedB} : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: rocdl.sudot8 %{{.+}}, %{{.+}}, %{{.+}} <signA = true> : (i32, i32, i32) -> i32
+  %r = amdgpu.dot %a * %b + %c unsignedB : vector<8xi4>, vector<8xi4>, i32
   func.return %r : i32
 }

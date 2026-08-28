@@ -1485,8 +1485,8 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
-  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
-                  DefR->getParent()->getEnclosingLoopRegion());
+  return DefR && (DefR->getParent()->getEnclosingLoopRegion() ||
+                  !DefR->getParent()->getPlan()->getVectorLoopRegion());
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {

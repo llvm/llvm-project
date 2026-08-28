@@ -28,11 +28,45 @@
 
 namespace clang::CIRGen {
 
+/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
+/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
+static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
+                                      const LangOptions &langOpts) {
+
+  if (cgOpts.DisableLifetimeMarkers)
+    return false;
+
+  // Sanitizers may use markers.
+  if (cgOpts.SanitizeAddressUseAfterScope ||
+      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
+      langOpts.Sanitize.has(SanitizerKind::Memory) ||
+      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
+    return true;
+
+  return cgOpts.OptimizationLevel != 0;
+}
+
+/// Does the statement tree rooted at \p s contain a label, switch, or indirect
+/// goto that could bypass a local's initialization? A coarse stand-in for
+/// classic CodeGen's per-decl bypass analysis (PR28267).
+static bool functionMightHaveBypass(const Stmt *s) {
+  if (!s)
+    return false;
+  if (isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(s))
+    return true;
+  for (const Stmt *child : s->children())
+    if (functionMightHaveBypass(child))
+      return true;
+  return false;
+}
+
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
+  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+      cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -369,14 +403,17 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   LexicalScope *localScope = cgf.curLexScope;
 
-  const auto *fd = cast<clang::FunctionDecl>(cgf.curGD.getDecl());
+  // Synthesized functions (e.g. SYCL kernel caller entry points) have no
+  // FunctionDecl; the non-void flow-off-the-end handling below is guarded on
+  // fd.
+  const auto *fd = dyn_cast_or_null<clang::FunctionDecl>(cgf.curGD.getDecl());
 
   // In C++, flowing off the end of a non-void function is always undefined
   // behavior. In C, flowing off the end of a non-void function is undefined
   // behavior only if the non-existent return value is used by the caller.
   // That influences whether the terminating op is trap, unreachable, or
   // return.
-  if (cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
+  if (fd && cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
       !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
       builder.getInsertionBlock() &&
       !previousOpIsNonYieldingCleanup(builder.getInsertionBlock())) {
@@ -651,7 +688,7 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
   return emitStmt(body, /*useCurrentScope=*/true);
 }
 
-static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
+void CIRGenFunction::eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
   // Remove any leftover blocks that are unreachable and empty, since they do
   // not represent unreachable code useful for warnings nor anything deemed
   // useful in general.
@@ -745,6 +782,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (shouldEmitLifetimeMarkers)
+      fnHasBypassStmt = functionMightHaveBypass(body);
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
@@ -779,6 +819,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     finishFunction(bodyRange.getEnd());
   }
+
+  if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
+    cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
 
   eraseEmptyAndUnusedBlocks(fn);
   return fn;

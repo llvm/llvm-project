@@ -1000,6 +1000,11 @@ Register createVirtualRegister(
       MIRBuilder);
 }
 
+bool isVectorType(SPIRVTypeInst SPVTy) {
+  return SPVTy->getOpcode() == SPIRV::OpTypeVector ||
+         SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
+}
+
 CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                           Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
                           IRBuilder<> &B) {
@@ -1247,13 +1252,12 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
     return Ty;
 
   Type *ResultTy;
-  if (STy->isLiteral())
+  if (STy->isLiteral()) {
     ResultTy =
         StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
-  else {
-    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
-    NewTy->setBody(NewElementTypes, STy->isPacked());
-    ResultTy = NewTy;
+  } else {
+    ResultTy = StructType::create(STy->getContext(), NewElementTypes,
+                                  STy->getName(), STy->isPacked());
   }
   return ResultTy;
 }

@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/StandaloneMachOUnwindInfoRegistrar.h"
+#include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
 
 #include "gtest/gtest.h"
 

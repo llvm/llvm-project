@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/DylibReader.h"
 #include "llvm/TextAPI/TextAPIError.h"

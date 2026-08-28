@@ -285,17 +285,23 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       };
 
   for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
   for (const dxil::ResourceInfo &RI : DRM.samplers()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
   for (const dxil::ResourceInfo &RI : DRM.srvs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -311,6 +317,8 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
   for (const dxil::ResourceInfo &RI : DRM.uavs()) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];

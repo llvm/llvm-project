@@ -15,9 +15,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %10 = llvm.addrspacecast %7 : !llvm.ptr<5> to !llvm.ptr
     llvm.store %1, %8 : i32, !llvm.ptr
     llvm.store %0, %9 : i32, !llvm.ptr
-    %map1 = omp.map.info var_ptr(%8 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%9 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map3 = omp.map.info var_ptr(%10 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map1 = omp.map.info var_ptr(%8 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%9 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    %map3 = omp.map.info var_ptr(%10 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %11 = llvm.load %arg0 : !llvm.ptr -> i32
       %12 = llvm.load %arg1 : !llvm.ptr -> i32

@@ -13,11 +13,11 @@ void a() {
   a = 1u;
 }
 
-// CIR: cir.func {{.*}} @_ZN1xaSEi(!cir.ptr<!rec_x> {{.*}}, !s32i {{.*}})
 // CIR: cir.func{{.*}} @_Z1av()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_x>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE]]) : (!cir.ptr<!rec_x> {{.*}}, !s32i {{.*}}) -> (!s32i {llvm.noundef})
+// CIR: cir.func {{.*}} @_ZN1xaSEi(!cir.ptr<!rec_x> {{.*}}, !s32i {{.*}})
 
 // LLVM: define{{.*}} @_Z1av(){{.*}}
 // OGCG: define{{.*}} @_Z1av()
@@ -57,8 +57,14 @@ void copy_c(C &c1, C &c2) {
   c1 = c2;
 }
 
-// CIR: cir.func private @_ZN1AaSERKS_(!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> (!cir.ptr<!rec_A>{{.*}})
-// CIR: cir.func private @memcpy(!cir.ptr<!void> {{.*}}, !cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> !cir.ptr<!void>
+// CIR: cir.func{{.*}} @_Z6copy_cR1CS0_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}})
+// CIR:   %[[C1_ADDR:.*]] = cir.alloca "c1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   %[[C2_ADDR:.*]] = cir.alloca "c2" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   cir.store %arg0, %[[C1_ADDR]]
+// CIR:   cir.store %arg1, %[[C2_ADDR]]
+// CIR:   %[[C2_LOAD:.*]] = cir.load{{.*}} %[[C2_ADDR]]
+// CIR:   %[[C1_LOAD:.*]] = cir.load{{.*}} %[[C1_ADDR]]
+// CIR:   %[[RET:.*]] = cir.call @_ZN1CaSERKS_(%[[C1_LOAD]], %[[C2_LOAD]])
 
 // Implicit assignment operator for C.
 
@@ -110,15 +116,6 @@ void copy_c(C &c1, C &c2) {
 // OGCG:   %[[B2:.*]] = getelementptr inbounds {{.*}} %struct.C, ptr %[[ARG_LOAD2]], i32 0, i32 1
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[B1]], ptr {{.*}} %[[B2]], i64 64, i1 false)
 
-// CIR: cir.func{{.*}} @_Z6copy_cR1CS0_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}})
-// CIR:   %[[C1_ADDR:.*]] = cir.alloca "c1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C>>
-// CIR:   %[[C2_ADDR:.*]] = cir.alloca "c2" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C>>
-// CIR:   cir.store %arg0, %[[C1_ADDR]]
-// CIR:   cir.store %arg1, %[[C2_ADDR]]
-// CIR:   %[[C2_LOAD:.*]] = cir.load{{.*}} %[[C2_ADDR]]
-// CIR:   %[[C1_LOAD:.*]] = cir.load{{.*}} %[[C1_ADDR]]
-// CIR:   %[[RET:.*]] = cir.call @_ZN1CaSERKS_(%[[C1_LOAD]], %[[C2_LOAD]])
-
 struct D {
   D &operator=(const D&);
 };
@@ -145,6 +142,9 @@ void copy_ref_to_ref(E &e1, E &e2) {
 // CIR:   %[[D1_REF:.*]] = cir.call @_ZN1E9get_d_refEv(%[[E1]])
 // CIR:   %[[D1_REF_2:.*]] = cir.call @_ZN1DaSERKS_(%[[D1_REF]], %[[D2_REF]])
 // CIR:   cir.return
+
+// CIR: cir.func private @_ZN1AaSERKS_(!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> (!cir.ptr<!rec_A>{{.*}})
+// CIR: cir.func private @memcpy(!cir.ptr<!void> {{.*}}, !cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> !cir.ptr<!void>
 
 // LLVM: define{{.*}} void @_Z15copy_ref_to_refR1ES0_(ptr{{.*}} %[[ARG0:.*]], ptr{{.*}} %[[ARG1:.*]]){{.*}} {
 // LLVM:   %[[E1_ADDR:.*]] = alloca ptr

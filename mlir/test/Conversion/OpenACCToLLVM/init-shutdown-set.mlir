@@ -31,10 +31,10 @@
 module {
   func.func @test_init_shutdown() {
     %c2_i32 = arith.constant 2 : i32
-    acc.init device_num(%c2_i32 : i32) attributes {device_types = [#acc.device_type<nvidia>]}
-    acc.shutdown device_num(%c2_i32 : i32) attributes {device_types = [#acc.device_type<nvidia>]}
-    acc.init attributes {device_types = [#acc.device_type<nvidia>, #acc.device_type<host>]}
-    acc.shutdown attributes {device_types = [#acc.device_type<nvidia>, #acc.device_type<host>]}
+    acc.init device_num(%c2_i32 : i32) device_types([#acc.device_type<nvidia>])
+    acc.shutdown device_num(%c2_i32 : i32) device_types([#acc.device_type<nvidia>])
+    acc.init device_types([#acc.device_type<nvidia>, #acc.device_type<host>])
+    acc.shutdown device_types([#acc.device_type<nvidia>, #acc.device_type<host>])
     acc.init device_num(%c2_i32 : i32)
     acc.shutdown device_num(%c2_i32 : i32)
     acc.init
@@ -54,7 +54,7 @@ module {
   func.func @test_set() {
     %c0_i32 = arith.constant 0 : i32
     %c1_i32 = arith.constant 1 : i32
-    acc.set default_async(%c1_i32 : i32) device_num(%c0_i32 : i32) attributes {device_type = #acc.device_type<nvidia>}
+    acc.set default_async(%c1_i32 : i32) device_num(%c0_i32 : i32) device_type(#acc.device_type<nvidia>)
     return
   }
 }
@@ -67,7 +67,7 @@ module {
 
 module {
   func.func @test_set_device_type() {
-    acc.set attributes {device_type = #acc.device_type<host>}
+    acc.set device_type(#acc.device_type<host>)
     return
   }
 }
@@ -83,7 +83,7 @@ module {
 
 module {
   func.func @test_if(%cond: i1) {
-    acc.init if(%cond) attributes {device_types = [#acc.device_type<nvidia>]}
+    acc.init if(%cond) device_types([#acc.device_type<nvidia>])
     return
   }
 }

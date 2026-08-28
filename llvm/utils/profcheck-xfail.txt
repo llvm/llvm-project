@@ -115,6 +115,7 @@ Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-compressstore.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-expandload.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-store.ll
+Transforms/ScalarizeMaskedMemIntrin/X86/metadata.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll

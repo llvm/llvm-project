@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/Math.h"
+#include "orc-rt/bedrock/Math.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

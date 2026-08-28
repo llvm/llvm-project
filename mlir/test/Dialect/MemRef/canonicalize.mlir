@@ -380,9 +380,9 @@ func.func @alloc_const_fold() -> memref<?xf32> {
 
 // CHECK-LABEL: func @alloc_alignment_const_fold
 func.func @alloc_alignment_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
+  // CHECK-NEXT: memref.alloc() alignment = 4096 : memref<4xf32>
   %c4 = arith.constant 4 : index
-  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
+  %a = memref.alloc(%c4) alignment = 4096 : memref<?xf32>
 
   // CHECK-NEXT: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   // CHECK-NEXT: return %{{.*}} : memref<?xf32>
@@ -1514,10 +1514,10 @@ func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?], offset: ?>>,
 // CHECK-LABEL: func @load_store_nontemporal(
 func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
-  // CHECK: memref.load %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
-  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  // CHECK: memref.load %{{.*}}[%{{.*}}] nontemporal(true) : memref<32xf32>
+  %2 = memref.load %input[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
+  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}] nontemporal(true) : memref<32xf32>
+  memref.store %2, %output[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
 

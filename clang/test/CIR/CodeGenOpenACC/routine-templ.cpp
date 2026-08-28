@@ -10,7 +10,7 @@ void use() {
 }
 
 // CHECK: cir.func{{.*}} @[[T1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[T1_R_NAME:.*]]]>{{.*}}}
+// CHECK: acc.routine @[[T1_R_NAME]] func(@[[T1_NAME]]) seq
 // CHECK: cir.func{{.*}} @[[T2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[T2_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: acc.routine @[[T1_R_NAME]] func(@[[T1_NAME]]) seq
 // CHECK: acc.routine @[[T2_R_NAME]] func(@[[T2_NAME]]) seq

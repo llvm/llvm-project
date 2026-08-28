@@ -666,6 +666,14 @@ public:
   bool TraverseAttr(Attr *X) {
     return traverseNode(X, [&] { return Base::TraverseAttr(X); });
   }
+  bool TraverseAttributedStmt(AttributedStmt *S) {
+    return traverseNode(S, [&] {
+      for (const Attr *A : S->getAttrs())
+        if (!TraverseAttr(const_cast<Attr *>(A)))
+          return false;
+      return TraverseStmt(S->getSubStmt());
+    });
+  }
   bool TraverseConceptReference(ConceptReference *X) {
     return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
   }

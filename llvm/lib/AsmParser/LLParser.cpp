@@ -6700,6 +6700,24 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIProperty:
+///   ::= !DIProperty(name: "x", file: !1, line: 7, type: !2,
+///                   backing_storage: !3)
+bool LLParser::parseDIProperty(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(type, MDField, );                                                   \
+  OPTIONAL(backing_storage, MDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIProperty, (Context, name.Val, file.Val, line.Val,
+                                        type.Val, backing_storage.Val));
+  return false;
+}
+
 /// parseDIImportedEntity:
 ///   ::= !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0, entity: !1,
 ///                         line: 7, name: "foo", elements: !2)
@@ -9033,10 +9051,11 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
 /// parseStore
 
 ///   ::= 'store' 'volatile'? TypeAndValue ',' TypeAndValue (',' 'align' i32)?
-///   ::= 'store' 'atomic' 'volatile'? TypeAndValue ',' TypeAndValue
-///       'singlethread'? AtomicOrdering (',' 'align' i32)?
+///   ::= 'store' 'atomic' 'volatile'? 'elementwise'? TypeAndValue ','
+///       TypeAndValue 'singlethread'? AtomicOrdering (',' 'align' i32)?
 int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
-  Value *Val, *Ptr; LocTy Loc, PtrLoc;
+  Value *Val, *Ptr;
+  LocTy Loc, PtrLoc;
   MaybeAlign Alignment;
   bool AteExtraComma = false;
   bool isAtomic = false;
@@ -9051,6 +9070,12 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   bool isVolatile = false;
   if (Lex.getKind() == lltok::kw_volatile) {
     isVolatile = true;
+    Lex.Lex();
+  }
+
+  bool IsElementwise = false;
+  if (Lex.getKind() == lltok::kw_elementwise) {
+    IsElementwise = true;
     Lex.Lex();
   }
 
@@ -9070,13 +9095,28 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Acquire ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic store cannot use Acquire ordering");
+
+  if (IsElementwise && !isAtomic)
+    return error(Loc, "elementwise store must be atomic");
+
+  if (IsElementwise && !isa<FixedVectorType>(Val->getType()))
+    return error(
+        Loc, "atomic elementwise store operand must have fixed vector type");
+
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return error(Loc,
+                 "atomic elementwise store cannot be sequentially consistent");
+
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Val->getType()->isSized(&Visited))
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
 
-  Inst = new StoreInst(Val, Ptr, isVolatile, *Alignment, Ordering, SSID);
+  Inst = new StoreInst(Val, Ptr,
+                       LoadStoreInstProperties{isVolatile, *Alignment, Ordering,
+                                               SSID, IsElementwise},
+                       /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

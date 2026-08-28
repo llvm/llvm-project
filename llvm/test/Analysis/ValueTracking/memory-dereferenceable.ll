@@ -301,6 +301,23 @@ define void @infer_missing_noalias2(ptr dereferenceable(8) readonly %p) {
   ret void
 }
 
+; CHECK-LABEL: 'nofreeobj_arg'
+; CHECK: %p
+define void @nofreeobj_arg(ptr dereferenceable(8) nofreeobj %p) {
+  call void @mayfree()
+  %v = load i32, ptr %p
+  ret void
+}
+
+; CHECK-LABEL: 'nofreeobj_ret'
+; CHECK: %p
+define void @nofreeobj_ret() {
+  %p = call dereferenceable(8) nofreeobj ptr @foo()
+  call void @mayfree()
+  %v = load i32, ptr %p
+  ret void
+}
+
 ; Just check that we don't crash.
 ; CHECK-LABEL: 'opaque_type_crasher'
 define void @opaque_type_crasher(ptr dereferenceable(16) %a, i1 %arg) {

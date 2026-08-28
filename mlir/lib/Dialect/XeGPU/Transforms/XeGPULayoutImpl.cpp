@@ -1146,6 +1146,10 @@ static std::optional<SmallVector<int64_t>> get2DBlockIOInstDataLayout(
       xegpu::getLargestDivisor(static_cast<int>(dataShape.back()), bWidths);
   int instHeight =
       xegpu::getLargestDivisor(static_cast<int>(dataShape[rank - 2]), bHeights);
+  // No supported hardware block size divides the data dim (e.g. innermost dim
+  // of 1 vs. minimum block width 16): not realizable as a 2D-block instruction.
+  if (instWidth < 0 || instHeight < 0)
+    return std::nullopt;
   instData.back() = instWidth;
   instData[rank - 2] = instHeight;
 
@@ -1655,9 +1659,12 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto instData =
       get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(instData && isValidLaneLayout(*instData, laneLayout, laneData) &&
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
            "Expected the store layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
@@ -1708,9 +1715,12 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto instData =
       get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(instData && isValidLaneLayout(*instData, laneLayout, laneData) &&
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
            "Expected the prefetch layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
@@ -1817,10 +1827,10 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // scale is smaller than block load
     auto instData = get2DBlockIOInstDataLayout(
         dataShape, elemTy, uArchInstruction, hasTransform, hasTranspose);
-    // assert instData is valid against consumer layout since
-    // transform/transpose attribute are derived from consumer layout
-    assert(instData &&
-           isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
+    // Shape not realizable as a 2D-block instruction; let the caller report it.
+    if (!instData)
+      return nullptr;
+    assert(isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
            "Expected the load layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        consumerLaneData, consumerOrderAttr);

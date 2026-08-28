@@ -9,9 +9,9 @@
 #include "llvm/ExecutionEngine/Orc/InProcessEPC.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
@@ -156,21 +156,18 @@ void InProcessEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 InProcessEPC::createDefaultMemoryManager() {
   // FIXME: Should actually use InProcessMemoryManager for this.
-  return EPCGenericJITLinkMemoryManager::Create(getExecutionSession());
+  return sps::createEPCGenericJITLinkMemoryManager(getExecutionSession());
 }
 
 Expected<std::unique_ptr<DylibManager>> InProcessEPC::createDefaultDylibMgr() {
   // FIXME: Should actually use in-process for this.
-  auto DM = EPCGenericDylibManager::Create(getExecutionSession());
-  if (!DM)
-    return DM.takeError();
-  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+  return sps::createEPCGenericDylibManager(getExecutionSession());
 }
 
 Expected<std::unique_ptr<MemoryAccess>>
 InProcessEPC::createDefaultMemoryAccess() {
   // FIXME: Should actually use in-process for this.
-  return EPCGenericMemoryAccess::Create(getExecutionSession());
+  return sps::createEPCGenericMemoryAccess(getExecutionSession());
 }
 
 Error InProcessEPC::disconnect() {

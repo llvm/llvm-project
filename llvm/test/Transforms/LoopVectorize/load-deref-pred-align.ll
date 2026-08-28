@@ -166,8 +166,7 @@ define i32 @loop_requires_scev_predicate(ptr %dest, i32 %end) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[END_CLAMPED]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[END_CLAMPED]], i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i8 1, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 1

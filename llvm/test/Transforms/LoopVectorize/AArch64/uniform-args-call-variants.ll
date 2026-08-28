@@ -41,7 +41,7 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
 ; INTERLEAVE-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
 ; INTERLEAVE-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 2)
@@ -125,7 +125,7 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
 ; INTERLEAVE-NEXT:    [[EXTRACT_ENTRY_ALM_PART:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
 ; INTERLEAVE-NEXT:    [[EXTRACT_ENTRY_ALM_PART1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 2)

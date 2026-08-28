@@ -149,10 +149,6 @@ public:
   /// the source and destination of the dependence.
   virtual unsigned getSameSDLevels() const { return 0; }
 
-  /// getDVEntry - Returns the DV entry associated with a regular or a
-  /// SameSD level
-  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const;
-
   /// getDirection - Returns the direction associated with a particular
   /// common or SameSD level.
   virtual unsigned getDirection(unsigned Level, bool SameSD = false) const {

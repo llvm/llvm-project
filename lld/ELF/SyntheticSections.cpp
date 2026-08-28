@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -491,6 +491,12 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Compute size.
   size_t oldSize = size;
   finalizeContents();
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (size < oldSize)
+    size = oldSize;
+
   return size != oldSize;
 }
 

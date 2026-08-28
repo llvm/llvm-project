@@ -2,7 +2,7 @@
 
 !void = !cir.void
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.struct<"S" padded {data !u8i}>
+!rec_S = !cir.struct<"S" {pad !u8i}>
 
 module {
   cir.func private @_ZdaPvm(!cir.ptr<!void>)

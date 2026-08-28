@@ -511,12 +511,21 @@ int main(int argc, char **argv, char * const *envp) {
 
   TargetOptions Options =
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+      ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
+    Mod->addModuleFlag(Module::Error, "float-abi",
+                       MDString::get(Context, FloatABI::getABITypeName(ABI)));
+  }
 
   builder.setTargetOptions(Options);
 
-  std::unique_ptr<ExecutionEngine> EE(builder.create());
+  // Resolve the target the JIT will compile for and record it in the module
+  TargetMachine *TM = builder.selectTarget();
+  if (TM && Mod->getTargetTriple().empty())
+    Mod->setTargetTriple(TM->getTargetTriple());
+
+  std::unique_ptr<ExecutionEngine> EE(builder.create(TM));
   if (!EE) {
     if (!ErrorMsg.empty())
       WithColor::error(errs(), argv[0])

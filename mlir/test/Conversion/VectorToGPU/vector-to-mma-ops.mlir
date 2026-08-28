@@ -24,11 +24,11 @@ func.func @no_convert_3d(%arg0: memref<2x2x2xf16>) {
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -52,11 +52,11 @@ func.func @matmul(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: mem
 
 // CHECK-LABEL: func @matmul_cst
 //   CHECK-DAG:   %[[CST:.+]] = arith.constant 0.000000e+00 : f16
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_constant_matrix %[[CST]] : !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_cst(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -80,10 +80,10 @@ func.func @matmul_cst(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2:
 // CHECK-LABEL: func @matmul_broadcast
 //  CHECK-SAME:   (%{{.*}}: memref<16x16xf16>, %{{.*}}: memref<16x16xf16>, %{{.*}}: memref<16x16xf16>, %[[F:.*]]: f16)
 //   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_constant_matrix %[[F]] : !gpu.mma_matrix<16x16xf16, "COp">
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %f: f16) {
   %C = vector.broadcast %f : f16 to vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -105,14 +105,14 @@ func.func @matmul_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, 
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_loop
-//       CHECK:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[ACC:.+]] = scf.for {{.*}} iter_args(%[[ACC1:.+]] = %[[C]]) -> (!gpu.mma_matrix<16x16xf16, "COp">) {
-//   CHECK-DAG:     %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:     %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 128 : index} : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:     %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:     %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 128 : memref<128x128xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //  CHECK-NEXT:     %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[ACC1]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
 //  CHECK-NEXT:     scf.yield %[[D]] : !gpu.mma_matrix<16x16xf16, "COp">
 //  CHECK-NEXT:   }
-//  CHECK-NEXT:   gpu.subgroup_mma_store_matrix %[[ACC]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 128 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf16>
+//  CHECK-NEXT:   gpu.subgroup_mma_store_matrix %[[ACC]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 128 : !gpu.mma_matrix<16x16xf16, "COp">, memref<128x128xf16>
 func.func @matmul_loop(%arg0: memref<128x128xf16>, %arg1: memref<128x128xf16>, %arg2: memref<128x128xf16>) {
   %c0 = arith.constant 0 : index
   %c128 = arith.constant 128 : index
@@ -141,13 +141,13 @@ func.func @matmul_loop(%arg0: memref<128x128xf16>, %arg1: memref<128x128xf16>, %
 // CHECK-LABEL: func @matmul_fused_elementwise
 //   CHECK-DAG:   %[[CST_0:.+]] = arith.constant 0.000000e+00 : f16
 //   CHECK-DAG:   %[[CST_1:.+]] = arith.constant 1.000000e+00 : f16
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //   CHECK-DAG:   %[[C0:.+]] = gpu.subgroup_mma_constant_matrix %[[CST_0]] : !gpu.mma_matrix<16x16xf16, "COp">
 //   CHECK-DAG:   %[[C1:.+]] = gpu.subgroup_mma_constant_matrix %[[CST_1]] : !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C0]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[E:.+]] = gpu.subgroup_mma_elementwise addf %[[D]], %[[C1]] : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[E]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[E]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_fused_elementwise(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %cst_1 = arith.constant dense<1.000000e+00> : vector<16x16xf16>
@@ -172,13 +172,13 @@ func.func @matmul_fused_elementwise(%arg0: memref<16x16xf16>, %arg1: memref<16x1
 
 // CHECK-LABEL: func @matmul_fused_broadcast
 //   CHECK-DAG:   %[[CST_0:.+]] = arith.constant 0.000000e+00 : f16
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //   CHECK-DAG:   %[[C0:.+]] = gpu.subgroup_mma_constant_matrix %[[CST_0]] : !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C0]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   %[[E:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] {leadDimension = 0 : index} : memref<16x16x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:   %[[E:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] leadDimension 0 : memref<16x16x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[F:.+]] = gpu.subgroup_mma_elementwise divf %[[D]], %[[E]] : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[F]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[F]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_fused_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>,
   %arg2: memref<16x16xf16>, %arg3: memref<16x16x16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
@@ -206,11 +206,11 @@ func.func @matmul_fused_broadcast(%arg0: memref<16x16xf16>, %arg1: memref<16x16x
 
 // CHECK-LABEL: func @matmul_3Dmemref
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 16 : index} : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]]] {leadDimension = 0 : index} : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 16 : index} : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 16 : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]]] leadDimension 0 : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 16 : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<2x16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<2x16x16xf16>
 func.func @matmul_3Dmemref(%arg0: memref<2x16x16xf16>, %arg1: memref<16xf16>, %arg2: memref<2x16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -234,11 +234,11 @@ func.func @matmul_3Dmemref(%arg0: memref<2x16x16xf16>, %arg1: memref<16xf16>, %a
 
 // CHECK-LABEL: func @matmul_memref_strided
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 32 : index} : memref<2x16x16xf16, #{{.*}}> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]]] {leadDimension = 0 : index} : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 16 : index} : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 32 : memref<2x16x16xf16, #{{.*}}> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]]] leadDimension 0 : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 16 : memref<2x16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<2x16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<2x16x16xf16>
 func.func @matmul_memref_strided(%arg0: memref<2x16x16xf16, affine_map<(d0, d1, d2) -> (d0 * 512 + d1 * 32 + d2)>>, %arg1: memref<16xf16>, %arg2: memref<2x16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -261,11 +261,11 @@ func.func @matmul_memref_strided(%arg0: memref<2x16x16xf16, affine_map<(d0, d1, 
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_transposed
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index, transpose} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 transpose : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_transposed(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -288,11 +288,11 @@ func.func @matmul_transposed(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>,
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_transposed_broadcasted_1d
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] {leadDimension = 0 : index, transpose} : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] {leadDimension = 0 : index} : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] leadDimension 0 transpose : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] leadDimension 0 : memref<16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_transposed_broadcasted_1d(%arg0: memref<16xf16>, %arg1: memref<16xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -315,11 +315,11 @@ func.func @matmul_transposed_broadcasted_1d(%arg0: memref<16xf16>, %arg1: memref
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_transposed_broadcasted_2d
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] {leadDimension = 0 : index, transpose} : memref<32x32xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] {leadDimension = 0 : index} : memref<32x32xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] leadDimension 0 transpose : memref<32x32xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}] leadDimension 0 : memref<32x32xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16>
 func.func @matmul_transposed_broadcasted_2d(%arg0: memref<32x32xf16>, %arg1: memref<32x32xf16>, %arg2: memref<16x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -375,11 +375,11 @@ func.func @matmul_no_extend_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_int8
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xsi8, "AOp">, !gpu.mma_matrix<16x16xsi8, "BOp"> -> !gpu.mma_matrix<16x16xi32, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
 func.func @matmul_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8>, %arg2: memref<16x16xi32>) {
   %cst_0 = arith.constant dense<0> : vector<16x16xi8>
   %c0 = arith.constant 0 : index
@@ -405,11 +405,11 @@ func.func @matmul_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8>, %arg2: 
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_mixed_signedness_int8
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi8> -> !gpu.mma_matrix<16x16xui8, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi8> -> !gpu.mma_matrix<16x16xui8, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi8> -> !gpu.mma_matrix<16x16xsi8, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xui8, "AOp">, !gpu.mma_matrix<16x16xsi8, "BOp"> -> !gpu.mma_matrix<16x16xi32, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
 func.func @matmul_mixed_signedness_int8(%arg0: memref<16x16xi8>, %arg1: memref<16x16xi8>, %arg2: memref<16x16xi32>) {
   %cst_0 = arith.constant dense<0> : vector<16x16xi8>
   %c0 = arith.constant 0 : index
@@ -435,11 +435,11 @@ func.func @matmul_mixed_signedness_int8(%arg0: memref<16x16xi8>, %arg1: memref<1
 #map5 = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @matmul_mixed_signedness_int8
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 32 : index} : memref<16x32xi8> -> !gpu.mma_matrix<16x32xui8, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 32 : index} : memref<16x32xi8> -> !gpu.mma_matrix<32x16xsi8, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 32 : memref<16x32xi8> -> !gpu.mma_matrix<16x32xui8, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 32 : memref<16x32xi8> -> !gpu.mma_matrix<32x16xsi8, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xi32> -> !gpu.mma_matrix<16x16xi32, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x32xui8, "AOp">, !gpu.mma_matrix<32x16xsi8, "BOp"> -> !gpu.mma_matrix<16x16xi32, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32>
 func.func @matmul_mixed_signedness_int8(%arg0: memref<16x32xi8>, %arg1: memref<16x32xi8>, %arg2: memref<16x16xi32>) {
   %cst_0 = arith.constant dense<0> : vector<16x16xi8>
   %c0 = arith.constant 0 : index
@@ -534,11 +534,11 @@ func.func @fold_transpose_into_transfer_read(%alloc: memref<64x128xf16>, %vector
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
 // CHECK-LABEL: func @cast_f16_to_f32_read
-//       CHECK:    %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//       CHECK:    %[[C:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:    %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//       CHECK:    %[[C:.+]] = gpu.subgroup_mma_load_matrix {{.+}} leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:    %[[AE:.+]] = gpu.subgroup_mma_elementwise extf %[[A]] : (!gpu.mma_matrix<16x16xf16, "AOp">) -> !gpu.mma_matrix<16x16xf32, "AOp">
 //       CHECK:    %[[CE:.+]] = gpu.subgroup_mma_elementwise extf %[[C]] : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
-//       CHECK:    %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index, transpose} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//       CHECK:    %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} leadDimension 16 transpose : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
 //       CHECK:    %[[BE:.+]] = gpu.subgroup_mma_elementwise extf %[[B]] : (!gpu.mma_matrix<16x16xf16, "BOp">) -> !gpu.mma_matrix<16x16xf32, "BOp">
 //       CHECK:    gpu.subgroup_mma_compute %[[AE]], %[[BE]], %[[CE]]
 func.func @cast_f16_to_f32_read(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>, %arg3: memref<16x16xf32>) {
@@ -580,8 +580,8 @@ func.func @test_unsupported(%arg0: vector<4x4xi32>, %arg1: vector<4x4xi32>, %arg
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: func @addf
-//       CHECK:   %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} {leadDimension = 16 : index, transpose} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:   %[[A:.+]] = gpu.subgroup_mma_load_matrix {{.+}} leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//       CHECK:   %[[B:.+]] = gpu.subgroup_mma_load_matrix {{.+}} leadDimension 16 transpose : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[C:.+]] = gpu.subgroup_mma_elementwise addf %[[A]], %[[B]] : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   gpu.subgroup_mma_store_matrix %[[C]]
 func.func @addf(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<16x16xf16>) {
@@ -597,11 +597,11 @@ func.func @addf(%arg0: memref<16x16xf16>, %arg1: memref<16x16xf16>, %arg2: memre
 // -----
 
 // CHECK-LABEL: func @matmul_with_strides
-//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 16 : index} : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
-//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] {leadDimension = 96 : index} : memref<16x6x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
-//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] {leadDimension = 144 : index} : memref<16x9x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
+//   CHECK-DAG:   %[[A:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 16 : memref<16x16xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+//   CHECK-DAG:   %[[B:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] leadDimension 96 : memref<16x6x16xf16> -> !gpu.mma_matrix<16x16xf16, "BOp">
+//   CHECK-DAG:   %[[C:.+]] = gpu.subgroup_mma_load_matrix %{{.*}}[%{{.*}}, %{{.*}}] leadDimension 144 : memref<16x9x16xf16> -> !gpu.mma_matrix<16x16xf16, "COp">
 //       CHECK:   %[[D:.+]] = gpu.subgroup_mma_compute %[[A]], %[[B]], %[[C]] : !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
-//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] {leadDimension = 144 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x9x16xf16>
+//       CHECK:   gpu.subgroup_mma_store_matrix %[[D]], %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] leadDimension 144 : !gpu.mma_matrix<16x16xf16, "COp">, memref<16x9x16xf16>
 func.func @matmul_with_strides(%arg0: memref<16x16xf16>, %arg1: memref<16x6x16xf16>, %arg2: memref<16x9x16xf16>) {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<16x16xf16>
   %c0 = arith.constant 0 : index
@@ -620,9 +620,9 @@ func.func @matmul_with_strides(%arg0: memref<16x16xf16>, %arg1: memref<16x6x16xf
 func.func @read_transpose_with_strides_3d(%arg0: memref<5x7x3xf16>, %arg1: memref<2x5x3xf16>, %arg2: memref<3x5xf16>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
-  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} {leadDimension = 21 : index, transpose} : memref<5x7x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} leadDimension 21 transpose : memref<5x7x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
   %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d0)>} : memref<5x7x3xf16>, vector<3x5xf16>
-  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} {leadDimension = 3 : index, transpose} : memref<2x5x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} leadDimension 3 transpose : memref<2x5x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
   %B = vector.transfer_read %arg1[%c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>} : memref<2x5x3xf16>, vector<3x5xf16>
   %C = arith.addf %A, %B : vector<3x5xf16>
   vector.transfer_write %C, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<3x5xf16>, memref<3x5xf16>
@@ -635,9 +635,9 @@ func.func @read_transpose_with_strides_3d(%arg0: memref<5x7x3xf16>, %arg1: memre
 func.func @read_transpose_with_strides_4d(%arg0: memref<5x7x11x3xf16>, %arg1: memref<2x5x11x3xf16>, %arg2: memref<3x5xf16>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
-  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} {leadDimension = 231 : index, transpose} : memref<5x7x11x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} leadDimension 231 transpose : memref<5x7x11x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
   %A = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0)>} : memref<5x7x11x3xf16>, vector<3x5xf16>
-  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} {leadDimension = 33 : index, transpose} : memref<2x5x11x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} leadDimension 33 transpose : memref<2x5x11x3xf16> -> !gpu.mma_matrix<3x5xf16, "COp">
   %B = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1)>} : memref<2x5x11x3xf16>, vector<3x5xf16>
   %C = arith.addf %A, %B : vector<3x5xf16>
   vector.transfer_write %C, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<3x5xf16>, memref<3x5xf16>
@@ -678,7 +678,7 @@ func.func @no_convert_write_transpose(%arg0: memref<2x2xf16>) {
 func.func @read_transpose_with_broadcast_3d(%arg0: memref<2x2x2xf16>, %arg1: memref<2x2xf16>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f16
-  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} {leadDimension = 0 : index, transpose} : memref<2x2x2xf16> -> !gpu.mma_matrix<2x2xf16, "COp">
+  // CHECK: gpu.subgroup_mma_load_matrix %{{.*}} leadDimension 0 transpose : memref<2x2x2xf16> -> !gpu.mma_matrix<2x2xf16, "COp">
   %A = vector.transfer_read %arg0[%c0, %c0, %c0], %cst {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2) -> (d2, 0)>} : memref<2x2x2xf16>, vector<2x2xf16>
   %B = arith.addf %A, %A : vector<2x2xf16>
   vector.transfer_write %B, %arg1[%c0, %c0] {in_bounds = [true, true]} : vector<2x2xf16>, memref<2x2xf16>

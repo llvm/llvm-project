@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-! CHECK-LABEL:   omp.declare_reduction @ior_byref_i32 : !fir.ref<i32>
+! CHECK-LABEL:   omp.declare_reduction @ior_byref_i32 byref_element_type({{.*}}) : !fir.ref<i32>
 ! CHECK-SAME:    alloc {
 ! CHECK:            %[[REF:.*]] = fir.alloca i32
 ! CHECK:            omp.yield(%[[REF]] : !fir.ref<i32>)

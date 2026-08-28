@@ -1108,13 +1108,17 @@ int baz() {
   auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
   auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
 
-  static_assert(sizeof(lfunc()) == 5, "baz");
+  static_assert(sizeof(lfunc()) == 4, "baz");
   static_assert(noexcept(lfunc()) == true, "noexcept");
 
-  static_assert(sizeof(lfunction()) == 5, "baz");
+#ifdef MS
+  static_assert(sizeof(lfunction()) == 14, "GH122657::baz");
+#else
+  static_assert(sizeof(lfunction()) == 4, "baz");
+#endif
   static_assert(noexcept(lfunction()) == true, "noexcept");
 
-  static_assert(sizeof(lpretty()) == 43, "int GH122657::baz() [T = int]_block_invoke");
+  static_assert(sizeof(lpretty()) == 30, "int GH122657::baz() [T = int]");
   static_assert(noexcept(lpretty()) == true, "noexcept");
 
   return 0;
@@ -1133,7 +1137,7 @@ int main() {
   static_assert(noexcept(lfunc()) == true, "noexcept");
 
 #ifdef MS
-  static_assert(sizeof(lfunction()) == 15, "main");
+  static_assert(sizeof(lfunction()) == 15, "GH122657::main");
 #else
   static_assert(sizeof(lfunction()) == 5, "main");
 #endif
@@ -1141,6 +1145,31 @@ int main() {
 
   static_assert(sizeof(lpretty()) == 21, "int GH122657::main()");
   static_assert(noexcept(lpretty()) == true, "noexcept");
-  return 0;
+
+  return baz<int>();
 }
 } // namespace GH122657
+
+namespace GH213420 {
+template <unsigned long long n>
+struct Sized {
+  char data[n];
+};
+
+void baz() {
+  auto lfunc = []() {
+    struct F {
+      auto foo(Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) {
+        return s;
+      }
+    };
+    return F{}.foo();
+  };
+  static_assert(sizeof(lfunc()) == 11, "operator()");
+
+  auto lfuncparam = [](Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) -> Sized<sizeof(s)> {
+   return s;
+  };
+  static_assert(sizeof(lfuncparam()) == 4, "baz");
+}
+} // namespace GH213420

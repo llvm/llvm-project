@@ -92,6 +92,11 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
+  /// If \c DiagId should be relaxed as per the current evaluation settings,
+  /// emit it as a warning instead of an error. Returns \c true if a relaxed
+  /// diagnostic was emitted, \c false otherwise.
+  bool emitRelaxedDiag(SourceLocation Loc, diag::kind DiagId);
+
   /// Note that we have had a side-effect, and determine whether we should
   /// keep evaluating.
   bool noteSideEffect() const {
@@ -203,6 +208,8 @@ private:
   void addCallStack(unsigned Limit);
 
   PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId);
+
+  void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
                           unsigned ExtraNotes, bool IsCCEDiag);

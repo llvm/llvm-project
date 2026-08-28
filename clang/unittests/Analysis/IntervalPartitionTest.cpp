@@ -90,7 +90,7 @@ using ::testing::UnorderedElementsAre;
 
 MATCHER_P(intervalID, ID, "") { return arg->ID == ID; }
 
-template <typename... T> auto blockIDs(T... IDs) {
+template <typename... T> [[maybe_unused]] auto blockIDs(T... IDs) {
   return UnorderedElementsAre(Property(&CFGBlock::getBlockID, IDs)...);
 }
 

@@ -76,7 +76,7 @@ func.func @test_copyin_name() {
   %0 = memref.alloca() : memref<10xf32>
 
   // Create an acc.copyin operation with a name
-  %1 = acc.copyin varPtr(%0 : memref<10xf32>) -> memref<10xf32> {name = "input_data"}
+  %1 = acc.copyin varPtr(%0 : memref<10xf32>) name("input_data") -> memref<10xf32>
 
   // Mark with test attribute - should find name from copyin operation
   %2 = memref.cast %1 {test.var_name} : memref<10xf32> to memref<?xf32>

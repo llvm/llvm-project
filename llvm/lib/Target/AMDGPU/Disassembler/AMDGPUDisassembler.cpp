@@ -123,6 +123,7 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
       OS << ":xnack+";
+      XnackOnFromEFlags = true;
       break;
     }
   }
@@ -461,6 +462,22 @@ DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
+
+#define DECODE_SDWA_IMM_FIELD(Name, MaxImm)                                    \
+  static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,    \
+                           const MCDisassembler * /* Decoder */) {             \
+    if (Imm > (MaxImm))                                                        \
+      return MCDisassembler::Fail;                                             \
+    return addOperand(Inst, MCOperand::createImm(Imm));                        \
+  }
+
+// The 3-bit SDWA sel fields only define values up to DWORD; 7 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWASel, AMDGPU::SDWA::SdwaSel::DWORD)
+// The 2-bit SDWA dst_unused field only defines values up to UNUSED_PRESERVE;
+// 3 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWADstUnused,
+                      AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+#undef DECODE_SDWA_IMM_FIELD
 
 static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
                                      uint64_t /* Addr */,
@@ -2103,6 +2120,13 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
     return MCOperand::createImm(Val);
 
   if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    // Only VOP1, VOP2, VOPC, SOP1, SOP2 and SOPC may encode a 64-bit literal.
+    // VOP3, VOP3P and VOPD have to use a 32-bit one.
+    if (SIInstrFlags::isVOP3Like(*MCII, Inst) ||
+        AMDGPU::isVOPD(Inst.getOpcode())) {
+      return errOperand(Val,
+                        "64-bit literal is not supported by this instruction");
+    }
     return decodeLiteral64Constant();
   }
 
@@ -2549,10 +2573,15 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
-  bool ReservedXnackMask = STI.hasFeature(AMDGPU::FeatureXNACK);
-  assert(!ReservedXnackMask || STI.hasFeature(AMDGPU::FeatureSupportsXNACK));
-  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
-           << '\n';
+  // Only print the directive on xnack-supporting targets (matching the
+  // asmprinter), unless the binary erronously set xnack on an unsupported
+  // target
+  bool ReservedXnackMask =
+      STI.hasFeature(AMDGPU::FeatureXNACK) || XnackOnFromEFlags;
+  if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
+    KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
+             << '\n';
+  }
   KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIORITY);

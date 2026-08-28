@@ -44,14 +44,14 @@ func.func @test_enum_prop() -> () {
   // CHECK: test.op_with_enum_prop first
   "test.op_with_enum_prop"() <{value = 0 : i32}> {} : () -> ()
 
-  // CHECK: test.op_with_enum_prop_attr_form <{value = 0 : i32}>
+  // CHECK: test.op_with_enum_prop_attr_form <value = first>
   test.op_with_enum_prop_attr_form <{value = 0 : i32}>
-  // CHECK: test.op_with_enum_prop_attr_form <{value = 1 : i32}>
+  // CHECK: test.op_with_enum_prop_attr_form <value = second>
   test.op_with_enum_prop_attr_form <{value = #test<enum second>}>
 
-  // CHECK: test.op_with_enum_prop_attr_form_always <{value = #test<enum first>}>
+  // CHECK: test.op_with_enum_prop_attr_form_always <value = first>
   test.op_with_enum_prop_attr_form_always <{value = #test<enum first>}>
-  // CHECK: test.op_with_enum_prop_attr_form_always  <{value = #test<enum second>}
+  // CHECK: test.op_with_enum_prop_attr_form_always <value = second>
   test.op_with_enum_prop_attr_form_always <{value = #test<enum second>}>
 
   return

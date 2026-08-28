@@ -228,9 +228,9 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
+#  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
-#  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>

@@ -332,9 +332,10 @@ class StoreInst : public Instruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AlignmentField, OrderingField>(),
-      "Bitfields must be contiguous");
+  using ElementWiseField = BoolBitfieldElementT<OrderingField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AlignmentField,
+                                        OrderingField, ElementWiseField>(),
+                "Bitfields must be contiguous");
 
   void AssertOK();
 
@@ -369,6 +370,12 @@ public:
 
   /// Specify whether this is a volatile store or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this is an elementwise atomic store.
+  bool isElementwise() const { return getSubclassData<ElementWiseField>(); }
+
+  /// Specify whether this is an elementwise atomic store or not.
+  void setElementwise(bool V) { setSubclassData<ElementWiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -412,7 +419,8 @@ public:
 
   /// Returns the properties of this store instruction.
   LoadStoreInstProperties getProperties() const {
-    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID(),
+            isElementwise()};
   }
 
   /// Sets the properties of this store instruction.
@@ -421,6 +429,7 @@ public:
     setAlignment(Props.Alignment);
     setOrdering(Props.Ordering);
     setSyncScopeID(Props.SSID);
+    setElementwise(Props.IsElementwise);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }

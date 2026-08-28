@@ -146,9 +146,16 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
         LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
         LLDBLog::Thread);
 
+  DynamicRegisterInfoSP register_info_sp = GetDynamicRegisterInfo();
+  if (!register_info_sp)
+    return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
+        LLVM_PRETTY_FUNCTION,
+        "Failed to create scripted thread registers info.", error,
+        LLDBLog::Thread);
+
   std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
       std::make_shared<RegisterContextMemory>(
-          *this, 0, *GetDynamicRegisterInfo(), LLDB_INVALID_ADDRESS);
+          *this, 0, std::move(register_info_sp), LLDB_INVALID_ADDRESS);
   if (!reg_ctx_memory)
     return ScriptedInterface::ErrorWithMessage<lldb::RegisterContextSP>(
         LLVM_PRETTY_FUNCTION, "Failed to create a register context.", error,
@@ -435,24 +442,19 @@ lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
   return m_scripted_thread_interface_sp;
 }
 
-std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
+DynamicRegisterInfoSP ScriptedThread::GetDynamicRegisterInfo() {
   CheckInterpreterAndScriptObject();
 
-  if (!m_register_info_sp) {
-    StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
+  StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
 
-    Status error;
-    if (!reg_info)
-      return ScriptedInterface::ErrorWithMessage<
-          std::shared_ptr<DynamicRegisterInfo>>(
-          LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
-          error, LLDBLog::Thread);
+  Status error;
+  if (!reg_info)
+    return ScriptedInterface::ErrorWithMessage<DynamicRegisterInfoSP>(
+        LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
+        error, LLDBLog::Thread);
 
-    m_register_info_sp = DynamicRegisterInfo::Create(
-        *reg_info, m_scripted_process.GetTarget().GetArchitecture());
-  }
-
-  return m_register_info_sp;
+  return DynamicRegisterInfo::Create(
+      *reg_info, m_scripted_process.GetTarget().GetArchitecture());
 }
 
 StructuredData::ObjectSP ScriptedThread::FetchThreadExtendedInfo() {

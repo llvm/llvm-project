@@ -566,6 +566,9 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("NoFreeObj")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, NoFreeObj);
   } else if (R->isSubClassOf("ArgInfo")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     if (ArgNo < 1)

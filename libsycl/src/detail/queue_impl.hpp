@@ -117,6 +117,15 @@ public:
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
 
+  /// Submits a prefetch operation for a USM pointer.
+  ///
+  /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param NumBytes is a number of bytes to be prefetched.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+                        const std::vector<EventImplPtr> &DepEvents);
+
 private:
   void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
   EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});

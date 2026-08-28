@@ -89,6 +89,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  netdb_macros
+  HDRS
+    netdb_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netdb_macros
+)
+
+add_proxy_header_library(
   netinet_in_macros
   HDRS
     netinet_in_macros.h

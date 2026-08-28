@@ -78,22 +78,6 @@ jobs:
       LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
       LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
-  release-doxygen:
-    name: Build and Upload Release Doxygen
-    permissions:
-      contents: write
-    needs:
-      - validate-tag
-      - release-create
-    uses: ./.github/workflows/release-doxygen.yml
-    with:
-      release-version: ${{ needs.validate-tag.outputs.release-version }}
-      upload: true
-    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
-    secrets:
-      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-
   # The pypi trusted publishing does not support called workflows, so we
   # can't use them here.
   release-lit:

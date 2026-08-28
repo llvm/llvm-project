@@ -70,15 +70,31 @@ protected:
 // Success cases
 //===----------------------------------------------------------------------===//
 
+TEST_F(HLSLSemanticSignatureMetadataTest, SemanticKindLookup) {
+  // Names without the "SV_" prefix denote user-defined semantics
+  EXPECT_EQ(getSemanticKind("TEXCOORD"), dxbc::PSV::SemanticKind::Arbitrary);
+  EXPECT_EQ(getSemanticKind(""), dxbc::PSV::SemanticKind::Arbitrary);
+  EXPECT_EQ(getSemanticKind("Target"), dxbc::PSV::SemanticKind::Arbitrary);
+
+  // System value names are matched case-insensitively, prefix included
+  EXPECT_EQ(getSemanticKind("SV_Target"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("sv_target"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("Sv_TaRgEt"), dxbc::PSV::SemanticKind::Target);
+  EXPECT_EQ(getSemanticKind("SV_Position"), dxbc::PSV::SemanticKind::Position);
+
+  // An unrecognized system value name is invalid rather than arbitrary
+  EXPECT_EQ(getSemanticKind("SV_NotASemantic"),
+            dxbc::PSV::SemanticKind::Invalid);
+  EXPECT_EQ(getSemanticKind("SV_"), dxbc::PSV::SemanticKind::Invalid);
+}
+
 TEST_F(HLSLSemanticSignatureMetadataTest, StructHelpers) {
-  SemanticSignatureElement Elem;
-  Elem.SigId = 0;
-  Elem.CompType = dxil::ElementType::F32;
-  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
-  Elem.Rows = 1;
+  SemanticSignatureElement Elem(/*SigId=*/0, "TEXCOORD", dxil::ElementType::F32,
+                                dxbc::PSV::SemanticKind::Arbitrary,
+                                /*SemanticIndices=*/{0}, /*Cols=*/4);
+  EXPECT_EQ(Elem.Rows, 1u);
   EXPECT_FALSE(Elem.isAllocated());
 
-  Elem.Cols = 4;
   Elem.StartRow = 0;
   Elem.StartCol = 0;
   EXPECT_TRUE(Elem.isAllocated());
@@ -389,20 +405,11 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementIndicesRowMismatch) {
 
 // A fully populated element emits all 13 operands in order
 TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadata) {
-  SemanticSignatureElement Elem;
-  Elem.SigId = 1;
-  Elem.SemanticName = "TEXCOORD";
-  Elem.CompType = dxil::ElementType::F32;
-  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
-  Elem.SemanticIndices = {0, 1};
-  Elem.InterpMode = dxbc::PSV::InterpolationMode::Undefined;
-  Elem.Rows = 2;
-  Elem.Cols = 4;
+  SemanticSignatureElement Elem(/*SigId=*/1, "TEXCOORD", dxil::ElementType::F32,
+                                dxbc::PSV::SemanticKind::Arbitrary,
+                                /*SemanticIndices=*/{0, 1}, /*Cols=*/4);
   Elem.StartRow = 1;
   Elem.StartCol = 0;
-  Elem.UsageMask = 0;
-  Elem.DynIndexMask = 0;
-  Elem.GSStream = 0;
 
   MDNode *Node = Elem.toMetadata(Ctx);
   ASSERT_EQ(Node->getNumOperands(), 13u);
@@ -423,14 +430,10 @@ TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadata) {
 
 // System value, non-zero masks and a non-zero stream index are emitted
 TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataSystemValue) {
-  SemanticSignatureElement Elem;
-  Elem.SigId = 1;
-  Elem.SemanticName = "SV_Target";
-  Elem.CompType = dxil::ElementType::F32;
-  Elem.SemanticKind = dxbc::PSV::SemanticKind::Target;
-  Elem.SemanticIndices = {1};
-  Elem.Rows = 1;
-  Elem.Cols = 4;
+  SemanticSignatureElement Elem(/*SigId=*/1, "SV_Target",
+                                dxil::ElementType::F32,
+                                dxbc::PSV::SemanticKind::Target,
+                                /*SemanticIndices=*/{1}, /*Cols=*/4);
   Elem.StartRow = 1;
   Elem.StartCol = 0;
   Elem.UsageMask = 0x7;
@@ -449,14 +452,9 @@ TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataSystemValue) {
 
 // An unallocated element emits the row/col sentinels
 TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataUnallocated) {
-  SemanticSignatureElement Elem;
-  Elem.SigId = 0;
-  Elem.SemanticName = "POSITION";
-  Elem.CompType = dxil::ElementType::F32;
-  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
-  Elem.SemanticIndices = {0};
-  Elem.Rows = 0;
-  Elem.Cols = 0;
+  SemanticSignatureElement Elem(/*SigId=*/0, "POSITION", dxil::ElementType::F32,
+                                dxbc::PSV::SemanticKind::Arbitrary,
+                                /*SemanticIndices=*/{0}, /*Cols=*/4);
 
   MDNode *Node = Elem.toMetadata(Ctx);
   ASSERT_EQ(Node->getNumOperands(), 13u);
@@ -466,20 +464,13 @@ TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataUnallocated) {
 
 // Emitting then parsing yields an equivalent element
 TEST_F(HLSLSemanticSignatureMetadataTest, ElementRoundTrip) {
-  SemanticSignatureElement Elem;
-  Elem.SigId = 2;
-  Elem.SemanticName = "TEXCOORD";
-  Elem.CompType = dxil::ElementType::F32;
-  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
-  Elem.SemanticIndices = {1};
+  SemanticSignatureElement Elem(/*SigId=*/2, "TEXCOORD", dxil::ElementType::F32,
+                                dxbc::PSV::SemanticKind::Arbitrary,
+                                /*SemanticIndices=*/{1}, /*Cols=*/4);
   Elem.InterpMode = dxbc::PSV::InterpolationMode::LinearNoperspective;
-  Elem.Rows = 1;
-  Elem.Cols = 4;
   Elem.StartRow = 2;
   Elem.StartCol = 0;
   Elem.UsageMask = 0x7;
-  Elem.DynIndexMask = 0;
-  Elem.GSStream = 0;
 
   Expected<SemanticSignatureElement> Parsed =
       SemanticSignatureElement::fromMetadata(Elem.toMetadata(Ctx));

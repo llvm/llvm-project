@@ -103,13 +103,13 @@
 
 // INVALID: invalid value 'invalid' in '-fuse-cuid=invalid'
 
-// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP:(amdgcn-amd-amdhsa|nvptx64-nvidia-cuda)]]"
+// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP0:(amdgpu9.00-amd-amdhsa|nvptx64-nvidia-cuda)]]"
 // COMMON-SAME: "-target-cpu" "[[G1:(gfx900|sm_60)]]"
 // HEX-SAME: "-cuid=[[CUID:[0-9a-f]+]]"
 // FIXED-SAME: "-cuid=[[CUID:xyz_123]]"
 // COMMON-SAME: "{{.*}}a.cu"
 
-// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP]]"
+// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP1:(amdgpu9.06-amd-amdhsa|nvptx64-nvidia-cuda)]]"
 // COMMON-SAME: "-target-cpu" "[[G2:(gfx906|sm_70)]]"
 // COMMON-SAME: "-cuid=[[CUID]]"
 // COMMON-SAME: "{{.*}}a.cu"
@@ -118,14 +118,14 @@
 // COMMON-SAME: "-cuid=[[CUID]]"
 // COMMON-SAME: "{{.*}}a.cu"
 
-// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP]]"
+// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP0]]"
 // COMMON-SAME: "-target-cpu" "[[G1]]"
 // HEX-NOT: "-cuid=[[CUID]]"
 // HEX-SAME: "-cuid=[[CUID2:[0-9a-f]+]]"
 // FIXED-SAME: "-cuid=[[CUID2:xyz_123]]"
 // COMMON-SAME: "{{.*}}b.hip"
 
-// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP]]"
+// COMMON: "-cc1"{{.*}} "-triple" "[[TRIP1]]"
 // COMMON-SAME: "-target-cpu" "[[G2]]"
 // HEX-NOT: "-cuid=[[CUID]]"
 // COMMON-SAME: "-cuid=[[CUID2]]"
@@ -144,12 +144,12 @@
 // HOST-SAME: "-cuid=[[CUID]]"
 // HOST-SAME: "{{.*}}b.hip"
 
-// DEVICE: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
+// DEVICE: "-cc1"{{.*}} "-triple" "amdgpu9.00-amd-amdhsa"
 // DEVICE-SAME: "-target-cpu" "gfx900"
 // DEVICE-SAME: "-cuid=[[CUID:xyz_123]]"
 // DEVICE-SAME: "{{.*}}a.cu"
 
-// DEVICE: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
+// DEVICE: "-cc1"{{.*}} "-triple" "amdgpu9.00-amd-amdhsa"
 // DEVICE-SAME: "-target-cpu" "gfx900"
 // DEVICE-SAME: "-cuid=[[CUID]]"
 // DEVICE-SAME: "{{.*}}b.hip"

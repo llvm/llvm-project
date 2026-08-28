@@ -5224,9 +5224,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
   if (NewElemTy.isNull()) {
+    // FIXME: We need to make sure that the target handles correctly the
+    // requested mode.
     // Only emit diagnostic on host for 128-bit mode attribute
-    if (!(DestWidth == 128 &&
-          (getLangOpts().CUDAIsDevice || getLangOpts().SYCLIsDevice)))
+    if (!(DestWidth == 128 && getLangOpts().isTargetDevice()))
       Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }

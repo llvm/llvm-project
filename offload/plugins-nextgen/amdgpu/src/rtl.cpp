@@ -2729,6 +2729,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "no memory pool for the specified allocation kind");
 
+    // See allocate() for the registration of host / shared memory as pinned
+    // memory.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
+        return Err;
+
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
 
@@ -4535,6 +4541,12 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
     // Enable all valid kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
       return std::move(Err);
+
+    // Register host / shared memory as pinned memory, so that transfers reading
+    // from it can take a device-accessible path.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
+        return std::move(Err);
   }
 
   return Alloc;

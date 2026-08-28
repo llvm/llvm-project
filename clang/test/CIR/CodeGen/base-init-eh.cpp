@@ -22,37 +22,7 @@ void test_base_initializer() {
   Derived d;
 }
 
-// CIR: cir.func {{.*}} @_ZN7DerivedC2Ev
-// CIR:   %[[THIS:.*]] = cir.load %{{.*}}
-// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[ZERO]])
-// CIR:   cir.cleanup.scope {
-// CIR:     cir.call @_Z8mayThrowv() : () -> ()
-// CIR:     cir.yield
-// CIR:   } cleanup eh {
-// CIR:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
-// CIR:     cir.yield
-// CIR:   }
-
-// LLVM: define {{.*}} void @_ZN7DerivedC2Ev
-// LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
-// LLVM:   invoke void @_Z8mayThrowv()
-// LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:   [[INVOKE_CONT:.*]]:
-// LLVM:     br label %[[EXIT:.*]]
-// LLVM:   [[LPAD:.*]]:
-// LLVM:     %[[EXN:.*]] = landingpad { ptr, i32 }
-// LLVM:       cleanup
-// LLVM:       br label %[[EH_CLEANUP:.*]]
-// LLVM:   [[EH_CLEANUP:.*]]:
-// LLVM:     call void @_ZN4BaseD2Ev(ptr {{.*}} %[[THIS]])
-// LLVM:     resume { ptr, i32 } %{{.*}}        
-// LLVM:   [[EXIT:.*]]:
-// LLVM:     ret void
-
-// OGCG emits @_ZN7DerivedC2Ev below @_ZN11VirtDerivedC1Ev
+// @_ZN7DerivedC2Ev is emitted below @_ZN11VirtDerivedC1Ev
 
 class VirtDerived : public virtual Base {
 public:
@@ -79,6 +49,19 @@ void test_virt_base_initializer() {
 // CIR:     cir.yield
 // CIR:   }
 
+// CIR: cir.func {{.*}} @_ZN7DerivedC2Ev
+// CIR:   %[[THIS:.*]] = cir.load %{{.*}}
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[ZERO]])
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.call @_Z8mayThrowv() : () -> ()
+// CIR:     cir.yield
+// CIR:   } cleanup eh {
+// CIR:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
+// CIR:     cir.yield
+// CIR:   }
+
 // LLVM: define {{.*}} void @_ZN11VirtDerivedC1Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
 // LLVM:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
@@ -94,6 +77,23 @@ void test_virt_base_initializer() {
 // LLVM:   [[EH_CLEANUP:.*]]:
 // LLVM:     call void @_ZN4BaseD2Ev(ptr {{.*}} %[[THIS]])
 // LLVM:     resume { ptr, i32 } %{{.*}}
+// LLVM:   [[EXIT:.*]]:
+// LLVM:     ret void
+
+// LLVM: define {{.*}} void @_ZN7DerivedC2Ev
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
+// LLVM:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
+// LLVM:   invoke void @_Z8mayThrowv()
+// LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
+// LLVM:   [[INVOKE_CONT:.*]]:
+// LLVM:     br label %[[EXIT:.*]]
+// LLVM:   [[LPAD:.*]]:
+// LLVM:     %[[EXN:.*]] = landingpad { ptr, i32 }
+// LLVM:       cleanup
+// LLVM:       br label %[[EH_CLEANUP:.*]]
+// LLVM:   [[EH_CLEANUP:.*]]:
+// LLVM:     call void @_ZN4BaseD2Ev(ptr {{.*}} %[[THIS]])
+// LLVM:     resume { ptr, i32 } %{{.*}}        
 // LLVM:   [[EXIT:.*]]:
 // LLVM:     ret void
 

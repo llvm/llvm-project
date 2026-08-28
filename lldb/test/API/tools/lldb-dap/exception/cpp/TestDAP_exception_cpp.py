@@ -2,7 +2,7 @@
 Test exception behavior in DAP with c++ throw.
 """
 
-from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase

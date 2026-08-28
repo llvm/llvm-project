@@ -1,0 +1,35 @@
+# No-conflict input with --sarif-conflicts-out=: SARIF is still written but
+# with results: [] (empty array). The merged YAML retains both replacements.
+# Tool exits 0; stderr contains no `conflict:` line.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml %t.dir/b.yaml 2> %t.dir/stderr.txt
+
+# Both inputs' replacements survive unchanged.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-DAG: ReplacementText: X
+# MERGED-DAG: ReplacementText: Y
+
+# SARIF was written with version 2.1.0 and an empty results array.
+# llvm::json::Object emits keys alphabetically, so $schema, results,
+# tool come first inside runs[0] and version is the last top-level key.
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF: "$schema": "https://json.schemastore.org/sarif-2.1.0.json"
+# SARIF: "results": []
+# SARIF: "name": "clang-ssaf-src-edit-merge"
+# SARIF: "version": "2.1.0"
+
+# Stderr contains no `conflict:` line.
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=STDERR \
+# RUN:           --allow-empty %s
+# STDERR-NOT: conflict:

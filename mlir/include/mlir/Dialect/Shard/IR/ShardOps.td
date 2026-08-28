@@ -28,7 +28,8 @@ class Shard_Op<string mnemonic, list<Trait> traits = []> :
     Op<Shard_Dialect, mnemonic, traits> {
 }
 
-def Shard_GridOp : Shard_Op<"grid", [Symbol, Pure]> {
+def Shard_GridOp
+    : Shard_Op<"grid", [SymbolName, SymbolVisibility, Symbol, Pure]> {
   let summary = "Description of a device/process grid.";
   let description = [{
     The shard.grid operation is a symbol operation that identifies a specific
@@ -67,10 +68,12 @@ def Shard_GridOp : Shard_Op<"grid", [Symbol, Pure]> {
   }];
   let arguments = (ins
     SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     DenseI64ArrayAttr:$shape
   );
   let assemblyFormat = [{
-    $sym_name `(` `shape` `=` custom<DimensionList>($shape) `)`
+    ($sym_visibility^)? $sym_name
+      `(` `shape` `=` custom<DimensionList>($shape) `)`
       attr-dict
   }];
   let extraClassDeclaration = [{

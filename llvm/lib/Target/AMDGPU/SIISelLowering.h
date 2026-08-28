@@ -108,7 +108,8 @@ private:
   SDValue LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFromFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
   SDValue LowerCONVERT_TO_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerToFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
+  SDValue lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
+                     SelectionDAG &DAG) const;
 
   // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
   // (the offset that is included in bounds checking and swizzling, to be split

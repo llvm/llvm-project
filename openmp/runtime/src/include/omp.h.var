@@ -328,7 +328,7 @@
         omp_control_tool_flush = 3,
         omp_control_tool_end = 4
     } omp_control_tool_t;
-#endif OMPCONTROLENUM
+#endif /* OMPCONTROLENUM */
 
     extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
 

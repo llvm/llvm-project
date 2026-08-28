@@ -2,6 +2,7 @@ import("//llvm/lib/Target/targets.gni")
 
 group("unittests") {
   deps = [
+    "ABI:ABITests",
     "ADT:ADTTests",
     "Analysis:AnalysisTests",
     "AsmParser:AsmParserTests",

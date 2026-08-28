@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/sps-ci/MemoryAccessSPSCI.h"
-#include "orc-rt/SPSWrapperFunction.h"
-#include "orc-rt/SimpleSymbolTable.h"
+#include "orc-rt/bedrock/sps-ci/MemoryAccessSPSCI.h"
+#include "orc-rt/bedrock/SPSWrapperFunction.h"
+#include "orc-rt/bedrock/SimpleSymbolTable.h"
 
 #include "DirectCaller.h"
 #include "gtest/gtest.h"

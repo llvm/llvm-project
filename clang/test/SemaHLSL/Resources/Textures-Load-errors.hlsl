@@ -1,19 +1,44 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=Texture2D -DARRAYED=0 -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=Texture2DArray -DARRAYED=1 -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2D -DARRAYED=0 -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2DArray -DARRAYED=1 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2D -DLOAD_TYPE=int3 \
+// RUN:   -DLOAD_FLOAT_TYPE=float3 -DNARROW_LOAD_TYPE=int2 \
+// RUN:   -DWIDE_LOAD_TYPE=int4 -DOFFSET_TYPE=int2 -DOFFSET_FLOAT_TYPE=float2 \
+// RUN:   -DWIDE_OFFSET_TYPE=int3 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2DArray -DLOAD_TYPE=int4 \
+// RUN:   -DLOAD_FLOAT_TYPE=float4 -DNARROW_LOAD_TYPE=int3 -DOFFSET_TYPE=int2 \
+// RUN:   -DOFFSET_FLOAT_TYPE=float2 -DWIDE_OFFSET_TYPE=int3 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DLOAD_TYPE=int3 \
+// RUN:   -DLOAD_FLOAT_TYPE=float3 -DNARROW_LOAD_TYPE=int2 \
+// RUN:   -DWIDE_LOAD_TYPE=int4 -DOFFSET_TYPE=int2 -DOFFSET_FLOAT_TYPE=float2 \
+// RUN:   -DWIDE_OFFSET_TYPE=int3 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOAD_TYPE=int4 \
+// RUN:   -DLOAD_FLOAT_TYPE=float4 -DNARROW_LOAD_TYPE=int3 -DOFFSET_TYPE=int2 \
+// RUN:   -DOFFSET_FLOAT_TYPE=float2 -DWIDE_OFFSET_TYPE=int3 -verify %s
 
-#if ARRAYED
-#define ITY int4
-#define FTY float4
-#define ZEROS 0, 0
-#else
-#define ITY int3
-#define FTY float3
-#define ZEROS 0
-#endif
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   LOAD_TYPE          Load location type
+//   LOAD_FLOAT_TYPE    Load location type, but floating point
+//   NARROW_LOAD_TYPE   a Load location with one component too few
+//   WIDE_LOAD_TYPE     a Load location with one component too many; only
+//                      defined where a wider vector exists
+//   OFFSET_TYPE        offset type, one component per resource dimension
+//   OFFSET_FLOAT_TYPE  offset type, but floating point
+//   WIDE_OFFSET_TYPE   an offset with one component too many
+//
+// The diagnostics that name a vector width use `-re` directives so that the
+// same assertions apply to every texture type.
 
 TEXTURE<float4> t;
+
+float4 test_exact_location(LOAD_TYPE loc) {
+  // No diagnostics expected: the location has exactly the right width.
+  return t.Load(loc);
+}
 
 float4 test_too_few_args() {
   return t.Load(); // expected-error {{no matching member function for call to 'Load'}}
@@ -21,39 +46,40 @@ float4 test_too_few_args() {
   // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 0 were provided}}
 }
 
-float4 test_too_many_args(int2 loc) {
-  return t.Load(ITY(loc, ZEROS), int2(1, 1), 1); // expected-error {{no matching member function for call to 'Load'}}
+float4 test_too_many_args(LOAD_TYPE loc, OFFSET_TYPE offset) {
+  return t.Load(loc, offset, 1); // expected-error {{no matching member function for call to 'Load'}}
   // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
   // expected-note@*:* {{candidate function not viable: requires single argument 'Location', but 3 arguments were provided}}
 }
 
-float4 test_invalid_coord_type(float2 loc) {
-  return t.Load(FTY(loc, ZEROS)); // expected-warning {{implicit conversion turns floating-point number into integer: }}
+float4 test_invalid_coord_type(LOAD_FLOAT_TYPE loc) {
+  return t.Load(loc); // expected-warning {{implicit conversion turns floating-point number into integer: }}
 }
 
-float4 test_invalid_offset_type(int2 loc, float2 offset) {
-  return t.Load(ITY(loc, ZEROS), offset); // expected-warning {{implicit conversion turns floating-point number into integer: 'float2' (aka 'vector<float, 2>') to 'vector<int, 2>' (vector of 2 'int' values)}}
+float4 test_invalid_offset_type(LOAD_TYPE loc, OFFSET_FLOAT_TYPE offset) {
+  // expected-warning-re@+1 {{implicit conversion turns floating-point number into integer: '{{float[0-9]}}' (aka 'vector<float, {{[0-9]}}>') to 'vector<int, {{[0-9]}}>' (vector of {{[0-9]}} 'int' values)}}
+  return t.Load(loc, offset);
 }
 
-float4 test_invalid_location_count(int2 loc) {
+float4 test_invalid_location_count(NARROW_LOAD_TYPE loc) {
   return t.Load(loc); // expected-error {{no matching member function for call to 'Load'}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from 'int2' (aka 'vector<int, 2>') to }}
+  // expected-note@*:* {{candidate function not viable: no known conversion from }}
   // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 1 was provided}}
 }
 
-float4 test_truncated_location_count(int4 loc) {
-#if ARRAYED
-  return t.Load(loc); // no warning expected for array textures which take an int4 argument
-#else
-  return t.Load(loc); // expected-warning {{implicit conversion truncates vector: 'int4' (aka 'vector<int, 4>') to 'vector<int, 3>' (vector of 3 'int' values)}}
-#endif
+#ifdef WIDE_LOAD_TYPE
+float4 test_truncated_location_count(WIDE_LOAD_TYPE loc) {
+  // expected-warning-re@+1 {{implicit conversion truncates vector: '{{int[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<int, {{[0-9]}}>' (vector of {{[0-9]}} 'int' values)}}
+  return t.Load(loc);
 }
+#endif
 
-float4 test_splatted_offset_count(ITY loc, int offset) {
+float4 test_splatted_offset_count(LOAD_TYPE loc, int offset) {
   // No errors expected. The vector will be generated by splatting `offset`.
   return t.Load(loc, offset);
 }
 
-float4 test_truncated_offset_count(int2 loc, int3 offset) {
-  return t.Load(ITY(loc, ZEROS), offset); // expected-warning {{implicit conversion truncates vector: 'int3' (aka 'vector<int, 3>') to 'vector<int, 2>' (vector of 2 'int' values)}}
+float4 test_truncated_offset_count(LOAD_TYPE loc, WIDE_OFFSET_TYPE offset) {
+  // expected-warning-re@+1 {{implicit conversion truncates vector: '{{int[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<int, {{[0-9]}}>' (vector of {{[0-9]}} 'int' values)}}
+  return t.Load(loc, offset);
 }

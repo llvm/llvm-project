@@ -154,8 +154,12 @@ DGNode::~DGNode() {
 
 #ifndef NDEBUG
 void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
-  OS << *I << " USuccs:" << UnscheduledSuccs << " UPreds:" << UnscheduledPreds
-     << " Sched:" << Scheduled << "\n";
+  OS << *I << " Unsched:";
+  if (UnscheduledDeps)
+    OS << UnscheduledDeps;
+  else
+    OS << "N/A";
+  OS << " Sched:" << Scheduled << "\n";
 }
 void DGNode::dump() const { print(dbgs()); }
 void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
@@ -304,7 +308,7 @@ void DependencyGraph::scanAndAddDeps(MemDGNode &DstN,
   for (MemDGNode &SrcN : reverse(SrcScanRange)) {
     Instruction *SrcI = SrcN.getInstruction();
     if (hasDep(SrcI, DstI))
-      DstN.addMemPred(&SrcN);
+      DstN.addMemPred(&SrcN, Dir);
   }
 }
 
@@ -331,11 +335,13 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
         continue;
-      OpN->incrUnscheduledSuccs();
+      if (Dir == SchedDirection::BottomUp)
+        OpN->incrUnscheduledDeps();
       if (!OpN->scheduled())
         ++CntUnschedPreds;
     }
-    getNode(&I)->UnscheduledPreds = CntUnschedPreds;
+    if (Dir == SchedDirection::TopDown)
+      getNode(&I)->UnscheduledDeps = CntUnschedPreds;
   }
 
   // Now handle the cross-interval edges.
@@ -368,11 +374,13 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       if (!TopInterval.contains(OpI))
         continue;
       if (!OpN->scheduled()) {
-        OpN->incrUnscheduledSuccs();
+        if (Dir == SchedDirection::BottomUp)
+          OpN->incrUnscheduledDeps();
         ++CntUnscheduledPreds;
       }
     }
-    *BotN->UnscheduledPreds += CntUnscheduledPreds;
+    if (Dir == SchedDirection::TopDown)
+      *BotN->UnscheduledDeps += CntUnscheduledPreds;
   }
 }
 
@@ -584,11 +592,11 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     // Drop the memory dependencies from both predecessors and successors.
     while (!MemN->memPreds().empty()) {
       auto *PredN = *MemN->memPreds().begin();
-      MemN->removeMemPred(PredN);
+      MemN->removeMemPred(PredN, Dir);
     }
     while (!MemN->memSuccs().empty()) {
       auto *SuccN = *MemN->memSuccs().begin();
-      SuccN->removeMemPred(MemN);
+      SuccN->removeMemPred(MemN, Dir);
     }
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   } else {
@@ -596,10 +604,10 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     if (!N->scheduled()) {
       for (auto *PredN : N->preds(*this))
         if (!PredN->scheduled())
-          PredN->decrUnscheduledSuccs();
+          PredN->decrUnscheduledDeps();
       for (auto *SuccN : N->succs(*this))
         /// TODO: Does the successor also need to be guarded?
-        SuccN->decrUnscheduledPreds();
+        SuccN->decrUnscheduledDeps();
     }
   }
   // Finally erase the Node.
@@ -628,23 +636,23 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   // NewSrc if needed.
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
-      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      // If CurrSrcN is scheduled there is no point in updating UnscheduledDeps.
       if (!CurrSrcN->scheduled()) {
         if (Dir == SchedDirection::BottomUp)
-          CurrSrcN->decrUnscheduledSuccs();
+          CurrSrcN->decrUnscheduledDeps();
         else
-          UserN->decrUnscheduledPreds();
+          UserN->decrUnscheduledDeps();
       }
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
-      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      // If CurrSrcN is scheduled there is no point in updating UnscheduleDeps.
       if (!NewSrcN->scheduled()) {
         if (Dir == SchedDirection::BottomUp)
-          NewSrcN->incrUnscheduledSuccs();
+          NewSrcN->incrUnscheduledDeps();
         else
-          UserN->incrUnscheduledPreds();
+          UserN->incrUnscheduledDeps();
       }
     }
   }

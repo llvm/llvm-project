@@ -102,8 +102,7 @@ bool Block::hasPointer(const Pointer *P) const {
 
 void Block::movePointersTo(Block *B) {
   assert(B != this);
-  unsigned MDDiff = static_cast<int>(B->Desc->getMetadataSize()) -
-                    static_cast<int>(Desc->getMetadataSize());
+  unsigned MDDiff = static_cast<int>(B->MDSize) - static_cast<int>(MDSize);
 
   while (Pointers) {
     Pointer *P = Pointers;
@@ -135,8 +134,9 @@ void Block::removePointers() {
 }
 
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
-    : Root(Root), B(~0u, Blk->Desc, Blk->isExtern(), Blk->IsStatic,
-                    Blk->isWeak(), Blk->isDummy(), /*IsDead=*/true) {
+    : Root(Root), B(~0u, Blk->Desc, Blk->MDSize, Blk->isExtern(), Blk->IsStatic,
+                    Blk->isWeak(), Blk->isDummy(),
+                    /*IsDead=*/true) {
   // Add the block to the chain of dead blocks.
   if (Root)
     Root->Prev = this;

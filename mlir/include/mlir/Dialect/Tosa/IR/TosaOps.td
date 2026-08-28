@@ -2415,7 +2415,8 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input
+    Tosa_Tensor:$input,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$input_unsigned
   );
 
   let results = (outs
@@ -2748,7 +2749,8 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
 //===----------------------------------------------------------------------===//
 // Operator: variable
 //===----------------------------------------------------------------------===//
-def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
+def Tosa_VariableOp
+    : Tosa_Op<"variable", [SymbolName, SymbolVisibility, Symbol]> {
   let summary = "Defines a variable";
 
   let description = [{
@@ -2757,10 +2759,10 @@ def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
   }];
 
   let arguments = (ins
-    // Note: "sym_name" is used as opposed to "name" in the specification,
-    // since a Symbol must be named "sym_name" for it to be recognised by
-    // the containing SymbolTable.
+    // Note: "sym_name" is used as opposed to "name" in the specification to
+    // use the conventional representation provided by the SymbolName trait.
     SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     IndexElementsAttr:$var_shape,
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initial_value
@@ -2769,7 +2771,7 @@ def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
   let hasCustomAssemblyFormat = 1;
 
   let assemblyFormat = [{
-    $sym_name
+    ($sym_visibility^)? $sym_name
     attr-dict
     custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
   }];

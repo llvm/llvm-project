@@ -287,8 +287,15 @@ public:
       : Ctx(Ctx), SM(SM), API(API), PP(PP) {}
 
   void EndOfMainFile() override {
-    for (const auto &M : PP.macros()) {
-      auto *II = M.getFirst();
+    SmallVector<const IdentifierInfo *> Macros;
+    for (const auto &M : PP.macros())
+      Macros.push_back(M.getFirst());
+    llvm::sort(Macros,
+               [](const IdentifierInfo *LHS, const IdentifierInfo *RHS) {
+                 return LHS->getName() < RHS->getName();
+               });
+
+    for (const auto *II : Macros) {
       auto MD = PP.getMacroDefinition(II);
       auto *MI = MD.getMacroInfo();
 
@@ -448,6 +455,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  // Public API can never be inside function bodies, so skip parsing them.
+  CI.getFrontendOpts().SkipFunctionBodies = true;
+
   auto &Inputs = CI.getFrontendOpts().Inputs;
   if (Inputs.empty())
     return true;

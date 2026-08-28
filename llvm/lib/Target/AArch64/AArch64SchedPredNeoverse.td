@@ -66,7 +66,6 @@ def NeoverseZeroMove : MCSchedPredicate<
                            // MOV Wd, #0
                            // MOV Xd, #0
                            CheckAll<[CheckOpcode<[MOVZWi, MOVZXi]>,
-                                     CheckIsImmOperand<1>,
                                      CheckImmOperand<1, 0>,
                                      CheckImmOperand<2, 0>]>,
                            // MOV Wd, WZR
@@ -103,7 +102,6 @@ def NeoverseAllActivePredicate : MCSchedPredicate<
                                        CheckOpcode<[
                                          PTRUE_B, PTRUE_H, PTRUE_S, PTRUE_D,
                                          PTRUES_B, PTRUES_H, PTRUES_S, PTRUES_D]>,
-                                       CheckIsImmOperand<1>,
                                        CheckImmOperand<1, 31>]>,
                                    ]>>;
 

@@ -149,10 +149,10 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
-  /// The number of unscheduled successors. Optional represents whether the
-  /// value is meaningless, e.g., after a node gets scheduled.
-  std::optional<unsigned> UnscheduledSuccs = 0;
-  std::optional<unsigned> UnscheduledPreds = 0;
+  /// The number of unscheduled successors (predecessors) depending on the
+  /// scheduling direction. Optional represents whether the value is
+  /// meaningless, e.g., after a node gets scheduled.
+  std::optional<unsigned> UnscheduledDeps = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
   /// The scheduler bundle that this node belongs to.
@@ -173,49 +173,35 @@ public:
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
-  unsigned getNumUnscheduledSuccs() const {
-    assert((bool)UnscheduledSuccs && "Invalid UnscheduledSuccs!");
-    return *UnscheduledSuccs;
-  }
-  /// \Returns the number of unscheduled predecessors.
-  unsigned getNumUnscheduledPreds() const {
-    assert((bool)UnscheduledPreds && "Invalid UnscheduledPreds!");
-    return *UnscheduledPreds;
+  unsigned getNumUnscheduledDeps() const {
+    assert((bool)UnscheduledDeps && "Invalid UnscheduledDeps!");
+    return *UnscheduledDeps;
   }
 #ifndef NDEBUG
-  /// \returns true unscheduled successors contains valid data (for testing).
-  bool validUnscheduledSuccs() const { return (bool)UnscheduledSuccs; }
-  /// \returns true unscheduled predecessors contains valid data (for testing).
-  bool validUnscheduledPreds() const { return (bool)UnscheduledPreds; }
+  /// \returns true if unscheduled successors(predecessors) contains valid data
+  /// (for testing).
+  bool validUnscheduledDeps() const { return (bool)UnscheduledDeps; }
 #endif
   // TODO: Make this private?
-  void decrUnscheduledSuccs() {
-    assert(*UnscheduledSuccs > 0 && "Counting error!");
-    --*UnscheduledSuccs;
+  void decrUnscheduledDeps() {
+    assert(*UnscheduledDeps > 0 && "Counting error!");
+    --*UnscheduledDeps;
   }
-  void incrUnscheduledSuccs() { ++*UnscheduledSuccs; }
-  void decrUnscheduledPreds() {
-    assert(*UnscheduledPreds > 0 && "Counting error!");
-    --*UnscheduledPreds;
-  }
-  void incrUnscheduledPreds() { ++*UnscheduledPreds; }
+  void incrUnscheduledDeps() { ++*UnscheduledDeps; }
 
   void resetScheduleState() {
-    UnscheduledSuccs = 0;
-    UnscheduledPreds = 0;
+    UnscheduledDeps = 0;
     Scheduled = false;
   }
   /// \Returns true if all dependent successors (or predecessors during top-down
   /// scheduling) have been scheduled.
-  bool readyBottomUp() const { return UnscheduledSuccs == 0; }
-  bool readyTopDown() const { return UnscheduledPreds == 0; }
+  bool ready() const { return UnscheduledDeps == 0; }
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
   void setScheduled() {
     Scheduled = true;
-    // UnscheduledSuccs is meaningless from this point on, so prohibit its use.
-    UnscheduledSuccs = std::nullopt;
-    UnscheduledPreds = std::nullopt;
+    // UnscheduledDeps is meaningless from this point on, so prohibit its use.
+    UnscheduledDeps = std::nullopt;
   }
   /// \Returns the scheduling bundle that this node belongs to, or nullptr.
   SchedBundle *getSchedBundle() const { return SB; }
@@ -384,33 +370,40 @@ public:
   MemDGNode *getPrevNode() const { return PrevMemN; }
   /// \Returns the next Mem DGNode in instruction order.
   MemDGNode *getNextNode() const { return NextMemN; }
+
+  // TODO: addMemPred() and removeMemPred() should be private.
   /// Adds the mem dependency edge PredN->this. This also increments the
-  /// UnscheduledSuccs counter of the predecessor if this node has not been
+  /// UnscheduledDeps counter of the predecessor if this node has not been
   /// scheduled.
-  void addMemPred(MemDGNode *PredN) {
+  void addMemPred(MemDGNode *PredN, SchedDirection Dir) {
     [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
     assert(PredN != this && "Trying to add a dependency to self!");
     PredN->MemSuccs.insert(this);
     if (!Scheduled) {
       if (!PredN->Scheduled) {
-        PredN->incrUnscheduledSuccs();
-        incrUnscheduledPreds();
+        if (Dir == SchedDirection::BottomUp)
+          PredN->incrUnscheduledDeps();
+        else
+          incrUnscheduledDeps();
       }
     }
   }
   /// Removes the memory dependency PredN->this. This also updates the
   /// UnscheduledSuccs counter of PredN if this node has not been scheduled.
-  void removeMemPred(MemDGNode *PredN) {
+  void removeMemPred(MemDGNode *PredN, SchedDirection Dir) {
     MemPreds.erase(PredN);
     PredN->MemSuccs.erase(this);
     if (!Scheduled) {
       if (!PredN->Scheduled) {
-        PredN->decrUnscheduledSuccs();
-        decrUnscheduledPreds();
+        if (Dir == SchedDirection::BottomUp)
+          PredN->decrUnscheduledDeps();
+        else
+          decrUnscheduledDeps();
       }
     }
   }
+
   /// \Returns true if there is a memory dependency N->this.
   bool hasMemPred(DGNode *N) const {
     if (auto *MN = dyn_cast<MemDGNode>(N))

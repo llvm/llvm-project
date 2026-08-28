@@ -492,11 +492,20 @@ static void filterByName(
     filterDieNames(CU.get());
     if (DumpNonSkeleton) {
       // If we have split DWARF, then recurse down into the .dwo files as well.
+      // Matching DIEs are printed as they are found and nothing here outlives
+      // them, so the split unit can be released instead of keeping every .dwo
+      // context resident until the end of the search.
+      const bool HadDWO = CU->getDWO();
       DWARFDie CUDie = CU->getUnitDIE(false);
       DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
       // If we have a DWO file, we need to search it as well
       if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
         filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+      const DWARFUnit *DWO = CU->getDWO();
+      // Don't release a DWP context -- it is the same for every non-skeleton CU
+      // and we benefit from keeping it resident to avoid the re-parse.
+      if (!HadDWO && DWO && !DWO->getContext().isDWP())
+        CU->clearDWO();
     }
   }
 }

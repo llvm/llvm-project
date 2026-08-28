@@ -61,6 +61,18 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
   }
 }
 
+static bool isPureCIRType(mlir::Type ty) {
+  if (!ty)
+    return true;
+  return !ty.walk([](mlir::Type t) {
+              if (!t)
+                return mlir::WalkResult::advance();
+              return mlir::isa<cir::CIRDialect>(t.getDialect())
+                         ? mlir::WalkResult::advance()
+                         : mlir::WalkResult::interrupt();
+            }).wasInterrupted();
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
@@ -172,7 +184,8 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
-static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
+                                                  "bitfield"};
 
 static std::optional<RecordMemberKind>
 parseMemberKind(mlir::AsmParser &parser) {
@@ -209,16 +222,15 @@ parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
 }
 
 /// Print a complete CIR record body:
-///   '<' ['class '] [name] ['packed '] ['padded '] body '>'
-/// where body is "incomplete" or "{[mark] members[, padding = {type}]}".
+///   '<' ['class '] [name] ['packed '] body '>'
+/// where body is "incomplete" or "{[mark] members}[, padding = {type}]".
 /// RecordTy must be a mutable MLIR type (StructType or UnionType).
 template <typename RecordTy>
-static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
-                            mlir::StringAttr name, bool hasClassPrefix,
-                            bool isPacked, bool isPadded, bool isIncomplete,
-                            llvm::ArrayRef<mlir::Type> members,
-                            mlir::Type padding,
-                            llvm::ArrayRef<RecordMemberKind> memberKinds) {
+static void
+printRecordBody(mlir::AsmPrinter &printer, RecordTy self, mlir::StringAttr name,
+                bool hasClassPrefix, bool isPacked, bool isIncomplete,
+                llvm::ArrayRef<mlir::Type> members, mlir::Type padding,
+                llvm::ArrayRef<RecordMemberKind> memberKinds) {
   printer << '<';
   if (hasClassPrefix)
     printer << "class ";
@@ -236,8 +248,6 @@ static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
     printer << ' ';
   if (isPacked)
     printer << "packed ";
-  if (isPadded)
-    printer << "padded ";
   if (isIncomplete) {
     printer << "incomplete";
   } else {
@@ -264,7 +274,6 @@ Type StructType::parse(mlir::AsmParser &parser) {
   const llvm::SMLoc loc = parser.getCurrentLocation();
   const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
   bool packed = false;
-  bool padded = false;
   mlir::MLIRContext *context = parser.getContext();
 
   if (parser.parseLess())
@@ -299,9 +308,6 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
 
-  if (parser.parseOptionalKeyword("padded").succeeded())
-    padded = true;
-
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
   llvm::SmallVector<RecordMemberKind> memberKinds;
@@ -317,18 +323,18 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (name && incomplete) {
     type = StructType::getChecked(eLoc, context, name, is_class);
   } else if (!name && !incomplete) {
-    type = StructType::getChecked(eLoc, context, membersRef, packed, padded,
-                                  is_class, kindsRef);
+    type = StructType::getChecked(eLoc, context, membersRef, packed, is_class,
+                                  kindsRef);
     if (!type)
       return {};
   } else if (!incomplete) {
     type = StructType::getChecked(eLoc, context, membersRef, name, packed,
-                                  padded, is_class, kindsRef);
+                                  is_class, kindsRef);
     if (!type)
       return {};
     if (auto structTy = mlir::dyn_cast<StructType>(type))
       if (structTy.isIncomplete())
-        structTy.complete(membersRef, packed, padded, kindsRef);
+        structTy.complete(membersRef, packed, kindsRef);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -340,16 +346,14 @@ Type StructType::parse(mlir::AsmParser &parser) {
 
 void StructType::print(mlir::AsmPrinter &printer) const {
   printRecordBody(printer, *this, getName(), isClass(), getPacked(),
-                  getPadded(), isIncomplete(), getMembers(), /*padding=*/{},
+                  isIncomplete(), getMembers(), /*padding=*/{},
                   getMemberKinds());
 }
 
-mlir::LogicalResult
-StructType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
-                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-                   bool incomplete, bool packed, bool padded,
-                   llvm::ArrayRef<RecordMemberKind> member_kinds,
-                   bool is_class) {
+mlir::LogicalResult StructType::verify(
+    function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name, bool incomplete,
+    bool packed, llvm::ArrayRef<RecordMemberKind> member_kinds, bool is_class) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
   return verifyRecordMemberKinds(emitError, members.size(), member_kinds);
@@ -364,11 +368,14 @@ mlir::StringAttr StructType::getName() const { return getImpl()->name; }
 bool StructType::isIncomplete() const { return getImpl()->incomplete; }
 bool StructType::getIncomplete() const { return getImpl()->incomplete; }
 bool StructType::getPacked() const { return getImpl()->packed; }
-bool StructType::getPadded() const { return getImpl()->padded; }
 llvm::ArrayRef<RecordMemberKind> StructType::getMemberKinds() const {
   return getImpl()->member_kinds;
 }
 bool StructType::getIsClass() const { return getImpl()->is_class; }
+
+bool StructType::getPadded() const {
+  return llvm::is_contained(getMemberKinds(), RecordMemberKind::Pad);
+}
 
 bool StructType::isABIConvertedRecord() const {
   return getName() && getName().getValue().starts_with(abi_conversion_prefix);
@@ -388,10 +395,10 @@ void StructType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
-void StructType::complete(ArrayRef<Type> members, bool packed, bool padded,
+void StructType::complete(ArrayRef<Type> members, bool packed,
                           ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded, memberKinds).failed())
+  if (mutate(members, packed, memberKinds).failed())
     llvm_unreachable("failed to complete struct");
 }
 
@@ -504,8 +511,8 @@ Type UnionType::parse(mlir::AsmParser &parser) {
 
 void UnionType::print(mlir::AsmPrinter &printer) const {
   printRecordBody(printer, *this, getName(), /*hasClassPrefix=*/false,
-                  getPacked(), /*isPadded=*/false, isIncomplete(), getMembers(),
-                  getPadding(), getMemberKinds());
+                  getPacked(), isIncomplete(), getMembers(), getPadding(),
+                  getMemberKinds());
 }
 
 mlir::LogicalResult
@@ -641,14 +648,13 @@ std::string RecordType::getKindAsStr() const {
 std::string RecordType::getPrefixedName() const {
   return getKindAsStr() + "." + getName().getValue().str();
 }
-void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
+void RecordType::complete(ArrayRef<Type> members, bool packed,
                           mlir::Type padding,
                           ArrayRef<RecordMemberKind> memberKinds) {
-  if (auto s = mlir::dyn_cast<StructType>(*this))
-    return s.complete(members, packed, padded, memberKinds);
-  // Unions derive padded from padding; assert the caller is consistent.
-  assert((!padded || padding) &&
-         "padded=true requires a non-null padding type");
+  if (auto s = mlir::dyn_cast<StructType>(*this)) {
+    assert(!padding && "only a union takes a separate padding slot");
+    return s.complete(members, packed, memberKinds);
+  }
   return mlir::cast<UnionType>(*this).complete(members, packed, padding,
                                                memberKinds);
 }
@@ -687,14 +693,19 @@ void RecordType::removeABIConversionNamePrefix() {
   return mlir::cast<UnionType>(*this).removeABIConversionNamePrefix();
 }
 
+bool cir::isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind) {
+  if (kind != RecordMemberKind::BitField)
+    return false;
+  auto arrTy = mlir::dyn_cast<ArrayType>(memberTy);
+  return arrTy && arrTy.getSize() == 0;
+}
+
 bool RecordType::isEmptyForABI() const {
   // An incomplete record has no members yet, which must not read as vacuously
   // holding no data.
   if (isIncomplete())
     return false;
-  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
-    return kind == RecordMemberKind::Data;
-  });
+  return !anyMemberHoldsDataForABI(getMembers(), getMemberKinds());
 }
 
 //===----------------------------------------------------------------------===//
@@ -849,7 +860,9 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   unsigned recordSize = 0;
   uint64_t recordAlignment = 1;
 
-  for (mlir::Type ty : getMembers()) {
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     // This assumes that we're calculating size based on the ABI alignment, not
     // the preferred alignment for each type.
     const uint64_t tyAlign =
@@ -875,17 +888,24 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Compute the data size (excluding tail padding) for this record type. For
-  // padded records, the last member is the tail padding array added by
-  // CIRGenRecordLayoutBuilder::appendPaddingBytes, so we exclude it. For
-  // non-padded records, data size equals the full struct size without
-  // alignment.
-  auto members = getMembers();
-  unsigned numMembers =
-      getPadded() && members.size() > 1 ? members.size() - 1 : members.size();
+  // Tail padding is the trailing run of pad members, which is what a derived
+  // class may reuse.  A zero-width bit-field holds no storage, so it does not
+  // end that run.  A member of any other kind stays inside the data size.
+  llvm::ArrayRef<mlir::Type> members = getMembers();
+  llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
+  assert(kinds.size() == members.size() &&
+         "the two drop_back calls below must stay in step");
+  while (!kinds.empty() &&
+         (kinds.back() == RecordMemberKind::Pad ||
+          isZeroWidthBitField(members.back(), kinds.back()))) {
+    kinds = kinds.drop_back();
+    members = members.drop_back();
+  }
+
   unsigned recordSize = 0;
-  for (unsigned i = 0; i < numMembers; ++i) {
-    mlir::Type ty = members[i];
+  for (auto [ty, kind] : llvm::zip_equal(members, kinds)) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
@@ -903,9 +923,12 @@ StructType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
   uint64_t recordAlignment = 1;
-  for (mlir::Type ty : getMembers())
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     recordAlignment =
         std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+  }
   return recordAlignment;
 }
 
@@ -918,15 +941,22 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
   assert(isComplete() && "Cannot get layout of incomplete records");
   assert(idx < getNumElements());
   llvm::ArrayRef<mlir::Type> members = getMembers();
+  llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
 
   unsigned offset = 0;
-  for (mlir::Type ty :
-       llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
-    const llvm::Align tyAlign =
-        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+  for (unsigned i = 0; i != idx; ++i) {
+    if (isZeroWidthBitField(members[i], kinds[i]))
+      continue;
+    const llvm::Align tyAlign = llvm::Align(
+        getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += dataLayout.getTypeSize(ty);
+    offset += dataLayout.getTypeSize(members[i]);
   }
+
+  // A zero-width bit-field imposes no alignment, so its offset is where the
+  // storage ahead of it ends.
+  if (isZeroWidthBitField(members[idx], kinds[idx]))
+    return offset;
 
   const llvm::Align tyAlign = llvm::Align(
       getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
@@ -1247,6 +1277,18 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
+
+  // The calling convention lowering pass expects all types in a function
+  // signature to be CIR types.
+  for (mlir::Type type : argTypes) {
+    if (!isPureCIRType(type))
+      return emitError()
+             << "expected all types in the function signature to be CIR types";
+  }
+  if (!isPureCIRType(returnType))
+    return emitError()
+           << "expected all types in the function signature to be CIR types";
+
   return mlir::success();
 }
 
@@ -1262,7 +1304,7 @@ static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
   auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
   mlir::Type fields[2]{voidPtrTy, voidPtrTy};
   return cir::StructType::get(ctx, fields, /*packed=*/false,
-                              /*padded=*/false, /*is_class=*/false,
+                              /*is_class=*/false,
                               cir::RecordType::getAllDataKinds(fields));
 }
 

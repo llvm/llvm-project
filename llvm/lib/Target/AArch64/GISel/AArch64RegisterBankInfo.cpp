@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -47,6 +48,7 @@
 #include "AArch64GenRegisterBankInfo.def"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 static const unsigned CustomMappingID = 1;
 
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(
@@ -1353,8 +1355,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned DefOpc = DefMI->getOpcode();
     const LLT SrcTy = MRI.getType(VReg);
     if (all_of(MI.operands(), [&](const MachineOperand &Op) {
-          return Op.isDef() || MRI.getVRegDef(Op.getReg())->getOpcode() ==
-                                   TargetOpcode::G_CONSTANT;
+          APInt Cst;
+          return Op.isDef() || mi_match(Op.getReg(), MRI, m_ICst(Cst));
         }))
       break;
     if (isPreISelGenericFloatingPointOpcode(DefOpc) ||

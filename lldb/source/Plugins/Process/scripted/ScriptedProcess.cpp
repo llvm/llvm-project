@@ -240,8 +240,9 @@ Status ScriptedProcess::DoDestroy() { return Status(); }
 
 bool ScriptedProcess::IsAlive() { return GetInterface().IsAlive(); }
 
-size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ScriptedProcess::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 

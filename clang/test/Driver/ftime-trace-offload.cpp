@@ -5,8 +5,8 @@
 // RUN: %clang -### -ftime-trace -ftime-trace-granularity=0 -x hip d/a.cpp --offload-arch=gfx906 --offload-arch=gfx90a \
 // RUN:   -nogpulib -nogpuinc -c -o e/a.o --target=x86_64-linux-gnu 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=HIP
-// HIP: -cc1{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgcn-amd-amdhsa-gfx906.json"
-// HIP: -cc1{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgcn-amd-amdhsa-gfx90a.json"
+// HIP: -cc1{{.*}} "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgpu9.06-amd-amdhsa-gfx906.json"
+// HIP: -cc1{{.*}} "-triple" "amdgpu9.0a-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgpu9.0a-amd-amdhsa-gfx90a.json"
 // HIP: -cc1{{.*}} "-triple" "x86_64{{.*}}"{{.*}} "-ftime-trace=e{{/|\\\\}}a.json"
 
 /// Test HIP offloading with new driver: same output as above.
@@ -18,14 +18,14 @@
 // RUN: %clang -### -ftime-trace=f -ftime-trace-granularity=0 -x hip d/a.cpp --offload-arch=gfx906 \
 // RUN:   -nogpulib -nogpuinc -c -o e/a.o --target=x86_64-linux-gnu 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=HIP-DIR
-// HIP-DIR: -cc1{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-ftime-trace=f{{/|\\\\}}a-hip-amdgcn-amd-amdhsa-gfx906.json"
+// HIP-DIR: -cc1{{.*}} "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-ftime-trace=f{{/|\\\\}}a-hip-amdgpu9.06-amd-amdhsa-gfx906.json"
 // HIP-DIR: -cc1{{.*}} "-triple" "x86_64{{.*}}"{{.*}} "-ftime-trace=f{{/|\\\\}}a.json"
 
 /// Test HIP offloading with --save-temps: both host and device get unique trace files.
 // RUN: %clang -### -ftime-trace -ftime-trace-granularity=0 -x hip d/a.cpp --offload-arch=gfx906 \
 // RUN:   -nogpulib -nogpuinc -c -o e/a.o --target=x86_64-linux-gnu --save-temps 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=HIP-SAVE-TEMPS
-// HIP-SAVE-TEMPS: -cc1{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgcn-amd-amdhsa-gfx906.json"
+// HIP-SAVE-TEMPS: -cc1{{.*}} "-triple" "amdgpu9.06-amd-amdhsa"{{.*}} "-ftime-trace=e{{/|\\\\}}a-hip-amdgpu9.06-amd-amdhsa-gfx906.json"
 // HIP-SAVE-TEMPS: -cc1{{.*}} "-triple" "x86_64{{.*}}"{{.*}} "-ftime-trace=e{{/|\\\\}}a-host-x86_64-unknown-linux-gnu.json"
 
 /// Test CUDA offloading: -ftime-trace should generate traces for both host and device.

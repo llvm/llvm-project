@@ -29,11 +29,15 @@
 #include <cstdint>
 #include <optional>
 
-#define LLDB_DAP_INVALID_SRC_REF 0
+#define LLDB_DAP_INVALID_SRC_REF int32_t(0)
 #define LLDB_DAP_INVALID_VALUE_LOC 0
 #define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
 
 namespace lldb_dap::protocol {
+
+/// The DAP `sourceReference`.
+/// The spec defines it as int32 with a minimum value of 0.
+using src_ref_t = int32_t;
 
 /// An `ExceptionBreakpointsFilter` is shown in the UI as an filter option for
 /// configuring how exceptions are dealt with.
@@ -413,7 +417,7 @@ struct Source {
   /// `source` request (even if a path is specified). Since a `sourceReference`
   /// is only valid for a session, it can not be used to persist a source. The
   /// value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<int32_t> sourceReference;
+  std::optional<src_ref_t> sourceReference;
 
   /// A hint for how to present the source in the UI. A value of `deemphasize`
   /// can be used to indicate that the source is not available or that it is
@@ -1133,5 +1137,9 @@ llvm::json::Value toJSON(const StackFrame::PresentationHint &);
 llvm::json::Value toJSON(const StackFrame &);
 
 } // namespace lldb_dap::protocol
+
+namespace lldb_dap {
+using src_ref_t = protocol::src_ref_t;
+} // namespace lldb_dap
 
 #endif

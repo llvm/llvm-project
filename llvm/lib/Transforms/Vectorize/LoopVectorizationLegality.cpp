@@ -936,11 +936,10 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
     // we can vectorize it given loosened floating-point constraints.
-    LibFunc Func;
     bool IsMathLibCall =
         TLI && CI->getCalledFunction() && CI->getType()->isFloatingPointTy() &&
-        TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
-        TLI->hasOptimizedCodeGen(Func);
+        TLI->hasOptimizedCodeGen(
+            TLI->getLibFunc(CI->getCalledFunction()->getName()));
 
     if (IsMathLibCall) {
       // TODO: Ideally, we should not use clang-specific language here,

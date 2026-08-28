@@ -1899,8 +1899,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
         RegOpers.detectDeadDefs(*MI, *LIS);
@@ -1934,8 +1933,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
         RegOpers.detectDeadDefs(*MI, *LIS);

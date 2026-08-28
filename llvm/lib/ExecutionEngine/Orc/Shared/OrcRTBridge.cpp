@@ -47,15 +47,6 @@ const char *DeregisterJITLoaderGDBAllocActionName =
 const char *const DispatchName = "__orc_rt_jit_dispatch";
 const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
 
-const SimpleExecutorMemoryManagerSymbolNames
-    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_ci_SimpleNativeMemoryMap_Instance",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
-};
-
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
         "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",

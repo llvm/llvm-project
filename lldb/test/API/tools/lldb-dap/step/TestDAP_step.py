@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase

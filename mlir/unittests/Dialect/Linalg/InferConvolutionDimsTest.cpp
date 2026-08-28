@@ -156,6 +156,8 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
   // Create equivalent generic with swapped filter loop order: (oh, ow, kw, kh)
   linalg::GenericOp swappedOp =
       createConv2DWithSwappedFilterLoops(builder, conv2DOp);
+  swappedOp->setDiscardableAttr("strides", builder.getI64TensorAttr({7, 8}));
+  swappedOp->setDiscardableAttr("dilations", builder.getI64TensorAttr({9, 10}));
   FailureOr<ConvolutionDimensions> swappedDims =
       inferConvolutionDims(swappedOp);
   ASSERT_TRUE(succeeded(swappedDims));
@@ -174,6 +176,8 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
       << "outputImage[0]=0 should pair with filterLoop[0]=3 (oh <-> kh)";
   EXPECT_EQ(swappedDims->filterLoop[1], 2u)
       << "outputImage[1]=1 should pair with filterLoop[1]=2 (ow <-> kw)";
+  EXPECT_EQ(swappedDims->strides, (SmallVector<int64_t, 2>{1, 1}));
+  EXPECT_EQ(swappedDims->dilations, (SmallVector<int64_t, 2>{1, 1}));
 }
 
 /// Asserts that two ConvolutionDimensions are equal across every populated
@@ -228,6 +232,10 @@ TEST_F(InferConvolutionDimsTest, MapsOverloadMatchesOpOverload) {
     FailureOr<ConvolutionDimensions> fromOp = inferConvolutionDims(linalgOp);
     ASSERT_TRUE(succeeded(fromOp))
         << "op overload failed for " << op->getName().getStringRef().str();
+    if (op == convs.front()) {
+      EXPECT_EQ(fromOp->strides, SmallVector<int64_t>({2, 1}));
+      EXPECT_EQ(fromOp->dilations, SmallVector<int64_t>({3, 1}));
+    }
     FailureOr<ConvolutionDimensions> fromMaps =
         inferConvolutionDims(linalgOp.getIndexingMapsArray());
     ASSERT_TRUE(succeeded(fromMaps))

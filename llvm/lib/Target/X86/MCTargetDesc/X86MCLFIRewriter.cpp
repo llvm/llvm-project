@@ -69,11 +69,15 @@ static bool isGR64OrNone(MCRegister Reg) {
 
 // syscall
 // ->
+// .bundle_lock
 // leaq .Ltmp(%rip), %r11
 // jmpq *(%r14)
 // .Ltmp:
+// .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
                                            const MCSubtargetInfo &STI) {
+  Out.emitBundleLock(/*AlignToEnd=*/false, STI);
+
   MCSymbol *Symbol = Out.getContext().createTempSymbol();
 
   // leaq .Ltmp(%rip), %r11
@@ -99,6 +103,7 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
   Out.emitInstruction(Jmp, STI);
 
   Out.emitLabel(Symbol);
+  Out.emitBundleUnlock(STI);
 }
 
 // Emit: movq TPOffset(%r15), %Reg

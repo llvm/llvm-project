@@ -21,12 +21,12 @@
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALABLE
 
 ; LV: Checking a loop in 'sext_reduction_i16_to_i32'
-; CHECK-FIXED-BASE-NOT: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
+; CHECK-FIXED-BASE: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
 ; CHECK-FIXED: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
 
 ; LV: Checking a loop in 'zext_reduction_i16_to_i32'
-; CHECK-FIXED-BASE-NOT: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
+; CHECK-FIXED-BASE: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
 ; CHECK-FIXED: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
 

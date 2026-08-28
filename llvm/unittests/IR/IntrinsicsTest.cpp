@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
@@ -186,8 +187,30 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
+TEST(IntrinsicAttributes,
+     SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent) {
+  using namespace Intrinsic;
+  LLVMContext Context;
+  static constexpr ID ConvergentResourceIntrinsics[] = {
+      spv_resource_sample,        spv_resource_sample_clamp,
+      spv_resource_samplebias,    spv_resource_samplebias_clamp,
+      spv_resource_calculate_lod, spv_resource_calculate_lod_unclamped,
+  };
+  for (ID IntrID : ConvergentResourceIntrinsics) {
+    AttributeSet AS = getFnAttributes(Context, IntrID);
+    EXPECT_TRUE(AS.hasAttribute(Attribute::Convergent))
+        << "Intrinsic " << getName(IntrID) << " should be convergent";
+  }
+
+  AttributeSet SampleGradAttrs =
+      getFnAttributes(Context, spv_resource_samplegrad);
+  EXPECT_FALSE(SampleGradAttrs.hasAttribute(Attribute::Convergent))
+      << "Intrinsic " << getName(spv_resource_samplegrad)
+      << " should not be convergent";
+}
+
 // Check that getFnAttributes for intrinsics that do not have any function
-// attributes correcty returns an empty set.
+// attributes correctly returns an empty set.
 TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
   using namespace Intrinsic;
   LLVMContext Context;

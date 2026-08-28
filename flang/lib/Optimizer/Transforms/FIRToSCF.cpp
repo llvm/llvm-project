@@ -54,7 +54,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     mlir::Value step = doLoopOp.getStep();
     bool hasTypedIV = !low.getType().isIndex();
     mlir::SmallVector<mlir::Value> iterArgs;
-    if (hasTypedIV || hasFinalValue)
+    if (hasFinalValue)
       iterArgs.push_back(low);
     iterArgs.append(doLoopOp.getIterOperands().begin(),
                     doLoopOp.getIterOperands().end());
@@ -104,18 +104,24 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
     rewriter.setInsertionPointToStart(&scfLoopBody);
     mlir::Value iv;
-    if (hasTypedIV) {
+    if (hasTypedIV && hasFinalValue) {
       iv = scfLoopLikeOp.getRegionIterArgs().front();
     } else {
-      iv = mlir::arith::MulIOp::create(
-          rewriter, loc, scfLoopLikeOp.getSingleInductionVar().value(), step);
-      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
+      mlir::Value canonicalIV = scfLoopLikeOp.getSingleInductionVar().value();
+      if (hasTypedIV)
+        canonicalIV =
+            fir::ConvertOp::create(rewriter, loc, low.getType(), canonicalIV);
+      // Keep the no-wrap flags the stepped increment carried, so a narrow IV
+      // still folds into an affine recurrence.
+      iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step,
+                                       iofAttr);
+      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv, iofAttr);
     }
     mlir::Value firIV = doLoopOp.getInductionVar();
     firIV.replaceAllUsesWith(iv);
 
     mlir::Value finalValue;
-    if (hasTypedIV) {
+    if (hasTypedIV && hasFinalValue) {
       finalValue =
           mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     } else if (hasFinalValue) {
@@ -134,23 +140,21 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
             mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     }
 
-    if (hasTypedIV || hasFinalValue || !results.empty()) {
+    if (hasFinalValue || !results.empty()) {
       rewriter.setInsertionPointToEnd(&scfLoopBody);
       llvm::SmallVector<mlir::Value> yieldOperands;
-      if (hasTypedIV || hasFinalValue) {
+      if (hasFinalValue) {
         yieldOperands.push_back(finalValue);
-      }
-      if (hasFinalValue)
         llvm::append_range(yieldOperands, results.drop_front());
-      else
+      } else {
         llvm::append_range(yieldOperands, results);
+      }
       mlir::scf::YieldOp::create(rewriter, resultOp->getLoc(), yieldOperands);
     }
     rewriter.replaceAllUsesWith(
         doLoopOp.getRegionIterArgs(),
-        hasTypedIV || hasFinalValue
-            ? scfLoopLikeOp.getRegionIterArgs().drop_front()
-            : scfLoopLikeOp.getRegionIterArgs());
+        hasFinalValue ? scfLoopLikeOp.getRegionIterArgs().drop_front()
+                      : scfLoopLikeOp.getRegionIterArgs());
 
     // Copy loop annotations from the fir.do_loop to scf loop op.
     if (auto ann = doLoopOp.getLoopAnnotation())
@@ -161,10 +165,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     if (auto parDims = doLoopOp->getAttr(mlir::acc::GPUParallelDimsAttr::name))
       scfLoopOp->setAttr(mlir::acc::GPUParallelDimsAttr::name, parDims);
 
-    mlir::ValueRange scfResults = scfLoopOp->getResults();
-    if (hasTypedIV && !hasFinalValue)
-      scfResults = scfResults.drop_front();
-    rewriter.replaceOp(doLoopOp, scfResults);
+    rewriter.replaceOp(doLoopOp, scfLoopOp->getResults());
     return mlir::success();
   }
 

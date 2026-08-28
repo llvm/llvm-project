@@ -257,6 +257,11 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple, bool IsLTO,
                             const StringRef PluginOptPrefix = "");
 
+void addSplitMachineFunctionsArgs(const Driver &D,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple);
+
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,

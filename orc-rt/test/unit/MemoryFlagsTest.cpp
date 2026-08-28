@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/MemoryFlags.h"
+#include "orc-rt/bedrock/MemoryFlags.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

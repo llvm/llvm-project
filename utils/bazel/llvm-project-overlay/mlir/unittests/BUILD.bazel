@@ -232,6 +232,7 @@ cc_test(
         "//mlir:SPIRVDialect",
         "//mlir:SPIRVSerialization",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )

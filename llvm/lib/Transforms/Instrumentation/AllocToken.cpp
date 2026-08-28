@@ -399,8 +399,8 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
   // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
   // returning false for nobuiltin calls.
-  LibFunc Func;
-  if (TLI.getLibFunc(*Callee, Func)) {
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func != NotLibFunc) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {

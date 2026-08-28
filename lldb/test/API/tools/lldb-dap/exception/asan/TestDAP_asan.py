@@ -2,7 +2,7 @@
 Test that we stop at runtime instrumentation locations (asan).
 """
 
-from lldbsuite.test.decorators import skipUnlessAddressSanitizer
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 

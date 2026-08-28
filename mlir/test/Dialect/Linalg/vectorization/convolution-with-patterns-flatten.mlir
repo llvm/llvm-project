@@ -79,9 +79,9 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xf32_memref_dillation_2(%input: memref<3
 //      CHECK-DAG:  %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
 
 //      CHECK:   %[[V_INPUT_0:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:     {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
+// CHECK-SAME:     offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1] : vector<3x4x4xf32> to vector<3x2x4xf32>
 //      CHECK:   %[[V_INPUT_1:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:     {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xf32> to vector<3x2x4xf32>
+// CHECK-SAME:     offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1] : vector<3x4x4xf32> to vector<3x2x4xf32>
 
 //      CHECK:  %[[V_FILTER_0:.+]] = vector.extract %[[V_FILTER_R]][0] : vector<4xf32> from vector<2x4xf32>
 //      CHECK:  %[[V_FILTER_1:.+]] = vector.extract %[[V_FILTER_R]][1] : vector<4xf32> from vector<2x4xf32>
@@ -139,9 +139,9 @@ func.func @depthwise_conv1d_nwc_wc_3x5x4xi8_memref_dilation_2(%input: memref<3x5
 //      CHECK-DAG:  %[[V_OUTPUT_R:.+]] = vector.transfer_read %[[OUTPUT]][%[[C0]], %[[C0]], %[[C0]]]
 
 //      CHECK:   %[[V_INPUT_0:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:     {offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
+// CHECK-SAME:     offsets = [0, 0, 0], sizes = [3, 2, 4], strides = [1, 1, 1] : vector<3x4x4xi8> to vector<3x2x4xi8>
 //      CHECK:   %[[V_INPUT_1:.+]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:     {offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1]} : vector<3x4x4xi8> to vector<3x2x4xi8>
+// CHECK-SAME:     offsets = [0, 2, 0], sizes = [3, 2, 4], strides = [1, 1, 1] : vector<3x4x4xi8> to vector<3x2x4xi8>
 
 //      CHECK:  %[[V_FILTER_0:.+]] = vector.extract %[[V_FILTER_R]][0] : vector<4xi8> from vector<2x4xi8>
 //      CHECK:  %[[V_FILTER_1:.+]] = vector.extract %[[V_FILTER_R]][1] : vector<4xi8> from vector<2x4xi8>
@@ -205,34 +205,34 @@ func.func @depthwise_conv1d_nwc_wc_3x9x4xi8_tensor_stride_2(%input: tensor<3x9x4
 // CHECK:           %[[V_OUTPUT_R:.*]] = vector.transfer_read %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]], %[[C0_I8]]
 
 // CHECK:           %[[V_INPUT_0:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_1:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_2:.*]] = vector.extract_strided_slice %[[V_INPUT_R]] 
-// CHECK-SAME:        {offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_3:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_4:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 3, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 3, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_5:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 5, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 5, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_6:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_7:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 4, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_INPUT_8:.*]] = vector.extract_strided_slice %[[V_INPUT_R]]
-// CHECK-SAME:        {offsets = [0, 6, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x7x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 6, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x7x4xi8> to vector<3x1x4xi8>
 
 // CHECK:           %[[V_FILTER_0:.*]] = vector.extract %[[V_FILTER_R]][0] : vector<4xi8> from vector<3x4xi8>
 // CHECK:           %[[V_FILTER_1:.*]] = vector.extract %[[V_FILTER_R]][1] : vector<4xi8> from vector<3x4xi8>
 // CHECK:           %[[V_FILTER_2:.*]] = vector.extract %[[V_FILTER_R]][2] : vector<4xi8> from vector<3x4xi8>
 
 // CHECK:           %[[V_OUTPUT_0:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
-// CHECK-SAME:        {offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 0, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x3x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_OUTPUT_1:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
-// CHECK-SAME:       {offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:       offsets = [0, 1, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x3x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[V_OUTPUT_2:.*]] = vector.extract_strided_slice %[[V_OUTPUT_R]]
-// CHECK-SAME:        {offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1]} : vector<3x3x4xi8> to vector<3x1x4xi8>
+// CHECK-SAME:        offsets = [0, 2, 0], sizes = [3, 1, 4], strides = [1, 1, 1] : vector<3x3x4xi8> to vector<3x1x4xi8>
 
 /// w == 0, kw == 0
 // CHECK:           %[[VAL_23:.*]] = vector.shape_cast %[[V_INPUT_0]] : vector<3x1x4xi8> to vector<3x4xi8>
@@ -296,11 +296,11 @@ func.func @depthwise_conv1d_nwc_wc_3x9x4xi8_tensor_stride_2(%input: tensor<3x9x4
 // Write the result back.
 // CHECK:           %[[VAL_73:.*]] = vector.shape_cast %[[VAL_72]] : vector<3x4xi8> to vector<3x1x4xi8>
 // CHECK:           %[[VAL_74:.*]] = vector.insert_strided_slice %[[VAL_61]], %[[V_OUTPUT_R]]
-// CHECK-SAME:        {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK-SAME:        offsets = [0, 0, 0], strides = [1, 1, 1] : vector<3x1x4xi8> into vector<3x3x4xi8>
 // CHECK:           %[[VAL_75:.*]] = vector.insert_strided_slice %[[VAL_67]], %[[VAL_74]]
-// CHECK-SAME:        {offsets = [0, 1, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK-SAME:        offsets = [0, 1, 0], strides = [1, 1, 1] : vector<3x1x4xi8> into vector<3x3x4xi8>
 // CHECK:           %[[VAL_76:.*]] = vector.insert_strided_slice %[[VAL_73]], %[[VAL_75]]
-// CHECK-SAME:        {offsets = [0, 2, 0], strides = [1, 1, 1]} : vector<3x1x4xi8> into vector<3x3x4xi8>
+// CHECK-SAME:        offsets = [0, 2, 0], strides = [1, 1, 1] : vector<3x1x4xi8> into vector<3x3x4xi8>
 // CHECK:           %[[VAL_77:.*]] = vector.transfer_write %[[VAL_76]], %[[OUTPUT]][%[[C0_IDX]], %[[C0_IDX]], %[[C0_IDX]]]
 
 module attributes {transform.with_named_sequence} {

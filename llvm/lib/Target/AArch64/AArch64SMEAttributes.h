@@ -198,6 +198,10 @@ public:
     return caller().hasAgnosticZAInterface() &&
            !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
   }
+
+  bool requiresZASave() const {
+    return requiresLazySave() || requiresPreservingAllZAState();
+  }
 };
 
 } // namespace llvm

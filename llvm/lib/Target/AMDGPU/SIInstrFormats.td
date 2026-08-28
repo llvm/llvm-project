@@ -218,9 +218,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{43} = maybeAtomic;
 
-  // Reserved, must be 0.
-  let TSFlags{44} = 0;
-
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
   let TSFlags{47} = ClampLo;

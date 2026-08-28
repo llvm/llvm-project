@@ -107,7 +107,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_atomic_capture_update
 ! CHECK: omp.atomic.capture {
 ! CHECK:   omp.atomic.update
-! CHECK: {atomic_control
+! CHECK: atomic_control
 ! CHECK-NOT: arith.cmpi sge
 ! CHECK: }
 ! CHECK: %[[VCU:.*]] = fir.load %[[XCU:.*]]
@@ -140,7 +140,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_atomic_capture_dest
 ! CHECK: omp.atomic.capture {
 ! CHECK:   omp.atomic.read
-! CHECK: {atomic_control
+! CHECK: atomic_control
 ! CHECK-NOT: arith.cmpi sge
 ! CHECK: }
 ! CHECK: %[[VD:.*]] = fir.load %[[XD:.*]]

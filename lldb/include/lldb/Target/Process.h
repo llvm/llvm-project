@@ -54,6 +54,7 @@
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Policy.h"
+#include "lldb/Utility/ProcessAddress.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -86,6 +87,9 @@ public:
   ~ProcessProperties() override;
 
   bool GetDisableMemoryCache() const;
+#ifndef NDEBUG
+  bool GetVerifyMemoryReads() const;
+#endif
   uint64_t GetMemoryCacheLineSize() const;
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
@@ -1603,8 +1607,8 @@ public:
   /// and remove any traps that may have been inserted into the memory.
   ///
   /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory (lldb::addr_t, size_t,
-  /// void *).
+  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &).
   ///
   /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
@@ -1629,8 +1633,8 @@ public:
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                            Status &error);
+  virtual size_t ReadMemory(const ProcessAddress &process_addr, void *buf,
+                            size_t size, Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
   ///
@@ -3051,8 +3055,8 @@ protected:
   /// \return
   ///     The number of bytes that were actually read into \a buf.
   ///     Zero is returned in the case of an error.
-  virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                              Status &error) = 0;
+  virtual size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                              size_t size, Status &error) = 0;
 
   /// Reads each range individually via ReadMemoryFromInferior, bypassing the
   /// memory cache. Subclasses may override it to batch the reads more
@@ -3732,6 +3736,13 @@ protected:
 
 private:
   Status DestroyImpl(bool force_kill);
+
+#ifndef NDEBUG
+  /// Re-read \a size bytes at \a addr and assert they match the cache.
+  void VerifyMemoryRead(lldb::addr_t addr, const void *cache_buf,
+                        size_t cache_bytes_read, size_t size,
+                        const Status &cache_error);
+#endif
 
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to

@@ -91,7 +91,7 @@ protected:
                                          bool &HasDeclFileName);
 
   /// Add type prefix to the built name.
-  void addTypePrefix(const DWARFDebugInfoEntry *DieEntry);
+  void addTypePrefix(CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry);
 
   /// Add type name to the built name.
   Error addTypeName(UnitEntryPairTy InputUnitEntryPair, bool AddParentNames);

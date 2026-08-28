@@ -38,7 +38,7 @@ EXAMPLE
     GPU (-mcpu):         gfx90a
     Wavefront size:      64
     Max waves/EU:        8 (waves per SIMD, hardware limit)
-    EUs (SIMDs) per CU:  4
+    SIMDs/work-group:    4
     ...
 
   Per-constraint occupancy (waves/EU)

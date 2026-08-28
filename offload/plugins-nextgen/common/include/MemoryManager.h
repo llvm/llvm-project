@@ -138,21 +138,24 @@ class MemoryManagerTy {
 
   /// The reference to a device allocator
   DeviceAllocatorTy &DeviceAllocator;
+  /// The kind of device for which the memory manager is allocated
+  TargetAllocTy DeviceKind;
 
   /// The threshold to manage memory using memory manager. If the request size
   /// is larger than \p SizeThreshold, the allocation will not be managed by the
   /// memory manager.
-  size_t SizeThreshold = 1U << 13;
+  size_t SizeThreshold = DefaultSizeThreshold;
 
   /// Request memory from target device
   Expected<void *> allocateOnDevice(size_t Size, void *HstPtr,
                                     size_t Alignment) const {
-    return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE,
-                                    Alignment);
+    return DeviceAllocator.allocate(Size, HstPtr, DeviceKind, Alignment);
   }
 
   /// Deallocate data on device
-  Error deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
+  Error deleteOnDevice(void *Ptr) const {
+    return DeviceAllocator.free(Ptr, DeviceKind);
+  }
 
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the
@@ -216,11 +219,14 @@ class MemoryManagerTy {
   }
 
 public:
+  static constexpr size_t DefaultSizeThreshold = 1U << 13;
+
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
-  MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0)
+  MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
+                  TargetAllocTy DeviceKind = TARGET_ALLOC_DEVICE)
       : FreeLists(NumBuckets), FreeListLocks(NumBuckets),
-        DeviceAllocator(DeviceAllocator) {
+        DeviceAllocator(DeviceAllocator), DeviceKind(DeviceKind) {
     if (Threshold)
       SizeThreshold = Threshold;
   }
@@ -359,6 +365,8 @@ public:
   /// threshold and the second element represents whether user disables memory
   /// manager explicitly by setting the var to 0. If user doesn't specify
   /// anything, returns <0, true>.
+  /// Note that this only affects the device memory manager, not the manager for
+  /// host or shared memory.
   static std::pair<size_t, bool> getSizeThresholdFromEnv() {
     static UInt64Envar MemoryManagerThreshold(
         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD", 0);

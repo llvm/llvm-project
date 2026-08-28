@@ -2,7 +2,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
 !CHECK-LABEL: omp.declare_reduction
-!CHECK-SAME: @[[RED_F32_NAME:.*]] : !fir.ref<f32>
+!CHECK-SAME: @[[RED_F32_NAME:[^ ]+]] byref_element_type({{.*}}) : !fir.ref<f32>
 !CHECK-SAME: alloc {
 !CHECK:  %[[REF:.*]] = fir.alloca f32
 !CHECK:  omp.yield(%[[REF]] : !fir.ref<f32>)
@@ -21,7 +21,7 @@
 !CHECK: }
 
 !CHECK-LABEL: omp.declare_reduction
-!CHECK-SAME: @[[RED_I32_NAME:.*]] : !fir.ref<i32>
+!CHECK-SAME: @[[RED_I32_NAME:[^ ]+]] byref_element_type({{.*}}) : !fir.ref<i32>
 !CHECK-SAME: alloc {
 !CHECK:  %[[REF:.*]] = fir.alloca i32
 !CHECK:  omp.yield(%[[REF]] : !fir.ref<i32>)

@@ -20,7 +20,7 @@ subroutine simple_linear
         y = x + 2
     end do
     !$omp end do
-    !CHECK: } {linear_var_types = [i32]}
+    !CHECK: }
 end subroutine
 
 
@@ -40,7 +40,7 @@ subroutine linear_step
         y = x + 2
     end do
     !$omp end do
-    !CHECK: } {linear_var_types = [i32]}
+    !CHECK: }
 end subroutine
 
 !CHECK: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
@@ -60,5 +60,5 @@ subroutine linear_expr
         y = x + 2
     end do
     !$omp end do
-    !CHECK: } {linear_var_types = [i32]}
+    !CHECK: }
 end subroutine

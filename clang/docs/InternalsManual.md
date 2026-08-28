@@ -45,7 +45,7 @@ when the code is incorrect or dubious. In Clang, each diagnostic produced has
 {ref}`SourceLocation <SourceLocation>` to "put the caret", and a severity
 (e.g., `WARNING` or `ERROR`). They can also optionally include a number of
 arguments to the diagnostic (which fill in "%0"'s in the string) as well as a
-number of source ranges that related to the diagnostic.
+number of source ranges that are related to the diagnostic.
 
 In this section, we'll be giving examples produced by the Clang command line
 driver, but diagnostics can be {ref}`rendered in many different ways
@@ -3612,7 +3612,8 @@ int A = B; // expected-error {{use of undeclared identifier 'B'}}
 ```
 
 You can place as many diagnostics on one line as you wish. To make the code
-more readable, you can use slash-newline to separate out the diagnostics.
+more readable, you can use backslashes to separate out the diagnostics into
+multiple lines.
 
 Alternatively, it is possible to specify the line on which the diagnostic
 should appear by appending `@<line>` to `expected-<type>`, for example:

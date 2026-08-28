@@ -215,17 +215,17 @@ static const char *const discardableAttrHelperDecl = R"(
         : name(::mlir::StringAttr::get(ctx, getNameStr())) {{}
 
      {2} getAttr(::mlir::Operation *op) const {{
-       return op->getAttrOfType<{2}>(name);
+       return op->getDiscardableAttrOfType<{2}>(name);
      }
      void setAttr(::mlir::Operation *op, {2} val) const {{
-       op->setAttr(name, val);
+       op->setDiscardableAttr(name, val);
      }
      bool isAttrPresent(::mlir::Operation *op) const {{
-       return op->hasAttrOfType<{2}>(name);
+       return op->hasDiscardableAttrOfType<{2}>(name);
      }
      void removeAttr(::mlir::Operation *op) const {{
-       assert(op->hasAttrOfType<{2}>(name));
-       op->removeAttr(name);
+       assert(op->hasDiscardableAttrOfType<{2}>(name));
+       op->removeDiscardableAttr(name);
      }
    };
    {0}AttrHelper get{0}AttrHelper() {

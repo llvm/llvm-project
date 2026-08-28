@@ -21,5 +21,5 @@ end program
 
 !CHECK-NOT: not yet implemented: intrinsic: omp_set_num_threads
 !CHECK-NOT: not yet implemented: intrinsic: omp_get_num_threads
-!CHECK: fir.call @omp_set_num_threads
+!CHECK: fir.call @_QMomp_libPomp_set_num_threads_i4
 !CHECK: fir.call @omp_get_num_threads

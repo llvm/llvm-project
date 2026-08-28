@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVCtorDtorLowering.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "llvm/ADT/STLFunctionalExtras.h"

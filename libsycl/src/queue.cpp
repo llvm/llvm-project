@@ -47,6 +47,14 @@ event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
   return detail::createSyclObjFromImpl<event>(EventImplPtr);
 }
 
+event queue::prefetch(void *ptr, std::size_t numBytes,
+                      const std::vector<event> &depEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr =
+      impl->prefetch(ptr, numBytes, detail::getSyclObjImpls(depEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
 event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }

@@ -212,9 +212,6 @@ LogicalResult CreateMemDescOp::verify() {
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && "expecting a memref with static shape");
-
   build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
@@ -260,8 +257,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  size_t rank = getMixedSizes().size();
-  bool invalidRank = rank != getMixedStrides().size();
+  auto srcMemrefTy = dyn_cast<MemRefType>(getSourceType());
+  size_t rank = srcMemrefTy ? srcMemrefTy.getRank() : getMixedSizes().size();
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -280,17 +277,22 @@ LogicalResult CreateNdDescOp::verify() {
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
     invalidElemTy |= memrefTy.getElementType() != getElementType();
 
+  bool hasExplicitShapeStrides =
+      !getShape().empty() || !getStrides().empty() ||
+      (getConstShapeAttr() && !getConstShapeAttr().empty()) ||
+      (getConstStridesAttr() && !getConstStridesAttr().empty());
+
   if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
       return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
+    if (getMixedSizes().size() != getMixedStrides().size())
+      return emitOpError("Expecting the rank of shape and strides to match.");
+  } else if (srcMemrefTy && hasExplicitShapeStrides) {
+    return emitOpError("shape and strides should not be specified for a memref "
+                       "source; they are inferred from the memref.");
   }
-
-  if (invalidRank)
-    return emitOpError(
-        "Expecting the rank of shape, strides, and source (if source "
-        "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)

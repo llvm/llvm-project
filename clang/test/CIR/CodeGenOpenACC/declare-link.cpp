@@ -12,7 +12,7 @@ int GlobalInt1;
 #pragma acc declare link(GlobalHSE1, GlobalInt1, GlobalHSEArr[1:1])
 // CHECK: acc.global_ctor @GlobalHSE1_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @GlobalHSE1 : !cir.ptr<!rec_HasSideEffects>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "GlobalHSE1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) name("GlobalHSE1") -> !cir.ptr<!rec_HasSideEffects>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!rec_HasSideEffects>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -20,7 +20,7 @@ int GlobalInt1;
 //
 // CHECK: acc.global_ctor @GlobalInt1_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @GlobalInt1 : !cir.ptr<!s32i>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "GlobalInt1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) name("GlobalInt1") -> !cir.ptr<!s32i>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!s32i>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -34,7 +34,7 @@ int GlobalInt1;
 // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
 // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB_CAST]] : si32) extent(%[[UB_CAST]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @GlobalHSEArr : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "GlobalHSEArr[1:1]"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("GlobalHSEArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -48,14 +48,14 @@ int NSInt1;
 #pragma acc declare link(NSHSE1, NSInt1, NSHSEArr[1:1])
 // CHECK: acc.global_ctor @{{.*}}NSHSE1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSE1{{.*}} : !cir.ptr<!rec_HasSideEffects>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "NSHSE1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) name("NSHSE1") -> !cir.ptr<!rec_HasSideEffects>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!rec_HasSideEffects>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 //
 // CHECK: acc.global_ctor @{{.*}}NSInt1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSInt1{{.*}} : !cir.ptr<!s32i>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "NSInt1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) name("NSInt1") -> !cir.ptr<!s32i>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!s32i>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -69,7 +69,7 @@ int NSInt1;
 // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
 // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB_CAST]] : si32) extent(%[[UB_CAST]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}NSHSEArr{{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "NSHSEArr[1:1]"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("NSHSEArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -85,14 +85,14 @@ int AnonNSInt1;
 #pragma acc declare link(AnonNSHSE1, AnonNSInt1, AnonNSHSEArr[1:1])
 // CHECK: acc.global_ctor @{{.*}}AnonNSHSE1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}AnonNSHSE1{{.*}} : !cir.ptr<!rec_HasSideEffects>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "AnonNSHSE1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!rec_HasSideEffects>) name("AnonNSHSE1") -> !cir.ptr<!rec_HasSideEffects>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!rec_HasSideEffects>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
 //
 // CHECK: acc.global_ctor @{{.*}}AnonNSInt1{{.*}}_acc_ctor {
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}AnonNSInt1{{.*}} : !cir.ptr<!s32i>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "AnonNSInt1"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!s32i>) name("AnonNSInt1") -> !cir.ptr<!s32i>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!s32i>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -106,7 +106,7 @@ int AnonNSInt1;
 // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
 // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB_CAST]] : si32) extent(%[[UB_CAST]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
 // CHECK-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @{{.*}}AnonNSHSEArr{{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "AnonNSHSEArr[1:1]"}
+// CHECK-NEXT: %[[CREATE:.*]] = acc.declare_link varPtr(%[[GET_GLOBAL]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("AnonNSHSEArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 // CHECK-NEXT: acc.terminator
 // CHECK-NEXT: }
@@ -127,10 +127,10 @@ struct Struct {
 #pragma acc declare link(LocalHSE, LocalInt, LocalHSEArr[1:1])
 
     // CHECK-NEXT: %[[GET_LOCAL_HSE:.*]] = cir.get_global @LocalHSE : !cir.ptr<!rec_HasSideEffects>
-    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"}
+    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("LocalHSE") -> !cir.ptr<!rec_HasSideEffects>
     //
     // CHECK-NEXT: %[[GET_LOCAL_INT:.*]] = cir.get_global @LocalInt : !cir.ptr<!s32i>
-    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt"}
+    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) name("LocalInt") -> !cir.ptr<!s32i>
     //
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -140,7 +140,7 @@ struct Struct {
     // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[ONE]] : i64) startIdx(%[[ZERO]] : i64)
     // CHECK-NEXT: %[[GET_LOCAL_ARR:.*]] = cir.get_global @LocalHSEArr : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("LocalHSEArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     //
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[HSE_LINK]], %[[INT_LINK]], %[[ARR_LINK]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
     // 
@@ -170,10 +170,10 @@ void Struct::MemFunc2() {
 
 #pragma acc declare link(LocalHSE2, LocalInt2, LocalHSEArr2[1:1])
     // CHECK-NEXT: %[[GET_LOCAL_HSE:.*]] = cir.get_global @LocalHSE2 : !cir.ptr<!rec_HasSideEffects>
-    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE2"}
+    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("LocalHSE2") -> !cir.ptr<!rec_HasSideEffects>
     //
     // CHECK-NEXT: %[[GET_LOCAL_INT:.*]] = cir.get_global @LocalInt2 : !cir.ptr<!s32i>
-    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt2"}
+    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) name("LocalInt2") -> !cir.ptr<!s32i>
     //
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -183,7 +183,7 @@ void Struct::MemFunc2() {
     // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[ONE]] : i64) startIdx(%[[ZERO]] : i64)
     // CHECK-NEXT: %[[GET_LOCAL_ARR:.*]] = cir.get_global @LocalHSEArr2 : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "LocalHSEArr2[1:1]"}
+    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("LocalHSEArr2[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     //
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[HSE_LINK]], %[[INT_LINK]], %[[ARR_LINK]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
     // 
@@ -207,10 +207,10 @@ void NormalFunc() {
     extern HasSideEffects InnerHSE;
 #pragma acc declare link(LocalHSE3, LocalInt3, LocalHSEArr3[1:1], InnerHSE)
     // CHECK-NEXT: %[[GET_LOCAL_HSE:.*]] = cir.get_global @LocalHSE3 : !cir.ptr<!rec_HasSideEffects>
-    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE3"}
+    // CHECK-NEXT: %[[HSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("LocalHSE3") -> !cir.ptr<!rec_HasSideEffects>
     //
     // CHECK-NEXT: %[[GET_LOCAL_INT:.*]] = cir.get_global @LocalInt3 : !cir.ptr<!s32i>
-    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt3"}
+    // CHECK-NEXT: %[[INT_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_INT]] : !cir.ptr<!s32i>) name("LocalInt3") -> !cir.ptr<!s32i>
     //
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -220,10 +220,10 @@ void NormalFunc() {
     // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[ONE]] : i64) startIdx(%[[ZERO]] : i64)
     // CHECK-NEXT: %[[GET_LOCAL_ARR:.*]] = cir.get_global @LocalHSEArr3 : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
-    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {name = "LocalHSEArr3[1:1]"}
+    // CHECK-NEXT: %[[ARR_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_ARR]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUNDS]]) name("LocalHSEArr3[1:1]") -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     //
     // CHECK-NEXT: %[[GET_LOCAL_HSE:.*]] = cir.get_global @InnerHSE : !cir.ptr<!rec_HasSideEffects>
-    // CHECK-NEXT: %[[INNERHSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "InnerHSE"}
+    // CHECK-NEXT: %[[INNERHSE_LINK:.*]] = acc.declare_link varPtr(%[[GET_LOCAL_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("InnerHSE") -> !cir.ptr<!rec_HasSideEffects>
     //
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[HSE_LINK]], %[[INT_LINK]], %[[ARR_LINK]], %[[INNERHSE_LINK]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>, !cir.ptr<!rec_HasSideEffects>)
     //

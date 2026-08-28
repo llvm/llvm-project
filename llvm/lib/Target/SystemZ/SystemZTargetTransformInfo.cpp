@@ -796,9 +796,9 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
 InstructionCost
 SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
+                               ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {
@@ -833,7 +833,7 @@ SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 

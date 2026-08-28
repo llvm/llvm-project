@@ -3,7 +3,7 @@
 ; RUN: llvm-as -o %t.bc %s
 
 ; Try to save statistics to file.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=stats-file=%t2.stats \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=stats-file=%t2.stats \
 ; RUN:    -m elf_x86_64 -r -o %t.o %t.bc
 ; RUN: FileCheck --input-file=%t2.stats %s
 
@@ -20,6 +20,6 @@ define i32 @foo() {
 }
 
 ; Try to save statistics to an invalid file.
-; RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=stats-file=%t2/foo.stats \
+; RUN: not %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=stats-file=%t2/foo.stats \
 ; RUN:    -m elf_x86_64 -r -o %t.o %t.bc 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s
 ; ERROR: LLVM gold plugin: [[MSG]]

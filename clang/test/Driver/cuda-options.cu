@@ -260,10 +260,10 @@
 // THINLTOWPD-SAME: "-flto=thin"
 // HOST-NOT: "-fcuda-is-device"
 // There is only one GPU binary after combining it with fatbinary!
-// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
-// INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
+// INCLUDES-DEVICE2-NOT: "-foffload-include-binary"
+// INCLUDES-DEVICE-SAME: "-foffload-include-binary" "[[FATBINARY]]"
 // There is only one GPU binary after combining it with fatbinary.
-// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
+// INCLUDES-DEVICE2-NOT: "-foffload-include-binary"
 // THINLTOWPD-SAME: "-fwhole-program-vtables"
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
@@ -273,7 +273,7 @@
 // HOST-AS: "-o" "{{.*}}.o" "[[HOSTOUTPUT]]"
 
 // Match no GPU code inclusion.
-// NOINCLUDES-DEVICE-NOT: "-fcuda-include-gpubinary"
+// NOINCLUDES-DEVICE-NOT: "-foffload-include-binary"
 
 // Match no host compilation.
 // NOHOST-NOT: "-cc1" "-triple"

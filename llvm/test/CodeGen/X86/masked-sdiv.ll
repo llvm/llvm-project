@@ -606,8 +606,6 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE2-NEXT:    movd %edx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    pslld $22, %xmm1
-; SSE2-NEXT:    psrad $22, %xmm1
 ; SSE2-NEXT:    movd %r8d, %xmm0
 ; SSE2-NEXT:    movd %ecx, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
@@ -616,6 +614,8 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE2-NEXT:    pslld $22, %xmm2
 ; SSE2-NEXT:    psrad $22, %xmm2
 ; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm0
+; SSE2-NEXT:    pslld $22, %xmm1
+; SSE2-NEXT:    psrad $22, %xmm1
 ; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; SSE2-NEXT:    divps %xmm0, %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm0
@@ -632,14 +632,14 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pinsrd $1, %esi, %xmm0
 ; SSE42-NEXT:    pinsrd $2, %edx, %xmm0
-; SSE42-NEXT:    pslld $22, %xmm0
-; SSE42-NEXT:    psrad $22, %xmm0
 ; SSE42-NEXT:    movd %ecx, %xmm1
 ; SSE42-NEXT:    pinsrd $1, %r8d, %xmm1
 ; SSE42-NEXT:    pinsrd $2, %r9d, %xmm1
 ; SSE42-NEXT:    pslld $22, %xmm1
 ; SSE42-NEXT:    psrad $22, %xmm1
 ; SSE42-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE42-NEXT:    pslld $22, %xmm0
+; SSE42-NEXT:    psrad $22, %xmm0
 ; SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE42-NEXT:    divps %xmm1, %xmm0
 ; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -656,14 +656,14 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX-NEXT:    vmovd %edi, %xmm0
 ; AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vpslld $22, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %ecx, %xmm1
 ; AVX-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
 ; AVX-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
-; AVX-NEXT:    vpsrad $22, %xmm0, %xmm0
 ; AVX-NEXT:    vpslld $22, %xmm1, %xmm1
 ; AVX-NEXT:    vpsrad $22, %xmm1, %xmm1
 ; AVX-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX-NEXT:    vpslld $22, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $22, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX-NEXT:    vdivps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0

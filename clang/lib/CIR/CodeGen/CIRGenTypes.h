@@ -44,6 +44,7 @@ class CallArgList;
 class CIRGenBuilderTy;
 class CIRGenCXXABI;
 class CIRGenModule;
+class FunctionArgList;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
@@ -185,6 +186,12 @@ public:
   /// function pointer type.
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *fd);
+
+  /// Arrange the function info for a device kernel caller entry point (e.g. a
+  /// SYCL kernel caller).
+  const CIRGenFunctionInfo &
+  arrangeDeviceKernelCallerDeclaration(clang::QualType resultType,
+                                       const FunctionArgList &args);
 
   /// A builtin function is a freestanding function using the default
   /// C conventions.

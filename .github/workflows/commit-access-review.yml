@@ -31,6 +31,7 @@ jobs:
           client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: ${{ github.repository }}
           permission-members: read
           permission-contents: read
       

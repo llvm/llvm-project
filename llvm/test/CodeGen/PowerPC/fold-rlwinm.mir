@@ -201,3 +201,15 @@ body: |
     %3:gprc = ANDI_rec %2:gprc, 4, implicit-def $cr0
     BLR8 implicit $lr8, implicit $rm
 ...
+---
+name: testFoldRLWINMUndef
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    ; An undef folding operand has no def; combineRLWINM must not crash.
+    ; CHECK-LABEL: name: testFoldRLWINMUndef
+    ; CHECK: RLWINM undef %{{[0-9]+}}:gprc, 1, 0, 30
+    %1:gprc = RLWINM undef %0:gprc, 1, 0, 30
+    $r3 = COPY %1
+    BLR implicit $lr, implicit $rm, implicit $r3
+...

@@ -69,29 +69,27 @@ static bool tryToImproveAlign(
   if (!II)
     return false;
 
-  // TODO: Handle more memory intrinsics.
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_store: {
-    unsigned PtrOpIdx = II->getIntrinsicID() == Intrinsic::masked_load ? 0 : 1;
-    Value *PtrOp = II->getArgOperand(PtrOpIdx);
-    Type *Type = II->getIntrinsicID() == Intrinsic::masked_load
-                     ? II->getType()
-                     : II->getArgOperand(0)->getType();
-
-    Align OldAlign = II->getParamAlign(PtrOpIdx).valueOrOne();
-    Align PrefAlign = DL.getPrefTypeAlign(Type);
-    Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
-    if (NewAlign <= OldAlign)
-      return false;
-
-    II->addParamAttr(PtrOpIdx,
-                     Attribute::getWithAlignment(II->getContext(), NewAlign));
-    return true;
-  }
-  default:
+  if (!isa<MemIntrinsic>(II) &&
+      II->getIntrinsicID() != Intrinsic::masked_load &&
+      II->getIntrinsicID() != Intrinsic::masked_store)
     return false;
+
+  bool Changed = false;
+  for (unsigned ArgNo = 0; ArgNo != II->arg_size(); ++ArgNo) {
+    Value *Arg = II->getArgOperand(ArgNo);
+    if (!Arg->getType()->isPointerTy())
+      continue;
+
+    Align OldAlign = II->getParamAlign(ArgNo).valueOrOne();
+    Align NewAlign = Fn(Arg, OldAlign, Align(1));
+    if (NewAlign <= OldAlign)
+      continue;
+
+    II->addParamAttr(ArgNo,
+                     Attribute::getWithAlignment(II->getContext(), NewAlign));
+    Changed = true;
   }
+  return Changed;
 }
 
 using ScopedHT =

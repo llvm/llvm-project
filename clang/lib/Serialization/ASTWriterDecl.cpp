@@ -1831,9 +1831,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
-  Record.push_back(D->NumTPLists);
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1841,26 +1838,47 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
     Record.AddDeclRef(D->getFriendDecl());
   else
     Record.AddTypeSourceInfo(D->getFriendType());
-  for (unsigned i = 0; i < D->NumTPLists; ++i)
-    Record.AddTemplateParameterList(D->getFriendTypeTemplateParameterList(i));
   Record.AddDeclRef(D->getNextFriend());
-  Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
   Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  // Record the number of template parameter lists here to simplify memory
+  // allocation during deserialization.
+  Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  Record.push_back(D->getNumTemplateParameters());
-  for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
-    Record.AddTemplateParameterList(D->getTemplateParameterList(i));
-  Record.push_back(D->getFriendDecl() != nullptr);
-  if (D->getFriendDecl())
-    Record.AddDeclRef(D->getFriendDecl());
-  else
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    Record.AddTemplateParameterList(TPL);
+  FriendTemplateDeclKind Kind;
+  if (D->getFriendType()) {
+    Kind = D->Template.isNull() ? FTDK_Type : FTDK_Dependent;
+  } else if (D->Template.isNull()) {
+    assert(D->getFriendDecl());
+    Kind = FTDK_Decl;
+  } else {
+    Kind = FTDK_Template;
+  }
+  Record.push_back(Kind);
+  switch (Kind) {
+  case FTDK_Type:
     Record.AddTypeSourceInfo(D->getFriendType());
-  Record.AddSourceLocation(D->getFriendLoc());
+    break;
+  case FTDK_Dependent:
+    Record.AddTypeSourceInfo(D->getFriendType());
+    Record.AddTemplateName(D->Template);
+    break;
+  case FTDK_Decl:
+    Record.AddDeclRef(D->getFriendDecl());
+    break;
+  case FTDK_Template:
+    Record.AddTemplateName(D->Template);
+    break;
+  }
+  Record.AddDeclRef(D->getNextFriend());
+  Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND_TEMPLATE;
 }
 

@@ -1203,6 +1203,8 @@ class NamelessValue:
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
         var = var.replace("%", "")
+        if var.startswith("."):
+            var = var.replace(".", "dot", 1)
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1926,8 +1928,6 @@ def generalize_check_lines(
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):
-            # An IR variable named '%.' matches the FileCheck regex string.
-            line = line.replace("%.", "%dot")
             for regex in _global_hex_value_regex:
                 if re.match("^@" + regex + " = ", line):
                     line = re.sub(

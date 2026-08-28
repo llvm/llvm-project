@@ -30,17 +30,24 @@ ir = _cext.ir
 __all__ = [
     "Dialect",
     "DialectAlreadyLoadedError",
+    # components of dialects
     "Operation",
+    "Type",
+    "Attribute",
+    # types for operation fields
     "Operand",
     "Result",
     "Region",
-    "Type",
-    "Attribute",
-    "Pure",
+    # specifiers for operation fields
     "result",
-    "infer_result",
     "operand",
     "attribute",
+    "infer_result",
+    # interfaces and traits
+    "Pure",
+    "NoMemoryEffect",
+    "AlwaysSpeculatable",
+    "RecursivelySpeculatable",
 ]
 
 Operand = ir.Value
@@ -995,20 +1002,34 @@ class Dialect(ir.Dialect):
             _cext.register_op_adaptor(op, replace=True)(op.Adaptor)
 
 
+class NoMemoryEffect(ir.MemoryEffectsOpInterface):
+    """Operation that has no effect on memory."""
+
+    @staticmethod
+    def get_effects(op):
+        return []
+
+
+class AlwaysSpeculatable(ir.ConditionallySpeculatable):
+    """Operation that is always speculatable."""
+
+    @staticmethod
+    def get_speculatability(op):
+        return ir.Speculatability.Speculatable
+
+
+class RecursivelySpeculatable(ir.ConditionallySpeculatable):
+    """Operation that is speculatable if all operations in all its regions are speculatable."""
+
+    @staticmethod
+    def get_speculatability(op):
+        return ir.Speculatability.RecursivelySpeculatable
+
+
 class Pure:
     """Always speculatable operation that does not touch memory."""
 
-    class NoMemoryEffect(ir.MemoryEffectsOpInterface):
-        @staticmethod
-        def get_effects(op, effects):
-            pass
-
-    class AlwaysSpeculatable(ir.ConditionallySpeculatable):
-        @staticmethod
-        def get_speculatability(op):
-            return ir.Speculatability.Speculatable
-
     @staticmethod
     def attach(op_name):
-        Pure.NoMemoryEffect.attach(op_name)
-        Pure.AlwaysSpeculatable.attach(op_name)
+        NoMemoryEffect.attach(op_name)
+        AlwaysSpeculatable.attach(op_name)

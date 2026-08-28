@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/TaskGroup.h"
+#include "orc-rt/bedrock/TaskGroup.h"
 #include "gtest/gtest.h"
 
 #include <atomic>

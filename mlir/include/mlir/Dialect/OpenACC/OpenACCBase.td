@@ -19,6 +19,7 @@ include "mlir/IR/AttrTypeBase.td"
 def OpenACC_Dialect : Dialect {
   let name = "acc";
   let useDefaultAttributePrinterParser = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
   let useDefaultTypePrinterParser = 1;
   let cppNamespace = "::mlir::acc";
   let dependentDialects = ["::mlir::memref::MemRefDialect",

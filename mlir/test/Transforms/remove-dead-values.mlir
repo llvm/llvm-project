@@ -4,8 +4,8 @@
 // The IR is updated regardless of memref.global private constant
 //
 module {
-  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
-  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> {alignment = 16 : i64}
+  // CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> alignment = 16
+  memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]> alignment = 16
   func.func @main(%arg0: i32) -> i32 {
     %0 = tensor.empty() : tensor<10xbf16>
     // CHECK-NOT: memref.get_global
@@ -894,4 +894,27 @@ module @func_with_non_call_users {
     func.return
   }
   spirv.EntryPoint "GLCompute" @callee
+}
+
+// -----
+
+// A call op may have results that are produced by the call op itself instead of
+// being forwarded from the callee (`%status` below). Such results are not part
+// of the 1:1 relationship between call results and callee results.
+//
+// CHECK-LABEL: func.func private @callee_with_dead_return() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+// CHECK:       func.func @main() -> i1 {
+// CHECK-NEXT:    %[[STATUS:.*]] = test.call_and_produce @callee_with_dead_return() : () -> i1
+// CHECK-NEXT:    return %[[STATUS]]
+// CHECK-NEXT:  }
+// CHECK-CANONICALIZE-LABEL: func.func private @callee_with_dead_return() {
+func.func private @callee_with_dead_return() -> i32 {
+  %c0 = arith.constant 0 : i32
+  return %c0 : i32
+}
+func.func @main() -> i1 {
+  %status, %non_live = test.call_and_produce @callee_with_dead_return() : () -> (i1, i32)
+  return %status : i1
 }

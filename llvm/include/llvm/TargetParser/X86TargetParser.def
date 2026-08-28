@@ -248,8 +248,6 @@ X86_FEATURE_COMPAT(AVX512BMM,          "avx512bmm",              0, 123)
 // Features we don't multiversion on.
 X86_FEATURE       (NF,                 "nf")
 X86_FEATURE       (CF,                 "cf")
-X86_FEATURE       (AVX5124VNNIW,       "avx5124vnniw")
-X86_FEATURE       (AVX5124FMAPS,       "avx5124fmaps")
 X86_FEATURE       (CMPXCHG8B,          "cx8")
 X86_FEATURE       (CRC32,              "crc32")
 X86_FEATURE       (INVPCID,            "invpcid")

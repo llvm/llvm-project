@@ -102,7 +102,7 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
       new MachineModuleInfoWrapperPass(TM.get());
   PM.add(TPC);
   PM.add(MMIWP);
-  PM.add(new IRTranslator());
+  PM.add(new IRTranslatorLegacy());
   PM.run(*M);
 
   auto *MMI = &MMIWP->getMMI();

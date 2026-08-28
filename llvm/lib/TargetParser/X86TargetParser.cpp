@@ -420,7 +420,7 @@ constexpr EnumStringDef<ProcInfo> ProcessorDefs[] = {
   { {"knl"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false} },
   { {"mic_avx512"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true} },
   // Knights Mill processor.
-  { {"knm"}, {CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false} },
+  { {"knm"}, {CK_KNM, FEATURE_AVX512F, FeaturesKNM, 'j', false} },
   // Lakemont microarchitecture based processors.
   { {"lakemont"}, {CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false} },
   // K6 architecture processors.
@@ -623,11 +623,6 @@ constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VBMI = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512VBMI2 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512VP2INTERSECT = FeatureAVX512F;
-
-// FIXME: These two aren't really implemented and just exist in the feature
-// list for __builtin_cpu_supports. So omit their dependencies.
-constexpr FeatureBitset ImpliedFeaturesAVX5124FMAPS = {};
-constexpr FeatureBitset ImpliedFeaturesAVX5124VNNIW = {};
 
 // SSE4_A->FMA4->XOP chain.
 constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSE3;

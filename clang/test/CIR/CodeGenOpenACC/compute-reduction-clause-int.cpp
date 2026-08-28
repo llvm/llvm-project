@@ -1193,6 +1193,10 @@ void acc_compute() {
   ;
 #pragma acc parallel reduction(||:someVarArr[1:1])
   ;
+  // CHECK-NEXT: cir.func {{.*}}@_Z4usesv()
+  // CHECK-NEXT: cir.call @_Z11acc_computeIiEvv() : () -> ()
+  // CHECK-NEXT: cir.return
+  // CHECK-NEXT: }
   // CHECK-NEXT: cir.func {{.*}}@_Z11acc_compute
 }
 

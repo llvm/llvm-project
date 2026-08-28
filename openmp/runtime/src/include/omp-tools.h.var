@@ -318,7 +318,7 @@ typedef enum omp_control_tool_t {
   omp_control_tool_flush              = 3,
   omp_control_tool_end                = 4
 } omp_control_tool_t;
-#endif OMPCONTROLENUM
+#endif /* OMPCONTROLENUM */
 
 typedef enum ompt_thread_t {
   ompt_thread_initial                 = 1,

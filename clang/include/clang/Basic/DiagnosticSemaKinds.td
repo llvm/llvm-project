@@ -72,6 +72,8 @@ defm constexpr_static_var : CXX23Compat<
   "in a constexpr %select{function|constructor}0 "
   "is">;
 
+defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
+
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
@@ -548,10 +550,10 @@ def warn_import_implementation_partition_unit_in_interface_unit : Warning<
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_size: Warning<
   "return value of %0 is a large (%1 bytes) pass-by-value object; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_udt: Warning<
   "%0 has C-linkage specified, but returns user-defined type %1 which is "
   "incompatible with C">, InGroup<ReturnTypeCLinkage>;
@@ -1934,16 +1936,6 @@ def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
   "cannot befriend target of using declaration">;
-def warn_template_qualified_friend_unsupported
-    : Warning<
-          "dependent nested name specifier %0 for friend class declaration is "
-          "not supported; turning off access control for %1">,
-      InGroup<UnsupportedFriend>;
-def warn_template_qualified_friend_ignored
-    : Warning<"dependent nested name specifier %0 for friend template "
-              "declaration is "
-              "not supported; ignoring this friend declaration">,
-      InGroup<UnsupportedFriend>;
 def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "unqualified friend declaration referring to type outside of the nearest "
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
@@ -1953,6 +1945,16 @@ def err_friend_template_decl_multiple_specifiers: Error<
   "a friend declaration that befriends a template must contain exactly one type-specifier">;
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
+def err_pack_indexing_in_friend : Error<
+  "a pack indexing specifier cannot be used in a nested name specifier of a "
+  "friend declaration">;
+def err_dependent_friend_not_member_of_template_spec : Error<
+  "%0 does not name a class template">;
+def err_dependent_friend_not_member : Error<
+  "friend declaration does not name a member of a class template specialization">;
+def err_dependent_friend_undeduced_params : Error<
+  "%select{template parameter|template parameters}0 of friend declaration "
+  "cannot be deduced from %1">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
@@ -2728,9 +2730,6 @@ def err_auto_new_ctor_multiple_expressions : Error<
 def err_auto_expr_init_paren_braces : Error<
   "cannot deduce actual type for %1 from "
   "%select{parenthesized|nested}0 initializer list">;
-def warn_cxx20_compat_auto_expr : Warning<
-  "'auto' as a functional-style cast is incompatible with C++ standards "
-  "before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_auto_missing_trailing_return : Error<
   "'auto' return without trailing return type; deduced return types are a "
   "C++14 extension">;
@@ -5325,11 +5324,16 @@ def note_ovl_candidate_deduced_mismatch : Note<
     "adjusted type of %select{|element of }4argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
+def note_friend_template_non_deduced_mismatch : Note<
+    "candidate friend template ignored: could not match "
+    "%diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
 // different types with the same name.  Remove this note when the above note
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
+def note_friend_template_non_deduced_mismatch_qualified : Note<
+    "candidate friend template ignored: could not match %q0 against %q1">;
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
@@ -9840,6 +9844,11 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_invalid_use_of_managedvar: Error<"invalid use of a __managed__ "
+    "variable">;
+def note_cuda_managed_var_in_glob_init : Note<"__managed__ variable shall not "
+    "be used in initialization of an object with static or thread local "
+    "storage duration">;
 def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
     "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
@@ -12836,8 +12845,7 @@ def err_omp_modifier_requires_version : Error<
   "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 def err_omp_unexpected_num_exprs
     : Error<"unexpected number of expressions in '%0' clause (expected %1, have %2)">;
-def err_omp_incompatible_modifiers
-    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
+def err_omp_malformed_complex_modifier : Error<"malformed '%0' complex modifier in '%1' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -13354,7 +13362,7 @@ def warn_invalid_default_version_priority
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
+  "cannot %select{use builtin operator '<=>'|default 'operator<=>'|compute order}1 "
   "because type '%0' was not found; include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "
@@ -13675,6 +13683,9 @@ def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
   "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def warn_riscv_attribute_interrupt_duplicate_type : Warning<
+  "RISC-V 'interrupt' attribute type '%0' specified more than once">,
+  InGroup<DiagGroup<"duplicate-interrupt-type">>;
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;

@@ -14,6 +14,7 @@
 #define FORTRAN_PARSER_OPENMP_UTILS_H
 
 #include "flang/Common/indirection.h"
+#include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -50,6 +51,23 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
     const OpenMPConstruct &x);
 const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
     const OpenMPDeclarativeConstruct &x);
+
+template <typename T> struct WithSource {
+  template < //
+      typename U = std::remove_reference_t<T>,
+      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
+  WithSource() : value(), source() {}
+  WithSource(const WithSource<T> &) = default;
+  WithSource(WithSource<T> &&) = default;
+  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
+  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
+  WithSource &operator=(const WithSource<T> &) = default;
+  WithSource &operator=(WithSource<T> &&) = default;
+
+  using value_type = T;
+  T value;
+  parser::CharBlock source;
+};
 
 namespace detail {
 struct DirectiveNameScope {

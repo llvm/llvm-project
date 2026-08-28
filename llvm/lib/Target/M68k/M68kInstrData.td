@@ -597,6 +597,9 @@ class MxPseudoMove_RM<MxType DST, MxOperand SRCOpd, list<dag> PAT = []>
 // depending on size, destination register class, and immediate value.
 // This is done with pseudoinstructions in order to not constrain RA to
 // data registers if moveq matches.
+// TODO: We should be more deliberate about whether or not these instructions
+// are expected to preserve the upper bits of the register, because the free
+// sext of moveq and movea have different utility from non-ext move.[bw].
 class MxPseudoMove_DI<MxType TYPE>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.IOp:$src),
                [(set TYPE.ROp:$dst, imm:$src)]>;
@@ -604,7 +607,7 @@ class MxPseudoMove_DI<MxType TYPE>
 // i8 imm -> reg can always be converted to moveq,
 // but we still emit a pseudo for consistency.
 def MOVI8di  : MxPseudoMove_DI<MxType8d>;
-def MOVI16ri : MxPseudoMove_DI<MxType16r>;
+def MOVI16di : MxPseudoMove_DI<MxType16d>;
 def MOVI32ri : MxPseudoMove_DI<MxType32r>;
 } // let Defs = [CCR]
 

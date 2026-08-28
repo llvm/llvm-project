@@ -21,6 +21,7 @@ add_llvm_target(SystemZCodeGen
   SystemZCallingConv.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
+  SystemZELFAsmPrinter.cpp
   SystemZElimCompare.cpp
   SystemZFrameLowering.cpp
   SystemZHazardRecognizer.cpp
@@ -41,6 +42,7 @@ add_llvm_target(SystemZCodeGen
   SystemZTargetObjectFile.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
+  SystemZXPLINKAsmPrinter.cpp
 
   LINK_COMPONENTS
   Analysis

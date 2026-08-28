@@ -21,6 +21,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -92,6 +93,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DISubprogram nodes that are definitions, collected in beginModule() for
   // DebugFunction emission.
   SmallVector<const DISubprogram *> SubprogramDefinitions;
+
+  // Distinct DILocations from instruction !dbg attachments and debug program
+  // records (#dbg_declare, #dbg_value, #dbg_assign, #dbg_label).
+  SetVector<const DILocation *> UniqueDebugLocations;
 
   struct GlobalVariableDebugInfo {
     const DIExpression *Expr = nullptr;
@@ -167,6 +172,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   bool DebugFunctionDefinitionEmitted = false;
 
+  const MachineInstr *LastLineMI = nullptr;
+
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
 
@@ -231,6 +238,8 @@ private:
                                    SPIRV::ModuleAnalysisInfo &MAI);
 
   void resetPerFunctionDebugState();
+
+  void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
 

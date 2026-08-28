@@ -81,3 +81,42 @@ class TestFrameVarDILAssignment(TestBase):
                 "frame variable 'p = (int *)10'", substrs=["p = 0x000000000000000a"]
             )
             self.expect("frame variable 'p -= 2'", substrs=["p = 0x0000000000000002"])
+
+        # Check that there can be only one assignment and only at top level
+        self.expect(
+            "frame variable 'i = i += 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable 'i += 1 + (i -= 1)'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable '*(arr + 1) = arr[1] += 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+
+        # Check that operators `--` and `++` return an error message.
+        self.expect(
+            "frame variable 'i++'",
+            error=True,
+            substrs=["Increment operator is not supported. Use `+=` instead."],
+        )
+        self.expect(
+            "frame variable '++i'",
+            error=True,
+            substrs=["Increment operator is not supported. Use `+=` instead."],
+        )
+        self.expect(
+            "frame variable 'i--'",
+            error=True,
+            substrs=["Decrement operator is not supported. Use `-=` instead."],
+        )
+        self.expect(
+            "frame variable -- '--i'",
+            error=True,
+            substrs=["Decrement operator is not supported. Use `-=` instead."],
+        )

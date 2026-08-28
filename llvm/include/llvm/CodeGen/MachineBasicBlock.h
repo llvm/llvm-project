@@ -1030,13 +1030,17 @@ public:
   }
 
   // Helper method for new pass manager migration.
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    const SplitCriticalEdgeAnalyses &Analyses,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to

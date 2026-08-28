@@ -68,13 +68,6 @@ template <typename DerivedT> struct InfoMixin {
     return Name;
   }
 };
-} // namespace detail
-
-class Function;
-class Module;
-
-// Forward declare the analysis manager template.
-template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
 /// A CRTP mix-in to automatically provide informational APIs needed for
 /// passes.
@@ -84,7 +77,6 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 /// Actual passes should inherit from RequiredPassInfoMixin or
 /// OptionalPassInfoMixin.
 ///
-/// TODO: move to a detail namespace once we've branched for LLVM 23.
 template <typename DerivedT>
 struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   void printPipeline(raw_ostream &OS,
@@ -97,16 +89,23 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   // TODO: remove once out of tree users are updated.
   static bool isRequired() { return false; }
 };
+} // namespace detail
+
+class Function;
+class Module;
+
+// Forward declare the analysis manager template.
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
 /// A CRTP mix-in for passes that should not be skipped.
 template <typename DerivedT>
-struct RequiredPassInfoMixin : PassInfoMixin<DerivedT> {
+struct RequiredPassInfoMixin : detail::PassInfoMixin<DerivedT> {
   static bool isRequired() { return true; }
 };
 
 /// A CRTP mix-in for passes that can be skipped.
 template <typename DerivedT>
-struct OptionalPassInfoMixin : PassInfoMixin<DerivedT> {
+struct OptionalPassInfoMixin : detail::PassInfoMixin<DerivedT> {
   static bool isRequired() { return false; }
 };
 

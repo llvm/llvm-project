@@ -88,7 +88,8 @@ TEST(InstSizes, PseudoInst) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *II = ST.getInstrInfo();
 
   auto cmpInstSize = [](const ARMBaseInstrInfo &II, MachineFunction &MF,

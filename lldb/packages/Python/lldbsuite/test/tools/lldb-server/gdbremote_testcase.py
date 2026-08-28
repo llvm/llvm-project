@@ -952,6 +952,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "MultiMemRead",
         "jMultiBreakpoint",
         "accelerator-plugins",
+        "ExpediteStack",
     ]
 
     def parse_qSupported_response(self, context):

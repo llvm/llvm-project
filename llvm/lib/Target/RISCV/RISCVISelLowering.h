@@ -122,8 +122,6 @@ public:
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
 
-  bool shouldExpandCttzElements(EVT VT) const override;
-
   /// Return the cost of LMUL for linear operations.
   InstructionCost getLMULCost(MVT VT) const;
 

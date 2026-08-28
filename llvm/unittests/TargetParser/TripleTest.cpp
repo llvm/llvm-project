@@ -3861,6 +3861,13 @@ TEST(TripleTest, isCompatibleWith) {
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
 
+      // amdgpu12.50s is its own major subarch: compatible only with itself.
+      {"amdgpu12.50s-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.50-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.51-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+
       {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
 
       // A vendor mismatch is incompatible even when the subarch is otherwise

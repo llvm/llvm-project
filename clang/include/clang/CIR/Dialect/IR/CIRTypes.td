@@ -624,29 +624,45 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 //===----------------------------------------------------------------------===//
 // RecordMemberKind
 //
-// What a record member holds, for members that do not hold source data.
+// What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
 def CIR_RecordMemberKind : CIR_I32EnumAttr<
     "RecordMemberKind", "what a record member holds", [
   I32EnumAttrCase<"Data", 0, "data">,
   I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">
+  I32EnumAttrCase<"Empty", 2, "empty">,
+  I32EnumAttrCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
-    Distinguishes a record member that holds source data from one that does
-    not.  `pad` is storage the compiler inserted to place a later member at its
+    `pad` is storage the compiler inserted to place a later member at its
     required offset, and is reusable tail padding when it trails the record.
-    `empty` is storage the source declared that carries no data for argument
-    passing: an unnamed bit-field unit, or a field of a record that is empty for
-    the ABI.  Everything else, including a vtable pointer, a base subobject, and
-    a bit-field unit with a named occupant, is `data`.
 
-    A record is empty for the ABI when no member is `data`, which is vacuously
-    true for a record with no members.  The distinction between `pad` and
-    `empty` is load-bearing beyond that: only `pad` is reusable, so a record
-    whose trailing member is an unnamed bit-field unit keeps that unit in its
-    data size.
+    `data` and `empty` both span something whose extent the source fixed: a
+    field, a vtable pointer, or a base subobject.  They differ only on whether
+    it holds data for argument passing.
+
+    `bitfield` is a bit-field access unit holding at least one named
+    bit-field.  A unit can be narrower than the declared type of the bit-fields
+    it holds, so its extent does not answer what the source declared.  Without
+    it, a unit holding a 32-bit bit-field of `long long` would be
+    indistinguishable from an `unsigned` field, and clang's x86-64 lowering
+    coerces two records that differ only in that to `i64` and `i32`.
+
+    An access unit holding only unnamed bit-fields is `empty`, since it carries
+    no data for argument passing.  A consumer that has to recognize one can:
+    among `empty` members only an access unit occupies bytes, everything else
+    the source declared as empty for the ABI occupies none.
+
+    A union's base subobject is the one exception to all of this: a single
+    member stands in for every variant, and it takes a unit mark as soon as any
+    variant is one, whatever its own storage type came from.
+
+    A record is empty for the ABI when no member is `data` or `bitfield`, which
+    is vacuously true for a record with no members.  The distinction between
+    `pad` and the rest is load-bearing beyond that: only `pad` is reusable, so a
+    record whose trailing member is an unnamed bit-field unit keeps that unit in
+    its data size.
   }];
 
   let genSpecializedAttr = 0;
@@ -698,9 +714,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_incomplete = !cir.struct<"incomplete" incomplete>
         !anonymous    = !cir.struct<{data !u8i}>
         !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
-        !rec_padded   = !cir.struct<"p2" padded {data !u8i, data !u8i}>
         !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
+        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty !u8i}>
         !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
@@ -710,7 +726,6 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    "bool":$padded,
     ArrayRefParameter<"cir::RecordMemberKind">:$member_kinds,
     "bool":$is_class
   );
@@ -728,11 +743,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      "bool":$padded,
       "bool":$is_class,
       "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
-      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
                    member_kinds, is_class);
     }]>,
 
@@ -742,7 +756,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "bool":$is_class
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
-                   /*incomplete=*/true, /*packed=*/false, /*padded=*/false,
+                   /*incomplete=*/true, /*packed=*/false,
                    /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{},
                    is_class);
     }]>,
@@ -751,12 +765,11 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      "bool":$padded,
       "bool":$is_class,
       "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded, member_kinds, is_class);
+                   packed, member_kinds, is_class);
     }]>
   ];
 
@@ -780,8 +793,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded,
                   llvm::ArrayRef<cir::RecordMemberKind> memberKinds);
+
+    /// Whether any member is marked pad.
+    bool getPadded() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
@@ -806,7 +821,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 
     bool isSized() const { return isComplete(); }
 
-    /// Returns the data size (excluding tail padding) for this struct type.
+    /// Returns the data size for this struct type.  Tail padding is the
+    /// trailing run of pad members, so interior padding and a trailing member
+    /// of any other kind stay inside the data size.
     unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
@@ -855,6 +872,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
         !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
+        !u_bits       = !cir.union<"U" {bitfield !u8i, empty !u8i}>
     ```
   }];
 
@@ -914,9 +932,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     bool isComplete() const { return !isIncomplete(); }
     bool isIncomplete() const;
 
-    /// Returns true when this union carries a tail-padding type.
-    /// Derived from getPadding(): a union is padded iff it has a non-null
-    /// padding type.
+    /// Whether this union carries a tail-padding type.
     bool getPadded() const;
 
     size_t getNumElements() const { return getMembers().size(); }

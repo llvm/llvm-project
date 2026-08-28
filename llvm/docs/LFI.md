@@ -607,6 +607,30 @@ The X86-64 LFI target reserves the following registers:
 - `r15`: context register (see [Context Register](#context-register)).
 - `r11`: scratch register.
 
+### Bundling
+
+The X86-64 LFI target confines control flow using 32-byte bundles. Indirect
+branch targets are masked to a 32-byte boundary, so control can only enter code
+at a bundle-aligned address. For this to constrain the instruction stream, no
+instruction may span a bundle boundary.
+
+LFI object files are therefore assembled with {doc}`aligned instruction
+bundling <AlignedBundling>` enabled, which inserts `nop` padding wherever an
+instruction would otherwise cross a boundary. Bundling is enabled implicitly
+for the `x86_64_lfi` target.
+
+A rewrite that expands one instruction into a sequence which must not be
+entered in the middle wraps that sequence in `.bundle_lock` / `.bundle_unlock`.
+This keeps the whole group within a single bundle, so no masked indirect branch
+can land between its instructions.
+
+**Note**: the masking of indirect branch targets is part of the control flow
+rewrites, which have not been implemented yet.
+
+Bundling is specific to X86-64. AArch64 instructions are fixed-width and
+naturally aligned, and the AArch64 LFI target confines indirect branches by
+guarding the target register instead.
+
 ### Assembly Rewrites
 
 #### Terminology

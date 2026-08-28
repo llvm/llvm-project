@@ -316,7 +316,7 @@ func.func @test_transpose(%arg0: tensor<13x21x3xi1>) -> tensor<3x13x21xi1> {
 // -----
 func.func @test_cast_i32_f32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 

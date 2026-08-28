@@ -1,0 +1,53 @@
+# Range-overlap conflict with distinct start offsets — one input
+# contains two replacements at (10, 5, "X") and (12, 3, "Y"). Byte
+# ranges [10, 15) and [12, 15) overlap on bytes 12..14, forming one
+# cluster of two. Drop-all removes both members at their respective
+# offsets; SARIF has one result at byteOffset 10 (cluster min) with two
+# relatedLocations sorted by (byteLength, text) ascending so the
+# length-3 "Y" entry precedes the length-5 "X" entry.
+#
+# This is the mandatory regression guard for the range-overlap cluster
+# definition — it cannot be exercised by any same-offset fixture.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/range-overlap-distinct-offsets.tpl.yaml %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml 2> %t.dir/stderr.txt
+
+# Drop-all: zero replacements survive at offsets 10 OR 12.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+# Run the SARIF assertions. One result at byteOffset 10 (cluster min).
+# relatedLocations is sorted by (byteLength, text) so length=3 "Y" comes
+# before length=5 "X". Within each entry json::Object emits keys in
+# alphabetical order: id, message, physicalLocation; within region:
+# byteLength, byteOffset.
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF:      "results":
+# SARIF:        "level": "error"
+# SARIF:        "byteOffset": 10
+# SARIF:        "relatedLocations":
+# SARIF:          "id": 1
+# SARIF:          "text": "candidate edit: \"Y\""
+# SARIF:          "byteLength": 3
+# SARIF-NEXT:          "byteOffset": 12
+# SARIF:          "id": 2
+# SARIF:          "text": "candidate edit: \"X\""
+# SARIF:          "byteLength": 5
+# SARIF-NEXT:          "byteOffset": 10
+# SARIF:        "ruleId": "clang-reforge-replacement-conflict"
+
+# Stderr: one cluster line at foo.cpp:10 (cluster min offset).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 2
+# CONFLICT-SAME: foo.cpp:10

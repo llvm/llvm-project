@@ -137,13 +137,13 @@ void AliasSet::addUnknownInst(Instruction *I, BatchAAResults &AA) {
     !(I->use_empty() && match(I, m_Intrinsic<Intrinsic::invariant_start>()));
   if (!MayWriteMemory) {
     Alias = SetMayAlias;
-    Access |= RefAccess;
+    Access |= ModRefInfo::Ref;
     return;
   }
 
   // FIXME: This should use mod/ref information to make this not suck so bad
   Alias = SetMayAlias;
-  Access = ModRefAccess;
+  Access = ModRefInfo::ModRef;
 }
 
 /// aliasesMemoryLocation - If the specified memory location "may" (or must)
@@ -314,32 +314,39 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
 }
 
 void AliasSetTracker::add(const MemoryLocation &Loc) {
-  addMemoryLocation(Loc, AliasSet::NoAccess);
+  addMemoryLocation(Loc, ModRefInfo::NoModRef);
 }
 
 void AliasSetTracker::add(LoadInst *LI) {
   if (isStrongerThanMonotonic(LI->getOrdering()))
     return addUnknown(LI);
-  addMemoryLocation(MemoryLocation::get(LI), AliasSet::RefAccess);
+  addMemoryLocation(MemoryLocation::get(LI), ModRefInfo::Ref);
 }
 
 void AliasSetTracker::add(StoreInst *SI) {
   if (isStrongerThanMonotonic(SI->getOrdering()))
     return addUnknown(SI);
-  addMemoryLocation(MemoryLocation::get(SI), AliasSet::ModAccess);
+  addMemoryLocation(MemoryLocation::get(SI), ModRefInfo::Mod);
+}
+
+void AliasSetTracker::addWithoutAATags(StoreInst *SI) {
+  assert(!isStrongerThanMonotonic(SI->getOrdering()) &&
+         "Can't handle release stores here");
+  addMemoryLocation(MemoryLocation::get(SI).getWithoutAATags(),
+                    ModRefInfo::Mod);
 }
 
 void AliasSetTracker::add(VAArgInst *VAAI) {
-  addMemoryLocation(MemoryLocation::get(VAAI), AliasSet::ModRefAccess);
+  addMemoryLocation(MemoryLocation::get(VAAI), ModRefInfo::ModRef);
 }
 
 void AliasSetTracker::add(AnyMemSetInst *MSI) {
-  addMemoryLocation(MemoryLocation::getForDest(MSI), AliasSet::ModAccess);
+  addMemoryLocation(MemoryLocation::getForDest(MSI), ModRefInfo::Mod);
 }
 
 void AliasSetTracker::add(AnyMemTransferInst *MTI) {
-  addMemoryLocation(MemoryLocation::getForDest(MTI), AliasSet::ModAccess);
-  addMemoryLocation(MemoryLocation::getForSource(MTI), AliasSet::RefAccess);
+  addMemoryLocation(MemoryLocation::getForDest(MTI), ModRefInfo::Mod);
+  addMemoryLocation(MemoryLocation::getForSource(MTI), ModRefInfo::Ref);
 }
 
 void AliasSetTracker::addUnknown(Instruction *Inst) {
@@ -386,17 +393,6 @@ void AliasSetTracker::add(Instruction *I) {
   // Handle all calls with known mod/ref sets genericall
   if (auto *Call = dyn_cast<CallBase>(I))
     if (Call->onlyAccessesArgMemory()) {
-      auto getAccessFromModRef = [](ModRefInfo MRI) {
-        if (isRefSet(MRI) && isModSet(MRI))
-          return AliasSet::ModRefAccess;
-        else if (isModSet(MRI))
-          return AliasSet::ModAccess;
-        else if (isRefSet(MRI))
-          return AliasSet::RefAccess;
-        else
-          return AliasSet::NoAccess;
-      };
-
       ModRefInfo CallMask = AA.getMemoryEffects(Call).getModRef();
 
       // Some intrinsics are marked as modifying memory for control flow
@@ -417,7 +413,7 @@ void AliasSetTracker::add(Instruction *I) {
         ModRefInfo ArgMask = AA.getArgModRefInfo(Call, ArgIdx);
         ArgMask &= CallMask;
         if (!isNoModRef(ArgMask))
-          addMemoryLocation(ArgLoc, getAccessFromModRef(ArgMask));
+          addMemoryLocation(ArgLoc, ArgMask);
       }
       return;
     }
@@ -447,7 +443,7 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
 
     // Loop over all of the memory locations in this alias set.
     for (const MemoryLocation &ASMemLoc : AS.MemoryLocs)
-      addMemoryLocation(ASMemLoc, (AliasSet::AccessLattice)AS.Access);
+      addMemoryLocation(ASMemLoc, AS.Access);
   }
 }
 
@@ -468,7 +464,7 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   AliasSets.push_back(new AliasSet());
   AliasAnyAS = &AliasSets.back();
   AliasAnyAS->Alias = AliasSet::SetMayAlias;
-  AliasAnyAS->Access = AliasSet::ModRefAccess;
+  AliasAnyAS->Access = ModRefInfo::ModRef;
   AliasAnyAS->AliasAny = true;
 
   for (auto *Cur : ASVector) {
@@ -489,9 +485,9 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
 }
 
 AliasSet &AliasSetTracker::addMemoryLocation(MemoryLocation Loc,
-                                             AliasSet::AccessLattice E) {
+                                             ModRefInfo MR) {
   AliasSet &AS = getAliasSetFor(Loc);
-  AS.Access |= E;
+  AS.Access |= MR;
 
   if (!AliasAnyAS && (TotalAliasSetSize > SaturationThreshold)) {
     // The AST is now saturated. From here on, we conservatively consider all
@@ -510,11 +506,18 @@ void AliasSet::print(raw_ostream &OS) const {
   OS << "  AliasSet[" << (const void*)this << ", " << RefCount << "] ";
   OS << (Alias == SetMustAlias ? "must" : "may") << " alias, ";
   switch (Access) {
-  case NoAccess:     OS << "No access "; break;
-  case RefAccess:    OS << "Ref       "; break;
-  case ModAccess:    OS << "Mod       "; break;
-  case ModRefAccess: OS << "Mod/Ref   "; break;
-  default: llvm_unreachable("Bad value for Access!");
+  case ModRefInfo::NoModRef:
+    OS << "No access ";
+    break;
+  case ModRefInfo::Ref:
+    OS << "Ref       ";
+    break;
+  case ModRefInfo::Mod:
+    OS << "Mod       ";
+    break;
+  case ModRefInfo::ModRef:
+    OS << "Mod/Ref   ";
+    break;
   }
   if (Forward)
     OS << " forwarding to " << (void*)Forward;

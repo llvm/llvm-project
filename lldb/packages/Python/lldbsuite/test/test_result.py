@@ -169,7 +169,7 @@ class LLDBTestResult(unittest.TextTestResult):
 
     def countUnsupported(self):
         """Number of skipped tests that can never run in this configuration."""
-        return sum(1 for _, reason in self.skipped if is_unsupported(reason))
+        return sum(1 for test, reason in self.skipped if is_unsupported(test, reason))
 
     def countSkipped(self):
         """Number of skipped tests that ought to run here but don't work yet."""
@@ -294,7 +294,7 @@ class LLDBTestResult(unittest.TextTestResult):
         # A test turned off by a `require*` decorator can never run in this
         # configuration, so report it as UNSUPPORTED. Anything else is a test
         # that ought to run here but doesn't work yet: report it as SKIPPED.
-        status = "UNSUPPORTED" if is_unsupported(reason) else "SKIPPED"
+        status = "UNSUPPORTED" if is_unsupported(test, reason) else "SKIPPED"
         self.stream.write(
             "%s: LLDB (%s) :: %s (%s) \n"
             % (status, self._config_string(test), str(test), reason)

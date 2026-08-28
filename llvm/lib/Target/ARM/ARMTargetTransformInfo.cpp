@@ -1226,9 +1226,9 @@ InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
 
 InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
@@ -1374,7 +1374,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   int BaseCost = ST->hasMVEIntegerOps() && SrcTy->isVectorTy()
                      ? ST->getMVEVectorCostFactor(CostKind)
                      : 1;
-  return BaseCost * BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind,
+  return BaseCost * BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask,
                                           Index, SubTp);
 }
 

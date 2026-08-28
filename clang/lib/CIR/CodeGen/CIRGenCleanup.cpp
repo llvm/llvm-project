@@ -364,7 +364,7 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   }
 
   // While emitting a loop's condition variable, suppress cir.cleanup.scope
-  // creation. The variable's destructor is captured on the EH stack and later
+  // creation. The variable's cleanups are captured on the EH stack and later
   // emitted into the loop op's per-iteration cleanup region.
   if (capturingLoopConditionCleanups)
     skipCleanupScope = true;
@@ -406,7 +406,7 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
     innermostEHScope = stable_begin();
 
   if (isLifetimeMarker)
-    cgf->cgm.errorNYI("push lifetime marker cleanup");
+    scope->setLifetimeMarker();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   if (cgf->getLangOpts().EHAsynch && isEHCleanup && !isLifetimeMarker &&
@@ -451,7 +451,7 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
     if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si))) {
       if (cleanup->isLifetimeMarker()) {
         // Skip lifetime markers and continue from the enclosing EH scope
-        assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        si = cleanup->getEnclosingEHScope();
         continue;
       }
     }
@@ -743,10 +743,12 @@ void CIRGenFunction::emitLoopConditionCleanups(
     if (scope.isEHCleanup())
       cleanupFlags.setIsEHCleanupKind();
 
-    // The condition variable's cleanup is guarded by an active flag that is
-    // false while its initializer runs, so a throwing initializer does not
-    // destroy the not-yet-constructed variable. The single guarded emission
-    // serves both the normal per-iteration exit and the EH unwind path.
+    // A condition variable's destructor cleanup is guarded by an active flag
+    // that is false while its initializer runs, so a throwing initializer does
+    // not destroy the not-yet-constructed variable. The lifetime-end cleanup
+    // has no flag because its lifetime starts before initialization. Each
+    // emission serves both the normal per-iteration exit and the EH unwind
+    // path.
     Address activeFlag = scope.getActiveFlag();
 
     // Copy the cleanup emission data out before popping, since popCleanup

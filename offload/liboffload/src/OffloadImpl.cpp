@@ -1276,7 +1276,8 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
-  LaunchArgs.Flags.StrictBlocksAndThreads = true;
+  LaunchArgs.Flags.StrictBlocks = true;
+  LaunchArgs.Flags.StrictThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {

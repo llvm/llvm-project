@@ -539,7 +539,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, const Any &) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \
@@ -1590,10 +1590,6 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
-}
-
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {

@@ -13,7 +13,7 @@
 //       cheap.
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/CallableTraitsHelper.h"
+#include "orc-rt/bedrock/CallableTraitsHelper.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

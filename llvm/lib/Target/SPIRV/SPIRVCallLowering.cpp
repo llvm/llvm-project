@@ -131,14 +131,6 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   return SPIRV::AccessQualifier::ReadWrite;
 }
 
-static std::vector<SPIRV::Decoration::Decoration>
-getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
-  MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
-    return {SPIRV::Decoration::Volatile};
-  return {};
-}
-
 static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder &MIRBuilder,
@@ -331,13 +323,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
-      }
-
-      if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
-        std::vector<SPIRV::Decoration::Decoration> ArgTypeQualDecs =
-            getKernelArgTypeQual(F, i);
-        for (SPIRV::Decoration::Decoration Decoration : ArgTypeQualDecs)
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Decoration, {});
       }
 
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");

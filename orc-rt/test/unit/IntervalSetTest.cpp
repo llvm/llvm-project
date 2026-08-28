@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/IntervalSet.h"
+#include "orc-rt/bedrock/IntervalSet.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

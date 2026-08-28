@@ -78,20 +78,20 @@ end subroutine mutual_mapper
 ! CHECK: omp.map.info {{.*}} mapper(@_QFrecursive_mapperTnode_t_omp_default_mapper)
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFtyp_t_omp_default_mapper
-! CHECK: omp.map.info {{.*}} map_clauses(tofrom) capture(ByRef) mapper(@_QQFnested_t_omp_default_mapper) -> {{.*}} {name = "t%nested"}
+! CHECK: omp.map.info {{.*}} map_clauses(tofrom) capture(ByRef) mapper(@_QQFnested_t_omp_default_mapper) name("t%nested") -> {{.*}}
 ! CHECK-LABEL: omp.declare_mapper @_QQFnested_t_omp_default_mapper
 
 ! CHECK-LABEL: func.func @_QQmain
 ! CHECK-NOT: implicit_map
-! CHECK: %[[TYP_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFtyp_t_omp_default_mapper){{.*}} {name = "typ"}
+! CHECK: %[[TYP_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFtyp_t_omp_default_mapper){{.*}} name("typ")
 ! CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[TYP_MAP]] -> %{{[^,]*}} : {{.*}}) {
 
 ! CHECK-LABEL: func.func @_QPrecursive_mapper
 ! CHECK-NOT: implicit_map
-! CHECK: %[[RECURSIVE_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFrecursive_mapperwrapper_t_omp_default_mapper){{.*}} {name = "w"}
+! CHECK: %[[RECURSIVE_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFrecursive_mapperwrapper_t_omp_default_mapper){{.*}} name("w")
 ! CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[RECURSIVE_MAP]] -> %{{[^,]*}} : {{.*}}) {
 
 ! CHECK-LABEL: func.func @_QPmutual_mapper
 ! CHECK-NOT: implicit_map
-! CHECK: %[[MUTUAL_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFmutual_mappera_t_omp_default_mapper){{.*}} {name = "a"}
+! CHECK: %[[MUTUAL_MAP:.*]] = omp.map.info {{.*}} mapper(@_QQFmutual_mappera_t_omp_default_mapper){{.*}} name("a")
 ! CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MUTUAL_MAP]] -> %{{[^,]*}} : {{.*}}) {

@@ -31,10 +31,10 @@ subroutine target_imp_capture
 end subroutine target_imp_capture
 
 ! CHECK-PROG-LABEL: func.func @_QPtarget_imp_capture()
-! CHECK-PROG:           %[[VAL_0:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "x"}
-! CHECK-PROG:           %[[VAL_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<10x10xf32>>, !fir.array<10x10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {name = "i"}
-! CHECK-PROG:           %[[VAL_2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ptr<!fir.array<5x5x2xf32>>, !fir.array<5x5x2xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) -> !fir.ptr<!fir.array<5x5x2xf32>> {name = "j"}
-! CHECK-PROG:           %[[VAL_3:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ptr<!fir.array<25x2xf32>>, !fir.array<25x2xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) -> !fir.ptr<!fir.array<25x2xf32>> {name = "k"}
+! CHECK-PROG:           %[[VAL_0:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("x") -> !fir.ref<i32>
+! CHECK-PROG:           %[[VAL_1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<10x10xf32>>, !fir.array<10x10xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) name("i") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK-PROG:           %[[VAL_2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ptr<!fir.array<5x5x2xf32>>, !fir.array<5x5x2xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) name("j") -> !fir.ptr<!fir.array<5x5x2xf32>>
+! CHECK-PROG:           %[[VAL_3:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ptr<!fir.array<25x2xf32>>, !fir.array<25x2xf32>) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) name("k") -> !fir.ptr<!fir.array<25x2xf32>>
 ! CHECK-PROG:           %[[VAL_4:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 ! CHECK-PROG:           %[[VAL_5:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 ! CHECK-PROG:           omp.target kernel_type(generic) map_entries(%[[VAL_0]] -> %[[VAL_6:.*]], %[[VAL_1]] -> %[[VAL_7:.*]], %[[VAL_2]] -> %[[VAL_8:.*]], %[[VAL_3]] -> %[[VAL_9:.*]], %[[VAL_4]] -> %[[VAL_10:.*]], %[[VAL_5]] -> %[[VAL_11:.*]] : !fir.ref<i32>, !fir.ref<!fir.array<10x10xf32>>, !fir.ptr<!fir.array<5x5x2xf32>>, !fir.ptr<!fir.array<25x2xf32>>, !fir.ref<i32>, !fir.ref<i32>) private(@_QFtarget_imp_captureEy_firstprivate_i32 %{{.*}}#0 -> %[[VAL_12:.*]] [map_idx=4], @_QMtest_dataEz_firstprivate_i32 %{{.*}}#0 -> %[[VAL_13:.*]] [map_idx=5] : !fir.ref<i32>, !fir.ref<i32>) {

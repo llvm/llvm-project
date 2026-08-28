@@ -42,6 +42,25 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     }]
   >;
 
+  // Default-implemented method, overridden by the corresponding clause. It
+  // returns the symbols associated with the clause.
+  //
+  // For the override to work, the clause tablegen definition must contain an
+  // `OptionalAttr<SymbolRefArrayAttr> $clause_name_syms` argument.
+  //
+  // Usage example:
+  //
+  // ```c++
+  // std::optional<ArrayAttr> reductionSyms = op.getReductionSyms();
+  // ```
+  InterfaceMethod symsMethod = InterfaceMethod<
+    "Get symbols associated to `" # clauseNameSnake # "`, if present.",
+    "::std::optional<::mlir::ArrayAttr>",
+    "get" # clauseNameCamel # "Syms", (ins), [{}], [{
+      return nullptr;
+    }]
+  >;
+
   // It returns the number of entry block arguments introduced by the given
   // clause.
   //
@@ -132,6 +151,7 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
 
   let methods = !listconcat(
     !foreach(clause, clauses, clause.varsMethod),
+    !foreach(clause, clauses, clause.symsMethod),
     !foreach(clause, clauses, clause.numArgsMethod),
     !foreach(clause, clauses, clause.startMethod),
     !foreach(clause, clauses, clause.blockArgsMethod),
@@ -297,7 +317,7 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"isComposite",
       (ins ), [{}], [{
-        return $_op->hasAttr("omp.composite");
+        return $_op->hasDiscardableAttr("omp.composite");
       }]
     >,
     InterfaceMethod<
@@ -322,7 +342,7 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"isCombined",
       (ins ), [{}], [{
-        return $_op->hasAttr("omp.combined");
+        return $_op->hasDiscardableAttr("omp.combined");
       }]
     >,
     InterfaceMethod<
@@ -376,15 +396,15 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
            "mlir::omp::DeclareTargetCaptureClause":$captureClause,
-           "bool":$automap), [{}], [{
-        $_op->setAttr("omp.declare_target",
+           "bool":$automap, "bool":$implicit), [{}], [{
+        $_op->setDiscardableAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
                       mlir::omp::DeclareTargetDeviceTypeAttr::get(
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
                           $_op->getContext(), captureClause),
-                      mlir::BoolAttr::get($_op->getContext(), automap)));
+                      automap, implicit));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -395,7 +415,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"isDeclareTarget",
       (ins), [{}], [{
-        return $_op->hasAttr("omp.declare_target");
+        return $_op->hasDiscardableAttr("omp.declare_target");
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -405,7 +425,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"mlir::omp::DeclareTargetDeviceType",
       /*methodName=*/"getDeclareTargetDeviceType",
       (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getDeviceType().getValue();
         return {};
@@ -418,7 +438,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"mlir::omp::DeclareTargetCaptureClause",
       /*methodName=*/"getDeclareTargetCaptureClause",
       (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getCaptureClause().getValue();
         return {};
@@ -430,10 +450,22 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"getDeclareTargetAutomap",
       (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            if (auto autoVal = dAttr.getAutomap())
-              return autoVal.getValue();
+            return dAttr.getAutomap();
+         return false;
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has been implicitly added.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isImplicitDeclareTarget",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar =
+                $_op->getDiscardableAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            return dAttr.getImplicit();
          return false;
       }]>
   ];
@@ -456,7 +488,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setIsTargetDevice",
       (ins "bool":$isTargetDevice), [{}], [{
-        $_op->setAttr(
+        $_op->setDiscardableAttr(
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_target_device"}),
             mlir::BoolAttr::get($_op->getContext(), isTargetDevice));
       }]>,
@@ -468,7 +500,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"getIsTargetDevice",
       (ins), [{}], [{
-        if (Attribute isTargetDevice = $_op->getAttr("omp.is_target_device"))
+        if (Attribute isTargetDevice = $_op->getDiscardableAttr("omp.is_target_device"))
           if (::llvm::isa<mlir::BoolAttr>(isTargetDevice))
            return ::llvm::dyn_cast<BoolAttr>(isTargetDevice).getValue();
         return false;
@@ -481,7 +513,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setIsGPU",
       (ins "bool":$isGPU), [{}], [{
-        $_op->setAttr(
+        $_op->setDiscardableAttr(
           mlir::StringAttr::get($_op->getContext(), "omp.is_gpu"),
             mlir::BoolAttr::get($_op->getContext(), isGPU));
       }]>,
@@ -493,7 +525,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"getIsGPU",
       (ins), [{}], [{
-        if (Attribute isTargetCGAttr = $_op->getAttr("omp.is_gpu"))
+        if (Attribute isTargetCGAttr = $_op->getDiscardableAttr("omp.is_gpu"))
           if (auto isTargetCGVal = ::llvm::dyn_cast<BoolAttr>(isTargetCGAttr))
            return isTargetCGVal.getValue();
         return false;
@@ -506,7 +538,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"mlir::omp::FlagsAttr",
       /*methodName=*/"getFlags",
       (ins), [{}], [{
-        if (Attribute flags = $_op->getAttr("omp.flags"))
+        if (Attribute flags = $_op->getDiscardableAttr("omp.flags"))
           return ::llvm::dyn_cast_or_null<mlir::omp::FlagsAttr>(flags);
         return nullptr;
       }]>,
@@ -524,7 +556,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             "bool":$assumeNoNestedParallelism,
             "uint32_t":$openmpDeviceVersion,
             "bool":$noGPULib), [{}], [{
-        $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
+        $_op->setDiscardableAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
                       assumeTeamsOversubscription, assumeThreadsOversubscription,
                       assumeNoThreadState, assumeNoNestedParallelism, noGPULib, openmpDeviceVersion));
@@ -538,7 +570,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setHostIRFilePath",
       (ins "std::string":$hostIRFilePath), [{}], [{
-        $_op->setAttr(
+        $_op->setDiscardableAttr(
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.host_ir_filepath"}),
             mlir::StringAttr::get($_op->getContext(), hostIRFilePath));
        }]>,
@@ -552,7 +584,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"llvm::StringRef",
       /*methodName=*/"getHostIRFilePath",
       (ins), [{}], [{
-        if (Attribute filepath = $_op->getAttr("omp.host_ir_filepath"))
+        if (Attribute filepath = $_op->getDiscardableAttr("omp.host_ir_filepath"))
           if (::llvm::isa<mlir::StringAttr>(filepath))
             return ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
         return {};
@@ -566,7 +598,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"::mlir::omp::ClauseRequires",
       /*methodName=*/"getRequires",
       (ins), [{}], [{
-        if (Attribute requiresAttr = $_op->getAttr("omp.requires"))
+        if (Attribute requiresAttr = $_op->getDiscardableAttr("omp.requires"))
           if (auto requiresVal = ::llvm::dyn_cast<mlir::omp::ClauseRequiresAttr>(requiresAttr))
             return requiresVal.getValue();
         return mlir::omp::ClauseRequires::none;
@@ -578,7 +610,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setRequires",
       (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
-        $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
+        $_op->setDiscardableAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
           mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
       }]>,
     InterfaceMethod<
@@ -589,7 +621,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*retTy=*/"::llvm::ArrayRef<::mlir::Attribute>",
       /*methodName=*/"getTargetTriples",
       (ins), [{}], [{
-        if (Attribute triplesAttr = $_op->getAttr("omp.target_triples"))
+        if (Attribute triplesAttr = $_op->getDiscardableAttr("omp.target_triples"))
           if (auto triples = ::llvm::dyn_cast<::mlir::ArrayAttr>(triplesAttr))
             return triples.getValue();
         return {};
@@ -605,7 +637,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             targetTriples, [&](::std::string str) -> ::mlir::Attribute {
               return mlir::StringAttr::get($_op->getContext(), str);
             }));
-        $_op->setAttr(
+        $_op->setDiscardableAttr(
             ::mlir::StringAttr::get($_op->getContext(), "omp.target_triples"),
             ::mlir::ArrayAttr::get($_op->getContext(), names));
       }]>

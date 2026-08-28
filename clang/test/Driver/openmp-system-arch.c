@@ -34,7 +34,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
-// ARCH-GFX906: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
 
 // case when nvptx-arch succeeds.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
@@ -49,15 +49,15 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
 // RUN:     --offload-arch-tool=%t/offload_arch_sm_70_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-SM_70-GFX906
-// ARCH-SM_70-GFX906: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-SM_70-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
 // ARCH-SM_70-GFX906: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
 
 // case when both nvptx-arch and amdgpu-arch succeed with other archs.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native,sm_75,gfx1030 \
 // RUN:     --offload-arch-tool=%t/offload_arch_sm_70_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-MULTIPLE
-// ARCH-MULTIPLE: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx1030"
-// ARCH-MULTIPLE: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"{{.*}}"-target-cpu" "gfx1030"
+// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_75"
 
@@ -71,7 +71,7 @@
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AMDGPU
-// AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '--offload-arch'
+// AMDGPU: error: cannot determine amdgpu architecture: No AMD GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed for nvptx-arch.
 // RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
@@ -87,4 +87,4 @@
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib \
 // RUN:     --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT-AMDGPU
-// BAD-TIMEOUT-AMDGPU: clang: error: cannot determine amdgcn architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got ''; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
+// BAD-TIMEOUT-AMDGPU: clang: error: cannot determine amdgpu architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got ''; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)

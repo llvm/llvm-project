@@ -619,7 +619,7 @@ struct SinOpConversion : public TrigonometricOpConversion<complex::SinOp> {
     // and defining t := exp(y)
     // We get:
     //   Re(sin(x + iy)) = (0.5*t + 0.5/t) * sin x
-    //   Im(cos(x + iy)) = (0.5*t - 0.5/t) * cos x
+    //   Im(sin(x + iy)) = (0.5*t - 0.5/t) * cos x
     Value sum =
         arith::AddFOp::create(rewriter, loc, scaledExp, reciprocalExp, fmf);
     Value resultReal = arith::MulFOp::create(rewriter, loc, sum, sin, fmf);

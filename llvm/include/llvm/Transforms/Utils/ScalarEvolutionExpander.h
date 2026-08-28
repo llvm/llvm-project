@@ -496,6 +496,11 @@ private:
       SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
+  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
+  /// poison-generating flags that reusing the value requires.
+  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
+                                                 const Instruction *InsertPt);
+
   LLVM_ABI Value *expand(SCEVUse S);
   Value *expand(SCEVUse S, BasicBlock::iterator I) {
     setInsertPoint(I);

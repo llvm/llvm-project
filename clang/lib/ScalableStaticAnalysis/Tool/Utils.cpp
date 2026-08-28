@@ -56,6 +56,9 @@ constexpr const char *FileAlreadyExists = "File already exists";
 
 constexpr const char *FailedToLoadPlugin = "failed to load plugin '{0}': {1}";
 
+constexpr const char *InvalidTargetTriple =
+    "invalid {0} '{1}': unrecognized architecture";
+
 } // namespace ErrorMessages
 
 llvm::StringRef ToolName;
@@ -146,6 +149,24 @@ void clang::ssaf::loadPlugins(llvm::ArrayRef<std::string> Paths) {
       fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
     }
   }
+}
+
+llvm::Triple clang::ssaf::parseTargetTripleOrFail(llvm::StringRef FlagName,
+                                                  llvm::StringRef Value) {
+  assert(!Value.empty() &&
+         "parseTargetTripleOrFail: triple value cannot be empty");
+
+  // Normalize so the components are moved to their proper places.
+  llvm::Triple T(llvm::Triple::normalize(Value));
+
+  // Only the architecture is validated. Validating vendor or OS rejects real
+  // targets like x86_64-unknown-linux-gnu. A misspelled vendor or OS is instead
+  // caught as a triple mismatch during linking or library creation.
+  if (T.getArch() == llvm::Triple::UnknownArch) {
+    fail(ErrorMessages::InvalidTargetTriple, FlagName, Value);
+  }
+
+  return T;
 }
 
 void clang::ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,

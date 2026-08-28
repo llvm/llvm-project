@@ -2,8 +2,8 @@
 Test exception behavior in DAP with signal.
 """
 
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.decorators import requireSignals
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 

@@ -50,6 +50,7 @@
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/Serialization/ASTWriter.h"

@@ -20,3 +20,17 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  getrusage_test
+  SUITE
+    libc_sys_resource_unittests
+  SRCS
+    getrusage_test.cpp
+  DEPENDS
+    libc.hdr.sys_resource_macros
+    libc.hdr.types.struct_rusage
+    libc.src.sys.resource.getrusage
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

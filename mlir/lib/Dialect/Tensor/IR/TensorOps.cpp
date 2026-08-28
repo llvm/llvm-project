@@ -2375,7 +2375,6 @@ ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
                                sourceTensorType.getEncoding());
 }
 
-// TODO: This uses neither offsets nor strides!
 RankedTensorType
 ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
                                 ArrayRef<OpFoldResult> sizes) {
@@ -2389,45 +2388,32 @@ ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
                                sourceTensorType.getEncoding());
 }
 
-/// If the rank is reduced (i.e. the desiredResultRank is smaller than the
-/// number of sizes), drop as many size 1 as needed to produce an inferred
-/// type with the desired rank.
-///
-/// Note that there may be multiple ways to compute this rank-reduced type:
-///   e.g. 1x6x1 can rank-reduce to either 1x6 or 6x1 2-D tensors.
-///
-/// To disambiguate, this function always drops the first 1 sizes occurrences.
-RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
-    unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<int64_t> sizes) {
-  // Type inferred in the absence of rank-reducing behavior.
-  auto inferredType = llvm::cast<RankedTensorType>(
-      inferResultType(sourceRankedTensorType, sizes));
-  int rankDiff = inferredType.getRank() - desiredResultRank;
-  if (rankDiff > 0) {
-    auto shape = inferredType.getShape();
-    llvm::SmallBitVector dimsToProject =
-        getPositionsOfShapeOne(rankDiff, shape);
-    SmallVector<int64_t> projectedShape;
-    // Best effort rank-reducing: drop 1s in order.
-    for (unsigned pos = 0, e = shape.size(); pos < e; ++pos)
-      if (!dimsToProject.test(pos))
-        projectedShape.push_back(shape[pos]);
-    inferredType =
-        RankedTensorType::get(projectedShape, inferredType.getElementType(),
-                              inferredType.getEncoding());
-  }
-  return inferredType;
+RankedTensorType
+mlir::tensor::inferSliceType(RankedTensorType sourceTensorType,
+                             ArrayRef<int64_t> staticSizes,
+                             const llvm::SmallBitVector &droppedDims) {
+  assert(staticSizes.size() == droppedDims.size() &&
+         "expected one dropped-dimension bit per size");
+
+  SmallVector<int64_t> resultShape;
+  resultShape.reserve(staticSizes.size() - droppedDims.count());
+  for (auto [idx, size] : llvm::enumerate(staticSizes))
+    if (!droppedDims.test(idx))
+      resultShape.push_back(size);
+
+  Type elementType = sourceTensorType.getElementType();
+  return RankedTensorType::get(resultShape, elementType,
+                               propagateEncoding(sourceTensorType.getEncoding(),
+                                                 resultShape, elementType));
 }
 
-RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
-    unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<OpFoldResult> sizes) {
+RankedTensorType
+mlir::tensor::inferSliceType(RankedTensorType sourceTensorType,
+                             ArrayRef<OpFoldResult> sizes,
+                             const llvm::SmallBitVector &droppedDims) {
   SmallVector<int64_t> staticSizes;
-  SmallVector<Value> dynamicSizes;
-  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
-  return ExtractSliceOp::inferCanonicalRankReducedResultType(
-      desiredResultRank, sourceRankedTensorType, staticSizes);
+  std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+  return inferSliceType(sourceTensorType, staticSizes, droppedDims);
 }
 
 /// Build an ExtractSliceOp with mixed static and dynamic entries and custom
@@ -2755,29 +2741,15 @@ void mlir::tensor::populateFoldConstantExtractSlicePatterns(
 }
 
 /// Return the canonical type of the result of an extract_slice op.
+/// Note: offsets and strides are not needed to determine the result type of
+/// an extract_slice. The operator arguments are just there for interface
+/// compatibility.
 struct SliceReturnTypeCanonicalizer {
   RankedTensorType operator()(ExtractSliceOp op,
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    // Infer a tensor type without taking into account any rank reductions.
-    RankedTensorType nonReducedType =
-        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
-
-    // Directly return the non-rank reduced type if there are no dropped
-    // dims.
-    llvm::SmallBitVector droppedDims = op.getDroppedDims();
-    if (droppedDims.none())
-      return nonReducedType;
-
-    // Build the reduced shape, preserving the original rank reduction pattern.
-    SmallVector<int64_t> targetShape;
-    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
-      if (!droppedDims.test(i))
-        targetShape.push_back(nonReducedType.getDimSize(i));
-
-    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
-                                 nonReducedType.getEncoding());
+    return inferSliceType(op.getSourceType(), mixedSizes, op.getDroppedDims());
   }
 };
 
@@ -3044,22 +3016,8 @@ public:
     if (!sliceResult.isValid)
       return failure();
 
-    // Create the new op in canonical form. The refined shape is inferred from
-    // the destination type, but the encoding is a per-value property of the
-    // source: insert_slice does not convert between encodings, so the
-    // produced cast/op must carry the source's encoding (dropping it would
-    // silently discard downstream metadata such as bounds, layout, or
-    // sparsity descriptors). If the source's encoding no longer holds on the
-    // refined shape (e.g. a `VerifiableTensorEncoding` that self-invalidates),
-    // it is dropped in accordance with the encoding's own contract.
-    auto sourceTypeBase = ExtractSliceOp::inferCanonicalRankReducedResultType(
-        insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
-        mixedSizes);
-    auto sourceType = RankedTensorType::get(
-        sourceTypeBase.getShape(), sourceTypeBase.getElementType(),
-        propagateEncoding(insertSliceOp.getSourceType().getEncoding(),
-                          sourceTypeBase.getShape(),
-                          sourceTypeBase.getElementType()));
+    auto sourceType = inferSliceType(insertSliceOp.getSourceType(), mixedSizes,
+                                     insertSliceOp.getDroppedDims());
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);

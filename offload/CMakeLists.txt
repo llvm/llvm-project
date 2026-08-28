@@ -328,6 +328,16 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
+# If LLVM is dynamically linked we need to add its libraries.
+set(OFFLOAD_INSTALL_RPATH "$ORIGIN")
+if(LLVM_LINK_LLVM_DYLIB)
+  file(RELATIVE_PATH llvm_libdir_relpath
+       "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}"
+       "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+  string(REGEX REPLACE "/$" "" llvm_libdir_relpath "${llvm_libdir_relpath}")
+  list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
+endif()
+
 add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.

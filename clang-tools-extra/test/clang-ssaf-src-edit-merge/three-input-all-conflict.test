@@ -1,0 +1,30 @@
+# Three inputs all conflict pairwise at the same (file, offset, length).
+# Per spec ("All inputs conflict pairwise"): under the tool's drop-all
+# policy every candidate is removed from the merged YAML; the tool emits
+# a "conflict:" line for the (file, offset) cluster with the full cluster
+# size (3) and exits 0.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: cp %S/Inputs/conflict-text-z.tpl.yaml %t.dir/c.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" \
+# RUN:           %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Drop-all: zero replacements survive at the conflict offset.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK-NOT: ReplacementText:
+
+# Tool's conflict summary names the cluster with the full cluster size (3).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 3
+# CONFLICT-SAME: foo.cpp:10

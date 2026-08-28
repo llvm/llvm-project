@@ -7539,8 +7539,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         visitInstruction(CB);
       return;
     }
-    LibFunc LF;
-    if (TLI->getLibFunc(CB, LF)) {
+    LibFunc LF = TLI->getLibFunc(CB);
+    if (LF != NotLibFunc) {
       // libatomic.a functions need to have special handling because there isn't
       // a good way to intercept them or compile the library with
       // instrumentation.

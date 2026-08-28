@@ -51,6 +51,22 @@ struct SimpleRemoteEPCExecutorInfo {
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
+/// Encode an Error as the payload of a Hangup message.
+///
+/// A Hangup always carries a serialized Error saying why the session is ending:
+/// a success value for an orderly disconnect, otherwise the reason. Both ends
+/// of the protocol encode and decode hangups through these two functions, so
+/// that their idea of the payload format cannot drift apart.
+LLVM_ABI shared::WrapperFunctionBuffer encodeHangupPayload(Error Err);
+
+/// Decode a Hangup payload produced by encodeHangupPayload.
+///
+/// Returns the encoded Error, or an Error describing the payload if it cannot
+/// be decoded -- including an empty payload, which is never valid. Both
+/// outcomes end the session with an error; they are distinguished only by the
+/// message.
+LLVM_ABI Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload);
+
 class LLVM_ABI SimpleRemoteEPCTransportClient {
 public:
   enum HandleMessageAction { ContinueSession, EndSession };

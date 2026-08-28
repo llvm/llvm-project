@@ -17,10 +17,10 @@ func.func @test_convert_input_parameters(%arg0: tensor<1x513x513x3xi64>) -> tens
   // DEFAULT: %[[FUNC_BOUND_CAST:.*]] = tosa.cast %[[IN]] : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
   // DEFAULT: %[[CAST1:.*]] = tosa.cast %[[FUNC_BOUND_CAST]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xi32>
   // FUNCBOUND: %[[CAST1:.*]] = tosa.cast %[[IN]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xi32>
-  %0 = tosa.cast %arg0 : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<1x513x513x3xi64>) -> tensor<1x513x513x3xi32>
 
   // COMMON: %[[CAST2:.*]] = tosa.cast %[[CAST1]] : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
-  %1 = tosa.cast %0 : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
+  %1 = tosa.cast %0 {input_unsigned = false} : (tensor<1x513x513x3xi32>) -> tensor<1x513x513x3xf32>
   return %1 : tensor<1x513x513x3xf32>
 }
 

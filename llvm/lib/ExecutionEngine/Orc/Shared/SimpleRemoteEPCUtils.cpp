@@ -46,6 +46,30 @@ const char *DispatchFnName = "__llvm_orc_SimpleRemoteEPC_dispatch_fn";
 
 } // end namespace SimpleRemoteEPCDefaultBootstrapSymbolNames
 
+shared::WrapperFunctionBuffer encodeHangupPayload(Error Err) {
+  using SPSSerialize = shared::SPSArgList<shared::SPSError>;
+  auto SE = shared::detail::toSPSSerializable(std::move(Err));
+  auto Payload =
+      shared::WrapperFunctionBuffer::allocate(SPSSerialize::size(SE));
+  shared::SPSOutputBuffer OB(Payload.data(), Payload.size());
+  bool Success = SPSSerialize::serialize(OB, SE);
+  (void)Success;
+  assert(Success && "Hangup payload serialization should not fail");
+  return Payload;
+}
+
+Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload) {
+  assert(!Payload.getOutOfBandError() &&
+         "Hangup payload should not be an out-of-band error buffer");
+
+  shared::detail::SPSSerializableError Info;
+  shared::SPSInputBuffer IB(Payload.data(), Payload.size());
+  if (!shared::SPSArgList<shared::SPSError>::deserialize(IB, Info))
+    return make_error<StringError>("Could not deserialize hangup info",
+                                   inconvertibleErrorCode());
+  return shared::detail::fromSPSSerializable(std::move(Info));
+}
+
 SimpleRemoteEPCTransportClient::~SimpleRemoteEPCTransportClient() = default;
 SimpleRemoteEPCTransport::~SimpleRemoteEPCTransport() = default;
 

@@ -157,7 +157,9 @@ void AccStructureChecker::Enter(const parser::AccClause &x) {
   SetContextClause(x);
 }
 
-void AccStructureChecker::Leave(const parser::AccClauseList &) {}
+void AccStructureChecker::Leave(const parser::AccClauseList &) {
+  CheckLoopLevelClauseKernelsConflicts();
+}
 
 void AccStructureChecker::Enter(const parser::OpenACCBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::AccBeginBlockDirective>(x.t)};
@@ -291,6 +293,105 @@ std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
       }
   }
   return std::nullopt;
+}
+
+void AccStructureChecker::CheckLoopLevelClauseValue(
+    llvm::StringRef clauseName) {
+  if (GetContext().directive == llvm::acc::ACCD_kernels_loop ||
+      IsInsideKernelsConstruct())
+    return;
+
+  if (GetContext().directive == llvm::acc::ACCD_routine ||
+      HasOpenACCRoutineDirective(
+          &context_.FindScope(GetContext().clauseSource))) {
+    context_.Say(GetContext().clauseSource,
+        "'%s(value)' not allowed in subprogram compiled with ROUTINE directive"_err_en_US,
+        clauseName.str());
+    return;
+  }
+
+  llvm::acc::Directive dir{GetContext().directive};
+  if (dir == llvm::acc::ACCD_loop) {
+    if (std::optional<llvm::acc::Directive> parent{
+            getParentComputeConstruct()}) {
+      if (*parent == llvm::acc::ACCD_parallel)
+        dir = llvm::acc::ACCD_parallel_loop;
+      else if (*parent == llvm::acc::ACCD_serial)
+        dir = llvm::acc::ACCD_serial_loop;
+    }
+  }
+  context_.Say(GetContext().clauseSource,
+      "'%s(value)' not allowed in %s directive"_err_en_US, clauseName.str(),
+      parser::ToUpperCaseLetters(getDirectiveName(dir).str()));
+}
+
+static bool AccClauseHasVectorValue(const parser::AccClause &clause) {
+  const auto *vectorClause{std::get_if<parser::AccClause::Vector>(&clause.u)};
+  return vectorClause && vectorClause->v.has_value();
+}
+
+static bool AccClauseHasWorkerValue(const parser::AccClause &clause) {
+  const auto *workerClause{std::get_if<parser::AccClause::Worker>(&clause.u)};
+  return workerClause && workerClause->v.has_value();
+}
+
+static bool AccClauseHasGangNum(const parser::AccClause &clause) {
+  const auto *gangClause{std::get_if<parser::AccClause::Gang>(&clause.u)};
+  if (!gangClause || !gangClause->v)
+    return false;
+  for (const parser::AccGangArg &gangArg : gangClause->v->v)
+    if (std::get_if<parser::AccGangArg::Num>(&gangArg.u))
+      return true;
+  return false;
+}
+
+void AccStructureChecker::CheckLoopLevelClauseKernelsConflicts() {
+  if (dirContext_.empty())
+    return;
+  if (GetContext().directive != llvm::acc::ACCD_kernels_loop &&
+      !IsInsideKernelsConstruct())
+    return;
+
+  auto hasKernelsSizeClause{[&](llvm::acc::Clause sizeClause) {
+    for (DirectiveContext &ctx : dirContext_) {
+      if ((ctx.directive == llvm::acc::ACCD_kernels ||
+              ctx.directive == llvm::acc::ACCD_kernels_loop) &&
+          FindClause(ctx, sizeClause))
+        return true;
+    }
+    return false;
+  }};
+
+  llvm::acc::Directive kernelsDir{
+      GetContext().directive == llvm::acc::ACCD_kernels_loop
+          ? llvm::acc::ACCD_kernels_loop
+          : llvm::acc::ACCD_kernels};
+  std::string dirName{
+      parser::ToUpperCaseLetters(getDirectiveName(kernelsDir).str())};
+
+  auto emitConflicts{[&](llvm::acc::Clause loopClause,
+                         llvm::acc::Clause sizeClause,
+                         bool (*isValued)(const parser::AccClause &)) {
+    if (!hasKernelsSizeClause(sizeClause))
+      return;
+    for (const auto &entry : FindClauses(loopClause)) {
+      const parser::AccClause *clause{entry.second};
+      if (clause && isValued(*clause)) {
+        context_.Say(clause->source,
+            "'%s(value)' not allowed in %s region that has a %s clause"_err_en_US,
+            parser::ToUpperCaseLetters(getClauseName(loopClause).str()),
+            dirName,
+            parser::ToUpperCaseLetters(getClauseName(sizeClause).str()));
+      }
+    }
+  }};
+
+  emitConflicts(llvm::acc::Clause::ACCC_vector,
+      llvm::acc::Clause::ACCC_vector_length, AccClauseHasVectorValue);
+  emitConflicts(llvm::acc::Clause::ACCC_worker,
+      llvm::acc::Clause::ACCC_num_workers, AccClauseHasWorkerValue);
+  emitConflicts(llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_num_gangs,
+      AccClauseHasGangNum);
 }
 
 void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
@@ -520,6 +621,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
     // Restriction - line 2669
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
+    // An update directive may not appear within a compute construct.
+    CheckNotInComputeConstruct();
     break;
   case llvm::acc::Directive::ACCD_init:
   case llvm::acc::Directive::ACCD_shutdown:
@@ -1028,6 +1131,10 @@ void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
   if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
     CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
   }
+  if (g.v) {
+    CheckLoopLevelClauseValue(
+        parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
+  }
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
@@ -1039,6 +1146,10 @@ void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
   CheckAllowed(crtClause);
   if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
     CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
+  if (g.v) {
+    CheckLoopLevelClauseValue(
+        parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
   }
 }
 
@@ -1087,6 +1198,15 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
     if (hasDim && hasNum) {
       context_.Say(GetContext().clauseSource,
           "The num argument is not allowed when dim is specified"_err_en_US);
+    }
+
+    // Only the num argument is restricted to kernels. The static and dim
+    // arguments are allowed on any loop. On ROUTINE, num is already diagnosed
+    // above as only dim being allowed.
+    if (hasNum &&
+        GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+      CheckLoopLevelClauseValue(
+          parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
     }
   }
 }

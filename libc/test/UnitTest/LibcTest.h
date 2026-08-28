@@ -521,6 +521,14 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #endif // LIBC_TEST_SKIP_DEATH_TESTS
 
+#else // LIBC_TEST_SUBPROCESS_TESTS
+
+// EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
+// if passing nullptr to the function. So it must be defined, even if it can't
+// do anything.
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
+
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 
 ////////////////////////////////////////////////////////////////////////////////

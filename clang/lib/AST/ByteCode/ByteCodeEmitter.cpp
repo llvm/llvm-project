@@ -92,7 +92,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
-  NextLocalOffset += align(D->getAllocSize());
+  NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
   return {Location, D};
 }
 

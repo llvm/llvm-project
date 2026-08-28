@@ -15,8 +15,10 @@
 
 #include "M68kInstrBuilder.h"
 #include "M68kMachineFunction.h"
+#include "M68kRegisterInfo.h"
 #include "M68kTargetMachine.h"
 #include "MCTargetDesc/M68kMCCodeEmitter.h"
+#include "MCTargetDesc/M68kMCTargetDesc.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -333,6 +335,17 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator I, DebugLoc DL,
                             unsigned Reg, MVT From, MVT To) const {
 
+  // On pre-020 (16-bit bus) CPUs, SWAP -> CLR -> SWAP is faster than AND with
+  // mask.
+  if (!Subtarget.atLeastM68020() && From == MVT::i16 && To == MVT::i32 &&
+      M68k::DR32RegClass.contains(Reg)) {
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
+    BuildMI(MBB, I, DL, get(M68k::SWAP), Reg).addReg(Reg);
+    BuildMI(MBB, I, DL, get(M68k::CLR16d), SubReg);
+    BuildMI(MBB, I, DL, get(M68k::SWAP), Reg).addReg(Reg);
+    return;
+  }
+
   unsigned Mask, And;
   if (From == MVT::i8)
     Mask = 0xFF;
@@ -353,14 +366,14 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
 bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
   Register Reg = MIB->getOperand(0).getReg();
   int64_t Imm = MIB->getOperand(1).getImm();
-  bool IsAddressReg = false;
 
   const auto *DR32 = RI.getRegClass(M68k::DR32RegClassID);
   const auto *AR32 = RI.getRegClass(M68k::AR32RegClassID);
   const auto *AR16 = RI.getRegClass(M68k::AR16RegClassID);
+  bool IsAddressReg = AR16->contains(Reg) || AR32->contains(Reg);
 
-  if (AR16->contains(Reg) || AR32->contains(Reg))
-    IsAddressReg = true;
+  MachineBasicBlock &MBB = *MIB->getParent();
+  DebugLoc DL = MIB->getDebugLoc();
 
   // We need to assign to the full register to make IV happy
   Register SReg =
@@ -371,8 +384,15 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
 
   LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
 
-  // Sign extention doesn't matter if we only use the bottom 8 bits
-  if (MVTSize == MVT::i8 || (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
+  if (Imm == 0) {
+    buildClearRegister(Reg, MBB, MIB, DL);
+    MachineInstr &NewMI = *std::prev((MachineBasicBlock::iterator)MIB);
+    LLVM_DEBUG(dbgs() << NewMI << "\n");
+    MIB->removeFromParent();
+
+    // Sign extention doesn't matter if we only use the bottom 8 bits
+  } else if (MVTSize == MVT::i8 ||
+             (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
     LLVM_DEBUG(dbgs() << "MOVEQ\n");
 
     MIB->setDesc(get(M68k::MOVQ));
@@ -383,27 +403,11 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
   } else if (DR32->contains(Reg) && isUInt<8>(Imm)) {
     LLVM_DEBUG(dbgs() << "MOVEQ and NOT\n");
 
-    MachineBasicBlock &MBB = *MIB->getParent();
-    DebugLoc DL = MIB->getDebugLoc();
-
     unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex8Lo);
     assert(SubReg && "No viable SUB register available");
 
     BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOVQ), SReg).addImm(~Imm & 0xFF);
     BuildMI(MBB, MIB.getInstr(), DL, get(M68k::NOT8d), SubReg).addReg(SubReg);
-
-    MIB->removeFromParent();
-
-    // Special case for setting address register to NULL (0)
-  } else if (IsAddressReg && Imm == 0) {
-    LLVM_DEBUG(dbgs() << "SUBA\n");
-
-    MachineBasicBlock &MBB = *MIB->getParent();
-    DebugLoc DL = MIB->getDebugLoc();
-
-    BuildMI(MBB, MIB.getInstr(), DL, get(M68k::SUB32ar), SReg)
-        .addReg(SReg, RegState::Undef)
-        .addReg(SReg, RegState::Undef);
 
     MIB->removeFromParent();
 
@@ -471,13 +475,6 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
                                     MVT MVTDst, MVT MVTSrc) const {
   LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
 
-  unsigned Move;
-
-  if (MVTDst == MVT::i16)
-    Move = M68k::MOV16rr;
-  else // i32
-    Move = M68k::MOV32rr;
-
   Register Dst = MIB->getOperand(0).getReg();
   Register Src = MIB->getOperand(1).getReg();
 
@@ -499,17 +496,40 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
   MachineBasicBlock &MBB = *MIB->getParent();
   DebugLoc DL = MIB->getDebugLoc();
 
-  if (Dst != SSrc) {
-    LLVM_DEBUG(dbgs() << "Move and " << '\n');
-    BuildMI(MBB, MIB.getInstr(), DL, get(Move), Dst).addReg(SSrc);
-  }
+  // It's more efficient to clear the destination and *then* move, rather than
+  // move and zext.
+  if (Dst != SSrc && !IsSigned) {
+    LLVM_DEBUG(dbgs() << "Clear and Move" << '\n');
 
-  if (IsSigned) {
-    LLVM_DEBUG(dbgs() << "Sign Extend" << '\n');
-    AddSExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
+    buildClearRegister(Dst, MBB, MIB.getInstr(), DL);
+
+    if (MVTSrc == MVT::i8) {
+      unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex8Lo);
+      BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV8dd), SubDst).addReg(Src);
+    } else { // i16
+      unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex16Lo);
+      BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV16dd), SubDst).addReg(Src);
+    }
   } else {
-    LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
-    AddZExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
+
+    unsigned Move;
+    if (MVTDst == MVT::i16)
+      Move = M68k::MOV16dd;
+    else // i32
+      Move = M68k::MOV32dd;
+
+    if (Dst != SSrc) {
+      LLVM_DEBUG(dbgs() << "Move and " << '\n');
+      BuildMI(MBB, MIB.getInstr(), DL, get(Move), Dst).addReg(SSrc);
+    }
+
+    if (IsSigned) {
+      LLVM_DEBUG(dbgs() << "Sign Extend" << '\n');
+      AddSExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
+    } else {
+      LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
+      AddZExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
+    }
   }
 
   MIB->eraseFromParent();
@@ -520,7 +540,7 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
 bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
                                     const MCInstrDesc &Desc, MVT MVTDst,
                                     MVT MVTSrc) const {
-  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to LOAD and ");
+  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
 
   Register Dst = MIB->getOperand(0).getReg();
 
@@ -539,16 +559,25 @@ bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
   MIB->getOperand(0).setReg(SubDst);
 
   MachineBasicBlock::iterator I = MIB.getInstr();
-  I++;
   MachineBasicBlock &MBB = *MIB->getParent();
   DebugLoc DL = MIB->getDebugLoc();
 
-  if (IsSigned) {
-    LLVM_DEBUG(dbgs() << "Sign Extend" << '\n');
-    AddSExt(MBB, I, DL, Dst, MVTSrc, MVTDst);
+  // We can only clear before loading if the destination register isn't being
+  // used as an index for the load.
+  if (!IsSigned && !MIB->readsRegister(Dst, &RI)) {
+    LLVM_DEBUG(dbgs() << "Clear and LOAD" << '\n');
+    buildClearRegister(Dst, MBB, I, DL);
+
+    // Extend after load
   } else {
-    LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
-    AddZExt(MBB, I, DL, Dst, MVTSrc, MVTDst);
+    I++;
+    if (IsSigned) {
+      LLVM_DEBUG(dbgs() << "LOAD and Sign Extend" << '\n');
+      AddSExt(MBB, I, DL, Dst, MVTSrc, MVTDst);
+    } else {
+      LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
+      AddZExt(MBB, I, DL, Dst, MVTSrc, MVTDst);
+    }
   }
 
   return true;
@@ -607,6 +636,29 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
   MIB->eraseFromParent();
 
   return true;
+}
+
+void M68kInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator Iter,
+                                       DebugLoc &DL,
+                                       bool AllowSideEffects) const {
+  // Clear an address register by subtracting it from itself.
+  if (M68k::AR32RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(M68k::SUB32ar), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
+    return;
+  }
+
+  if (M68k::DR8RegClass.contains(Reg))
+    BuildMI(MBB, Iter, DL, get(M68k::CLR8d), Reg);
+  else if (M68k::DR16RegClass.contains(Reg))
+    BuildMI(MBB, Iter, DL, get(M68k::CLR16d), Reg);
+  else if (M68k::DR32RegClass.contains(Reg))
+    BuildMI(MBB, Iter, DL, get(M68k::MOVQ), Reg).addImm(0);
+  else
+    llvm::reportFatalInternalError(
+        "buildClearRegister is not implemented for " + RI.getRegAsmName(Reg));
 }
 
 /// Expand a single-def pseudo instruction to a two-addr

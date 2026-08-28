@@ -385,8 +385,7 @@ bool HandleDlopenInit() {
 // immediately after the CRT runs. This way, our exception filter is called
 // first and we can delegate to their filter if appropriate.
 #pragma section(".CRT$XCAB", long, read)
-__declspec(allocate(".CRT$XCAB")) int (*__intercept_seh)() =
-    __asan_set_seh_filter;
+IN_SECTION(".CRT$XCAB") int (*__intercept_seh)() = __asan_set_seh_filter;
 
 // Piggyback on the TLS initialization callback directory to initialize asan as
 // early as possible. Initializers in .CRT$XL* are called directly by ntdll,
@@ -398,9 +397,9 @@ static void NTAPI asan_thread_init(void *module, DWORD reason, void *reserved) {
 }
 
 #pragma section(".CRT$XLAB", long, read)
-__declspec(allocate(".CRT$XLAB")) void(NTAPI *__asan_tls_init)(
-    void *, unsigned long, void *) = asan_thread_init;
-#endif
+IN_SECTION(".CRT$XLAB")
+void(NTAPI* __asan_tls_init)(void*, unsigned long, void*) = asan_thread_init;
+#  endif
 
 static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
   if (reason == DLL_THREAD_DETACH) {
@@ -412,8 +411,8 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
 }
 
 #pragma section(".CRT$XLY", long, read)
-__declspec(allocate(".CRT$XLY")) void(NTAPI *__asan_tls_exit)(
-    void *, unsigned long, void *) = asan_thread_exit;
+IN_SECTION(".CRT$XLY")
+void(NTAPI* __asan_tls_exit)(void*, unsigned long, void*) = asan_thread_exit;
 
 WIN_FORCE_LINK(__asan_dso_reg_hook)
 

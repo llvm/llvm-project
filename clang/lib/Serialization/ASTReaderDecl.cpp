@@ -2103,7 +2103,27 @@ void ASTDeclMerger::MergeDefinitionData(
       PFDI->second == ASTReader::PendingFakeDefinitionKind::Fake) {
     // We faked up this definition data because we found a class for which we'd
     // not yet loaded the definition. Replace it with the real thing now.
-    assert(!DD.IsLambda && !MergeDD.IsLambda && "faked up lambda definition?");
+    assert(!DD.IsLambda && "faked up lambda definition?");
+
+    // This is possible for some special loading ordering. See
+    // clang/test/Modules/pr217858.cppm for an example.
+    //
+    // LambdaDefinitionData is larger than DefinitionData, so it cannot replace
+    // the fake DefinitionData object in place.
+    if (MergeDD.IsLambda) {
+      auto *Def = DD.Definition;
+      MergeDD.Definition = Def;
+      // Unlike an instantiated class definition,
+      // whose update-record reader removes the fake entry after loading its
+      // lexical declarations, a lambda's definition is part of its declaration
+      // record and is fully loaded here.
+      Reader.PendingFakeDefinitionData.erase(PFDI);
+      for (auto *R = Reader.getMostRecentExistingDecl(Def); R;
+           R = R->getPreviousDecl())
+        cast<CXXRecordDecl>(R)->DefinitionData = &MergeDD;
+      return;
+    }
+
     PFDI->second = ASTReader::PendingFakeDefinitionKind::FakeLoaded;
 
     // Don't change which declaration is the definition; that is required
@@ -2408,26 +2428,37 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
     D->Friend = readDeclAs<NamedDecl>();
   else
     D->Friend = readTypeSourceInfo();
-  for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
-  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  unsigned NumParams = Record.readInt();
-  D->NumParams = NumParams;
-  D->Params = new (Reader.getContext()) TemplateParameterList *[NumParams];
-  for (unsigned i = 0; i != NumParams; ++i)
-    D->Params[i] = Record.readTemplateParameterList();
-  if (Record.readInt()) // HasFriendDecl
-    D->Friend = readDeclAs<NamedDecl>();
-  else
+  for (unsigned I = 0; I != D->NumTPLists; ++I)
+    D->getTrailingObjects()[I] = Record.readTemplateParameterList();
+  auto Kind = static_cast<FriendTemplateDeclKind>(Record.readInt());
+  switch (Kind) {
+  case FTDK_Type:
     D->Friend = readTypeSourceInfo();
+    break;
+  case FTDK_Decl:
+    D->Friend = readDeclAs<NamedDecl>();
+    break;
+  case FTDK_Template:
+    D->Template = Record.readTemplateName();
+    assert(D->Template.getAsTemplateDecl() &&
+           "friend template name must resolve to a template declaration");
+    D->Friend = D->Template.getAsTemplateDecl();
+    break;
+  case FTDK_Dependent:
+    D->Friend = readTypeSourceInfo();
+    D->Template = Record.readTemplateName();
+    break;
+  }
+  D->NextFriend = readDeclID().getRawValue();
   D->FriendLoc = readSourceLocation();
+  D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
@@ -4104,10 +4135,11 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = AccessSpecDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND:
-    D = FriendDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = FriendDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID);
+    D = FriendTemplateDecl::CreateDeserialized(Context, ID,
+                                               /*NumTPLists=*/Record.readInt());
     break;
   case DECL_CLASS_TEMPLATE:
     D = ClassTemplateDecl::CreateDeserialized(Context, ID);

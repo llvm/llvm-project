@@ -6,12 +6,7 @@ import os
 from typing import List, Optional
 
 from lldbsuite.test import lldbplatformutil
-from lldbsuite.test.decorators import (
-    no_debug_info_test,
-    requireDarwin,
-    skipIfAsan,
-    skipIfWindows,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import (
     EvaluateContext,

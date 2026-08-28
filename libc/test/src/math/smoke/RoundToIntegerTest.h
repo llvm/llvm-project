@@ -109,7 +109,7 @@ public:
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > 0) {
+        if (x > FloatType(0.0)) {
           ASSERT_EQ_ROUNDING_UPWARD(IntType(1), func(x));
           ASSERT_EQ_ROUNDING_DOWNWARD(IntType(0), func(x));
           ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));

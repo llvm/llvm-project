@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -20,6 +21,7 @@
 #define DEBUG_TYPE "gi-match-table-executor"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 GIMatchTableExecutor::MatcherState::MatcherState(unsigned MaxRenderers)
     : Renderers(MaxRenderers) {}
@@ -47,16 +49,8 @@ bool GIMatchTableExecutor::isBaseWithConstantOffset(
   if (!Root.isReg())
     return false;
 
-  MachineInstr *RootI = MRI.getVRegDef(Root.getReg());
-  if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
-    return false;
-
-  MachineOperand &RHS = RootI->getOperand(2);
-  MachineInstr *RHSI = MRI.getVRegDef(RHS.getReg());
-  if (RHSI->getOpcode() != TargetOpcode::G_CONSTANT)
-    return false;
-
-  return true;
+  GConstant *RHSI;
+  return mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(), m_GConstant(RHSI)));
 }
 
 bool GIMatchTableExecutor::isObviouslySafeToFold(MachineInstr &MI,

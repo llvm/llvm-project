@@ -280,14 +280,29 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // LLVM's dwarf::LanguageDialectAttribute enum.
   MlirAttribute compile_unit =
       mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
-          ctx, recId0, false, id, LLVMDWARFSourceLanguageC99,
+          ctx, recId0, false, id, /*DW_LANG_C99=*/0x000c,
           /*sourceLanguageDialect=*/1, file, foo, false,
           MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
           bar, 0, NULL);
 
-  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguageDialect =
-  // CHECK-SAME: DW_LLVM_LANG_DIALECT_simt{{.*}}>
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<language = DW_LANG_C99
+  // CHECK-SAME: dialect = DW_LLVM_LANG_DIALECT_simt>
   mlirAttributeDump(compile_unit);
+
+  // sourceLanguageName 4 is DW_LNAME_C_plus_plus.
+  MlirAttribute versioned_compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+          ctx, recId0, false, id, /*sourceLanguageName=*/4,
+          /*sourceLanguageVersion=*/202002,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
+
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguage =
+  // CHECK-SAME: #llvm.di_source_language_name<name = DW_LNAME_C_plus_plus
+  // CHECK-SAME: version = 202002
+  mlirAttributeDump(versioned_compile_unit);
 
   // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>
   mlirAttributeDump(mlirLLVMDICompileUnitAttrGetRecSelf(recId1));

@@ -302,6 +302,7 @@ function(runtime_default_target)
     # OpenMP tests. install-libomp-mod is a separate distribution component
     # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
+    list(APPEND extra_targets "libomp-mod-barrier")
     list(APPEND extra_targets "install-libomp-mod")
     list(APPEND extra_targets "install-libomp-mod-stripped")
 
@@ -580,14 +581,19 @@ if(build_runtimes)
     endif()
   endif()
 
-  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # Forward user-provided system configuration to runtimes for requirement introspection.
+  # These are lists, so their separators have to survive being passed on the
+  # sub-build's command line; an unescaped ';' would split them into separate
+  # arguments.
   # CMAKE_PREFIX_PATH is the search path for CMake packages.
   if(CMAKE_PREFIX_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_prefix_path ${CMAKE_PREFIX_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${escaped_prefix_path}")
   endif()
   # CMAKE_PROGRAM_PATH is the search path for executables such as python.
   if(CMAKE_PROGRAM_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_program_path ${CMAKE_PROGRAM_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${escaped_program_path}")
   endif()
 
   set(libclc_enabled FALSE)
@@ -867,6 +873,7 @@ ${_flag_values}\
     endif ()
     if (TARGET libomp-mod)
       add_dependencies(flang-rt-test-deps libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod-barrier)
     endif ()
   endif ()
 endif()

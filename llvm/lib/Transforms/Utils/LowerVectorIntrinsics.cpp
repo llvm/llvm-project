@@ -42,10 +42,13 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Vec->addIncoming(CI->getArgOperand(0), PreLoopBB);
 
   Value *Elem = LoopBuilder.CreateExtractElement(Vec, LoopIndex);
-  Function *Exp = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
-                                                    VecTy->getElementType());
-  Value *Res = LoopBuilder.CreateCall(Exp, Elem);
-  Value *NewVec = LoopBuilder.CreateInsertElement(Vec, Res, LoopIndex);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
+                                                   VecTy->getElementType());
+
+  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Elem);
+  if (isa<FPMathOperator>(CI))
+    ScalarCall->copyFastMathFlags(CI);
+  Value *NewVec = LoopBuilder.CreateInsertElement(Vec, ScalarCall, LoopIndex);
   Vec->addIncoming(NewVec, LoopBB);
 
   Value *One = ConstantInt::get(IdxTy, 1U);

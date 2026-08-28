@@ -238,6 +238,12 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
       info.sourceExprLoc = parserSourceExpr->source;
       if (const DerivedTypeSpec *
           derived{evaluate::GetDerivedTypeSpec(info.sourceExprType)}) {
+        if (derived->IsVectorType()) {
+          context.Say(at,
+              "SOURCE or MOLD expression must not be a vector type '%s'"_err_en_US,
+              info.sourceExprType.value().AsFortran());
+          return std::nullopt;
+        }
         // C949
         if (auto it{FindCoarrayUltimateComponent(*derived)}) {
           context

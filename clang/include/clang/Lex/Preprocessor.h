@@ -711,6 +711,25 @@ private:
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
 
+  /// Implicit input directives waiting to be entered after a global module
+  /// fragment introducer, if the main file starts a module unit.
+  std::string DeferredGMFInputs;
+
+  /// The synthesized buffer used to enter deferred implicit input files.
+  FileID DeferredGMFInputsFileID;
+
+  /// Whether the predefines buffer contains a synthesized GMF introducer.
+  bool HasSynthesizedGMF = false;
+
+  /// Whether setPredefines() replaced a previously initialized buffer.
+  bool PredefinesWereReplaced = false;
+  bool PredefinesInitialized = false;
+
+  bool hasDeferredGMFInputs() const { return !DeferredGMFInputs.empty(); }
+
+  /// Enter implicit input files after the global module fragment introducer.
+  void EnterDeferredGMFInputs(SourceLocation IncludeLoc);
+
   /// Whether we hit an error due to reaching max allowed include depth. Allows
   /// to avoid hitting the same error over and over again.
   bool HasReachedMaxIncludeDepth = false;
@@ -1569,7 +1588,18 @@ public:
   /// Set the predefines for this Preprocessor.
   ///
   /// These predefines are automatically injected when parsing the main file.
-  void setPredefines(std::string P) { Predefines = std::move(P); }
+  void setPredefines(std::string P) {
+    PredefinesWereReplaced |= PredefinesInitialized;
+    PredefinesInitialized = true;
+    Predefines = std::move(P);
+  }
+
+  /// Record implicit macro, PCH, and regular include directives to be entered
+  /// before the main file or inside its global module fragment.
+  void setDeferredGMFInputs(std::string Inputs) {
+    assert(DeferredGMFInputs.empty());
+    DeferredGMFInputs = std::move(Inputs);
+  }
 
   /// Return information about the specified preprocessor
   /// identifier token.

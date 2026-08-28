@@ -661,8 +661,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 bool InputFile::Symbol::isLibcall(
     const TargetLibraryInfo &TLI,
     const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
-  LibFunc F;
-  if (TLI.getLibFunc(IRName, F) && TLI.has(F))
+  if (TLI.has(TLI.getLibFunc(IRName)))
     return true;
   return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
 }

@@ -2,9 +2,9 @@
 Test exception behavior in DAP with obj-c throw.
 """
 
-from lldbsuite.test.decorators import requireDarwin
-from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
 
 
 class TestDAP_exception_objc(DAPTestCaseBase):

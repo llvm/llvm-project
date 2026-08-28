@@ -9,7 +9,9 @@
 #include "config/linux/app.h"
 #include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
+#include "hdr/pthread_macros.h"
 #include "hdr/stdint_proxy.h"
+#include "hdr/sys_auxv_macros.h"
 #include "hdr/sys_mman_macros.h"
 #include "hdr/types/struct_link_map.h"
 #include "hdr/types/struct_r_debug.h"
@@ -25,7 +27,6 @@
 #include "src/unistd/environ.h"
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
-
 #include <sys/syscall.h>
 
 extern "C" int main(int argc, char **argv, char **envp);
@@ -110,6 +111,7 @@ static TLSDescriptor tls;
   uintptr_t program_hdr_count = 0;
   unsigned long hwcap = 0;
   unsigned long hwcap2 = 0;
+  const char *execfn = nullptr;
   auxv::Vector::initialize_unsafe(
       reinterpret_cast<const auxv::Entry *>(env_end_marker + 1));
   auxv::Vector auxvec;
@@ -130,10 +132,20 @@ static TLSDescriptor tls;
     case AT_HWCAP2:
       hwcap2 = aux_entry.val;
       break;
+    case AT_EXECFN:
+      execfn = reinterpret_cast<const char *>(aux_entry.val);
+      break;
     default:
       break; // TODO: Read other useful entries from the aux vector.
     }
   }
+  // AT_EXECFN is typically the last thing on the stack. Round it up to the
+  // next page boundary.
+  uintptr_t stack_addr =
+      (reinterpret_cast<uintptr_t>(execfn) + app.page_size - 1) &
+      ~(app.page_size - 1);
+  main_thread_attrib.stack = reinterpret_cast<void *>(stack_addr);
+  main_thread_attrib.stacksize = PTHREAD_STACK_DYNAMIC_NP;
 
   intptr_t base = 0;
   app.tls.size = 0;
@@ -182,7 +194,7 @@ static TLSDescriptor tls;
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
-  self.attrib = &main_thread_attrib;
+  internal::self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
 

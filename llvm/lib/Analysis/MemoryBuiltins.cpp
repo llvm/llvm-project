@@ -180,8 +180,11 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
     return std::nullopt;
 
   // Make sure that the function is available.
-  LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
+  if (!TLI)
+    return std::nullopt;
+
+  LibFunc TLIFn = TLI->getLibFunc(*Callee);
+  if (!TLI->has(TLIFn))
     return std::nullopt;
 
   const auto *Iter = find_if(AllocationFnData,
@@ -289,14 +292,6 @@ bool llvm::isAllocationFn(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   return getAllocationData(V, AnyAlloc, GetTLI).has_value() ||
          checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
-}
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory similar to malloc or calloc.
-bool llvm::isMallocOrCallocLikeFn(const Value *V,
-                                  const TargetLibraryInfo *TLI) {
-  // TODO: Function behavior does not match name.
-  return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -492,8 +487,8 @@ getFreeFunctionDataForFunction(const Function *Callee, const LibFunc TLIFn) {
 std::optional<StringRef>
 llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
   if (const Function *Callee = getCalledFunction(I)) {
-    LibFunc TLIFn;
-    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn)) {
+    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
+    if (TLIFn != NotLibFunc && TLI->has(TLIFn)) {
       // Callee is some known library function.
       const auto AllocData =
           getAllocationDataForFunction(Callee, AnyAlloc, TLI);
@@ -537,8 +532,8 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
   if (const Function *Callee = getCalledFunction(CB)) {
-    LibFunc TLIFn;
-    if (TLI && TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
+    if (TLIFn != NotLibFunc && TLI->has(TLIFn) &&
         isLibFreeFunction(Callee, TLIFn)) {
       // All currently supported free functions free the first argument.
       return CB->getArgOperand(0);
@@ -1098,9 +1093,11 @@ OffsetSpan ObjectSizeOffsetVisitor::findLoadOffsetRange(
       if (!Callee)
         return Unknown();
 
-      LibFunc TLIFn;
-      if (!TLI || !TLI->getLibFunc(*CB->getCalledFunction(), TLIFn) ||
-          !TLI->has(TLIFn))
+      if (!TLI)
+        return Unknown();
+
+      LibFunc TLIFn = TLI->getLibFunc(*CB->getCalledFunction());
+      if (!TLI->has(TLIFn))
         return Unknown();
 
       // TODO: There's probably more interesting case to support here.

@@ -840,6 +840,11 @@ interface section goes as follows:
 *   `CallOpInterface` - Used to represent operations like 'call'
     -   `CallInterfaceCallable getCallableForCallee()`
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
+    -   `Operation::operand_range getArgOperands()`
+    -   `MutableOperandRange getArgOperandsMutable()`
+    -   `Operation::result_range getForwardedResults()`
+    -   `Operation * resolveCallable()`
+    -   `Operation * resolveCallableInTable(SymbolTableCollection *)`
     -   `ArrayAttr getArgAttrsAttr()`
     -   `ArrayAttr getResAttrsAttr()`
     -   `void setArgAttrsAttr(ArrayAttr)`
@@ -856,6 +861,22 @@ interface section goes as follows:
     -   `void setResAttrsAttr(ArrayAttr)`
     -   `Attribute removeArgAttrsAttr()`
     -   `Attribute removeResAttrsAttr()`
+
+A call operation may have operands and results that are not part of the call
+itself; such operands are said to be *consumed* by the operation and such
+results to be *produced* by it. The operands that are passed to the callee
+(`getArgOperands`) and the results that receive the values returned by the
+callee (`getForwardedResults`) are said to be *forwarded*, and they are in a 1:1
+relationship with the arguments and results of the callee: the i-th forwarded
+operand is passed as the i-th argument of the callee and the i-th forwarded
+result receives the i-th value returned by the callee. Corresponding types are
+not required to be equal; it is up to the call operation to verify them as
+needed.
+
+Variadic arguments of a call to a variadic callee (if supported by the call
+op / callee op) are consumed operands, not forwarded ones: they do not
+correspond to any argument of the callee, which reads them through dedicated
+operations instead of receiving them as block arguments.
 
 ##### RegionKindInterfaces
 

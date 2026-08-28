@@ -35,6 +35,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.__support.math_extras
     .mbstate
 )

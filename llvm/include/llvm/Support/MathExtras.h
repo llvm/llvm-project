@@ -320,12 +320,6 @@ template <size_t kValue> constexpr size_t ConstantLog2() {
   return llvm::countr_zero_constexpr(kValue);
 }
 
-template <size_t kValue>
-LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
-constexpr size_t CTLog2() {
-  return ConstantLog2<kValue>();
-}
-
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2

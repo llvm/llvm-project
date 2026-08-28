@@ -45,6 +45,8 @@ private:
   bool legalizeBitreverse(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeBRJT(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeReadCounter(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                           GISelChangeObserver &Observer) const;
   bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;

@@ -39,7 +39,7 @@
 
 // This gets promoted to a constant, so it is up here.
 // CIR-AFTER-DAG: cir.global "private" constant cir_private @__const._Z1fv.inner_a2 = #cir.const_record<{#cir.int<12> : !s32i}> : !rec_inner_aggregate2
-// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] undef }
+// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] {{.*}} }
 
 struct S { int x; };
 int S::* p = nullptr;
@@ -54,7 +54,7 @@ int S::* p = nullptr;
 // LLVMCIR-DAG: @outer_a1 = global %union.outer_aggregate zeroinitializer
 // OGCG-DAG:    @outer_a1 = global %union.outer_aggregate { i64 -1 }
 
-// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] undef }
+// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] {{.*}} }
 // LLVM-DAG: @outer_a3 = global %union.outer_aggregate3 { i64 -1 }
 
 struct HasPtrToMember { int S::*p; };  // not zero-initializable
@@ -65,7 +65,7 @@ union U {
 U u{};
 // CIR-DAG: cir.global external @u = #cir.zero : !rec_U
 // LLVMCIR-DAG: @u = global %union.U zeroinitializer
-// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] {{.*}} }
 auto use() {
   return u;
 }

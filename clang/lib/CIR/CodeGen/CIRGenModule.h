@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -45,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -651,9 +655,18 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Emit the SYCL kernel caller offload entry point function generated for a
+  /// function declared with the sycl_kernel_entry_point attribute.
+  void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
+                            clang::ASTContext &ctx);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 

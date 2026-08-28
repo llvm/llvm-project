@@ -1442,10 +1442,12 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
             : resultType);
   }
   //   d. Build and return the new op.
-  return VectorizationHookResult{
-      VectorizationHookStatus::NewOp,
-      rewriter.create(op->getLoc(), op->getName().getIdentifier(), vecOperands,
-                      resultTypes, op->getAttrs())};
+  Operation *newOp = Operation::create(
+      op->getLoc(), op->getName(), resultTypes, vecOperands,
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      /*successors=*/{}, /*numRegions=*/0);
+  return VectorizationHookResult{VectorizationHookStatus::NewOp,
+                                 rewriter.insert(newOp)};
 }
 
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
@@ -2733,8 +2735,8 @@ struct PadOpVectorizationWithTransferReadPattern
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(xferOp.getInBoundsAttrName(),
+                              rewriter.getBoolArrayAttr(inBounds));
       xferOp.getBaseMutable().assign(padOp.getSource());
       xferOp.getPaddingMutable().assign(padValue);
     });
@@ -3794,8 +3796,9 @@ public:
 
       SmallVector<bool> inBounds(maskShape.size(), true);
       auto xferOp = cast<VectorTransferOpInterface>(opToMask);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(
+          rewriter.getStringAttr(xferOp.getInBoundsAttrName()),
+          rewriter.getBoolArrayAttr(inBounds));
 
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);

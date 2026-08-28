@@ -447,6 +447,7 @@ addMSAFloatType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, Ty, Legal);
   setOperationAction(ISD::INSERT_VECTOR_ELT, Ty, Legal);
   setOperationAction(ISD::BUILD_VECTOR, Ty, Custom);
+  setOperationAction(ISD::UNDEF, Ty, Legal);
 
   if (Ty != MVT::v8f16) {
     setOperationAction(ISD::FABS,  Ty, Legal);

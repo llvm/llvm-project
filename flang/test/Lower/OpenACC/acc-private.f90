@@ -384,7 +384,7 @@ program acc_private
     a(i) = b(i) + c
   END DO
 
-! CHECK: %[[C_PRIVATE:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {name = "c"}
+! CHECK: %[[C_PRIVATE:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) name("c") -> !fir.ref<i32>
 ! CHECK: acc.loop private(%[[C_PRIVATE]]{{.*}} : !fir.ref<i32>{{.*}})
 ! CHECK: acc.yield
 
@@ -394,7 +394,7 @@ program acc_private
     a(i) = b(i) + c
   END DO
 
-! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@privatization_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@privatization_ref_100xf32) name("b") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.loop private(%[[B_PRIVATE]]{{.*}} : !fir.ref<!fir.array<100xf32>>{{.*}})
 ! CHECK: acc.yield
 
@@ -408,7 +408,7 @@ program acc_private
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 49 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) recipe(@privatization_section_lb0.ub49_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b(1:50)"}
+! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) recipe(@privatization_section_lb0.ub49_ref_100xf32) name("b(1:50)") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.loop private(%[[B_PRIVATE]]{{.*}} : !fir.ref<!fir.array<100xf32>>{{.*}})
 
   !$acc parallel loop firstprivate(c)
@@ -417,7 +417,7 @@ program acc_private
     a(i) = b(i) + c
   END DO
 
-! CHECK: %[[FP_C:.*]] = acc.firstprivate varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) -> !fir.ref<i32> {name = "c"}
+! CHECK: %[[FP_C:.*]] = acc.firstprivate varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("c") -> !fir.ref<i32>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_C]] : !fir.ref<i32>)
 ! CHECK: acc.yield
 
@@ -427,7 +427,7 @@ program acc_private
     a(i) = b(i) + c
   END DO
 
-! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@firstprivatization_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) recipe(@firstprivatization_ref_100xf32) name("b") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_B]] : !fir.ref<!fir.array<100xf32>>)
 ! CHECK: acc.yield
 
@@ -441,7 +441,7 @@ program acc_private
 ! CHECK: %[[LB:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.constant 99 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) recipe(@firstprivatization_section_lb50.ub99_ref_100xf32) -> !fir.ref<!fir.array<100xf32>> {name = "b(51:100)"}
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) recipe(@firstprivatization_section_lb50.ub99_ref_100xf32) name("b(51:100)") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_B]] : !fir.ref<!fir.array<100xf32>>)
 
 end program
@@ -459,7 +459,7 @@ end subroutine
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_assumed_shapeEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: acc.parallel {{.*}} {
-! CHECK: %[[PRIVATE:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xi32>>) recipe(@privatization_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
+! CHECK: %[[PRIVATE:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xi32>>) recipe(@privatization_box_Uxi32) name("a") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.loop {{.*}} private(%[[PRIVATE]]{{.*}} : !fir.box<!fir.array<?xi32>>{{.*}})
 
 subroutine acc_private_allocatable_array(a, n)
@@ -480,9 +480,9 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}
 ! CHECK: %[[DECLA_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_arrayEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK: acc.parallel {{.*}} {
-! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_heap_Uxi32) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "a"}
+! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_heap_Uxi32) name("a") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: acc.loop {{.*}} private(%[[PRIVATE]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}})
-! CHECK: %[[PRIVATE_SERIAL:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_heap_Uxi32) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[PRIVATE_SERIAL:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_heap_Uxi32) name("a") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: acc.serial private(%[[PRIVATE_SERIAL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
 subroutine acc_private_allocatable_scalar(b, a, n)
@@ -504,9 +504,9 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "b"}
 ! CHECK: %[[DECLA_B:.*]]:2 = hlfir.declare %arg0 dummy_scope %0 {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_scalarEb"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK: acc.parallel {{.*}} {
-! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_B]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@privatization_ref_box_heap_i32) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "b"}
+! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_B]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@privatization_ref_box_heap_i32) name("b") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: acc.loop {{.*}} private(%[[PRIVATE]]{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>{{.*}})
-! CHECK: %[[PRIVATE_SERIAL:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@privatization_ref_box_heap_i32) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: %[[PRIVATE_SERIAL:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@privatization_ref_box_heap_i32) name("b") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: acc.serial private(%[[PRIVATE_SERIAL]] : !fir.ref<!fir.box<!fir.heap<i32>>>) {
 
 subroutine acc_private_pointer_array(a, n)
@@ -523,7 +523,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_private_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK: acc.parallel {{.*}} {
-! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_ptr_Uxi32) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "a"}
+! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) recipe(@privatization_ref_box_ptr_Uxi32) name("a") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: acc.loop {{.*}} private(%[[PRIVATE]]{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}})
 
 subroutine acc_private_dynamic_extent(a, n)
@@ -541,7 +541,7 @@ end subroutine
 ! CHECK: %[[DECL_N:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_private_dynamic_extentEa"} : (!fir.ref<!fir.array<?x?x2xi32>>, !fir.shape<3>, !fir.dscope) -> (!fir.box<!fir.array<?x?x2xi32>>, !fir.ref<!fir.array<?x?x2xi32>>)
 ! CHECK: acc.parallel {{.*}} {
-! CHECK: %[[PRIV:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?x2xi32>>) recipe(@privatization_box_UxUx2xi32) -> !fir.box<!fir.array<?x?x2xi32>> {name = "a"}
+! CHECK: %[[PRIV:.*]] = acc.private var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?x2xi32>>) recipe(@privatization_box_UxUx2xi32) name("a") -> !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK: acc.loop {{.*}} private(%[[PRIV]]{{.*}} : !fir.box<!fir.array<?x?x2xi32>>{{.*}})
 
 subroutine acc_firstprivate_assumed_shape(a, n)
@@ -554,7 +554,7 @@ subroutine acc_firstprivate_assumed_shape(a, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_assumed_shape
-! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@firstprivatization_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
+! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@firstprivatization_box_Uxi32) name("a") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?xi32>>) {
 
 subroutine acc_firstprivate_assumed_shape_with_section(a, n)
@@ -567,7 +567,7 @@ subroutine acc_firstprivate_assumed_shape_with_section(a, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_assumed_shape_with_section
-! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) bounds(%{{.*}}) recipe(@firstprivatization_section_lb4.ub9_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a(5:10)"}
+! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?xi32>>) bounds(%{{.*}}) recipe(@firstprivatization_section_lb4.ub9_box_Uxi32) name("a(5:10)") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?xi32>>)
 
 subroutine acc_firstprivate_dynamic_extent(a, n)
@@ -581,7 +581,7 @@ subroutine acc_firstprivate_dynamic_extent(a, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_firstprivate_dynamic_extent
-! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?x?x2xi32>>) recipe(@firstprivatization_box_UxUx2xi32) -> !fir.box<!fir.array<?x?x2xi32>> {name = "a"}
+! CHECK: %[[FIRSTPRIVATE_A:.*]] = acc.firstprivate var(%{{.*}} : !fir.box<!fir.array<?x?x2xi32>>) recipe(@firstprivatization_box_UxUx2xi32) name("a") -> !fir.box<!fir.array<?x?x2xi32>>
 ! CHECK: acc.parallel {{.*}}firstprivate(%[[FIRSTPRIVATE_A]] : !fir.box<!fir.array<?x?x2xi32>>)
 
 module acc_declare_equivalent
@@ -596,7 +596,7 @@ contains
   end subroutine
 end module
 
-! CHECK: %[[PRIVATE_V2:.*]] = acc.private varPtr(%{{.*}} : !fir.ptr<!fir.array<10xf32>>) recipe(@privatization_ptr_10xf32) -> !fir.ptr<!fir.array<10xf32>>
+! CHECK: %[[PRIVATE_V2:.*]] = acc.private varPtr(%{{.*}} : !fir.ptr<!fir.array<10xf32>>) recipe(@privatization_ptr_10xf32) name("v2") -> !fir.ptr<!fir.array<10xf32>>
 ! CHECK: acc.parallel private(%[[PRIVATE_V2]] : !fir.ptr<!fir.array<10xf32>>)
 
 subroutine acc_private_use()
@@ -612,7 +612,7 @@ end
 ! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFacc_private_useEi"}
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.parallel
-! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK: acc.loop {{.*}} private(%[[PRIV_I]] : !fir.ref<i32>) control(%[[IV0:.*]] : i32) = (%c1{{.*}} : i32) to (%c10{{.*}} : i32) step (%c1{{.*}} : i32)
 ! CHECK:   %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:   fir.store %[[IV0]] to %[[DECL_PRIV_I]]#0 : !fir.ref<i32>

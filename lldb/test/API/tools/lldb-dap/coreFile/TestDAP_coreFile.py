@@ -2,197 +2,188 @@
 Test lldb-dap coreFile attaching
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import os
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import (
+    AttachArgs,
+    ContinueArgs,
+    NextArgs,
+    Source,
+    StackFrame,
+)
 
 # The expected backtrace when loading the bundled linux-x86_64.core. Shared by
 # the tests that load this core through different mechanisms (the "coreFile"
 # attach key and "attachCommands") so we can assert they behave identically.
 EXPECTED_CORE_FRAMES = [
-    {
-        "column": 0,
-        "id": 524288,
-        "line": 4,
-        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-        "name": "bar",
-        "source": {
-            "name": "main.c",
-            "path": "/home/labath/test/main.c",
-            "presentationHint": "deemphasize",
-        },
-        "instructionPointerReference": "0x40011C",
-    },
-    {
-        "column": 0,
-        "id": 524289,
-        "line": 10,
-        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-        "name": "foo",
-        "source": {
-            "name": "main.c",
-            "path": "/home/labath/test/main.c",
-            "presentationHint": "deemphasize",
-        },
-        "instructionPointerReference": "0x400142",
-    },
-    {
-        "column": 0,
-        "id": 524290,
-        "line": 16,
-        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-        "name": "_start",
-        "source": {
-            "name": "main.c",
-            "path": "/home/labath/test/main.c",
-            "presentationHint": "deemphasize",
-        },
-        "instructionPointerReference": "0x40015F",
-    },
+    StackFrame(
+        column=0,
+        id=524288,
+        line=4,
+        moduleId="01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        name="bar",
+        source=Source(
+            name="main.c",
+            path="/home/labath/test/main.c",
+            presentationHint="deemphasize",
+        ),
+        instructionPointerReference="0x40011C",
+    ),
+    StackFrame(
+        column=0,
+        id=524289,
+        line=10,
+        moduleId="01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        name="foo",
+        source=Source(
+            name="main.c",
+            path="/home/labath/test/main.c",
+            presentationHint="deemphasize",
+        ),
+        instructionPointerReference="0x400142",
+    ),
+    StackFrame(
+        column=0,
+        id=524290,
+        line=16,
+        moduleId="01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        name="_start",
+        source=Source(
+            name="main.c",
+            path="/home/labath/test/main.c",
+            presentationHint="deemphasize",
+        ),
+        instructionPointerReference="0x40015F",
+    ),
 ]
 
 
-class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_coreFile(DAPTestCaseBase):
     @skipIfLLVMTargetMissing("X86")
     def test_core_file(self):
-        current_dir = os.path.dirname(__file__)
-        exe_file = os.path.join(current_dir, "linux-x86_64.out")
-        core_file = os.path.join(current_dir, "linux-x86_64.core")
+        exe_file = self.getSourcePath("linux-x86_64.out")
+        core_file = self.getSourcePath("linux-x86_64.core")
 
-        self.create_debug_adapter()
-        self.attach(program=exe_file, coreFile=core_file)
-        self.dap_server.request_configurationDone()
+        session = self.create_session()
+        process_event = session.attach(AttachArgs(program=exe_file, coreFile=core_file))
+        stop_event = session.wait_for_stopped_event(after=process_event)
+        thread_id = self.expect_not_none(stop_event.body.threadId)
 
-        expected_frames = EXPECTED_CORE_FRAMES
+        frames = session.stack_trace(thread_id).body.stackFrames
+        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
 
-        self.assertEqual(self.get_stackFrames(), expected_frames)
+        # Resuming a core process should fail. the process stays stopped
+        # with the same backtrace.
+        session.send_request(ContinueArgs(thread_id)).error()
+        frames = session.stack_trace(thread_id).body.stackFrames
+        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
 
-        # Resuming should have no effect and keep the process stopped
-        resp = self.dap_server.request_continue()
-        self.assertFalse(resp["success"])
-        self.assertEqual(self.get_stackFrames(), expected_frames)
-
-        self.dap_server.request_next(threadId=32259)
-        self.assertEqual(self.get_stackFrames(), expected_frames)
+        # Same for step-over.
+        session.send_request(NextArgs(threadId=thread_id)).error()
+        frames = session.stack_trace(thread_id).body.stackFrames
+        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_attach_commands(self):
         """Loading a core through "attachCommands" (e.g. `target create --core`)
         should behave identically to using the "coreFile" attach key: the
         session stops with the real crash reason and cannot be resumed."""
-        current_dir = os.path.dirname(__file__)
-        exe_file = os.path.join(current_dir, "linux-x86_64.out")
-        core_file = os.path.join(current_dir, "linux-x86_64.core")
+        exe_file = self.getSourcePath("linux-x86_64.out")
+        core_file = self.getSourcePath("linux-x86_64.core")
 
-        self.create_debug_adapter()
+        session = self.create_session()
         # Bootstrap the core target purely through a custom attach command,
         # mirroring how the "coreFile" key passes the same program.
-        self.attach(
-            program=exe_file,
-            attachCommands=['target create --core "%s" "%s"' % (core_file, exe_file)],
-        )
-
         # configurationDone must succeed: a core is a non-live session, so the
         # adapter must not try to resume it (resuming a core fails).
-        resp = self.dap_server.request_configurationDone()
-        self.assertTrue(
-            resp["success"],
-            "configurationDone should succeed for a core loaded via attachCommands",
+        process_event = session.attach(
+            AttachArgs(
+                program=exe_file,
+                attachCommands=[f"target create --core '{core_file}' '{exe_file}'"],
+            )
         )
-
-        # The backtrace must match the "coreFile" attach key exactly.
-        self.assertEqual(self.get_stackFrames(), EXPECTED_CORE_FRAMES)
 
         # The stop must be reported with the real crash reason, not "entry".
-        self.dap_server.wait_for_stopped()
-        found_exception = any(
-            body.get("reason") == "exception"
-            for body in self.dap_server.thread_stop_reasons.values()
-        )
-        self.assertTrue(
-            found_exception,
-            f"Expected a thread stopped with reason 'exception', got: "
-            f"{self.dap_server.thread_stop_reasons}",
-        )
+        stop_event = session.verify_stopped_on_exception(after=process_event)
+        thread_id = self.expect_not_none(stop_event.body.threadId)
 
-        # Resuming should have no effect and keep the process stopped.
-        resp = self.dap_server.request_continue()
-        self.assertFalse(resp["success"])
-        self.assertEqual(self.get_stackFrames(), EXPECTED_CORE_FRAMES)
+        # The backtrace must match the "coreFile" attach key exactly.
+        frames = session.stack_trace(thread_id).body.stackFrames
+        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+
+        # Resuming should fail.
+        session.send_request(ContinueArgs(thread_id)).error()
+        frames = session.stack_trace(thread_id).body.stackFrames
+        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
 
     def test_wrong_core_file(self):
+        """Attaching with a file that isn't a real core should fail cleanly
+        during configurationDone rather than crashing the adapter."""
         exe_file = self.getSourcePath("linux-x86_64.out")
         wrong_core_file = self.getSourcePath("main.c")
 
-        self.create_debug_adapter()
-        resp = self.attach_and_configurationDone(
-            program=exe_file, coreFile=wrong_core_file
+        session = self.create_session()
+        session.initialize_sequence(session.initialize_args)
+        pending_attach = session.send_request(
+            AttachArgs(program=exe_file, coreFile=wrong_core_file)
         )
-        self.assertIsNotNone(resp)
-        self.assertFalse(resp["success"], "Expected failure in response {resp!r}")
-        error_msg = resp["body"]["error"]["format"]
+        session.verify_configuration_done(expected_success=False)
 
-        # attach may fail for mutilple reasons.
-        self.assertEqual(error_msg, "Failed to create the process")
+        resp = pending_attach.error()
+        resp_error = self.expect_not_none(resp.body and resp.body.error)
+        self.assertEqual(resp_error.format, "Failed to create the process")
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_stopped_reason(self):
-        """Test that the stopped event for a core file reports the actual crash
+        """The stopped event for a core file should report the actual crash
         reason (e.g. 'exception') rather than 'entry'."""
-        current_dir = os.path.dirname(__file__)
-        exe_file = os.path.join(current_dir, "linux-x86_64.out")
-        core_file = os.path.join(current_dir, "linux-x86_64.core")
+        exe_file = self.getSourcePath("linux-x86_64.out")
+        core_file = self.getSourcePath("linux-x86_64.core")
 
-        self.create_debug_adapter()
-        self.attach(program=exe_file, coreFile=core_file)
-        self.dap_server.request_configurationDone()
-        self.dap_server.wait_for_stopped()
+        session = self.create_session()
+        process_event = session.attach(AttachArgs(program=exe_file, coreFile=core_file))
 
-        # Core files should report the actual crash reason, not 'entry'.
-        stop_reasons = self.dap_server.thread_stop_reasons
-        self.assertGreater(len(stop_reasons), 0, "Expected at least one stopped thread")
-
-        # Find any thread with a stop reason — the crashing thread should
-        # report 'exception' with a description about the signal.
-        found_exception = False
-        for tid, body in stop_reasons.items():
-            if body.get("reason") == "exception":
-                found_exception = True
-                self.assertIn("description", body)
-                break
-        self.assertTrue(
-            found_exception,
-            f"Expected at least one thread with stop reason 'exception', "
-            f"got: {stop_reasons}",
-        )
+        stop_event = session.verify_stopped_on_exception(after=process_event)
+        self.assertIsNotNone(stop_event.body.description, "expect a stop description.")
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping_array(self):
         """Test that sourceMap property is correctly applied when loading a core"""
-        current_dir = os.path.dirname(__file__)
-        exe_file = os.path.join(current_dir, "linux-x86_64.out")
-        core_file = os.path.join(current_dir, "linux-x86_64.core")
+        exe_file = self.getSourcePath("linux-x86_64.out")
+        core_file = self.getSourcePath("linux-x86_64.core")
+        current_dir = self.getSourceDir()
 
-        self.create_debug_adapter()
+        session = self.create_session()
+        process_event = session.attach(
+            AttachArgs(
+                program=exe_file,
+                coreFile=core_file,
+                sourceMap=[("/home/labath/test", current_dir)],
+            )
+        )
 
-        source_map = [["/home/labath/test", current_dir]]
-        self.attach(program=exe_file, coreFile=core_file, sourceMap=source_map)
-
-        self.assertIn(current_dir, self.get_stackFrames()[0]["source"]["path"])
+        stop_event = session.verify_stopped_on_exception(after=process_event)
+        top_frame = session.top_frame_from(stop_event).frame
+        top_source = self.expect_not_none(top_frame.source and top_frame.source.path)
+        self.assertIn(current_dir, top_source)
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping_object(self):
         """Test that sourceMap property is correctly applied when loading a core"""
-        current_dir = os.path.dirname(__file__)
-        exe_file = os.path.join(current_dir, "linux-x86_64.out")
-        core_file = os.path.join(current_dir, "linux-x86_64.core")
+        exe_file = self.getSourcePath("linux-x86_64.out")
+        core_file = self.getSourcePath("linux-x86_64.core")
+        current_dir = self.getSourceDir()
 
-        self.create_debug_adapter()
+        session = self.create_session()
+        process_event = session.attach(
+            AttachArgs(
+                program=exe_file,
+                coreFile=core_file,
+                sourceMap={"/home/labath/test": current_dir},
+            )
+        )
 
-        source_map = {"/home/labath/test": current_dir}
-        self.attach(program=exe_file, coreFile=core_file, sourceMap=source_map)
-
-        self.assertIn(current_dir, self.get_stackFrames()[0]["source"]["path"])
+        stop_event = session.verify_stopped_on_exception(after=process_event)
+        top_frame = session.top_frame_from(stop_event).frame
+        top_source = self.expect_not_none(top_frame.source and top_frame.source.path)
+        self.assertIn(current_dir, top_source)

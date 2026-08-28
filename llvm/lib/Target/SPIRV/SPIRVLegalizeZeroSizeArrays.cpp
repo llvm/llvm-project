@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -346,8 +345,8 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
 
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeZeroSizeArrays::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeZeroSizeArraysPass::run(Module &M, ModuleAnalysisManager &AM) {
   SPIRVLegalizeZeroSizeArraysImpl Impl(TM);
   if (Impl.runOnModule(M))
     return PreservedAnalyses::none();

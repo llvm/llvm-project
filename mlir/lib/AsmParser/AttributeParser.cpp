@@ -339,6 +339,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
 
 /// Parse a float attribute.
 Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
+  SMLoc loc = getToken().getLoc();
   auto val = getToken().getFloatingPointValue();
   if (!val)
     return (emitError("floating point value too large for attribute"), nullptr);
@@ -352,6 +353,14 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
   }
   if (!isa<FloatType>(type))
     return (emitError("floating point value not valid for specified type"),
+            nullptr);
+  // A type with no signed representation, such as f8E8M0FNU, has no encoding
+  // for a negative value. The conversion inside FloatAttr::get keeps the sign
+  // bit, and printing the attribute that comes out of it asserts.
+  if (isNegative && !APFloat::semanticsHasSignedRepr(
+                        cast<FloatType>(type).getFloatSemantics()))
+    return (emitError(loc, "negative floating point literal for a type with no "
+                           "signed representation"),
             nullptr);
   return FloatAttr::get(type, isNegative ? -*val : *val);
 }

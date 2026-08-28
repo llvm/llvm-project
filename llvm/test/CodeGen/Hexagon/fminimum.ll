@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: fminimum_vec32f32
 define float @fminimum_vec32f32(<32 x float> %vec) {

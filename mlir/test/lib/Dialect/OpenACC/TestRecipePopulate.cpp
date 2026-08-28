@@ -62,7 +62,7 @@ void TestRecipePopulatePass::runOnOperation() {
   SmallVector<std::tuple<Operation *, Value, std::string>> testVars;
 
   module.walk([&](Operation *op) {
-    if (auto varName = op->getAttrOfType<StringAttr>("test.var")) {
+    if (auto varName = op->getDiscardableAttrOfType<StringAttr>("test.var")) {
       for (auto result : op->getResults()) {
         testVars.push_back({op, result, varName.str()});
       }

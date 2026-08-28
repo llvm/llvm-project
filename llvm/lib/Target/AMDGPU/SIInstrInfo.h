@@ -425,6 +425,9 @@ public:
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
                        Register TrueReg, Register FalseReg, int &CondCycles,

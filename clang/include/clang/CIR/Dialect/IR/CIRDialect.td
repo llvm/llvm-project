@@ -36,6 +36,8 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
+    static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
@@ -81,6 +83,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
     static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
+    // Mangled symbol name of the C++20 named-module initializer function,
+    // precomputed by CIRGen so later passes don't need a live ASTContext.
+    static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

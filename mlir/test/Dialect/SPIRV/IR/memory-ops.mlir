@@ -35,6 +35,17 @@ func.func @access_chain_2D_array_2(%arg0 : i32) -> () {
   return
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChain
+//===----------------------------------------------------------------------===//
+
+func.func @inbounds_access_chain(%arg0 : i32) -> () {
+  %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  %1 = spirv.InBoundsAccessChain %0[%arg0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
+  return
+}
+
 func.func @access_chain_rtarray(%arg0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.rtarray<f32>, Function>
   // CHECK: spirv.AccessChain {{.*}}[{{.*}}] : !spirv.ptr<!spirv.rtarray<f32>, Function>

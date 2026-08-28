@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -enable-ipra=0 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -enable-ipra=0 < %s | FileCheck -check-prefix=GCN %s
 
 ; Functions that don't make calls should have constants as its resource usage as no resource information has to be propagated.
 

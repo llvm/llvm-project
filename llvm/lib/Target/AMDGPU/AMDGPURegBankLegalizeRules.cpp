@@ -21,7 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;

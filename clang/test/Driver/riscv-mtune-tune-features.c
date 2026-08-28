@@ -42,3 +42,9 @@
 // RUN:     FileCheck --check-prefix=UNSUPPORTED-DIRECTIVE %s
 // UNSUPPORTED-DIRECTIVE: invalid tune feature string 'prefer-w-inst':
 // UNSUPPORTED-DIRECTIVE-SAME: Directive 'prefer-w-inst' is not allowed to be used with processor 'sifive-x280'
+
+// RUN: not %clang --target=riscv64 -mexperimental-mtune-syntax \
+// RUN:     -mtune=native:full-vec-fp64 -c %s 2>&1 | \
+// RUN:     FileCheck --check-prefix=NO-DIRECTIVE-NATIVE %s
+// NO-DIRECTIVE-NATIVE: invalid tune feature string 'full-vec-fp64':
+// NO-DIRECTIVE-NATIVE-SAME: Processor 'native' has no configurable tuning features

@@ -8,6 +8,7 @@
 
 #include "clang/ScalableStaticAnalysis/Frontend/SourceTransformationFrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/MultiplexConsumer.h"

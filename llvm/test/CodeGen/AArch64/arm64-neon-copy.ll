@@ -1040,18 +1040,11 @@ define <1 x i64> @test_bitcastv2f32tov1f64(<2 x float> %a) #0 {
 }
 
 define <8 x i8> @test_bitcastv1f64tov8i8(<1 x i64> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv1f64tov8i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    scvtf d0, d0
-; CHECK-SD-NEXT:    neg v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv1f64tov8i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    scvtf d0, d0
-; CHECK-GI-NEXT:    neg v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv1f64tov8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, d0
+; CHECK-NEXT:    neg v0.8b, v0.8b
+; CHECK-NEXT:    ret
   %vcvt.i = sitofp <1 x i64> %a to <1 x double>
   %1 = bitcast <1 x double> %vcvt.i to <8 x i8>
   %sub.i = sub <8 x i8> zeroinitializer, %1
@@ -1059,18 +1052,11 @@ define <8 x i8> @test_bitcastv1f64tov8i8(<1 x i64> %a) #0 {
 }
 
 define <4 x i16> @test_bitcastv1f64tov4i16(<1 x i64> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv1f64tov4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    scvtf d0, d0
-; CHECK-SD-NEXT:    neg v0.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv1f64tov4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    scvtf d0, d0
-; CHECK-GI-NEXT:    neg v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv1f64tov4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, d0
+; CHECK-NEXT:    neg v0.4h, v0.4h
+; CHECK-NEXT:    ret
   %vcvt.i = sitofp <1 x i64> %a to <1 x double>
   %1 = bitcast <1 x double> %vcvt.i to <4 x i16>
   %sub.i = sub <4 x i16> zeroinitializer, %1
@@ -1078,18 +1064,11 @@ define <4 x i16> @test_bitcastv1f64tov4i16(<1 x i64> %a) #0 {
 }
 
 define <2 x i32> @test_bitcastv1f64tov2i32(<1 x i64> %a) #0 {
-; CHECK-SD-LABEL: test_bitcastv1f64tov2i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    scvtf d0, d0
-; CHECK-SD-NEXT:    neg v0.2s, v0.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_bitcastv1f64tov2i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    scvtf d0, d0
-; CHECK-GI-NEXT:    neg v0.2s, v0.2s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_bitcastv1f64tov2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, d0
+; CHECK-NEXT:    neg v0.2s, v0.2s
+; CHECK-NEXT:    ret
   %vcvt.i = sitofp <1 x i64> %a to <1 x double>
   %1 = bitcast <1 x double> %vcvt.i to <2 x i32>
   %sub.i = sub <2 x i32> zeroinitializer, %1
@@ -1099,7 +1078,6 @@ define <2 x i32> @test_bitcastv1f64tov2i32(<1 x i64> %a) #0 {
 define <1 x i64> @test_bitcastv1f64tov1i64(<1 x i64> %a) #0 {
 ; CHECK-SD-LABEL: test_bitcastv1f64tov1i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    scvtf d0, d0
 ; CHECK-SD-NEXT:    neg d0, d0
 ; CHECK-SD-NEXT:    ret
@@ -1120,7 +1098,6 @@ define <1 x i64> @test_bitcastv1f64tov1i64(<1 x i64> %a) #0 {
 define <2 x float> @test_bitcastv1f64tov2f32(<1 x i64> %a) #0 {
 ; CHECK-LABEL: test_bitcastv1f64tov2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    fneg v0.2s, v0.2s
 ; CHECK-NEXT:    ret

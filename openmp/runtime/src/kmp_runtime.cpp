@@ -459,6 +459,15 @@ void __kmp_warn(char const *format, ...) {
 }
 
 void __kmp_abort_process() {
+  // A failed assertion or fatal error raised from inside the abort path itself
+  // re-enters this function on the same thread. __kmp_exit_lock is not
+  // recursive, so re-acquiring it below would hang the process instead of
+  // terminating it. Terminate directly on re-entry.
+  static KMP_THREAD_LOCAL bool aborting = false;
+  if (aborting)
+    abort();
+  aborting = true;
+
   // Later threads may stall here, but that's ok because abort() will kill them.
   __kmp_acquire_bootstrap_lock(&__kmp_exit_lock);
 
@@ -6917,6 +6926,13 @@ void __kmp_register_library_startup(void) {
 } // func __kmp_register_library_startup
 
 void __kmp_unregister_library(void) {
+
+  // The library can be torn down before it ever registered itself, e.g. when
+  // __kmp_abort_process() runs for a fatal error raised during environment
+  // parsing. There is nothing to unregister then, and __kmp_registration_str
+  // is still NULL, so the strcmp() below would dereference it.
+  if (__kmp_registration_flag == 0)
+    return;
 
   char *name = __kmp_reg_status_name();
   char *value = NULL;

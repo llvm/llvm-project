@@ -130,6 +130,8 @@ public:
   virtual void setUseMD5() {}
   virtual void setPartialProfile() {}
   virtual void setUseCtxSplitLayout() {}
+  virtual void setUseMD5ProfileSymbolList() {}
+  virtual void setUseMD5IndexedTables() {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -264,18 +266,21 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecProfileSymbolList, 0, 0, 0, 0},
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
         // CtxSplitLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
-                                          {SecNameTable, 0, 0, 0, 0},
-                                          // profile with inlined functions
-                                          // for next two sections
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          // profile without inlined functions
-                                          // for next two sections
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          {SecProfileSymbolList, 0, 0, 0, 0},
-                                          {SecFuncMetadata, 0, 0, 0, 0}}),
+        SmallVector<SecHdrTableEntry, 8>(
+            {{SecProfSummary, 0, 0, 0, 0},
+             {SecNameTable, 0, 0, 0, 0},
+             // profile with inlined functions
+             // for next two sections
+             {SecFuncOffsetTable, 0, 0, 0, 0},
+             {SecLBRProfile, 0, 0, 0, 0},
+             // profile without inlined functions
+             // for next two sections
+             {SecFuncOffsetTable,
+              static_cast<uint64_t>(SecCommonFlags::SecFlagFlat), 0, 0, 0},
+             {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
+              0, 0, 0},
+             {SecProfileSymbolList, 0, 0, 0, 0},
+             {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
 class LLVM_ABI SampleProfileWriterExtBinaryBase
@@ -313,6 +318,10 @@ public:
     resetSecLayout(SectionLayout::CtxSplitLayout);
   }
 
+  void setUseMD5ProfileSymbolList() override { UseMD5ProfSymList = true; }
+
+  void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
+
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
@@ -337,11 +346,6 @@ protected:
         addSecFlag(Entry, Flag);
     }
   }
-  template <class SecFlagType>
-  void addSectionFlag(uint32_t SectionIdx, SecFlagType Flag) {
-    addSecFlag(SectionHdrLayout[SectionIdx], Flag);
-  }
-
   void addContext(const SampleContext &Context) override;
 
   // placeholder for subclasses to dispatch their own section writers.
@@ -352,9 +356,12 @@ protected:
   // specify the order to write sections.
   virtual std::error_code writeSections(const SampleProfileMap &ProfileMap) = 0;
 
-  // Dispatch section writer for each section. \p LayoutIdx is the sequence
-  // number indicating where the section is located in SectionHdrLayout.
-  virtual std::error_code writeOneSection(SecType Type, uint32_t LayoutIdx,
+  // Find the first unwritten entry in SectionHdrLayout matching Type, returning
+  // its layout index.
+  unsigned findUnwrittenEntry(SecType Type);
+
+  // Dispatch section writer for each section.
+  virtual std::error_code writeOneSection(SecType Type,
                                           const SampleProfileMap &ProfileMap);
 
   // Helper function to write name table.
@@ -421,6 +428,12 @@ private:
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
+  // Whether to write the profile symbol list as 64-bit MD5 hashes in Eytzinger
+  // layout.
+  bool UseMD5ProfSymList = false;
+  // Whether to write MD5-based indexed NameTable and parallel FuncOffsetTable
+  // in Eytzinger layout.
+  bool UseMD5IndexedTables = false;
   size_t NumNested = 0;
   size_t NumFlat = 0;
 

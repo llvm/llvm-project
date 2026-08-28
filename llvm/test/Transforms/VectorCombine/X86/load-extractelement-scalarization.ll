@@ -7,7 +7,7 @@ define void @multiple_extract(ptr %p) {
 ; CHECK-LABEL: @multiple_extract(
 ; CHECK-NEXT:    [[VP:%.*]] = load ptr, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[VP]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i64 0, i64 1
 ; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i32 [[E0]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
@@ -59,4 +59,49 @@ define i64 @dont_scalarize_atomic_bitcast(ptr %p) {
   %load = load atomic <2 x i32>, ptr %p seq_cst, align 8
   %bitcast = bitcast <2 x i32> %load to i64
   ret i64 %bitcast
+}
+
+define i8 @load_extract_narrow_unsigned_constant(ptr %p) {
+; CHECK-LABEL: @load_extract_narrow_unsigned_constant(
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 8
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P8]], align 1
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %v = load <16 x i8>, ptr %p, align 1
+  %x = extractelement <16 x i8> %v, i4 -8
+  ret i8 %x
+}
+
+define i8 @load_extract_narrow_unsigned_dynamic(ptr %p, i4 noundef %idx) {
+; CHECK-LABEL: @load_extract_narrow_unsigned_dynamic(
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX:%.*]], -1
+; CHECK-NEXT:    [[GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P:%.*]], i64 0, i64 [[GEPIDX]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %bounded = urem i4 %idx, -1
+  %v = load <15 x i8>, ptr %p, align 1
+  %x = extractelement <15 x i8> %v, i4 %bounded
+  ret i8 %x
+}
+
+; The dynamic zext makes scalarization no cheaper for code size. Keep the
+; vector load and extracts, and do not leave an orphan cast behind.
+define float @load_extract_narrow_unsigned_dynamic_unprofitable(
+    ptr %p, i2 noundef %idx) optsize {
+; CHECK-LABEL: @load_extract_narrow_unsigned_dynamic_unprofitable(
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i2 [[IDX:%.*]], -1
+; CHECK-NEXT:    [[V:%.*]] = load <3 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[X:%.*]] = extractelement <3 x float> [[V]], i2 [[BOUNDED]]
+; CHECK-NEXT:    [[Y:%.*]] = extractelement <3 x float> [[V]], i2 0
+; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %bounded = urem i2 %idx, -1
+  %v = load <3 x float>, ptr %p, align 1
+  %x = extractelement <3 x float> %v, i2 %bounded
+  %y = extractelement <3 x float> %v, i2 0
+  %sum = fadd float %x, %y
+  ret float %sum
 }

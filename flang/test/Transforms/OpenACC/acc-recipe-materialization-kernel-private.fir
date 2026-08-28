@@ -22,8 +22,8 @@ func.func @kpriv_(%arg0: !fir.ref<i32> {fir.bindc_name = "start"}, %arg1: !fir.r
   %7 = fir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFkprivEstart"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %8 = fir.load %7 : !fir.ref<i32>
   fir.store %8 to %6 : !fir.ref<i32>
-  %9 = acc.copyin varPtr(%2 : !fir.ref<!fir.array<32xi32>>) -> !fir.ref<!fir.array<32xi32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "a"}
-  %10 = acc.private varPtr(%6 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "s"}
+  %9 = acc.copyin varPtr(%2 : !fir.ref<!fir.array<32xi32>>) dataClause(acc_copy) implicit(true) name("a") -> !fir.ref<!fir.array<32xi32>>
+  %10 = acc.private varPtr(%6 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("s") -> !fir.ref<i32>
   acc.kernels dataOperands(%9 : !fir.ref<!fir.array<32xi32>>) private(%10 : !fir.ref<i32>) {
     %11 = fir.shape %c32 : (index) -> !fir.shape<1>
     acc.loop control(%arg2 : index) = (%c1 : index) to (%c32 : index) step (%c1 : index) {
@@ -37,9 +37,9 @@ func.func @kpriv_(%arg0: !fir.ref<i32> {fir.bindc_name = "start"}, %arg1: !fir.r
       %18 = fir.array_coor %9(%11) %17 : (!fir.ref<!fir.array<32xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
       fir.store %15 to %18 : !fir.ref<i32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.terminator
   }
-  acc.copyout accPtr(%9 : !fir.ref<!fir.array<32xi32>>) to varPtr(%2 : !fir.ref<!fir.array<32xi32>>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "a"}
+  acc.copyout accPtr(%9 : !fir.ref<!fir.array<32xi32>>) to varPtr(%2 : !fir.ref<!fir.array<32xi32>>) dataClause(acc_copy) implicit(true) name("a")
   return
 }

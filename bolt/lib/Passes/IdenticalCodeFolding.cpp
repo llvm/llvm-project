@@ -384,8 +384,8 @@ namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   for (const auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
-    if (!Data->getName().starts_with("_ZTV") && // vtable
-        !Data->getName().starts_with("_ZTCN"))  // construction vtable
+    if (!Data->nameStartsWith("_ZTV") && // vtable
+        !Data->nameStartsWith("_ZTCN"))  // construction vtable
       continue;
     for (uint64_t I = Address, End = I + Data->getSize(); I < End;
          I += VTableAddressGranularity)

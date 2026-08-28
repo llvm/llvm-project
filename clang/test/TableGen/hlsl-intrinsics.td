@@ -442,6 +442,31 @@ def test_17_shape_arg : HLSLBuiltin<"shapearg", "__builtin_shapearg"> {
 // ALIAS-NOT: shapearg
 
 //===----------------------------------------------------------------------===//
+// Dependent-size vector template overload.
+// Exercises: VaryingLongVector emission after concrete vector overloads.
+//===----------------------------------------------------------------------===//
+
+def test_18_long_vector : HLSLBuiltin<"longvec", "__builtin_longvec"> {
+  let Args = [Varying];
+  let ReturnType = Varying;
+  let VaryingVecSizes = [4];
+  let VaryingLongVector = 1;
+  let VaryingTypes = [IntTy];
+  let Availability = SM6_0;
+}
+
+// ALIAS-LABEL: // longvec overloads
+// ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_longvec)
+// ALIAS-NEXT: int4 longvec(int4);
+// ALIAS-NEXT: template <int N>
+// ALIAS-NEXT: _HLSL_AVAILABILITY(shadermodel, 6.0)
+// ALIAS-NEXT: _HLSL_BUILTIN_ALIAS(__builtin_longvec)
+// ALIAS-NEXT: vector<__detail::enable_if_t<(N > 4), int>, N> longvec(vector<__detail::enable_if_t<(N > 4), int>, N>);
+//
+// ALIAS-NOT: longvec
+
+//===----------------------------------------------------------------------===//
 // Verify no alias intrinsics are generated in the inline header.
 //===----------------------------------------------------------------------===//
 
@@ -461,6 +486,7 @@ def test_17_shape_arg : HLSLBuiltin<"shapearg", "__builtin_shapearg"> {
 // INLINE-NOT: shapesorted
 // INLINE-NOT: elemarg
 // INLINE-NOT: shapearg
+// INLINE-NOT: longvec
 
 //===----------------------------------------------------------------------===//
 // Verify no inline intrinsics are generated in the alias header.

@@ -43,7 +43,7 @@
 
 // CHECK: [[CLANG]] "-cc1" "-triple" {{".*"}} "-aux-triple" "[[TRIPLE]]"
 // CHECK-SAME: "-emit-obj"
-// CHECK-SAME: "-fcuda-include-gpubinary" "[[BUNDLE]]"
+// CHECK-SAME: "-foffload-include-binary" "[[BUNDLE]]"
 // CHECK-SAME: "-o" [[OBJ_HOST:".*o"]] "-x" "hip"
 
 // OLD: {{".*ld.*"}} {{.*}}[[OBJ_HOST]]

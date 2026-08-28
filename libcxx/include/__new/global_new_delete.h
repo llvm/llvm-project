@@ -25,7 +25,7 @@
 #endif
 
 #if defined(_LIBCPP_ABI_VCRUNTIME)
-#  include <new.h>
+#  include <vcruntime_new.h>
 #else
 [[__nodiscard__]] _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz) _THROW_BAD_ALLOC;
 [[__nodiscard__]] _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, const std::nothrow_t&) _NOEXCEPT

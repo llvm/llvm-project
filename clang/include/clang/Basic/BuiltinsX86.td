@@ -129,7 +129,7 @@ let Features = "sse", Header = "xmmintrin.h", Attributes = [NoThrow, RequireDecl
   def _mm_getcsr : X86LibBuiltin<"unsigned int()">;
 }
 
-let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtss2si : X86Builtin<"int(_Vector<4, float>)">;
   def cvttss2si : X86Builtin<"int(_Vector<4, float>)">;
 }
@@ -179,7 +179,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVecto
   def cvtsd2ss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<2, double>, _Vector<4, float>, unsigned char, _Constant int)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtpd2dq : X86Builtin<"_Vector<4, int>(_Vector<2, double>)">;
   def cvttpd2dq : X86Builtin<"_Vector<4, int>(_Vector<2, double>)">;
   def cvtsd2si : X86Builtin<"int(_Vector<2, double>)">;
@@ -475,6 +475,9 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
   def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
   def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
+}
+
+let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cvtps2dq256 : X86Builtin<"_Vector<8, int>(_Vector<8, float>)">;
   def cvttpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
   def cvtpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;

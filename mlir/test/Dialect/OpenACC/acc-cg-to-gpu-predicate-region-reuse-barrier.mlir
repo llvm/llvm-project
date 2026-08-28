@@ -17,8 +17,8 @@
 func.func @reuse_barrier_in_block_seq_loop() {
   %c256_pw = arith.constant 256 : index
   %c1024_pw = arith.constant 1024 : index
-  %par_bx = acc.par_width %c256_pw {par_dim = #acc.par_dim<block_x>}
-  %par_tx = acc.par_width %c1024_pw {par_dim = #acc.par_dim<thread_x>}
+  %par_bx = acc.par_width %c256_pw par_dim(#acc.par_dim<block_x>)
+  %par_tx = acc.par_width %c1024_pw par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv0 = acc.privatize : () -> !acc.private_type<memref<i64>>
     acc.compute_region launch(%grid = %par_bx, %block = %par_tx) ins(%arg10 = %priv0) : (!acc.private_type<memref<i64>>) {
@@ -42,7 +42,7 @@ func.func @reuse_barrier_in_block_seq_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -56,8 +56,8 @@ func.func @reuse_barrier_in_block_seq_loop() {
 func.func @no_reuse_barrier_outside_seq_loop() {
   %c256_pw = arith.constant 256 : index
   %c1024_pw = arith.constant 1024 : index
-  %par_bx = acc.par_width %c256_pw {par_dim = #acc.par_dim<block_x>}
-  %par_tx = acc.par_width %c1024_pw {par_dim = #acc.par_dim<thread_x>}
+  %par_bx = acc.par_width %c256_pw par_dim(#acc.par_dim<block_x>)
+  %par_tx = acc.par_width %c1024_pw par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv0 = acc.privatize : () -> !acc.private_type<memref<i64>>
     acc.compute_region launch(%grid = %par_bx, %block = %par_tx) ins(%arg10 = %priv0) : (!acc.private_type<memref<i64>>) {
@@ -77,7 +77,7 @@ func.func @no_reuse_barrier_outside_seq_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

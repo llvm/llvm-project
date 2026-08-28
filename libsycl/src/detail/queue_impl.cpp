@@ -153,8 +153,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-// Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
-static std::pair<ol_device_handle_t, bool> getAllocDevice(const void *ptr) {
+static ol_device_handle_t getAllocDevice(const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
@@ -163,13 +162,13 @@ static std::pair<ol_device_handle_t, bool> getAllocDevice(const void *ptr) {
   if (detail::isFailed(Result)) {
     // If liboffload could not find the allocation, assume it is a host one.
     if (Result->Code == OL_ERRC_NOT_FOUND) {
-      return {getHostOLDevice(), true};
+      return getHostOLDevice();
     }
     checkAndThrow(Result);
   }
 
   assert(Device);
-  return {Device, false};
+  return Device;
 }
 
 std::shared_ptr<EventImpl>
@@ -186,20 +185,38 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                           "Nullptr argument in memcpy operation");
   }
 
-  auto [DestOLDevice, IsDestOLDeviceHost] = getAllocDevice(Dest);
-  auto [SrcOLDevice, IsSrcOLDeviceHost] = getAllocDevice(Src);
-
-  // TODO: Currently, liboffload does not let us specify a queue for
-  // host-to-host cases, which means that the operation would be synchronous and
-  // any implicit dependencies wouldn't be respected for an in-order queue.
-  if (IsDestOLDeviceHost && IsSrcOLDeviceHost)
-    throw sycl::exception(
-        sycl::make_error_code(sycl::errc::feature_not_supported),
-        "Host-to-host copy is not implemented yet");
+  ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
+  ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
                NumBytes);
+  return createEvent();
+}
+
+EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+                                 const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+
+  if (NumBytes == 0) {
+    handleEventDependencies(DepEvents);
+    return createEvent();
+  }
+  if (!Ptr) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in prefetch operation");
+  }
+
+  constexpr std::size_t Count = 1;
+  const void *Mems[] = {Ptr};
+  const std::size_t Sizes[] = {NumBytes};
+
+  constexpr ol_mem_migration_flags_t Flag =
+      OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
+
   return createEvent();
 }
 

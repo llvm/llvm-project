@@ -384,6 +384,28 @@ LogicalResult ExtfOp::verify() {
   return success();
 }
 
+LogicalResult BitcastShuffleOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type resTy = getRes().getType();
+  auto srcVecTy = dyn_cast<VectorType>(srcTy);
+  auto resVecTy = dyn_cast<VectorType>(resTy);
+  // Only a pack (vector -> scalar) and an unpack (scalar -> vector) are
+  // supported, so exactly one side is a vector.
+  if (static_cast<bool>(srcVecTy) == static_cast<bool>(resVecTy))
+    return emitOpError("expected exactly one of src and res to be a vector: a "
+                       "pack takes a vector and returns a scalar, an unpack "
+                       "takes a scalar and returns a vector");
+
+  auto getTotalBitWidth = [](Type ty) -> unsigned {
+    if (auto vecTy = dyn_cast<VectorType>(ty))
+      return vecTy.getNumElements() * vecTy.getElementTypeBitWidth();
+    return ty.getIntOrFloatBitWidth();
+  };
+  if (getTotalBitWidth(srcTy) != getTotalBitWidth(resTy))
+    return emitOpError("src and res types must have the same total bit width");
+  return success();
+}
+
 LogicalResult
 XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,

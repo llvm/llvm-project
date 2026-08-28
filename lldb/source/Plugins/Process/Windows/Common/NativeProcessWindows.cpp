@@ -232,13 +232,15 @@ Status NativeProcessWindows::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return ProcessDebugger::GetMemoryRegionInfo(load_addr, range_info);
 }
 
-Status NativeProcessWindows::ReadMemory(lldb::addr_t addr, void *buf,
-                                        size_t size, size_t &bytes_read) {
+Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
+                                        void *buf, size_t size,
+                                        size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 
-Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessWindows::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 

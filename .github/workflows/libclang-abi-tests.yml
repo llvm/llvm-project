@@ -37,15 +37,9 @@ jobs:
       LLVM_VERSION_MINOR: ${{ steps.version.outputs.minor }}
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
-      - name: Checkout source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          fetch-depth: 250
-
       - name: Get LLVM version
         id: version
-        uses: ./.github/workflows/get-llvm-version
+        uses: $/.github/workflows/get-llvm-version
 
       - name: Setup Variables
         id: vars

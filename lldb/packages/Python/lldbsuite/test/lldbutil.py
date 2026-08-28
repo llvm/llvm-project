@@ -22,6 +22,7 @@ import lldb
 from . import lldbtest_config
 from . import configuration
 from lldbsuite.test.gdbclientutils import escape_binary
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -2006,6 +2007,17 @@ def send_packet_get_reply(test, packet_str):
 def get_qsupported_capabilities(test):
     reply = send_packet_get_reply(test, "qSupported")
     return reply.strip().split(";")
+
+
+def require_qsupported_capability(test, capability):
+    """Require *capability* in the stub's qSupported reply.  Requires a live
+    process.  Our own stub must advertise it, so a miss is a failure; a stub we
+    did not build can lack the feature, and the test is UNSUPPORTED."""
+    if capability in get_qsupported_capabilities(test):
+        return
+    if not lldbtest_config.out_of_tree_debugserver:
+        test.fail(f"stub built from this tree does not advertise {capability}")
+    test.skipTest(UnsupportedReason(f"stub does not support {capability}"))
 
 
 def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):

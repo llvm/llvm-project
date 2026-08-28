@@ -2339,13 +2339,17 @@ def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic<[IntrSpeculatable]
 // Reinterpreting data
 //
 
-def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                                    [llvm_nxv16i1_ty],
-                                                    [IntrNoMem, IntrSpeculatable]>;
+def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<
+    [llvm_anyvector_ty], [llvm_nxv16i1_ty], [IntrNoMem, IntrSpeculatable]>;
 
-def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                                                  [llvm_any_ty],
-                                                  [IntrNoMem, IntrSpeculatable]>;
+def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<
+    [llvm_nxv16i1_ty], [llvm_anyvector_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_aarch64_sve_convert_from_svcount : DefaultAttrsIntrinsic<
+    [llvm_nxv16i1_ty], [llvm_aarch64_svcount_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_aarch64_sve_convert_to_svcount : DefaultAttrsIntrinsic<
+    [llvm_aarch64_svcount_ty], [llvm_nxv16i1_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Gather loads: scalar base + vector offsets
@@ -3281,8 +3285,8 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                              [llvm_nxv16i1_ty,
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>,
                                llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 

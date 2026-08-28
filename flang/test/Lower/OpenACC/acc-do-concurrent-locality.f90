@@ -25,9 +25,9 @@ subroutine reduce_kernels_region()
 end subroutine
 
 ! CHECK: acc.kernels {
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
 ! Scalar reduction in parallel region (no explicit loop → independent)
 ! CHECK-LABEL: func.func @_QPreduce_parallel_region
@@ -43,9 +43,9 @@ subroutine reduce_parallel_region()
 end subroutine
 
 ! CHECK: acc.parallel {
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
 ! Combined kernels loop with reduce (auto)
 ! CHECK-LABEL: func.func @_QPreduce_kernels_loop
@@ -61,9 +61,9 @@ subroutine reduce_kernels_loop()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK: } inclusiveUpperbound(array<i1: true, true>) auto_
 
 ! Combined parallel loop with reduce (independent)
 ! CHECK-LABEL: func.func @_QPreduce_parallel_loop
@@ -78,9 +78,9 @@ subroutine reduce_parallel_loop()
 end subroutine
 
 ! CHECK: acc.parallel combined(loop)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(parallel) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
 ! Multiple reductions (add + multiply)
 ! CHECK-LABEL: func.func @_QPmulti_reduce
@@ -97,8 +97,8 @@ subroutine multi_reduce()
 end subroutine
 
 ! CHECK: acc.parallel combined(loop)
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_mul{{.*}}) -> !fir.ref<f32> {name = "p"}
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_mul{{.*}}) name("p") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(
 
 ! Max/min reductions
@@ -116,8 +116,8 @@ subroutine reduce_max_min()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_max{{.*}}) -> !fir.ref<f32> {name = "mx"}
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_min{{.*}}) -> !fir.ref<f32> {name = "mn"}
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_max{{.*}}) name("mx") -> !fir.ref<f32>
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_min{{.*}}) name("mn") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(
 
 ! Integer multiply reduction
@@ -132,7 +132,7 @@ subroutine int_reduce()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK: acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul{{.*}}) -> !fir.ref<i32> {name = "prod"}
+! CHECK: acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul{{.*}}) name("prod") -> !fir.ref<i32>
 
 ! ---------------------------------------------------------------------------
 ! LOCAL locality spec → acc.private
@@ -152,9 +152,9 @@ subroutine local_kernels_region()
 end subroutine
 
 ! CHECK: acc.kernels {
-! CHECK: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "tmp"}
+! CHECK: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) name("tmp") -> !fir.ref<f32>
 ! CHECK: acc.loop private(%[[PRIV]],
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
 ! LOCAL in parallel region (independent)
 ! CHECK-LABEL: func.func @_QPlocal_parallel_region
@@ -170,9 +170,9 @@ subroutine local_parallel_region()
 end subroutine
 
 ! CHECK: acc.parallel {
-! CHECK: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "tmp"}
+! CHECK: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) name("tmp") -> !fir.ref<f32>
 ! CHECK: acc.loop private(%[[PRIV]],
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
 ! ---------------------------------------------------------------------------
 ! LOCAL_INIT locality spec → acc.firstprivate
@@ -192,9 +192,9 @@ subroutine local_init_kernels_region()
 end subroutine
 
 ! CHECK: acc.kernels {
-! CHECK: %[[FP:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe(@firstprivatization_ref_f32) -> !fir.ref<f32> {name = "scale"}
+! CHECK: %[[FP:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe(@firstprivatization_ref_f32) name("scale") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}firstprivate(%[[FP]] : !fir.ref<f32>)
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
 ! ---------------------------------------------------------------------------
 ! Mixed locality specs: REDUCE + LOCAL
@@ -213,10 +213,10 @@ subroutine mixed_locality()
 end subroutine
 
 ! CHECK: acc.parallel combined(loop)
-! CHECK-DAG: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
-! CHECK-DAG: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "tmp"}
+! CHECK-DAG: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
+! CHECK-DAG: %[[PRIV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<f32>) recipe(@privatization_ref_f32) name("tmp") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
 ! ---------------------------------------------------------------------------
 ! Reduce combined with explicit ACC reduction clause
@@ -236,8 +236,8 @@ subroutine reduce_with_acc_clause()
 end subroutine
 
 ! CHECK: acc.parallel combined(loop)
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s1"}
-! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s2"}
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s1") -> !fir.ref<f32>
+! CHECK-DAG: acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s2") -> !fir.ref<f32>
 ! CHECK: acc.loop {{.*}}reduction(
 
 ! ---------------------------------------------------------------------------
@@ -257,9 +257,9 @@ subroutine reduce_kernels_loop_auto()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
 ! kernels loop seq with reduce
 ! CHECK-LABEL: func.func @_QPreduce_kernels_loop_seq
@@ -274,9 +274,9 @@ subroutine reduce_kernels_loop_seq()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 
 ! kernels loop independent with reduce
 ! CHECK-LABEL: func.func @_QPreduce_kernels_loop_independent
@@ -291,6 +291,6 @@ subroutine reduce_kernels_loop_independent()
 end subroutine
 
 ! CHECK: acc.kernels combined(loop)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) -> !fir.ref<f32> {name = "s"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent

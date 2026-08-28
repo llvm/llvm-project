@@ -3423,9 +3423,6 @@ bool ASTContext::defaultsToMsStruct() const {
          getTargetInfo().getTriple().isWindowsGNUEnvironment();
 }
 
-/// getASTRecordLayout - Get or compute information about the layout of the
-/// specified record (struct/union/class), which indicates its size and field
-/// position information.
 const ASTRecordLayout &
 ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
@@ -3514,7 +3511,10 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   ASTRecordLayouts[D] = NewEntry;
 
-  constexpr uint64_t MaxStructSizeInBytes = 1ULL << 60;
+  // Cap at the target's size_t width (up to 60 bits) so oversized layouts on
+  // narrow targets are diagnosed instead of overflowing size_t in codegen.
+  uint64_t MaxStructSizeInBytes =
+      1ULL << std::min<unsigned>(getTypeSize(getSizeType()), 60);
   CharUnits StructSize = NewEntry->getSize();
   if (static_cast<uint64_t>(StructSize.getQuantity()) >= MaxStructSizeInBytes) {
     getDiagnostics().Report(D->getLocation(), diag::err_struct_too_large)

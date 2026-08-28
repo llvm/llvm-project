@@ -64,6 +64,12 @@ Policy Policy::CreatePublicStateRunningExpression() {
   return p;
 }
 
+Policy Policy::CreateScriptedExtensionCall() {
+  Policy p = PolicyStack::Get().Current();
+  p.capabilities.can_bypass_target_api_mutex = true;
+  return p;
+}
+
 PolicyStack::Guard::~Guard() {
   if (!m_active)
     return;
@@ -108,6 +114,7 @@ void Policy::Dump(Stream &s) const {
   s << " bp_actions=" << capabilities.can_run_breakpoint_actions;
   s << " frame_providers=" << capabilities.can_load_frame_providers;
   s << " frame_recognizers=" << capabilities.can_run_frame_recognizers;
+  s << " bypass_api_mutex=" << capabilities.can_bypass_target_api_mutex;
   s << '}';
 }
 
