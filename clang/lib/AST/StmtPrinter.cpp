@@ -1994,6 +1994,14 @@ void StmtPrinter::VisitShuffleVectorExpr(ShuffleVectorExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitSplatVectorExpr(SplatVectorExpr *Node) {
+  OS << "__builtin_splatvector(";
+  PrintExpr(Node->getSrcExpr());
+  OS << ", ";
+  Node->getType().print(OS, Policy);
+  OS << ")";
+}
+
 void StmtPrinter::VisitConvertVectorExpr(ConvertVectorExpr *Node) {
   OS << "__builtin_convertvector(";
   PrintExpr(Node->getSrcExpr());
