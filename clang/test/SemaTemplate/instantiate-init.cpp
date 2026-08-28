@@ -178,3 +178,13 @@ namespace RebuildStdInitList {
   template<typename U> void f() { PES({1, 2, 3}); }
   void g() { f<int>(); }
 }
+
+namespace StringLiteralDefaultInit {
+  template <unsigned L> struct V {
+    char rest[L] = "at least 18 bytes";
+  };
+  void test() {
+    V<100> v1;
+    V<18> v2;
+  }
+}
