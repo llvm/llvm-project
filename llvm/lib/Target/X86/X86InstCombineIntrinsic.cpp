@@ -16,6 +16,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
@@ -2239,6 +2240,25 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // TODO should we convert this to an AND if the RHS is constant?
     }
     break;
+
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64: {
+    auto *CrcArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    auto *DataArg = dyn_cast<ConstantInt>(II.getArgOperand(1));
+    if (!CrcArg || !DataArg)
+      break;
+
+    // If both operands are constant, we can completely constant fold this.
+    uint32_t Crc = static_cast<uint32_t>(CrcArg->getZExtValue());
+    uint64_t Data = DataArg->getZExtValue();
+    unsigned DataBytes = DataArg->getBitWidth() / 8;
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    const uint32_t Poly = 0x82F63B78;
+    uint32_t Result = calculateReflectedCRC32(Crc, Data, DataBytes, Poly);
+    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
+  }
 
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:

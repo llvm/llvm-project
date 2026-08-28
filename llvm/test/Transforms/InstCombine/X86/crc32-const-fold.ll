@@ -4,8 +4,7 @@
 define i32 @crc32_i8_1() {
 ; CHECK-LABEL: define i32 @crc32_i8_1(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.8(i32 -1, i8 -1)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 16777215
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.8(i32 -1, i8 -1)
   ret i32 %crc
@@ -14,8 +13,7 @@ define i32 @crc32_i8_1() {
 define i32 @crc32_i8_2() {
 ; CHECK-LABEL: define i32 @crc32_i8_2(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.8(i32 44190712, i8 -70)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 -1606234368
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.8(i32 44190712, i8 186)
   ret i32 %crc
@@ -24,8 +22,7 @@ define i32 @crc32_i8_2() {
 define i32 @crc32_i8_3() {
 ; CHECK-LABEL: define i32 @crc32_i8_3(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.8(i32 215343375, i8 -25)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 1776624948
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.8(i32 215343375, i8 231)
   ret i32 %crc
@@ -34,8 +31,7 @@ define i32 @crc32_i8_3() {
 define i32 @crc32_i8_4() {
 ; CHECK-LABEL: define i32 @crc32_i8_4(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.8(i32 1357330872, i8 46)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 -1269171002
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.8(i32 1357330872, i8 46)
   ret i32 %crc
@@ -44,8 +40,7 @@ define i32 @crc32_i8_4() {
 define i32 @crc32_i8_5() {
 ; CHECK-LABEL: define i32 @crc32_i8_5(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.8(i32 1009627414, i8 61)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 -1190655916
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.8(i32 1009627414, i8 61)
   ret i32 %crc
@@ -54,8 +49,7 @@ define i32 @crc32_i8_5() {
 define i32 @crc32_i16_1() {
 ; CHECK-LABEL: define i32 @crc32_i16_1(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.16(i32 -1, i16 -1)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 65535
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.16(i32 -1, i16 -1)
   ret i32 %crc
@@ -64,8 +58,7 @@ define i32 @crc32_i16_1() {
 define i32 @crc32_i16_2() {
 ; CHECK-LABEL: define i32 @crc32_i16_2(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.16(i32 44190712, i16 -11078)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 350827643
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.16(i32 44190712, i16 54458)
   ret i32 %crc
@@ -74,8 +67,7 @@ define i32 @crc32_i16_2() {
 define i32 @crc32_i16_3() {
 ; CHECK-LABEL: define i32 @crc32_i16_3(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.16(i32 215343375, i16 17127)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 1464882880
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.16(i32 215343375, i16 17127)
   ret i32 %crc
@@ -84,8 +76,7 @@ define i32 @crc32_i16_3() {
 define i32 @crc32_i16_4() {
 ; CHECK-LABEL: define i32 @crc32_i16_4(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.16(i32 1357330872, i16 14382)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 1604487598
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.16(i32 1357330872, i16 14382)
   ret i32 %crc
@@ -94,8 +85,7 @@ define i32 @crc32_i16_4() {
 define i32 @crc32_i16_5() {
 ; CHECK-LABEL: define i32 @crc32_i16_5(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.16(i32 1009627414, i16 32573)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 -1181930003
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.16(i32 1009627414, i16 32573)
   ret i32 %crc
@@ -104,8 +94,7 @@ define i32 @crc32_i16_5() {
 define i32 @crc32_i32_1() {
 ; CHECK-LABEL: define i32 @crc32_i32_1(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.32(i32 -1, i32 -1)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 0
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.32(i32 -1, i32 -1)
   ret i32 %crc
@@ -114,8 +103,7 @@ define i32 @crc32_i32_1() {
 define i32 @crc32_i32_2() {
 ; CHECK-LABEL: define i32 @crc32_i32_2(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.32(i32 44190712, i32 -209857350)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 2122844148
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.32(i32 44190712, i32 -209857350)
   ret i32 %crc
@@ -124,8 +112,7 @@ define i32 @crc32_i32_2() {
 define i32 @crc32_i32_3() {
 ; CHECK-LABEL: define i32 @crc32_i32_3(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.32(i32 215343375, i32 -2094316825)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 881727033
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.32(i32 215343375, i32 -2094316825)
   ret i32 %crc
@@ -134,8 +121,7 @@ define i32 @crc32_i32_3() {
 define i32 @crc32_i32_4() {
 ; CHECK-LABEL: define i32 @crc32_i32_4(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.32(i32 1357330872, i32 -822396882)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 139192539
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.32(i32 1357330872, i32 -822396882)
   ret i32 %crc
@@ -144,8 +130,7 @@ define i32 @crc32_i32_4() {
 define i32 @crc32_i32_5() {
 ; CHECK-LABEL: define i32 @crc32_i32_5(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i32 @llvm.x86.sse42.crc32.32.32(i32 1009627414, i32 -745242819)
-; CHECK-NEXT:    ret i32 [[CRC]]
+; CHECK-NEXT:    ret i32 1861871255
 ;
   %crc = call i32 @llvm.x86.sse42.crc32.32.32(i32 1009627414, i32 -745242819)
   ret i32 %crc
@@ -154,8 +139,7 @@ define i32 @crc32_i32_5() {
 define i64 @crc32_i64_1() {
 ; CHECK-LABEL: define i64 @crc32_i64_1(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i64 @llvm.x86.sse42.crc32.64.64(i64 -1, i64 -1)
-; CHECK-NEXT:    ret i64 [[CRC]]
+; CHECK-NEXT:    ret i64 3080238136
 ;
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 -1, i64 -1)
   ret i64 %crc
@@ -164,8 +148,7 @@ define i64 @crc32_i64_1() {
 define i64 @crc32_i64_2() {
 ; CHECK-LABEL: define i64 @crc32_i64_2(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i64 @llvm.x86.sse42.crc32.64.64(i64 -6961118521834976264, i64 -8553926960789728070)
-; CHECK-NEXT:    ret i64 [[CRC]]
+; CHECK-NEXT:    ret i64 3230864714
 ;
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 -6961118521834976264, i64 -8553926960789728070)
   ret i64 %crc
@@ -174,8 +157,7 @@ define i64 @crc32_i64_2() {
 define i64 @crc32_i64_3() {
 ; CHECK-LABEL: define i64 @crc32_i64_3(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i64 @llvm.x86.sse42.crc32.64.64(i64 499784758672613647, i64 2608514570853761767)
-; CHECK-NEXT:    ret i64 [[CRC]]
+; CHECK-NEXT:    ret i64 337502055
 ;
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 499784758672613647, i64 2608514570853761767)
   ret i64 %crc
@@ -184,8 +166,7 @@ define i64 @crc32_i64_3() {
 define i64 @crc32_i64_4() {
 ; CHECK-LABEL: define i64 @crc32_i64_4(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i64 @llvm.x86.sse42.crc32.64.64(i64 5774921304237357496, i64 2927024987405236270)
-; CHECK-NEXT:    ret i64 [[CRC]]
+; CHECK-NEXT:    ret i64 712052683
 ;
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 5774921304237357496, i64 2927024987405236270)
   ret i64 %crc
@@ -194,8 +175,7 @@ define i64 @crc32_i64_4() {
 define i64 @crc32_i64_5() {
 ; CHECK-LABEL: define i64 @crc32_i64_5(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CRC:%.*]] = call i64 @llvm.x86.sse42.crc32.64.64(i64 -3762583644562149098, i64 -6300179796582957251)
-; CHECK-NEXT:    ret i64 [[CRC]]
+; CHECK-NEXT:    ret i64 1390230251
 ;
   %crc = call i64 @llvm.x86.sse42.crc32.64.64(i64 -3762583644562149098, i64 -6300179796582957251)
   ret i64 %crc
