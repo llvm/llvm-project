@@ -99,41 +99,6 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
-class SDVTListNode : public FoldingSetNode {
-  friend struct FoldingSetTrait<SDVTListNode>;
-
-  /// A reference to an Interned FoldingSetNodeID for this node.
-  /// The Allocator in SelectionDAG holds the data.
-  /// SDVTList contains all types which are frequently accessed in SelectionDAG.
-  /// The size of this list is not expected to be big so it won't introduce
-  /// a memory penalty.
-  FoldingSetNodeIDRef FastID;
-  const EVT *VTs;
-  unsigned int NumVTs;
-
-public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num)
-      : FastID(ID), VTs(VT), NumVTs(Num) {}
-
-  SDVTList getSDVTList() {
-    SDVTList result = {VTs, NumVTs};
-    return result;
-  }
-};
-
-/// Specialize FoldingSetTrait for SDVTListNode
-/// to avoid computing temp FoldingSetNodeID.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
-  static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
-    ID = X.FastID;
-  }
-
-  static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
-    return ID == X.FastID;
-  }
-};
-
 template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
@@ -246,8 +211,21 @@ class SelectionDAG {
   /// Extended EVTs used for single value VTLists.
   std::set<EVT, EVT::compareRawBits> EVTs;
 
-  /// List of non-single value types.
-  FoldingSet<SDVTListNode> VTListMap;
+  /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
+  /// SDVTList points at, allocated from \p Allocator.
+  struct VTListInfo {
+    static unsigned getHashValue(ArrayRef<EVT> VTs) {
+      unsigned H = VTs.size();
+      for (EVT VT : VTs)
+        H = detail::combineHashValue(
+            H, DenseMapInfo<intptr_t>::getHashValue(VT.getRawBits()));
+      return H;
+    }
+    static bool isEqual(ArrayRef<EVT> LHS, ArrayRef<EVT> RHS) {
+      return LHS == RHS;
+    }
+  };
+  DenseSet<ArrayRef<EVT>, VTListInfo> VTLists;
 
   /// Pool allocation for misc. objects that are created once per SelectionDAG.
   BumpPtrAllocator Allocator;

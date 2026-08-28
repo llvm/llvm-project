@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_NATIVEDYLIBMANAGER_H
-#define ORC_RT_NATIVEDYLIBMANAGER_H
+#ifndef ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
+#define ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
 
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
-#include "orc-rt/bedrock/sps-ci/NativeDylibManagerSPSCI.h"
+#include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 
 #include <optional>
 
@@ -89,4 +89,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_NATIVEDYLIBMANAGER_H
+#endif // ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H

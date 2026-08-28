@@ -126,7 +126,7 @@ template <typename T> struct DefaultFoldingSetTrait {
   // to compute a temporary ID if necessary. The default implementation
   // just calls Profile and does a regular comparison. Implementations
   // can override this to provide more efficient implementations.
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID, unsigned IDHash,
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
                             FoldingSetNodeID &TempID);
 };
 
@@ -151,7 +151,7 @@ template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
     X.Profile(ID, Context);
   }
 
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID, unsigned IDHash,
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
                             FoldingSetNodeID &TempID, Ctx Context);
 };
 
@@ -350,8 +350,7 @@ protected:
     /// Instantiations of the FoldingSet template implement this function to
     /// compare the given node with the given ID.
     bool (*NodeEquals)(const FoldingSetBase *Self, Node *N,
-                       const FoldingSetNodeID &ID, unsigned IDHash,
-                       FoldingSetNodeID &TempID);
+                       const FoldingSetNodeID &ID, FoldingSetNodeID &TempID);
   };
 
 private:
@@ -362,7 +361,7 @@ private:
   /// Compare \p N against \p ID. Out of line to keep FoldingSetNodeID's inline
   /// storage out of the probe loop's frame.
   static bool nodeEquals(const FoldingSetInfo &Info, const FoldingSetBase *Self,
-                         Node *N, const FoldingSetNodeID &ID, unsigned IDHash);
+                         Node *N, const FoldingSetNodeID &ID);
 
   /// Rehash into at least \p MinNumBuckets buckets, rounded up to a power of
   /// two and floored at the constructor's minimum.
@@ -400,15 +399,13 @@ template <class T> class FoldingSetIterator;
 // require the definition of FoldingSetNodeID.
 template <typename T>
 inline bool DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
-                                              unsigned /*IDHash*/,
                                               FoldingSetNodeID &TempID) {
   FoldingSetTrait<T>::Profile(X, TempID);
   return TempID == ID;
 }
 template <typename T, typename Ctx>
 inline bool DefaultContextualFoldingSetTrait<T, Ctx>::Equals(
-    T &X, const FoldingSetNodeID &ID, unsigned /*IDHash*/,
-    FoldingSetNodeID &TempID, Ctx Context) {
+    T &X, const FoldingSetNodeID &ID, FoldingSetNodeID &TempID, Ctx Context) {
   ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
   return TempID == ID;
 }
@@ -435,13 +432,12 @@ class FoldingSetImpl : public FoldingSetBase, public Trait::ContextStorage {
         },
         // NodeEquals
         [](const FoldingSetBase *Base, FoldingSetNode *N,
-           const FoldingSetNodeID &ID, unsigned IDHash,
-           FoldingSetNodeID &TempID) {
+           const FoldingSetNodeID &ID, FoldingSetNodeID &TempID) {
           if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-            return Trait::Equals(*static_cast<T *>(N), ID, IDHash, TempID);
+            return Trait::Equals(*static_cast<T *>(N), ID, TempID);
           else
             return Trait::Equals(
-                *static_cast<T *>(N), ID, IDHash, TempID,
+                *static_cast<T *>(N), ID, TempID,
                 static_cast<const FoldingSetImpl *>(Base)->getContext());
         }};
     return Info;
@@ -623,7 +619,7 @@ public:
 
   T &operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
-    return *static_cast<T *>(*Bucket);
+    return *static_cast<T *>(static_cast<FoldingSetNode *>(*Bucket));
   }
 
   T *operator->() const { return &operator*(); }

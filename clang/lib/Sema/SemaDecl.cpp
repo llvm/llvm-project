@@ -6585,6 +6585,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
           return nullptr;
 
         D.setInvalidType();
+      } else if (CurContext->isRecord() && !CurContext->Equals(DC)) {
+        D.setInvalidType();
       }
     }
 
