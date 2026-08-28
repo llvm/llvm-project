@@ -1435,6 +1435,53 @@ func.func @no_fold_transfer_write_in_bounds_scalable(%m: memref<4xf32>, %v: vect
 
 // -----
 
+// `in_bounds` promises that the transfer stays within the source *including its
+// starting point*, so a negative index is not in bounds even when the end of
+// the transfer would land inside the source. Here `-1 + 4 <= 8` holds, but
+// element `-1` is still read from outside `%m`.
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_negative_index
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<8xf32>, vector<4xf32>
+func.func @no_fold_transfer_read_in_bounds_negative_index(%m: memref<8xf32>, %p: f32) -> vector<4xf32> {
+  %c-1 = arith.constant -1 : index
+  %v = vector.transfer_read %m[%c-1], %p : memref<8xf32>, vector<4xf32>
+  return %v : vector<4xf32>
+}
+
+// -----
+
+// Same for the write path, where the fold would permit a store to element -1.
+
+// CHECK-LABEL: func @no_fold_transfer_write_in_bounds_negative_index
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : vector<4xf32>, memref<8xf32>
+func.func @no_fold_transfer_write_in_bounds_negative_index(%m: memref<8xf32>, %v: vector<4xf32>) {
+  %c-1 = arith.constant -1 : index
+  vector.transfer_write %v, %m[%c-1] : vector<4xf32>, memref<8xf32>
+  return
+}
+
+// -----
+
+// The bound is computed as `sourceSize - vectorSize` rather than
+// `index + vectorSize`, so an index large enough to overflow the addition is
+// still rejected.
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_huge_index
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<8xf32>, vector<4xf32>
+func.func @no_fold_transfer_read_in_bounds_huge_index(%m: memref<8xf32>, %p: f32) -> vector<4xf32> {
+  %c = arith.constant 9223372036854775807 : index
+  %v = vector.transfer_read %m[%c], %p : memref<8xf32>, vector<4xf32>
+  return %v : vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
