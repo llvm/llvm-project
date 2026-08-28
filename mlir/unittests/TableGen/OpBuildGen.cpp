@@ -33,6 +33,15 @@ static MLIRContext &getContext() {
 /// Test fixture for providing basic utilities for testing.
 class OpBuildGenTest : public ::testing::Test {
 protected:
+  static NamedAttrList collectAttrs(Operation *op) {
+    NamedAttrList attrs(op->getDiscardableAttrDictionary());
+    if (op->getPropertiesStorageSize())
+      op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+        attrs.append(name, attr);
+      });
+    return NamedAttrList(attrs.getDictionary(op->getContext()));
+  }
+
   OpBuildGenTest()
       : ctx(getContext()), builder(&ctx), loc(builder.getUnknownLoc()),
         i32Ty(builder.getI32Type()), f32Ty(builder.getF32Type()),
@@ -60,10 +69,10 @@ protected:
     for (unsigned idx : llvm::seq(0U, op->getNumOperands()))
       EXPECT_EQ(op->getOperand(idx), operands[idx]);
 
-    EXPECT_EQ(op->getAttrs().size(), attrs.size());
+    NamedAttrList actualAttrs = collectAttrs(op);
+    EXPECT_EQ(actualAttrs.getAttrs().size(), attrs.size());
     for (unsigned idx : llvm::seq<unsigned>(0U, attrs.size()))
-      EXPECT_EQ(op->getAttr(attrs[idx].getName().strref()),
-                attrs[idx].getValue());
+      EXPECT_EQ(actualAttrs.get(attrs[idx].getName()), attrs[idx].getValue());
 
     EXPECT_TRUE(mlir::succeeded(concreteOp.verify()));
     concreteOp.erase();
@@ -85,11 +94,12 @@ protected:
     for (unsigned idx : llvm::seq(0U, op->getNumOperands()))
       EXPECT_EQ(op->getOperand(idx), operands[idx]);
 
-    EXPECT_EQ(op->getAttrs().size(), attrs.size());
-    if (op->getAttrs().size() != attrs.size()) {
+    NamedAttrList actualAttrs = collectAttrs(op);
+    EXPECT_EQ(actualAttrs.getAttrs().size(), attrs.size());
+    if (actualAttrs.getAttrs().size() != attrs.size()) {
       // Simple export where there is mismatch count.
       llvm::errs() << "Op attrs:\n";
-      for (auto it : op->getAttrs())
+      for (auto it : actualAttrs)
         llvm::errs() << "\t" << it.getName() << " = " << it.getValue() << "\n";
 
       llvm::errs() << "Expected attrs:\n";
@@ -97,8 +107,7 @@ protected:
         llvm::errs() << "\t" << it.getName() << " = " << it.getValue() << "\n";
     } else {
       for (unsigned idx : llvm::seq<unsigned>(0U, attrs.size()))
-        EXPECT_EQ(op->getAttr(attrs[idx].getName().strref()),
-                  attrs[idx].getValue());
+        EXPECT_EQ(actualAttrs.get(attrs[idx].getName()), attrs[idx].getValue());
     }
 
     EXPECT_TRUE(mlir::succeeded(concreteOp.verify()));
