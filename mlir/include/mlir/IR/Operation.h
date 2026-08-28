@@ -946,7 +946,7 @@ public:
 
   // Emit a remark about this operation for each message, reporting up to
   /// any diagnostic handlers that may be listening.
-  InFlightDiagnostic emitRemark(const ArrayRef<Twine> messages);
+  std::vector<InFlightDiagnostic> emitRemark(const ArrayRef<Twine> messages);
 
   /// Returns the properties storage size.
   int getPropertiesStorageSize() const {

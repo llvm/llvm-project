@@ -291,16 +291,16 @@ InFlightDiagnostic Operation::emitRemark(const Twine &message) {
 
 /// Emit a remark about this operation for each message, reporting up to
 /// any diagnostic handlers that may be listening.
-InFlightDiagnostic Operation::emitRemark(const ArrayRef<Twine> messages) {
-  assert(!messages.empty() && "emitRemark messages is empty");
+std::vector<InFlightDiagnostic>
+Operation::emitRemark(const ArrayRef<Twine> messages) {
+  std::vector<InFlightDiagnostic> diags;
   for (size_t i = 0, e = messages.size(); i < e; ++i) {
     InFlightDiagnostic diag = mlir::emitRemark(getLoc(), messages[i]);
-    if (i == e - 1 && getContext()->shouldPrintOpOnDiagnostic()) {
+    if (i == e - 1 && getContext()->shouldPrintOpOnDiagnostic())
       diag.attachNote(getLoc()) << "see current operation: " << *this;
-      return diag;
-    }
+    diags.push_back(std::move(diag));
   }
-  return {};
+  return diags;
 }
 
 DictionaryAttr Operation::getAttrDictionary() {
@@ -871,7 +871,8 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 
 /// Emit a remark about this operation for each message, reporting up to
 /// any diagnostic handlers that may be listening.
-InFlightDiagnostic OpState::emitRemark(const ArrayRef<Twine> messages) {
+std::vector<InFlightDiagnostic>
+OpState::emitRemark(const ArrayRef<Twine> messages) {
   return getOperation()->emitRemark(messages);
 }
 
