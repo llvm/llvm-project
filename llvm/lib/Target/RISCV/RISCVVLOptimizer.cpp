@@ -54,10 +54,10 @@ struct DemandedVL {
     return !VL.isIdenticalTo(Other.VL);
   }
 
-  DemandedVL max(const DemandedVL &X) const {
-    if (RISCV::isVLKnownLE(VL, X.VL))
+  DemandedVL max(const MachineRegisterInfo &MRI, const DemandedVL &X) const {
+    if (RISCV::isVLKnownLE(MRI, VL, X.VL))
       return X;
-    if (RISCV::isVLKnownLE(X.VL, VL))
+    if (RISCV::isVLKnownLE(MRI, X.VL, VL))
       return *this;
     return DemandedVL::vlmax();
   }
@@ -1089,7 +1089,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
+    if (!RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1105,7 +1105,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
+  if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
@@ -1253,7 +1253,7 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*MRI, CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
@@ -1315,7 +1315,7 @@ void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(*MRI, getMinimumVLForUser(MO));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }
