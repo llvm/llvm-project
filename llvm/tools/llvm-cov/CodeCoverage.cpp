@@ -308,6 +308,10 @@ void CodeCoverageTool::attachExpansionSubViews(
   if (!ViewOpts.ShowExpandedRegions)
     return;
   for (const auto &Expansion : Expansions) {
+    // Skip macro expansions if requested.
+    if (ViewOpts.IgnoreBranchesInMacros && Expansion.Region.isMacroExpansion())
+      continue;
+
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
     if (ExpansionCoverage.empty())
       continue;
@@ -376,7 +380,15 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
   if (!SourceBuffer)
     return nullptr;
 
-  auto Branches = FunctionCoverage.getBranches();
+  auto AllBranches = FunctionCoverage.getBranches();
+  // Filter out branches from macro expansions if requested.
+  // These branches have a FileID that differs from the main file's FileID.
+  unsigned MainFileID = AllBranches.empty() ? 0 : AllBranches[0].FileID;
+  SmallVector<CountedRegion, 0> Branches;
+  for (const auto &B : AllBranches)
+    if (!ViewOpts.IgnoreBranchesInMacros || B.FileID == MainFileID)
+      Branches.push_back(B);
+
   auto Expansions = FunctionCoverage.getExpansions();
   auto MCDCRecords = FunctionCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(DC.demangle(Function.Name),
@@ -399,7 +411,15 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   if (FileCoverage.empty())
     return nullptr;
 
-  auto Branches = FileCoverage.getBranches();
+  auto AllBranches = FileCoverage.getBranches();
+  // Filter out branches from macro expansions if requested.
+  // These branches have a FileID that differs from the main file's FileID.
+  unsigned MainFileID = AllBranches.empty() ? 0 : AllBranches[0].FileID;
+  SmallVector<CountedRegion, 0> Branches;
+  for (const auto &B : AllBranches)
+    if (!ViewOpts.IgnoreBranchesInMacros || B.FileID == MainFileID)
+      Branches.push_back(B);
+
   auto Expansions = FileCoverage.getExpansions();
   auto MCDCRecords = FileCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
@@ -423,8 +443,17 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
       if (Function->ExecutionCount > 0) {
         auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
         auto SubViewExpansions = SubViewCoverage.getExpansions();
-        auto SubViewBranches = SubViewCoverage.getBranches();
+        auto AllSubViewBranches = SubViewCoverage.getBranches();
         auto SubViewMCDCRecords = SubViewCoverage.getMCDCRecords();
+
+        // Filter out branches from macro expansions if requested.
+        unsigned SubMainFileID =
+            AllSubViewBranches.empty() ? 0 : AllSubViewBranches[0].FileID;
+        SmallVector<CountedRegion, 0> SubViewBranches;
+        for (const auto &B : AllSubViewBranches)
+          if (!ViewOpts.IgnoreBranchesInMacros || B.FileID == SubMainFileID)
+            SubViewBranches.push_back(B);
+
         SubView = SourceCoverageView::create(
             Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
         attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
@@ -797,6 +826,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "summary-only", cl::Optional,
       cl::desc("Export only summary information for each source file"));
 
+  cl::opt<bool> IgnoreBranchesInMacros(
+      "ignore-branch-in-macro", cl::Optional,
+      cl::desc("Ignore branches inside macro expansions in branch coverage"));
+
   cl::opt<unsigned> NumThreads(
       "num-threads", cl::init(0),
       cl::desc("Number of merge threads to use (default: autodetect)"));
@@ -982,6 +1015,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowFunctionSummary = FunctionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
+    ViewOpts.IgnoreBranchesInMacros = IgnoreBranchesInMacros;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
 

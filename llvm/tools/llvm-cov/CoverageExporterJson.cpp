@@ -231,14 +231,20 @@ void renderMCDCRecords(json::OStream &JOS,
 
 std::vector<llvm::coverage::CountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
-                      ArrayRef<llvm::coverage::ExpansionRecord> Expansions) {
+                      ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
+                      bool IgnoreBranchesInMacros = false) {
   std::vector<llvm::coverage::CountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
+    // Skip macro expansions if requested.
+    if (IgnoreBranchesInMacros && Expansion.Region.isMacroExpansion())
+      continue;
+
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions);
+    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
+                                                  IgnoreBranchesInMacros);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
@@ -253,7 +259,8 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
 
 void renderExpansion(json::OStream &JOS,
                      const coverage::CoverageMapping &Coverage,
-                     const coverage::ExpansionRecord &Expansion) {
+                     const coverage::ExpansionRecord &Expansion,
+                     bool IgnoreBranchesInMacros = false) {
   std::vector<llvm::coverage::ExpansionRecord> Expansions = {Expansion};
   JOS.object([&] {
     JOS.attributeArray("filenames", [&] {
@@ -262,7 +269,8 @@ void renderExpansion(json::OStream &JOS,
     });
     // Enumerate the branch coverage information for the expansion.
     JOS.attributeBegin("branches");
-    renderBranchRegions(JOS, collectNestedBranches(Coverage, Expansions));
+    renderBranchRegions(JOS, collectNestedBranches(Coverage, Expansions,
+                                                   IgnoreBranchesInMacros));
     JOS.attributeEnd();
     // Mark the beginning and end of this expansion in the source file.
     JOS.attributeBegin("source_region");
@@ -332,14 +340,22 @@ void renderFile(json::OStream &JOS, const coverage::CoverageMapping &Coverage,
     if (!Options.ExportSummaryOnly) {
       // Calculate and render detailed coverage information for given file.
       auto FileCoverage = Coverage.getCoverageForFile(Filename);
+      // Filter out branches from macro expansions if requested.
+      // These branches have a FileID that differs from the main file's FileID.
+      auto FileBranches = FileCoverage.getBranches();
+      unsigned MainFileID = FileBranches.empty() ? 0 : FileBranches[0].FileID;
       JOS.attributeArray("branches", [&] {
-        for (const auto &Branch : FileCoverage.getBranches())
-          renderBranch(JOS, Branch);
+        for (const auto &Branch : FileBranches)
+          if (!Options.IgnoreBranchesInMacros || Branch.FileID == MainFileID)
+            renderBranch(JOS, Branch);
       });
       if (!Options.SkipExpansions) {
         JOS.attributeArray("expansions", [&] {
           for (const auto &Expansion : FileCoverage.getExpansions())
-            renderExpansion(JOS, Coverage, Expansion);
+            if (!Options.IgnoreBranchesInMacros ||
+                !Expansion.Region.isMacroExpansion())
+              renderExpansion(JOS, Coverage, Expansion,
+                              Options.IgnoreBranchesInMacros);
         });
       }
       JOS.attributeArray("mcdc_records", [&] {

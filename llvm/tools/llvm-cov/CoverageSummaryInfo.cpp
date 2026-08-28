@@ -38,12 +38,17 @@ static auto sumBranches(const ArrayRef<CountedRegion> &Branches) {
 
 static BranchCoverageInfo
 sumBranchExpansions(const CoverageMapping &CM,
-                    ArrayRef<ExpansionRecord> Expansions) {
+                    ArrayRef<ExpansionRecord> Expansions,
+                    bool IgnoreBranchesInMacros) {
   BranchCoverageInfo BranchCoverage;
   for (const auto &Expansion : Expansions) {
+    // Skip macro expansions if requested.
+    if (IgnoreBranchesInMacros && Expansion.Region.isMacroExpansion())
+      continue;
     auto CE = CM.getCoverageForExpansion(Expansion);
     BranchCoverage += sumBranches(CE.getBranches());
-    BranchCoverage += sumBranchExpansions(CM, CE.getExpansions());
+    BranchCoverage +=
+        sumBranchExpansions(CM, CE.getExpansions(), IgnoreBranchesInMacros);
   }
   return BranchCoverage;
 }
@@ -98,7 +103,8 @@ CoverageDataSummary::CoverageDataSummary(const CoverageData &CD,
 
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
-                             const coverage::FunctionRecord &Function) {
+                             const coverage::FunctionRecord &Function,
+                             bool IgnoreBranchesInMacros) {
   CoverageData CD = CM.getCoverageForFunction(Function);
 
   auto Summary =
@@ -107,7 +113,8 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   Summary += CoverageDataSummary(CD, Function.CountedRegions);
 
   // Compute the branch coverage, including branches from expansions.
-  Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());
+  Summary.BranchCoverage +=
+      sumBranchExpansions(CM, CD.getExpansions(), IgnoreBranchesInMacros);
 
   return Summary;
 }

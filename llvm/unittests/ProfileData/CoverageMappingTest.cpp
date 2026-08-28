@@ -219,6 +219,13 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
         LS, CS, LE, CE));
   }
 
+  void addMacroExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
+                            unsigned CS, unsigned LE, unsigned CE) {
+    InputFunctions.back().Regions.push_back(CounterMappingRegion::makeExpansion(
+        getFileIndexForFunction(File), getFileIndexForFunction(ExpandedFile),
+        LS, CS, LE, CE, /*IsMacro=*/true));
+  }
+
   void addExpression(CounterExpression CE) {
     InputFunctions.back().Expressions.push_back(CE);
   }
@@ -1027,6 +1034,113 @@ TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
   ASSERT_EQ(2U, Segments.size());
   EXPECT_EQ(CoverageSegment(1, 1, 10, true), Segments[0]);
   EXPECT_EQ(CoverageSegment(1, 10, false), Segments[1]);
+}
+
+TEST_P(CoverageMappingTest, macro_expansion_roundtrip) {
+  startFunction("func", 0x1234);
+  // Add code regions that the expansions reference
+  addCMR(Counter::getCounter(0), "main", 1, 1, 20, 1);
+  addCMR(Counter::getCounter(0), "include_file", 1, 1, 5, 10);
+  addCMR(Counter::getCounter(0), "macro_file", 1, 1, 5, 10);
+  // Add a regular expansion (e.g., #include)
+  addExpansionCMR("main", "include_file", 5, 1, 5, 10);
+  // Add a macro expansion
+  addMacroExpansionCMR("main", "macro_file", 10, 1, 10, 15);
+
+  writeAndReadCoverageRegions();
+  ASSERT_EQ(1u, OutputFunctions.size());
+  const OutputFunctionCoverageData &Output = OutputFunctions[0];
+
+  // Find the expansion regions (there should be 5 regions total: 3 code + 2
+  // expansion)
+  ASSERT_EQ(5u, Output.Regions.size());
+
+  // Check each region
+  size_t ExpansionCount = 0;
+  size_t MacroExpansionCount = 0;
+  for (const auto &Region : Output.Regions) {
+    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      ExpansionCount++;
+      EXPECT_TRUE(Region.isExpansion());
+      EXPECT_FALSE(Region.isMacroExpansion());
+    } else if (Region.Kind == CounterMappingRegion::MacroExpansionRegion) {
+      MacroExpansionCount++;
+      EXPECT_TRUE(Region.isExpansion());
+      EXPECT_TRUE(Region.isMacroExpansion());
+    } else {
+      EXPECT_EQ(CounterMappingRegion::CodeRegion, Region.Kind);
+      EXPECT_FALSE(Region.isExpansion());
+      EXPECT_FALSE(Region.isMacroExpansion());
+    }
+  }
+
+  EXPECT_EQ(1u, ExpansionCount);
+  EXPECT_EQ(1u, MacroExpansionCount);
+}
+
+TEST_P(CoverageMappingTest, macro_expansion_coverage_data) {
+  ProfileWriter.addRecord({"func", 0x1234, {5}}, Err);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "main", 1, 1, 10, 1);
+  addMacroExpansionCMR("main", "macro_def", 5, 1, 5, 20);
+  addCMR(Counter::getCounter(0), "macro_def", 1, 1, 1, 10);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  // Verify main file coverage
+  CoverageData MainData = LoadedCoverage->getCoverageForFile("main");
+  std::vector<CoverageSegment> MainSegments(MainData.begin(), MainData.end());
+  ASSERT_GE(MainSegments.size(), 2u);
+
+  // Verify macro definition file coverage
+  CoverageData MacroData = LoadedCoverage->getCoverageForFile("macro_def");
+  std::vector<CoverageSegment> MacroSegments(MacroData.begin(),
+                                             MacroData.end());
+  ASSERT_GE(MacroSegments.size(), 1u);
+  EXPECT_EQ(CoverageSegment(1, 1, 5, true), MacroSegments[0]);
+}
+
+TEST_P(CoverageMappingTest, mixed_expansion_types) {
+  startFunction("func", 0x1234);
+  // Add code regions
+  addCMR(Counter::getCounter(0), "main", 1, 1, 15, 1);
+  addCMR(Counter::getCounter(0), "header1", 1, 1, 3, 1);
+  addCMR(Counter::getCounter(0), "macro1", 1, 1, 5, 1);
+  addCMR(Counter::getCounter(0), "header2", 1, 1, 3, 1);
+  addCMR(Counter::getCounter(0), "macro2", 1, 1, 5, 1);
+  // Mix regular expansions and macro expansions
+  addExpansionCMR("main", "header1", 3, 1, 3, 10);
+  addMacroExpansionCMR("main", "macro1", 5, 1, 5, 15);
+  addExpansionCMR("main", "header2", 7, 1, 7, 10);
+  addMacroExpansionCMR("main", "macro2", 9, 1, 9, 15);
+
+  writeAndReadCoverageRegions();
+  ASSERT_EQ(1u, OutputFunctions.size());
+  const OutputFunctionCoverageData &Output = OutputFunctions[0];
+
+  ASSERT_EQ(9u, Output.Regions.size());
+
+  // Count expansion types
+  size_t ExpansionCount = 0;
+  size_t MacroExpansionCount = 0;
+  for (const auto &Region : Output.Regions) {
+    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      ExpansionCount++;
+      EXPECT_FALSE(Region.isMacroExpansion());
+    } else if (Region.Kind == CounterMappingRegion::MacroExpansionRegion) {
+      MacroExpansionCount++;
+      EXPECT_TRUE(Region.isMacroExpansion());
+    }
+    // All expansions should return true for isExpansion()
+    if (Region.isExpansion()) {
+      EXPECT_TRUE(Region.Kind == CounterMappingRegion::ExpansionRegion ||
+                  Region.Kind == CounterMappingRegion::MacroExpansionRegion);
+    }
+  }
+
+  EXPECT_EQ(2u, ExpansionCount);
+  EXPECT_EQ(2u, MacroExpansionCount);
 }
 
 TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
