@@ -1880,9 +1880,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getGlobalVaddrOp(uint32_t Opcode);
 
-  LLVM_READONLY
-  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
-
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
