@@ -750,9 +750,14 @@ Error CompileUnit::emitDebugAddrSection() {
   if (getVersion() < 5)
     return Error::success();
 
-  if (DebugAddrIndexMap.empty())
-    return Error::success();
-
+  // Every cloned DWARFv5 unit carries a DW_AT_addr_base, either from the input
+  // or added while cloning (see DIEAttributeCloner::clone()), so the
+  // contribution is emitted even when no address was indexed -- otherwise the
+  // attribute would point at a table that does not exist. A contribution with
+  // no entries is well formed: DWARFv5 section 7.27 defines the address table
+  // as a header "followed by a series of segment/address pairs", and "the
+  // DW_AT_addr_base attribute points to the first entry following the header",
+  // which stays well defined when there are no entries.
   SectionDescriptor &OutAddrSection =
       getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr);
 

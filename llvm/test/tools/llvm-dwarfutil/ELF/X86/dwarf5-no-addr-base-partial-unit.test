@@ -1,0 +1,120 @@
+## Same missing DW_AT_addr_base as dwarf5-no-addr-base.test, but on a unit
+## whose root is DW_TAG_partial_unit rather than DW_TAG_compile_unit. DWARFv5
+## section 3.1.3 gives a partial unit the attributes of a full compilation
+## unit, and DWARFContext::compile_units() hands both kinds to the linker, so
+## the address base has to be synthesized for either root. Keying it on the
+## root DIE rather than on DW_TAG_compile_unit is what makes that hold; before
+## that the classic linker asserted here and the parallel linker emitted
+## addrx-indexed ranges with no base to resolve them.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+
+# RUN: llvm-dwarfutil --linker parallel %t.o %t2
+# RUN: llvm-dwarfdump -a --verbose %t2 | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t2 | FileCheck %s --check-prefix=VERIFY
+
+## Both outputs verify clean. Beyond the address base this test is about, a
+## clean result needs DW_AT_str_offsets_base synthesized for the partial unit
+## root and the unit header recording DW_UT_partial, both of which are keyed on
+## the root DIE rather than on DW_TAG_compile_unit.
+#VERIFY: No errors.
+
+#CHECK: DW_TAG_partial_unit
+#CHECK:   DW_AT_ranges [DW_FORM_sec_offset]
+#CHECK-NEXT: [0x0000000000001130, 0x0000000000001140)
+#CHECK-NEXT: [0x0000000000001150, 0x0000000000001160)
+#CHECK:   DW_AT_addr_base [DW_FORM_sec_offset] (0x00000008)
+
+## The rewritten ranges are emitted as a DW_RLE_base_addressx indexing
+## .debug_addr, followed by DW_RLE_offset_pair entries relative to it. Both
+## functions therefore hang off the single pooled address, and resolving either
+## of them back to its input range depends on DW_AT_addr_base above.
+#CHECK: .debug_addr contents:
+#CHECK: 0x00000000: Address table header: length = {{.*}} version = 0x0005, addr_size = 0x08, seg_size = 0x00
+#CHECK: Addrs: [
+#CHECK-NEXT: 0x0000000000001130
+#CHECK-NEXT: ]
+#CHECK: .debug_rnglists contents:
+#CHECK: [DW_RLE_base_addressx]: 0x0000000000000000
+#CHECK-NEXT: [DW_RLE_offset_pair ]: {{.*}} => [0x0000000000001130, 0x0000000000001140)
+#CHECK-NEXT: [DW_RLE_offset_pair ]: {{.*}} => [0x0000000000001150, 0x0000000000001160)
+
+## A DWARFv5 partial unit carrying two function ranges, with absolute
+## DW_FORM_addr addresses, no DW_AT_addr_base and no .debug_addr.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "1d0000000500080000000000073011000000000000100750110000000000001000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_partial
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: PU1
+            - Value:  0xc
+            - Value:  0x0
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x59
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1150
+            - Value: 0x10
+            - Value: 0x59
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+...
