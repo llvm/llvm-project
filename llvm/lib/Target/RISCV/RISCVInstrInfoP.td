@@ -2301,28 +2301,28 @@ let Predicates = [HasStdExtP] in {
 
   // Packed byte multiply halves patterns.
   def : Pat<(XLenVecI16VT (riscv_pmul_halves_00 (XLenVecI8VT GPR:$rs1),
-                                              (XLenVecI8VT GPR:$rs2))),
+                                                (XLenVecI8VT GPR:$rs2))),
             (PMUL_H_B00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmul_halves_01 (XLenVecI8VT GPR:$rs1),
-                                              (XLenVecI8VT GPR:$rs2))),
+                                                (XLenVecI8VT GPR:$rs2))),
             (PMUL_H_B01 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmul_halves_11 (XLenVecI8VT GPR:$rs1),
-                                              (XLenVecI8VT GPR:$rs2))),
+                                                (XLenVecI8VT GPR:$rs2))),
             (PMUL_H_B11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmulu_halves_00 (XLenVecI8VT GPR:$rs1),
-                                               (XLenVecI8VT GPR:$rs2))),
+                                                 (XLenVecI8VT GPR:$rs2))),
             (PMULU_H_B00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmulu_halves_01 (XLenVecI8VT GPR:$rs1),
-                                               (XLenVecI8VT GPR:$rs2))),
+                                                 (XLenVecI8VT GPR:$rs2))),
             (PMULU_H_B01 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmulu_halves_11 (XLenVecI8VT GPR:$rs1),
-                                               (XLenVecI8VT GPR:$rs2))),
+                                                 (XLenVecI8VT GPR:$rs2))),
             (PMULU_H_B11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_00 (XLenVecI8VT GPR:$rs1),
-                                                (XLenVecI8VT GPR:$rs2))),
+                                                  (XLenVecI8VT GPR:$rs2))),
             (PMULSU_H_B00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_11 (XLenVecI8VT GPR:$rs1),
-                                                (XLenVecI8VT GPR:$rs2))),
+                                                  (XLenVecI8VT GPR:$rs2))),
             (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
 
 let append Predicates = [IsRV32] in {
