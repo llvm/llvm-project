@@ -3273,7 +3273,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           // SV form encodes only the offset in vaddr; an SS-form scratch op
           // keeps its FI in the SGPR saddr, so this is only reached with no
-          // frame register.
+          // frame register. SVS form has both vaddr and saddr but still depends
+          // on the FI being in the SGPR saddr so it is also possible to end up
+          // here through SVS form without frame register and scavenged SGPR.
           assert(!FrameReg &&
                  "SV-form fallback cannot encode a frame register");
 
@@ -3293,11 +3295,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   TII->getNamedOperand(*MI, AMDGPU::OpName::vaddr)) {
             MachineOperand *VData =
                 TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
-            bool CanReuseVAddr = VAddr->isKill() &&
-                                 !(VData && VAddr->getReg() == VData->getReg());
 
             // SVS form: add RemainderOffset to vaddr.
             Register Src = VAddr->getReg();
+            bool CanReuseVAddr = VAddr->isKill() &&
+                                 !(VData && regsOverlap(Src, VData->getReg()));
             Register Dst = CanReuseVAddr ? Src
                                          : RS->scavengeRegisterBackwards(
                                                AMDGPU::VGPR_32RegClass, MI,
