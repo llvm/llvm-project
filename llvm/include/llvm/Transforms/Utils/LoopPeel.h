@@ -50,6 +50,12 @@ LLVM_ABI void computePeelCount(Loop *L, unsigned LoopSize,
                                AssumptionCache *AC = nullptr,
                                unsigned Threshold = UINT_MAX);
 
+/// Combine load instructions in a loop into a wider one, given that we peeled
+/// the last iteration and can assume the bytes are dereferenceable.
+LLVM_ABI bool widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
+                                  const TargetTransformInfo &TTI,
+                                  DominatorTree &DT);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPPEEL_H
