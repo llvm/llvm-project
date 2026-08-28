@@ -2950,29 +2950,28 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
-    // FIXME: Improve for errno modeling.
+    // FIXME: Improve for errno modeling
+    auto MmapSignature = Signature(
+        ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
+        RetType{VoidPtrTy});
+    auto MmapSummaryWithLengthConstraint =
+        Summary(NoEvalCall)
+            .ArgConstraint(
+                ArgumentCondition(1, WithinRange, Range(1, SizeMax)));
+
     if (ACtx.getTargetInfo().getTriple().isOSDarwin()) {
       // On Darwin, MAP_ANON + VM_MAKE_TAG(tag) uses argument 4 (len) for
-      // the tag, which looks like a large negative signed integer. The
-      // valid range for fd is not expressible as a simple union of ranges
-      // so omit the constraint.
-      addToFunctionSummaryMap("mmap",
-                              Signature(ArgTypes{VoidPtrTy, SizeTyCanonTy,
-                                                 IntTy, IntTy, IntTy, Off_tTy},
-                                        RetType{VoidPtrTy}),
-                              Summary(NoEvalCall)
-                                  .ArgConstraint(ArgumentCondition(
-                                      1, WithinRange, Range(1, SizeMax))));
+      // the tag, which looks like a large negative signed integer.
+      // The valid range for fd is not expressible as a simple union of
+      // ranges so we only constrain the length parameter.
+      addToFunctionSummaryMap("mmap", MmapSignature,
+                              MmapSummaryWithLengthConstraint);
     } else {
-      addToFunctionSummaryMap("mmap",
-                              Signature(ArgTypes{VoidPtrTy, SizeTyCanonTy,
-                                                 IntTy, IntTy, IntTy, Off_tTy},
-                                        RetType{VoidPtrTy}),
-                              Summary(NoEvalCall)
-                                  .ArgConstraint(ArgumentCondition(
-                                      1, WithinRange, Range(1, SizeMax)))
-                                  .ArgConstraint(ArgumentCondition(
-                                      4, WithinRange, Range(-1, IntMax))));
+      // On other platforms, we also constrain the fd parameter (-1 <= fd).
+      addToFunctionSummaryMap(
+          "mmap", MmapSignature,
+          MmapSummaryWithLengthConstraint.ArgConstraint(
+              ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
     }
 
     std::optional<QualType> Off64_tTy = lookupTy("off64_t");
