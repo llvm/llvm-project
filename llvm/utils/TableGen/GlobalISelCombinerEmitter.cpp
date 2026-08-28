@@ -664,6 +664,10 @@ private:
     return CGT.getInstruction(RuleDef.getRecords().getDef("G_CONSTANT"));
   }
 
+  const CodeGenInstruction &getGImplicitDef() const {
+    return CGT.getInstruction(RuleDef.getRecords().getDef("G_IMPLICIT_DEF"));
+  }
+
   std::optional<LLTCodeGenOrTempType>
   getLLTCodeGenOrTempType(const PatternType &PT, RuleMatcher &RM);
 
@@ -1365,6 +1369,23 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       if (MatchOpTable.getDef(OldRegName) != MatchRoot) {
         PrintError(Name + " cannot replace '" + OldRegName +
+                   "': this builtin can only replace a register defined by the "
+                   "match root");
+        return false;
+      }
+      break;
+    }
+    case BI_ReplaceRegWithUndef: {
+      // (GIReplaceRegWithUndef can only be used on the root instruction)
+      StringRef RegName = BIP->getOperand(0).getOperandName();
+      auto *Def = MatchOpTable.getDef(RegName);
+      if (!Def) {
+        PrintError(Name + " cannot find a matched pattern that defines '" +
+                   RegName + "'");
+        return false;
+      }
+      if (Def != MatchRoot) {
+        PrintError(Name + " cannot replace '" + RegName +
                    "': this builtin can only replace a register defined by the "
                    "match root");
         return false;
@@ -2204,6 +2225,27 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
     assert(MatchOpTable.getDef(Old) == MatchRoot);
+    return true;
+  }
+  case BI_ReplaceRegWithUndef: {
+    StringRef Reg = P.getOperand(0).getOperandName();
+
+    auto &RegOM = M.getOperandMatcher(Reg);
+
+    // Build a G_IMPLICIT_DEF into a fresh temp reg of the same type as the
+    // replaced register, then replace all uses of the register with it.
+    unsigned TempRegID = M.allocateTempRegID();
+    M.insertAction<MakeTempRegisterAction>(M.actions_begin(),
+                                           RegOM.getTempTypeIdx(M), TempRegID);
+
+    auto &UndefMI = M.addAction<BuildMIAction>(M.allocateOutputInsnID(), M,
+                                               &getGImplicitDef());
+    UndefMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
+
+    M.addAction<ReplaceRegAction>(RegOM.getInsnVarID(), RegOM.getOpIdx(),
+                                  TempRegID);
+    // checkSemantics should have ensured that we can only rewrite the root.
+    assert(MatchOpTable.getDef(Reg) == MatchRoot);
     return true;
   }
   }

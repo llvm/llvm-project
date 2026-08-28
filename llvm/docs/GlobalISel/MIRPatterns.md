@@ -211,6 +211,25 @@ Semantics:
 - If both old/new are operands of matched instructions,
   `canReplaceReg` is checked before applying the rule.
 
+#### GIReplaceRegWithUndef
+
+```{code-block} text
+:caption: Usage
+
+(apply (GIReplaceRegWithUndef $reg))
+```
+
+Operands:
+
+- `$reg` (out) register defined by the match root
+
+Semantics:
+
+- Can only appear in an 'apply' pattern.
+- `$reg` must be a register defined by the match root.
+- Replaces all uses of `$reg` with a fresh `G_IMPLICIT_DEF` of the same type,
+  then erases the root.
+
 #### GIEraseRoot
 
 ```{code-block} text
@@ -421,6 +440,17 @@ def ReplaceTemp : GICombineRule<
             (G_UNMERGE_VALUES $a, $b, $tmp)),
   (apply  (G_UNMERGE_VALUES $a, i32:$new, $y),
           (GIReplaceReg $b, $new))>
+```
+
+To instead replace a register defined by the match root with an undefined value,
+use the `GIReplaceRegWithUndef` builtin. It creates a `G_IMPLICIT_DEF` of the same
+type and replaces the register with it, without any C++.
+
+```text
+def Foo : GICombineRule<
+  (defs root:$dst),
+  (match (G_FNEG $dst, $src)),
+  (apply (GIReplaceRegWithUndef $dst))>;
 ```
 
 #### Common Pattern #2: Erasing a Def-less Root

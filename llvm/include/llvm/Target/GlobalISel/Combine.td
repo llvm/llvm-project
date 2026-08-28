@@ -162,6 +162,20 @@ class GIBuiltinInst;
 //   "canReplaceReg" is checked before applying the rule.
 def GIReplaceReg : GIBuiltinInst;
 
+// Replace a register defined by the match root with a fresh G_IMPLICIT_DEF of
+// the same type.
+//
+// Usage:
+//    (apply (GIReplaceRegWithUndef $reg))
+//
+// Operands:
+// - $reg (out) register defined by the match root
+//
+// Semantics:
+// - Can only appear in an 'apply' pattern.
+// - $reg must be a register defined by the match root.
+def GIReplaceRegWithUndef : GIBuiltinInst;
+
 // Apply action that erases the match root.
 //
 // Usage:
@@ -516,7 +530,7 @@ def unary_undef_to_undef_frags : GICombinePatFrag<
 def unary_undef_to_undef : GICombineRule<
   (defs root:$dst),
   (match (unary_undef_to_undef_frags $dst)),
-  (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
+  (apply (GIReplaceRegWithUndef $dst))>;
 
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
@@ -783,9 +797,9 @@ def binop_right_to_zero: GICombineRule<
 // Erase stores of undef values.
 def erase_undef_store : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_STORE):$root,
+  (match (G_STORE $val, $ptr):$root,
     [{ return Helper.matchUndefStore(*${root}); }]),
-  (apply [{ Helper.eraseInst(*${root}); }])
+  (apply (GIEraseRoot))
 >;
 
 def simplify_add_to_sub_matchinfo: GIDefMatchData<"std::tuple<Register, Register>">;

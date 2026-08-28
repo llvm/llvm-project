@@ -78,6 +78,25 @@ def replacereg_nonroot : GICombineRule<
   (match (COPY $dst, $tmp), (COPY $tmp, $src)),
   (apply (GIReplaceReg $dst, $src), (GIReplaceReg $tmp, $src))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'GIReplaceRegWithUndef' cannot be used in a 'match' pattern
+def replaceregundef_in_match : GICombineRule<
+  (defs root:$dst),
+  (match (GIReplaceRegWithUndef $dst)),
+  (apply (COPY $dst, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'GIReplaceRegWithUndef' expected 1 operands, got 2
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceRegWithUndef ?:$dst, ?:$src)'
+def replaceregundef_ops : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceRegWithUndef $dst, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: GIReplaceRegWithUndef cannot replace 'tmp': this builtin can only replace a register defined by the match root
+def replaceregundef_nonroot : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $tmp), (COPY $tmp, $src)),
+  (apply (GIReplaceReg $dst, $src), (GIReplaceRegWithUndef $tmp))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -90,5 +109,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   eraseroot_notinstmatch,
   replacereg_in_match,
   replacereg_ops,
-  replacereg_nonroot
+  replacereg_nonroot,
+  replaceregundef_in_match,
+  replaceregundef_ops,
+  replaceregundef_nonroot
 ]>;

@@ -49,7 +49,29 @@ def BuiltinTest1 : GICombineRule<
   (apply (GIEraseRoot))
 >;
 
+// CHECK:      (CombineRule name:BuiltinTest2 id:2 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__BuiltinTest2_match_0:(CodeGenInstructionPattern G_TRUNC operands:[<def>$a, $b])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     <apply_root>__BuiltinTest2_apply_0:(BuiltinPattern GIReplaceRegWithUndef operands:[<def>$a])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __BuiltinTest2_match_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats
+// CHECK-NEXT:     a -> __BuiltinTest2_apply_0
+// CHECK-NEXT:   )
+// CHECK-NEXT: )
+def BuiltinTest2 : GICombineRule<
+  (defs root:$a),
+  (match (G_TRUNC $a, $b)),
+  (apply (GIReplaceRegWithUndef $a))
+>;
+
 def MyCombiner: GICombiner<"GenMyCombiner", [
   BuiltinTest0,
-  BuiltinTest1
+  BuiltinTest1,
+  BuiltinTest2
 ]>;
