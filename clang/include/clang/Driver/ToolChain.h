@@ -881,6 +881,15 @@ public:
                                 const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const {}
 
+  /// If this link pulls in a HIP runtime that was itself built
+  /// with the address sanitizer, return true.
+  ///
+  /// Only meaningful when HIP is among the active offload kinds.
+  virtual bool
+  hipRuntimeRequiresAddressSanitizer(const llvm::opt::ArgList &Args) const {
+    return false;
+  }
+
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask
   getSupportedSanitizers(BoundArch BA,

@@ -87,6 +87,16 @@ def err_drv_no_hipstdpar_prim_lib : Error<
   "cannot find rocPrim, which is required by the HIP Standard Parallelism "
   "Acceleration library; provide it via '--hipstdpar-prim-path'">;
 
+def warn_drv_hip_runtime_asan_ignoring_static_libsan : Warning<
+  "ignoring '%0': the HIP runtime is built with the address sanitizer and "
+  "requires the shared address sanitizer runtime">,
+  InGroup<DiagGroup<"hip-runtime-sanitizer">>;
+def warn_drv_hip_runtime_asan_needs_shared_rt : Warning<
+  "the HIP runtime is built with the address sanitizer and requires the shared "
+  "address sanitizer runtime; the static runtime selected here is not "
+  "compatible with it, consider '-shared-libasan'">,
+  InGroup<DiagGroup<"hip-runtime-sanitizer">>;
+
 def err_drv_no_hipspv_device_lib : Error<
   "cannot find HIP device library%select{| for %1}0; provide its path via "
   "'--hip-path' or '--hip-device-lib-path', or pass '-nogpulib' to build "

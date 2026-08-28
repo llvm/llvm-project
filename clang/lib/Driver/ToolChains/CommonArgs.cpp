@@ -1583,6 +1583,38 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
       Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
 }
 
+static bool hasRPathEntry(const ArgStringList &CmdArgs, StringRef Path) {
+  for (size_t I = 1, E = CmdArgs.size(); I != E; ++I)
+    if (StringRef(CmdArgs[I - 1]) == "-rpath" && StringRef(CmdArgs[I]) == Path)
+      return true;
+  return false;
+}
+
+/// Add an RPATH entry for the directory holding the selected shared sanitizer
+/// runtime.
+///
+/// That directory depends on the compiler-rt layout, so it's derived
+/// from the given file rather than guessed from the triple the way
+/// addArchSpecificRPath() does.
+static void addSanitizerRuntimeRPath(const ToolChain &TC, const ArgList &Args,
+                                     ArgStringList &CmdArgs,
+                                     StringRef Sanitizer) {
+  if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
+                    options::OPT_fno_rtlib_add_rpath, false))
+    return;
+
+  if (TC.getTriple().isOSAIX()) // TODO: AIX doesn't support -rpath option.
+    return;
+
+  std::string RT = TC.getCompilerRT(Args, Sanitizer, ToolChain::FT_Shared);
+  StringRef Dir = llvm::sys::path::parent_path(RT);
+  if (Dir.empty() || !TC.getVFS().exists(Dir) || hasRPathEntry(CmdArgs, Dir))
+    return;
+
+  CmdArgs.push_back("-rpath");
+  CmdArgs.push_back(Args.MakeArgString(Dir));
+}
+
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
                                 ArgStringList &CmdArgs, StringRef Sanitizer,
                                 bool IsShared, bool IsWhole) {
@@ -1593,6 +1625,9 @@ static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
       Args, Sanitizer, IsShared ? ToolChain::FT_Shared : ToolChain::FT_Static));
   if (IsWhole)
     CmdArgs.push_back("--no-whole-archive");
+
+  if (IsShared)
+    addSanitizerRuntimeRPath(TC, Args, CmdArgs, Sanitizer);
 }
 
 // Tries to use a file with the list of dynamic symbols that need to be exported
@@ -1898,6 +1933,48 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty() ||
          FuzzerNeedsSanitizerDeps;
+}
+
+// Links the ASan runtime an ASan-instrumented HIP runtime needs. That
+// requirement comes from the link rather than from how the user's sources were
+// compiled, so it must not imply '-fsanitize=address' for the compile jobs.
+//
+// Returns true if sanitizer system deps need to be linked in.
+bool tools::addHIPRuntimeSanitizerRuntimes(const ToolChain &TC,
+                                           unsigned ActiveOffloadKinds,
+                                           const ArgList &Args,
+                                           ArgStringList &CmdArgs) {
+  if (!(ActiveOffloadKinds & Action::OFK_HIP))
+    return false;
+
+  if (!TC.hipRuntimeRequiresAddressSanitizer(Args))
+    return false;
+
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  // Already handled by addSanitizerRuntimes(), except that a static runtime
+  // cannot serve the instrumented HIP runtime and there is nothing to fix up
+  // at this point.
+  if (SanArgs.needsAsanRt()) {
+    if (!SanArgs.needsSharedRt())
+      TC.getDriver().Diag(diag::warn_drv_hip_runtime_asan_needs_shared_rt);
+    return false;
+  }
+
+  // The HIP runtime is a shared library, so only the shared ASan runtime can
+  // serve it.
+  if (const Arg *A = Args.getLastArg(options::OPT_static_libsan))
+    TC.getDriver().Diag(diag::warn_drv_hip_runtime_asan_ignoring_static_libsan)
+        << A->getAsString(Args);
+
+  addSanitizerRuntime(TC, Args, CmdArgs, "asan", /*IsShared=*/true,
+                      /*IsWhole=*/false);
+  // Same split collectSanitizerRuntimes() makes between executables and DSOs.
+  if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
+    addSanitizerRuntime(TC, Args, CmdArgs, "asan-preinit", /*IsShared=*/false,
+                        /*IsWhole=*/true);
+  addSanitizerRuntime(TC, Args, CmdArgs, "asan_static", /*IsShared=*/false,
+                      /*IsWhole=*/true);
+  return true;
 }
 
 bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
