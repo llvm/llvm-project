@@ -2265,6 +2265,22 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
                        ExpectHostAddress({0x11, 0x22}));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_zero_size) {
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x44332211})));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+
+  // The zero-sized r3 piece contributes no bytes, but it must still consume
+  // its register location before the four-byte r0 piece is assembled.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_reg3, DW_OP_piece, 0, DW_OP_reg0, DW_OP_piece, 4}, {},
+               &delegate, &exe_ctx, test_ctx.reg_ctx_sp.get()),
+      ExpectHostAddress({0x11, 0x22, 0x33, 0x44}));
+}
+
 class DWARFExpressionMockProcessTestWithAArch
     : public DWARFExpressionMockProcessTest {
 public:
