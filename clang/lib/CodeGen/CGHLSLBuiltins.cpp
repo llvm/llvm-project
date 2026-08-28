@@ -712,15 +712,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
-    const unsigned OffsetIdx = 3;
+    constexpr unsigned OffsetIdx = 3;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleIntrinsic(), Args,
                                RetTy);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleClampIntrinsic(),
@@ -740,15 +739,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(BiasOp);
-    const unsigned OffsetIdx = 4;
+    constexpr unsigned OffsetIdx = 4;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasIntrinsic(),
                                Args, RetTy);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
@@ -768,16 +766,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(CoordOp);
     Args.push_back(DDXOp);
     Args.push_back(DDYOp);
-    const unsigned OffsetIdx = 5;
+    constexpr unsigned OffsetIdx = 5;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
 
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleGradIntrinsic(), Args);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return Builder.CreateIntrinsic(
@@ -797,7 +794,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(LODOp);
-    const unsigned OffsetIdx = 4;
+    constexpr unsigned OffsetIdx = 4;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
@@ -866,15 +863,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-    const unsigned OffsetIdx = 4;
+    constexpr unsigned OffsetIdx = 4;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleCmpIntrinsic(), Args);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return Builder.CreateIntrinsic(
@@ -894,7 +890,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-    const unsigned OffsetIdx = 4;
+    constexpr unsigned OffsetIdx = 4;
     Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
