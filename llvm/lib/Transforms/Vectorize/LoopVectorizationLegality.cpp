@@ -447,9 +447,14 @@ void LoopVectorizationLegality::collectUnitStridePredicates() const {
     return;
 
   for (BasicBlock *BB : TheLoop->blocks())
-    for (Instruction &I : *BB)
+    for (Instruction &I : *BB) {
+      // Unpredicated bounded loads are widened via their bound; skip them to
+      // avoid the wrap predicate getPtrStride would register.
+      if (!blockNeedsPredication(BB) && getBoundForConsecutiveLoad(&I))
+        continue;
       if (Value *Ptr = getLoadStorePointerOperand(&I))
         isConsecutivePtr(getLoadStoreType(&I), Ptr);
+    }
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
@@ -471,6 +476,16 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
     return 0;
   PSE.addPredicates(Predicates);
   return Stride;
+}
+
+uint64_t
+LoopVectorizationLegality::getBoundForConsecutiveLoad(Instruction *I) const {
+  auto *LI = dyn_cast<LoadInst>(I);
+  if (!LI || LAI->getNumStores() != 0)
+    return 0;
+  Value *Ptr = LI->getPointerOperand();
+  return llvm::getBoundForConsecutiveLoad(PSE.getSCEV(Ptr), LI->getType(),
+                                          TheLoop, *PSE.getSE());
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {

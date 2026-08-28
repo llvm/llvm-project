@@ -873,7 +873,8 @@ public:
   /// Decision that was taken during cost calculation for memory instruction.
   enum InstWidening {
     CM_Unknown,
-    CM_Widen,         // For consecutive accesses with stride +1.
+    CM_Widen,         // For consecutive accesses with stride +1 and bounded
+                      // (i % 2^N) loads in read-only loops.
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
@@ -2641,8 +2642,12 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
-  // In order to be widened, the pointer should be consecutive, first of all.
-  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
+  // Check for consecutive pointers. A bounded (i % 2^N) load in a read-only
+  // loop is consecutive within a single 2^N window; otherwise check
+  // isConsecutivePtr,
+  uint64_t Bound =
+      isPredicatedInst(I) ? 0 : Legal->getBoundForConsecutiveLoad(I);
+  int Stride = Bound ? 1 : Legal->isConsecutivePtr(ScalarTy, Ptr);
   if (!Stride)
     return std::nullopt;
 
@@ -2655,6 +2660,11 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
+    return std::nullopt;
+
+  // Each VF-wide bounded load must stay within a single 2^N window and must not
+  // wrap, so only widen for VFs dividing the bound.
+  if (Bound && !ElementCount::getFixed(Bound).isKnownMultipleOf(VF))
     return std::nullopt;
 
   return Stride == 1 ? CM_Widen : CM_Widen_Reverse;
@@ -6151,6 +6161,10 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+  assert((isPredicatedInst(I) || !Legal->getBoundForConsecutiveLoad(I) ||
+          Decision != LoopVectorizationCostModel::CM_Widen) &&
+         "unpredicated bounded loads must be widened in "
+         "makeMemOpWideningDecisions");
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;

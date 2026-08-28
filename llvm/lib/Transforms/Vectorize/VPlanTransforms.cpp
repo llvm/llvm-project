@@ -5323,6 +5323,27 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
+/// Check if the bounded (i % 2^N) load \p VPI can be widened as a consecutive
+/// load. This requires the vector factor to divide the bound, so that each
+/// VF-wide load stays within a single 2^N window.
+static bool canWidenBoundedLoad(VPInstruction *VPI, VFRange &Range,
+                                VPCostContext &Ctx) {
+  const SCEV *PtrSCEV =
+      vputils::getSCEVExprForVPValue(VPI->getOperand(0), Ctx.PSE, Ctx.L);
+  uint64_t Bound = getBoundForConsecutiveLoad(PtrSCEV, VPI->getScalarType(),
+                                              Ctx.L, *Ctx.PSE.getSE());
+  if (Bound == 0)
+    return false;
+
+  // Only widen for VFs that divide the bound, so each VF-wide load stays within
+  // a single window and does not wrap.
+  return LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) {
+        return ElementCount::getFixed(Bound).isKnownMultipleOf(VF);
+      },
+      Range);
+}
+
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  VPCostContext &CostCtx) {
@@ -5343,6 +5364,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   }
 
   // Few helpers to process different kinds of memory operations.
+
+  bool LoopHasStore = any_of(
+      MemOps, [](VPInstruction *VPI) { return VPI->mayWriteToMemory(); });
 
   // To be used as argument to `VPlanTransforms::runPass` which explicitly
   // specified pass name, hence `VPlan &` parameter.
@@ -5442,6 +5466,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
+        // A bounded load is widened without a mask, so it must not be
+        // predicated.
+        if (IsLoad && !LoopHasStore && !RecipeBuilder.isPredicatedInst(I) &&
+            canWidenBoundedLoad(VPI, Range, CostCtx))
+          return ReplaceWith(VPI, VPBuilder(VPI).createWidenLoad(
+                                      *cast<LoadInst>(I), VPI->getOperand(0),
+                                      /*Mask=*/nullptr, /*Consecutive=*/true,
+                                      *VPI, VPI->getDebugLoc()));
+
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();

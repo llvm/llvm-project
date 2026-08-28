@@ -1720,6 +1720,35 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   return Stride;
 }
 
+uint64_t llvm::getBoundForConsecutiveLoad(const SCEV *PtrSCEV, Type *AccessTy,
+                                          const Loop *L, ScalarEvolution &SE) {
+  if (AccessTy->isScalableTy())
+    return 0;
+
+  // `A[i % 2^N]` is modeled as `Base + ElemSize * zext({0,+,1}<iN>)` by SCEV,
+  // with N being the bitwidth of the induction and ElemSize the access's
+  // allocation size. SCEV folds away a multiply by one, hence the unscaled
+  // index is matched for byte elements. Base must be the add's operand and not
+  // SE.getPointerBase(PtrSCEV), which looks through add-recurrences and would
+  // report the invariant %A for a moving base like `{%A,+,4}<L>`.
+  uint64_t AllocSize =
+      SE.getDataLayout().getTypeAllocSize(AccessTy).getFixedValue();
+  const SCEV *Base, *Start;
+  auto Index = m_scev_ZExt(
+      m_scev_AffineAddRec(m_SCEV(Start), m_scev_One(), m_SpecificLoop(L)));
+  bool Matched =
+      AllocSize == 1
+          ? match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base)))
+          : match(PtrSCEV,
+                  m_scev_Add(m_scev_Mul(m_scev_SpecificInt(AllocSize), Index),
+                             m_SCEV(Base)));
+  if (!Matched || !Start->isZero() || !SE.isLoopInvariant(Base, L))
+    return 0;
+
+  unsigned NarrowWidth = SE.getTypeSizeInBits(Start->getType());
+  return NarrowWidth < 64 ? uint64_t(1) << NarrowWidth : 0;
+}
+
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
                                              Type *ElemTyB, Value *PtrB,
                                              const DataLayout &DL,
