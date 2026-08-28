@@ -1050,6 +1050,76 @@ public:
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertSelect!");
   }
 
+  /// Carries the state that canConvertToCCMP() computes and convertToCCMP()
+  /// consumes when the target-independent conditional-compare formation pass
+  /// (see MachineConditionalCompares) folds a CFG triangle into a conditional
+  /// compare. All fields except CmpMI are target-owned scratch; the generic
+  /// pass never interprets them.
+  struct CCmpConvInfo {
+    /// The convertible compare instruction found in CmpBB.
+    MachineInstr *CmpMI = nullptr;
+    /// Opaque target scratch (parsed condition codes, chosen opcode, etc.);
+    /// sized to cover any target's needs.
+    int64_t TargetData[5] = {};
+  };
+
+  /// Return the physical flag/status register clobbered by conditional-compare
+  /// candidates (EFLAGS on X86, NZCV on AArch64), or a null register if the
+  /// target does not support conditional-compare formation. Used by the generic
+  /// MachineConditionalCompares pass to scan for flag reads/defs.
+  virtual MCRegister getConditionalCompareFlagReg() const {
+    return MCRegister();
+  }
+
+  /// Analyze whether the compare controlling CmpBB's terminator can be folded
+  /// into a conditional compare merged into Head (a triangle Head->CmpBB->Tail).
+  ///
+  /// HeadCond/CmpBBCond are analyzeBranch's opaque condition arrays. The
+  /// HeadTBBIsCmpBB and CmpBBTBBIsTail flags report whether each block's
+  /// analyzeBranch TBB is the wanted successor, so the target can invert its
+  /// condition codes as needed.
+  ///
+  /// On success, fills Info (including Info.CmpMI) and returns true.
+  virtual bool canConvertToCCMP(MachineBasicBlock &Head,
+                                MachineBasicBlock &CmpBB,
+                                ArrayRef<MachineOperand> HeadCond,
+                                bool HeadTBBIsCmpBB,
+                                ArrayRef<MachineOperand> CmpBBCond,
+                                bool CmpBBTBBIsTail,
+                                const MachineRegisterInfo &MRI,
+                                CCmpConvInfo &Info) const {
+    return false;
+  }
+
+  /// Emit the conditional compare that replaces Info.CmpMI, using the target
+  /// data stashed by canConvertToCCMP(). This is invoked after the generic pass
+  /// has spliced CmpBB into Head and removed Head's branch, so the target only
+  /// performs the instruction rewrite (and any Head-terminator fixup, e.g.
+  /// synthesizing a compare for a cbz/cbnz head, or re-inserting a conditional
+  /// branch when the folded compare was itself a terminator).
+  ///
+  /// SpliceLoc is the insertion point for a synthesized Head compare (the first
+  /// instruction spliced in from CmpBB); HeadTermDL is the removed Head
+  /// terminator's debug location; HeadCond is its condition array. The generic
+  /// caller erases Info.CmpMI and fixes up Head's terminator afterwards. Returns
+  /// the new conditional-compare instruction.
+  virtual MachineInstr *convertToCCMP(MachineBasicBlock &Head,
+                                      MachineBasicBlock::iterator SpliceLoc,
+                                      const DebugLoc &HeadTermDL,
+                                      ArrayRef<MachineOperand> HeadCond,
+                                      const CCmpConvInfo &Info,
+                                      MachineRegisterInfo &MRI) const {
+    llvm_unreachable("Target didn't implement TargetInstrInfo::convertToCCMP!");
+  }
+
+  /// Return the expected code-size delta (in number of instructions) of
+  /// converting the candidate described by Info into a conditional compare.
+  /// Used by the MinSize heuristic. Defaults to 0 (no size change assumed).
+  virtual int getCCMPCodeSizeDelta(const CCmpConvInfo &Info,
+                                   ArrayRef<MachineOperand> HeadCond) const {
+    return 0;
+  }
+
   /// Given an instruction marked as `isSelect = true`, attempt to optimize MI
   /// by merging it with one of its operands. Returns nullptr on failure.
   ///

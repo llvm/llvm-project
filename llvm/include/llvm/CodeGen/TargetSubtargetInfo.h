@@ -343,6 +343,21 @@ public:
   /// Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }
 
+  /// Per-target tuning for the conditional-compare formation pass
+  /// (MachineConditionalCompares). The default leaves the code-size path off
+  /// (X86 behavior); AArch64 overrides it.
+  struct CCmpConvHeuristics {
+    /// In a MinSize function, convert whenever it does not grow code.
+    bool UseCodeSizeDeltaOnMinSize = false;
+  };
+
+  /// Enable the target-independent conditional-compare formation pass
+  /// (MachineConditionalCompares) for this subtarget.
+  virtual bool enableCCMPFormation() const { return false; }
+
+  /// Return the tunable heuristics for conditional-compare formation.
+  virtual CCmpConvHeuristics getCCmpConvHeuristics() const { return {}; }
+
   /// Return PBQPConstraint(s) for the target.
   ///
   /// Override to provide custom PBQP constraints.

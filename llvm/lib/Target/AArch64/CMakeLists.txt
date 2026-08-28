@@ -51,7 +51,6 @@ add_llvm_target(AArch64CodeGen
   AArch64CleanupLocalDynamicTLSPass.cpp
   AArch64CollectLOH.cpp
   AArch64CondBrTuning.cpp
-  AArch64ConditionalCompares.cpp
   AArch64DeadRegisterDefinitionsPass.cpp
   AArch64ExpandImm.cpp
   AArch64ExpandPseudoInsts.cpp

@@ -430,6 +430,20 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
+  MCRegister getConditionalCompareFlagReg() const override;
+  bool canConvertToCCMP(MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+                        ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+                        ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+                        const MachineRegisterInfo &MRI,
+                        CCmpConvInfo &Info) const override;
+  MachineInstr *convertToCCMP(MachineBasicBlock &Head,
+                              MachineBasicBlock::iterator SpliceLoc,
+                              const DebugLoc &HeadTermDL,
+                              ArrayRef<MachineOperand> HeadCond,
+                              const CCmpConvInfo &Info,
+                              MachineRegisterInfo &MRI) const override;
+  int getCCMPCodeSizeDelta(const CCmpConvInfo &Info,
+                           ArrayRef<MachineOperand> HeadCond) const override;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;

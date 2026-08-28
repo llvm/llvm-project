@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass=aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
-# RUN: llc -o - %s -mtriple=aarch64 -passes=aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass=machine-ccmp -stress-machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -passes=machine-ccmp -stress-machine-ccmp | FileCheck %s
 ---
 name: ccmp-look-through-copy
 tracksRegLiveness: true
