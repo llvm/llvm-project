@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 
@@ -191,7 +192,10 @@ public:
         reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
   }
 
-  LLVM_ABI bool operator==(FoldingSetNodeIDRef) const;
+  bool operator==(FoldingSetNodeIDRef RHS) const {
+    return Size == RHS.Size &&
+           memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
+  }
 
   bool operator!=(FoldingSetNodeIDRef RHS) const { return !(*this == RHS); }
 
@@ -268,8 +272,12 @@ public:
   }
 
   /// operator== - Used to compare two nodes to each other.
-  LLVM_ABI bool operator==(const FoldingSetNodeID &RHS) const;
-  LLVM_ABI bool operator==(const FoldingSetNodeIDRef RHS) const;
+  bool operator==(const FoldingSetNodeID &RHS) const {
+    return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
+  }
+  bool operator==(const FoldingSetNodeIDRef RHS) const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
+  }
 
   bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
   bool operator!=(const FoldingSetNodeIDRef RHS) const {
