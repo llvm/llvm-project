@@ -484,9 +484,9 @@ features cannot lower the translation-unit ABI level;
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
 
-- Fixed a crash when module directive export module foo not following a 
+- Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
-  
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
@@ -545,6 +545,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a non-deterministic ordering of unused local typedefs that made
   serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
   non-reproducible across runs. (#GH209639)
+
+- `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
+  location of a trailing return type. (#GH162649)
 
 #### Miscellaneous Bug Fixes
 
