@@ -102,6 +102,13 @@ struct ArrMem {
 // CIR-DAG: !rec_ArrMem = !cir.struct<"ArrMem" packed {data !s32i, pad !cir.array<!u8i x 4>, data !cir.array<!s128i_bitint x 2>}>
 // LLVM-DAG: %struct.ArrMem = type <{ i32, [4 x i8], [2 x i128] }>
 
+struct ArrMem65 { 
+  int i;
+  _BitInt(65) bi[2];
+};
+// CIR-DAG: !rec_ArrMem65 = !cir.struct<"ArrMem65" packed {data !s32i, pad !cir.array<!u8i x 4>, data !cir.array<!cir.int<s, 65, bitint> x 2>}>
+// LLVM-DAG: %struct.ArrMem65 = type <{ i32, [4 x i8], [2 x i128] }>
+
 struct Inner {
   int i;
   _BitInt(128) bi;
@@ -178,6 +185,10 @@ struct Last128 l128[2] = {{1, 222}, {3, 444}};
 struct ArrMem arrMem[2] = {{1, 222}, {3, 444}};
 // CIR-DAG: cir.global external @arrMem = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.const_array<[#cir.int<222> : !s128i_bitint], trailing_zeros> : !cir.array<!s128i_bitint x 2>}> : !rec_ArrMem, #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.const_array<[#cir.int<444> : !s128i_bitint], trailing_zeros> : !cir.array<!s128i_bitint x 2>}> : !rec_ArrMem]> : !cir.array<!rec_ArrMem x 2> {alignment = 16 : i64}
 // LLVM-DAG: @arrMem = global [2 x %struct.ArrMem] [%struct.ArrMem <{ i32 1, [4 x i8] zeroinitializer, [2 x i128] [i128 222, i128 0] }>, %struct.ArrMem <{ i32 3, [4 x i8] zeroinitializer, [2 x i128] [i128 444, i128 0] }>], align 16
+
+struct ArrMem65 arrMem65[2] = {{1, 222}, {3, 444}};
+// CIR-DAG: cir.global external @arrMem65 = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.const_array<[#cir.int<222> : !cir.int<s, 65, bitint>], trailing_zeros> : !cir.array<!cir.int<s, 65, bitint> x 2>}> : !rec_ArrMem65, #cir.const_record<{#cir.int<3> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.const_array<[#cir.int<444> : !cir.int<s, 65, bitint>], trailing_zeros> : !cir.array<!cir.int<s, 65, bitint> x 2>}> : !rec_ArrMem65]> : !cir.array<!rec_ArrMem65 x 2> {alignment = 16 : i64}
+// LLVM-DAG: @arrMem65 = global [2 x %struct.ArrMem65] [%struct.ArrMem65 <{ i32 1, [4 x i8] zeroinitializer, [2 x i128] [i128 222, i128 0] }>, %struct.ArrMem65 <{ i32 3, [4 x i8] zeroinitializer, [2 x i128] [i128 444, i128 0] }>], align 16
 
 struct Outer nestedArr[2] = {{1, 222}, {3, 444}};
 // CIR-DAG: cir.global external @nestedArr = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<222> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<0> : !s128i_bitint}> : !rec_Inner}> : !rec_Outer, #cir.const_record<{#cir.int<3> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<444> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<0> : !s128i_bitint}> : !rec_Inner}> : !rec_Outer]> : !cir.array<!rec_Outer x 2> {alignment = 16 : i64}
