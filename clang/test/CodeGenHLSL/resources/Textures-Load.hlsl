@@ -39,7 +39,7 @@
 // RUN:   -DFORMAT1=0 -DFORMAT3=0 -DFORMAT6=0 -DFORMAT21=0 -DFORMAT24=0 \
 // RUN:   -DFORMAT25=0 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2
 
-// RWTexture2D.
+// RWTexture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DTEXTURE=RWTexture2D -DLOAD_ARG="loc" -o - %s \
@@ -56,7 +56,7 @@
 // RUN:   -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 \
 // RUN:   -DFORMAT24=24 -DFORMAT25=25 -DSPV_DIM=1 -DENTRY_DIM=2 -DDIM=2
 
-// RWTexture2DArray.
+// RWTexture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \
 // RUN:   -DTEXTURE=RWTexture2DArray -DLOAD_ARG="int3(loc, 0)" -o - %s \
