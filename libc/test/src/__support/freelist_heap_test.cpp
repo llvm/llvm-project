@@ -97,11 +97,12 @@ TEST_FOR_EACH_ALLOCATOR(CanFreeAndRealloc, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   allocator.free(ptr1);
   void *ptr2 = allocator.allocate(ALLOC_SIZE);
-#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
-  EXPECT_NE(ptr1, ptr2);
-#else
-  EXPECT_EQ(ptr1, ptr2);
-#endif
+  // The freed block is quarantined in the inactive free store, so it cannot
+  // be handed back out until the stores rotate.
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) 
+    EXPECT_NE(ptr1, ptr2);
+  else
+    EXPECT_EQ(ptr1, ptr2);
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReturnsNullWhenAllocationTooLarge, 2048) {
@@ -395,32 +396,32 @@ TEST_FOR_EACH_ALLOCATOR(IntegrityCheck, 2048) {
   allocator.integrity_check();
 }
 
-#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
 TEST(LlvmLibcFreeListHeap, RotationSmokeTest) {
-  byte buf[4096] = {byte(0)};
-  FreeListHeap allocator(buf);
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) {
+    byte buf[4096] = {byte(0)};
+    FreeListHeap allocator(buf);
 
-  constexpr size_t SIZES[] = {64, 128, 256, 512};
+    constexpr size_t SIZES[] = {64, 128, 256, 512};
 
-  for (size_t size : SIZES) {
-    void *ptr1 = allocator.allocate(size);
-    ASSERT_NE(ptr1, static_cast<void *>(nullptr));
-    allocator.free(ptr1);
+    for (size_t size : SIZES) {
+      void *ptr1 = allocator.allocate(size);
+      ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+      allocator.free(ptr1);
 
-    // Because free() quarantines blocks into non-active store (1 - active),
-    // allocating again from active store yields a different address even for
-    // the same requested size.
-    void *ptr2 = allocator.allocate(size);
-    ASSERT_NE(ptr2, static_cast<void *>(nullptr));
-    EXPECT_NE(ptr1, ptr2);
-    allocator.free(ptr2);
+      // free() quarantines the block in the inactive store, so allocating the
+      // same size again yields a different address.
+      void *ptr2 = allocator.allocate(size);
+      ASSERT_NE(ptr2, static_cast<void *>(nullptr));
+      EXPECT_NE(ptr1, ptr2);
+      allocator.free(ptr2);
+    }
+
+    // Ask for more than the active store has left, which forces a rotation:
+    // all the quarantined blocks are migrated and coalesced into the store
+    // that is about to become active.
+    void *large_ptr = allocator.allocate(3500);
+    ASSERT_NE(large_ptr, static_cast<void *>(nullptr));
+    allocator.integrity_check();
+    allocator.free(large_ptr);
   }
-
-  // Trigger store rotation by requesting a size larger than remaining free
-  // space in active store, forcing migration and coalescing of all quarantined
-  // blocks into active store.
-  void *large_ptr = allocator.allocate(3500);
-  ASSERT_NE(large_ptr, static_cast<void *>(nullptr));
-  allocator.free(large_ptr);
 }
-#endif

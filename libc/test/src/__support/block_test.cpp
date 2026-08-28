@@ -249,11 +249,7 @@ TEST(LlvmLibcBlockTest, CanMarkBlockUsed) {
   EXPECT_TRUE(block.used());
   EXPECT_EQ(block.outer_size(), orig_size);
 
-#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
-  block.mark_free(0);
-#else
   block.mark_free();
-#endif
   EXPECT_FALSE(block.used());
 }
 
@@ -473,7 +469,7 @@ TEST(LlvmLibcBlockTest, PreviousBlockMergedIfNotFirst) {
   ASSERT_TRUE(result2.has_value());
   BlockRef newblock = *result2;
   ASSERT_EQ(newblock.prev_free().addr(), block.addr());
-  [[maybe_unused]] size_t old_prev_size = block.outer_size();
+  size_t old_prev_size = block.outer_size();
 
   // Now pick an alignment such that the usable space is not already aligned to
   // it. We want to explicitly test that the block will split into one before
@@ -485,18 +481,12 @@ TEST(LlvmLibcBlockTest, PreviousBlockMergedIfNotFirst) {
   // Ensure we can allocate in the new block.
   auto [aligned_block, prev, next] = BlockRef::allocate(newblock, alignment, 1);
 
-#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
-  EXPECT_EQ(prev.addr(), newblock.addr());
-  EXPECT_EQ(aligned_block.prev_free().addr(), newblock.addr());
-  EXPECT_EQ(newblock.next().addr(), aligned_block.addr());
-#else
   // Now there should be no new previous block. Instead, the padding we did
   // create should be merged into the original previous block.
   EXPECT_EQ(prev.addr(), BlockRef().addr());
   EXPECT_EQ(aligned_block.prev_free().addr(), block.addr());
   EXPECT_EQ(block.next().addr(), aligned_block.addr());
   EXPECT_GT(block.outer_size(), old_prev_size);
-#endif
 }
 
 TEST(LlvmLibcBlockTest, CanRemergeBlockAllocations) {
