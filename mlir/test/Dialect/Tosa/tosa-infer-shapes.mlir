@@ -356,8 +356,8 @@ func.func @test_dynamic_mixed_matmul(%arg0 : tensor<?x3x?xi32>, %arg1 : tensor<?
 
 // CHECK-LABEL: @test_unranked_zero_points_matmul
 func.func @test_unranked_zero_points_matmul(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x3x4xf32>, %zero_point: tensor<1xf32>) -> tensor<1x2x4xf32> {
-    // CHECK: %[[ZP:.*]] = tosa.cast %arg2 : (tensor<1xf32>) -> tensor<1xf32>
-    %zero_point_unranked = "tosa.cast"(%zero_point) {input_unsigned = false} : (tensor<1xf32>) -> tensor<*xf32>
+    // CHECK: %[[ZP:.*]] = tosa.cast %arg2 input_unsigned(false) : (tensor<1xf32>) -> tensor<1xf32>
+    %zero_point_unranked = "tosa.cast"(%zero_point) <{input_unsigned = false}> : (tensor<1xf32>) -> tensor<*xf32>
     // CHECK: tosa.matmul %arg0, %arg1, %[[ZP]], %[[ZP]] : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x4xf32>
     %0 = tosa.matmul %arg0, %arg1, %zero_point_unranked, %zero_point_unranked : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<*xf32>, tensor<*xf32>)  -> tensor<1x2x4xf32>
     return %0 : tensor<1x2x4xf32>
@@ -839,7 +839,7 @@ func.func @gather_minimum_info(%arg0 : tensor<3x?x5xi32>, %arg1 : tensor<?x6xi32
 
 // CHECK-LABEL: @row_gather_static
 func.func @row_gather_static(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x12x5xi32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
   return
@@ -849,7 +849,7 @@ func.func @row_gather_static(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>)
 
 // CHECK-LABEL: @row_gather_minimum_info
 func.func @row_gather_minimum_info(%arg0 : tensor<3x?x5xi32>, %arg1 : tensor<?x6xi32>) {
-  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x?x5xi32>, tensor<?x6xi32>, tensor<1xi32>) -> tensor<3x12x5xi32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x?x5xi32>, tensor<?x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
   return
@@ -868,7 +868,7 @@ func.func @row_gather_nonconstant_row_count(%arg0 : tensor<3x4x5xi32>, %arg1 : t
 
 // CHECK-LABEL: @row_gather_row_count_one
 func.func @row_gather_row_count_one(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x6xi32>) {
-  %row_count = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<3x6x5xi32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<3x4x5xi32>, tensor<3x6xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
   return
@@ -878,7 +878,7 @@ func.func @row_gather_row_count_one(%arg0 : tensor<3x4x5xi32>, %arg1 : tensor<3x
 
 // CHECK-LABEL: @row_gather_unranked
 func.func @row_gather_unranked(%arg0 : tensor<*xi32>, %arg1 : tensor<*xi32>) {
-  %row_count = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %row_count = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
   // CHECK: tosa.row_gather %arg0, %arg1, %[[ROW_COUNT:.+]] : (tensor<*xi32>, tensor<*xi32>, tensor<1xi32>) -> tensor<?x?x?xi32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<*xi32>, tensor<*xi32>, tensor<1xi32>) -> tensor<*xi32>
   return

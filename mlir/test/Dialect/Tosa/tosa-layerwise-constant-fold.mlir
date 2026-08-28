@@ -103,10 +103,10 @@ func.func @transpose_fold_2d_bool() -> tensor<3x2xi1> {
 
 // CHECK-LABEL: @transpose_fold_4d_int
 func.func @transpose_fold_4d_int() -> tensor<3x1x4x2xi32> {
-  %input = "tosa.const"() {values = dense<[[
+  %input = "tosa.const"() <{values = dense<[[
     [[ 0,  1,  2,  3], [ 4,  5,  6,  7], [ 8,  9, 10, 11]],
     [[12, 13, 14, 15], [16, 17, 18, 19], [20, 21, 22, 23]]
-  ]]> : tensor<1x2x3x4xi32>} : () -> tensor<1x2x3x4xi32>
+  ]]> : tensor<1x2x3x4xi32>}> : () -> tensor<1x2x3x4xi32>
   //               CHECK: %[[CST:.+]] = "tosa.const"() <{
   // CHECK-SAME{LITERAL}: values = dense<[
   // CHECK-SAME{LITERAL}:   [[[0, 12], [1, 13], [2, 14], [3, 15]]],

@@ -435,9 +435,9 @@ func.func @test_static_unary_path_to_const() -> tensor<1x2x3x4xi32> {
 // CHECK: return %[[NEW_ADD]]
 func.func @test_static_diverges_to_non_splat_const_and_nullifying(%arg0: tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32> {
   %transpose0 = tosa.transpose %arg0 perms([0, 2, 3, 1]) : (tensor<1x2x3x4xi32>) -> tensor<1x3x4x2xi32>
-  %const = "tosa.const"() {values = dense<[[[[1, 2], [3, 4], [5, 6], [7, 8]],
+  %const = "tosa.const"() <{values = dense<[[[[1, 2], [3, 4], [5, 6], [7, 8]],
    [[9, 10], [11, 12], [13, 14], [15, 16]],
-   [[17, 18], [19, 20], [21, 22], [23, 24]]]]> : tensor<1x3x4x2xi32>} : () -> tensor<1x3x4x2xi32>
+   [[17, 18], [19, 20], [21, 22], [23, 24]]]]> : tensor<1x3x4x2xi32>}> : () -> tensor<1x3x4x2xi32>
   %clamp = tosa.clamp %transpose0 min_val(0 : i32) max_val(2147483647 : i32) : (tensor<1x3x4x2xi32>) -> tensor<1x3x4x2xi32>
   %abs = tosa.abs %const : (tensor<1x3x4x2xi32>) -> tensor<1x3x4x2xi32>
   %add = tosa.add %abs, %clamp : (tensor<1x3x4x2xi32>, tensor<1x3x4x2xi32>) -> tensor<1x3x4x2xi32>

@@ -211,8 +211,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
       "`stride` `(` $stride `)` "
       "`dilation` `(` $dilation `)` "
       "`acc_type` `(` $acc_type `)` "
-      "oilist(`local_bound` `(` $local_bound `)`) "
-      "attr-dict `:` "
+      "custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -305,8 +304,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
       "`stride` `(` $stride `)` "
       "`dilation` `(` $dilation `)` "
       "`acc_type` `(` $acc_type `)` "
-      "oilist(`local_bound` `(` $local_bound `)`) "
-      "attr-dict `:` "
+      "custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -360,8 +358,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
       "`stride` `(` $stride `)` "
       "`dilation` `(` $dilation `)` "
       "`acc_type` `(` $acc_type `)` "
-      "oilist(`local_bound` `(` $local_bound `)`) "
-      "attr-dict `:` "
+      "custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -408,8 +405,7 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
 
   let assemblyFormat =
       "operands `inverse` `(` $inverse `)` "
-      "oilist(`local_bound` `(` $local_bound `)`) "
-      "attr-dict `:` "
+      "custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -631,7 +627,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   let hasVerifier = 1;
 
   let assemblyFormat =
-      "operands oilist(`local_bound` `(` $local_bound `)`) attr-dict `:` "
+      "operands custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -681,8 +677,7 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
       "operands `out_pad` `(` $out_pad `)` "
       "`stride` `(` $stride `)` "
       "`acc_type` `(` $acc_type `)` "
-      "oilist(`local_bound` `(` $local_bound `)`) "
-      "attr-dict `:` "
+      "custom<LocalBound>($local_bound) attr-dict `:` "
       "functional-type(operands, results)";
 }
 
@@ -2515,8 +2510,8 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
   );
 
   let assemblyFormat =
-      "operands oilist(`input_unsigned` `(` $input_unsigned `)`) "
-      "attr-dict `:` functional-type(operands, results)";
+      "operands custom<InputUnsigned>($input_unsigned) attr-dict `:` "
+      "functional-type(operands, results)";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

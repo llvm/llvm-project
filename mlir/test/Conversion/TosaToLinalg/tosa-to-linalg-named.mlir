@@ -665,7 +665,7 @@ func.func @conv2d_f16_f32_acc(%input: tensor<1x49x42x27xf16>, %weights: tensor<2
   // CHECK: linalg.generic {{{.*}}} ins(%{{.*}} : tensor<28xf16>) outs(%{{.*}} : tensor<1x45x40x28xf32>)
   // CHECK: arith.extf %{{.*}} : f16 to f32
   // CHECK: %[[CONV:.*]] = linalg.conv_2d_nhwc_fhwc {{{.*}}} ins(%{{.*}}, %{{.*}} : tensor<1x49x42x27xf16>, tensor<28x3x3x27xf16>) outs(%{{.*}} : tensor<1x45x40x28xf32>) -> tensor<1x45x40x28xf32>
-  // CHECK: tosa.cast %[[CONV]] : (tensor<1x45x40x28xf32>) -> tensor<1x45x40x28xf16>
+  // CHECK: tosa.cast %[[CONV]] input_unsigned(false) : (tensor<1x45x40x28xf32>) -> tensor<1x45x40x28xf16>
   %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0]) stride([1, 1]) dilation([2, 1]) acc_type(f32) : (tensor<1x49x42x27xf16>, tensor<28x3x3x27xf16>, tensor<28xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x45x40x28xf16>
   return
 }
@@ -878,7 +878,7 @@ func.func @depthwise_conv2d_f16_f32_acc(%arg0 : tensor<1x7x5x3xf16>, %arg1 : ten
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   // CHECK: %[[CONV:.*]] = linalg.depthwise_conv_2d_nhwc_hwcm {{{.*}}} ins(%{{.*}}, %{{.*}} : tensor<1x7x5x3xf16>, tensor<3x1x3x11xf16>) outs(%{{.*}} : tensor<1x5x5x3x11xf32>) -> tensor<1x5x5x3x11xf32>
-  // CHECK: tosa.cast %[[CONV]] : (tensor<1x5x5x3x11xf32>) -> tensor<1x5x5x3x11xf16>
+  // CHECK: tosa.cast %[[CONV]] input_unsigned(false) : (tensor<1x5x5x3x11xf32>) -> tensor<1x5x5x3x11xf16>
   %2 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f32) : (tensor<1x7x5x3xf16>, tensor<3x1x3x11xf16>, tensor<33xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x5x5x33xf16>
   return
 }
@@ -973,7 +973,7 @@ func.func @conv3d_f16_f32_acc(%input: tensor<1x49x48x47x27xf16>, %weights: tenso
   // CHECK: linalg.generic {{{.*}}} ins(%{{.*}} : tensor<43xf16>) outs(%{{.*}} : tensor<1x47x45x43x43xf32>)
   // CHECK: arith.extf %{{.*}} : f16 to f32
   // CHECK: %[[CONV:.*]] = linalg.conv_3d_ndhwc_dhwcf {{{.*}}} ins(%{{.*}}, %{{.*}} : tensor<1x49x48x47x27xf16>, tensor<3x4x5x27x43xf16>) outs(%{{.*}} : tensor<1x47x45x43x43xf32>) -> tensor<1x47x45x43x43xf32>
-  // CHECK: tosa.cast %[[CONV]] : (tensor<1x47x45x43x43xf32>) -> tensor<1x47x45x43x43xf16>
+  // CHECK: tosa.cast %[[CONV]] input_unsigned(false) : (tensor<1x47x45x43x43xf32>) -> tensor<1x47x45x43x43xf16>
   %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x49x48x47x27xf16>, tensor<43x3x4x5x27xf16>, tensor<43xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<1x47x45x43x43xf16>
   return
 }
