@@ -152,7 +152,7 @@ define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]

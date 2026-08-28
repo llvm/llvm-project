@@ -50,7 +50,7 @@ define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) {
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP6]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP7]], [[SCEVGEP]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[TMP10:%.*]] = icmp ugt ptr [[TMP8]], [[SCEVGEP]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[TMP10:%.*]] = icmp sgt ptr [[TMP8]], [[SCEVGEP]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP11:%.*]] = select i1 [[TMP4]], i1 [[TMP10]], i1 [[TMP9]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
 ; NO-UNIT-STRIDE-MV-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]

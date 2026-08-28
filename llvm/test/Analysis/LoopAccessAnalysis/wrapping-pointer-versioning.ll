@@ -175,7 +175,7 @@ define void @f3(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      {%a,+,4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
@@ -232,13 +232,13 @@ define void @f4(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
-; CHECK-NEXT:      {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body> Added Flags: <nusw>
+; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nsuw>
+; CHECK-NEXT:      {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
 ; CHECK-NEXT:        ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body>
+; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body>
 ;
 entry:
   %TruncN = trunc i64 %N to i32
@@ -292,12 +292,12 @@ define void @f5(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr inbounds i16, ptr %a, i32 %mul:
 ; CHECK-NEXT:        ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body>
+; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body>
 ;
 entry:
   %TruncN = trunc i64 %N to i32

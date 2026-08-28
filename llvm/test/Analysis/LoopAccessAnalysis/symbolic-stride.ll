@@ -470,17 +470,17 @@ define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B))))
-; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (zext i32 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (zext i32 %N to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 %N to i64))<nuw><nsw>}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,%N}<%loop> to i64))<nsw> + %B)
-; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 %N to i64))<nuw><nsw>}<%loop>
 ;
 entry:
   %cmp = icmp eq i32 %N, 0
@@ -526,7 +526,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
@@ -572,17 +572,17 @@ define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B))))
-; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<nw><%loop>
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (sext i16 %N to i32) to i64) * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (sext i16 %N to i32) to i64) * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 (sext i16 %N to i32) to i64))<nuw><nsw>}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(sext i16 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
-; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<nw><%loop>
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 (sext i16 %N to i32) to i64))<nuw><nsw>}<%loop>
 ;
 entry:
   %N.ext = sext i16 %N to i32
@@ -623,17 +623,17 @@ define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B))))
-; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
+; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (trunc i64 %N to i32) to i64) * (zext i32 (-1 + (trunc i64 %N to i32)) to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (trunc i64 %N to i32) to i64) * (zext i32 (-1 + (trunc i64 %N to i32)) to i64)) + %B))))
+; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 (trunc i64 %N to i32) to i64))<nuw><nsw>}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
 ; CHECK-NEXT:        ((2 * (sext i32 {%j,+,(trunc i64 %N to i32)}<nw><%loop> to i64))<nsw> + %B)
-; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
+; CHECK-NEXT:        --> {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i32 (trunc i64 %N to i32) to i64))<nuw><nsw>}<%loop>
 ;
 entry:
   %N.trunc = trunc i64 %N to i32
@@ -883,20 +883,20 @@ define void @single_stride_scaled_inside_and_outside_cast(ptr %A, i32 %N, i32 %s
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umin %A) High: (4 + (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umax %A)))
-; CHECK-NEXT:            Member: {%A,+,(4 * (sext i32 (16 * %stride) to i64))<nsw>}<%loop>
+; CHECK-NEXT:          (Low: (((4 * (zext i32 (-1 + %N) to i64) * (zext i32 (16 * %stride) to i64)) + %A) umin %A) High: (4 + (((4 * (zext i32 (-1 + %N) to i64) * (zext i32 (16 * %stride) to i64)) + %A) umax %A)))
+; CHECK-NEXT:            Member: {%A,+,(4 * (zext i32 (16 * %stride) to i64))<nuw><nsw>}<%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %A)<nuw> High: (8 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {(4 + %A)<nuw>,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,(16 * %stride)}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,(16 * %stride)}<%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul.ext:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,(16 * %stride)}<%loop> to i64))<nsw> + %A)
-; CHECK-NEXT:        --> {%A,+,(4 * (sext i32 (16 * %stride) to i64))<nsw>}<%loop>
+; CHECK-NEXT:        --> {%A,+,(4 * (zext i32 (16 * %stride) to i64))<nuw><nsw>}<%loop>
 ;
 entry:
   %s16 = mul i32 %stride, 16

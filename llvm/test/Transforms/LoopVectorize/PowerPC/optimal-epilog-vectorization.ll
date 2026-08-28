@@ -243,7 +243,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; VF-TWO-CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; VF-TWO-CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; VF-TWO-CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
+; VF-TWO-CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], [[TMP0]]
 ; VF-TWO-CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
 ; VF-TWO-CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
@@ -357,7 +357,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; VF-FOUR-CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; VF-FOUR-CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; VF-FOUR-CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP0]]
+; VF-FOUR-CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], [[TMP0]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
 ; VF-FOUR-CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]

@@ -11,10 +11,8 @@ define i32 @bounded_load_reduction_bound2(ptr %A, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -687,7 +685,7 @@ define i32 @reverse_load_with_bounded(ptr %A, ptr %B, i32 %N) {
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 1, [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 1, [[N]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:

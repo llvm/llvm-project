@@ -155,7 +155,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
+; RV64-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], [[TMP4]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
 ; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
@@ -271,7 +271,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
+; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], [[TMP4]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
@@ -370,7 +370,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
+; RV64-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], [[TMP4]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
 ; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
@@ -486,7 +486,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
+; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], [[TMP4]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
