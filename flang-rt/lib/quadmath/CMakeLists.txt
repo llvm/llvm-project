@@ -86,6 +86,26 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
         "to be available: ${FLANG_RUNTIME_F128_MATH_LIB}"
         )
     endif()
+  elseif (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libm")
+    # glibc 2.26 and later export the *f128 entry points from libm itself, so
+    # this route pulls in no third-party library at all.
+    check_library_exists(m sinf128 "" FOUND_LIBMF128_EXPLICIT)
+    if (FOUND_LIBMF128_EXPLICIT)
+      add_compile_definitions(HAS_LIBMF128)
+      # glibc gates the *f128 prototypes behind this, and it has to be on the
+      # command line rather than in a header: no header can guarantee it is
+      # seen before <cmath> or <complex.h> in every translation unit, and when
+      # it is not, the prototypes silently do not appear. Measured on glibc
+      # 2.43: <cmath> exposes sqrtf128 without it but <complex.h> does not
+      # expose cabsf128, so a header-based definition looks correct on the
+      # scalar half and fails on the complex half of the same build.
+      add_compile_definitions(__STDC_WANT_IEC_60559_TYPES_EXT__=1)
+    else()
+      message(FATAL_ERROR
+        "FLANG_RUNTIME_F128_MATH_LIB=libm requires a libm that exports the "
+        "*f128 entry points (glibc 2.26 or later)"
+        )
+    endif()
   else()
     message(FATAL_ERROR
       "Unsupported third-party library for Fortran F128 math runtime: "
@@ -125,11 +145,18 @@ else()
   if (FOUND_LIBMF128)
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBMF128
+      # glibc gates the *f128 prototypes behind this. It must be on the command
+      # line, not in a header: a header cannot guarantee it is seen before
+      # <cmath> or <complex.h> in every translation unit, and when it is not,
+      # the prototypes silently do not appear. Measured on glibc 2.43: <cmath>
+      # exposes sqrtf128 without it, <complex.h> does not expose cabsf128 - so
+      # a header-based definition would look correct on the scalar half and
+      # fail on the complex half of the same build.
+      __STDC_WANT_IEC_60559_TYPES_EXT__=1
       )
     target_include_directories(FortranFloat128MathILib INTERFACE
       "${FLANG_RT_SOURCE_DIR}/lib/flang_rt"
       )
-    # Enable this, when math-entries.h and complex-math.h is ready.
-    # target_sources(FortranFloat128MathILib INTERFACE ${sources})
+    target_sources(FortranFloat128MathILib INTERFACE ${sources})
   endif()
 endif()
