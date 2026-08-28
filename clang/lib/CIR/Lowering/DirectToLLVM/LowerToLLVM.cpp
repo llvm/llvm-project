@@ -76,69 +76,6 @@ mlir::Type elementTypeIfVector(mlir::Type type) {
 }
 } // namespace
 
-/// In-memory storage width in bits for a _BitInt(N): N rounded up to the type's
-/// ABI alignment.  This equals sizeof(_BitInt(N)) * 8 on the default target
-/// (e.g. _BitInt(6) -> 8, _BitInt(17) -> 32, _BitInt(128) -> 128).
-static unsigned getBitIntMemoryStorageBits(cir::IntType ty,
-                                           const mlir::DataLayout &dataLayout) {
-  uint64_t alignBits = ty.getABIAlignment(dataLayout, {}) * 8;
-  return llvm::alignTo(ty.getWidth(), alignBits);
-}
-
-/// A _BitInt(N) whose padded storage integer iM has a larger alloc size than
-/// its M/8 store size is laid out by clang as a byte array, not a plain integer
-/// (e.g. _BitInt(129) -> i192 with alloc size 32 != store size 24).  That
-/// "split" storage form is not yet implemented; lowerings must detect it and
-/// report errorNYI rather than emit the wrong-sized integer.
-static bool isSplitStorageBitInt(cir::IntType ty,
-                                 const mlir::DataLayout &dataLayout) {
-  if (!ty.isBitInt())
-    return false;
-  unsigned storageBits = getBitIntMemoryStorageBits(ty, dataLayout);
-  auto storageTy = mlir::IntegerType::get(ty.getContext(), storageBits);
-  uint64_t storeSize = storageBits / 8;
-  uint64_t allocSize =
-      llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
-  return allocSize != storeSize;
-}
-
-/// Given a type convertor and a data layout, convert the given type to a type
-/// that is suitable for memory operations. For example, this can be used to
-/// lower cir.bool accesses to i8.
-static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
-                                       mlir::DataLayout const &dataLayout,
-                                       mlir::Type type) {
-  // TODO(cir): Handle other types similarly to clang's codegen
-  // convertTypeForMemory
-  if (isa<cir::BoolType>(type)) {
-    return mlir::IntegerType::get(type.getContext(),
-                                  dataLayout.getTypeSizeInBits(type));
-  }
-
-  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
-    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
-      assert(!cir::MissingFeatures::hlsl());
-      // Pad to at least one byte.
-      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-      return mlir::IntegerType::get(type.getContext(), bytePadded);
-    }
-  }
-
-  // _BitInt(N) keeps its literal width as a value but is stored in a padded
-  // integer iM in memory, the same way bool is i1 as a value and i8 in memory.
-  // The byte-array storage form for wide split widths is not implemented; a
-  // null return signals that, and op lowerings turn it into errorNYI.
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
-      intTy && intTy.isBitInt()) {
-    if (isSplitStorageBitInt(intTy, dataLayout))
-      return {};
-    return mlir::IntegerType::get(
-        type.getContext(), getBitIntMemoryStorageBits(intTy, dataLayout));
-  }
-
-  return converter.convertType(type);
-}
-
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
 /// over-aligns the value, so use the CIR _BitInt ABI alignment (e.g. 8).
@@ -179,7 +116,7 @@ static mlir::Value
 castBitIntMemoryStorage(mlir::ConversionPatternRewriter &rewriter,
                         const mlir::DataLayout &dataLayout, cir::IntType intTy,
                         mlir::Value value, bool toMemory) {
-  unsigned storageBits = getBitIntMemoryStorageBits(intTy, dataLayout);
+  unsigned storageBits = intTy.getStorageTypeWidth(dataLayout);
   if (storageBits == intTy.getWidth())
     return value;
   unsigned dstBits = toMemory ? storageBits : intTy.getWidth();
