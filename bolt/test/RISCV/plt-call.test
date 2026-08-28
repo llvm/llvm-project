@@ -11,13 +11,13 @@
 // RUN:   --print-only=_start | FileCheck %s
 
 // Call to foo.
-// CHECK:      auipc t3, %pcrel_hi(foo@GOT)
-// CHECK-NEXT: ld t3, %pcrel_lo({{.*}})(t3)
+// CHECK:      auipc t3, %pcrel_hi(foo@GOT) # Label: [[FOO_HI:\.Lpcrel_hi[0-9]+]]
+// CHECK-NEXT: ld t3, %pcrel_lo([[FOO_HI]])(t3)
 // CHECK-NEXT: jalr t3 # PLTCall: 1
 
 // Tail call to bar.
-// CHECK:      auipc t3, %pcrel_hi(bar@GOT)
-// CHECK-NEXT: ld t3, %pcrel_lo({{.*}})(t3)
+// CHECK:      auipc t3, %pcrel_hi(bar@GOT) # Label: [[BAR_HI:\.Lpcrel_hi[0-9]+]]
+// CHECK-NEXT: ld t3, %pcrel_lo([[BAR_HI]])(t3)
 // CHECK-NEXT: jr t3 # TAILCALL # PLTCall: 1
 
 //--- main.s
