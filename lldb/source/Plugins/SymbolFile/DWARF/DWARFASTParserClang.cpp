@@ -1883,22 +1883,27 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
         m_ast.CreateClassTemplateSpecializationDecl(
             containing_decl_ctx, GetOwningClangModule(die), class_template_decl,
             tag_decl_kind, template_param_infos);
-    if (!class_specialization_decl) {
-      if (log) {
-        dwarf->GetObjectFile()->GetModule()->LogMessage(
-            log,
-            "SymbolFileDWARF({0:p}) - Failed to create specialization for "
-            "clang::ClassTemplateDecl({1}, {2:p}).",
-            this, llvm::StringRef(attrs.name), class_template_decl);
-      }
-      return TypeSP();
+    if (class_specialization_decl) {
+      clang_type =
+          m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
+
+      m_ast.SetMetadata(class_template_decl, metadata);
+      m_ast.SetMetadata(class_specialization_decl, metadata);
+    } else if (log) {
+      // A specialization with identical template arguments already exists.
+      // This happens with malformed/duplicated DWARF, e.g. GCC emits several
+      // reduced copies of a std::tuple<...> instantiation whose only template
+      // child is an empty DW_TAG_GNU_template_parameter_pack, so every copy
+      // collapses to the same (empty) argument list. Failing to parse the type
+      // here would leave members that reference it (such as unique_ptr's _M_t)
+      // with a null type and crash data formatters. Instead, fall through and
+      // build a plain (non-template) record type below.
+      dwarf->GetObjectFile()->GetModule()->LogMessage(
+          log,
+          "SymbolFileDWARF({0:p}) - Specialization for clang::ClassTemplateDecl"
+          "({1}, {2:p}) already exists; falling back to a non-template record.",
+          this, llvm::StringRef(attrs.name), class_template_decl);
     }
-
-    clang_type =
-        m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
-
-    m_ast.SetMetadata(class_template_decl, metadata);
-    m_ast.SetMetadata(class_specialization_decl, metadata);
   }
 
   if (!clang_type) {
