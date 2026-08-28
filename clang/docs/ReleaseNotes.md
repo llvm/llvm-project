@@ -554,6 +554,7 @@ features cannot lower the translation-unit ABI level;
   represent in `size_t`. The `err_struct_too_large` check now scales the
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
+- Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 
 ### OpenACC Specific Changes
 
@@ -682,6 +683,8 @@ features cannot lower the translation-unit ABI level;
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
 #### Moved checkers
+
+The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.UseAfterLifetimeEnd`.
 
 #### Diagnostic changes
 
