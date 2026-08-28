@@ -603,16 +603,24 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
+  // Verify the reduction dimensions.
+  int64_t sourceRank = getSourceVectorType().getRank();
+  SmallVector<bool> isReduced(sourceRank, false);
+  for (int64_t dim : getReductionDims()) {
+    if (dim < 0 || dim >= sourceRank)
+      return emitOpError("reduction dimension out of range: ") << dim;
+    if (isReduced[dim])
+      return emitOpError("duplicate reduction dimension: ") << dim;
+    isReduced[dim] = true;
+  }
+
   SmallVector<int64_t> targetShape;
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto [dimIdx, dimSize] :
        llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims(),
-                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
-                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
-                      })) {
+    if (!isReduced[dimIdx]) {
       targetShape.push_back(dimSize);
       scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
@@ -6180,6 +6188,21 @@ TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
+
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
                                                  VectorType vecTy,
                                                  MemRefType memRefTy) {
@@ -6303,6 +6326,9 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
   // Negative strides are not supported on vector.maskedload. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
   // assume non-negative strides to avoid undefined behavior.
@@ -6368,6 +6394,9 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
 
   // Negative strides are not supported on vector.maskedstore. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
@@ -6652,6 +6681,15 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.expandload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
     return failure();
@@ -6708,6 +6746,15 @@ LogicalResult CompressStoreOp::verify() {
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.compressstore. The lowering
+  // to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
@@ -7544,8 +7591,9 @@ static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
   return true;
 }
 
-/// Folds transpose(broadcast(x)) to broadcast(x) when the transpose leaves
-/// every non-broadcast dim of x at the position it already occupies.
+/// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
+/// 'order preserving', where 'order preserving' means the flattened
+/// inputs and outputs of the transpose have identical (numerical) values.
 ///
 /// Example:
 /// ```
@@ -7557,33 +7605,17 @@ static bool transposeMapsAxes(ArrayRef<int64_t> from, ArrayRef<int64_t> to,
 /// ```
 ///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<8x1xi32>.
 /// ```
+/// The algorithm works by partitioning dimensions into groups that can be
+/// locally permuted while preserving order, and checks that the transpose
+/// only permutes within these groups.
 ///
-/// The algorithm works by locating x's non-broadcast dims - those with size
-/// != 1, or a scalable [1] - in the broadcast result, and checking that the
-/// transpose leaves each of them in place.
-///
-/// A broadcast right-aligns x against its result, copies x along the
-/// non-broadcast dims and replicates it along all the others. Reading an
-/// element of the broadcast result therefore only uses the indices of the
-/// non-broadcast dims; the other indices are ignored. Those dims can be
-/// permuted freely, as a broadcast fills them the same way wherever they land.
-///
-/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7, i.e. a broadcast from
-///
-///   1x1x4x1x1x7
-///   ^ ^ ^ ^ ^ ^
-///   0 1 2 3 4 5   <- position in the broadcast result
-///       ^     ^
-///       non-broadcast dims (4 and 7)
-///
-/// The fold applies iff the permutation leaves positions 2 and 5 alone, e.g.
-/// [1, 0, 2, 3, 4, 5] or [4, 0, 2, 3, 1, 5]. The latter permutes broadcast dims
-/// across position 2, which is still valid because those dims only replicate.
-///
-/// Note this is weaker than `isOrderPreserving`, used by the transpose <->
-/// shape_cast folds, which requires the flattened transpose input and output to
-/// be identical. Here only the composition has to be a broadcast, so a
-/// transpose that is not order preserving can still fold.
+/// Groups are either contiguous sequences of 1s, or non-1s (1-element groups).
+/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7. This is equivalent to
+/// broadcasting from 1x1x4x1x1x7.
+///                   ^^^ ^ ^^^ ^
+///          groups:   0  1  2  3
+/// Order preserving permutations for this example are ones that only permute
+/// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
   using Base::Base;
@@ -7592,11 +7624,13 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransposeOp transpose,
                                 PatternRewriter &rewriter) const override {
+
     vector::BroadcastOp broadcast =
         transpose.getVector().getDefiningOp<vector::BroadcastOp>();
-    if (!broadcast)
+    if (!broadcast) {
       return rewriter.notifyMatchFailure(transpose,
                                          "not preceded by a broadcast");
+    }
 
     auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
     VectorType outputType = transpose.getResultVectorType();
@@ -7609,15 +7643,35 @@ public:
       return success();
     }
 
-    // The transpose must leave the non-broadcast dims in place, i.e. map each
-    // to itself (from == to).
-    int64_t rankDelta = outputType.getRank() - inputType.getRank();
-    SmallVector<int64_t> axes;
-    for (int64_t axis : nonBroadcastAxes(inputType))
-      axes.push_back(axis + rankDelta);
-    if (!transposeMapsAxes(axes, axes, transpose.getPermutation()))
-      return rewriter.notifyMatchFailure(transpose,
-                                         "moves a non-broadcast dim");
+    ArrayRef<int64_t> permutation = transpose.getPermutation();
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    int64_t inputRank = inputType.getRank();
+    int64_t outputRank = transpose.getType().getRank();
+    int64_t deltaRank = outputRank - inputRank;
+
+    int low = 0;
+    for (int inputIndex = 0; inputIndex < inputRank; ++inputIndex) {
+      bool notOne = inputShape[inputIndex] != 1;
+      bool prevNotOne = (inputIndex != 0 && inputShape[inputIndex - 1] != 1);
+      bool groupEndFound = notOne || prevNotOne;
+      if (groupEndFound) {
+        int high = inputIndex + deltaRank;
+        // Return failure if not all permutation destinations for indices in
+        // [low, high) are in [low, high), i.e. the permutation is not local to
+        // the group.
+        for (int i = low; i < high; ++i) {
+          if (permutation[i] < low || permutation[i] >= high) {
+            return rewriter.notifyMatchFailure(
+                transpose, "permutation not local to group");
+          }
+        }
+        low = high;
+      }
+    }
+
+    // We don't need to check the final group [low, outputRank) because if it is
+    // not locally bound, there must be a preceding group that already failed
+    // the check (impossible to have just 1 non-locally bound group).
 
     // The preceding logic also ensures that at this point, the output of the
     // transpose is definitely broadcastable from the input shape, assert so:
@@ -7627,6 +7681,7 @@ public:
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
                                                      broadcast.getSource());
+
     return success();
   }
 };
