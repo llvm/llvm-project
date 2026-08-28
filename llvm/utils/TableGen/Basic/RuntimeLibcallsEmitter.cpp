@@ -433,7 +433,7 @@ void RuntimeLibcallEmitter::emitPredicateGroups(
     // may have more than one. Order is irrelevant (each entry is a setAvailable
     // call); sort by the provided libcall, breaking ties on the impl enum for a
     // deterministic total order.
-    sort(Funcs, [](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
+    llvm::sort(Funcs, [](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
       return std::make_pair(A->getProvides()->getEnumVal(), A->getEnumVal()) <
              std::make_pair(B->getProvides()->getEnumVal(), B->getEnumVal());
     });
