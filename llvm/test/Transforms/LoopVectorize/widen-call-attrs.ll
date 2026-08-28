@@ -301,6 +301,61 @@ exit:
   ret void
 }
 
+; The call is only conditionally executed (if-converted) and its only
+; available variant is unmasked, so the widened call executes unconditionally
+; on every lane. nonnull must not be propagated to the widened call's
+; argument in that case: doing so would assert nonnull for lanes whose
+; scalar call never ran.
+define void @nonnull_dropped_for_if_converted_call(ptr noalias %p, ptr noalias %src, ptr noalias %out) {
+; CHECK-LABEL: define void @nonnull_dropped_for_if_converted_call(
+; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr [[P]])
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %latch]
+  %s.gep = getelementptr i32, ptr %src, i64 %iv
+  %x = load i32, ptr %s.gep
+  %c = icmp sgt i32 %x, 0
+  br i1 %c, label %then, label %latch
+
+then:
+  %r = call i32 @scalar_fn_uniform_ptr(ptr nonnull %p)
+  br label %latch
+
+latch:
+  %res = phi i32 [%r, %then], [0, %loop]
+  %o.gep = getelementptr i32, ptr %out, i64 %iv
+  store i32 %res, ptr %o.gep
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; byval(T) is an ABI parameter attribute and cannot be preserved for different
 ; types.
 define void @byval_stripped(ptr noalias %p, ptr noalias %out) {
@@ -317,7 +372,7 @@ define void @byval_stripped(ptr noalias %p, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -358,7 +413,7 @@ define void @range_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -399,7 +454,7 @@ define void @align_uniform_ptr_variant_decl_wins(ptr noalias %p, ptr noalias %ou
 ; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -422,7 +477,7 @@ exit:
 }
 
 ; The variant declaration carries nofpclass(nan inf) on its parameter; the
-; scalar call site's weaker nofpclass(nan). Should keep the stricter mask.
+; scalar call site's weaker nofpclass(nan).
 define void @nofpclass_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-LABEL: define void @nofpclass_arg_variant_decl_wins(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[OUT:%.*]]) {
@@ -434,12 +489,12 @@ define void @nofpclass_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @vec_fn_fp_variant_attrs(<2 x float> nofpclass(nan inf) [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @vec_fn_fp_variant_attrs(<2 x float> nofpclass(nan) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -480,7 +535,7 @@ define void @range_ret_propagated(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -521,7 +576,7 @@ define void @align_vec_ptr_propagated(ptr noalias %dst, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -562,7 +617,7 @@ define void @nonnull_vec_ptr_dropped(ptr noalias %dst, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -603,7 +658,7 @@ define void @signext_zeroext_stripped(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

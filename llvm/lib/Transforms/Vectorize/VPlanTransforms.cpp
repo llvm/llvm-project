@@ -5694,14 +5694,17 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       case CallWideningDecision::KindTy::VectorVariant: {
         // Masked variants take the mask as a trailing parameter, so they have
         // one more parameter than the original call's arguments.
-        if (Decision.Variant->arg_size() > Ops.size()) {
+        bool IsMaskedVariant = Decision.Variant->arg_size() > Ops.size();
+        if (IsMaskedVariant) {
           VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Replacement = new VPWidenCallRecipe(
-            CI, Decision.Variant, Ops, *VPI, *VPI,
-            VPIRAttributes(*CI, *Decision.Variant), VPI->getDebugLoc());
+        VPIRAttributes Attrs(*CI, *Decision.Variant);
+        if (VPI->isMasked() && !IsMaskedVariant)
+          Attrs.dropArgAttrs(CI->getContext());
+        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI,
+                                            *VPI, Attrs, VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:

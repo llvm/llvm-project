@@ -2171,6 +2171,8 @@ VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
   AttributeList VariantAttrs = Variant.getAttributes();
   FunctionType *VariantTy = Variant.getFunctionType();
 
+  // Limit initial supported set of attributes to subset of poison-generating
+  // ones that can be transferred from scalar to wide arguments.
   // TODO: Support additional attributes.
   static constexpr Attribute::AttrKind Allowed[] = {
       Attribute::Alignment, Attribute::NonNull, Attribute::NoFPClass,
@@ -2187,16 +2189,15 @@ VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
       return Attribute::getWithAlignment(
           Ctx, std::max(CallAttr.getAlignment().valueOrOne(),
                         VariantAttr.getAlignment().valueOrOne()));
-    case Attribute::NoFPClass:
-      return Attribute::getWithNoFPClass(Ctx, CallAttr.getNoFPClass() |
-                                                  VariantAttr.getNoFPClass());
     case Attribute::Range:
       return Attribute::get(
           Ctx, Attribute::Range,
           CallAttr.getRange().intersectWith(VariantAttr.getRange()));
-    default:
-      // Boolean attributes (e.g. nonnull) carry no value to combine.
+    case Attribute::NonNull:
+    case Attribute::NoFPClass:
       return CallAttr;
+    default:
+      llvm_unreachable("unknown attribute with custom combine rule");
     }
   };
 
@@ -2231,6 +2232,11 @@ VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
   }
 
   CallAttrs = AttributeList::get(Ctx, AttributeSet(), RetAttrs, ArgAttrs);
+}
+
+void VPIRAttributes::dropArgAttrs(LLVMContext &Ctx) {
+  CallAttrs =
+      AttributeList::get(Ctx, AttributeSet(), CallAttrs.getRetAttrs(), {});
 }
 
 void VPIRAttributes::applyAttrs(CallInst &V) const {
@@ -2288,9 +2294,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   applyFlags(*V);
   applyMetadata(*V);
-  V->setCallingConv(Variant->getCallingConv());
-
   applyAttrs(*V);
+  V->setCallingConv(Variant->getCallingConv());
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);

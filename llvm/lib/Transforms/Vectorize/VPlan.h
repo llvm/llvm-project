@@ -1238,6 +1238,9 @@ public:
   /// propagate to a widened call to \p Variant.
   VPIRAttributes(CallInst &CI, const Function &Variant);
 
+  /// Drop all argument attributes.
+  void dropArgAttrs(LLVMContext &Ctx);
+
   VPIRAttributes(const VPIRAttributes &Other) = default;
   VPIRAttributes &operator=(const VPIRAttributes &Other) = default;
 
