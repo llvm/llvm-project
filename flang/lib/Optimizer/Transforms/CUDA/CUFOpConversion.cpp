@@ -315,6 +315,9 @@ struct CUFDataTransferOpConversion
         }
       }
       if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
+        // A non-null shadow means the destination is a scalar constant. Keep
+        // its shadow up to date for later host reads, then aim the copy at the
+        // device symbol instead of the shadow.
         if (fir::AddrOfOp addrOfOp = getShadowAddrOf(dst)) {
           mlir::Value hostValue = src;
           if (fir::isa_ref_type(src.getType()))
@@ -328,19 +331,25 @@ struct CUFDataTransferOpConversion
       if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
         // A scalar CUDA constant is designated by its host shadow, which lives
         // in host memory and cannot take part in a device to device copy. Route
-        // the transfer through the shadow instead.
+        // the transfer through the shadow instead. There are three cases,
+        // depending on which side is a scalar constant.
         fir::AddrOfOp srcShadow = getShadowAddrOf(src);
         fir::AddrOfOp dstShadow = getShadowAddrOf(dst);
         if (srcShadow || dstShadow) {
           if (dstShadow) {
             if (srcShadow) {
+              // constant = constant
+              // Both sides are shadows, so the value is already in host
+              // memory. Copy shadow to shadow.
               mlir::Value hostValue =
                   fir::LoadOp::create(builder, loc, srcShadow);
               hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
               fir::StoreOp::create(builder, loc, hostValue, dstShadow);
             } else {
-              // Bring the device value into the host shadow first so that later
-              // host reads of the destination see it.
+              // constant = device
+              // The source is real device memory. Bring the value into the
+              // host shadow first so that later host reads of the destination
+              // see it.
               mlir::Value deviceToHost = builder.createIntegerConstant(
                   loc, builder.getI32Type(), kDeviceToHost);
               llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
@@ -348,13 +357,20 @@ struct CUFDataTransferOpConversion
                   sourceFile, sourceLine)};
               fir::CallOp::create(builder, loc, func, args);
             }
-            // The shadow now holds the value to push to constant memory.
+            // In both cases above the destination shadow now holds the value.
+            // Use it as the source and push it to the device symbol. Taking it
+            // from the shadow rather than from the original source also keeps
+            // any type conversion applied above.
             src = dstShadow;
             dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
                                                dstShadow.getSymbol());
           } else {
+            // device = constant
+            // The destination already carries a device address, so the source
+            // shadow is simply the host value to push.
             src = srcShadow;
           }
+          // Every case now reads from host memory.
           modeValue = builder.createIntegerConstant(loc, builder.getI32Type(),
                                                     kHostToDevice);
         }
