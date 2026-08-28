@@ -72,6 +72,91 @@ void IterateOverMembers(const llvm::omp::Clauses &set,
   }
 }
 
+static const parser::Name *GetBaseName(const parser::DataRef &dataRef);
+
+static bool ContainsStructureComponent(const parser::DataRef &dataRef) {
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &) { return false; },
+          [](const common::Indirection<parser::StructureComponent> &) {
+            return true;
+          },
+          [](const common::Indirection<parser::ArrayElement> &x) {
+            return ContainsStructureComponent(x.value().Base());
+          },
+          [](const common::Indirection<parser::CoindexedNamedObject> &x) {
+            return ContainsStructureComponent(
+                std::get<parser::DataRef>(x.value().t));
+          },
+      },
+      dataRef.u);
+}
+
+static bool ContainsStructureComponent(const parser::OmpObject &object) {
+  if (const auto *designator{GetDesignatorFromObj(object)}) {
+    return common::visit(common::visitors{
+                             [](const parser::DataRef &dataRef) {
+                               return ContainsStructureComponent(dataRef);
+                             },
+                             [](const parser::Substring &substring) {
+                               return ContainsStructureComponent(
+                                   std::get<parser::DataRef>(substring.t));
+                             },
+                         },
+        designator->u);
+  }
+  return false;
+}
+
+static const parser::Name *GetBaseName(const parser::DataRef &dataRef) {
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &name) { return &name; },
+          [](const common::Indirection<parser::StructureComponent> &x) {
+            return GetBaseName(x.value().Base());
+          },
+          [](const common::Indirection<parser::ArrayElement> &x) {
+            return GetBaseName(x.value().Base());
+          },
+          [](const common::Indirection<parser::CoindexedNamedObject> &x) {
+            return GetBaseName(std::get<parser::DataRef>(x.value().t));
+          },
+      },
+      dataRef.u);
+}
+
+static const Symbol *GetBaseObjectSymbol(const parser::OmpObject &object) {
+  if (const parser::Name *name{GetCommonBlockFromObj(object)})
+    return name->symbol ? &name->symbol->GetUltimate() : nullptr;
+
+  if (const parser::Designator *designator{GetDesignatorFromObj(object)}) {
+    const parser::Name *name{common::visit(
+        common::visitors{
+            [](const parser::DataRef &dataRef) { return GetBaseName(dataRef); },
+            [](const parser::Substring &substring) {
+              return GetBaseName(std::get<parser::DataRef>(substring.t));
+            },
+        },
+        designator->u)};
+    return name && name->symbol ? &name->symbol->GetUltimate() : nullptr;
+  }
+
+  return nullptr;
+}
+
+static bool HasCloseMapModifier(const parser::OmpMapClause &clause) {
+  const auto &modifiers{OmpGetModifiers(clause)};
+  if (OmpGetUniqueModifier<parser::OmpCloseModifier>(modifiers))
+    return true;
+
+  for (const parser::OmpMapTypeModifier *modifier :
+      OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(modifiers))
+    if (modifier->v == parser::OmpMapTypeModifier::Value::Close)
+      return true;
+
+  return false;
+}
+
 OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
     : DirectiveStructureChecker(context,
 #define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
@@ -3796,6 +3881,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   // Semantic checks related to presence of multiple list items within the same
   // clause
   CheckMultListItems();
+  CheckCloseModifierOnMapMembers();
 
   if (GetContext().directive == llvm::omp::Directive::OMPD_task) {
     if (auto *detachClause{FindClause(llvm::omp::Clause::OMPC_detach)}) {
@@ -4809,6 +4895,43 @@ void OmpStructureChecker::CheckAllowedMapTypes(parser::OmpMapType::Value type,
   context_.Say(GetContext().clauseSource,
       "Only the %s map types are permitted for MAP clauses on the %s directive"_err_en_US,
       llvm::join(names, ", "), ContextDirectiveAsFortran());
+}
+
+void OmpStructureChecker::CheckCloseModifierOnMapMembers() {
+  std::set<const Symbol *> closeMappedParents;
+  llvm::SmallVector<std::pair<const Symbol *, parser::CharBlock>>
+      closeMappedMembers;
+
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_map)) {
+    const auto &mapClause{std::get<parser::OmpClause::Map>(clause->u).v};
+
+    if (!HasCloseMapModifier(mapClause))
+      continue;
+
+    const parser::OmpObjectList &objects{
+        std::get<parser::OmpObjectList>(mapClause.t)};
+    for (const parser::OmpObject &object : objects.v) {
+      const Symbol *base{GetBaseObjectSymbol(object)};
+      if (!base)
+        continue;
+
+      if (ContainsStructureComponent(object)) {
+        std::optional<parser::CharBlock> source{GetObjectSource(object)};
+        closeMappedMembers.emplace_back(base, source.value_or(clause->source));
+      } else {
+        closeMappedParents.insert(base);
+      }
+    }
+  }
+
+  std::set<const Symbol *> warnedParents;
+  for (const auto &[parent, source] : closeMappedMembers) {
+    if (closeMappedParents.count(parent) == 0 &&
+        warnedParents.insert(parent).second) {
+      context_.Say(source,
+          "OpenMP CLOSE map modifier ignored for structure component; map the base object with CLOSE to apply the modifier"_warn_en_US);
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
