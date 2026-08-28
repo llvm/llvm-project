@@ -502,6 +502,36 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+KnownFPClass KnownFPClass::frem(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  Known.knownNot(fcInf);
+
+  // Inf REM x and x REM 0 produce NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      KnownLHS.isKnownNeverInfinity() &&
+      KnownRHS.isKnownNeverLogicalZero(Mode)) {
+    Known.knownNot(fcNan);
+  }
+
+  // The sign for frem is the same as the first operand.
+  if (KnownLHS.cannotBeOrderedLessThanZero())
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+  if (KnownLHS.cannotBeOrderedGreaterThanZero())
+    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
+  // See if we can be more aggressive about the sign of 0.
+  if (KnownLHS.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+  if (KnownLHS.isKnownNever(fcPositive))
+    Known.knownNot(fcPositive);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
                                      DenormalMode Mode) {
   // X % X is always exactly [+-]0.0 or a NaN.

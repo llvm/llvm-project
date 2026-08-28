@@ -27,6 +27,16 @@ struct FloatEmptyFirst { Empty e; float a; };
 struct alignas(32) Big32 {};
 union UBits { unsigned : 3; };
 union UNone {};
+union UEmptyInt { Empty e; int i; };
+union UEmptyAligned { Aligned e; int i; };
+union UArrEmpty { Empty a[2]; char c; };
+union UEmptyOnly { Empty e; };
+union UEmptyDouble { Empty e; double d; };
+union UEmptyBytes { Empty e; char c[8]; };
+union UBigEmpty { Big32 e; int i; };
+union UEmptyBaseMem { HasEmptyBase e; int i; };
+union UValue { Empty mono; int i; long long ll; double d; const char *s; };
+struct ArgStore { UValue value; unsigned char type; };
 
 // An empty class is passed in no register at all.
 int takeEmpty(Empty v, int k) { return k; }
@@ -160,6 +170,88 @@ int takeUNone(UNone v, int k) { return k; }
 
 // CIR: cir.func {{.*}}@_Z9takeUNone5UNonei(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z9takeUNone5UNonei(i32 noundef %{{[^,]+}})
+
+// A union with an empty member coerces from the member that supplies bytes,
+// not from the union's size.
+int takeUEmptyInt(UEmptyInt v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z13takeUEmptyInt9UEmptyInt(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z13takeUEmptyInt9UEmptyInt(i32 %{{[^,]+}})
+
+// Here the empty member's alignment (16) outranks the int's (4), so the same
+// rule matters more: a member supplying no bytes still cannot decide the
+// storage type, and the 16-byte union coerces to the int's eightbyte rather
+// than widening to i64.
+int takeUEmptyAligned(UEmptyAligned v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z17takeUEmptyAligned13UEmptyAligned(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z17takeUEmptyAligned13UEmptyAligned(i32 %{{[^,]+}})
+
+// An alignment tie is broken by size, so an array of empty records outranks
+// the byte of data while holding none itself.
+int takeUArrEmpty(UArrEmpty v) { return v.c; }
+
+// CIR: cir.func {{.*}}@_Z13takeUArrEmpty9UArrEmpty(%arg0: !s8i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z13takeUArrEmpty9UArrEmpty(i8 %{{[^,]+}})
+
+// A union of nothing but an empty member is dropped, like an empty class.
+int takeUEmptyOnly(UEmptyOnly v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z14takeUEmptyOnly10UEmptyOnlyi(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z14takeUEmptyOnly10UEmptyOnlyi(i32 noundef %{{[^,]+}})
+
+// Skipping the empty member leaves the class to the member that remains, so
+// this passes in an SSE register rather than an integer one.
+double takeUEmptyDouble(UEmptyDouble v) { return v.d; }
+
+// CIR: cir.func {{.*}}@_Z16takeUEmptyDouble12UEmptyDouble(%arg0: !cir.double {{.*}}) -> (!cir.double
+// LLVM: define dso_local noundef double @_Z16takeUEmptyDouble12UEmptyDouble(double %{{[^,]+}})
+
+// Where the data member fills the eightbyte there is nothing to narrow.
+int takeUEmptyBytes(UEmptyBytes v) { return v.c[0]; }
+
+// CIR: cir.func {{.*}}@_Z15takeUEmptyBytes11UEmptyBytes(%arg0: !u64i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeUEmptyBytes11UEmptyBytes(i64 %{{[^,]+}})
+
+// Past two eightbytes SysV says memory whatever the content, so the empty
+// member changes nothing here.
+int takeUBigEmpty(UBigEmpty v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noalias, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM-CIR: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noalias noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// LLVM-OGCG: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// The same union returned uses sret at that alignment.
+UBigEmpty retUBigEmpty() { return UBigEmpty{}; }
+
+// CIR: cir.func {{.*}}@_Z12retUBigEmptyv(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBigEmpty, llvm.writable}
+// LLVM: define dso_local void @_Z12retUBigEmptyv(ptr dead_on_unwind noalias writable sret(%union.UBigEmpty) align 32 %{{[^,]+}})
+
+// Emptiness reaches the union member through a base class as well.
+int takeUEmptyBaseMem(UEmptyBaseMem v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z17takeUEmptyBaseMem13UEmptyBaseMem(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z17takeUEmptyBaseMem13UEmptyBaseMem(i32 %{{[^,]+}})
+
+// Several scalars alongside one empty member: the widest of the scalars decides
+// the coercion.
+long long takeUValue(UValue v) { return v.ll; }
+
+// CIR: cir.func {{.*}}@_Z10takeUValue6UValue(%arg0: !s64i {{.*}}) -> (!s64i
+// LLVM: define dso_local noundef i64 @_Z10takeUValue6UValue(i64 %{{[^,]+}})
+
+// The same union as a struct member, where the struct's eightbytes are what
+// gets classified.
+long long takeArgStore(ArgStore a) { return a.value.ll; }
+
+// CIR: cir.func {{.*}}@_Z12takeArgStore8ArgStore(%arg0: !s64i {{.*}}, %arg1: !u8i {{.*}}) -> (!s64i
+// LLVM: define dso_local noundef i64 @_Z12takeArgStore8ArgStore(i64 %{{[^,]+}}, i8 %{{[^,]+}})
+
+// The union returned by value round-trips through its coercion.
+UValue retUValue() { return UValue{}; }
+
+// CIR: cir.func {{.*}}@_Z9retUValuev() -> !s64i
+// LLVM: define dso_local i64 @_Z9retUValuev()
 
 // An empty return is dropped to void.
 Empty retEmpty() { return Empty{}; }

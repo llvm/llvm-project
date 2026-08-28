@@ -767,6 +767,9 @@ The available directives are as follows:
         on the default parser use attribute conversion instead when no
         `FieldParser` specialization is available or when the selected
         specialization declares `isKeyValueCompositional = false`.
+        `UnitAttr` and `UnitProp` entries use a presence-only `<key>` spelling
+        and are omitted when absent. The parser also accepts `<key = unit>` for
+        compatibility.
     -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
         accepted when parsing. The generated printer uses the key-value
         spelling and the same custom-printer or attribute-conversion choice.

@@ -21,6 +21,28 @@
 !rec_UEmpty = !cir.union<"UEmpty" {}, padding = {!u8i}>
 !rec_UNoRegs = !cir.union<"UNoRegs" {data !s32i, data !cir.float}>
 !rec_SWithUnion = !cir.struct<"SWithUnion" {data !rec_UIntFloat, data !s32i}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_E2 = !cir.struct<"E2" {pad !u8i}>
+!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
+!rec_EBig = !cir.struct<"EBig" {pad !cir.array<!u8i x 32>}>
+!rec_UEmptyInt = !cir.union<"UEmptyInt" {data !rec_E, data !s32i}>
+!rec_UTwoEmpty = !cir.union<"UTwoEmpty" {data !rec_E, data !rec_E2, data !s32i}>
+!rec_UEmptyTwoEightbytes = !cir.union<"UEmptyTwoEightbytes" {data !rec_E, data !cir.array<!s8i x 16>}>
+!rec_SWithEmptyUnion = !cir.struct<"SWithEmptyUnion" {data !rec_UEmptyInt, data !s32i}>
+!rec_UEmptyOver = !cir.union<"UEmptyOver" {data !rec_EOver, data !s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UEmptyOnly = !cir.union<"UEmptyOnly" {data !rec_E}>
+!rec_UEmptyOverOnly = !cir.union<"UEmptyOverOnly" {data !rec_EOver}>
+!rec_UEmptyDouble = !cir.union<"UEmptyDouble" {data !rec_E, data !cir.double}>
+!rec_UEmptyBytes = !cir.union<"UEmptyBytes" {data !rec_E, data !cir.array<!s8i x 8>}>
+!rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
+!rec_UArr8Empty = !cir.union<"UArr8Empty" {data !cir.array<!rec_E x 8>, data !s8i}>
+!rec_UBigEmptyInt = !cir.union<"UBigEmptyInt" {data !rec_EBig, data !s32i}, padding = {!cir.array<!u8i x 28>}>
+!rec_UEmptyUnnamedBits = !cir.union<"UEmptyUnnamedBits" {data !cir.array<!rec_E x 4>, empty !cir.array<!u8i x 3>}>
+!rec_SFloats = !cir.struct<"SFloats" {data !cir.float, data !cir.float}>
+!rec_UEmptyFloats = !cir.union<"UEmptyFloats" {data !rec_E, data !rec_SFloats}>
+!u32i = !cir.int<u, 32>
+!rec_UBitSpans = !cir.union<"UBitSpans" {bitfield !u32i}>
+!rec_UBitPlusLong = !cir.union<"UBitPlusLong" {bitfield !u32i, data !s64i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -32,6 +54,27 @@ module attributes {
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
       record_align = 32>,
     SOverAligned = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 32>,
+    E = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    E2 = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    EOver = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 16>,
+    EBig = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 32>,
+    UEmptyOver = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 16>,
+    UEmptyOverOnly = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 16>,
+    UBigEmptyInt = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
       record_align = 32>},
   dlti.dl_spec = #dlti.dl_spec<
@@ -180,6 +223,169 @@ module attributes {
   // CHECK:   cir.alloca "u" align(1) : !cir.ptr<!rec_UEmpty>
   // CHECK:   cir.return{{$}}
 
+  // An empty member does not reject a union: the int is the only member
+  // supplying bytes, so it is what the coercion is built from.
+  cir.func @take_empty_int(%arg0: !rec_UEmptyInt) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_int(%arg0: !s32i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s32i> -> !cir.ptr<!rec_UEmptyInt>
+
+  // The empty member's declared alignment (16) outranks the int's (4).  A
+  // member supplying no bytes is skipped when the union's storage type is
+  // chosen, so this 16-byte union still coerces to the int's eightbyte
+  // instead of widening to i64.
+  cir.func @take_empty_over(%arg0: !rec_UEmptyOver) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_over(%arg0: !s32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UEmptyOver>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UEmptyOver> -> !cir.ptr<!s32i>
+
+  // A union of nothing but an empty member classifies Ignore, the same as the
+  // member-less shape above.
+  cir.func @take_empty_only(%arg0: !rec_UEmptyOnly) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_only()
+
+  // Still Ignore at two eightbytes, where the empty member is over-aligned.
+  cir.func @take_empty_over_only(%arg0: !rec_UEmptyOverOnly) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_over_only()
+
+  // Skipping the empty member does not force an integer coercion.  The
+  // member that remains decides the eightbyte's class.
+  cir.func @take_empty_double(%arg0: !rec_UEmptyDouble) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_double(%arg0: !cir.double)
+
+  // Where the other member does fill the eightbyte there is nothing to narrow,
+  // so this stays i64.
+  cir.func @take_empty_bytes(%arg0: !rec_UEmptyBytes) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_bytes(%arg0: !u64i)
+
+  // The reduction breaks an alignment tie by size, so an array of empty
+  // records beats the one byte of data without holding any itself.
+  cir.func @take_arr_empty(%arg0: !rec_UArrEmpty) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr_empty(%arg0: !s8i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_UArrEmpty> -> !cir.ptr<!s8i>
+
+  // The same array spanning a whole eightbyte, where reading the union's size
+  // instead of its data would coerce to i64.
+  cir.func @take_arr8_empty(%arg0: !rec_UArr8Empty) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr8_empty(%arg0: !s8i)
+
+  // Past two eightbytes SysV says memory whatever the content, so the empty
+  // member changes nothing and the union is passed byval.
+  cir.func @take_big_empty_int(%arg0: !rec_UBigEmptyInt) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big_empty_int(%arg0: !cir.ptr<!rec_UBigEmptyInt> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmptyInt, llvm.noalias, llvm.noundef})
+
+  // More than one empty member is skipped the same way.
+  cir.func @take_two_empty(%arg0: !rec_UTwoEmpty) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_two_empty(%arg0: !s32i)
+
+  // Only data members are classified, so the unnamed bit-field's storage is
+  // not mapped and the union is left holding nothing that supplies bytes.
+  cir.func @take_empty_unnamed_bits(%arg0: !rec_UEmptyUnnamedBits) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_unnamed_bits()
+
+  // The remaining member decides the class, so a pair of floats in one
+  // eightbyte still coerces to a vector rather than an integer.
+  cir.func @take_empty_floats(%arg0: !rec_UEmptyFloats) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_floats(%arg0: !cir.vector<2 x !cir.float>)
+
+  // A named bit-field access unit that spans the union is itself the data
+  // the coercion reads from, so it is accepted on its own.
+  cir.func @take_bit_spans(%arg0: !rec_UBitSpans) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_spans(%arg0: !u32i)
+
+  // Here the bit-field access unit does not span, but the long does, so the
+  // union is accepted from the long's eightbyte rather than the unit's.
+  cir.func @take_bit_plus_long(%arg0: !rec_UBitPlusLong) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_plus_long(%arg0: !s64i)
+
+  // Both eightbytes classify INTEGER and are flattened into one argument each,
+  // so the empty member does not disturb a multi-eightbyte coercion.
+  cir.func @take_empty_two_eightbytes(%arg0: !rec_UEmptyTwoEightbytes) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_two_eightbytes(%arg0: !u64i, %arg1: !u64i)
+
+  // SWithEmptyUnion embeds UEmptyInt as a member, so the struct's own
+  // eightbyte classification has to look through the union: this pins that
+  // the enclosing struct still coerces correctly, not just the bare union.
+  cir.func @take_struct_with_empty_union(%arg0: !rec_SWithEmptyUnion) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_struct_with_empty_union(%arg0: !u64i)
+
+  // A coerced union return round-trips through the coercion type.
+  cir.func @ret_empty_int(%arg0: !rec_UEmptyInt) -> !rec_UEmptyInt {
+    %0 = cir.alloca "u" align(4) : !cir.ptr<!rec_UEmptyInt>
+    cir.store %arg0, %0 : !rec_UEmptyInt, !cir.ptr<!rec_UEmptyInt>
+    %1 = cir.load %0 : !cir.ptr<!rec_UEmptyInt>, !rec_UEmptyInt
+    cir.return %1 : !rec_UEmptyInt
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty_int(%arg0: !s32i) -> !s32i
+  // CHECK:   cir.return %{{.*}} : !s32i
+
+  // A union of only empty members is dropped from the return as well.
+  cir.func @ret_empty_only() -> !rec_UEmptyOnly {
+    %0 = cir.alloca "u" align(1) : !cir.ptr<!rec_UEmptyOnly>
+    %1 = cir.load %0 : !cir.ptr<!rec_UEmptyOnly>, !rec_UEmptyOnly
+    cir.return %1 : !rec_UEmptyOnly
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty_only()
+  // CHECK:   cir.return{{$}}
+
+  // The call site coerces the same way the callee expects.
+  cir.func @call_empty_int(%arg0: !rec_UEmptyInt) {
+    cir.call @take_empty_int(%arg0) : (!rec_UEmptyInt) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_empty_int(%arg0: !s32i)
+  // CHECK:   cir.call @take_empty_int(%{{.*}}) : (!s32i) -> ()
+
   // A union the record layout marks as unable to pass in registers goes
   // indirect without byval, however small it is.
   cir.func @take_no_regs(%arg0: !rec_UNoRegs) {
@@ -270,6 +476,26 @@ module attributes {
 // LLVM: define void @take_struct_over_aligned(ptr noalias noundef byval(%struct.SOverAligned) align 32 %{{.+}})
 // LLVM: define void @take_empty()
 // LLVM: define void @ret_empty()
+// LLVM: define void @take_empty_int(i32 %{{.+}})
+// LLVM: define void @take_empty_over(i32 %{{.+}})
+// LLVM: define void @take_empty_only()
+// LLVM: define void @take_empty_over_only()
+// LLVM: define void @take_empty_double(double %{{.+}})
+// LLVM: define void @take_empty_bytes(i64 %{{.+}})
+// LLVM: define void @take_arr_empty(i8 %{{.+}})
+// LLVM: define void @take_arr8_empty(i8 %{{.+}})
+// LLVM: define void @take_big_empty_int(ptr noalias noundef byval(%union.UBigEmptyInt) align 32 %{{.+}})
+// LLVM: define void @take_two_empty(i32 %{{.+}})
+// LLVM: define void @take_empty_unnamed_bits()
+// LLVM: define void @take_empty_floats(<2 x float> %{{.+}})
+// LLVM: define void @take_bit_spans(i32 %{{.+}})
+// LLVM: define void @take_bit_plus_long(i64 %{{.+}})
+// LLVM: define void @take_empty_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define void @take_struct_with_empty_union(i64 %{{.+}})
+// LLVM: define i32 @ret_empty_int(i32 %{{.+}})
+// LLVM: define void @ret_empty_only()
+// LLVM: define void @call_empty_int(i32 %{{.+}})
+// LLVM:   call void @take_empty_int(i32 %{{.+}})
 // LLVM: define void @take_no_regs(ptr byref(%union.UNoRegs) align 4 %{{.+}})
 // LLVM: define void @take_struct_with_union(i64 %{{.+}})
 // LLVM: define i32 @ret_int_float(i32 %{{.+}})

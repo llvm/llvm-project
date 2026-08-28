@@ -17,7 +17,7 @@
 // TYPE_TEST-NEXT:    %cmp14.not = icmp eq i64 %len, 0
 // TYPE_TEST-NEXT:    br i1 %cmp14.not, label %for.end7, label %for.cond1.preheader.preheader
 // TYPE_TEST-LABEL: for.cond1.preheader.preheader:                    ; preds = %entry
-// TYPE_TEST-NEXT:    %arrayidx.1 = getelementptr inbounds nuw i8, ptr %ptr, i64 4
+// TYPE_TEST-NEXT:    %arrayidx.c = getelementptr inbounds nuw i8, ptr %ptr, i64 4
 // TYPE_TEST-NEXT:    br label %for.cond1.preheader
 
 // The code below is a reduced case from https://github.com/llvm/llvm-project/issues/112053

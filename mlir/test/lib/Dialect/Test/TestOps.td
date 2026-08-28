@@ -3677,7 +3677,8 @@ def TestOpWithCustomPropDict : TEST_Op<"with_custom_prop_dict"> {
     I64Prop:$prop,
     DefaultValuedProp<I64Prop, "42">:$defaulted,
     OptionalAttr<StrAttr>:$optional,
-    UnitProp:$unit
+    UnitProp:$unit,
+    UnitAttr:$unit_attr
   );
 }
 

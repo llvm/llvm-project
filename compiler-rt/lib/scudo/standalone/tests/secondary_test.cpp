@@ -680,3 +680,47 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
     EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
   }
 }
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), 0U);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  Info.storeMemMap(Info.MemMaps[0]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  Info.storeMemMap(Info.MemMaps[1]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1 + Size2);
+
+  const scudo::uptr PeakBytes = Size1 + Size2;
+
+  // Releasing pages should drop CurrentResidentBytes to 0, while
+  // MaxResidentBytes stays at peak
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), PeakBytes);
+
+  // Store a third map to verify CurrentResidentBytes increases again
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  EXPECT_NE(0U, Size3);
+  Info.storeMemMap(Info.MemMaps[2]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size3);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), PeakBytes);
+}

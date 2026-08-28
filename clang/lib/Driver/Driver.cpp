@@ -999,7 +999,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
         C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
                             options::OPT_fno_offload_via_llvm, false);
     if (!UsesLLVMOffloading) {
-      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isSPIRV()) {
+      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isAMDGCNSPIRV()) {
         C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
             << "HIP" << Arch;
         return {};
@@ -4918,7 +4918,7 @@ static StringRef getCanonicalArchString(Compilation &C,
         << "CUDA" << ArchStr;
     return StringRef();
   } else if (Triple.isAMDGPU()) {
-    if (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isSPIRV())) {
+    if (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isAMDGCNSPIRV())) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "HIP" << ArchStr;
       return StringRef();
@@ -4938,7 +4938,7 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  if (Arch.isAMDGPU() || Arch.isSPIRV()) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
     llvm::StringMap<bool> Features;
     std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
     if (!Arch) {

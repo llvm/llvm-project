@@ -28,6 +28,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -111,6 +112,79 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
   return DL.isBigEndian() ? VectorWidth - 1 - Idx : Idx;
 }
 
+static void copyMemCacheHint(Instruction &Dest, const Instruction &Source,
+                             unsigned SourcePtrOperand,
+                             unsigned DestPtrOperand) {
+  MDNode *CacheHint = Source.getMetadata(LLVMContext::MD_mem_cache_hint);
+  // These intrinsics have a single memory operand.
+  if (!CacheHint || CacheHint->getNumOperands() != 2)
+    return;
+
+  auto *OperandNo = mdconst::extract<ConstantInt>(CacheHint->getOperand(0));
+  if (OperandNo->getZExtValue() != SourcePtrOperand)
+    return;
+
+  Metadata *DestOperandNo = ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt32Ty(Dest.getContext()), DestPtrOperand));
+  Dest.setMetadata(LLVMContext::MD_mem_cache_hint,
+                   MDNode::get(Dest.getContext(),
+                               {DestOperandNo, CacheHint->getOperand(1)}));
+}
+
+static void copyMetadataForMemoryAccess(
+    Instruction &Dest, const Instruction &Source, const DataLayout &DL,
+    unsigned SourcePtrOperand, unsigned DestPtrOperand, Type *AccessType,
+    bool IsWholeAccess, std::optional<size_t> ByteOffset) {
+  // Only propagate metadata that is valid on each constituent memory access.
+  // In particular, do not copy metadata whose meaning is tied to the call,
+  // such as !prof or !callsite.
+  Dest.copyMetadata(Source,
+                    {LLVMContext::MD_nontemporal,
+                     LLVMContext::MD_mem_parallel_loop_access,
+                     LLVMContext::MD_access_group, LLVMContext::MD_annotation,
+                     LLVMContext::MD_nosanitize, LLVMContext::MD_mmra});
+
+  AAMDNodes AANodes = Source.getAAMetadata();
+  if (IsWholeAccess)
+    Dest.setAAMetadata(AANodes);
+  else if (ByteOffset)
+    Dest.setAAMetadata(AANodes.adjustForAccess(*ByteOffset, AccessType, DL));
+  else {
+    // The packed address is runtime-dependent. The other AA metadata remains
+    // applicable, but !tbaa.struct cannot be adjusted to a known byte range.
+    AANodes.TBAAStruct = nullptr;
+    Dest.setAAMetadata(AANodes);
+  }
+  copyMemCacheHint(Dest, Source, SourcePtrOperand, DestPtrOperand);
+}
+
+static void copyMetadataForScalarizedLoad(LoadInst &Dest,
+                                          const Instruction &Source,
+                                          const DataLayout &DL,
+                                          unsigned SourcePtrOperand,
+                                          std::optional<size_t> ByteOffset) {
+  copyMetadataForMemoryAccess(Dest, Source, DL, SourcePtrOperand,
+                              Dest.getPointerOperandIndex(), Dest.getType(),
+                              Dest.getType() == Source.getType(), ByteOffset);
+
+  // !range applies element-wise to vectors, so the same range describes each
+  // scalar result. The other metadata here also describes the loaded result.
+  Dest.copyMetadata(Source, {LLVMContext::MD_fpmath, LLVMContext::MD_range,
+                             LLVMContext::MD_invariant_load});
+}
+
+static void copyMetadataForScalarizedStore(StoreInst &Dest,
+                                           const Instruction &Source,
+                                           const DataLayout &DL,
+                                           unsigned SourcePtrOperand,
+                                           std::optional<size_t> ByteOffset) {
+  copyMetadataForMemoryAccess(
+      Dest, Source, DL, SourcePtrOperand, Dest.getPointerOperandIndex(),
+      Dest.getValueOperand()->getType(),
+      Dest.getValueOperand()->getType() == Source.getOperand(0)->getType(),
+      ByteOffset);
+}
+
 // Translate a masked load intrinsic like
 // <16 x i32 > @llvm.masked.load( <16 x i32>* %addr,
 //                               <16 x i1> %mask, <16 x i32> %passthru)
@@ -139,9 +213,9 @@ static unsigned adjustForEndian(const DataLayout &DL, unsigned VectorWidth,
 //  br label %else2
 //
 // else2:                                          ; preds = %else, %cond.load1
-//  %res.phi.else3 = phi <16 x i32> [ %9, %cond.load1 ], [ %res.phi.else, %else ]
-//  %10 = extractelement <16 x i1> %mask, i32 2
-//  br i1 %10, label %cond.load4, label %else5
+//  %res.phi.else3 = phi <16 x i32> [ %9, %cond.load1 ], [ %res.phi.else, %else
+//  ] %10 = extractelement <16 x i1> %mask, i32 2 br i1 %10, label %cond.load4,
+//  label %else5
 //
 static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
                                 CallInst *CI, DomTreeUpdater *DTU,
@@ -165,7 +239,8 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
     LoadInst *NewI = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal);
-    NewI->copyMetadata(*CI);
+    copyMetadataForScalarizedLoad(*NewI, *CI, DL, /*SourcePtrOperand=*/0,
+                                  std::nullopt);
     NewI->takeName(CI);
     CI->replaceAllUsesWith(NewI);
     CI->eraseFromParent();
@@ -186,6 +261,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
+      copyMetadataForScalarizedLoad(
+          *Load, *CI, DL, /*SourcePtrOperand=*/0,
+          Idx * DL.getTypeAllocSize(EltTy).getFixedValue());
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
@@ -208,7 +286,8 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     LoadInst *Load = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal,
                                                CI->getName() + ".cond.load");
-    Load->copyMetadata(*CI);
+    copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                  std::nullopt);
 
     BasicBlock *PostLoad = ThenTerm->getSuccessor(0);
     Builder.SetInsertPoint(PostLoad, PostLoad->begin());
@@ -267,6 +346,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
+    copyMetadataForScalarizedLoad(
+        *Load, *CI, DL, /*SourcePtrOperand=*/0,
+        Idx * DL.getTypeAllocSize(EltTy).getFixedValue());
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Create "else" block, fill it in the next iteration
@@ -336,7 +418,10 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
     StoreInst *Store = Builder.CreateAlignedStore(Src, Ptr, AlignVal);
     Store->takeName(CI);
-    Store->copyMetadata(*CI);
+    copyMetadataForScalarizedStore(*Store, *CI, DL, /*SourcePtrOperand=*/1,
+                                   std::nullopt);
+    // This is a one-to-one replacement, so the assignment link remains valid.
+    Store->copyMetadata(*CI, LLVMContext::MD_DIAssignID);
     CI->eraseFromParent();
     return;
   }
@@ -352,7 +437,11 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
-      Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      StoreInst *Store =
+          Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+      copyMetadataForScalarizedStore(
+          *Store, *CI, DL, /*SourcePtrOperand=*/1,
+          Idx * DL.getTypeAllocSize(EltTy).getFixedValue());
     }
     CI->eraseFromParent();
     return;
@@ -373,7 +462,10 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
     StoreInst *Store = Builder.CreateAlignedStore(Src, Ptr, AlignVal);
     Store->takeName(CI);
-    Store->copyMetadata(*CI);
+    copyMetadataForScalarizedStore(*Store, *CI, DL, /*SourcePtrOperand=*/1,
+                                   std::nullopt);
+    // This is a one-to-one replacement, so the assignment link remains valid.
+    Store->copyMetadata(*CI, LLVMContext::MD_DIAssignID);
 
     CI->eraseFromParent();
     ModifiedDT = true;
@@ -425,7 +517,11 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
-    Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+    StoreInst *Store =
+        Builder.CreateAlignedStore(OneElt, Gep, AdjustedAlignVal);
+    copyMetadataForScalarizedStore(
+        *Store, *CI, DL, /*SourcePtrOperand=*/1,
+        Idx * DL.getTypeAllocSize(EltTy).getFixedValue());
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
@@ -497,6 +593,8 @@ static void scalarizeMaskedGather(const DataLayout &DL,
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load =
           Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+      copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                    /*ByteOffset=*/0);
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
@@ -556,6 +654,8 @@ static void scalarizeMaskedGather(const DataLayout &DL,
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load =
         Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+    copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                  /*ByteOffset=*/0);
     Value *NewVResult =
         Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
 
@@ -635,7 +735,10 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-      Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+      StoreInst *Store = Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+      copyMetadataForScalarizedStore(*Store, *CI, DL,
+                                     /*SourcePtrOperand=*/1,
+                                     /*ByteOffset=*/0);
     }
     CI->eraseFromParent();
     return;
@@ -689,7 +792,10 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-    Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+    StoreInst *Store = Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
+    copyMetadataForScalarizedStore(*Store, *CI, DL,
+                                   /*SourcePtrOperand=*/1,
+                                   /*ByteOffset=*/0);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
@@ -745,8 +851,12 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
       } else {
         Value *NewPtr =
             Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, AdjustedAlignment,
-                                              "Load" + Twine(Idx));
+        LoadInst *Load = Builder.CreateAlignedLoad(
+            EltTy, NewPtr, AdjustedAlignment, "Load" + Twine(Idx));
+        copyMetadataForScalarizedLoad(
+            *Load, *CI, DL, /*SourcePtrOperand=*/0,
+            MemIndex * DL.getTypeAllocSize(EltTy).getFixedValue());
+        InsertElt = Load;
         ShuffleMask[Idx] = Idx;
         ++MemIndex;
       }
@@ -804,6 +914,8 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, AdjustedAlignment);
+    copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                  std::nullopt);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
@@ -874,7 +986,11 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      Builder.CreateAlignedStore(OneElt, NewPtr, AdjustedAlignment);
+      StoreInst *Store =
+          Builder.CreateAlignedStore(OneElt, NewPtr, AdjustedAlignment);
+      copyMetadataForScalarizedStore(
+          *Store, *CI, DL, /*SourcePtrOperand=*/1,
+          MemIndex * DL.getTypeAllocSize(EltTy).getFixedValue());
       ++MemIndex;
     }
     CI->eraseFromParent();
@@ -924,7 +1040,10 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *OneElt = Builder.CreateExtractElement(Src, Idx);
-    Builder.CreateAlignedStore(OneElt, Ptr, AdjustedAlignment);
+    StoreInst *Store =
+        Builder.CreateAlignedStore(OneElt, Ptr, AdjustedAlignment);
+    copyMetadataForScalarizedStore(*Store, *CI, DL, /*SourcePtrOperand=*/1,
+                                   std::nullopt);
 
     // Move the pointer if there are more blocks to come.
     Value *NewPtr;
@@ -1004,9 +1123,14 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+      copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                    /*ByteOffset=*/0);
       Value *Update =
           CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
-      Builder.CreateStore(Update, Ptr);
+      StoreInst *Store = Builder.CreateStore(Update, Ptr);
+      copyMetadataForScalarizedStore(*Store, *CI, DL,
+                                     /*SourcePtrOperand=*/0,
+                                     /*ByteOffset=*/0);
     }
     CI->eraseFromParent();
     return;
@@ -1026,9 +1150,14 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
+    copyMetadataForScalarizedLoad(*Load, *CI, DL, /*SourcePtrOperand=*/0,
+                                  /*ByteOffset=*/0);
     Value *UpdateOp =
         CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
-    Builder.CreateStore(UpdateOp, Ptr);
+    StoreInst *Store = Builder.CreateStore(UpdateOp, Ptr);
+    copyMetadataForScalarizedStore(*Store, *CI, DL,
+                                   /*SourcePtrOperand=*/0,
+                                   /*ByteOffset=*/0);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);

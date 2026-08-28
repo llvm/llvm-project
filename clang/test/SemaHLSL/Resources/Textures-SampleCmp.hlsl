@@ -1,6 +1,22 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -finclude-default-header -verify -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -finclude-default-header -verify -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -finclude-default-header -verify=expected,dim2 \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -finclude-default-header -verify=expected,dim2 \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_TYPE=float3 %s
 
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   OFFSET_ARG         a literal offset argument
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//
+// Check prefixes:
+//   dim2               diagnostics naming a 2-component offset or location
+//                      vector
 
 TEXTURE<float4> t;
 TEXTURE<int4> t_int;
@@ -9,8 +25,8 @@ SamplerState s2;
 
 void main(COORD_TYPE loc, float cmp) {
   t.SampleCmp(s, loc, cmp);
-  t.SampleCmp(s, loc, cmp, int2(1, 2));
-  t.SampleCmp(s, loc, cmp, int2(1, 2), 1.0f);
+  t.SampleCmp(s, loc, cmp, OFFSET_ARG);
+  t.SampleCmp(s, loc, cmp, OFFSET_ARG, 1.0f);
 
   // expected-error@* {{'SampleCmp' and 'SampleCmpLevelZero' require resource to contain a floating point type}}
   // expected-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}::SampleCmp' requested here}}
@@ -26,7 +42,7 @@ void main(COORD_TYPE loc, float cmp) {
   // expected-note@*:* {{candidate function not viable: requires 5 arguments, but 6 were provided}}
   // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
   // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 6 were provided}}
-  t.SampleCmp(s, loc, cmp, int2(1, 2), 1.0f, 1.0f);
+  t.SampleCmp(s, loc, cmp, OFFSET_ARG, 1.0f, 1.0f);
 
   // expected-error@+4 {{no matching member function for call to 'SampleCmp'}}
   // expected-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'hlsl::SamplerComparisonState' for 1st argument}}
@@ -35,7 +51,7 @@ void main(COORD_TYPE loc, float cmp) {
   t.SampleCmp(s2, loc, cmp);
 
   // expected-error@+4 {{no matching member function for call to 'SampleCmp'}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from 'SamplerComparisonState' to 'vector<int, 2>' (vector of 2 'int' values) for 4th argument}}
+  // dim2-note@*:* {{candidate function not viable: no known conversion from 'SamplerComparisonState' to 'vector<int, 2>' (vector of 2 'int' values) for 4th argument}}
   // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 4 were provided}}
   // expected-note@*:* {{candidate function not viable: requires 5 arguments, but 4 were provided}}
   t.SampleCmp(s, loc, cmp, s);
@@ -44,5 +60,5 @@ void main(COORD_TYPE loc, float cmp) {
   // expected-note@*:* {{candidate function not viable: no known conversion from 'SamplerComparisonState' to 'float' for 5th argument}}
   // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 5 were provided}}
   // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 5 were provided}}
-  t.SampleCmp(s, loc, cmp, int2(1, 2), s);
+  t.SampleCmp(s, loc, cmp, OFFSET_ARG, s);
 }
