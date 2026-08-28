@@ -187,13 +187,11 @@ static std::optional<bool> computeSignedness(ScalarEvolution &SE, Loop *L,
   return std::nullopt;
 }
 
-// Prove \p Pred between \p LHS and \p RHS on entry to \p L, retrying with the
-// loop guards folded in so a bound fixed by a dominating condition is seen.
+// Prove \p Pred between \p LHS and \p RHS on entry to \p L, with loop guards
+// folded in so a bound fixed by a dominating condition is seen.
 static bool isEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
                                  ICmpInst::Predicate Pred, const SCEV *LHS,
                                  const SCEV *RHS) {
-  if (SE.isLoopEntryGuardedByCond(L, Pred, LHS, RHS))
-    return true;
   return SE.isLoopEntryGuardedByCond(L, Pred, SE.applyLoopGuards(LHS, L),
                                      SE.applyLoopGuards(RHS, L));
 }
