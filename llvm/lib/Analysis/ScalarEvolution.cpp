@@ -11103,6 +11103,14 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
     }
   }
 
+  // a /u b == 0 => a < b
+  // a /u b != 0 => a >= b
+  if (ICmpInst::isEquality(Pred) && RHS->isZero() &&
+      match(LHS, m_scev_UDiv(m_SCEV(LHS), m_SCEV(RHS)))) {
+    Pred = Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    Changed = true;
+  }
+
   // Check for obvious equality.
   if (HasSameValue(LHS, RHS)) {
     if (ICmpInst::isTrueWhenEqual(Pred))
