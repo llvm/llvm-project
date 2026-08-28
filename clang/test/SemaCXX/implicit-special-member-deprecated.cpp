@@ -7,12 +7,12 @@ struct A {
   [[deprecated("use something else")]] int x = 42; // expected-note {{marked deprecated here}}
 };
 
-A makeDefaultA() { return {}; }    // ctor is implicit → no warn
-A copyA(const A &a) { return a; }  // copy-ctor implicit → no warn
+A makeDefaultA() { return {}; }    // ctor is implicit -> no warn
+A copyA(const A &a) { return a; }  // copy-ctor implicit -> no warn
 
 void assignA() {
   A a, b;
-  a = b;                           // copy-assign implicit → no warn
+  a = b;                           // copy-assign implicit -> no warn
 }
 
 void useA() {
