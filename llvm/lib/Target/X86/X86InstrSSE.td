@@ -7315,6 +7315,7 @@ let Predicates = [HasAVX1Only] in {
   defm : vperm2x128_lowering<"VPERM2F128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2F128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2F128", v16f16, loadv16f16>;
+  defm : vperm2x128_lowering<"VPERM2F128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2F128", v32i8,  loadv32i8>;
 }
 
@@ -7994,6 +7995,7 @@ let Predicates = [HasAVX2] in {
   defm : vperm2x128_lowering<"VPERM2I128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2I128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2I128", v16f16, loadv16f16>;
+  defm : vperm2x128_lowering<"VPERM2I128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
 }
 
