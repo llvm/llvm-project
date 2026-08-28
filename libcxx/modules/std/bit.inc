@@ -22,9 +22,11 @@ export namespace std {
   using std::bit_width;
   using std::has_single_bit;
 
+#if _LIBCPP_STD_VER >= 29
   // [bit.shift], shifting
   using std::shl;
   using std::shr;
+#endif
 
   // [bit.rotate], rotating
   using std::rotl;
