@@ -45,20 +45,16 @@ SamplerState s;
 void main(COORD_TYPE loc) {
   t.Sample(s, loc);
 
-  // offset-note@*:* {{candidate function not viable: requires 2 arguments, but 1 was provided}}
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 1 was provided}}
+  // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 1 was provided}}
   // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 1 was provided}}
-  // nooffset-note@* {{'Sample' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'Sample'}}
-  // nooffset-error@+1 {{too few arguments to function call, expected 2, have 1}}
+  // expected-error@+1 {{no matching member function for call to 'Sample'}}
   t.Sample(loc);
 
   // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 5 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 5 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 2 arguments, but 5 were provided}}
-  // nooffset-note@* {{'Sample' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'Sample'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 2, have 5}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 5 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 5 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'Sample'}}
   t.Sample(s, loc, OFFSET_ARG, 1.0, 1.0);
 
   // Test with wrong coordinate dimension.
@@ -86,13 +82,17 @@ void main(COORD_TYPE loc) {
   // Note: int implicitly converts to int2 (splat), so no error here.
   t.Sample(s, loc, 1);
 #else
-  // This type has no overload that takes an offset.
-  // nooffset-error@+2 {{too many arguments to function call, expected 2, have 3}}
-  // nooffset-note@* {{'Sample' declared here}}
+  // This type has no overload that takes an offset, but it does have one that
+  // takes a clamp, so the 3rd parameter is the clamp.
+  t.Sample(s, loc, 1.0);
+
+  // Passing an offset therefore selects the clamp overload and truncates.
+  // nooffset-warning@+1 {{implicit conversion turns vector to scalar}}
   t.Sample(s, loc, OFFSET_ARG);
 
-  // nooffset-error@+2 {{too many arguments to function call, expected 2, have 4}}
-  // nooffset-note@* {{'Sample' declared here}}
+  // nooffset-note@*:* {{candidate function not viable: requires 3 arguments, but 4 were provided}}
+  // nooffset-note@*:* {{candidate function not viable: requires 2 arguments, but 4 were provided}}
+  // nooffset-error@+1 {{no matching member function for call to 'Sample'}}
   t.Sample(s, loc, OFFSET_ARG, 1.0);
 #endif
 }
