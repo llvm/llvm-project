@@ -463,8 +463,10 @@ and destructor refer to the capability via different names; see the
 Scoped capabilities are treated as capabilities that are implicitly acquired
 on construction and released on destruction. They are associated with
 the set of (regular) capabilities named in thread safety attributes on the
-constructor or function returning them by value (using C++17 guaranteed copy
-elision). Acquire-type attributes on other member functions are treated as
+constructor or function returning them by value; initializing a variable from
+such a function works whether or not the copy is guaranteed to be elided, as
+does returning one from another. Acquire-type attributes on other member
+functions are treated as
 applying to that set of associated capabilities, while `RELEASE` implies that
 a function releases all associated capabilities in whatever mode they're held.
 A constructor may also be annotated with {ref}`try_acquire`.
@@ -1133,7 +1135,7 @@ public:
   // Assume mu is not held, implicitly acquire *this and associate it with mu.
   MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
 
-  // Same as constructors, but without tag types. (Requires C++17 copy elision.)
+  // Same as constructors, but without tag types.
   static MutexLocker Lock(Mutex *mu) ACQUIRE(mu) {
     return MutexLocker(mu);
   }

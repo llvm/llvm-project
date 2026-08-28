@@ -586,6 +586,28 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   conditionally held and the new diagnostic reports the leak if there is
   one. That merge is silent at a loop merge in either mode.
 
+- Thread safety analysis now tracks a scoped capability initialized or
+  returned by value from a function annotated with an acquire attribute under
+  C++11/14, where the initialization goes through an elidable copy of the
+  returned temporary. The temporary's capabilities transfer to the
+  destination as if the copy were elided -- matching C++17 guaranteed copy
+  elision -- instead of being spuriously released at the end of the
+  full-expression. Where nothing takes the transferred capability over --
+  a guard temporary returned from a function with no acquire attribute, one
+  built into an array element or an aggregate member, or one initializing a
+  `static` guard -- C++11/14 now reports it as still held at the end of the
+  *function*, as C++17 already did: the analysis has no scope to end it at,
+  so accesses after the guard's own block are accepted until then.
+
+- Thread safety analysis now looks through the temporaries, conversions and
+  initializer lists a scoped capability's construction can be wrapped in,
+  wherever it looks one up: a guard from an annotated conversion operator, a
+  reference bound to a parenthesized temporary, one initialized through a
+  comma operator, and one list-initialized from a factory (`Guard g{lock()}`)
+  are recognized now, and a guard declared as a loop's condition variable is
+  no longer released before its body runs. The last two were already wrong
+  under C++17.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 

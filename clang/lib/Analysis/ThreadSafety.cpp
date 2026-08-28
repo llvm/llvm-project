@@ -5774,6 +5774,45 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
   }
 }
 
+/// The construction a prvalue denotes, which is the key its scope object
+/// is recorded under (ConstructedObjects). Parens, cleanups, the no-op and
+/// conversion casts a copy is wrapped in, a temporary binding and the left
+/// operand of a comma are all transparent -- in any order and any number
+/// of times, since the C++11 nesting of a conversion operator is
+/// no-op-over-binding-over-conversion while a plain factory's is
+/// binding-over-call. A `?:` is not transparent: its arms construct two
+/// objects and a lookup carries one key, and neither is an array's
+/// initializer list.
+static const Expr *claimConstructedObject(const Expr *E) {
+  while (E) {
+    const Expr *Inner = E->IgnoreParens();
+    if (const auto *EWC = dyn_cast<ExprWithCleanups>(Inner))
+      Inner = EWC->getSubExpr();
+    else if (const auto *CE = dyn_cast<CastExpr>(Inner)) {
+      if (CE->getCastKind() == CK_NoOp ||
+          CE->getCastKind() == CK_ConstructorConversion ||
+          CE->getCastKind() == CK_UserDefinedConversion)
+        Inner = CE->getSubExpr();
+    } else if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Inner))
+      Inner = BTE->getSubExpr();
+    else if (const auto *BO = dyn_cast<BinaryOperator>(Inner)) {
+      if (BO->getOpcode() == BO_Comma)
+        Inner = BO->getRHS();
+    } else if (const auto *ILE = dyn_cast<InitListExpr>(Inner)) {
+      // List-initialization of the object itself (`Guard g{factory()}`),
+      // which C++17 leaves in place around the construction. An array's
+      // list is not that: it initializes several objects and this lookup
+      // carries one key.
+      if (ILE->getNumInits() == 1 && ILE->getType()->isRecordType())
+        Inner = ILE->getInit(0);
+    }
+    if (Inner == E)
+      return E;
+    E = Inner;
+  }
+  return E;
+}
+
 /// Process a function call, method call, constructor call,
 /// or destructor call.  This involves looking at the attributes on the
 /// corresponding function/method/constructor/destructor, issuing warnings,
@@ -6012,7 +6051,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                         StringRef("mutex"), /*Neg=*/false, /*Reentrant=*/false);
       if (const auto *CBTE = dyn_cast<CXXBindTemporaryExpr>(Arg->IgnoreCasts());
           Cp.isInvalid() && CBTE) {
-        if (auto Object = Analyzer->ConstructedObjects.find(CBTE->getSubExpr());
+        if (auto Object =
+                Analyzer->ConstructedObjects.find(claimConstructedObject(CBTE));
             Object != Analyzer->ConstructedObjects.end())
           Cp = CapabilityExpr(Object->second, StringRef("mutex"), /*Neg=*/false,
                               /*Reentrant=*/false);
@@ -6324,26 +6364,63 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
   const CXXConstructorDecl *D = Exp->getConstructor();
   if (D && D->isCopyConstructor()) {
-    const Expr* Source = Exp->getArg(0);
+    const Expr *Source = Exp->getArg(0);
     checkAccess(Source, AK_Read);
   } else {
     examineArguments(D, Exp->arg_begin(), Exp->arg_end());
+  }
+  // Without guaranteed copy elision (C++11/14), initializing or returning a
+  // scoped lockable by value goes through an elidable copy or move of a
+  // materialized temporary. The temporary owns nothing once the target
+  // takes over -- the C++17 semantics -- so hand its scope object over to
+  // this construction: a variable initialized by the result binds it in
+  // VisitDeclStmt, and the temporary's destructor, which looks up the inner
+  // expression, no longer finds anything to release.
+  //
+  // This is asked before the ordinary call path, so that an attribute on
+  // the copy or move constructor -- the ABI-visibility or inlining macro
+  // every library guard type carries -- does not divert the handover to
+  // handleCall(), which would build a scope object managing nothing. Every
+  // other construction takes the call path exactly as before: gating that
+  // on thread-safety attributes alone would drop the scope object of a
+  // guard whose ordinary constructor carries only such a macro, and with
+  // it the attributes handleCall() reads from the constructor's own
+  // parameters.
+  if (D && Exp->isElidable() && D->isCopyOrMoveConstructor() &&
+      D->getParent()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>()) {
+    if (const auto *MTE =
+            dyn_cast<MaterializeTemporaryExpr>(Exp->getArg(0)->IgnoreParens()))
+      if (auto Object = Analyzer->ConstructedObjects.find(
+              claimConstructedObject(MTE->getSubExpr()));
+          Object != Analyzer->ConstructedObjects.end()) {
+        til::LiteralPtr *Placeholder = Object->second;
+        Analyzer->ConstructedObjects.erase(Object);
+        Analyzer->ConstructedObjects.insert({Exp, Placeholder});
+        return;
+      }
   }
   if (D && D->hasAttrs())
     handleCall(Exp, D);
 }
 
-static const Expr *UnpackConstruction(const Expr *E) {
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    if (CE->getCastKind() == CK_NoOp)
-      E = CE->getSubExpr()->IgnoreParens();
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    if (CE->getCastKind() == CK_ConstructorConversion ||
-        CE->getCastKind() == CK_UserDefinedConversion)
-      E = CE->getSubExpr();
-  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-    E = BTE->getSubExpr();
-  return E;
+/// Whether a declaration in \p B initializes its variable from the
+/// construction \p Key, so that the variable -- not a temporary
+/// destructor the CFG happens to order first -- is what owns the object.
+static bool blockDeclaresObject(const CFGBlock *B, const Expr *Key) {
+  for (const CFGElement &El : *B) {
+    std::optional<CFGStmt> CS = El.getAs<CFGStmt>();
+    if (!CS)
+      continue;
+    const auto *DS = dyn_cast<DeclStmt>(CS->getStmt());
+    if (!DS)
+      continue;
+    for (const Decl *D : DS->decls())
+      if (const auto *VD = dyn_cast<VarDecl>(D))
+        if (const Expr *Init = VD->getInit())
+          if (claimConstructedObject(Init) == Key)
+            return true;
+  }
+  return false;
 }
 
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
@@ -6352,12 +6429,9 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       const Expr *E = VD->getInit();
       if (!E)
         continue;
-      E = E->IgnoreParens();
-
-      // handle constructors that involve temporaries
-      if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
-        E = EWC->getSubExpr()->IgnoreParens();
-      E = UnpackConstruction(E);
+      // Look through the temporaries and conversions an initializer's
+      // construction is wrapped in.
+      E = claimConstructedObject(E);
 
       if (auto Object = Analyzer->ConstructedObjects.find(E);
           Object != Analyzer->ConstructedObjects.end()) {
@@ -6373,7 +6447,7 @@ void BuildLockset::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *Exp) {
   if (const ValueDecl *ExtD = Exp->getExtendingDecl()) {
     if (auto Object = Analyzer->ConstructedObjects.find(
-            UnpackConstruction(Exp->getSubExpr()));
+            claimConstructedObject(Exp->getSubExpr()));
         Object != Analyzer->ConstructedObjects.end()) {
       Object->second->setClangDecl(ExtD);
       Analyzer->ConstructedObjects.erase(Object);
@@ -8249,12 +8323,21 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
         case CFGElement::TemporaryDtor: {
           auto TD = BI.castAs<CFGTemporaryDtor>();
+          const Expr *Key = claimConstructedObject(TD.getBindTemporaryExpr());
 
           // Clean up constructed object even if there are no attributes to
           // keep the number of objects in limbo as small as possible.
-          if (auto Object = ConstructedObjects.find(
-                  TD.getBindTemporaryExpr()->getSubExpr());
+          if (auto Object = ConstructedObjects.find(Key);
               Object != ConstructedObjects.end()) {
+            // Unless a declaration in this very block initializes its
+            // variable from that construction: the object is the
+            // variable's, and the declaration is what claims it. A
+            // condition variable is that shape -- the CFG orders the
+            // temporary's destructor before `while (Guard g = factory())`
+            // -- and the guard would otherwise be released before its
+            // scope begins.
+            if (blockDeclaresObject(CurrBlock, Key))
+              break;
             const auto *DD = TD.getDestructorDecl(AC.getASTContext());
             if (DD->hasAttrs())
               // TODO: the location here isn't quite correct.

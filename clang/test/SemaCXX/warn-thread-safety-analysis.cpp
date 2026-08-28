@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// The scoped-capability handover differs by standard (guaranteed copy elision
+// from C++17) and by whether the copy is elided at all, so the modes in
+// between are covered too.
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -fno-elide-constructors -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -1817,6 +1823,72 @@ namespace template_member_test {
 
 namespace test_scoped_lockable {
 
+// The ABI-visibility / inlining macros a library guard type puts on its
+// special members; unrelated to thread safety, but they make hasAttrs()
+// true on the copy or move constructor.
+#define GUARD_ABI __attribute__((noinline)) __attribute__((visibility("hidden")))
+class SCOPED_LOCKABLE AttributedGuard {
+public:
+  GUARD_ABI AttributedGuard(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  GUARD_ABI AttributedGuard(AttributedGuard &&);
+  GUARD_ABI ~AttributedGuard() UNLOCK_FUNCTION();
+};
+
+// The same macros on a constructor that carries no thread-safety attribute
+// at all -- an adopting guard, or one whose acquisition the analysis is
+// told to ignore. Such a construction has to keep taking the ordinary call
+// path: it is what builds the scope object the destructor releases.
+class SCOPED_LOCKABLE AdoptingGuard {
+public:
+  GUARD_ABI AdoptingGuard(Mutex *mu);
+  GUARD_ABI ~AdoptingGuard() UNLOCK_FUNCTION();
+};
+class SCOPED_LOCKABLE UnanalyzedGuard {
+public:
+  __attribute__((no_thread_safety_analysis)) UnanalyzedGuard(Mutex *mu);
+  ~UnanalyzedGuard() UNLOCK_FUNCTION();
+};
+
+// The documented move idiom for a scoped capability, whose move
+// constructor carries thread-safety attributes of its own.
+class SCOPED_LOCKABLE MutexLockerWithMove {
+  Mutex *mut;
+public:
+  MutexLockerWithMove(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  MutexLockerWithMove(MutexLockerWithMove &&other)
+      EXCLUSIVE_LOCKS_REQUIRED(other.mut) EXCLUSIVE_LOCK_FUNCTION(other.mut);
+  ~MutexLockerWithMove() UNLOCK_FUNCTION();
+  static MutexLockerWithMove Lock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+};
+
+// A guard built by an annotated conversion operator.
+class SCOPED_LOCKABLE ConvGuard {
+public:
+  ConvGuard(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~ConvGuard() UNLOCK_FUNCTION();
+};
+Mutex conv_mu;
+struct GuardMaker {
+  operator ConvGuard() const EXCLUSIVE_LOCK_FUNCTION(conv_mu);
+};
+
+// A guard that can be a loop's condition variable.
+class SCOPED_LOCKABLE BoolGuard {
+public:
+  BoolGuard(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~BoolGuard() UNLOCK_FUNCTION();
+  explicit operator bool() const;
+};
+
+// A constructor whose thread-safety attributes sit on its parameters rather
+// than on itself, beside an unrelated macro: handleCall() reads those too,
+// so it must still run.
+Mutex wrap_mu;
+struct WrapRelease {
+  // expected-note@+1 {{see attribute on parameter here}}
+  GUARD_ABI WrapRelease(MutexLock &s EXCLUSIVE_UNLOCK_FUNCTION(wrap_mu));
+};
+
 struct TestScopedLockable {
   Mutex mu1;
   Mutex mu2;
@@ -1832,12 +1904,110 @@ struct TestScopedLockable {
     a = 5;
   }
 
-#ifdef __cpp_guaranteed_copy_elision
   void const_lock() {
     const MutexLock mulock = MutexLock(&mu1);
     a = 5;
   }
-#endif
+
+  // Without guaranteed copy elision, the initializer is an elidable copy of
+  // the temporary; the analysis transfers the temporary's capabilities to the
+  // variable as if elided. A copy from an lvalue gets no such transfer: the
+  // copy owns nothing the analysis can see. (What distinguishes the two here
+  // is that the source is not a materialized temporary; the elidable test
+  // beside it is a statement of the rule, since a copy that is not elidable
+  // never has a bare materialization for its argument.)
+  void copy_from_lvalue() {
+    MutexLock mulock_a(&mu1);
+    MutexLock mulock_b = mulock_a;
+    a = 5;
+  } // expected-warning {{releasing mutex 'mulock_b' that was not held}}
+
+  // The handover is gated on the thread-safety attributes specifically, not
+  // on the constructor carrying any attribute at all: the ABI-visibility and
+  // inlining macros a library guard puts on its copy or move constructor
+  // must not divert it to the ordinary call path, which would build a scope
+  // object managing nothing and lose the capability at the initialization.
+  AttributedGuard attributedFactory() EXCLUSIVE_LOCK_FUNCTION(mu1);
+  MutexLock unannotatedFactory() EXCLUSIVE_LOCK_FUNCTION(mu1);
+  BoolGuard boolFactory() EXCLUSIVE_LOCK_FUNCTION(mu1);
+  void attributed_move_ctor() {
+    AttributedGuard guard = attributedFactory();
+    a = 5;
+  }
+
+  // A guard whose ordinary constructor carries only those macros keeps its
+  // scope object: gating the call path on thread-safety attributes dropped
+  // it, and the destructor then released a capability the analysis had never
+  // recorded.
+  void adopting_guard() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    AdoptingGuard guard(&mu1);
+  }
+  void unanalyzed_guard() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    UnanalyzedGuard guard(&mu1);
+  }
+
+  // And a constructor whose thread-safety attributes are on its parameters
+  // rather than on itself: handleCall() reads those too, so it has to run,
+  // and the release the parameter names is what makes the second one here a
+  // double release.
+  // expected-note@+1 {{mutex acquired here}}
+  void wrapped_release() EXCLUSIVE_LOCKS_REQUIRED(wrap_mu) {
+    MutexLock scope(&mu1);
+    // expected-warning@+1 {{mutex managed by 'scope' is 'mu1' instead of 'wrap_mu'}}
+    WrapRelease w(scope);
+  } // expected-warning {{expecting mutex 'wrap_mu' to be held at the end of function}}
+
+  // The documented annotated-move idiom: a move constructor that carries
+  // thread-safety attributes of its own is still an elidable copy of the
+  // factory's temporary, and the handover is what the C++17 modes do with
+  // it. Sending it down the call path instead built a second scope object
+  // for the copy and released the first at the end of the full expression.
+  void annotated_move_idiom() {
+    MutexLockerWithMove guard = MutexLockerWithMove::Lock(&mu1);
+    a = 5;
+  }
+
+  // The construction a guard's initializer denotes is looked up through
+  // whatever wraps it: an annotated conversion operator (whose C++11
+  // nesting is no-op over binding over conversion), a parenthesized
+  // materialization bound to a reference, a comma operator, and the
+  // initializer list C++17 leaves around a list-initialization.
+  void from_conversion(GuardMaker m) EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    ConvGuard g = m;
+    a = 5;
+  }
+  void reference_binding() {
+    MutexLock &&r = (MutexLock(&mu1));
+    a = 5;
+  }
+  void through_comma() {
+    MutexLock g = (void(0), unannotatedFactory());
+    a = 5;
+  }
+  void list_initialized() {
+    MutexLock g{unannotatedFactory()};
+    a = 5;
+  }
+
+  // A guard declared as a loop's condition variable: the CFG orders the
+  // temporary's destructor before the declaration, and releasing there left
+  // the body unguarded.
+  void loop_condition_guard() {
+    while (BoolGuard g = boolFactory()) {
+      a = 5;
+      break;
+    }
+  }
+
+  // The guard is handed over even where nothing later claims it, so a
+  // temporary that is neither bound to a variable nor extended keeps the
+  // capability to the end of the scope rather than releasing it at the end
+  // of the full expression. This matches what C++17's guaranteed elision
+  // already did; it is pinned here so that the pre-C++17 modes stay in step
+  // with it.
+  MutexLock unannotated_return() {
+    return MutexLock(&mu1); // expected-note {{mutex acquired here}}
+  } // expected-warning {{mutex 'mu1' is still held at the end of function}}
 
   void temporary() {
     MutexLock{&mu1}, a = 5;
@@ -7602,11 +7772,11 @@ void adoptTryHeldChecked() {
   }
 }
 
-#ifdef __cpp_guaranteed_copy_elision
-// A TRY_ACQUIRE-annotated factory returning the guard by value (guaranteed
-// copy elision) associates the conditional capability with the returned
-// scope: the same managed conditionally held semantics as the annotated
-// constructor.
+// A TRY_ACQUIRE-annotated factory returning the guard by value associates
+// the conditional capability with the returned scope: the same managed
+// conditionally held semantics as the annotated constructor. Under C++11/14 the
+// initializer is an elidable copy of the returned temporary rather than a
+// direct initialization; the analysis looks through it either way.
 MutexLockMaybe tryFactory() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
 
 void guardFromFactory() {
@@ -7622,7 +7792,6 @@ void guardFromFactoryReacquire() {
   x = 2;
   mu.Unlock();
 }
-#endif
 
 // A try-guard nesting over a hold that is already definite deepens it
 // conditionally (addLock()), and the guard's destructor releases exactly
@@ -8336,19 +8505,15 @@ void Foo::test() {
   int b = a;  // expected-warning {{reading variable 'a' requires holding mutex 'getMutexPtr()'}}
 }
 
-#ifdef __cpp_guaranteed_copy_elision
-
-void guaranteed_copy_elision() {
+void copy_elided() {
   MutexLock lock = MutexLock{&sls_mu};
   sls_guard_var = 0;
 }
 
-void guaranteed_copy_elision_const() {
+void copy_elided_const() {
   const MutexLock lock = MutexLock{&sls_mu};
   sls_guard_var = 0;
 }
-
-#endif
 
 } // end namespace TemporaryCleanupExpr
 
@@ -11532,8 +11697,6 @@ C c;
 void f() { c[A()]->g(); }
 } // namespace PR34800
 
-#ifdef __cpp_guaranteed_copy_elision
-
 namespace ReturnScopedLockable {
 
 class Object {
@@ -11594,8 +11757,6 @@ int testAdoptShared() {
 }
 
 } // namespace ReturnScopedLockable
-
-#endif // __cpp_guaranteed_copy_elision
 
 namespace PR38640 {
 void f() {
@@ -12134,14 +12295,12 @@ struct TestScopedReentrantLockable {
     a = 5;
   }
 
-#ifdef __cpp_guaranteed_copy_elision
   void const_lock() {
     const ReentrantMutexLock mulock1 = ReentrantMutexLock(&mu1);
     a = 5;
     const ReentrantMutexLock mulock2 = ReentrantMutexLock(&mu1);
     a = 3;
   }
-#endif
 
   void temporary() {
     ReentrantMutexLock{&mu1}, a = 1, ReentrantMutexLock{&mu1}, a = 5;
