@@ -505,6 +505,21 @@ that is already conditionally held by another try-acquire is tracked separately:
 each is resolved by the branch on its own return value. Asserting the capability
 (`ASSERT_CAPABILITY`) upgrades it to held without a warning.
 
+A merge that brings together two outcomes of the *same* call -- the hold its
+success proved on one path, the record of its failure on the other -- loses
+nothing: taken together they are again "held if the call succeeded", so the
+capability is conditionally held after the merge and a later branch on the
+result resolves it. The same applies to a call that releases on success
+(`TRY_ACQUIRE(true, !mu)`), where the two outcomes differ by the level the
+release discharged, and to a merge where one path is one level deeper than
+the other for the same reason. At a loop merge this applies always; at a
+branch merge only under `-Wthread-safety-beta`, because without it the
+merge's eager "not held on every path" warning is the only report of a
+result that really is leaked, and the beta diagnostics below are what
+replace it. Turning `-Wthread-safety-beta` on therefore silences that
+warning on such merges while adding the leak reports -- the one place where
+the flag removes a warning rather than only adding some.
+
 Under `-Wthread-safety-beta`, a try-acquire additionally warns where the
 analysis loses track of its result -- at a branch merge with a path that does
 not hold the capability, or at the end of the function -- since the capability

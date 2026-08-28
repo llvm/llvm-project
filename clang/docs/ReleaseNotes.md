@@ -558,6 +558,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   try-acquire whose result the analysis never sees checked: the capability may
   be leaked, and the warning is reported where the analysis loses track of the
   result, or at the end of the function. One acquisition is reported once.
+  Enabling it also makes a merge of two outcomes of the same try-acquire --
+  the hold its success proved meeting the record of its failure -- silent
+  rather than "not held on every path", since the merged state is again
+  conditionally held and the new diagnostic reports the leak if there is
+  one. That merge is silent at a loop merge in either mode.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
