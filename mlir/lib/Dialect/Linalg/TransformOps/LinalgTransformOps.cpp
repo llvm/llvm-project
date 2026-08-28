@@ -2539,12 +2539,6 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
-      // With no explicit padding values the transform relies on inference,
-      // which fails when a semantics-preserving value cannot be determined
-      // (e.g. a reduction whose neutral element is unknown).
-      if (paddingValues.empty())
-        diag.attachNote(target->getLoc())
-            << "could not infer a padding value; specify `padding_values`";
       return diag;
     }
     const auto &[paddedOperands, paddedOp, slicedResults] = maybePadOps.value();

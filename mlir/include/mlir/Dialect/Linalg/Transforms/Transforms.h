@@ -745,19 +745,6 @@ struct PadTilingInterfaceResult {
   SmallVector<Value> replacements;
 };
 
-/// Infers a semantics-preserving padding value for every operand of `toPad`
-/// (indexed by operand number). Operands that are reduced are padded with the
-/// neutral element of their reduction combiner (e.g. `-inf` for `maximumf`, `1`
-/// for `mulf`) because a plain zero would corrupt the reduction; every other
-/// operand is padded with the zero value of its element type.
-///
-/// Inference is conservative: it returns failure when a semantics-preserving
-/// value cannot be determined (a non-LinalgOp reduction, or a reduction whose
-/// neutral element is unknown), letting callers decide whether to set
-/// `options.paddingValues` explicitly.
-FailureOr<SmallVector<Attribute>> inferPaddingValues(OpBuilder &builder,
-                                                     TilingInterface toPad);
-
 /// Pad the iterator dimensions of `toPad`.
 /// * "options.paddingSizes" indicates that each padding dimension should be
 ///   padded to the specified padding size.

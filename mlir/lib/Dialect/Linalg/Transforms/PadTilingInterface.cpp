@@ -266,8 +266,38 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
-FailureOr<SmallVector<Attribute>>
-linalg::inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
+/// Returns true if `mul` and `add` are a pair for which `0 * x = 0` and
+/// `0 + x = x`. Zero is then a valid padding value for the operands of a
+/// contraction with such a body: `mul` turns a padded zero into a zero, and
+/// adding that zero leaves the accumulated value unchanged.
+///
+/// Do not grow this list just to match `isaContractionOpInterface`, since not
+/// every contraction can be zero-padded: a `max`/`+` body needs `-inf`.
+static bool isZeroNeutralContractionPair(Operation *mul, Operation *add) {
+  if (isa<arith::MulFOp>(mul) && isa<arith::AddFOp>(add))
+    return true;
+  if (isa<arith::MulIOp>(mul) && isa<arith::AddIOp>(add))
+    return true;
+  if (isa<complex::MulOp>(mul) && isa<complex::AddOp>(add))
+    return true;
+  if (isa<arith::AndIOp>(mul) && isa<arith::OrIOp>(add) &&
+      mul->getResult(0).getType().isInteger(1))
+    return true;
+  return false;
+}
+
+/// Infers a semantics-preserving padding value for every operand of `toPad`
+/// (indexed by operand number). Operands that are reduced are padded with the
+/// neutral element of their reduction combiner (e.g. `-inf` for `maximumf`, `1`
+/// for `mulf`); every other operand is padded with the zero value of its
+/// element type.
+///
+/// Inference is conservative: it returns failure when a semantics-preserving
+/// value cannot be determined (a non-LinalgOp reduction, or a reduction whose
+/// neutral element is unknown), letting callers set `options.paddingValues`
+/// explicitly instead.
+static FailureOr<SmallVector<Attribute>>
+inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   Operation *op = toPad.getOperation();
 
   // Padding acts on operands; default each to the zero of its element type.
@@ -286,9 +316,10 @@ linalg::inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   if (!linalgOp)
     return failure();
 
-  // In a contraction, zero annihilates through the multiply (0 * x = 0), so the
-  // default zero is already correct for every operand.
-  if (isaContractionOpInterface(linalgOp))
+  // Keep the default zero for a contraction: the multiply maps a padded zero to
+  // zero, and accumulating a zero changes nothing.
+  if (linalg::detail::isContractionBody(*linalgOp.getBlock(),
+                                        isZeroNeutralContractionPair))
     return paddingValues;
 
   // Only a single reduction has an unambiguous per-operand neutral.
@@ -301,6 +332,15 @@ linalg::inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
   std::optional<TypedAttr> neutral = arith::getNeutralElement(combiner);
   if (!neutral)
     return failure();
+
+  if (auto floatNeutral = dyn_cast<FloatAttr>(*neutral);
+      floatNeutral && floatNeutral.getValue().isNaN()) {
+    auto fastMath = dyn_cast<arith::ArithFastMathInterface>(combiner);
+    if (fastMath &&
+        arith::bitEnumContainsAny(fastMath.getFastMathFlagsAttr().getValue(),
+                                  arith::FastMathFlags::nnan))
+      return failure();
+  }
 
   for (OpOperand *input : linalgOp.getDpsInputOperands()) {
     // Only operands indexed along a reduction dim need a neutral.

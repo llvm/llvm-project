@@ -129,9 +129,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// maxnumf is the NaN-ignoring variant, so its neutral element is NaN. Padding
-// with NaN is correct here (maxnumf(NaN, x) = x), but note it would be unsound
-// under a `nnan` fast-math assumption.
+// maxnumf is the NaN-ignoring variant, so its neutral element is NaN.
 
 // CHECK-LABEL: @pad_reduce_maxnumf
 func.func @pad_reduce_maxnumf(%input: tensor<8x30xf32>, %init: tensor<8xf32>)
@@ -152,6 +150,34 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
+    %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Negative: `nnan` declares that NaN operands do not occur, so the NaN neutral
+// element of maxnumf is not a usable pad value and inference fails instead.
+
+func.func @pad_reduce_maxnumf_nnan_fails(%input: tensor<8x30xf32>,
+    %init: tensor<8xf32>) -> tensor<8xf32> {
+  // expected-note @below {{target op}}
+  %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
+      dimensions = [1]
+    (%in: f32, %out: f32) {
+      %m = arith.maxnumf %in, %out fastmath<nnan> : f32
+      linalg.yield %m : f32
+    }
+  return %0 : tensor<8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{failed to pad op}}
     %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
@@ -238,7 +264,6 @@ module attributes {transform.with_named_sequence} {
 func.func @pad_reduce_indirect_combiner_fails(
     %input: tensor<8x30xf32>, %init: tensor<8xf32>) -> tensor<8xf32> {
   // expected-note @below {{target op}}
-  // expected-note @below {{could not infer a padding value; specify `padding_values`}}
   %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
       dimensions = [1]
     (%in: f32, %out: f32) {
@@ -272,7 +297,6 @@ func.func @pad_multi_reduction_fails(%in: tensor<8x30xf32>, %m0: tensor<8xf32>,
                                      %s0: tensor<8xf32>)
     -> (tensor<8xf32>, tensor<8xf32>) {
   // expected-note @below {{target op}}
-  // expected-note @below {{could not infer a padding value; specify `padding_values`}}
   %r:2 = linalg.generic {indexing_maps = [#map, #mapr, #mapr],
                          iterator_types = ["parallel", "reduction"]}
       ins(%in : tensor<8x30xf32>) outs(%m0, %s0 : tensor<8xf32>, tensor<8xf32>) {
