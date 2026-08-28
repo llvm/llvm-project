@@ -836,12 +836,59 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
 using namespace clang::targets;
 
-/// Returns true if Triple names a target that takes its pointer related types
-/// from a host target. Logical SPIR-V is excluded; it uses fixed values for
-/// those types regardless of the host.
-static bool adaptsToHostTarget(const llvm::Triple &Triple) {
-  return (Triple.isSPIROrSPIRV() && Triple.getArch() != llvm::Triple::spirv) ||
-         Triple.isNVPTX();
+TargetInfo::HostAdaptation
+TargetInfo::getHostAdaptation(const llvm::Triple &DeviceTriple,
+                              const llvm::Triple &HostTriple) {
+  // No recognizable host triple, so nothing to adapt to.
+  if (HostTriple.getArch() == llvm::Triple::UnknownArch)
+    return HostAdaptation::None;
+
+  // setAuxTarget() overwrites these, so constructor values are not yet final.
+  if (DeviceTriple.isAMDGPU() ||
+      (DeviceTriple.getArch() == llvm::Triple::spirv64 &&
+       DeviceTriple.getOS() == llvm::Triple::AMDHSA))
+    return HostAdaptation::SetAuxTarget;
+
+  // Logical SPIR-V sets these itself, with a 32-bit size_t by design.
+  if (DeviceTriple.isSPIRVLogical())
+    return HostAdaptation::None;
+
+  if (DeviceTriple.isSPIROrSPIRV())
+    return HostTriple.isSPIROrSPIRV() ? HostAdaptation::None
+                                      : HostAdaptation::Constructor;
+  if (DeviceTriple.isNVPTX())
+    return HostTriple.isNVPTX() ? HostAdaptation::None
+                                : HostAdaptation::Constructor;
+
+  return HostAdaptation::None;
+}
+
+bool TargetInfo::checkHostPointerRelatedTypes(DiagnosticsEngine &Diags,
+                                              const llvm::Triple &HostTriple,
+                                              HostAdaptation Stage) const {
+  assert(Stage != HostAdaptation::None && "Nothing to check");
+  if (getHostAdaptation(getTriple(), HostTriple) != Stage)
+    return true;
+
+  // The device data layout fixes the width of every one of these types.
+  unsigned Required = getTriple().getArchPointerBitWidth();
+  // The order matches the %select in the diagnostic below.
+  unsigned Widths[] = {getPointerWidth(LangAS::Default),
+                       getPointerAlign(LangAS::Default),
+                       getTypeWidth(getSizeType()),
+                       getTypeWidth(getPtrDiffType(LangAS::Default)),
+                       getTypeWidth(getIntPtrType())};
+
+  for (auto [Which, Width] : llvm::enumerate(Widths)) {
+    if (Width != Required) {
+      Diags.Report(diag::err_target_unsupported_host_pointer_related_type)
+          << getTriple().str() << HostTriple.str()
+          << static_cast<unsigned>(Which) << Width << Required;
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// CreateTargetInfo - Return the target info object for the specified target
@@ -852,21 +899,6 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
 
-  // Host and device pointer related type widths must match. Reject a mismatch
-  // before constructing the device target, which asserts on this.
-  if (adaptsToHostTarget(Triple) && !Opts->HostTriple.empty()) {
-    llvm::Triple HostTriple(llvm::Triple::normalize(Opts->HostTriple));
-    if (!adaptsToHostTarget(HostTriple) &&
-        HostTriple.getArch() != llvm::Triple::UnknownArch &&
-        Triple.getArchPointerBitWidth() !=
-            HostTriple.getArchPointerBitWidth()) {
-      Diags.Report(diag::err_target_unsupported_host_device_pointer_width)
-          << Triple.str() << Triple.getArchPointerBitWidth() << HostTriple.str()
-          << HostTriple.getArchPointerBitWidth();
-      return nullptr;
-    }
-  }
-
   // Construct the target
   std::unique_ptr<TargetInfo> Target = AllocateTarget(Triple, *Opts);
   if (!Target) {
@@ -874,6 +906,11 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
   }
   Target->TargetOpts = Opts;
+
+  // Targets that adapt in their constructor have done so by now.
+  if (!Target->checkHostPointerRelatedTypes(
+          Diags, llvm::Triple(Opts->HostTriple), HostAdaptation::Constructor))
+    return nullptr;
 
   // Set the target CPU if specified.
   if (!Opts->CPU.empty() && !Target->setCPU(Opts->CPU)) {

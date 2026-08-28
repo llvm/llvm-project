@@ -327,6 +327,36 @@ public:
   static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
                                       TargetOptions &Opts);
 
+  /// When a device target takes its pointer related types (the pointer width
+  /// and alignment, size_t, ptrdiff_t, and intptr_t) from a host target.
+  enum class HostAdaptation {
+    /// It keeps its own pointer related types.
+    None,
+    /// It adapts in its constructor, from TargetOptions::HostTriple.
+    Constructor,
+    SetAuxTarget,
+  };
+
+  /// Returns when the device target takes its pointer related types from the
+  /// host target, mirroring the conditions under which the TargetInfo
+  /// subclasses adapt. A device that declines a host keeps its own types, which
+  /// the driver's triple level check must not report as a mismatch.
+  static HostAdaptation getHostAdaptation(const llvm::Triple &DeviceTriple,
+                                          const llvm::Triple &HostTriple);
+
+  static bool adaptsToHostTarget(const llvm::Triple &DeviceTriple,
+                                 const llvm::Triple &HostTriple) {
+    return getHostAdaptation(DeviceTriple, HostTriple) != HostAdaptation::None;
+  }
+
+  /// Reports an error if this target adapts to the given host target at the
+  /// given stage and ended up with pointer related types that disagree with its
+  /// own data layout. Does nothing if it does not adapt at that stage. Returns
+  /// true if no error was reported.
+  bool checkHostPointerRelatedTypes(DiagnosticsEngine &Diags,
+                                    const llvm::Triple &HostTriple,
+                                    HostAdaptation Stage) const;
+
   virtual ~TargetInfo();
 
   /// Retrieve the target options.

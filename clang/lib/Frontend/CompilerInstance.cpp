@@ -167,8 +167,14 @@ bool CompilerInstance::createTarget() {
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
 
-  if (auto *Aux = getAuxTarget())
+  if (auto *Aux = getAuxTarget()) {
     getTarget().setAuxTarget(Aux);
+
+    if (!getTarget().checkHostPointerRelatedTypes(
+            getDiagnostics(), Aux->getTriple(),
+            TargetInfo::HostAdaptation::SetAuxTarget))
+      return false;
+  }
 
   return true;
 }

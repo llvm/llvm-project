@@ -55,6 +55,7 @@
 #include "ToolChains/ZOS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetID.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -1129,19 +1130,16 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         continue;
       }
 
+      // A triple level approximation that catches the common cases early; the
+      // types are checked once the device adapts.
       const llvm::Triple &HostTriple = C.getDefaultToolChain().getTriple();
-      // Logical SPIR-V is excluded; it overrides those types with fixed values.
-      auto AdaptsToHostTarget = [](const llvm::Triple &T) {
-        return (T.isSPIROrSPIRV() && T.getArch() != llvm::Triple::spirv) ||
-               T.isNVPTX();
-      };
-      // Target and host pointer related type widths must match.
-      if (AdaptsToHostTarget(Target) && !AdaptsToHostTarget(HostTriple) &&
+      if (TargetInfo::adaptsToHostTarget(Target, HostTriple) &&
           Target.getArchPointerBitWidth() !=
               HostTriple.getArchPointerBitWidth()) {
-        Diag(diag::err_target_unsupported_host_device_pointer_width)
-            << Target.str() << Target.getArchPointerBitWidth()
-            << HostTriple.str() << HostTriple.getArchPointerBitWidth();
+        Diag(diag::err_target_unsupported_host_pointer_related_type)
+            << Target.str() << HostTriple.str() << /*pointer width*/ 0
+            << HostTriple.getArchPointerBitWidth()
+            << Target.getArchPointerBitWidth();
         continue;
       }
 

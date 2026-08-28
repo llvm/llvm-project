@@ -254,17 +254,11 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir &&
            "Invalid architecture for 32-bit SPIR.");
-    PointerWidth = PointerAlign = 32;
     if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
-
-    // Host and device pointer related type widths must match.
-    assert(PointerWidth == 32 && PointerAlign == 32 &&
-           getTypeWidth(SizeType) == 32 && getTypeWidth(PtrDiffType) == 32 &&
-           getTypeWidth(IntPtrType) == 32 &&
-           "Invalid pointer related types for SPIR32");
 
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -283,17 +277,11 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir64 &&
            "Invalid architecture for 64-bit SPIR.");
-    PointerWidth = PointerAlign = 64;
     if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     }
-
-    // Host and device pointer related type widths must match.
-    assert(PointerWidth == 64 && PointerAlign == 64 &&
-           getTypeWidth(SizeType) == 64 && getTypeWidth(PtrDiffType) == 64 &&
-           getTypeWidth(IntPtrType) == 64 &&
-           "Invalid pointer related types for SPIR64");
 
     // SPIR64 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -383,17 +371,11 @@ public:
            "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
-    PointerWidth = PointerAlign = 32;
     if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
-
-    // Host and device pointer related type widths must match.
-    assert(PointerWidth == 32 && PointerAlign == 32 &&
-           getTypeWidth(SizeType) == 32 && getTypeWidth(PtrDiffType) == 32 &&
-           getTypeWidth(IntPtrType) == 32 &&
-           "Invalid pointer related types for SPIR-V 32");
 
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
@@ -417,17 +399,11 @@ public:
            "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
-    PointerWidth = PointerAlign = 64;
     if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     }
-
-    // Host and device pointer related type widths must match.
-    assert(PointerWidth == 64 && PointerAlign == 64 &&
-           getTypeWidth(SizeType) == 64 && getTypeWidth(PtrDiffType) == 64 &&
-           getTypeWidth(IntPtrType) == 64 &&
-           "Invalid pointer related types for SPIR-V 64");
 
     // SPIR-V has core support for atomic ops, and Int64 is always available;
     // we take the maximum because it's possible the Host supports wider types.
