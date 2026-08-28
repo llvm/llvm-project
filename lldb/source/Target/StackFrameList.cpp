@@ -111,7 +111,9 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
         break;
       }
       StackFrameSP frame_sp = *frame_or_err;
-      if (frame_sp->IsSynthetic())
+      // Synthetic frames can provide a CFA.  If they haven't, set it to the
+      // frame index which will at least order the frames on this stop.
+      if (frame_sp->IsSynthetic() && !frame_sp->GetStackID().IsValid())
         frame_sp->GetStackID().SetCFA(num_synthetic_frames++,
                                       GetThread().GetProcess().get());
       // Set the frame list weak pointer so ExecutionContextRef can resolve

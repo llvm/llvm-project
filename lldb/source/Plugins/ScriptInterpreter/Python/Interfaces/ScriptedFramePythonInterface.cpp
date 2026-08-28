@@ -62,6 +62,17 @@ lldb::addr_t ScriptedFramePythonInterface::GetPC() {
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
+lldb::addr_t ScriptedFramePythonInterface::GetCFA() {
+  Status error;
+  StructuredData::ObjectSP obj = Dispatch("get_cfa", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
+    return LLDB_INVALID_ADDRESS;
+
+  return obj->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+}
+
 std::optional<SymbolContext> ScriptedFramePythonInterface::GetSymbolContext() {
   Status error;
   auto sym_ctx = Dispatch<SymbolContext>("get_symbol_context", error);
@@ -194,6 +205,62 @@ ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
   }
 
   return val;
+}
+
+llvm::Expected<ScriptedMetadata>
+ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(lldb::StepType step_type) {
+  Status error;
+  Log *log = GetLog(LLDBLog::Script);
+
+  ScriptedMetadata no_plan_return("", StructuredData::DictionarySP());
+  StructuredData::DictionarySP dict_sp = Dispatch<StructuredData::DictionarySP>(
+      "get_plan_for_step_type", error, step_type);
+  if (error.Fail()) {
+    // There are two cases here.  The `get_plan_for_step_type` didn't exist, in
+    // which case we should return no_plan_return
+    // FIXME - Dispatch should distinguish between these two cases in a way
+    // that's more definitive than this.
+    llvm::StringRef err_str(error.AsCString());
+    if (err_str.contains("object has no attribute 'get_plan_for_step_type'"))
+      return no_plan_return;
+    else
+      return llvm::createStringError("error dispatching get_plan_for_step_type: %s", error.AsCString());
+  }
+
+  // The return value is an StructuredData::Dictionary with the class name and
+  // the extra args for the call:
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION,
+                                                    dict_sp, error))
+    return llvm::createStringError("return from get_plan_for_step_type not a valid object: %s",
+        error.AsCString());
+
+
+  StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");
+  if (!obj)
+    return llvm::createStringError("Required 'class_name' field not provided.");
+
+  std::string class_string = obj->GetStringValue().str();
+  // Passing out an empty class name is they way to say the frame provider doesn't
+  // know how to step from here, and the regular method should be tried instead.
+  // So we only need to make sure the class exists if we were given a string:
+  if (!class_string.empty()) {
+    const char *class_str = class_string.c_str();
+    if (!m_interpreter.CheckObjectExists(class_str))
+      return llvm::createStringError("class_name specified a class: '%s' that does not exist.",
+          class_str);
+  }
+
+  // Look for extra args, this is optional:
+  StructuredData::Dictionary *extra_args_ptr = nullptr;
+  StructuredData::DictionarySP extra_args_sp;
+  if (dict_sp->GetValueForKeyAsDictionary("extra_args", extra_args_ptr))
+    extra_args_sp = std::static_pointer_cast<StructuredData::Dictionary>(
+        extra_args_ptr->shared_from_this());
+
+  // Now make a new thread plan for stepping using the provided class name and
+  // extra args.
+  ScriptedMetadata plan_metadata(class_string, extra_args_sp);
+  return plan_metadata;
 }
 
 void ScriptedFramePythonInterface::Initialize() {

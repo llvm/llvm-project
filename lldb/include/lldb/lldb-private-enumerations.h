@@ -17,17 +17,6 @@
 
 namespace lldb_private {
 
-// Thread Step Types
-enum StepType {
-  eStepTypeNone,
-  eStepTypeTrace,     ///< Single step one instruction.
-  eStepTypeTraceOver, ///< Single step one instruction, stepping over.
-  eStepTypeInto,      ///< Single step into a specified context.
-  eStepTypeOver,      ///< Single step over a specified context.
-  eStepTypeOut,       ///< Single step out a specified context.
-  eStepTypeScripted   ///< A step type implemented by the script interpreter.
-};
-
 // Address Types
 enum AddressType {
   eAddressTypeInvalid = 0,

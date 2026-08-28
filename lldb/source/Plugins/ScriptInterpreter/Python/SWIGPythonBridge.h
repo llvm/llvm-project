@@ -106,6 +106,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp);
   static PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_extractor_sp);
   static PythonObject ToSWIGWrapper(lldb::DescriptionLevel level);
+  static PythonObject ToSWIGWrapper(lldb::StepType step_type);
 
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);

@@ -40,3 +40,9 @@ your explains_stop and should_stop methods won't get called until the
 subsidiary plan is done, or the process stops for an event the subsidiary plan
 doesn't explain. For instance, step over plans don't explain a breakpoint hit
 while performing the step-over.
+
+Another way to trigger scripted stepping plans is to implement a ScriptedFrameProvider
+which returns ScriptedFrames which in turn implement the `get_plan_for_step_type` interface.
+Then whenever the user issues any of the step operations when stopped in your ScriptedFrame,
+it will consult this API, and if it returns a step plan class, that will be used instead of
+the built-in stepping algorithms for this step type.

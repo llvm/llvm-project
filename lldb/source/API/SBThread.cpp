@@ -494,21 +494,46 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   }
 
   Thread *thread = exe_ctx->GetThreadPtr();
+
   bool abort_other_plans = false;
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
+  if (!frame_sp) {
+    error.SetErrorString("No frame to step over");
+    return;
+  }
 
-  Status new_plan_status;
   ThreadPlanSP new_plan_sp;
+  lldb::StepType step_type =
+      frame_sp->HasDebugInformation() || frame_sp->IsSynthetic()
+          ? eStepTypeOver : eStepTypeTraceOver;
+
   if (frame_sp) {
-    if (frame_sp->HasDebugInformation()) {
-      const LazyBool avoid_no_debug = eLazyBoolCalculate;
-      SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
-      new_plan_sp = thread->QueueThreadPlanForStepOverRange(
-          abort_other_plans, sc.line_entry, sc, stop_other_threads,
-          new_plan_status, avoid_no_debug);
-    } else {
-      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, stop_other_threads, new_plan_status);
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
+      = frame_sp->GetThreadPlanForStepType(step_type);
+    if (auto llvm_err = frame_plan_result.takeError()) {
+      error.SetErrorStringWithFormat("scripted frame provider got an error "
+          "while constructing step plan: \"%s\"",
+          llvm::toString(std::move(llvm_err)).c_str());
+      return;
+    }
+    new_plan_sp = *frame_plan_result;
+  }
+
+  if (new_plan_sp) {
+    thread->QueueThreadPlan(new_plan_sp, false);
+  } else {
+    Status new_plan_status;
+    if (frame_sp) {
+      if (step_type == eStepTypeOver) {
+        const LazyBool avoid_no_debug = eLazyBoolCalculate;
+        SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
+        new_plan_sp = thread->QueueThreadPlanForStepOverRange(
+            abort_other_plans, sc.line_entry, sc, stop_other_threads,
+            new_plan_status, avoid_no_debug);
+      } else {
+        new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+            true, abort_other_plans, stop_other_threads, new_plan_status);
+      }
     }
   }
   error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
@@ -550,31 +575,54 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
   ThreadPlanSP new_plan_sp;
   Status new_plan_status;
+  lldb::StepType step_type;
 
-  if (frame_sp && frame_sp->HasDebugInformation()) {
-    SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
-    AddressRange range;
-    if (end_line == LLDB_INVALID_LINE_NUMBER)
-      range = sc.line_entry.range;
-    else {
-      llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
-      if (err) {
-        error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
-        return;
-      }
+  if (frame_sp && (frame_sp->HasDebugInformation() || frame_sp->IsSynthetic()))
+    step_type = eStepTypeInto;
+  else
+    step_type = eStepTypeTrace;
+
+  // First see if the Frame has some special way to do this step:
+  if (frame_sp) {
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
+      = frame_sp->GetThreadPlanForStepType(step_type);
+    if (auto llvm_err = frame_plan_result.takeError()) {
+      error.SetErrorStringWithFormat("scripted frame provider got an error "
+          "while constructing step plan: \"%s\"",
+          llvm::toString(std::move(llvm_err)).c_str());
+      return;
     }
+    new_plan_sp = *frame_plan_result;
+  }
 
-    const LazyBool step_out_avoids_code_without_debug_info =
-        eLazyBoolCalculate;
-    const LazyBool step_in_avoids_code_without_debug_info =
-        eLazyBoolCalculate;
-    new_plan_sp = thread->QueueThreadPlanForStepInRange(
-        abort_other_plans, range, sc, target_name, stop_other_threads,
-        new_plan_status, step_in_avoids_code_without_debug_info,
-        step_out_avoids_code_without_debug_info);
+  if (new_plan_sp) {
+    thread->QueueThreadPlan(new_plan_sp, false);
   } else {
-    new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-        false, abort_other_plans, stop_other_threads, new_plan_status);
+    if (step_type == eStepTypeInto) {
+      SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
+      AddressRange range;
+      if (end_line == LLDB_INVALID_LINE_NUMBER)
+        range = sc.line_entry.range;
+      else {
+        llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
+        if (err) {
+          error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
+          return;
+        }
+      }
+
+      const LazyBool step_out_avoids_code_without_debug_info =
+          eLazyBoolCalculate;
+      const LazyBool step_in_avoids_code_without_debug_info =
+          eLazyBoolCalculate;
+      new_plan_sp = thread->QueueThreadPlanForStepInRange(
+          abort_other_plans, range, sc, target_name, stop_other_threads,
+          new_plan_status, step_in_avoids_code_without_debug_info,
+          step_out_avoids_code_without_debug_info);
+    } else {
+      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+          false, abort_other_plans, stop_other_threads, new_plan_status);
+    }
   }
 
   if (new_plan_status.Success())
@@ -608,13 +656,33 @@ void SBThread::StepOut(SBError &error) {
   bool abort_other_plans = false;
   bool stop_other_threads = false;
 
-  Thread *thread = exe_ctx->GetThreadPtr();
+  ThreadPlanSP new_plan_sp;
 
-  const LazyBool avoid_no_debug = eLazyBoolCalculate;
+  Thread *thread = exe_ctx->GetThreadPtr();
+  StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
+  if (frame_sp) {
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
+      = frame_sp->GetThreadPlanForStepType(eStepTypeOut);
+    if (auto llvm_err = frame_plan_result.takeError()) {
+      error.SetErrorStringWithFormat("scripted frame provider got an error "
+          "while constructing step plan: \"%s\"",
+          llvm::toString(std::move(llvm_err)).c_str());
+      return;
+    }
+    new_plan_sp = *frame_plan_result;
+  }
+
   Status new_plan_status;
-  ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
-      abort_other_plans, nullptr, false, stop_other_threads, eVoteYes,
-      eVoteNoOpinion, 0, new_plan_status, avoid_no_debug));
+  if (new_plan_sp) {
+    // FIXME: Carry over stop_other_threads, and avoid_no_debug to
+    // the new plan?
+    thread->QueueThreadPlan(new_plan_sp, false);
+  } else {
+    const LazyBool avoid_no_debug = eLazyBoolCalculate;
+    new_plan_sp = thread->QueueThreadPlanForStepOut(
+        abort_other_plans, nullptr, false, stop_other_threads, eVoteYes,
+        eVoteNoOpinion, 0, new_plan_status, avoid_no_debug);
+  }
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
@@ -693,9 +761,27 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   }
 
   Thread *thread = exe_ctx->GetThreadPtr();
+  StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
+  lldb::StepType step_type = step_over ? eStepTypeTraceOver : eStepTypeTrace;
+
+  ThreadPlanSP new_plan_sp;
+
+  if (frame_sp) {
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
+      = frame_sp->GetThreadPlanForStepType(step_type);
+    if (auto llvm_err = frame_plan_result.takeError()) {
+      error.SetErrorStringWithFormat("scripted frame provider got an error "
+          "while constructing step plan: \"%s\"",
+          llvm::toString(std::move(llvm_err)).c_str());
+      return;
+    }
+    new_plan_sp = *frame_plan_result;
+  }
+
   Status new_plan_status;
-  ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepSingleInstruction(
-      step_over, false, true, new_plan_status));
+  if (!new_plan_sp)
+    new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+        step_over, false, true, new_plan_status);
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());

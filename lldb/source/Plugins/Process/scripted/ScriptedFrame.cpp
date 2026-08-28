@@ -23,8 +23,10 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -104,6 +106,8 @@ ScriptedFrame::Create(ThreadSP thread_sp,
   lldb::user_id_t frame_id = scripted_frame_interface->GetID();
 
   lldb::addr_t pc = scripted_frame_interface->GetPC();
+  lldb::addr_t cfa = scripted_frame_interface->GetCFA();
+
   SymbolContext sc;
   Address symbol_addr;
   if (pc != LLDB_INVALID_ADDRESS) {
@@ -117,18 +121,19 @@ ScriptedFrame::Create(ThreadSP thread_sp,
     sc = *maybe_sym_ctx;
 
   return std::make_shared<ScriptedFrame>(thread_sp, scripted_frame_interface,
-                                         frame_id, pc, sc,
+                                         frame_id, pc, cfa, sc,
                                          owned_script_object_sp);
 }
 
 ScriptedFrame::ScriptedFrame(ThreadSP thread_sp,
                              ScriptedFrameInterfaceSP interface_sp,
                              lldb::user_id_t id, lldb::addr_t pc,
+                             lldb::addr_t cfa,
                              SymbolContext &sym_ctx,
                              StructuredData::GenericSP script_object_sp)
     : StackFrame(thread_sp, /*frame_idx=*/id,
                  /*concrete_frame_idx=*/id, /*reg_context_sp=*/nullptr,
-                 /*cfa=*/0, /*pc=*/pc,
+                 /*cfa=*/cfa, /*pc=*/pc,
                  /*behaves_like_zeroth_frame=*/!id, /*symbol_ctx=*/&sym_ctx),
       m_scripted_frame_interface_sp(interface_sp),
       m_script_object_sp(script_object_sp) {
@@ -333,4 +338,27 @@ lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
   // Otherwise, delegate to the scripted frame interface pointer.
   return m_scripted_frame_interface_sp->GetValueObjectForVariableExpression(
       var_expr, options, error);
+}
+
+llvm::Expected<lldb::ThreadPlanSP> ScriptedFrame::GetThreadPlanForStepType(
+    lldb::StepType step_type) {
+  llvm::Expected<ScriptedMetadata> metadata =
+      m_scripted_frame_interface_sp->GetThreadPlanMetadataForStepType(step_type);
+  if (auto error = metadata.takeError()) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+        llvm::toString(std::move(error)));
+  }
+  // Returning a ScriptedMetadata with an empty class name means that the
+  // scripted frame doesn't know how to step.  That's not an error, but don't
+  // try to make a thread plan in this case.  The bool operator of
+  // ScriptedMetadata checks the class name...
+
+  ThreadSP thread_sp = GetThread();
+  if (*metadata && thread_sp && !metadata->GetClassName().empty()) {
+    lldb::ThreadPlanSP new_plan_sp(new ScriptedThreadPlan(*thread_sp.get(),
+          *metadata));
+    return new_plan_sp;
+  }
+
+  return lldb::ThreadPlanSP();
 }

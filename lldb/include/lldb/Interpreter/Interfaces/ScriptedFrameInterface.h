@@ -28,6 +28,8 @@ public:
 
   virtual lldb::addr_t GetPC() { return LLDB_INVALID_ADDRESS; }
 
+  virtual lldb::addr_t GetCFA() { return LLDB_INVALID_ADDRESS; }
+
   virtual std::optional<SymbolContext> GetSymbolContext() {
     return std::nullopt;
   }
@@ -62,6 +64,12 @@ public:
                                       Status &error) {
     return nullptr;
   }
+
+  virtual llvm::Expected<ScriptedMetadata>
+  GetThreadPlanMetadataForStepType(lldb::StepType step_type) {
+    return llvm::createStringError("the current interpreter doesn't support scripted stepping");
+  }
+
 };
 } // namespace lldb_private
 

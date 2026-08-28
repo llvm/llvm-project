@@ -517,6 +517,15 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return None
 
+    def get_cfa(self) -> int:
+        """ Get the Call Frame Address for this frame.
+        By default pass the ID of this frame so the CFA's and the
+        ID's order the same way on this stop.  This won't support
+        step-in and step-out, for those the frames have to have a
+        stable CFA.
+        """
+        return self.get_id()
+
     def get_symbol_context(self) -> Optional[lldb.SBSymbolContext]:
         """Get the scripted frame symbol context.
 
@@ -629,6 +638,22 @@ class ScriptedFrame(metaclass=ABCMeta):
             str: A byte representing all register's value.
         """
         pass
+
+    # def get_plan_for_step_type(self, step_type : lldb.StepType):
+    #    """Optional method.  If this ScriptedFrame can produce a ThreadPlan
+    #    that implements the given step_type, then it should return a Python
+    #    dictionary with the `class_name` key giving the name of a class that
+    #    implements the step plan, and an optional extra_args dictionary that
+    #    will be passed to the constructor of your step-plan class.  If the
+    #    class name is an empty string, that means use the standard stepping
+    #    algorithms for this step.
+    #    The body below tells lldb to fall back to the standard stepping
+    #    algorithm.  However, the method is commented out in the base class,
+    #    since if you really don't intend to provide stepping support,
+    #    it's simpler to just not implement this API."""
+    #    
+    #dict = {"class_name" : "", extra_args : {"step_type" : str(step_type)}
+    #    return dict
 
 class PassthroughScriptedProcess(ScriptedProcess):
     """A reference `ScriptedProcess` subclass that forwards every request to
