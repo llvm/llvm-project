@@ -9133,6 +9133,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def fmodules_force_redundant_lookup
+    : Flag<["-"], "fmodules-force-redundant-lookup">,
+      Group<f_Group>,
+      HelpText<"Force redundant module lookup when loading PCM files">,
+      MarshallingInfoFlag<PreprocessorOpts<"ModulesForceRedundantLookup">>;
 def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
   HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
   Values<"default,literalone,undefined">,
@@ -10037,6 +10042,15 @@ def fhlsl_spv_use_unknown_image_format
                "attribute. If this option is not used, the format is inferred "
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
+def fhlsl_spv_use_legacy_buffer_matrix_order
+    : Flag<["-"], "fspv-use-legacy-buffer-matrix-order">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Assume the legacy matrix order (row major) when accessing "
+               "raw buffers (e.g. ByteAddressBuffer). Defaults to column "
+               "major.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseLegacyBufferMatrixOrder">>;
 
 def fhlsl_spv_enable_maximal_reconvergence
     : Flag<["-"], "fspv-enable-maximal-reconvergence">,

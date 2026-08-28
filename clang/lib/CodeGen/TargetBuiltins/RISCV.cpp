@@ -1648,24 +1648,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     switch (BuiltinID) {
     default:
       llvm_unreachable("unexpected builtin ID");
-    case RISCV::BI__builtin_riscv_mqacc_h00_i32:
-      ID = Intrinsic::riscv_mqacc_h00;
-      break;
-    case RISCV::BI__builtin_riscv_mqacc_h01_i32:
-      ID = Intrinsic::riscv_mqacc_h01;
-      break;
-    case RISCV::BI__builtin_riscv_mqacc_h11_i32:
-      ID = Intrinsic::riscv_mqacc_h11;
-      break;
-    case RISCV::BI__builtin_riscv_mqracc_h00_i32:
-      ID = Intrinsic::riscv_mqracc_h00;
-      break;
-    case RISCV::BI__builtin_riscv_mqracc_h01_i32:
-      ID = Intrinsic::riscv_mqracc_h01;
-      break;
-    case RISCV::BI__builtin_riscv_mqracc_h11_i32:
-      ID = Intrinsic::riscv_mqracc_h11;
-      break;
     case RISCV::BI__builtin_riscv_pmqacc_h00_i32x2:
       ID = Intrinsic::riscv_pmqacc_h00;
       break;
@@ -1684,23 +1666,30 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pmqracc_h11_i32x2:
       ID = Intrinsic::riscv_pmqracc_h11;
       break;
+    // Scalar "Q-format" Multiply Parts Accumulate
+    case RISCV::BI__builtin_riscv_mqacc_h00_i32:
     case RISCV::BI__builtin_riscv_mqacc_w00_i64:
-      ID = Intrinsic::riscv_mqacc_w00;
+      ID = Intrinsic::riscv_mqacc_00;
       break;
+    case RISCV::BI__builtin_riscv_mqacc_h01_i32:
     case RISCV::BI__builtin_riscv_mqacc_w01_i64:
-      ID = Intrinsic::riscv_mqacc_w01;
+      ID = Intrinsic::riscv_mqacc_01;
       break;
+    case RISCV::BI__builtin_riscv_mqacc_h11_i32:
     case RISCV::BI__builtin_riscv_mqacc_w11_i64:
-      ID = Intrinsic::riscv_mqacc_w11;
+      ID = Intrinsic::riscv_mqacc_11;
       break;
+    case RISCV::BI__builtin_riscv_mqracc_h00_i32:
     case RISCV::BI__builtin_riscv_mqracc_w00_i64:
-      ID = Intrinsic::riscv_mqracc_w00;
+      ID = Intrinsic::riscv_mqracc_00;
       break;
+    case RISCV::BI__builtin_riscv_mqracc_h01_i32:
     case RISCV::BI__builtin_riscv_mqracc_w01_i64:
-      ID = Intrinsic::riscv_mqracc_w01;
+      ID = Intrinsic::riscv_mqracc_01;
       break;
+    case RISCV::BI__builtin_riscv_mqracc_h11_i32:
     case RISCV::BI__builtin_riscv_mqracc_w11_i64:
-      ID = Intrinsic::riscv_mqracc_w11;
+      ID = Intrinsic::riscv_mqracc_11;
       break;
     }
 
