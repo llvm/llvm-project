@@ -361,8 +361,6 @@ define i8 @test_umax_nneg(i8 %a, i8 %b) {
 ; lattice element it cached for %s: intersecting the stale pre-fold range with
 ; the range implied by %c makes %s look like 0 on the nonneg -> join edge, and
 ; the phi is then folded to %s, which is wrong for any non-negative %v.
-;
-; FIXME: the phi below is folded away. That is the miscompile described above.
 define i16 @test_smin_at_use_invalidates_user(i8 %v, i1 %cc) {
 ; CHECK-LABEL: @test_smin_at_use_invalidates_user(
 ; CHECK-NEXT:  entry:
@@ -376,12 +374,10 @@ define i16 @test_smin_at_use_invalidates_user(i8 %v, i1 %cc) {
 ; CHECK:       nonneg:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; COM: The phi must not be folded away. Once it survives, the line below
-; COM: belongs here, and %r feeds off it instead of off %s:
-; COM: CHECK-NEXT: [[P:%.*]] = phi i16 [ 0, [[NONNEG]] ], [ [[S]], [[MINMAX]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i16 [ 0, [[NONNEG]] ], [ [[S]], [[MINMAX]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[R:%.*]] = phi i16 [ 7, [[EARLY]] ], [ [[S]], [[JOIN]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i16 [ 7, [[EARLY]] ], [ [[P]], [[JOIN]] ]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
 entry:
