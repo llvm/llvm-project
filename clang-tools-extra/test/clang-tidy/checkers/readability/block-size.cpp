@@ -1,123 +1,55 @@
-// RUN: %check_clang_tidy %s readability-block-size %t
+// RUN: %check_clang_tidy %s readability-block-size %t \
+// RUN: -config='{CheckOptions: { \
+// RUN:  readability-block-size.IfLineCountThreshold: 5, \
+// RUN:  readability-block-size.ForLineCountThreshold: 6, \
+// RUN:  readability-block-size.WhileLineCountThreshold: 7 }}'
 
 void should_warn(){
     if (true){ // 1
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: if block spans 6 lines of code, which exceeds the threshold of 5 lines [readability-block-size]
         int sum = 3
                 + 4
-                + 5
-                + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19
-                + 20;
-    } //          21
+                + 5;
+    } //          6
 
 
     if (true){ // 1
         int sum = 2;
-    } else { //   3      1
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: else block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
-        int sum = 5   // 3
-                + 6   // 4
-                + 7   // 5
-                + 8   // 6
-                + 9   // 7
-                + 10  // 8
-                + 11  // 9
-                + 12  // 10
-                + 13  // 11
-                + 14  // 12
-                + 15  // 13
-                + 16  // 14
-                + 17  // 15
-                + 18  // 16
-                + 19  // 17
-                + 20  // 18
-                + 21  // 19
-                + 22; // 20
-    } //          23     21
+    } else { //   3     1
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: else block spans 6 lines of code, which exceeds the threshold of 5 lines [readability-block-size]
+        int sum = 5  // 3
+                + 6  // 4
+                + 7; // 5
+    } //          8     6
 
 
     if (true){ // 1
         int sum = 2;
     } else if (true){ // 1
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: if block spans 6 lines of code, which exceeds the threshold of 5 lines [readability-block-size]
         int sum = 5   // 3
                 + 6   // 4
-                + 7   // 5
-                + 8   // 6
-                + 9   // 7
-                + 10  // 8
-                + 11  // 9
-                + 12  // 10
-                + 13  // 11
-                + 14  // 12
-                + 15  // 13
-                + 16  // 14
-                + 17  // 15
-                + 18  // 16
-                + 19  // 17
-                + 20  // 18
-                + 21  // 19
-                + 22; // 20
-    } else { //   23     21
-        int sum = 24;
-    } //          25
+                + 7;  // 5
+    } else { //   8      6
+        int sum = 9;
+    } //          10
 
 
     for (int i = 0; i < 10; ++i) {
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: for loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: for loop spans 7 lines of code, which exceeds the threshold of 6 lines [readability-block-size]
         int sum = 3
                 + 4
                 + 5
-                + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19
-                + 20;
+                + 6;
     }
 
     while (true) {
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: while loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: while loop spans 8 lines of code, which exceeds the threshold of 7 lines [readability-block-size]
         int sum = 3
                 + 4
                 + 5
                 + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19
-                + 20;
+                + 7;
     }
 }
 
@@ -125,47 +57,21 @@ void should_not_warn(){
     if (true){ // 1
         int sum = 2
                 + 3
-                + 4
-                + 5
-                + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19;
-    } //          20
+                + 4;
+    } //          5
 
     bool a = true;
     bool b = false;
     if (a && b){
         int sum = 2
-                + 3
-                + 4
-                + 5
-                + 6;
+                + 3;
     } else if (a || b) {
-        int sum = 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15;
+        int sum = 5
+                + 6
+                + 7;
     } else {
-        int sum = 17
-                + 18
-                + 19
-                + 20
-                + 21;
+        int sum = 9
+                + 10;
     }
 
 
@@ -173,21 +79,7 @@ void should_not_warn(){
         int sum = 2
                 + 3
                 + 4
-                + 5
-                + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19;
+                + 5;
     }
 
     while (true) {
@@ -195,19 +87,6 @@ void should_not_warn(){
                 + 3
                 + 4
                 + 5
-                + 6
-                + 7
-                + 8
-                + 9
-                + 10
-                + 11
-                + 12
-                + 13
-                + 14
-                + 15
-                + 16
-                + 17
-                + 18
-                + 19;
+                + 6;
     }
 }

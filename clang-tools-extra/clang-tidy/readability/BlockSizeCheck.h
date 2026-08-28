@@ -19,8 +19,8 @@ namespace clang::tidy::readability {
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/block-size.html
 class BlockSizeCheck : public ClangTidyCheck {
 public:
-  BlockSizeCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  BlockSizeCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -28,7 +28,9 @@ public:
   }
 
 private:
-  const unsigned LineCountThreshold = 20;
+  const unsigned IfLineCountThreshold;
+  const unsigned ForLineCountThreshold;
+  const unsigned WhileLineCountThreshold;
 };
 
 } // namespace clang::tidy::readability

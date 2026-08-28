@@ -15,6 +15,25 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+const unsigned DefaultIfLineCountThreshold = 20;
+const unsigned DefaultForLineCountThreshold = 30;
+const unsigned DefaultWhileLineCountThreshold = 30;
+
+BlockSizeCheck::BlockSizeCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IfLineCountThreshold(
+          Options.get("IfLineCountThreshold", DefaultIfLineCountThreshold)),
+      ForLineCountThreshold(
+          Options.get("ForLineCountThreshold", DefaultForLineCountThreshold)),
+      WhileLineCountThreshold(Options.get("WhileLineCountThreshold",
+                                          DefaultWhileLineCountThreshold)) {}
+
+void BlockSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IfLineCountThreshold", IfLineCountThreshold);
+  Options.store(Opts, "ForLineCountThreshold", ForLineCountThreshold);
+  Options.store(Opts, "WhileLineCountThreshold", WhileLineCountThreshold);
+}
+
 void BlockSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(ifStmt().bind("if"), this);
   Finder->addMatcher(forStmt().bind("for"), this);
@@ -36,11 +55,11 @@ void BlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
     }();
     const unsigned LineCount = LastLine - FirstLine + 1;
 
-    if (LineCount > LineCountThreshold)
+    if (LineCount > IfLineCountThreshold)
       diag(IfBlk->getBeginLoc(),
            "if block spans %0 lines of code, which exceeds "
            "the threshold of %1 lines")
-          << LineCount << LineCountThreshold;
+          << LineCount << IfLineCountThreshold;
 
     if (ElseBlk != nullptr &&
         isa<CompoundStmt>(ElseBlk)) { // i.e. is not an else if
@@ -48,11 +67,11 @@ void BlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
           SrcMgr->getSpellingLineNumber(IfBlk->getEndLoc());
       const unsigned ElseLineCount = ElseLastLine - LastLine + 1;
 
-      if (ElseLineCount > LineCountThreshold)
+      if (ElseLineCount > IfLineCountThreshold)
         diag(ElseBlk->getBeginLoc(),
              "else block spans %0 lines of code, which exceeds "
              "the threshold of %1 lines")
-            << ElseLineCount << LineCountThreshold;
+            << ElseLineCount << IfLineCountThreshold;
     }
 
     return;
@@ -65,10 +84,10 @@ void BlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
         SrcMgr->getSpellingLineNumber(ForLoop->getEndLoc());
     const unsigned LineCount = LastLine - FirstLine + 1;
 
-    if (LineCount > LineCountThreshold) {
+    if (LineCount > ForLineCountThreshold) {
       diag(ForLoop->getBeginLoc(), "for loop spans %0 lines of code, which "
                                    "exceeds the threshold of %1 lines")
-          << LineCount << LineCountThreshold;
+          << LineCount << ForLineCountThreshold;
     }
 
     return;
@@ -81,10 +100,10 @@ void BlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
         SrcMgr->getSpellingLineNumber(WhileLoop->getEndLoc());
     const unsigned LineCount = LastLine - FirstLine + 1;
 
-    if (LineCount > LineCountThreshold) {
+    if (LineCount > WhileLineCountThreshold) {
       diag(WhileLoop->getBeginLoc(), "while loop spans %0 lines of code, which "
                                      "exceeds the threshold of %1 lines")
-          << LineCount << LineCountThreshold;
+          << LineCount << WhileLineCountThreshold;
     }
 
     return;
