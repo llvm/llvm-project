@@ -80,7 +80,7 @@ in the same files: `clang/include/clang/Options/Options.td` and
 `clang/include/clang/Options/FlangOptions.td`.
 
 The separation helps us split various tasks and allows us to implement more
-specialised tools. In particular, `flang` is not aware of various
+specialized tools. In particular, `flang` is not aware of various
 compilation phases within the frontend (e.g. scanning, parsing or semantic
 checks). It does not have to be. Conversely, the frontend driver, `flang
 -fc1`, needs not to be concerned with linkers or other external tools like
