@@ -73,6 +73,7 @@ struct EvalContext {
   lldb::ModuleSP module_sp;
   const DWARFExpression::Delegate *dwarf_cu;
   lldb::RegisterKind reg_kind;
+  lldb::ByteOrder byte_order;
   const Value *initial_value_ptr;
   const Value *object_address_ptr;
   Process *process = nullptr;
@@ -83,17 +84,17 @@ struct EvalContext {
   /// @{
   std::vector<Value> stack;
   Value pieces;
-  uint64_t op_piece_offset = 0;
+  uint64_t op_piece_bit_offset = 0;
   LocationDescriptionKind loc_desc_kind = Memory;
   /// @}
 
   EvalContext(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
               lldb::ModuleSP module_sp,
               const DWARFExpression::Delegate *dwarf_cu,
-              lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
-              const Value *object_address_ptr)
+              lldb::RegisterKind reg_kind, lldb::ByteOrder byte_order,
+              const Value *initial_value_ptr, const Value *object_address_ptr)
       : exe_ctx(exe_ctx), reg_ctx(reg_ctx), module_sp(std::move(module_sp)),
-        dwarf_cu(dwarf_cu), reg_kind(reg_kind),
+        dwarf_cu(dwarf_cu), reg_kind(reg_kind), byte_order(byte_order),
         initial_value_ptr(initial_value_ptr),
         object_address_ptr(object_address_ptr) {
     if (exe_ctx) {
@@ -1106,6 +1107,123 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   return llvm::Error::success();
 }
 
+static std::optional<uint64_t> BitsToBytes(uint64_t bit_size) {
+  if (bit_size > std::numeric_limits<uint64_t>::max() - 7)
+    return std::nullopt;
+  return (bit_size + 7) / 8;
+}
+
+static uint8_t GetBitMask(uint64_t bit_offset, lldb::ByteOrder byte_order) {
+  uint8_t bit_in_byte = bit_offset % 8;
+  if (byte_order == lldb::eByteOrderBig)
+    bit_in_byte = 7 - bit_in_byte;
+  return static_cast<uint8_t>(1u << bit_in_byte);
+}
+
+/// Appends an eagerly materialized piece at the next composite bit offset.
+static llvm::Error AppendPieceToComposite(EvalContext &eval_ctx,
+                                          const Value &piece,
+                                          uint64_t piece_bit_size) {
+  if (piece_bit_size == 0)
+    return llvm::Error::success();
+
+  if (eval_ctx.byte_order != lldb::eByteOrderLittle &&
+      eval_ctx.byte_order != lldb::eByteOrderBig)
+    return llvm::createStringError(
+        "unsupported byte order for composite DWARF piece");
+
+  if (eval_ctx.op_piece_bit_offset >
+      std::numeric_limits<uint64_t>::max() - piece_bit_size)
+    return llvm::createStringError("composite DWARF piece size overflow");
+  const uint64_t next_bit_offset =
+      eval_ctx.op_piece_bit_offset + piece_bit_size;
+
+  std::optional<uint64_t> current_byte_size =
+      BitsToBytes(eval_ctx.op_piece_bit_offset);
+  std::optional<uint64_t> next_byte_size = BitsToBytes(next_bit_offset);
+  if (!current_byte_size || !next_byte_size ||
+      *next_byte_size > std::numeric_limits<size_t>::max())
+    return llvm::createStringError("composite DWARF piece size overflow");
+  if (eval_ctx.pieces.GetBuffer().GetByteSize() != *current_byte_size)
+    return llvm::createStringError(
+        "composite DWARF piece buffer size does not match its bit offset");
+
+  const uint8_t *source_data = nullptr;
+  uint64_t source_byte_size = 0;
+  uint64_t source_bit_offset = 0;
+  std::vector<uint8_t> scalar_data;
+
+  switch (piece.GetValueType()) {
+  case Value::ValueType::Scalar: {
+    if (piece_bit_size > std::numeric_limits<uint16_t>::max())
+      return llvm::createStringError("scalar DWARF piece is too large");
+    std::optional<uint64_t> scalar_byte_size = BitsToBytes(piece_bit_size);
+    if (!scalar_byte_size ||
+        *scalar_byte_size > std::numeric_limits<size_t>::max())
+      return llvm::createStringError("scalar DWARF piece is too large");
+
+    scalar_data.resize(static_cast<size_t>(*scalar_byte_size));
+    Status error;
+    if (piece.GetScalar().GetAsMemoryData(
+            scalar_data.data(), scalar_data.size(), eval_ctx.byte_order,
+            error) != scalar_data.size())
+      return llvm::createStringError("failed to serialize scalar DWARF piece");
+
+    source_data = scalar_data.data();
+    source_byte_size = scalar_data.size();
+    // A partial-byte scalar occupies the least significant bits of its first
+    // byte, which follow the leading padding bits in big-endian order.
+    if (eval_ctx.byte_order == lldb::eByteOrderBig && piece_bit_size % 8)
+      source_bit_offset = 8 - piece_bit_size % 8;
+    break;
+  }
+  case Value::ValueType::HostAddress:
+    source_data = piece.GetBuffer().GetBytes();
+    source_byte_size = piece.GetBuffer().GetByteSize();
+    break;
+  case Value::ValueType::Invalid:
+  case Value::ValueType::FileAddress:
+  case Value::ValueType::LoadAddress:
+    return llvm::createStringError(
+        "unsupported value type for composite DWARF piece");
+  }
+
+  if (source_bit_offset >
+          std::numeric_limits<uint64_t>::max() - piece_bit_size ||
+      source_byte_size > std::numeric_limits<uint64_t>::max() / 8 ||
+      source_bit_offset + piece_bit_size > source_byte_size * 8)
+    return llvm::createStringError("DWARF piece exceeds its source buffer");
+
+  if (eval_ctx.pieces.ResizeData(static_cast<size_t>(*next_byte_size)) !=
+      *next_byte_size)
+    return llvm::createStringError(
+        "failed to resize composite DWARF piece buffer");
+
+  uint8_t *destination_data = eval_ctx.pieces.GetBuffer().GetBytes();
+  if (eval_ctx.op_piece_bit_offset % 8 == 0 && source_bit_offset % 8 == 0 &&
+      piece_bit_size % 8 == 0) {
+    ::memcpy(destination_data + eval_ctx.op_piece_bit_offset / 8,
+             source_data + source_bit_offset / 8, piece_bit_size / 8);
+  } else {
+    for (uint64_t i = 0; i < piece_bit_size; ++i) {
+      const uint64_t source_offset = source_bit_offset + i;
+      const uint64_t destination_offset = eval_ctx.op_piece_bit_offset + i;
+      const bool bit = source_data[source_offset / 8] &
+                       GetBitMask(source_offset, eval_ctx.byte_order);
+      uint8_t &destination_byte = destination_data[destination_offset / 8];
+      const uint8_t destination_mask =
+          GetBitMask(destination_offset, eval_ctx.byte_order);
+      if (bit)
+        destination_byte |= destination_mask;
+      else
+        destination_byte &= static_cast<uint8_t>(~destination_mask);
+    }
+  }
+
+  eval_ctx.op_piece_bit_offset = next_bit_offset;
+  return llvm::Error::success();
+}
+
 static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
                                         uint64_t piece_byte_size) {
   LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
@@ -1115,21 +1233,24 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
   if (piece_byte_size == 0)
     return llvm::Error::success();
 
+  if (piece_byte_size > std::numeric_limits<uint64_t>::max() / 8 ||
+      piece_byte_size > std::numeric_limits<size_t>::max())
+    return llvm::createStringError("DW_OP_piece size overflow");
+  const uint64_t piece_bit_size = piece_byte_size * 8;
+
   Value curr_piece;
 
   if (eval_ctx.stack.empty()) {
     UpdateValueTypeFromLocationDescription(eval_ctx,
                                            LocationDescriptionKind::Empty);
     // In a multi-piece expression, this means that the current piece is
-    // not available. Fill with zeros for now by resizing the data and
-    // appending it
+    // not available. Fill with zeros for now by resizing the data.
     curr_piece.ResizeData(piece_byte_size);
     // Note that "0" is not a correct value for the unknown bits.
     // It would be better to also return a mask of valid bits together
     // with the expression result, so the debugger can print missing
     // members as "<optimized out>" or something.
     ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
-    eval_ctx.pieces.AppendDataToHostBuffer(curr_piece);
   } else {
     Status error;
     // Extract the current piece into "curr_piece"
@@ -1190,7 +1311,9 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
     } break;
 
     case Value::ValueType::Scalar: {
-      uint32_t bit_size = piece_byte_size * 8;
+      if (piece_bit_size > std::numeric_limits<uint16_t>::max())
+        return llvm::createStringError("scalar DW_OP_piece is too large");
+      const uint32_t bit_size = static_cast<uint32_t>(piece_bit_size);
       uint32_t bit_offset = 0;
       if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
         return llvm::createStringError(
@@ -1208,33 +1331,8 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
       curr_piece.GetScalar() = scalar;
     } break;
     }
-
-    // Check if this is the first piece?
-    if (eval_ctx.op_piece_offset == 0) {
-      // This is the first piece, we should push it back onto the stack
-      // so subsequent pieces will be able to access this piece and add
-      // to it.
-      if (eval_ctx.pieces.AppendDataToHostBuffer(curr_piece) == 0) {
-        return llvm::createStringError("failed to append piece data");
-      }
-    } else {
-      // If this is the second or later piece there should be a value on
-      // the stack.
-      if (eval_ctx.pieces.GetBuffer().GetByteSize() !=
-          eval_ctx.op_piece_offset) {
-        return llvm::createStringError(
-            "DW_OP_piece for offset %" PRIu64
-            " but top of stack is of size %" PRIu64,
-            eval_ctx.op_piece_offset,
-            eval_ctx.pieces.GetBuffer().GetByteSize());
-      }
-
-      if (eval_ctx.pieces.AppendDataToHostBuffer(curr_piece) == 0)
-        return llvm::createStringError("failed to append piece data");
-    }
   }
-  eval_ctx.op_piece_offset += piece_byte_size;
-  return llvm::Error::success();
+  return AppendPieceToComposite(eval_ctx, curr_piece, piece_bit_size);
 }
 
 static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
@@ -1453,7 +1551,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         "no location, value may have been optimized out");
 
   EvalContext eval_ctx(exe_ctx, reg_ctx, std::move(module_sp), dwarf_cu,
-                       reg_kind, initial_value_ptr, object_address_ptr);
+                       reg_kind, opcodes.GetByteOrder(), initial_value_ptr,
+                       object_address_ptr);
 
   Stack &stack = eval_ctx.stack;
 
@@ -2056,19 +2155,42 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         eval_ctx.loc_desc_kind = Memory;
         const uint64_t piece_bit_size = op->getRawOperand(0);
         const uint64_t piece_bit_offset = op->getRawOperand(1);
+        if (piece_bit_size == 0)
+          break;
         switch (stack.back().GetValueType()) {
         case Value::ValueType::Invalid:
           return llvm::createStringError(
               "unable to extract bit value from invalid value");
         case Value::ValueType::Scalar: {
-          if (!stack.back().GetScalar().ExtractBitfield(piece_bit_size,
-                                                        piece_bit_offset)) {
+          if (piece_bit_size > std::numeric_limits<uint16_t>::max())
+            return llvm::createStringError(
+                "scalar DW_OP_bit_piece is too large");
+
+          Value curr_piece(stack.back());
+          Scalar &scalar = curr_piece.GetScalar();
+          if (scalar.GetType() != Scalar::e_int)
+            return llvm::createStringError(
+                "unable to extract %" PRIu64 " bit value with %" PRIu64
+                " bit offset from a non-integer scalar value.",
+                piece_bit_size, piece_bit_offset);
+          const uint64_t scalar_bit_size = scalar.GetAPSInt().getBitWidth();
+          if (piece_bit_offset >= scalar_bit_size) {
+            scalar = Scalar(llvm::APInt(static_cast<unsigned>(piece_bit_size),
+                                        /*val=*/0));
+          } else if (!scalar.ExtractBitfield(
+                         static_cast<uint32_t>(piece_bit_size),
+                         static_cast<uint32_t>(piece_bit_offset))) {
             return llvm::createStringError(
                 "unable to extract %" PRIu64 " bit value with %" PRIu64
                 " bit offset from a %" PRIu64 " bit scalar value.",
-                piece_bit_size, piece_bit_offset,
-                (uint64_t)(stack.back().GetScalar().GetByteSize() * 8));
+                piece_bit_size, piece_bit_offset, scalar_bit_size);
           }
+          scalar.TruncOrExtendTo(static_cast<uint16_t>(piece_bit_size),
+                                 /*sign=*/false);
+          stack.pop_back();
+          if (llvm::Error err =
+                  AppendPieceToComposite(eval_ctx, curr_piece, piece_bit_size))
+            return err;
         } break;
 
         case Value::ValueType::FileAddress:
