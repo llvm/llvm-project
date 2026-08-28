@@ -21,7 +21,7 @@ func.func @member(%arg0: !emitc.opaque<"mystruct">, %arg1: i32, %arg2: index) {
   %8 = emitc.subscript %7[%arg2] : (!emitc.array<2xi32>, index) -> !emitc.lvalue<i32>
   emitc.assign %arg1 : i32 to %8 : !emitc.lvalue<i32>
 
-  %9 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
+  %9 = "emitc.member" (%arg0) <{member = "a"}> : (!emitc.opaque<"mystruct">) -> i32
 
   return
 }

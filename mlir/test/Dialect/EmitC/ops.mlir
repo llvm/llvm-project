@@ -8,7 +8,7 @@ emitc.include "test.h"
 
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
-  %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
+  %1 = "emitc.call_opaque"() <{callee = "blah"}> : () -> i64
   emitc.call_opaque "foo" (%1) <{args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
   ]}> : (i64) -> ()
@@ -46,6 +46,13 @@ emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
 
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
+  return
+}
+
+// CHECK-LABEL: func.func @pure_cast
+// CHECK: emitc.cast %{{.*}} pure : i32 to f32
+func.func @pure_cast(%arg0: i32) {
+  %1 = emitc.cast %arg0 pure : i32 to f32
   return
 }
 
@@ -345,14 +352,14 @@ func.func @assign_global(%arg0 : i32) {
 }
 
 func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: !emitc.lvalue<!emitc.opaque<"mystruct_ptr">>, %arg2: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) {
-  %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-  %1 = "emitc.member" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
-  %2 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
-  %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
-  %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
-  %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %0 = "emitc.member" (%arg0) <{member = "a"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member" (%arg0) <{member = "b"}> : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %2 = "emitc.member_of_ptr" (%arg1) <{member = "a"}> : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
+  %3 = "emitc.member_of_ptr" (%arg1) <{member = "b"}> : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
+  %4 = "emitc.member_of_ptr" (%arg2) <{member = "a"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %5 = "emitc.member_of_ptr" (%arg2) <{member = "b"}> : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   %6 = emitc.load %arg0 : !emitc.lvalue<!emitc.opaque<"mystruct">>
-  %7 = "emitc.member" (%6) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
+  %7 = "emitc.member" (%6) <{member = "a"}> : (!emitc.opaque<"mystruct">) -> i32
   return
 }
 

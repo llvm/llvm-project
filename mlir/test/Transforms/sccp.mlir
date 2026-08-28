@@ -296,7 +296,7 @@ func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
 // CHECK-LABEL: no_crash_emitc_switch_unsigned_condition
 func.func @no_crash_emitc_switch_unsigned_condition() {
   // CHECK: emitc.constant
-  %0 = "emitc.constant"() {value = 1 : ui32} : () -> ui32
+  %0 = "emitc.constant"() <{value = 1 : ui32}> : () -> ui32
   // CHECK: emitc.switch
   emitc.switch %0 : ui32
   case 2 {

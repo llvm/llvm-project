@@ -1205,9 +1205,9 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
     Example:
 
     ```mlir
-    %0 = "emitc.member" (%arg0) {member = "a"}
+    %0 = "emitc.member" (%arg0) <{member = "a"}>
         : (!emitc.opaque<"mystruct">) -> i32
-    %0 = "emitc.member" (%arg0) {member = "a"}
+    %0 = "emitc.member" (%arg0) <{member = "a"}>
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     %1 = "emitc.member" (%arg0) <{member = "b"}>
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
@@ -1408,7 +1408,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %0 = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">}
+    %1 = "emitc.variable"() <{value = #emitc.opaque<"NULL">}>
       : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"int32_t">>>
     ```
 
@@ -1416,8 +1416,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     As an example, it is valid to create pointers to `variable` operations
     by using `address_of` operations and pass these to a `call` operation.
     ```mlir
-    %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
-    %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+    %1 = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
     %2 = emitc.address_of %0 : !emitc.lvalue<i32>
     %3 = emitc.address_of %1 : !emitc.lvalue<i32>
     emitc.call_opaque "write"(%2, %3)
