@@ -2124,6 +2124,28 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
       EXPECT_EQ(NewRHS, B);
     }
   });
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *Numerator = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *Denominator = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Quotient = SE.getUDivExpr(Numerator, Denominator);
+    const SCEV *Zero = SE.getZero(Numerator->getType());
+
+    auto CheckSimplification = [&](CmpPredicate Pred,
+                                   ICmpInst::Predicate ExpectedPred) {
+      SCEVUse LHS = Quotient;
+      SCEVUse RHS = Zero;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(Pred, LHS, RHS));
+      EXPECT_EQ(Pred, ExpectedPred);
+      EXPECT_EQ(LHS, Numerator);
+      EXPECT_EQ(RHS, Denominator);
+    };
+
+    // a / b == 0  =>  a < b
+    CheckSimplification(ICmpInst::ICMP_EQ, ICmpInst::ICMP_ULT);
+    // a / b != 0  =>  a >= b
+    CheckSimplification(ICmpInst::ICMP_NE, ICmpInst::ICMP_UGE);
+  });
 }
 
 // An operand of a SCEV expression is a SCEVUse and may carry use-specific

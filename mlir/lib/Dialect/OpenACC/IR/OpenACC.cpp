@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -593,6 +594,68 @@ ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
+/// Whether the body of a structured `acc.loop` is proven to run. This decides
+/// which edges out of the parent are feasible; the edges out of the region are
+/// unaffected.
+enum class BodyExecution {
+  /// The body runs at least once, so the parent cannot bypass the region.
+  Always,
+  /// The body never runs, so the parent cannot enter the region.
+  Never,
+  /// Neither could be proven, so the parent may do either.
+  Maybe
+};
+
+/// Prove whether the body of `loopOp` runs. A counted dimension whose entry
+/// test already fails at its lower bound runs exactly zero times, so a single
+/// comparison decides both `Always` and `Never`. Bounds that are not constant
+/// prove nothing.
+static BodyExecution getBodyExecution(LoopOp loopOp) {
+  // A container-like loop describes its iteration space inside the region.
+  if (loopOp.isContainerLike())
+    return BodyExecution::Maybe;
+
+  // The verifier guarantees one lower bound, upper bound and step per
+  // dimension.
+  ValueRange lbs = loopOp.getLowerbound();
+  ValueRange ubs = loopOp.getUpperbound();
+  ValueRange steps = loopOp.getStep();
+
+  BodyExecution result = BodyExecution::Always;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    std::optional<int64_t> lb = getConstantIntValue(lbs[i]);
+    std::optional<int64_t> ub = getConstantIntValue(ubs[i]);
+    std::optional<int64_t> step = getConstantIntValue(steps[i]);
+    // An unknown bound cannot be tested, and a zero step either spins forever
+    // or never starts. Neither proves `Always`, but a later dimension may
+    // still prove the nest empty: `(0 to %n)` collapsed with `(0 to 0)`.
+    if (!lb || !ub || !step || *step == 0) {
+      result = BodyExecution::Maybe;
+      continue;
+    }
+
+    // The entry test at the lower bound. A descending dimension compares
+    // against its bound the other way round. The attribute is absent when
+    // every dimension is exclusive as in `scf.for`, and the verifier otherwise
+    // guarantees one entry per dimension.
+    std::optional<ArrayRef<bool>> inclusiveUbs =
+        loopOp.getInclusiveUpperbound();
+    bool inclusiveUb = inclusiveUbs && (*inclusiveUbs)[i];
+    assert(*step != 0 && "zero step should have been filtered out");
+    bool runsOnce = *step > 0 ? (inclusiveUb ? *lb <= *ub : *lb < *ub)
+                              : (inclusiveUb ? *lb >= *ub : *lb > *ub);
+    // The dimensions are iterated as a nest, so one empty dimension empties
+    // the whole nest whatever the others do, while the body runs only if every
+    // dimension runs.
+    if (!runsOnce)
+      return BodyExecution::Never;
+  }
+
+  // No dimension was empty, so the body runs unless some dimension was
+  // unknown.
+  return result;
+}
+
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
   // Unstructured loops: the body may contain arbitrary CFG and early exits.
@@ -607,7 +670,21 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  // Structured loops: model a loop-shaped region graph similar to scf.for,
+  // minus the entry edge the loop is proven not to take.
+  if (point.isParent()) {
+    switch (getBodyExecution(*this)) {
+    case BodyExecution::Always:
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    case BodyExecution::Never:
+      regions.push_back(RegionSuccessor(getOperation()));
+      return;
+    case BodyExecution::Maybe:
+      break;
+    }
+  }
+
   regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor(getOperation()));
 }
