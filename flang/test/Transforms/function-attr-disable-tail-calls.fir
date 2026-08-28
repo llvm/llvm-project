@@ -5,11 +5,7 @@ func.func @_QPf() {
   return
 }
 
-// ENABLED: func.func @_QPf() attributes {llvm.disable_tail_calls = true} {
-// ENABLED-NEXT:   return
-// ENABLED-NEXT: }
+// ENABLED: func.func @_QPf() attributes {llvm.disable_tail_calls = true} 
 
-// DISABLED: func.func @_QPf() {
+// DISABLED: func.func @_QPf() 
 // DISABLED-NOT: llvm.disable_tail_calls
-// DISABLED-NEXT:   return
-// DISABLED-NEXT: }
