@@ -129,6 +129,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by suggesting a wider type of the same signedness as the original operands,
+  instead of forcing a signed type, when a multiplication of two unsigned
+  operands narrower than `int` is only signed due to integer promotion.
+
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
@@ -144,7 +150,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
-  
+
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
