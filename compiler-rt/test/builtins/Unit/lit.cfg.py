@@ -62,6 +62,9 @@ if is_msvc:
 elif config.target_os == "Darwin":
     base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.osx.a ")
     config.substitutions.append(("%librt ", base_lib + " -lSystem "))
+elif config.target_os == "OS390":
+    base_lib = os.path.join( config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix)
+    config.substitutions.append(("%librt ", base_lib + " "))
 elif config.target_os == "Windows":
     base_lib = os.path.join(
         config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix
@@ -144,7 +147,10 @@ builtins_source_dir = os.path.join(
 )
 builtins_lit_source_dir = get_required_attr(config, "builtins_lit_source_dir")
 
-extra_link_flags = ["-nodefaultlibs"]
+if sys.platform == 'zos':
+    extra_link_flags = ["-nodefaultrtlibs"]
+else:
+    extra_link_flags = ["-nodefaultlibs"]
 
 target_cflags = [get_required_attr(config, "target_cflags")]
 target_cflags += ["-fno-builtin", "-I", builtins_source_dir]
