@@ -134,12 +134,16 @@ end subroutine
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[BEGIN_DO_FALLBACK_IV:.*]] =
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[BEGIN_DO_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[BEGIN_DO_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[BEGIN_DO_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[BEGIN_DO_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[BEGIN_DO_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[BEGIN_DO_FALLBACK_INDEX]]
 ! CHECK-NOT:       omp.
@@ -214,12 +218,16 @@ end subroutine
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[ENTRY_FALLBACK_IV:.*]] =
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[ENTRY_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[ENTRY_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ENTRY_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[ENTRY_FALLBACK_INDEX]]
 ! CHECK-NOT:       omp.
@@ -282,12 +290,16 @@ end subroutine
 ! CHECK-NOT:       omp.
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.do_loop %[[ALT_ENTRY_FALLBACK_IV:.*]] =
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             fir.store %[[ALT_ENTRY_FALLBACK_IV]] to
 ! CHECK-SAME:          %[[ALT_ENTRY_FALLBACK_IV_ADDR:.*]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_VALUE:.*]] =
 ! CHECK-SAME:          fir.load %[[ALT_ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_INDEX:.*]] =
 ! CHECK-SAME:          fir.load %[[ALT_ENTRY_FALLBACK_IV_ADDR]]
+! CHECK-NOT:       {{^ *}}}
 ! CHECK:             %[[ALT_ENTRY_FALLBACK_INDEX_I64:.*]] =
 ! CHECK-SAME:          fir.convert %[[ALT_ENTRY_FALLBACK_INDEX]]
 ! CHECK-NOT:       omp.
