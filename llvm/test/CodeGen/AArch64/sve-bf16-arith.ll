@@ -85,16 +85,13 @@ define <vscale x 4 x bfloat> @fadd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fadd_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fadd_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fadd z2.s, z3.s, z2.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fadd z2.s, z4.s, z3.s
 ; NOB16B16-NEXT:    fadd z0.s, z0.s, z1.s
 ; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
@@ -142,18 +139,15 @@ define <vscale x 4 x bfloat> @fdiv_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fdiv_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: fdiv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fdivr z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    zip2 z3.h, z2.h, z1.h
+; CHECK-NEXT:    zip2 z4.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    fdivr z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    bfcvt z1.h, p0/m, z2.s
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -206,18 +200,15 @@ define <vscale x 4 x bfloat> @fmax_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fmax_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fmax_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fmax z2.s, p0/m, z2.s, z3.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fmax z3.s, p0/m, z3.s, z4.s
 ; NOB16B16-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; NOB16B16-NEXT:    ret
@@ -276,18 +267,15 @@ define <vscale x 4 x bfloat> @fmaxnm_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale 
 define <vscale x 8 x bfloat> @fmaxnm_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fmaxnm_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fmaxnm z2.s, p0/m, z2.s, z3.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fmaxnm z3.s, p0/m, z3.s, z4.s
 ; NOB16B16-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; NOB16B16-NEXT:    ret
@@ -346,18 +334,15 @@ define <vscale x 4 x bfloat> @fmin_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fmin_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fmin_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fmin z2.s, p0/m, z2.s, z3.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fmin z3.s, p0/m, z3.s, z4.s
 ; NOB16B16-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; NOB16B16-NEXT:    ret
@@ -416,18 +401,15 @@ define <vscale x 4 x bfloat> @fminnm_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale 
 define <vscale x 8 x bfloat> @fminnm_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fminnm_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fminnm z2.s, p0/m, z2.s, z3.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fminnm z3.s, p0/m, z3.s, z4.s
 ; NOB16B16-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; NOB16B16-NEXT:    ret
@@ -486,18 +468,17 @@ define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
 ; NOB16B16-LABEL: fmla_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z3.s, z2.h
-; NOB16B16-NEXT:    uunpklo z2.s, z2.h
+; NOB16B16-NEXT:    movi v3.2d, #0000000000000000
 ; NOB16B16-NEXT:    uunpkhi z4.s, z1.h
 ; NOB16B16-NEXT:    uunpkhi z5.s, z0.h
 ; NOB16B16-NEXT:    uunpklo z1.s, z1.h
 ; NOB16B16-NEXT:    uunpklo z0.s, z0.h
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    bfmlalb z3.s, z5.h, z4.h
+; NOB16B16-NEXT:    zip2 z6.h, z3.h, z2.h
+; NOB16B16-NEXT:    zip1 z2.h, z3.h, z2.h
+; NOB16B16-NEXT:    bfmlalb z6.s, z5.h, z4.h
 ; NOB16B16-NEXT:    bfmlalb z2.s, z0.h, z1.h
-; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z6.s
 ; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
 ; NOB16B16-NEXT:    uzp1 z0.h, z1.h, z0.h
 ; NOB16B16-NEXT:    ret
@@ -676,14 +657,13 @@ define <vscale x 4 x bfloat> @fsqrt_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define <vscale x 8 x bfloat> @fsqrt_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fsqrt_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fsqrt z1.s, p0/m, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fsqrt z2.s, p0/m, z2.s
 ; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
-; CHECK-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-NEXT:    bfcvt z1.h, p0/m, z2.s
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -736,16 +716,13 @@ define <vscale x 4 x bfloat> @fsub_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 define <vscale x 8 x bfloat> @fsub_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; NOB16B16-LABEL: fsub_nxv8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fsub z2.s, z3.s, z2.s
+; NOB16B16-NEXT:    zip2 z3.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip2 z4.h, z2.h, z0.h
+; NOB16B16-NEXT:    zip1 z1.h, z2.h, z1.h
+; NOB16B16-NEXT:    zip1 z0.h, z2.h, z0.h
+; NOB16B16-NEXT:    fsub z2.s, z4.s, z3.s
 ; NOB16B16-NEXT:    fsub z0.s, z0.s, z1.s
 ; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s

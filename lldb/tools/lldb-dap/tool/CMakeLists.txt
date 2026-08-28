@@ -2,17 +2,24 @@ set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 
+set(LLDB_DAP_LINK_LIBS lldbDAP liblldb lldbHost)
+
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
+  LINK_COMPONENTS
+    Option
+    Support
   LINK_LIBS
-    lldbDAP
+    ${LLDB_DAP_LINK_LIBS}
   )
 
 add_dependencies(lldb-dap
   LLDBDAPOptionsTableGen
   ${tablegen_deps}
 )
+
+lldb_prevent_liblldb_symbol_interposition(lldb-dap)
 
 if(APPLE)
   configure_file(

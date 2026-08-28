@@ -99,8 +99,8 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (MaybeHeaderToInclude)
     Diag << IncludeInserter.createIncludeInsertion(
-        Result.Context->getSourceManager().getFileID(
-            StrFormatCall->getBeginLoc()),
+        Result.SourceManager->getFileID(Result.SourceManager->getExpansionLoc(
+            StrFormatCall->getBeginLoc())),
         *MaybeHeaderToInclude);
 }
 

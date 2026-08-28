@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.35 %s -o - | FileCheck --check-prefix=NOLINK %s
 ; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.36 %s -o - | FileCheck %s
 

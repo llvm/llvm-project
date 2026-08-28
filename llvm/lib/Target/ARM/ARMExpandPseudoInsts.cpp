@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -58,6 +59,11 @@ namespace {
 
     StringRef getPassName() const override {
       return ARM_EXPAND_PSEUDO_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -802,8 +808,8 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
     GetDSubRegs(MO.getReg(), RegSpc, TRI, D0, D1, D2, D3);
 
   // Add the subregs as sources of the new instruction.
-  unsigned SrcFlags = (getUndefRegState(MO.isUndef()) |
-                       getKillRegState(MO.isKill()));
+  RegState SrcFlags =
+      (getUndefRegState(MO.isUndef()) | getKillRegState(MO.isKill()));
   MIB.addReg(D0, SrcFlags);
   if (NumRegs > 1)
     MIB.addReg(D1, SrcFlags);
@@ -881,7 +887,7 @@ void ARMExpandPseudo::ExpandMQQPRLoadStore(MachineBasicBlock::iterator &MBBI) {
   MachineInstrBuilder MIB =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc));
 
-  unsigned Flags = getKillRegState(MI.getOperand(0).isKill()) |
+  RegState Flags = getKillRegState(MI.getOperand(0).isKill()) |
                    getDefRegState(MI.getOperand(0).isDef());
   Register SrcReg = MI.getOperand(0).getReg();
 
@@ -985,6 +991,8 @@ static MachineOperand getMovOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol:
     return MachineOperand::CreateES(MO.getSymbolName(), TF);
+  case MachineOperand::MO_MCSymbol:
+    return MachineOperand::CreateMCSymbol(MO.getMCSymbol(), TF);
   case MachineOperand::MO_JumpTableIndex:
     return MachineOperand::CreateJTI(MO.getIndex(), TF);
   default:
@@ -1839,6 +1847,15 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
   }
 }
 
+static unsigned getCmpOpcode(bool IsThumb, Register LHS, Register RHS) {
+  if (!IsThumb)
+    return ARM::CMPrr;
+  if (ARM::tGPRRegClass.contains(LHS) &&
+      ARM::tGPRRegClass.contains(RHS))
+    return ARM::tCMPr;
+  return ARM::tCMPhir;
+}
+
 /// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
 /// possible. This only gets used at -O0 so we don't care about efficiency of
 /// the generated code.
@@ -1899,7 +1916,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
     MIB.addImm(0); // a 32-bit Thumb ldrex (only) allows an offset.
   MIB.add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  unsigned CMPrr = getCmpOpcode(IsThumb, Dest.getReg(), DesiredReg);
   BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
@@ -1962,7 +1979,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
 /// single GPRPair register), Thumb's take two separate registers so we need to
 /// extract the subregs from the pair.
 static void addExclusiveRegPair(MachineInstrBuilder &MIB, MachineOperand &Reg,
-                                unsigned Flags, bool IsThumb,
+                                RegState Flags, bool IsThumb,
                                 const TargetRegisterInfo *TRI) {
   if (IsThumb) {
     Register RegLo = TRI->getSubReg(Reg.getReg(), ARM::gsub_0);
@@ -2019,16 +2036,18 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrLo = getCmpOpcode(IsThumb, DestLo, DesiredLo);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrLo))
       .addReg(DestLo, getKillRegState(Dest.isDead()))
       .addReg(DesiredLo)
       .add(predOps(ARMCC::AL));
 
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrHi = getCmpOpcode(IsThumb, DestHi, DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrHi))
       .addReg(DestHi, getKillRegState(Dest.isDead()))
       .addReg(DesiredHi)
-      .addImm(ARMCC::EQ).addReg(ARM::CPSR, RegState::Kill);
+      .addImm(ARMCC::EQ)
+      .addReg(ARM::CPSR, RegState::Kill);
 
   unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
   BuildMI(LoadCmpBB, DL, TII->get(Bcc))
@@ -2044,7 +2063,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   //     bne .Lloadcmp
   unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
   MIB = BuildMI(StoreBB, DL, TII->get(STREXD), TempReg);
-  unsigned Flags = getKillRegState(New.isDead());
+  RegState Flags = getKillRegState(New.isDead());
   addExclusiveRegPair(MIB, New, Flags, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
@@ -2218,7 +2237,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         } else {
           // Use move to satisfy constraints
           unsigned MoveOpc = Opcode == ARM::VBSPd ? ARM::VORRd : ARM::VORRq;
-          unsigned MO1Flags = getRegState(MI.getOperand(1)) & ~RegState::Kill;
+          RegState MO1Flags = getRegState(MI.getOperand(1)) & ~RegState::Kill;
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoveOpc))
               .addReg(DstReg,
                       RegState::Define |
@@ -2242,6 +2261,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
+    case ARM::CLEANUPRET:
+    case ARM::CATCHRET: {
+      unsigned RetOpcode = STI->isThumb() ? ARM::tBX_RET : ARM::BX_RET;
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpcode))
+          .add(predOps(ARMCC::AL));
+      MI.eraseFromParent();
+      return true;
+    }
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {
@@ -2268,7 +2295,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
                            MF->getFunction().needsUnwindTableEntry();
         unsigned TCOpcode =
             STI->isThumb()
@@ -2532,7 +2559,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       case ARM::t2MOVCClsr: NewOpc = ARM::t2LSRri; break;
       case ARM::t2MOVCCasr: NewOpc = ARM::t2ASRri; break;
       case ARM::t2MOVCCror: NewOpc = ARM::t2RORri; break;
-      default: llvm_unreachable("unexpeced conditional move");
+      default: llvm_unreachable("unexpected conditional move");
       }
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc),
               MI.getOperand(1).getReg())

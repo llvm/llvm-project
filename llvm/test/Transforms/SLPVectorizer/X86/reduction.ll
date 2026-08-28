@@ -23,8 +23,8 @@ define i32 @reduce(ptr nocapture %A, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i32 [[MUL]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP0]], splat (double 7.000000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD6]] = fadd double [[SUM_014]], [[ADD5]]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_015]], 1
@@ -75,16 +75,15 @@ define i32 @horiz_max_multiple_uses(ptr %x, ptr %p) {
 ; CHECK-NEXT:    [[X4:%.*]] = getelementptr [32 x i32], ptr [[X:%.*]], i64 0, i64 4
 ; CHECK-NEXT:    [[X5:%.*]] = getelementptr [32 x i32], ptr [[X]], i64 0, i64 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[X]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[X4]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[X5]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[MAX_ROOT_CMP:%.*]] = icmp sgt i32 [[TMP2]], [[T4]]
-; CHECK-NEXT:    [[MAX_ROOT_SEL:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 [[TMP2]], i32 [[T4]]
-; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[MAX_ROOT_SEL]], [[T5]]
-; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[MAX_ROOT_SEL]], i32 [[T5]]
-; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[MAX_ROOT_CMP]], i32 3, i32 4
+; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[X4]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[X5]], align 4
+; CHECK-NEXT:    [[RDX4:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[MAX_ROOT_CMP1:%.*]] = icmp sgt i32 [[RDX4]], [[T6]]
+; CHECK-NEXT:    [[MAX_ROOT_SEL:%.*]] = select i1 [[MAX_ROOT_CMP1]], i32 [[RDX4]], i32 [[T6]]
+; CHECK-NEXT:    [[T18:%.*]] = call i32 @llvm.smax.i32(i32 [[MAX_ROOT_SEL]], i32 [[T7]])
+; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[MAX_ROOT_CMP1]], i32 3, i32 4
 ; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    ret i32 [[T17]]
+; CHECK-NEXT:    ret i32 [[T18]]
 ;
   %x1 = getelementptr [32 x i32], ptr %x, i64 0, i64 1
   %x2 = getelementptr [32 x i32], ptr %x, i64 0, i64 2
@@ -99,16 +98,12 @@ define i32 @horiz_max_multiple_uses(ptr %x, ptr %p) {
   %t4 = load i32, ptr %x4
   %t5 = load i32, ptr %x5
 
-  %c01 = icmp sgt i32 %t0, %t1
-  %s5 = select i1 %c01, i32 %t0, i32 %t1
-  %c012 = icmp sgt i32 %s5, %t2
-  %t8 = select i1 %c012, i32 %s5, i32 %t2
-  %c0123 = icmp sgt i32 %t8, %t3
-  %rdx4 = select i1 %c0123, i32 %t8, i32 %t3
+  %s5 = call i32 @llvm.smax(i32 %t0, i32 %t1)
+  %t8 = call i32 @llvm.smax(i32 %s5, i32 %t2)
+  %rdx4 = call i32 @llvm.smax(i32 %t8, i32 %t3)
   %MAX_ROOT_CMP = icmp sgt i32 %rdx4, %t4
   %MAX_ROOT_SEL = select i1 %MAX_ROOT_CMP, i32 %rdx4, i32 %t4
-  %c012345 = icmp sgt i32 %MAX_ROOT_SEL, %t5
-  %t17 = select i1 %c012345, i32 %MAX_ROOT_SEL, i32 %t5
+  %t17 = call i32 @llvm.smax(i32 %MAX_ROOT_SEL, i32 %t5)
   %three_or_four = select i1 %MAX_ROOT_CMP, i32 3, i32 4
   store i32 %three_or_four, ptr %p, align 8
   ret i32 %t17

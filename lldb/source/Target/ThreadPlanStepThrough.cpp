@@ -62,10 +62,8 @@ ThreadPlanStepThrough::ThreadPlanStepThrough(Thread &thread,
         return_bp->SetBreakpointKind("step-through-backstop");
       }
       Log *log = GetLog(LLDBLog::Step);
-      if (log) {
-        LLDB_LOGF(log, "Setting backstop breakpoint %d at address: 0x%" PRIx64,
-                  m_backstop_bkpt_id, m_backstop_addr);
-      }
+      LLDB_LOGF(log, "Setting backstop breakpoint %d at address: 0x%" PRIx64,
+                m_backstop_bkpt_id, m_backstop_addr);
     }
   }
 }
@@ -114,7 +112,7 @@ void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
 void ThreadPlanStepThrough::GetDescription(Stream *s,
                                            lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief)
-    s->Printf("Step through");
+    s->PutCString("Step through");
   else {
     s->PutCString("Stepping through trampoline code from: ");
     DumpAddress(s->AsRawOstream(), m_start_address, sizeof(addr_t));

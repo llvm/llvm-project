@@ -32,6 +32,7 @@
 namespace llvm {
 
 class Constant;
+class DataLayout;
 class Module;
 
 template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
@@ -170,6 +171,11 @@ public:
   /// it isn't explicitly set.
   LLVM_ABI void replaceInitializer(Constant *InitVal);
 
+  /// Get the size of this global variable in bytes.
+  /// This is only a minimum size if this is a declaration or a replaceable
+  /// definition.
+  LLVM_ABI uint64_t getGlobalSize(const DataLayout &DL) const;
+
   /// If the value is a global constant, its value is immutable throughout the
   /// runtime execution of the program.  Assigning a value into the constant
   /// leads to undefined behavior.
@@ -271,6 +277,8 @@ public:
 
   /// Check if section name is present
   bool hasImplicitSection() const {
+    if (isDeclarationForLinker())
+      return false;
     return getAttributes().hasAttribute("bss-section") ||
            getAttributes().hasAttribute("data-section") ||
            getAttributes().hasAttribute("relro-section") ||
@@ -302,12 +310,6 @@ public:
   /// Remove the code model for this global.
   ///
   LLVM_ABI void clearCodeModel();
-
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    MaybeAlign Align = getAlign();
-    return Align ? Align->value() : 0;
-  }
 
   /// Returns the alignment of the given variable.
   MaybeAlign getAlign() const { return GlobalObject::getAlign(); }

@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H
 
 #include "RISCVTargetStreamer.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCELFStreamer.h"
 
 namespace llvm {
@@ -25,6 +26,18 @@ class RISCVELFStreamer : public MCELFStreamer {
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
 
+  // Active ISA string propagated from RISCVTargetELFStreamer. When non-empty,
+  // it is used as the suffix for "$x<ISA>" mapping symbols.
+  std::string MappingSymbolArch;
+
+  // ISA suffix last emitted via "$x<ISA>" in the current section, and the
+  // per-section history preserved across changeSection. A new mapping symbol
+  // is emitted whenever LastEMS != EMS_Instructions or
+  // LastEmittedArch != MappingSymbolArch, so the ISA in effect at each
+  // instruction run is always recorded.
+  std::string LastEmittedArch;
+  DenseMap<const MCSection *, std::string> LastEmittedArchInSection;
+
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
                    std::unique_ptr<MCObjectWriter> MOW,
@@ -35,11 +48,24 @@ public:
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
+
+  void setMappingSymbolArch(StringRef Arch);
 };
 
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {
 private:
   StringRef CurrentVendor;
+
+  // Initial ISA string derived from the subtarget features in the constructor.
+  // Used to re-establish state on reset().
+  std::string InitialArchString;
+
+  // Current ISA string, kept in sync with each .option arch/rvc/norvc/pop
+  // and .attribute arch directive. Used to avoid propagating redundant ISA
+  // updates to the streamer when the ISA does not actually change (e.g.,
+  // .option rvc when C is already enabled).
+  std::string ArchString;
+  SmallVector<std::string, 4> ArchStringStack;
 
   MCSection *AttributeSection = nullptr;
 
@@ -55,6 +81,10 @@ public:
   RISCVELFStreamer &getStreamer();
   RISCVTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
+  // Update ArchString and propagate the change to the streamer so the next
+  // instruction-run emits an ISA-specific mapping symbol. A no-op when
+  // Arch == ArchString (deduplication).
+  void setArchString(StringRef Arch) override;
   void emitDirectiveOptionExact() override;
   void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;

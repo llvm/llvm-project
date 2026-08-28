@@ -13,7 +13,7 @@ module functions
 contains
   function func1() result(i)
     !$omp declare target enter(func1) indirect(.true.)
-    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK:      OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
     !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
     !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
     !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
@@ -28,7 +28,7 @@ contains
 
   function func2() result(i)
     !$omp declare target enter(func2) indirect
-    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK:      OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
     !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
     !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
     !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'

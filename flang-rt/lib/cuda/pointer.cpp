@@ -82,6 +82,24 @@ int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
   return stat;
 }
 
+int RTDEF(CUFPointerDeallocate)(Descriptor &desc, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  // Perform the standard allocation.
+  int stat{
+      RTNAME(PointerDeallocate)(desc, hasStat, errMsg, sourceFile, sourceLine)};
+#ifndef RT_DEVICE_COMPILATION
+  // Descriptor synchronization is only done when the deallocation is done
+  // from the host.
+  if (stat == StatOk) {
+    void *deviceAddr{
+        RTNAME(CUFGetDeviceAddress)((void *)&desc, sourceFile, sourceLine)};
+    RTNAME(CUFDescriptorSync)
+    ((Descriptor *)deviceAddr, &desc, sourceFile, sourceLine);
+  }
+#endif
+  return stat;
+}
+
 RT_EXT_API_GROUP_END
 
 } // extern "C"

@@ -29,11 +29,11 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -859,13 +859,11 @@ public:
 
   void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned index) const {
-    assert(index < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[index];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -886,31 +884,39 @@ public:
 /// is an integral constant expression (if known).
 struct EvaluatedStmt {
   /// Whether this statement was already evaluated.
-  bool WasEvaluated : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned WasEvaluated : 1;
 
   /// Whether this statement is being evaluated.
-  bool IsEvaluating : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsEvaluating : 1;
 
   /// Whether this variable is known to have constant initialization. This is
   /// currently only computed in C++, for static / thread storage duration
   /// variables that might have constant initialization and for variables that
   /// are usable in constant expressions.
-  bool HasConstantInitialization : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasConstantInitialization : 1;
 
   /// Whether this variable is known to have constant destruction. That is,
   /// whether running the destructor on the initial value is a side-effect
   /// (and doesn't inspect any state that might have changed during program
   /// execution). This is currently only computed if the destructor is
   /// non-trivial.
-  bool HasConstantDestruction : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasConstantDestruction : 1;
 
   /// In C++98, whether the initializer is an ICE. This affects whether the
   /// variable is usable in constant expressions.
-  bool HasICEInit : 1;
-  bool CheckedForICEInit : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasICEInit : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CheckedForICEInit : 1;
 
-  bool HasSideEffects : 1;
-  bool CheckedForSideEffects : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasSideEffects : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CheckedForSideEffects : 1;
 
   LazyDeclStmtPtr Value;
   APValue Evaluated;
@@ -1212,6 +1218,21 @@ public:
       && !isFileVarDecl();
   }
 
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
+      return true;
+    return isInAnonymousNamespace();
+  }
+
   /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {
@@ -1247,14 +1268,16 @@ public:
 
   /// Returns true for local variable declarations other than parameters.
   /// Note that this includes static variables inside of functions. It also
-  /// includes variables inside blocks.
+  /// includes variables inside blocks and expansion statements.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
     if (const DeclContext *DC = getLexicalDeclContext())
-      return DC->getRedeclContext()->isFunctionOrMethod();
+      return DC->getEnclosingNonExpansionStatementContext()
+          ->getRedeclContext()
+          ->isFunctionOrMethod();
     return false;
   }
 
@@ -1409,18 +1432,19 @@ public:
 
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated.
-  /// Returns a pointer to the value if evaluation succeeded, 0 otherwise.
-  APValue *evaluateValue() const;
+  /// Returns a pointer to the value if evaluation succeeded, \c nullptr
+  /// otherwise.
+  const APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                             bool IsConstantInitialization) const;
+  const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   bool IsConstantInitialization) const;
 
 public:
   /// Return the already-evaluated value of this variable's
-  /// initializer, or NULL if the value is not yet known. Returns pointer
-  /// to untyped APValue if the value could not be evaluated.
-  APValue *getEvaluatedValue() const;
+  /// initializer, or \c nullptr if the value is not yet known or couldn't be
+  /// evaluated.
+  const APValue *getEvaluatedValue() const;
 
   /// Evaluate the destruction of this variable to determine if it constitutes
   /// constant destruction.
@@ -1715,6 +1739,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1749,16 +1777,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1776,6 +1795,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
@@ -1985,6 +2014,35 @@ enum class MultiVersionKind {
   TargetVersion
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+/// Kinds of defaulted comparison operator functions.
+enum class DefaultedComparisonKind : unsigned char {
+  /// This is not a defaultable comparison operator.
+  None,
+  /// This is an operator== that should be implemented as a series of
+  /// subobject comparisons.
+  Equal,
+  /// This is an operator<=> that should be implemented as a series of
+  /// subobject comparisons.
+  ThreeWay,
+  /// This is an operator!= that should be implemented as a rewrite in terms
+  /// of a == comparison.
+  NotEqual,
+  /// This is an <, <=, >, or >= that should be implemented as a rewrite in
+  /// terms of a <=> comparison.
+  Relational,
+};
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -2022,13 +2080,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2037,7 +2099,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
@@ -2051,6 +2116,54 @@ public:
     }
 
     void setDeletedMessage(StringLiteral *Message);
+  };
+
+  /// For a defaulted function, the kind of defaulted function that it is.
+  class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
+
+  public:
+    DefaultedFunctionKind()
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(DefaultedComparisonKind Comp)
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
+
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
+    bool isComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison) !=
+             DefaultedComparisonKind::None;
+    }
+
+    explicit operator bool() const {
+      return isSpecialMember() || isComparison();
+    }
+
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
+    }
+    DefaultedComparisonKind asComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison);
+    }
+
+    /// Get the index of this function kind for use in diagnostics.
+    unsigned getDiagnosticIndex() const {
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
+                    "invalid should have highest index");
+      static_assert((unsigned)DefaultedComparisonKind::None == 0,
+                    "none should be equal to zero");
+      return SpecialMember + Comparison;
+    }
   };
 
 private:
@@ -2337,6 +2450,19 @@ public:
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
   DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
 
+  /// Determine the kind of defaulting that would be done for a given function.
+  ///
+  /// If the function is both a default constructor and a copy / move
+  /// constructor (due to having a default argument for the first parameter),
+  /// this picks CXXSpecialMemberKind::DefaultConstructor.
+  ///
+  /// FIXME: Check that case is properly handled by all callers.
+  DefaultedFunctionKind getDefaultedFunctionKind() const;
+
+  DefaultedComparisonKind getDefaultedComparisonKind() const {
+    return getDefaultedFunctionKind().asComparison();
+  }
+
   /// Whether this function is variadic.
   bool isVariadic() const;
 
@@ -2572,6 +2698,7 @@ public:
 
   /// Determines whether this function is one of the replaceable
   /// global allocation functions:
+  /// \code
   ///    void *operator new(size_t);
   ///    void *operator new(size_t, const std::nothrow_t &) noexcept;
   ///    void *operator new[](size_t);
@@ -2582,6 +2709,7 @@ public:
   ///    void operator delete[](void *) noexcept;
   ///    void operator delete[](void *, std::size_t) noexcept;    [C++1y]
   ///    void operator delete[](void *, const std::nothrow_t &) noexcept;
+  /// \endcode
   /// These functions have special behavior under C++1y [expr.new]:
   ///    An implementation is allowed to omit a call to a replaceable global
   ///    allocation function. [...]
@@ -2605,6 +2733,7 @@ public:
   /// or is a function that may be treated as such during constant evaluation.
   /// This adds support for potentially templated type aware global allocation
   /// functions of the form:
+  /// \code
   ///    void *operator new(type-identity, std::size_t, std::align_val_t)
   ///    void *operator new(type-identity, std::size_t, std::align_val_t,
   ///                       const std::nothrow_t &) noexcept;
@@ -2619,6 +2748,7 @@ public:
   ///                         std::align_val_t) noexcept;
   ///    void operator delete[](type-identity, void*, std::size_t,
   ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// \endcode
   /// Where `type-identity` is a specialization of std::type_identity. If the
   /// declaration is a templated function, it may not include a parameter pack
   /// in the argument list, the type-identity parameter is required to be
@@ -3104,6 +3234,10 @@ public:
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
+
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
 
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.
@@ -3774,6 +3908,9 @@ protected:
   void printAnonymousTagDecl(llvm::raw_ostream &OS,
                              const PrintingPolicy &Policy) const;
 
+  void printAnonymousTagDeclLocation(llvm::raw_ostream &OS,
+                                     const PrintingPolicy &Policy) const;
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -3972,13 +4109,11 @@ public:
 
   void setQualifierInfo(NestedNameSpecifierLoc QualifierLoc);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[i];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   // These types are created lazily, use the ASTContext methods to obtain them.

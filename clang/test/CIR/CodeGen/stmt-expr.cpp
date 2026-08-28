@@ -21,33 +21,27 @@ void test1() {
 }
 
 // CIR: cir.func {{.*}} @_Z5test1v()
+// CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[TMP:.+]]      = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_A>
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
-// CIR:     %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
-// CIR:     cir.scope {
-// CIR:       %[[A:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init]
-// CIR:       cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A>) -> ()
-// CIR:       cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A>, !cir.ptr<!rec_A>) -> ()
-// CIR:     }
-// CIR:     cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A>) -> ()
+// CIR:     %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_A>
+// CIR:     cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:     cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   }
+// CIR:   cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z5test1v()
-// LLVM:   %[[VAR1:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[VAR3:.+]] = alloca %class.A, i64 1
+// LLVM:   %[[A:.+]] = alloca %class.A, 
+// LLVM:   %[[REF_TMP:.+]] = alloca %class.A, 
+// LLVM:   %[[TMP:.+]] = alloca %class.A, 
 // LLVM:   br label %[[LBL4:.+]]
 // LLVM: [[LBL4]]:
+// LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
+// LLVM:     call void @_ZN1AC2ERS_(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} %[[A]])
 // LLVM:     br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
-// LLVM:     call void @_ZN1AC2Ev(ptr %[[VAR3]])
-// LLVM:     call void @_ZN1AC2ERS_(ptr %[[VAR1]], ptr %[[VAR3]])
-// LLVM:     br label %[[LBL6:.+]]
-// LLVM: [[LBL6]]:
-// LLVM:     call void @_ZN1A3FooEv(ptr %[[VAR1]])
-// LLVM:     br label %[[LBL7:.+]]
-// LLVM: [[LBL7]]:
+// LLVM:     call void @_ZN1A3FooEv(ptr {{.*}} %[[REF_TMP]])
 // LLVM:     ret void
 
 // OGCG: define dso_local void @_Z5test1v()
@@ -69,16 +63,21 @@ void cleanup() {
 
 // CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[WD:.+]] = cir.alloca !rec_with_dtor, !cir.ptr<!rec_with_dtor>, ["wd"]
-// CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor>) -> ()
+// CIR:     %[[WD:.+]] = cir.alloca "wd" {{.*}} : !cir.ptr<!rec_with_dtor>
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor> {{.*}}) -> ()
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z7cleanupv()
-// LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, i64 1
+// LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, 
 // LLVM:   br label %[[LBL2:.+]]
 // LLVM: [[LBL2]]:
-// LLVM:     call void @_ZN9with_dtorD1Ev(ptr %[[WD]])
+// LLVM:     call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
 // LLVM:     br label %[[LBL3:.+]]
 // LLVM: [[LBL3]]:
 // LLVM:     ret void
@@ -93,10 +92,10 @@ void gnu_statement_extension() {
   float b = __real__ ({float _Complex a; a;});
 }
 
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
-// CIR: %[[TMP_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["tmp"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[TMP_ADDR:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.scope {
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR:   cir.store {{.*}} %[[TMP_A]], %[[TMP_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: }
@@ -104,9 +103,9 @@ void gnu_statement_extension() {
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: cir.store {{.*}} %[[REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
-// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[B_ADDR:.*]] = alloca float, i64 1, align 4
-// LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca float, align 4
+// LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM:   br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:   %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4

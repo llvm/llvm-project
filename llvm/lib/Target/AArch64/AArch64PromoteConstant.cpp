@@ -136,7 +136,6 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   /// Type to store a list of Uses.
@@ -246,7 +245,7 @@ static bool isConstantUsingVectorTy(const Type *CstTy) {
   return false;
 }
 
-// Returns true if \p C contains only ConstantData leafs and no global values,
+// Returns true if \p C contains only ConstantData leaves and no global values,
 // block addresses or constant expressions. Traverses ConstantAggregates.
 static bool containsOnlyConstantData(const Constant *C) {
   if (isa<ConstantData>(C))
@@ -342,7 +341,7 @@ static bool shouldConvertImpl(const Constant *Cst) {
   // instances of Cst.
   // Ideally, we could promote this into a global and rematerialize the constant
   // when it was a bad idea.
-  if (Cst->isZeroValue())
+  if (Cst->isNullValue())
     return false;
 
   // Globals cannot be or contain scalable vectors.

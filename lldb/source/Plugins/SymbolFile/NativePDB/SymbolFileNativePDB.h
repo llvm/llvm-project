@@ -236,14 +236,16 @@ private:
   Block *GetOrCreateBlock(PdbCompilandSymId block_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
-                                            bool is_param);
+                                            bool is_param,
+                                            bool is_constant = false);
   lldb::TypeSP GetOrCreateTypedef(PdbGlobalSymId id);
 
   lldb::FunctionSP CreateFunction(PdbCompilandSymId func_id,
                                   CompileUnit &comp_unit);
   Block *CreateBlock(PdbCompilandSymId block_id);
   lldb::VariableSP CreateLocalVariable(PdbCompilandSymId scope_id,
-                                       PdbCompilandSymId var_id, bool is_param);
+                                       PdbCompilandSymId var_id, bool is_param,
+                                       bool is_constant = false);
   lldb::TypeSP CreateTypedef(PdbGlobalSymId id);
   lldb::CompUnitSP CreateCompileUnit(const CompilandIndexItem &cci);
   lldb::TypeSP CreateType(PdbTypeSymId type_id, CompilerType ct);
@@ -311,6 +313,8 @@ private:
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
+
+  bool m_parent_map_built = false;
 
   struct UdtDeclaration {
     /// This could either be an index into the `/names` section (string table,

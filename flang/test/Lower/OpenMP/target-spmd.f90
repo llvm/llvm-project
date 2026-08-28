@@ -207,27 +207,27 @@ subroutine omp_target_teams_device
   !$omp target teams device(dev32)
   !$omp end target teams
   ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: omp.target device(%[[DEV32]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV32]] : i32)
 
   !$omp target teams device(dev64)
   !$omp end target teams
   ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-  ! CHECK: omp.target device(%[[DEV64]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV64]] : i64)
 
   !$omp target teams device(dev16)
   !$omp end target teams
   ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
-  ! CHECK: omp.target device(%[[DEV16]] : i16)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV16]] : i16)
 
   !$omp target teams device(2)
   !$omp end target teams
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: omp.target device(%[[C2]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C2]] : i32)
 
   !$omp target teams device(5_8)
   !$omp end target teams
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
-  ! CHECK: omp.target device(%[[C5]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C5]] : i64)
 
 end subroutine omp_target_teams_device
 
@@ -251,7 +251,7 @@ subroutine omp_target_teams_distribute_device
   end do
   !$omp end target teams distribute
   ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: omp.target device(%[[DEV32]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV32]] : i32)
   ! CHECK: omp.teams
   ! CHECK: omp.distribute
   ! CHECK: omp.loop_nest
@@ -261,28 +261,28 @@ subroutine omp_target_teams_distribute_device
   end do
   !$omp end target teams distribute
   ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-  ! CHECK: omp.target device(%[[DEV64]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV64]] : i64)
 
   !$omp target teams distribute device(dev16)
   do i = 1, 1
   end do
   !$omp end target teams distribute
   ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
-  ! CHECK: omp.target device(%[[DEV16]] : i16)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV16]] : i16)
 
   !$omp target teams distribute device(2)
   do i = 1, 1
   end do
   !$omp end target teams distribute
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: omp.target device(%[[C2]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C2]] : i32)
 
   !$omp target teams distribute device(5_8)
   do i = 1, 1
   end do
   !$omp end target teams distribute
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
-  ! CHECK: omp.target device(%[[C5]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C5]] : i64)
 
 end subroutine omp_target_teams_distribute_device
 
@@ -306,7 +306,7 @@ subroutine omp_target_teams_distribute_parallel_do_device
   end do
   !$omp end target teams distribute parallel do
   ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: omp.target device(%[[DEV32]] : i32)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV32]] : i32)
   ! CHECK: omp.teams
   ! CHECK: omp.parallel
   ! CHECK: omp.distribute
@@ -318,28 +318,28 @@ subroutine omp_target_teams_distribute_parallel_do_device
   end do
   !$omp end target teams distribute parallel do
   ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-  ! CHECK: omp.target device(%[[DEV64]] : i64)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV64]] : i64)
 
   !$omp target teams distribute parallel do device(dev16)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do
   ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
-  ! CHECK: omp.target device(%[[DEV16]] : i16)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV16]] : i16)
 
   !$omp target teams distribute parallel do device(2)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: omp.target device(%[[C2]] : i32)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[C2]] : i32)
 
   !$omp target teams distribute parallel do device(5_8)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
-  ! CHECK: omp.target device(%[[C5]] : i64)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[C5]] : i64)
 
 end subroutine omp_target_teams_distribute_parallel_do_device
 
@@ -363,7 +363,7 @@ subroutine omp_target_teams_distribute_parallel_do_simd_device
   end do
   !$omp end target teams distribute parallel do simd
   ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: omp.target device(%[[DEV32]] : i32)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV32]] : i32)
   ! CHECK: omp.teams
   ! CHECK: omp.parallel
   ! CHECK: omp.distribute
@@ -376,27 +376,27 @@ subroutine omp_target_teams_distribute_parallel_do_simd_device
   end do
   !$omp end target teams distribute parallel do simd
   ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-  ! CHECK: omp.target device(%[[DEV64]] : i64)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV64]] : i64)
 
   !$omp target teams distribute parallel do simd device(dev16)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do simd
   ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
-  ! CHECK: omp.target device(%[[DEV16]] : i16)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[DEV16]] : i16)
 
   !$omp target teams distribute parallel do simd device(2)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do simd
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: omp.target device(%[[C2]] : i32)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[C2]] : i32)
 
   !$omp target teams distribute parallel do simd device(5_8)
   do i = 1, 1
   end do
   !$omp end target teams distribute parallel do simd
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
-  ! CHECK: omp.target device(%[[C5]] : i64)
+  ! CHECK: omp.target kernel_type(spmd) device(%[[C5]] : i64)
 
 end subroutine omp_target_teams_distribute_parallel_do_simd_device

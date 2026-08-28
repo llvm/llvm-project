@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_xcvalu 1
+
 #if defined(__riscv_xcvalu)
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))

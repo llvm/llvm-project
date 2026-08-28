@@ -17,7 +17,6 @@
 
 #include "complexity.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "benchmark/benchmark.h"
@@ -25,9 +24,10 @@
 
 namespace benchmark {
 
+namespace {
+
 // Internal function to calculate the different scalability forms
 BigOFunc* FittingCurve(BigO complexity) {
-  static const double kLog2E = 1.44269504088896340736;
   switch (complexity) {
     case oN:
       return [](IterationCount n) -> double { return static_cast<double>(n); };
@@ -36,21 +36,20 @@ BigOFunc* FittingCurve(BigO complexity) {
     case oNCubed:
       return [](IterationCount n) -> double { return std::pow(n, 3); };
     case oLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return [](IterationCount n) {
-        return kLog2E * std::log(static_cast<double>(n));
+      return [](IterationCount n) -> double {
+        return std::log2(static_cast<double>(n));
       };
     case oNLogN:
-      /* Note: can't use log2 because Android's GNU STL lacks it */
-      return [](IterationCount n) {
-        return kLog2E * static_cast<double>(n) *
-               std::log(static_cast<double>(n));
+      return [](IterationCount n) -> double {
+        return static_cast<double>(n) * std::log2(static_cast<double>(n));
       };
     case o1:
     default:
       return [](IterationCount) { return 1.0; };
   }
 }
+
+}  // end namespace
 
 // Function to return an string for the calculated complexity
 std::string GetBigOString(BigO complexity) {
@@ -71,6 +70,8 @@ std::string GetBigOString(BigO complexity) {
       return "f(N)";
   }
 }
+
+namespace {
 
 // Find the coefficient for the high-order term in the running time, by
 // minimizing the sum of squares of relative error, for the fitting curve
@@ -156,12 +157,16 @@ LeastSq MinimalLeastSq(const std::vector<ComplexityN>& n,
   return best_fit;
 }
 
+}  // end namespace
+
 std::vector<BenchmarkReporter::Run> ComputeBigO(
     const std::vector<BenchmarkReporter::Run>& reports) {
   typedef BenchmarkReporter::Run Run;
   std::vector<Run> results;
 
-  if (reports.size() < 2) return results;
+  if (reports.size() < 2) {
+    return results;
+  }
 
   // Accumulators.
   std::vector<ComplexityN> n;

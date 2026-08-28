@@ -16,6 +16,11 @@ def note_constexpr_invalid_cast : Note<
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_cast_ptrtoint : Note<
+  "%select{reinterpret_cast||"
+  "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
+  "}0 is not allowed in a constant expression">;
+def note_constexpr_has_lvalue : Note<"converting the address of an object to an integer is not allowed">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
@@ -24,6 +29,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_offsetof_overflow : Note<
+  "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
 def note_constexpr_large_shift : Note<
   "shift count %0 >= width of type %1 (%2 bit%s2)">;
@@ -168,7 +175,7 @@ def note_constexpr_depth_limit_exceeded : Note<
 def note_constexpr_call_limit_exceeded : Note<
   "constexpr evaluation hit maximum call limit">;
 def note_constexpr_step_limit_exceeded : Note<
-  "constexpr evaluation hit maximum step limit; possible infinite loop?">;
+  "constexpr evaluation hit maximum step limit of %0; possible infinite loop?">;
 def note_constexpr_heap_alloc_limit_exceeded : Note<
   "constexpr evaluation hit maximum heap allocation limit">;
 def note_constexpr_this : Note<
@@ -353,8 +360,9 @@ def note_constexpr_new_negative : Note<
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
 def note_constexpr_new_exceeds_limits : Note<
-  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
-  "use '-fconstexpr-steps' to increase this limit">;
+  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1)">;
+def note_constexpr_steps : Note<
+  "use -fconstexpr-steps= to increase this limit (=0 will remove the limit)">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "
   "%1 explicitly initialized elements">;
@@ -404,10 +412,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode : Note<
-  "stateful alloc token mode not supported in constexpr">;
-def err_experimental_clang_interp_failed : Error<
-  "the experimental clang interpreter failed to evaluate an expression">;
+def note_constexpr_infer_alloc_token_stateful_mode
+    : Note<"stateful alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -428,12 +434,6 @@ def warn_fixedpoint_constant_overflow : Warning<
 def note_constexpr_unscoped_enum_out_of_range : Note<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
   "enumeration type %3">;
-
-// This is a temporary diagnostic, and shall be removed once our
-// implementation is complete, and like the preceding constexpr notes belongs
-// in Sema.
-def note_unimplemented_constexpr_lambda_feature_ast : Note<
-    "unimplemented constexpr lambda feature: %0 (coming soon!)">;
 
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
@@ -603,6 +603,8 @@ def warn_odr_objc_synthesize_ivar_inconsistent : Warning<
   InGroup<ODR>;
 def note_odr_objc_synthesize_ivar_here : Note<
   "property is synthesized to ivar %0 here">;
+def err_unsupported_objc_primitive_encoding
+    : Error<"cannot yet @encode type %0">;
 
 // Importing C++ ASTs
 def note_odr_friend : Note<"friend declared here">;
@@ -1036,9 +1038,48 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def warn_relaxed_constant_fold_cast : Extension<
+  "folding constant expression involving "
+  "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
+def warn_relaxed_constant_fold_null : Extension<
+  "folding constant expression that takes field address of null pointer "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
+
+// Unsupported features in name mangling
+def err_unsupported_itanium_mangling : Error<
+    "cannot yet mangle "
+    "%enum_select<UnsupportedItaniumManglingKind>"
+    "{%FixedPointLiteral{fixed point literal}"
+    "|%DependentNeonVector{dependent neon vector type}"
+    "|%DependentFixedLengthSVEVector{dependent fixed-length SVE vector "
+    "type}"
+    "|%DependentFixedLengthRVVVectorType{dependent fixed-length RVV "
+    "vector type}"
+    "|%TernaryWithOmittedMiddleOperand{?: operator with omitted middle "
+    "operand}"
+    "|%OpenACCAsteriskSizeExpr{OpenACC Asterisk Size expression}"
+    "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
+    "|%RequiresExprWithSubstitutionFailure{requires-expression "
+    "containing a substitution failure}"
+    "}0">;
+
+def err_unsupported_itanium_expr_mangling : Error<
+    "cannot yet mangle %0 expression">;
+
+def err_ms_mangle_number_overflow : Error<
+    "mangling number exceeds limit (65535)">;
+def err_ms_mangle_unsupported_with_detail : Error<
+    "cannot mangle this %0 %1 yet">;
+def err_ms_mangle_unsupported : Error<"cannot mangle this %0 yet">;
+
+def err_unexpected_vftable_component : Error<
+    "unexpected vftable component type %0 for component number %1">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<

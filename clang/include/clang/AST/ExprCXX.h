@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_EXPRCXX_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -30,8 +31,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -39,11 +40,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TemplateKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -95,7 +96,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                       SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-                      ADLCallKind UsesADL);
+                      ADLCallKind UsesADL, bool IsReversed);
 
   CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
@@ -104,7 +105,7 @@ public:
   Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
          SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-         ADLCallKind UsesADL = NotADL);
+         ADLCallKind UsesADL = NotADL, bool IsReversed = false);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
                                           unsigned NumArgs, bool HasFPFeatures,
@@ -140,6 +141,9 @@ public:
     }
   }
   bool isComparisonOp() const { return isComparisonOp(getOperator()); }
+
+  /// Whether this is a C++20 rewritten reversed operator.
+  bool isReversed() const { return CXXOperatorCallExprBits.IsReversed; }
 
   /// Is this written as an infix binary operator?
   bool isInfixBinaryOp() const;
@@ -2902,7 +2906,7 @@ class TypeTraitExpr final
 
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
-                std::variant<bool, APValue> Value);
+                std::variant<bool, APValue, ComparisonCategoryResult> Value);
 
   TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
@@ -2931,6 +2935,12 @@ public:
                                ArrayRef<TypeSourceInfo *> Args,
                                SourceLocation RParenLoc, APValue Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc,
+                               ComparisonCategoryResult Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            bool IsStoredAsBool,
                                            unsigned NumArgs);
@@ -2942,6 +2952,10 @@ public:
 
   bool isStoredAsBoolean() const {
     return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool isStoredAsComparisonResult() const {
+    return TypeTraitExprBits.IsComparisonResult;
   }
 
   bool getBoolValue() const {
@@ -3278,47 +3292,15 @@ public:
 
   /// Determines whether this expression had explicit template arguments.
   bool hasExplicitTemplateArgs() const {
-    if (!hasTemplateKWAndArgsInfo())
-      return false;
-    // FIXME: deduced function types can have "hidden" args and no <
-    // investigate that further, but ultimately maybe we want to model concepts
-    // reference with another kind of expression.
-    return (isConceptReference() || isVarDeclReference())
-               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
-               : getLAngleLoc().isValid();
-  }
-
-  bool isConceptReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Concept_template;
-      if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
-  }
-
-  bool isVarDeclReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Var_template;
-      if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
+    if (getLAngleLoc().isValid())
+      return true;
+    return hasTemplateKWAndArgsInfo() &&
+           getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
   TemplateDecl *getTemplateDecl() const {
     assert(getNumDecls() == 1);
     return dyn_cast_or_null<TemplateDecl>(getTrailingResults()->getDecl());
-  }
-
-  TemplateTemplateParmDecl *getTemplateTemplateDecl() const {
-    assert(getNumDecls() == 1);
-    return dyn_cast_or_null<TemplateTemplateParmDecl>(
-        getTrailingResults()->getDecl());
   }
 
   TemplateArgumentLoc const *getTemplateArgs() const {
@@ -3486,6 +3468,75 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == UnresolvedLookupExprClass;
+  }
+};
+
+/// A template-id naming a variable template or a concept through a template
+/// template parameter.
+class DependentTemplateIdExpr final
+    : public Expr,
+      private llvm::TrailingObjects<DependentTemplateIdExpr,
+                                    TemplateArgumentLoc> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  DeclarationNameInfo NameInfo;
+  TemplateName Name;
+  ASTTemplateKWAndArgsInfo KWAndArgs;
+
+  DependentTemplateIdExpr(const ASTContext &Context,
+                          const DeclarationNameInfo &NameInfo,
+                          TemplateName Name,
+                          const TemplateArgumentListInfo &TemplateArgs);
+
+  DependentTemplateIdExpr(EmptyShell Empty, unsigned NumTemplateArgs);
+
+public:
+  static DependentTemplateIdExpr *
+  Create(const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+         TemplateName Name, const TemplateArgumentListInfo &TemplateArgs);
+
+  static DependentTemplateIdExpr *CreateEmpty(const ASTContext &Context,
+                                              unsigned NumTemplateArgs);
+
+  const DeclarationNameInfo &getNameInfo() const { return NameInfo; }
+  DeclarationName getName() const { return NameInfo.getName(); }
+  SourceLocation getNameLoc() const { return NameInfo.getLoc(); }
+
+  TemplateName getTemplateName() const { return Name; }
+
+  TemplateTemplateParmDecl *getParameter() const {
+    return cast<TemplateTemplateParmDecl>(Name.getAsTemplateDecl());
+  }
+
+  bool isConceptReference() const {
+    return getParameter()->templateParameterKind() == TNK_Concept_template;
+  }
+
+  SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
+  SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }
+
+  unsigned getNumTemplateArgs() const { return KWAndArgs.NumTemplateArgs; }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return getTrailingObjects(getNumTemplateArgs());
+  }
+
+  SourceLocation getBeginLoc() const { return getNameLoc(); }
+
+  SourceLocation getEndLoc() const { return getRAngleLoc(); }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == DependentTemplateIdExprClass;
   }
 };
 
@@ -4671,12 +4722,12 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   /// The associated declaration and a flag indicating if it was a reference
   /// parameter. For class NTTPs, we can't determine that based on the value
   /// category alone.
-  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndRef;
+  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+
+  QualType ParamType;
 
   unsigned Index : 15;
   unsigned PackIndex : 15;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Final : 1;
 
   explicit SubstNonTypeTemplateParmExpr(EmptyShell Empty)
       : Expr(SubstNonTypeTemplateParmExprClass, Empty) {}
@@ -4684,13 +4735,13 @@ class SubstNonTypeTemplateParmExpr : public Expr {
 public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
-                               Decl *AssociatedDecl, unsigned Index,
-                               UnsignedOrNone PackIndex, bool RefParam,
+                               Decl *AssociatedDecl, QualType ParamType,
+                               unsigned Index, UnsignedOrNone PackIndex,
                                bool Final)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
-        Replacement(Replacement),
-        AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
-        PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
+        Replacement(Replacement), AssociatedDeclAndFinal(AssociatedDecl, Final),
+        ParamType(ParamType), Index(Index),
+        PackIndex(PackIndex.toInternalRepresentation()) {
     assert(AssociatedDecl != nullptr);
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
@@ -4706,7 +4757,9 @@ public:
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
-  Decl *getAssociatedDecl() const { return AssociatedDeclAndRef.getPointer(); }
+  Decl *getAssociatedDecl() const {
+    return AssociatedDeclAndFinal.getPointer();
+  }
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameter()->getIndex()`.
@@ -4718,14 +4771,12 @@ public:
 
   // This substitution is Final, which means the substitution is fully
   // sugared: it doesn't need to be resugared later.
-  bool getFinal() const { return Final; }
+  bool getFinal() const { return AssociatedDeclAndFinal.getInt(); }
 
   NonTypeTemplateParmDecl *getParameter() const;
 
-  bool isReferenceParameter() const { return AssociatedDeclAndRef.getInt(); }
-
   /// Determine the substituted type of the template parameter.
-  QualType getParameterType(const ASTContext &Ctx) const;
+  QualType getParameterType() const { return ParamType; }
 
   static bool classof(const Stmt *s) {
     return s->getStmtClass() == SubstNonTypeTemplateParmExprClass;
@@ -5184,7 +5235,7 @@ public:
 
   ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
 
-  ArrayRef<Expr *> getUserSpecifiedInitExprs() {
+  MutableArrayRef<Expr *> getUserSpecifiedInitExprs() {
     return getTrailingObjects(NumUserSpecifiedExprs);
   }
 
@@ -5499,6 +5550,102 @@ public:
   }
 };
 
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of the
+/// expression is either:
+///  - :: (global namespace),
+///  - a reflection-name,
+///  - a type-id, or
+///  - an id-expression.
+class CXXReflectExpr : public Expr {
+
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
+
+  SourceLocation CaretCaretLoc;
+  operand_type Operand;
+
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+  CXXReflectExpr(EmptyShell Empty);
+
+public:
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                TypeSourceInfo *TL);
+
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeSourceInfo *>(
+            [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
+  }
+
+  /// Returns location of the '^^'-operator.
+  SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+
+  child_range children() {
+    // TODO(Reflection)
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    // TODO(Reflection)
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXReflectExprClass;
+  }
+};
+
+/// Helper that selects an expression from an InitListExpr depending on the
+/// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
+class CXXExpansionSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum SubExpr { RANGE, INDEX, COUNT };
+  Expr *SubExprs[COUNT];
+
+public:
+  CXXExpansionSelectExpr(EmptyShell Empty);
+  CXXExpansionSelectExpr(const ASTContext &C, InitListExpr *Range, Expr *Idx);
+
+  InitListExpr *getRangeExpr() { return cast<InitListExpr>(SubExprs[RANGE]); }
+
+  const InitListExpr *getRangeExpr() const {
+    return cast<InitListExpr>(SubExprs[RANGE]);
+  }
+
+  void setRangeExpr(InitListExpr *E) { SubExprs[RANGE] = E; }
+
+  Expr *getIndexExpr() { return SubExprs[INDEX]; }
+  const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
+  void setIndexExpr(Expr *E) { SubExprs[INDEX] = E; }
+
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(SubExprs),
+                       reinterpret_cast<Stmt **>(SubExprs + COUNT));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionSelectExprClass;
+  }
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

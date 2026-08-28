@@ -5,6 +5,7 @@ when unwinding C++ exceptions. This is important for Apple Processor Trace analy
 
 import lldb
 import os
+import subprocess
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -12,9 +13,44 @@ from lldbsuite.test import configuration
 
 
 class LibunwindRetInjectionTestCase(TestBase):
+    def find_in_tree_libunwind(self):
+        llvm_lib_dir = os.path.join(
+            os.path.dirname(configuration.llvm_tools_dir), "lib"
+        )
+
+        # Find the libunwind library (platform-agnostic).
+        for filename in os.listdir(llvm_lib_dir):
+            if filename.startswith("libunwind.") or filename.startswith("unwind."):
+                return os.path.join(llvm_lib_dir, filename)
+
+        return None
+
+    def libunwind_arch_no_match(self):
+        test_arch = configuration.arch
+
+        libunwind_path = self.find_in_tree_libunwind()
+        if not libunwind_path:
+            return "Libunwind not found"
+
+        # Note: This is Darwin-specific. If this test is to be ported, we need
+        # a platform-agnostic way to find the relevant architectures of the
+        # libunwind library.
+        libunwind_archs = (
+            subprocess.check_output(["lipo", "-archs", libunwind_path])
+            .decode("utf-8")
+            .split()
+        )
+
+        for arch in libunwind_archs:
+            if test_arch in arch:
+                return None
+
+        return "Libunwind not built with compatible architecture"
+
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     @skipUnlessDarwin
     @skipIfOutOfTreeLibunwind
+    @skipTestIfFn(libunwind_arch_no_match)
     def test_ret_injection_on_exception_unwind(self):
         """Test that __libunwind_Registers_arm64_jumpto receives correct walkedFrames count and injects the right number of ret instructions."""
         self.build()
@@ -30,20 +66,10 @@ class LibunwindRetInjectionTestCase(TestBase):
             "llvm_tools_dir must be set to find in-tree libunwind",
         )
 
-        llvm_lib_dir = os.path.join(
-            os.path.dirname(configuration.llvm_tools_dir), "lib"
-        )
-
         # Find the libunwind library (platform-agnostic).
-        libunwind_path = None
-        for filename in os.listdir(llvm_lib_dir):
-            if filename.startswith("libunwind.") or filename.startswith("unwind."):
-                libunwind_path = os.path.join(llvm_lib_dir, filename)
-                break
+        libunwind_path = self.find_in_tree_libunwind()
 
-        self.assertIsNotNone(
-            libunwind_path, f"Could not find libunwind in {llvm_lib_dir}"
-        )
+        self.assertIsNotNone(libunwind_path, f"Failed to find libunwind in build tree")
 
         # Set breakpoint in __libunwind_Registers_arm64_jumpto.
         # This is the function that performs the actual jump and ret injection.

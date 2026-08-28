@@ -76,8 +76,6 @@ struct TLSDescriptor {
   // Note that, dependending the target architecture ABI, it can be the
   // same as |addr| or something else.
   uintptr_t tp = 0;
-
-  constexpr TLSDescriptor() = default;
 };
 
 // Create and initialize the TLS area for the current thread. Should not

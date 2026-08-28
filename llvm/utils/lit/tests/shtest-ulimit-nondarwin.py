@@ -2,7 +2,7 @@
 
 # ulimit does not work on non-POSIX platforms.
 # These tests are specific to options that Darwin does not support.
-# UNSUPPORTED: system-windows, system-cygwin, system-darwin, system-aix, system-solaris, system-freebsd
+# UNSUPPORTED: system-windows, system-cygwin, system-darwin, system-aix, system-solaris, system-freebsd, system-zos
 
 # RUN: not %{lit} -v %{inputs}/shtest-ulimit-nondarwin | FileCheck %s
 
@@ -18,4 +18,4 @@
 # CHECK: ulimit -f 5
 # CHECK: RLIMIT_FSIZE=5
 # CHECK: ulimit -f unlimited
-# CHECK: RLIMIT_FSIZE=-1
+# CHECK: RLIMIT_FSIZE=infinity

@@ -8,8 +8,8 @@ struct S {
   virtual ~S();
 } s;
 
-// RTTI-DAG: [[VTABLE_S:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4S@@6B@", ptr @"??_ES@@UAEPAXI@Z"] }, comdat($"??_7S@@6B@")
-// RTTI-DAG: @"??_7S@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_S]], i32 0, i32 0, i32 1)
+// RTTI-DAG: [[VTABLE_S:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4S@@6B@", ptr @"??_ES@@UAEPAXI@Z"] }, comdat($"??_7S@@6B@")
+// RTTI-DAG: @"??_7S@@6B@" = alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_S]], i32 0, i32 0, i32 1)
 
 // NO-RTTI-DAG: @"??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_ES@@UAEPAXI@Z"] }
 
@@ -17,8 +17,8 @@ struct __declspec(dllimport) U {
   virtual ~U();
 } u;
 
-// RTTI-DAG: [[VTABLE_U:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4U@@6B@", ptr @"??_EU@@UAEPAXI@Z"] }
-// RTTI-DAG: @"??_SU@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_U]], i32 0, i32 0, i32 1)
+// RTTI-DAG: [[VTABLE_U:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4U@@6B@", ptr @"??_EU@@UAEPAXI@Z"] }
+// RTTI-DAG: @"??_SU@@6B@" = alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_U]], i32 0, i32 0, i32 1)
 
 // NO-RTTI-DAG: @"??_SU@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_EU@@UAEPAXI@Z"] }
 
@@ -26,8 +26,8 @@ struct __declspec(dllexport) V {
   virtual ~V();
 } v;
 
-// RTTI-DAG: [[VTABLE_V:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4V@@6B@", ptr @"??_EV@@UAEPAXI@Z"] }, comdat($"??_7V@@6B@")
-// RTTI-DAG: @"??_7V@@6B@" = dllexport unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_V]], i32 0, i32 0, i32 1)
+// RTTI-DAG: [[VTABLE_V:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4V@@6B@", ptr @"??_EV@@UAEPAXI@Z"] }, comdat($"??_7V@@6B@")
+// RTTI-DAG: @"??_7V@@6B@" = dllexport alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_V]], i32 0, i32 0, i32 1)
 
 // NO-RTTI-DAG: @"??_7V@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_EV@@UAEPAXI@Z"] }
 
@@ -36,8 +36,8 @@ struct W {
   virtual ~W() {}
 } w;
 }
-// RTTI-DAG: [[VTABLE_W:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4W@?A0x{{[^@]*}}@@6B@", ptr @"??_EW@?A0x{{[^@]*}}@@UAEPAXI@Z"] }
-// RTTI-DAG: @"??_7W@?A0x{{[^@]*}}@@6B@" = internal unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_W]], i32 0, i32 0, i32 1)
+// RTTI-DAG: [[VTABLE_W:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4W@?A0x{{[^@]*}}@@6B@", ptr @"??_EW@?A0x{{[^@]*}}@@UAEPAXI@Z"] }
+// RTTI-DAG: @"??_7W@?A0x{{[^@]*}}@@6B@" = internal alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_W]], i32 0, i32 0, i32 1)
 
 // NO-RTTI-DAG: @"??_7W@?A0x{{[^@]*}}@@6B@" = internal unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_EW@?A0x{{[^@]*}}@@UAEPAXI@Z"] }
 
@@ -49,7 +49,7 @@ template <class> struct Y : virtual X {
 
 extern template class Y<int>;
 template Y<int>::Y();
-// RTTI-DAG: [[VTABLE_Y:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4?$Y@H@@6B@", ptr @"??_E?$Y@H@@UAEPAXI@Z"] }, comdat($"??_7?$Y@H@@6B@")
-// RTTI-DAG: @"??_7?$Y@H@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_Y]], i32 0, i32 0, i32 1)
+// RTTI-DAG: [[VTABLE_Y:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4?$Y@H@@6B@", ptr @"??_E?$Y@H@@UAEPAXI@Z"] }, comdat($"??_7?$Y@H@@6B@")
+// RTTI-DAG: @"??_7?$Y@H@@6B@" = alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VTABLE_Y]], i32 0, i32 0, i32 1)
 
 // NO-RTTI-DAG: @"??_7?$Y@H@@6B@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"??_E?$Y@H@@UAEPAXI@Z"] }, comdat

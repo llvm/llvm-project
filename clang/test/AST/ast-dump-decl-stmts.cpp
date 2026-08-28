@@ -36,3 +36,6 @@ void d(), e(int);
 int f;
 // CHECK: VarDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:5> col:5 f 'int'
 
+int decltype_fn_int;
+auto decltype_fn() -> decltype(decltype_fn_int);
+// CHECK: FunctionDecl {{.*}} <line:[[@LINE-1]]:1, col:47> col:6 decltype_fn 'auto () -> decltype(decltype_fn_int)'

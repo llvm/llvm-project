@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -29,6 +30,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"
+
+bool VirtRegAuxInfo::getCachedOptimizeForSize() {
+  if (!CachedOptForSize.has_value())
+    CachedOptForSize = PSI && llvm::shouldOptimizeForSize(&MF, PSI, &MBFI);
+  return *CachedOptForSize;
+}
 
 void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
   LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
@@ -229,8 +236,7 @@ static bool canMemFoldInlineAsm(LiveInterval &LI,
   return false;
 }
 
-float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
-                                       SlotIndex *End) {
+float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -254,29 +260,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   // Don't recompute spill weight for an unspillable register.
   bool IsSpillable = LI.isSpillable();
-
-  bool IsLocalSplitArtifact = Start && End;
-
-  // Do not update future local split artifacts.
-  bool ShouldUpdateLI = !IsLocalSplitArtifact;
-
-  if (IsLocalSplitArtifact) {
-    MachineBasicBlock *LocalMBB = LIS.getMBBFromIndex(*End);
-    assert(LocalMBB == LIS.getMBBFromIndex(*Start) &&
-           "start and end are expected to be in the same basic block");
-
-    // Local split artifact will have 2 additional copy instructions and they
-    // will be in the same BB.
-    // localLI = COPY other
-    // ...
-    // other   = COPY localLI
-    TotalWeight +=
-        LiveIntervals::getSpillWeight(true, false, &MBFI, LocalMBB, PSI);
-    TotalWeight +=
-        LiveIntervals::getSpillWeight(false, true, &MBFI, LocalMBB, PSI);
-
-    NumInstr += 2;
-  }
 
   // CopyHint is a sortable hint derived from a COPY instruction.
   struct CopyHint {
@@ -305,12 +288,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
            E = MRI.reg_instr_nodbg_end();
        I != E;) {
     MachineInstr *MI = &*(I++);
-
-    // For local split artifacts, we are interested only in instructions between
-    // the expected start and end of the range.
-    SlotIndex SI = LIS.getInstructionIndex(*MI);
-    if (IsLocalSplitArtifact && ((SI < *Start) || (SI > *End)))
-      continue;
 
     NumInstr++;
     bool identityCopy = false;
@@ -348,7 +325,8 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       // Calculate instr weight.
       bool Reads, Writes;
       std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
-      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI, PSI);
+      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI,
+                                             getCachedOptimizeForSize());
 
       // Give extra weight to what looks like a loop induction variable update.
       if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB))
@@ -366,7 +344,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   }
 
   // Pass all the sorted copy hints to mri.
-  if (ShouldUpdateLI && Hint.size()) {
+  if (Hint.size()) {
     // Remove a generic hint if previously added by target.
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
@@ -400,7 +378,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // At the same time STATEPOINT instruction is perfectly fine to have this
   // operand on stack, so spilling such interval and folding its load from stack
   // into instruction itself makes perfect sense.
-  if (ShouldUpdateLI && LI.isZeroLength(LIS.getSlotIndexes()) &&
+  if (LI.isZeroLength(LIS.getSlotIndexes()) &&
       !LI.isLiveAtIndexes(LIS.getRegMaskSlots()) &&
       !isLiveAtStatepointVarArg(LI) && !canMemFoldInlineAsm(LI, MRI)) {
     LI.markNotSpillable();
@@ -418,7 +396,5 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
   TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
 
-  if (IsLocalSplitArtifact)
-    return normalize(TotalWeight, Start->distance(*End), NumInstr);
   return normalize(TotalWeight, LI.getSize(), NumInstr);
 }

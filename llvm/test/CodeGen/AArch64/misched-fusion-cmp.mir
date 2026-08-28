@@ -13,7 +13,7 @@ body: |
     %1:gpr64common = COPY $x1
     %0:gpr32common = COPY $w0
     %3:gpr64sp = COPY $xzr
-    INLINEASM &"", 9 /* sideeffect mayload attdialect */, 196622 /* mem:m */, %3
+    INLINEASM &"", sideeffect mayload attdialect, mem:m, %3
     %4:gpr32 = ADDSWri %0, 1, 0, implicit-def $nzcv
     STRWui %4, %1, 0 :: (store (s32))
     Bcc 3, %bb.2, implicit killed $nzcv

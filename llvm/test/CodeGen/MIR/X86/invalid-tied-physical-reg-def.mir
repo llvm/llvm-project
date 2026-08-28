@@ -1,0 +1,15 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+
+  ; CHECK: [[@LINE+1]]:45: tied-def not supported for defs
+    INLINEASM &"$foo", 1, 2818058, def $rdi(tied-def 5), 2147483657, killed $rdi(tied-def 3)
+    $rax = COPY killed $rdi
+    RET64 killed $rax
+...

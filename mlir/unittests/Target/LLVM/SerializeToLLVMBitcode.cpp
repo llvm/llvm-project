@@ -37,12 +37,12 @@ namespace {
 class TargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<TargetAttrImpl> {
 public:
-  std::optional<SmallVector<char, 0>>
+  std::optional<mlir::gpu::SerializedObject>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
   Attribute createObject(Attribute attribute, Operation *module,
-                         const SmallVector<char, 0> &object,
+                         const mlir::gpu::SerializedObject &object,
                          const gpu::TargetOptions &options) const;
 };
 } // namespace
@@ -82,13 +82,15 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(SerializeToLLVMBitcode)) {
   std::string targetTriple = llvm::sys::getProcessTriple();
   LLVM::ModuleToObject serializer(*(module->getOperation()), targetTriple, "",
                                   "");
-  std::optional<SmallVector<char, 0>> serializedModule = serializer.run();
+  std::optional<mlir::gpu::SerializedObject> serializedModule =
+      serializer.run();
   ASSERT_TRUE(!!serializedModule);
-  ASSERT_TRUE(!serializedModule->empty());
+  ASSERT_TRUE(!serializedModule->getObject().empty());
 
   // Read the serialized module.
-  llvm::MemoryBufferRef buffer(
-      StringRef(serializedModule->data(), serializedModule->size()), "module");
+  llvm::MemoryBufferRef buffer(StringRef(serializedModule->getObject().data(),
+                                         serializedModule->getObject().size()),
+                               "module");
   llvm::LLVMContext llvmContext;
   llvm::Expected<std::unique_ptr<llvm::Module>> llvmModule =
       llvm::getLazyBitcodeModule(buffer, llvmContext);
@@ -99,7 +101,7 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(SerializeToLLVMBitcode)) {
   ASSERT_TRUE((*llvmModule)->getFunction("foo") != nullptr);
 }
 
-std::optional<SmallVector<char, 0>>
+std::optional<mlir::gpu::SerializedObject>
 TargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                   const gpu::TargetOptions &options) const {
   // Set a dummy attr to be retrieved by `createObject`.
@@ -113,14 +115,15 @@ TargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
 
 Attribute
 TargetAttrImpl::createObject(Attribute attribute, Operation *module,
-                             const SmallVector<char, 0> &object,
+                             const mlir::gpu::SerializedObject &object,
                              const gpu::TargetOptions &options) const {
   // Create a GPU object with the GPU module dictionary as the object
   // properties.
   return gpu::ObjectAttr::get(
       module->getContext(), attribute, gpu::CompilationTarget::Offload,
-      StringAttr::get(module->getContext(),
-                      StringRef(object.data(), object.size())),
+      StringAttr::get(
+          module->getContext(),
+          StringRef(object.getObject().data(), object.getObject().size())),
       module->getAttrDictionary(), /*kernels=*/nullptr);
 }
 
@@ -140,11 +143,11 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(TargetAttrAPI)) {
   // Check the attribute holds the interface.
   ASSERT_TRUE(!!targetAttr);
   gpu::TargetOptions opts;
-  std::optional<SmallVector<char, 0>> serializedBinary =
+  std::optional<mlir::gpu::SerializedObject> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
   // Check the serialized string.
   ASSERT_TRUE(!!serializedBinary);
-  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!serializedBinary->getObject().empty());
   // Create the object attribute.
   auto object = cast<gpu::ObjectAttr>(
       targetAttr.createObject(*module, *serializedBinary, opts));
@@ -176,11 +179,11 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithInitialLLVMIR)) {
   gpu::TargetOptions opts(
       {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
       {}, initialCallback);
-  std::optional<SmallVector<char, 0>> serializedBinary =
+  std::optional<mlir::gpu::SerializedObject> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 
   ASSERT_TRUE(serializedBinary != std::nullopt);
-  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!serializedBinary->getObject().empty());
   ASSERT_TRUE(!initialLLVMIR.empty());
 }
 
@@ -204,11 +207,11 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithLinkedLLVMIR)) {
   gpu::TargetOptions opts(
       {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
       {}, {}, linkedCallback);
-  std::optional<SmallVector<char, 0>> serializedBinary =
+  std::optional<mlir::gpu::SerializedObject> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 
   ASSERT_TRUE(serializedBinary != std::nullopt);
-  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!serializedBinary->getObject().empty());
   ASSERT_TRUE(!linkedLLVMIR.empty());
 }
 
@@ -233,10 +236,10 @@ TEST_F(MLIRTargetLLVM,
   gpu::TargetOptions opts(
       {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
       {}, {}, {}, optimizedCallback);
-  std::optional<SmallVector<char, 0>> serializedBinary =
+  std::optional<mlir::gpu::SerializedObject> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 
   ASSERT_TRUE(serializedBinary != std::nullopt);
-  ASSERT_TRUE(!serializedBinary->empty());
+  ASSERT_TRUE(!serializedBinary->getObject().empty());
   ASSERT_TRUE(!optimizedLLVMIR.empty());
 }

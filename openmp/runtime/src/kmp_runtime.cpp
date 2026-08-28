@@ -459,6 +459,15 @@ void __kmp_warn(char const *format, ...) {
 }
 
 void __kmp_abort_process() {
+  // A failed assertion or fatal error raised from inside the abort path itself
+  // re-enters this function on the same thread. __kmp_exit_lock is not
+  // recursive, so re-acquiring it below would hang the process instead of
+  // terminating it. Terminate directly on re-entry.
+  static KMP_THREAD_LOCAL bool aborting = false;
+  if (aborting)
+    abort();
+  aborting = true;
+
   // Later threads may stall here, but that's ok because abort() will kill them.
   __kmp_acquire_bootstrap_lock(&__kmp_exit_lock);
 
@@ -6918,6 +6927,13 @@ void __kmp_register_library_startup(void) {
 
 void __kmp_unregister_library(void) {
 
+  // The library can be torn down before it ever registered itself, e.g. when
+  // __kmp_abort_process() runs for a fatal error raised during environment
+  // parsing. There is nothing to unregister then, and __kmp_registration_str
+  // is still NULL, so the strcmp() below would dereference it.
+  if (__kmp_registration_flag == 0)
+    return;
+
   char *name = __kmp_reg_status_name();
   char *value = NULL;
 
@@ -8924,7 +8940,8 @@ __kmp_determine_reduction_method(
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM32 || KMP_ARCH_WASM64 ||     \
+    KMP_ARCH_ARM64EC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HAIKU ||       \
@@ -8956,7 +8973,7 @@ __kmp_determine_reduction_method(
        // KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
-    KMP_ARCH_WASM || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HAIKU || KMP_OS_HURD ||         \

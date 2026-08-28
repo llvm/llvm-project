@@ -7,7 +7,6 @@ define void @test_fence_mbarrier_init() {
 ; CHECK-LABEL: test_fence_mbarrier_init(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.mbarrier_init.release.cluster;
 ; CHECK-NEXT:    ret;

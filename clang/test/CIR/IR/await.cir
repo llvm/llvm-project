@@ -1,13 +1,16 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
-  cir.await(user, ready : {
-    cir.condition(%arg0)
-  }, suspend : {
+  cir.coro.body {
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.yield
+    },)
     cir.yield
-  }, resume : {
-    cir.yield
-  },)
+  }
   cir.return
 }
 

@@ -42,6 +42,31 @@ static_assert(add<int>(static_cast<unsigned int>(INT_MAX), 1u) == Result<int>{tr
 static_assert(add<int>(17, 22) == Result<int>{false, 39});
 static_assert(add<int>(INT_MAX - 22, 24) == Result<int>{true, INT_MIN + 1});
 static_assert(add<int>(INT_MIN + 22, -23) == Result<int>{true, INT_MAX});
+static_assert(add<_BitInt(31)>((_BitInt(31))1073741823, (_BitInt(31))1) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))(-1073741824)});
+static_assert(add<bool>(1u, 1u) == Result<bool>{true, false});
+static_assert(add<bool>(1u, 0u) == Result<bool>{false, true});
+static_assert(add<bool>(255u, 1u) == Result<bool>{true, false});
+
+constexpr Result<unsigned> uadd(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_uadd_overflow(lhs, rhs, &sum), sum};
+}
+
+constexpr Result<unsigned> usub(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_usub_overflow(lhs, rhs, &sum), sum};
+}
+
+constexpr Result<unsigned> umul(unsigned lhs, unsigned rhs) {
+  unsigned sum{};
+  return {__builtin_umul_overflow(lhs, rhs, &sum), sum};
+}
+
+static_assert(uadd(1u, 2u) == Result<unsigned>{false, 3u});
+static_assert(uadd(UINT_MAX, 1u) == Result<unsigned>{true, 0u});
+static_assert(usub(0u, 1u) == Result<unsigned>{true, UINT_MAX});
+static_assert(umul(UINT_MAX, 2u) == Result<unsigned>{true, UINT_MAX - 1u});
 
 template <typename RET, typename LHS, typename RHS>
 constexpr Result<RET> sub(LHS &&lhs, RHS &&rhs) {
@@ -57,6 +82,9 @@ static_assert(sub<uint8_t>(static_cast<uint8_t>(255),static_cast<int>(100)) == R
 static_assert(sub<int>(17,22) == Result<int>{false, -5});
 static_assert(sub<int>(INT_MAX - 22, -23) == Result<int>{true, INT_MIN});
 static_assert(sub<int>(INT_MIN + 22, 23) == Result<int>{true, INT_MAX});
+static_assert(sub<_BitInt(31)>((_BitInt(31))(-1073741824), (_BitInt(31))1) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))1073741823});
+static_assert(sub<bool>(0u, 1u) == Result<bool>{true, true});
 
 template <typename RET, typename LHS, typename RHS>
 constexpr Result<RET> mul(LHS &&lhs, RHS &&rhs) {
@@ -67,6 +95,10 @@ constexpr Result<RET> mul(LHS &&lhs, RHS &&rhs) {
 static_assert(mul<int>(17,22) == Result<int>{false, 374});
 static_assert(mul<int>(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(mul<int>(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
+static_assert(mul<_BitInt(31)>((_BitInt(31))1073741823, (_BitInt(31))2) ==
+              Result<_BitInt(31)>{true, (_BitInt(31))(-2)});
+static_assert(mul<bool>(1u, 1u) == Result<bool>{false, true});
+static_assert(mul<bool>(1u, 2u) == Result<bool>{true, false});
 
 constexpr Result<int> sadd(int lhs, int rhs) {
   int sum{};

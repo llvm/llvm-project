@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+
 class TestFrameVarDILMemberOf(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
@@ -19,11 +20,11 @@ class TestFrameVarDILMemberOf(TestBase):
 
     def test_frame_var(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here",
-                                          lldb.SBFileSpec("main.cpp"))
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
-        self.expect("settings set target.experimental.use-DIL true",
-                    substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect_var_path("s.x", value="1")
         self.expect_var_path("s.r", type="int &")
         self.expect_var_path("sr.x", value="1")
@@ -48,3 +49,16 @@ class TestFrameVarDILMemberOf(TestBase):
         # Test for record typedefs.
         self.expect_var_path("sa.x", value="3")
         self.expect_var_path("sa.y", value="'\\x04'")
+
+        # Check that '.' is allowed in both simple and legacy modes
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePath("s.x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("s.x", lldb.eDILModeLegacy)
+        self.assertSuccess(simple.GetError())
+        self.assertSuccess(legacy.GetError())
+
+        # Check that '->' is not allowed in simple mode, but allowed in legacy mode
+        simple = frame.GetValueForVariablePath("sp->x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("sp->x", lldb.eDILModeLegacy)
+        self.assertFailure(simple.GetError())
+        self.assertSuccess(legacy.GetError())

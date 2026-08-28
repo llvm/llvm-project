@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test allocatable dummy argument on callee side
 
@@ -8,7 +8,8 @@ subroutine test_scalar(x)
   real, allocatable :: x
 
   print *, x
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[x]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[val:.*]] = fir.load %[[addr]] : !fir.heap<f32>
 end subroutine
@@ -19,10 +20,10 @@ subroutine test_array(x)
   integer, allocatable :: x(:,:)
 
   print *, x(1,2)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-  ! CHECK-DAG: fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
-  ! CHECK-DAG: fir.box_dims %[[box]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
-  ! CHECK-DAG: fir.box_dims %[[box]], %c1{{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[x]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+  ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%{{.*}}, %{{.*}})  : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index, index) -> !fir.ref<i32>
+  ! CHECK: fir.load %[[elem]] : !fir.ref<i32>
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_char_scalar_deferred(
@@ -31,9 +32,11 @@ subroutine test_char_scalar_deferred(c)
   character(:), allocatable :: c
   external foo1
   call foo1(c)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-  ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+  ! CHECK-DAG: %[[box1:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
@@ -44,9 +47,11 @@ subroutine test_char_scalar_explicit_cst(c)
   character(10), allocatable :: c
   external foo1
   call foo1(c)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>
-  ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,10>>>) -> !fir.heap<!fir.char<1,10>>
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}} : (!fir.heap<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,10>>>) -> !fir.heap<!fir.char<1,10>>
+  ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,10>>
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[cast]], %c10{{.*}} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -57,17 +62,18 @@ subroutine test_char_scalar_explicit_dynamic(c, n)
   character(n), allocatable :: c
   external foo1
   ! Check that the length expr was evaluated before the execution parts.
-  ! CHECK: %[[raw_len:.*]] = fir.load %arg1 : !fir.ref<i32>
-  ! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
-  ! CHECK:  %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
-  ! CHECK:  %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[n:.*]]:2 = hlfir.declare %[[arg1]]
+  ! CHECK: %[[raw_len:.*]] = fir.load %[[n]]#0 : !fir.ref<i32>
+  ! CHECK: %[[c0_i32:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]] typeparams %[[len]]{{.*}}allocatable
   n = n + 1
-  ! CHECK: fir.store {{.*}} to %arg1 : !fir.ref<i32>
+  ! CHECK: hlfir.assign %{{.*}} to %[[n]]#0 : i32, !fir.ref<i32>
   call foo1(c)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-  ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-  ! CHECK-DAG: %[[len_cast:.*]] = fir.convert %[[len]] : (i32) -> index
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len_cast]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len]] : (!fir.heap<!fir.char<1,?>>, i32) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -77,12 +83,10 @@ subroutine test_char_array_deferred(c)
   character(:), allocatable :: c(:)
   external foo1
   call foo1(c(10))
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK-DAG: fir.box_dims %[[box]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, index) -> (index, index, index)
-  ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
-  ! [...] address computation
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %[[len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+  ! CHECK: %[[len:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+  ! CHECK: %[[boxchar:.*]] = hlfir.designate %[[box]] (%{{.*}})  typeparams %[[len]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -92,10 +96,10 @@ subroutine test_char_array_explicit_cst(c)
   character(10), allocatable :: c(:)
   external foo1
   call foo1(c(3))
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
-  ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,10>>>
-  ! [...] address computation
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %c10{{.*}} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
+  ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%{{.*}})  typeparams %c10{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, index, index) -> !fir.ref<!fir.char<1,10>>
+  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[elem]], %c10{{.*}} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -106,19 +110,17 @@ subroutine test_char_array_explicit_dynamic(c, n)
   character(n), allocatable :: c(:)
   external foo1
   ! Check that the length expr was evaluated before the execution parts.
-  ! CHECK: %[[raw_len:.*]] = fir.load %arg1 : !fir.ref<i32>
-  ! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
-  ! CHECK:  %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
-  ! CHECK:  %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[n:.*]]:2 = hlfir.declare %[[arg1]]
+  ! CHECK: %[[raw_len:.*]] = fir.load %[[n]]#0 : !fir.ref<i32>
+  ! CHECK: %[[c0_i32:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]] typeparams %[[len]]{{.*}}allocatable
   n = n + 1
-  ! CHECK: fir.store {{.*}} to %arg1 : !fir.ref<i32>
+  ! CHECK: hlfir.assign %{{.*}} to %[[n]]#0 : i32, !fir.ref<i32>
   call foo1(c(1))
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-  ! [...] address computation
-  ! CHECK: fir.coordinate_of
-  ! CHECK-DAG: %[[len_cast:.*]] = fir.convert %[[len]] : (i32) -> index
-  ! CHECK: %[[boxchar:.*]] = fir.emboxchar %{{.*}}, %[[len_cast]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+  ! CHECK: %[[boxchar:.*]] = hlfir.designate %[[box]] (%{{.*}})  typeparams %[[len]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, index, i32) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPfoo1(%[[boxchar]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
@@ -131,9 +133,11 @@ subroutine test_char_scalar_deferred_k2(c)
   character(kind=2, len=:), allocatable :: c
   external foo2
   call foo2(c)
-  ! CHECK: %[[box:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<2,?>>>>
+  ! CHECK: %[[c:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}allocatable
+  ! CHECK: %[[box:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<2,?>>>>
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.char<2,?>>>) -> !fir.heap<!fir.char<2,?>>
-  ! CHECK-DAG: %[[size:.*]] = fir.box_elesize %[[box]] : (!fir.box<!fir.heap<!fir.char<2,?>>>) -> index
+  ! CHECK-DAG: %[[box1:.*]] = fir.load %[[c]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<2,?>>>>
+  ! CHECK-DAG: %[[size:.*]] = fir.box_elesize %[[box1]] : (!fir.box<!fir.heap<!fir.char<2,?>>>) -> index
   ! CHECK-DAG: %[[len:.*]] = arith.divsi %[[size]], %c2{{.*}} : index
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %[[len]] : (!fir.heap<!fir.char<2,?>>, index) -> !fir.boxchar<2>
   ! CHECK: fir.call @_QPfoo2(%[[boxchar]]) {{.*}}: (!fir.boxchar<2>) -> ()
@@ -149,10 +153,11 @@ subroutine test_char_assumed(a)
   character(len=*), allocatable :: a
   ! CHECK: %[[argLoad:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
   ! CHECK: %[[argLen:.*]] = fir.box_elesize %[[argLoad]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+  ! CHECK: hlfir.declare %[[arg0]] typeparams %[[argLen]]{{.*}}allocatable
 
   n = len(a)
   ! CHECK: %[[argLenCast:.*]] = fir.convert %[[argLen]] : (index) -> i32
-  ! CHECK: fir.store %[[argLenCast]] to %{{.*}} : !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[argLenCast]] to %{{.*}} : i32, !fir.ref<i32>
 end subroutine
 
 ! CHECK-LABEL: _QPtest_char_assumed_optional(
@@ -168,10 +173,11 @@ subroutine test_char_assumed_optional(a)
   ! CHECK: } else {
   ! CHECK:   %[[undef:.*]] = fir.undefined index
   ! CHECK:   fir.result %[[undef]] : index
+  ! CHECK: %[[a:.*]]:2 = hlfir.declare %[[arg0]] typeparams %[[argLen]]{{.*}}allocatable, optional
 
   if (present(a)) then
     n = len(a)
     ! CHECK:   %[[argLenCast:.*]] = fir.convert %[[argLen]] : (index) -> i32
-    ! CHECK:   fir.store %[[argLenCast]] to %{{.*}} : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %[[argLenCast]] to %{{.*}} : i32, !fir.ref<i32>
   endif
 end subroutine

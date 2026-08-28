@@ -14,6 +14,7 @@ class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @no_debug_info_test
+    @skipIfLLVMTargetMissing("RISCV")
     def test_riscv32_gpr_corefile_registers(self):
         corefile = self.getBuildArtifact("core")
         self.yaml2macho_core("riscv32-registers.yaml", corefile)
@@ -25,7 +26,7 @@ class TestRV32MachOCorefile(TestBase):
         self.assertEqual(process.GetNumThreads(), 2)
 
         thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetNumFrames(), 1)
+        self.assertEqual(thread.GetNumFrames(), 2)
 
         frame = thread.GetFrameAtIndex(0)
         gpr_regs = frame.registers.GetValueAtIndex(0)
@@ -75,10 +76,31 @@ class TestRV32MachOCorefile(TestBase):
 
         idx = 0
         while idx < len(regnames):
-            val = idx | (idx << 8) | (idx << 16) | (idx << 24)
-            self.assertEqual(gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), val)
+            # fp needs to meet specific alignment rules,
+            # so hardcode that value.
+            if regnames[idx] == "fp":
+                self.assertEqual(
+                    gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), 0x08080800
+                )
+            else:
+                val = idx | (idx << 8) | (idx << 16) | (idx << 24)
+                self.assertEqual(
+                    gpr_regs.GetChildAtIndex(idx).GetValueAsUnsigned(), val
+                )
             idx = idx + 1
 
+        # We used an ArchDefaultUnwindPlan to get the second stack frame.
+        # Only pc and fp should be available in this stack frame; any other
+        # register being available is a bug.
+        frame = thread.GetFrameAtIndex(1)
+        gpr_regs = frame.registers.GetValueAtIndex(0)
+
+        # Get pc
+        self.assertEqual(gpr_regs.GetChildAtIndex(32).GetValueAsUnsigned(3), 0x20201020)
+        # Should not be able to read a callee-preserved register, s6
+        self.assertEqual(gpr_regs.GetChildAtIndex(22).GetValueAsUnsigned(3), 3)
+
+        # Check that we can read registers for second thread.
         thread = process.GetThreadAtIndex(1)
         self.assertEqual(thread.GetNumFrames(), 1)
 

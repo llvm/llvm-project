@@ -32,6 +32,6 @@
   .globl _start
   _start:
 .data
-  .word foo@PLT - . + 2149589079
-  .word foo@PLT - . - 2145378212
-  .word foo@PLT - .
+  .word %pltpcrel(foo + 2149589079)
+  .word %pltpcrel(foo - 2145378212)
+  .word %pltpcrel(foo)

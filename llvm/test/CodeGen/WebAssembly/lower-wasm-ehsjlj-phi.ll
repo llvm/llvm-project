@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -110,7 +110,7 @@ ehcleanup:                                        ; preds = %bb3, %catch.start, 
 }
 
 declare i32 @setjmp(ptr)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 declare void @foo()
 declare void @longjmpable()
 declare void @use_i32(i32)

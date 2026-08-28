@@ -36,7 +36,7 @@ using namespace llvm;
 
 static MCAsmInfo *createVEMCAsmInfo(const MCRegisterInfo &MRI, const Triple &TT,
                                     const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new VEELFMCAsmInfo(TT);
+  MCAsmInfo *MAI = new VEELFMCAsmInfo(TT, Options);
   unsigned Reg = MRI.getDwarfRegNum(VE::SX11, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0);
   MAI->addInitialFrameState(Inst);

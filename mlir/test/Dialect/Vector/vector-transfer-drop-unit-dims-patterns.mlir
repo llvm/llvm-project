@@ -176,7 +176,7 @@ func.func @transfer_read_dynamic_rank_reducing(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [%[[DIM0]], 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} : memref<?xi8, {{.*}}>, vector<[16]xi8>
 
-func.func @masked_transfer_read_dynamic_rank_reducing_1(
+func.func @transfer_read_with_mask_dynamic_rank_reducing_1_create_mask(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %mask_dim0 : index) -> vector<[16]x1xi8> {
     %c0 = arith.constant 0 : index
@@ -187,7 +187,7 @@ func.func @masked_transfer_read_dynamic_rank_reducing_1(
       memref<?x1xi8, strided<[?, ?], offset: ?>>, vector<[16]x1xi8>
     return %v : vector<[16]x1xi8>
 }
-// CHECK-LABEL: func @masked_transfer_read_dynamic_rank_reducing_1
+// CHECK-LABEL: func @transfer_read_with_mask_dynamic_rank_reducing_1_create_mask
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //  CHECK-SAME:     %[[MASK_DIM0:.+]]: index
 //       CHECK:   %[[C0:.+]] = arith.constant 0 : index
@@ -197,7 +197,22 @@ func.func @masked_transfer_read_dynamic_rank_reducing_1(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [%[[DIM0]], 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]][{{.*}}], %[[PAD]], %[[MASK]] {in_bounds = [true]} : memref<?xi8, {{.*}}>, vector<[16]xi8>
 
-func.func @masked_transfer_read_dynamic_rank_reducing_2(
+func.func @transfer_read_with_mask_dynamic_rank_reducing_1_constant_mask(
+      %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>) -> vector<[16]x1xi8> {
+    %c0 = arith.constant 0 : index
+    %pad = arith.constant 0 : i8
+    %mask = vector.constant_mask [16, 1] : vector<[16]x1xi1>
+    %v = vector.transfer_read %arg[%c0, %c0], %pad, %mask {in_bounds = [true, true]} :
+      memref<?x1xi8, strided<[?, ?], offset: ?>>, vector<[16]x1xi8>
+    return %v : vector<[16]x1xi8>
+}
+// CHECK-LABEL: func @transfer_read_with_mask_dynamic_rank_reducing_1_constant_mask
+//  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
+//   CHECK-NOT:   vector.constant_mask
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [{{.*}}, 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
+//       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : memref<?xi8, {{.*}}>, vector<[16]xi8>
+
+func.func @transfer_read_with_mask_dynamic_rank_reducing_2_create_mask(
       %arg : memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>,
       %mask_dim1 : index, %mask_dim4 : index) -> vector<1x[1]x3x1x[16]x1xi8> {
     %c0 = arith.constant 0 : index
@@ -209,7 +224,7 @@ func.func @masked_transfer_read_dynamic_rank_reducing_2(
       memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>, vector<1x[1]x3x1x[16]x1xi8>
     return %v : vector<1x[1]x3x1x[16]x1xi8>
 }
-// CHECK-LABEL: func @masked_transfer_read_dynamic_rank_reducing_2
+// CHECK-LABEL: func @transfer_read_with_mask_dynamic_rank_reducing_2_create_mask
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x?x3x1x?x1xi8
 //  CHECK-SAME:     %[[MASK_DIM1:.+]]: index, %[[MASK_DIM4:.+]]: index
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
@@ -223,7 +238,28 @@ func.func @masked_transfer_read_dynamic_rank_reducing_2(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0, 0] [1, %[[DIM1]], 3, 1, %[[DIM4]], 1] [1, 1, 1, 1, 1, 1] : memref<1x?x3x1x?x1xi8, {{.*}}> to memref<?x3x?xi8, {{.*}}>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]][{{.*}}], %[[PAD]], %[[MASK]] {in_bounds = [true, true, true]} : memref<?x3x?xi8, {{.*}}>, vector<[1]x3x[16]xi8>
 
-func.func @masked_transfer_write_and_vector_rank_reducing(
+func.func @transfer_read_with_mask_dynamic_rank_reducing_2_constant_mask(
+      %arg : memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>) -> vector<1x[1]x3x1x[16]x1xi8> {
+    %c0 = arith.constant 0 : index
+    %pad = arith.constant 0 : i8
+    %mask = vector.constant_mask [1, 1, 2, 1, 16, 1] : vector<1x[1]x3x1x[16]x1xi1>
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true, true, true, true]} :
+      memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>, vector<1x[1]x3x1x[16]x1xi8>
+    return %v : vector<1x[1]x3x1x[16]x1xi8>
+}
+// CHECK-LABEL: func @transfer_read_with_mask_dynamic_rank_reducing_2_constant_mask
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x?x3x1x?x1xi8
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C4:.+]] = arith.constant 4 : index
+//   CHECK-DAG:   %[[PAD:.+]] = arith.constant 0 : i8
+//       CHECK:   %[[MASK:.+]] = vector.constant_mask [1, 2, 16] : vector<[1]x3x[16]xi1>
+//       CHECK:   %[[DIM1:.+]] = memref.dim %[[ARG]], %[[C1]] : memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>
+//       CHECK:   %[[DIM4:.+]] = memref.dim %[[ARG]], %[[C4]] : memref<1x?x3x1x?x1xi8, strided<[?, ?, ?, ?, ?, ?], offset: ?>>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0, 0] [1, %[[DIM1]], 3, 1, %[[DIM4]], 1] [1, 1, 1, 1, 1, 1] : memref<1x?x3x1x?x1xi8, {{.*}}> to memref<?x3x?xi8, {{.*}}>
+//       CHECK:   vector.transfer_read %[[SUBVIEW]][{{.*}}], %[[PAD]], %[[MASK]] {in_bounds = [true, true, true]} : memref<?x3x?xi8, {{.*}}>, vector<[1]x3x[16]xi8>
+
+func.func @transfer_write_with_mask_and_vector_rank_reducing_create_mask(
       %arg : memref<1x1x3x1x16x1xf32>,
       %vec : vector<1x3x1x16x1xf32>,
       %mask_dim1 : index,
@@ -235,7 +271,7 @@ func.func @masked_transfer_write_and_vector_rank_reducing(
       vector<1x3x1x16x1xf32>, memref<1x1x3x1x16x1xf32>
     return
 }
-// CHECK-LABEL: func @masked_transfer_write_and_vector_rank_reducing
+// CHECK-LABEL: func @transfer_write_with_mask_and_vector_rank_reducing_create_mask
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x1x16x1xf32>
 //  CHECK-SAME:     {{.*}}: vector<1x3x1x16x1xf32>,
 //  CHECK-SAME:     %[[MASKDIM1:.+]]: index,
@@ -245,7 +281,23 @@ func.func @masked_transfer_write_and_vector_rank_reducing(
 //  CHECK-SAME:     memref<1x1x3x1x16x1xf32> to memref<3x16xf32>
 //       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]{{.*}}, %[[MASK]] {in_bounds = [true, true]} : vector<3x16xf32>, memref<3x16xf32>
 
-func.func @masked_transfer_write_dynamic_rank_reducing(
+func.func @transfer_write_with_mask_and_vector_rank_reducing_constant_mask(
+      %arg : memref<1x1x3x1x16x1xf32>,
+      %vec : vector<1x3x1x16x1xf32>) {
+    %c0 = arith.constant 0 : index
+    %mask = vector.constant_mask [1, 2, 1, 8, 1] : vector<1x3x1x16x1xi1>
+    vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0, %c0, %c0], %mask :
+      vector<1x3x1x16x1xf32>, memref<1x1x3x1x16x1xf32>
+    return
+}
+// CHECK-LABEL: func @transfer_write_with_mask_and_vector_rank_reducing_constant_mask
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x1x16x1xf32>
+//       CHECK:   %[[MASK:.+]] = vector.constant_mask [2, 8] : vector<3x16xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0, 0] [1, 1, 3, 1, 16, 1] [1, 1, 1, 1, 1, 1]
+//  CHECK-SAME:     memref<1x1x3x1x16x1xf32> to memref<3x16xf32>
+//       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]{{.*}}, %[[MASK]] {in_bounds = [true, true]} : vector<3x16xf32>, memref<3x16xf32>
+
+func.func @transfer_write_with_mask_dynamic_rank_reducing_create_mask(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %vec : vector<[16]x1xi8>,
       %mask_dim0 : index) {
@@ -257,7 +309,7 @@ func.func @masked_transfer_write_dynamic_rank_reducing(
       vector<[16]x1xi8>, memref<?x1xi8, strided<[?, ?], offset: ?>>
     return
 }
-// CHECK-LABEL: func @masked_transfer_write_dynamic_rank_reducing
+// CHECK-LABEL: func @transfer_write_with_mask_dynamic_rank_reducing_create_mask
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //  CHECK-SAME:     %{{.*}}: vector<[16]x1xi8>,
 //  CHECK-SAME:     %[[MASK_DIM0:.+]]: index
@@ -267,8 +319,23 @@ func.func @masked_transfer_write_dynamic_rank_reducing(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [%[[DIM0]], 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
 //       CHECK:   vector.transfer_write {{.*}}, %[[SUBVIEW]][%[[C0]]], %[[MASK]] {in_bounds = [true]} : vector<[16]xi8>, memref<?xi8, {{.*}}>
 
-/// Only masks operands of vector.create_mask are currently supported.
-func.func @unsupported_masked_transfer_read_dynamic_rank_reducing_1(
+func.func @transfer_write_with_mask_dynamic_rank_reducing_constant_mask(
+      %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
+      %vec : vector<[16]x1xi8>) {
+    %c0 = arith.constant 0 : index
+    %mask = vector.constant_mask [16, 1] : vector<[16]x1xi1>
+    vector.transfer_write %vec, %arg[%c0, %c0], %mask {in_bounds = [true, true]} :
+      vector<[16]x1xi8>, memref<?x1xi8, strided<[?, ?], offset: ?>>
+    return
+}
+// CHECK-LABEL: func @transfer_write_with_mask_dynamic_rank_reducing_constant_mask
+//  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
+//   CHECK-NOT:   vector.constant_mask
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [{{.*}}, 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
+//       CHECK:   vector.transfer_write {{.*}}, %[[SUBVIEW]]{{.*}} {in_bounds = [true]} : vector<[16]xi8>, memref<?xi8, {{.*}}>
+
+/// Only vector.create_mask and vector.constant_mask masks are supported.
+func.func @transfer_read_with_unsupported_mask_dynamic_rank_reducing_1(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %mask : vector<[16]x1xi1>) -> vector<[16]x1xi8> {
     %c0 = arith.constant 0 : index
@@ -277,14 +344,14 @@ func.func @unsupported_masked_transfer_read_dynamic_rank_reducing_1(
       memref<?x1xi8, strided<[?, ?], offset: ?>>, vector<[16]x1xi8>
     return %v : vector<[16]x1xi8>
 }
-// CHECK-LABEL: func @unsupported_masked_transfer_read_dynamic_rank_reducing_1
+// CHECK-LABEL: func @transfer_read_with_unsupported_mask_dynamic_rank_reducing_1
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //   CHECK-NOT: vector.create_mask
 //   CHECK-NOT: memref.subview
 //       CHECK: vector.transfer_read %[[ARG]]
 
 /// Unit dim mask must be constant of 1.
-func.func @unsupported_masked_transfer_read_dynamic_rank_reducing_2(
+func.func @transfer_read_with_unsupported_mask_dynamic_rank_reducing_2(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %mask_dim0 : index, %mask_dim1 : index) -> vector<[16]x1xi8> {
     %c0 = arith.constant 0 : index
@@ -295,13 +362,13 @@ func.func @unsupported_masked_transfer_read_dynamic_rank_reducing_2(
       memref<?x1xi8, strided<[?, ?], offset: ?>>, vector<[16]x1xi8>
     return %v : vector<[16]x1xi8>
 }
-// CHECK-LABEL: func @unsupported_masked_transfer_read_dynamic_rank_reducing_2
+// CHECK-LABEL: func @transfer_read_with_unsupported_mask_dynamic_rank_reducing_2
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //   CHECK-NOT: memref.subview
 //       CHECK: vector.transfer_read {{.*}} vector<[16]x1xi8>
 
 /// Unit dim must be non-scalable.
-func.func @masked_transfer_read_dynamic_rank_reducing_scalable_unit_dim(
+func.func @transfer_read_with_mask_dynamic_rank_reducing_scalable_unit_dim(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %mask_dim0 : index) -> vector<[16]x[1]xi8> {
     %c0 = arith.constant 0 : index
@@ -312,10 +379,50 @@ func.func @masked_transfer_read_dynamic_rank_reducing_scalable_unit_dim(
       memref<?x1xi8, strided<[?, ?], offset: ?>>, vector<[16]x[1]xi8>
     return %v : vector<[16]x[1]xi8>
 }
-// CHECK-LABEL: func @masked_transfer_read_dynamic_rank_reducing_scalable_unit_dim
+// CHECK-LABEL: func @transfer_read_with_mask_dynamic_rank_reducing_scalable_unit_dim
 //  CHECK-SAME:     %[[ARG:.+]]: memref<?x1xi8
 //   CHECK-NOT: memref.subview
 //       CHECK: vector.transfer_read {{.*}} vector<[16]x[1]xi8>
+
+/// Memref has unit dims but vector has no unit dims (all scalable). The mask
+/// does not need reduction — only the memref rank should be reduced.
+func.func @transfer_read_with_mask_memref_only_unit_dims(
+      %arg : memref<1x1x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+      %mask_dim0 : index, %mask_dim1 : index) -> vector<[4]x[4]xf32> {
+    %c0 = arith.constant 0 : index
+    %pad = arith.constant 0.0 : f32
+    %mask = vector.create_mask %mask_dim0, %mask_dim1 : vector<[4]x[4]xi1>
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %pad, %mask {in_bounds = [true, true]} :
+      memref<1x1x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>, vector<[4]x[4]xf32>
+    return %v : vector<[4]x[4]xf32>
+}
+// CHECK-LABEL: func @transfer_read_with_mask_memref_only_unit_dims
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x?x?xf32
+//       CHECK:   %[[MASK:.+]] = vector.create_mask {{.*}} : vector<[4]x[4]xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0]
+//  CHECK-SAME:     memref<1x1x?x?xf32, {{.*}}> to memref<?x?xf32, {{.*}}>
+//       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}}, %[[MASK]]
+//  CHECK-SAME:     memref<?x?xf32, {{.*}}>, vector<[4]x[4]xf32>
+
+func.func @transfer_write_with_mask_memref_only_unit_dims(
+      %arg : memref<1x1x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+      %vec : vector<[4]x[4]xf32>,
+      %mask_dim0 : index, %mask_dim1 : index) {
+    %c0 = arith.constant 0 : index
+    %mask = vector.create_mask %mask_dim0, %mask_dim1 : vector<[4]x[4]xi1>
+    vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0], %mask {in_bounds = [true, true]} :
+      vector<[4]x[4]xf32>, memref<1x1x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>
+    return
+}
+// CHECK-LABEL: func @transfer_write_with_mask_memref_only_unit_dims
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x?x?xf32
+//  CHECK-SAME:     %[[VEC:.+]]: vector<[4]x[4]xf32>
+//       CHECK:   %[[MASK:.+]] = vector.create_mask {{.*}} : vector<[4]x[4]xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0]
+//  CHECK-SAME:     memref<1x1x?x?xf32, {{.*}}> to memref<?x?xf32, {{.*}}>
+//       CHECK:   vector.transfer_write %[[VEC]], %[[SUBVIEW]]{{.*}}, %[[MASK]]
+//  CHECK-SAME:     vector<[4]x[4]xf32>, memref<?x?xf32, {{.*}}>
+
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {

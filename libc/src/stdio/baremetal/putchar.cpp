@@ -13,6 +13,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
+#include "src/stdio/stdout.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -882,6 +882,12 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
 
+  // If either operand is a constant, let ORI/ORIS/ADDI/ADDIS tablegen
+  // patterns handle it — they produce a single instruction without the
+  // tied-register constraint that RLWIMI requires.
+  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+    return false;
+
   KnownBits LKnown = CurDAG->computeKnownBits(Op0);
   KnownBits RKnown = CurDAG->computeKnownBits(Op1);
 

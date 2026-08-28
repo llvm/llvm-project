@@ -51,7 +51,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; VF1-NOT: %{{.*}} = shl i32
 ; VF1: middle.block:            
 
-@a = common local_unnamed_addr global [250 x i32] zeroinitializer, align 16
+@a = common global [250 x i32] zeroinitializer, align 16
 
 define void @doit1(i32 %n, i32 %step) {
 entry:
@@ -112,9 +112,10 @@ for.end:
 ; VF8: vector.body:
 ; VF8-NEXT:  [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
 ; VF8-NEXT:  [[OFFSET_IDX:%.+]] = mul i64 [[INDEX]], %step
-; VF8-NEXT:  [[MUL0:%.+]] = mul i64 0, %step
-; VF8-NEXT:  [[ADD:%.+]] = add i64 [[OFFSET_IDX]], [[MUL0]]
-; VF8:       getelementptr inbounds i32, ptr %in, i64 [[ADD]]
+; VF8-NEXT:  [[MUL1:%.+]] = mul i64 1, %step
+; VF8-NEXT:  [[ADD1:%.+]] = add i64 [[OFFSET_IDX]], [[MUL1]]
+; VF8:       getelementptr inbounds i32, ptr %in, i64 [[OFFSET_IDX]]
+; VF8:       getelementptr inbounds i32, ptr %in, i64 [[ADD1]]
 ; VF8: middle.block:
 
 ; VF1-LABEL: @doit2

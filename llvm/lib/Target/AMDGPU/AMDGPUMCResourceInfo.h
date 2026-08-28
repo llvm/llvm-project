@@ -82,9 +82,9 @@ public:
   }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                      MCContext &OutContext, bool IsLocal);
+                      MCContext &OutContext);
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
-                              MCContext &Ctx, bool IsLocal);
+                              MCContext &Ctx);
 
   void reset();
 
@@ -102,6 +102,10 @@ public:
   /// transitive maximum or accumulative. For example, if A calls B and B's VGPR
   /// usage exceeds A's, A should be assigned B's VGPR usage. Furthermore,
   /// functions with indirect calls should be assigned the module level maximum.
+  ///
+  /// When link-time object linking is enabled, skip all call-transitive
+  /// propagation and emit concrete per-function values for every resource
+  /// symbol. Cross-TU aggregation is then the linker's responsibility.
   void gatherResourceInfo(
       const MachineFunction &MF,
       const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,

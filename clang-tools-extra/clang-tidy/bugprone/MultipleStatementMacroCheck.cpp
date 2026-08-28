@@ -23,7 +23,7 @@ AST_MATCHER(Expr, isInMacro) { return Node.getBeginLoc().isMacroID(); }
 /// Find the next statement after `S`.
 static const Stmt *nextStmt(const MatchFinder::MatchResult &Result,
                             const Stmt *S) {
-  auto Parents = Result.Context->getParents(*S);
+  const auto Parents = Result.Context->getParents(*S);
   if (Parents.empty())
     return nullptr;
   const auto *Parent = Parents[0].get<Stmt>();

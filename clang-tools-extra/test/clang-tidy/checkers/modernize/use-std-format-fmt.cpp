@@ -4,9 +4,7 @@
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: 'fmt::sprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
-// RUN:            }}" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:            }}"
 // CHECK-FIXES: #include <fmt/core.h>
 #include <string>
 

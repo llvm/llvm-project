@@ -61,13 +61,15 @@ entry:
 ;; to the GUID of _Z3xyzv, see comments in the profile above.
 ; CHECK-ENABLE: ![[VP2]] = !{!"VP", i32 0, i64 1, i64 -3079258800046378528, i64 1}
 
+!20 = !{null}
+!21 = !DISubroutineType(types: !20)
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
 !1 = !DIFile(filename: "t", directory: "/")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 1, unit: !0)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 1, type: !21, unit: !0)
 !5 = !DILocation(line: 4, column: 5, scope: !4)
 !6 = !DILocation(line: 5, column: 10, scope: !4)
 
@@ -127,7 +129,9 @@ entry:
 !11 = !DIFile(filename: "t", directory: "/")
 !12 = !{i32 7, !"Dwarf Version", i32 5}
 !13 = !{i32 2, !"Debug Info Version", i32 3}
-!14 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !11, file: !11, line: 1, unit: !10)
+!14 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !11, file: !11, line: 1, type: !21, unit: !10)
 !15 = !DILocation(line: 4, column: 5, scope: !14)
 !17 = !DILocation(line: 6, column: 5, scope: !14)
 !18 = !DILocation(line: 7, column: 5, scope: !14)
+!20 = !{null}
+!21 = !DISubroutineType(types: !20)

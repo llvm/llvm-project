@@ -23,10 +23,11 @@ function(add_offload_test_device_code test_filename test_name)
 
   set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+  set(compile_flags -nostdlibinc -nogpulib)
 
   # Try to build with support for NVPTX devices.
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-    find_package(CUDAToolkit QUIET)
+    find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
     if(CUDAToolkit_FOUND)
       get_filename_component(cuda_path "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
     endif()
@@ -40,7 +41,7 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(nvptx_arch AND CUDAToolkit_FOUND)
-      set(nvptx_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+      set(nvptx_compile_flags ${compile_flags} ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
 
       if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
         file(GLOB libdevice_paths "${CUDAToolkit_LIBRARY_ROOT}/nvvm/libdevice/libdevice.*.bc")
@@ -58,7 +59,7 @@ function(add_offload_test_device_code test_filename test_name)
         COMMAND ${CMAKE_CXX_COMPILER}
         -I${OFFLOAD_UNITTESTS_DIR}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
-        -nogpulib --cuda-path=${cuda_path} -flto ${nvptx_compile_flags}
+        --cuda-path=${cuda_path} -flto ${nvptx_compile_flags}
         ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
@@ -77,7 +78,7 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(amdgpu_arch)
-      set(amdgpu_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+      set(amdgpu_compile_flags ${compile_flags} ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
 
       if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
         find_package(AMDDeviceLibs QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
@@ -95,11 +96,29 @@ function(add_offload_test_device_code test_filename test_name)
         COMMAND ${CMAKE_CXX_COMPILER}
         -I${OFFLOAD_UNITTESTS_DIR}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
-        -nogpulib -flto ${amdgpu_compile_flags} ${SRC_PATH} -o ${output_file}
+        -flto ${amdgpu_compile_flags} ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.amdgpu DEPENDS ${output_file})
     endif()
+  endif()
+
+  # Try to build with support for Level Zero SPIRV devices.
+  if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    set(spirv_compile_flags ${compile_flags} ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+    set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.spirv64.bin")
+    # TODO: Building for specific devices is not implemented yet.
+    # TODO: Remove the -ffreestanding flag once libc can be built for spirv64.
+    add_custom_command(
+      OUTPUT ${output_file}
+      COMMAND ${CMAKE_CXX_COMPILER}
+      -I${OFFLOAD_UNITTESTS_DIR}
+      --target=spirv64-intel
+      -ffreestanding
+      -flto ${spirv_compile_flags} ${SRC_PATH} -o ${output_file}
+      DEPENDS ${SRC_PATH}
+    )
+    add_custom_target(${test_name}.spirv64 DEPENDS ${output_file})
   endif()
 
   # Create a single dependency target for the device code.
@@ -109,6 +128,9 @@ function(add_offload_test_device_code test_filename test_name)
   endif()
   if(TARGET ${test_name}.nvptx64)
     add_dependencies(${test_name}.bin ${test_name}.nvptx64)
+  endif()
+  if(TARGET ${test_name}.spirv64)
+    add_dependencies(${test_name}.bin ${test_name}.spirv64)
   endif()
 endfunction()
 
@@ -124,6 +146,7 @@ function(add_offload_unittest test_dirname)
   target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")
   target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON})
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
+  set_target_properties(${target_name} PROPERTIES BUILD_RPATH "${LIBOMPTARGET_LIBRARY_DIR}")
 endfunction()
 
 function(add_conformance_test test_name)

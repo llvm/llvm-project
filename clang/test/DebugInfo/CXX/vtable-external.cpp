@@ -1,24 +1,24 @@
 // For the `CInlined` struct, where all member functions are inlined, we check the following cases:
 // - If the definition of its destructor is visible:
 //   * The vtable is generated with a COMDAT specifier
-//   * Its '_vtable$' is generated
+//   * Its '__clang_vtable' is generated
 // - Otherwise:
 //   * The vtable is declared
-//   * Its '_vtable$' is NOT generated
+//   * Its '__clang_vtable' is NOT generated
 //
 // For the `CNoInline` strcut, where member functions are defined as non-inline, we check the following:
 // - Regardless of whether the definition of its destructor is visible or not:
 //   * The vtable is generated
-//   * Its '_vtable$' is generated
+//   * Its '__clang_vtable' is generated
 //
 // For the `CNoFnDef` struct, where member functions are declared only, we check the following:
 // - Regardless of whether the definition of its destructor is visible or not:
 //  # when non-optimized:
 //   * The vtable is declared
-//   * Its '_vtable$' is NOT generated
+//   * Its '__clang_vtable' is NOT generated
 //  # when optimized even if no LLVM passes:
 //   * The vtable is declared as `available_externally` (which is potentially turned into `external` by LLVM passes)
-//   * Its '_vtable$' is generated only if the compiler is targeting the non-COFF platforms
+//   * Its '__clang_vtable' is generated only if the compiler is targeting the non-COFF platforms
 
 struct CInlined {
   virtual void f1() noexcept {}
@@ -81,17 +81,17 @@ int main() {
 
 // CHECK-HAS-DTOR: !llvm.dbg.cu
 
-// CHECK-HAS-DTOR-DAG: [[INLINED_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV8CInlined"
+// CHECK-HAS-DTOR-DAG: [[INLINED_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV8CInlined"
 // CHECK-HAS-DTOR-DAG: [[INLINED_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[INLINED_VTABLE]], expr: !DIExpression())
 // CHECK-HAS-DTOR-DAG: [[INLINED:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CInlined"
-// CHECK-HAS-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[INLINED]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK-HAS-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[INLINED]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 
-// CHECK-HAS-DTOR-DAG: [[NOINLINE_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CNoInline"
+// CHECK-HAS-DTOR-DAG: [[NOINLINE_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CNoInline"
 // CHECK-HAS-DTOR-DAG: [[NOINLINE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[NOINLINE_VTABLE]], expr: !DIExpression())
 // CHECK-HAS-DTOR-DAG: [[NOINLINE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CNoInline"
-// CHECK-HAS-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[NOINLINE]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK-HAS-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[NOINLINE]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 
-// CHECK-HAS-DTOR-O1-DAG: [[NOFNDEF_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV8CNoFnDef"
+// CHECK-HAS-DTOR-O1-DAG: [[NOFNDEF_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV8CNoFnDef"
 // CHECK-HAS-DTOR-O1-DAG: [[NOFNDEF_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[NOFNDEF_VTABLE]], expr: !DIExpression())
 
 // CHECK-NO-DTOR-NOT: $_ZTV8CInlined
@@ -106,10 +106,10 @@ int main() {
 
 // CHECK-NO-DTOR: !llvm.dbg.cu
 
-// CHECK-NO-DTOR-DAG: [[NOINLINE_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CNoInline"
+// CHECK-NO-DTOR-DAG: [[NOINLINE_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CNoInline"
 // CHECK-NO-DTOR-DAG: [[NOINLINE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[NOINLINE_VTABLE]], expr: !DIExpression())
 // CHECK-NO-DTOR-DAG: [[NOINLINE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CNoInline"
-// CHECK-NO-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[NOINLINE]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK-NO-DTOR-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[NOINLINE]], file: {{.*}}, baseType: {{![0-9]+}}, flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 
-// CHECK-NO-DTOR-O1-DAG: [[NOFNDEF_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV8CNoFnDef"
+// CHECK-NO-DTOR-O1-DAG: [[NOFNDEF_VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV8CNoFnDef"
 // CHECK-NO-DTOR-O1-DAG: [[NOFNDEF_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[NOFNDEF_VTABLE]], expr: !DIExpression())

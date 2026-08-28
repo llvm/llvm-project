@@ -224,4 +224,6 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<Invoke, AllFunctionTypes>();
   makeCartesianProductBenchmark<InvokeInlined, AllFunctionTypes>();
   benchmark::RunSpecifiedBenchmarks();
+
+  return 0;
 }

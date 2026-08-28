@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-constraints=z3 \
+// RUN: %clang_analyze_cc1 -analyzer-constraints=unsupported-z3 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection %s 2>&1 | FileCheck %s
 //
 // REQUIRES: z3

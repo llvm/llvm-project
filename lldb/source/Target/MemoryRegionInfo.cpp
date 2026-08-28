@@ -12,29 +12,28 @@ using namespace lldb_private;
 
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const MemoryRegionInfo &Info) {
-  return OS << llvm::formatv("MemoryRegionInfo([{0}, {1}), {2:r}{3:w}{4:x}, "
-                             "{5}, `{6}`, {7}, {8}, {9}, {10}, {11})",
-                             Info.GetRange().GetRangeBase(),
-                             Info.GetRange().GetRangeEnd(), Info.GetReadable(),
-                             Info.GetWritable(), Info.GetExecutable(),
-                             Info.GetMapped(), Info.GetName(), Info.GetFlash(),
-                             Info.GetBlocksize(), Info.GetMemoryTagged(),
-                             Info.IsStackMemory(), Info.IsShadowStack());
+  return OS << llvm::formatv(
+             "MemoryRegionInfo([{0}, {1}), {2:r}{3:w}{4:x}, "
+             "{5}, `{6}`, {7}, {8}, {9}, {10}, {11}, {12})",
+             Info.GetRange().GetRangeBase(), Info.GetRange().GetRangeEnd(),
+             Info.GetReadable(), Info.GetWritable(), Info.GetExecutable(),
+             Info.GetMapped(), Info.GetName(), Info.GetFlash(),
+             Info.GetBlocksize(), Info.GetMemoryTagged(), Info.IsStackMemory(),
+             Info.IsShadowStack(), Info.GetProtectionKey());
 }
 
-void llvm::format_provider<MemoryRegionInfo::OptionalBool>::format(
-    const MemoryRegionInfo::OptionalBool &B, raw_ostream &OS,
-    StringRef Options) {
+void llvm::format_provider<LazyBool>::format(const LazyBool &B, raw_ostream &OS,
+                                             StringRef Options) {
   assert(Options.size() <= 1);
   bool Empty = Options.empty();
   switch (B) {
-  case lldb_private::MemoryRegionInfo::eNo:
+  case lldb_private::eLazyBoolNo:
     OS << (Empty ? "no" : "-");
     return;
-  case lldb_private::MemoryRegionInfo::eYes:
+  case lldb_private::eLazyBoolYes:
     OS << (Empty ? "yes" : Options);
     return;
-  case lldb_private::MemoryRegionInfo::eDontKnow:
+  case lldb_private::eLazyBoolDontKnow:
     OS << (Empty ? "don't know" : "?");
     return;
   }

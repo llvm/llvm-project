@@ -12,6 +12,7 @@
 
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/StringViewExtras.h"
+#include <cctype>
 #include <cstdlib>
 #include <string_view>
 
@@ -38,6 +39,15 @@ std::string llvm::demangle(std::string_view MangledName) {
 }
 
 static bool isItaniumEncoding(std::string_view S) {
+  if (starts_with(S, "__alloc_token_")) {
+    S.remove_prefix(sizeof("__alloc_token_") - 1);
+    if (!S.empty() && std::isdigit(S[0])) {
+      while (!S.empty() && std::isdigit(S[0]))
+        S.remove_prefix(1);
+      if (starts_with(S, "_"))
+        S.remove_prefix(1);
+    }
+  }
   // Itanium demangler supports prefixes with 1-4 underscores.
   const size_t Pos = S.find_first_not_of('_');
   return Pos > 0 && Pos <= 4 && S[Pos] == 'Z';

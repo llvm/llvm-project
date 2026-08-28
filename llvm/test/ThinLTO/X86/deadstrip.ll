@@ -60,14 +60,14 @@
 ; CHECK-NOT: available_externally {{.*}} @baz()
 ; CHECK: @llvm.global_ctors =
 ; CHECK: define internal void @_GLOBAL__I_a()
-; CHECK: define internal void @bar() {
+; CHECK: define internal void @bar()
 ; CHECK: define internal void @bar_internal()
-; CHECK: define internal void @dead_func() {
+; CHECK: define internal void @dead_func()
 ; CHECK-NOT: available_externally {{.*}} @baz()
 ; LTO2-NOT: available_externally {{.*}} @baz()
 ; LTO2: @llvm.global_ctors =
 ; LTO2: define internal void @_GLOBAL__I_a()
-; LTO2: define internal void @bar() [[ATTR:#[0-9]+]] {
+; LTO2: define internal void @bar() [[ATTR:#[0-9]+]]
 ; LTO2: define internal void @bar_internal()
 ; LTO2-NOT: @dead_func()
 ; LTO2-NOT: available_externally {{.*}} @baz()
@@ -79,7 +79,7 @@
 
 ; Make sure we keep @linkonceodrfuncwithalias in Input/deadstrip.ll alive as it
 ; is reachable from @main.
-; LTO2-CHECK2: define weak_odr dso_local void @linkonceodrfuncwithalias() [[ATTR:#[0-9]+]] {
+; LTO2-CHECK2: define weak_odr dso_local void @linkonceodrfuncwithalias() [[ATTR:#[0-9]+]]
 
 ; We should have eventually removed @baz since it was internalized and unused
 ; CHECK2-NM-NOT: _baz

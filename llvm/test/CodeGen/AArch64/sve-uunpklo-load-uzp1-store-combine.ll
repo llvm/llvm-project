@@ -89,8 +89,7 @@ define <vscale x 2 x i64> @uunpklo_invalid_all(ptr %b) #0 {
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
   %uzp = call <vscale x 2 x i64> @llvm.aarch64.sve.uunpklo.nxv2i64(<vscale x 4 x i32> %load)
   ret <vscale x 2 x i64> %uzp
 }
@@ -186,8 +185,7 @@ define void @uzp1_invalid_all(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>
   %uzp = call <vscale x 4 x i32> @llvm.aarch64.sve.uzp1.nxv4i32(<vscale x 4 x i32> %a.bc, <vscale x 4 x i32> %a.bc)
-  %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %uzp, ptr %b, i32 2, <vscale x 4 x i1> %mask)
+  call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %uzp, ptr %b, i32 2, <vscale x 4 x i1> splat (i1 true))
   ret void
 }
 

@@ -57,7 +57,6 @@ struct EDAttr {
   GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate;
   GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
   GOFF::ESDReserveQwords ReservedQwords = GOFF::ESD_RQ_0;
-  GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword;
   uint8_t FillByteValue = 0;
 };
 
@@ -82,6 +81,7 @@ struct PRAttr {
 
 // Attributes for ER symbols.
 struct ERAttr {
+  bool IsIndirectReference = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
@@ -94,6 +94,7 @@ constexpr StringLiteral CLASS_CODE = "C_CODE64";
 constexpr StringLiteral CLASS_WSA = "C_WSA64";
 constexpr StringLiteral CLASS_DATA = "C_DATA64";
 constexpr StringLiteral CLASS_PPA2 = "C_@@QPPA2";
+constexpr StringLiteral CLASS_SINIT = "C_@@SQINIT";
 
 } // namespace GOFF
 } // namespace llvm

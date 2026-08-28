@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class ConstVariableTestCase(TestBase):
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=["mips", "mipsel", "mips64", "mips64el"])
@@ -35,7 +36,6 @@ class ConstVariableTestCase(TestBase):
         # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
-        self.runCmd("next")
         self.runCmd("next")
 
         # Try frame variable.

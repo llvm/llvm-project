@@ -190,7 +190,7 @@ body:             |
   ; MIPS64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS64:   BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
   ; MIPS64: bb.1.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -203,7 +203,7 @@ body:             |
   ; PIC:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; PIC:   BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
   ; PIC: bb.1.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -218,7 +218,7 @@ body:             |
     BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -267,7 +267,7 @@ body:             |
   ; MIPS64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS64:   BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
   ; MIPS64: bb.1.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -280,7 +280,7 @@ body:             |
   ; PIC:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; PIC:   BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
   ; PIC: bb.1.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -295,7 +295,7 @@ body:             |
     BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -349,7 +349,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -378,7 +378,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -393,7 +393,7 @@ body:             |
     BNEC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -447,7 +447,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -476,7 +476,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -491,7 +491,7 @@ body:             |
     BEQC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -545,7 +545,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -574,7 +574,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -589,7 +589,7 @@ body:             |
     BLTC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -643,7 +643,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -672,7 +672,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -687,7 +687,7 @@ body:             |
     BLTUC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -741,7 +741,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -770,7 +770,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -785,7 +785,7 @@ body:             |
     BGEC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -839,7 +839,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -868,7 +868,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -883,7 +883,7 @@ body:             |
     BGEUC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -937,7 +937,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -966,7 +966,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -981,7 +981,7 @@ body:             |
     BLEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -1035,7 +1035,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -1064,7 +1064,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -1079,7 +1079,7 @@ body:             |
     BLTZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -1133,7 +1133,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -1162,7 +1162,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -1177,7 +1177,7 @@ body:             |
     BGEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 
@@ -1231,7 +1231,7 @@ body:             |
   ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
-  ; MIPS64:   INLINEASM &".space 831068", 1
+  ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
   ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; MIPS64:     $v0_64 = DADDiu $zero_64, 1
   ; MIPS64:   }
@@ -1260,7 +1260,7 @@ body:             |
   ; PIC:     $sp_64 = DADDiu $sp_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
-  ; PIC:   INLINEASM &".space 831068", 1
+  ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
   ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
   ; PIC:     $v0_64 = DADDiu $zero_64, 1
   ; PIC:   }
@@ -1275,7 +1275,7 @@ body:             |
     BGTZC64 killed renamable $a0_64, %bb.2, implicit-def $at
 
   bb.1.iftrue:
-    INLINEASM &".space 831068", 1
+    INLINEASM &".space 831068", sideeffect attdialect
     $v0_64 = DADDiu $zero_64, 1
     PseudoReturn64 undef $ra_64, implicit killed $v0_64
 

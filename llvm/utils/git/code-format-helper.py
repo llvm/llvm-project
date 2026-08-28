@@ -124,7 +124,7 @@ View the diff from {self.name} here.
         import github
         from github import IssueComment, PullRequest
 
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = self.comment_tag + "\n\n" + comment_text

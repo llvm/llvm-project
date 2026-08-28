@@ -42,7 +42,7 @@ class TargetLibraryInfo;
 class TypeSize;
 class Value;
 
-class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
+class MemCpyOptPass : public OptionalPassInfoMixin<MemCpyOptPass> {
   TargetLibraryInfo *TLI = nullptr;
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
@@ -57,13 +57,11 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  // Glue for the old PM.
-  LLVM_ABI bool runImpl(Function &F, TargetLibraryInfo *TLI, AAResults *AA,
-                        AssumptionCache *AC, DominatorTree *DT,
-                        PostDominatorTree *PDT, MemorySSA *MSSA);
-
 private:
   // Helper functions
+  bool runImpl(Function &F, TargetLibraryInfo *TLI, AAResults *AA,
+               AssumptionCache *AC, DominatorTree *DT, PostDominatorTree *PDT,
+               MemorySSA *MSSA);
   bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
   bool processStoreOfLoad(StoreInst *SI, LoadInst *LI, const DataLayout &DL,
                           BasicBlock::iterator &BBI);

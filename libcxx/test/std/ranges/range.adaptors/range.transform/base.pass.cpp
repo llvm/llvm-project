@@ -11,6 +11,7 @@
 // constexpr V base() const& requires copy_constructible<V>
 // constexpr V base() &&
 
+#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

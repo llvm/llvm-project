@@ -14,6 +14,7 @@
 #include "FeatureModule.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "SourceCode.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -28,9 +29,11 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -264,10 +267,10 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
     float foo = [[0.1f]];
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // Enable alias clang-tidy checks, these checks emit the same diagnostics
   // (except the check name).
   TU.ClangTidyProvider = addTidyChecks("readability-uppercase-literal-suffix,"
-                                       "hicpp-uppercase-literal-suffix");
+                                       "cert-dcl16-c");
   // Verify that we filter out the duplicated diagnostic message.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -318,12 +321,13 @@ TEST(DiagnosticsTest, ClangTidy) {
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.AdditionalFiles["system/assert.h"] = ""; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
                                        "modernize-use-trailing-return-type,"
                                        "misc-no-recursion");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.ExtraArgs.push_back("-Wno-unsequenced");
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -356,6 +360,29 @@ TEST(DiagnosticsTest, ClangTidy) {
                "function 'foo' is within a recursive call chain"),
           Diag(Test.range("bar"),
                "function 'bar' is within a recursive call chain"))));
+}
+
+TEST(DiagnosticsTest, ClangTidyRedundantParenthesesFix) {
+  Annotations Test(R"cpp(
+    int func() {
+      return$lparen[[(]]0$rparen[[)]];
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("readability-redundant-parentheses");
+
+  clangd::Fix ExpectedFix;
+  ExpectedFix.Message = "redundant parentheses around expression";
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("lparen"), " "});
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("rparen"), ""});
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(ElementsAre(AllOf(
+          Diag(Test.range("lparen"), "redundant parentheses around expression"),
+          diagSource(Diag::ClangTidy),
+          diagName("readability-redundant-parentheses"),
+          withFix(equalToFix(ExpectedFix))))));
 }
 
 TEST(DiagnosticsTest, ClangTidyEOF) {
@@ -823,6 +850,25 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
+TEST(DiagnosticTest, BadSignalToKillThreadInPreamble) {
+  Annotations Main(R"cpp(
+    #include "signal.h"
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 15);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderFilename = "signal.h";
+  TU.HeaderCode = "#define SIGTERM 15";
+  TU.ClangTidyProvider = addTidyChecks("bugprone-bad-signal-to-kill-thread");
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  diagName("bugprone-bad-signal-to-kill-thread"))));
+}
+
 TEST(DiagnosticTest, ClangTidyMacroToEnumCheck) {
   Annotations Main(R"cpp(
     #if 1
@@ -891,17 +937,17 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
 
   clangd::Fix ExpectedCFix;
   ExpectedCFix.Message = "variable 'C' is not initialized";
-  ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
   ExpectedCFix.Edits.push_back(
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+  ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
 
   // Again in clang-tidy only the include directive would be emitted for the
   // first warning. However we need the include attaching for both warnings.
   clangd::Fix ExpectedDFix;
   ExpectedDFix.Message = "variable 'D' is not initialized";
-  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   ExpectedDFix.Edits.push_back(
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       ifTidyChecks(UnorderedElementsAre(
@@ -936,14 +982,14 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
   clangd::Fix const ExpectedFix1{
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
-      {TextEdit{Main.range("override1"), " override"},
-       TextEdit{Main.range("virtual1"), ""}},
+      {TextEdit{Main.range("virtual1"), ""},
+       TextEdit{Main.range("override1"), " override"}},
       {}};
   clangd::Fix const ExpectedFix2{
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
-      {TextEdit{Main.range("override2"), " override"},
-       TextEdit{Main.range("virtual2"), ""}},
+      {TextEdit{Main.range("virtual2"), ""},
+       TextEdit{Main.range("override2"), " override"}},
       {}};
   // Note that in the Fix we expect the "virtual" keyword and the following
   // whitespace to be deleted
@@ -1070,6 +1116,18 @@ void foo(int *x);
   const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
   ASSERT_TRUE(X->getOriginalType()->getNullability() ==
               NullabilityKind::NonNull);
+}
+
+TEST(DiagnosticsTest, PreamblePragmaDiagnosticPushPop) {
+  auto TU = TestTU::withCode(R"cpp(
+#pragma clang diagnostic push
+int main() {
+   return 0;
+}
+#pragma clang diagnostic pop
+)cpp");
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), IsEmpty());
 }
 
 TEST(DiagnosticsTest, PreambleHeaderWithBadPragmaAssumeNonnull) {
@@ -2149,6 +2207,74 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   // https://github.com/clangd/vscode-clangd/issues/360
   TU.Filename = "test.h";
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
+TEST(DiagnosticsTest, DontSuppressSubcategories) {
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar(int x) {
+      switch(x) {
+      default:
+        break;
+        break;
+      }
+    })cpp");
+  TestTU TU;
+  TU.ExtraArgs.push_back("-Wunreachable-code-aggressive");
+  TU.Code = Source.code().str();
+  Config Cfg;
+  // This shouldn't suppress subcategory unreachable-break.
+  Cfg.Diagnostics.Suppress = {"unreachable-code"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(diagName("-Wunreachable-code-break")));
+}
+
+// Simulate a diagnostic with two removal fixits.
+TEST(DiagnosticsTest, TokenMergeFixit) {
+  Annotations Test(R"cpp(
+    int test() {
+      return$lparen[[(]]0$rparen[[)]];
+    }
+  )cpp");
+
+  SourceManagerForFile SM("TestTU.cpp", Test.code());
+  DiagnosticsEngine &DE = SM.get().getDiagnostics();
+  StoreDiags DiagConsumer;
+  DE.setClient(&DiagConsumer, /*ShouldOwnClient=*/false);
+
+  LangOptions LangOpts;
+  DiagConsumer.BeginSourceFile(LangOpts, /*PP=*/nullptr);
+  {
+    auto Loc = [&](Position P) {
+      return llvm::cantFail(sourceLocationInMainFile(SM.get(), P));
+    };
+    SourceLocation LParenBegin = Loc(Test.range("lparen").start);
+    SourceLocation LParenEnd = Loc(Test.range("lparen").end);
+    SourceLocation RParenBegin = Loc(Test.range("rparen").start);
+    SourceLocation RParenEnd = Loc(Test.range("rparen").end);
+
+    unsigned ID = DE.getCustomDiagID(DiagnosticsEngine::Warning,
+                                     "redundant parentheses around expression");
+    DiagnosticBuilder DB = DE.Report(LParenBegin, ID);
+    DB.AddFixItHint(FixItHint::CreateRemoval(
+        CharSourceRange::getCharRange(LParenBegin, LParenEnd)));
+    DB.AddFixItHint(FixItHint::CreateRemoval(
+        CharSourceRange::getCharRange(RParenBegin, RParenEnd)));
+  }
+  DiagConsumer.EndSourceFile();
+
+  auto Diags = DiagConsumer.take();
+
+  ASSERT_EQ(Diags.size(), 1u);
+  ASSERT_EQ(Diags[0].Fixes.size(), 1u);
+  const auto &Fix = Diags[0].Fixes[0];
+
+  ASSERT_EQ(Fix.Edits.size(), 2u);
+  EXPECT_EQ(Fix.Edits[0].range, Test.range("lparen"));
+  EXPECT_EQ(Fix.Edits[0].newText, " ");
+  EXPECT_EQ(Fix.Edits[1].range, Test.range("rparen"));
+  EXPECT_EQ(Fix.Edits[1].newText, "");
 }
 
 } // namespace

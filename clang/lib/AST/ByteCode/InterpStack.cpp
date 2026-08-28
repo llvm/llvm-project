@@ -8,6 +8,7 @@
 
 #include "InterpStack.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Integral.h"
@@ -116,4 +117,10 @@ void InterpStack::dump() const {
 
     ++Index;
   }
+}
+
+void InterpStack::discardSlow() {
+  assert(!empty());
+
+  TYPE_SWITCH(ItemTypes.back(), { discard<T>(); });
 }

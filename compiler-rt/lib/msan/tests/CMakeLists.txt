@@ -46,7 +46,7 @@ set(MSAN_UNITTEST_COMMON_CFLAGS
   -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
 )
 # Remove -stdlib= which is unused when passing -nostdinc++.
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
 set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
   ${MSAN_UNITTEST_COMMON_CFLAGS}

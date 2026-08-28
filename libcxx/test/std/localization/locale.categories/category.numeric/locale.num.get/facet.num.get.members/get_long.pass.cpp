@@ -16,10 +16,11 @@
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <locale>
-#include <ios>
 #include <cassert>
+#include <ios>
 #include <limits>
 #include <streambuf>
+#include <string>
 #include "test_macros.h"
 #include "test_iterators.h"
 

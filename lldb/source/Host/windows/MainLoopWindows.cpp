@@ -43,10 +43,11 @@ namespace {
 class PipeEvent : public MainLoopWindows::IOEvent {
 public:
   explicit PipeEvent(HANDLE handle)
-      : IOEvent(CreateEventW(NULL, /*bManualReset=*/TRUE,
-                             /*bInitialState=*/FALSE, NULL)),
-        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/TRUE,
-                                               /*bInitialState=*/FALSE, NULL)) {
+      : IOEvent(CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                             /*bInitialState=*/FALSE, nullptr)),
+        m_handle(handle),
+        m_ready(CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                             /*bInitialState=*/FALSE, nullptr)) {
     assert(m_event && m_ready);
     m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
   }
@@ -109,8 +110,8 @@ public:
         err = GetLastError();
       }
       if (success) {
-        success =
-            PeekNamedPipe(m_handle, NULL, 0, NULL, &bytes_available, NULL);
+        success = PeekNamedPipe(m_handle, nullptr, 0, nullptr, &bytes_available,
+                                nullptr);
         err = GetLastError();
       }
       if (success) {
@@ -247,7 +248,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
         callback};
   } else {
     DWORD file_type = GetFileType(waitable_handle);
-    if (file_type != FILE_TYPE_PIPE) {
+    if (file_type != FILE_TYPE_CHAR && file_type != FILE_TYPE_PIPE) {
       error = Status::FromErrorStringWithFormat("Unsupported file type %ld",
                                                 file_type);
       return nullptr;

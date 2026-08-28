@@ -1,3 +1,8 @@
+## On z/OS, ebcdic output from printf is converted into utf-8 as
+## the output being redirected, causing the values to be incorrect.
+## TODO: use a builtin version of printf
+# UNSUPPORTED: system-zos
+
 # RUN: yaml2obj %s -o %t1.o
 # RUN: yaml2obj %s -o %t2.o
 

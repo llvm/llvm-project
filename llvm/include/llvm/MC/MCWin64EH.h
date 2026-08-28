@@ -26,6 +26,9 @@ struct Instruction {
   static WinEH::Instruction PushNonVol(MCSymbol *L, unsigned Reg) {
     return WinEH::Instruction(Win64EH::UOP_PushNonVol, L, Reg, -1);
   }
+  static WinEH::Instruction Push2(MCSymbol *L, unsigned Reg1, unsigned Reg2) {
+    return WinEH::Instruction(Win64EH::UOP_Push2, L, Reg1, Reg2, -1);
+  }
   static WinEH::Instruction Alloc(MCSymbol *L, unsigned Size) {
     return WinEH::Instruction(Size > 128 ? UOP_AllocLarge : UOP_AllocSmall, L,
                               -1, Size);
@@ -50,26 +53,30 @@ struct Instruction {
   }
 };
 
-class UnwindEmitter : public WinEH::UnwindEmitter {
+class LLVM_ABI UnwindEmitter : public WinEH::UnwindEmitter {
 public:
   void Emit(MCStreamer &Streamer) const override;
   void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI,
                       bool HandlerData) const override;
 };
 
-class ARMUnwindEmitter : public WinEH::UnwindEmitter {
+class LLVM_ABI ARMUnwindEmitter : public WinEH::UnwindEmitter {
 public:
   void Emit(MCStreamer &Streamer) const override;
   void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI,
                       bool HandlerData) const override;
 };
 
-class ARM64UnwindEmitter : public WinEH::UnwindEmitter {
+class LLVM_ABI ARM64UnwindEmitter : public WinEH::UnwindEmitter {
 public:
   void Emit(MCStreamer &Streamer) const override;
   void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI,
                       bool HandlerData) const override;
 };
+/// Encode a single WinEH::Instruction as V3 WOD bytes.
+/// Appends encoded bytes to Out.
+LLVM_ABI void EncodeWOD(const WinEH::Instruction &Inst,
+                        SmallVectorImpl<uint8_t> &Out);
 } // namespace Win64EH
 } // namespace llvm
 

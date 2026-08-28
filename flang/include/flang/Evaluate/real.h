@@ -30,6 +30,12 @@ namespace Fortran::evaluate::value {
 // LOG10(2.)*1E12
 static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 
+// Ignore error about requesting a large alignment not being ABI compatible
+// with older AIX systems.
+#if defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waix-compat"
+#endif
 // Models IEEE binary floating-point numbers (IEEE 754-2008,
 // ISO/IEC/IEEE 60559.2011).  The first argument to this
 // class template must be (or look like) an instance of Integer<>;
@@ -498,6 +504,9 @@ private:
   // by unaligned address.
   alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
+#if defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format
