@@ -314,6 +314,12 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
     if (sys::fs::exists(Status)) {
       if (!sys::fs::is_regular_file(Status))
         Config.setNoAtomicWrite();
+
+      // Fail now if we can't write to the final destination.
+      if (Config.getAppend() && !sys::fs::can_write(OutputPath))
+        return make_error<OutputError>(
+            OutputPath,
+            std::make_error_code(std::errc::operation_not_permitted));
     }
   }
 
