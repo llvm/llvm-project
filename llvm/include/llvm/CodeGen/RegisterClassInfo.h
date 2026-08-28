@@ -29,8 +29,6 @@
 
 namespace llvm {
 
-class MachineRegisterClassAnalysis;
-
 class RegisterClassInfo {
   struct RCInfo {
     unsigned Tag = 0;
@@ -110,12 +108,6 @@ public:
   /// Whether the cached information was filtered by MRI's frozen reserved
   /// registers, i.e. no change to them was left unpublished.
   LLVM_ABI bool hasCurrentReservedRegs() const;
-
-  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &) {
-    auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
-    return !PAC.preservedWhenStateless();
-  }
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
