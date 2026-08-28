@@ -496,10 +496,6 @@ public:
   applyCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
 
-  /// Return true if any explicit use operand on \p MI is defined by a
-  /// G_IMPLICIT_DEF.
-  LLVM_ABI bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
-
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
   LLVM_ABI bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
@@ -571,9 +567,6 @@ public:
 
   /// Optimize (x op x) -> x
   LLVM_ABI bool matchBinOpSameVal(MachineInstr &MI) const;
-
-  /// Check if operand \p OpIdx is undef.
-  LLVM_ABI bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
