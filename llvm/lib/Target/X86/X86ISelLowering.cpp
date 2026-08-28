@@ -25338,9 +25338,8 @@ static bool isX86LogicalCmp(SDValue Op) {
     return true;
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
-       Opc == X86ISD::ADOX || Opc == X86ISD::SBB || Opc == X86ISD::SMUL ||
-       Opc == X86ISD::UMUL || Opc == X86ISD::OR || Opc == X86ISD::XOR ||
-       Opc == X86ISD::AND))
+       Opc == X86ISD::SBB || Opc == X86ISD::SMUL || Opc == X86ISD::UMUL ||
+       Opc == X86ISD::OR || Opc == X86ISD::XOR || Opc == X86ISD::AND))
     return true;
 
   return false;
