@@ -1,14 +1,73 @@
 // RUN: %check_clang_tidy %s readability-if-block-size %t
 
-// FIXME: Add something that triggers the check here.
-void f();
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' is insufficiently awesome [readability-if-block-size]
+void should_warn(){
+    if (true){ // 1
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+        int sum = 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19
+                + 20;
+    } //          21
+}
 
-// FIXME: Verify the applied fix.
-//   * Make the CHECK patterns specific enough and try to make verified lines
-//     unique to avoid incorrect matches.
-//   * Use {{}} for regular expressions.
-// CHECK-FIXES: {{^}}void awesome_f();{{$}}
+void should_not_warn(){
+    if (true){ // 1
+        int sum = 2
+                + 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19;
+    } //          20
 
-// FIXME: Add something that doesn't trigger the check here.
-void awesome_f2();
+    bool a = true;
+    bool b = false;
+    if (a && b){
+        int sum = 2
+                + 3
+                + 4
+                + 5
+                + 6;
+    } else if (a || b) {
+        int sum = 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15;
+    } else {
+        int sum = 17
+                + 18
+                + 19
+                + 20
+                + 21;
+    }
+}

@@ -7,26 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "IfBlockSizeCheck.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
 void IfBlockSizeCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Add matchers.
-  Finder->addMatcher(functionDecl().bind("x"), this);
+  Finder->addMatcher(ifStmt().bind("if"), this);
 }
 
 void IfBlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
-  // FIXME: Add callback implementation.
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().starts_with("awesome_"))
+  const auto& SrcMgr = Result.SourceManager;
+
+  const auto *IfBlk = Result.Nodes.getNodeAs<IfStmt>("if");
+  const unsigned FirstLine = SrcMgr->getSpellingLineNumber(IfBlk->getBeginLoc());
+  const unsigned LastLine = [&](){
+    if (const auto *ElseBlk = IfBlk->getElse())
+      return SrcMgr->getSpellingLineNumber(ElseBlk->getBeginLoc());
+    return SrcMgr->getSpellingLineNumber(IfBlk->getEndLoc());
+  }();
+  const unsigned LineCount = LastLine - FirstLine  + 1;
+
+  if (LineCount <= LineCountThreshold)
     return;
-  diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
-      << MatchedDecl
-      << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
-  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note);
+
+  diag(IfBlk->getBeginLoc(), "if block spans %0 lines of code, which exceeds the threshold of %1 lines")
+      << LineCount
+      << LineCountThreshold;
 }
 
 } // namespace clang::tidy::readability

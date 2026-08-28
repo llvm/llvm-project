@@ -13,7 +13,7 @@
 
 namespace clang::tidy::readability {
 
-/// FIXME: Write a short description.
+/// Warns about large if blocks
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/if-block-size.html
@@ -26,6 +26,9 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  const unsigned LineCountThreshold = 20;
 };
 
 } // namespace clang::tidy::readability
