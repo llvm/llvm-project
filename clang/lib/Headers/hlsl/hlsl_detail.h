@@ -53,6 +53,17 @@ template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
 
+template <typename T> struct elem_type {
+  using Type = T;
+};
+template <typename T, int N> struct elem_type<vector<T, N>> {
+  using Type = T;
+};
+template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
+  using Type = T;
+};
+template <typename T> using elem_type_t = typename elem_type<T>::Type;
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_
