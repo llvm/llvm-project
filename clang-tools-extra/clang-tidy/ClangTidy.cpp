@@ -270,7 +270,7 @@ public:
         Rule = Rule.setHelpURI(buildClangTidyHelpURI(Name));
 
       Rule = addDiagnosticLevelToRule(Rule, EffectiveLevel);
-      if(SarifWriter)
+      if (SarifWriter)
         RuleIndex = SarifWriter->createRule(Rule);
     }
 
@@ -281,7 +281,7 @@ public:
             .setThreadFlows(createThreadFlows(Error))
             .addLocations(getResultRanges(Error, Loc));
 
-    if(SarifWriter)
+    if (SarifWriter)
       SarifWriter->appendResult(Result);
   }
 
