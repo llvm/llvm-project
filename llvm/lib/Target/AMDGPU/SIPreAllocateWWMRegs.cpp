@@ -17,13 +17,11 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
@@ -50,7 +48,7 @@ private:
   LiveIntervals *LIS;
   LiveRegMatrix *Matrix;
   VirtRegMap *VRM;
-  const RegisterClassInfo &RegClassInfo;
+  RegisterClassInfo &RCI;
 
   std::vector<unsigned> RegsToRewrite;
 #ifndef NDEBUG
@@ -61,8 +59,8 @@ private:
 
 public:
   SIPreAllocateWWMRegs(LiveIntervals *LIS, LiveRegMatrix *Matrix,
-                       VirtRegMap *VRM, const RegisterClassInfo &RCI)
-      : LIS(LIS), Matrix(Matrix), VRM(VRM), RegClassInfo(RCI) {}
+                       VirtRegMap *VRM, RegisterClassInfo &RCI)
+      : LIS(LIS), Matrix(Matrix), VRM(VRM), RCI(RCI) {}
   bool run(MachineFunction &MF);
 };
 
@@ -78,14 +76,8 @@ public:
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<LiveRegMatrixWrapperLegacy>();
-    // TODO: Update RCI with the additional reserved registers the pass sets.
     AU.addRequired<MachineRegisterClassInfoWrapperPass>();
-    AU.setPreservesCFG();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<VirtRegMapWrapperLegacy>();
-    AU.addPreserved<LiveRegMatrixWrapperLegacy>();
-    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -122,7 +114,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
 
   LiveInterval &LI = LIS->getInterval(Reg);
 
-  for (MCRegister PhysReg : RegClassInfo.getOrder(MRI->getRegClass(Reg))) {
+  for (MCRegister PhysReg : RCI.getOrder(MRI->getRegClass(Reg))) {
     if (!MRI->isPhysRegUsed(PhysReg, /*SkipRegMaskTest=*/true) &&
         Matrix->checkInterference(LI, PhysReg) == LiveRegMatrix::IK_Free) {
       Matrix->assign(LI, PhysReg);
@@ -180,8 +172,10 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
 
   RegsToRewrite.clear();
 
-  // Update the set of reserved registers to include WWM ones.
+  // Update the set of reserved registers to include WWM ones
+  // without unnecessarily invalidating RegClassInfo.
   MRI->freezeReservedRegs();
+  RCI.updateReservedRegs(MRI->getReservedRegs());
 }
 
 #ifndef NDEBUG
@@ -213,7 +207,7 @@ bool SIPreAllocateWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto *Matrix = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   auto *VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  const auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   return SIPreAllocateWWMRegs(LIS, Matrix, VRM, RCI).run(MF);
 }
 
@@ -283,12 +277,7 @@ SIPreAllocateWWMRegsPass::run(MachineFunction &MF,
   auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto *Matrix = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   auto *VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
-  const auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   SIPreAllocateWWMRegs(LIS, Matrix, VRM, RCI).run(MF);
-  // The pass reserves WWM registers, invalidating RegisterClassInfo's
-  // allocation order, so it cannot be preserved (see the legacy
-  // getAnalysisUsage above).
-  PreservedAnalyses PA = PreservedAnalyses::all();
-  PA.abandon<MachineRegisterClassAnalysis>();
-  return PA;
+  return PreservedAnalyses::all();
 }
