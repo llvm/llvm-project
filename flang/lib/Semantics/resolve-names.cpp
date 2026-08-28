@@ -4281,23 +4281,29 @@ static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
 
 struct IntrinsicModuleUseAssociationRule {
   const char *moduleName;
-  const char *genericName;
-  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+  bool (*matches)(SemanticsContext &, const Symbol &, const Symbol &);
 };
 
-static bool MatchesCublasGemm(SemanticsContext &context,
-    const GenericDetails &generic, const Symbol &other) {
-  const Symbol *specific{generic.specific()};
+static bool MatchesCublasBlas(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  if (generic.GetUltimate().name().ToString().rfind("cublas", 0) == 0) {
+    return false;
+  }
+  const auto &details{generic.get<GenericDetails>()};
+  const Symbol *specific{details.specific()};
   if (!specific ||
       !AreSameProcedureForUseAssociation(context, *specific, other)) {
     return false;
   }
   bool containsSpecific{false};
   bool hasCUDAOverload{false};
-  for (const Symbol &candidate : generic.specificProcs()) {
+  for (const Symbol &candidate : details.specificProcs()) {
     containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
     hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
   }
+  // If a CUBLAS generic is found whose CUDA specifics are not compatible
+  // enough with its homonymous host specific, also consider checking their
+  // basic procedure shapes here while ignoring CUDA-specific attributes.
   return containsSpecific && hasCUDAOverload;
 }
 
@@ -4307,9 +4313,7 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
-      {"cublas", "sgemm", MatchesCublasGemm},
-      {"cublas", "dgemm", MatchesCublasGemm},
-      {"cublas", "zgemm", MatchesCublasGemm},
+      {"cublas", MatchesCublasBlas},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
@@ -4318,8 +4322,7 @@ FindIntrinsicModuleUseAssociationRule(
   }
   for (const auto &rule : rules) {
     if (owner.GetName().value() == rule.moduleName &&
-        generic.GetUltimate().name() == rule.genericName &&
-        rule.matches(context, generic.get<GenericDetails>(), other)) {
+        rule.matches(context, generic, other)) {
       return &rule;
     }
   }
