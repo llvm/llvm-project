@@ -1010,14 +1010,14 @@ static Expected<unsigned> parseAMDGPULDSBufferingMaxBytes(StringRef Params) {
       continue;
     if (!Param.consume_front("max-bytes=")) {
       return make_error<StringError>(
-          formatv("invalid AMDGPULDSBuffering pass parameter '{0}' ", Param)
+          formatv("invalid AMDGPU LDS buffering pass parameter '{0}'", Param)
               .str(),
           inconvertibleErrorCode());
     }
     unsigned Parsed = 0;
     if (Param.getAsInteger(10, Parsed)) {
       return make_error<StringError>(
-          formatv("invalid AMDGPULDSBuffering max-bytes '{0}' ", Param).str(),
+          formatv("invalid AMDGPU LDS buffering max-bytes '{0}'", Param).str(),
           inconvertibleErrorCode());
     }
     Result = Parsed;

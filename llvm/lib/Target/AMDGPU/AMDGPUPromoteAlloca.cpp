@@ -26,9 +26,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULDSUtils.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPULDSUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -38,8 +38,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -134,17 +132,13 @@ private:
   const DataLayout &DL;
 
   // FIXME: This should be per-kernel.
-  uint32_t LocalMemLimit = 0;
-  uint32_t CurrentLocalMemUsage = 0;
+  uint64_t LocalMemLimit = 0;
+  uint64_t CurrentLocalMemUsage = 0;
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
 
   bool IsAMDGCN = false;
-  bool IsAMDHSA = false;
-
-  std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
-  Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
   bool collectAllocaUses(AllocaAnalysis &AA) const;
 
@@ -177,7 +171,6 @@ public:
       : TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
     const Triple &TT = M.getTargetTriple();
     IsAMDGCN = TT.isAMDGCN();
-    IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
 
   bool run(Function &F, bool PromoteToLDS);
@@ -368,7 +361,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
-  MaxVGPRs = IsAMDGCN ? getMaxVGPRs(CurrentLocalMemUsage, TM, F) : 128;
+  MaxVGPRs =
+      IsAMDGCN ? getMaxVGPRs(static_cast<unsigned>(CurrentLocalMemUsage), TM, F)
+               : 128;
   setFunctionLimits(F);
 
   unsigned VectorizationBudget =
@@ -1191,124 +1186,6 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   AA.Alloca->eraseFromParent();
 }
 
-std::pair<Value *, Value *>
-AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
-  Function &F = *Builder.GetInsertBlock()->getParent();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-
-  if (!IsAMDHSA) {
-    CallInst *LocalSizeY = Builder.CreateIntrinsicWithoutFolding(
-        Intrinsic::r600_read_local_size_y, {});
-    CallInst *LocalSizeZ = Builder.CreateIntrinsicWithoutFolding(
-        Intrinsic::r600_read_local_size_z, {});
-
-    ST.makeLIDRangeMetadata(LocalSizeY);
-    ST.makeLIDRangeMetadata(LocalSizeZ);
-
-    return std::pair(LocalSizeY, LocalSizeZ);
-  }
-
-  // We must read the size out of the dispatch pointer.
-  assert(IsAMDGCN);
-
-  // We are indexing into this struct, and want to extract the workgroup_size_*
-  // fields.
-  //
-  //   typedef struct hsa_kernel_dispatch_packet_s {
-  //     uint16_t header;
-  //     uint16_t setup;
-  //     uint16_t workgroup_size_x ;
-  //     uint16_t workgroup_size_y;
-  //     uint16_t workgroup_size_z;
-  //     uint16_t reserved0;
-  //     uint32_t grid_size_x ;
-  //     uint32_t grid_size_y ;
-  //     uint32_t grid_size_z;
-  //
-  //     uint32_t private_segment_size;
-  //     uint32_t group_segment_size;
-  //     uint64_t kernel_object;
-  //
-  // #ifdef HSA_LARGE_MODEL
-  //     void *kernarg_address;
-  // #elif defined HSA_LITTLE_ENDIAN
-  //     void *kernarg_address;
-  //     uint32_t reserved1;
-  // #else
-  //     uint32_t reserved1;
-  //     void *kernarg_address;
-  // #endif
-  //     uint64_t reserved2;
-  //     hsa_signal_t completion_signal; // uint64_t wrapper
-  //   } hsa_kernel_dispatch_packet_t
-  //
-  CallInst *DispatchPtr =
-      Builder.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_dispatch_ptr, {});
-  DispatchPtr->addRetAttr(Attribute::NoAlias);
-  DispatchPtr->addRetAttr(Attribute::NonNull);
-  F.removeFnAttr("amdgpu-no-dispatch-ptr");
-
-  // Size of the dispatch packet struct.
-  DispatchPtr->addDereferenceableRetAttr(64);
-
-  Type *I32Ty = Type::getInt32Ty(Mod.getContext());
-
-  // We could do a single 64-bit load here, but it's likely that the basic
-  // 32-bit and extract sequence is already present, and it is probably easier
-  // to CSE this. The loads should be mergeable later anyway.
-  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 1);
-  LoadInst *LoadXY = Builder.CreateAlignedLoad(I32Ty, GEPXY, Align(4));
-
-  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 2);
-  LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, Align(4));
-
-  MDNode *MD = MDNode::get(Mod.getContext(), {});
-  LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
-  LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
-  ST.makeLIDRangeMetadata(LoadZU);
-
-  // Extract y component. Upper half of LoadZU should be zero already.
-  Value *Y = Builder.CreateLShr(LoadXY, 16);
-
-  return std::pair(Y, LoadZU);
-}
-
-Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
-                                              unsigned N) {
-  Function *F = Builder.GetInsertBlock()->getParent();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, *F);
-  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
-  StringRef AttrName;
-
-  switch (N) {
-  case 0:
-    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_x
-                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_x;
-    AttrName = "amdgpu-no-workitem-id-x";
-    break;
-  case 1:
-    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_y
-                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_y;
-    AttrName = "amdgpu-no-workitem-id-y";
-    break;
-
-  case 2:
-    IntrID = IsAMDGCN ? (Intrinsic::ID)Intrinsic::amdgcn_workitem_id_z
-                      : (Intrinsic::ID)Intrinsic::r600_read_tidig_z;
-    AttrName = "amdgpu-no-workitem-id-z";
-    break;
-  default:
-    llvm_unreachable("invalid dimension");
-  }
-
-  Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(&Mod, IntrID);
-  CallInst *CI = Builder.CreateCall(WorkitemIdFn);
-  ST.makeLIDRangeMetadata(CI);
-  F->removeFnAttr(AttrName);
-
-  return CI;
-}
-
 static bool isCallPromotable(CallInst *CI) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (!II)
@@ -1462,14 +1339,14 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
 
 bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   AMDGPU::AMDGPULDSBudget Budget = AMDGPU::computeLDSBudget(F, TM);
-  CurrentLocalMemUsage = Budget.currentUsage;
-  LocalMemLimit = Budget.limit;
-  if (!Budget.promotable) {
-    if (Budget.disabledDueToLocalArg) {
+  CurrentLocalMemUsage = Budget.CurrentUsage;
+  LocalMemLimit = Budget.Limit;
+  if (!Budget.Promotable) {
+    if (Budget.DisabledDueToLocalArg) {
       LLVM_DEBUG(dbgs() << "Function has local memory argument. Promoting to "
                            "local memory disabled.\n");
     }
-    if (Budget.disabledDueToExternDynShared) {
+    if (Budget.DisabledDueToExternDynShared) {
       LLVM_DEBUG(dbgs() << "Function has a reference to externally allocated "
                            "local memory. Promoting to local memory "
                            "disabled.\n");
@@ -1478,7 +1355,12 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   }
 
   LLVM_DEBUG(dbgs() << F.getName() << " uses " << CurrentLocalMemUsage
-                    << " bytes of LDS\n");
+                    << " bytes of LDS\n"
+                    << "  Rounding size to " << LocalMemLimit
+                    << " with a maximum occupancy of " << Budget.MaxOccupancy
+                    << '\n'
+                    << " and " << (LocalMemLimit - CurrentLocalMemUsage)
+                    << " available for promotion\n");
   return true;
 }
 
@@ -1506,18 +1388,20 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   // FIXME: It is also possible that if we're allowed to use all of the memory
   // could end up using more than the maximum due to alignment padding.
 
-  uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
   std::optional<TypeSize> ElemSize = AA.Alloca->getAllocationSize(DL);
   if (!ElemSize || ElemSize->isScalable())
     return false;
-  TypeSize AllocSize = WorkGroupSize * *ElemSize;
-  NewSize += AllocSize.getFixedValue();
-
-  if (NewSize > LocalMemLimit) {
-    LLVM_DEBUG(dbgs() << "  " << AllocSize
-                      << " bytes of local memory not available to promote\n");
+  uint64_t ElemBytes = ElemSize->getFixedValue();
+  if (Alignment.value() > LocalMemLimit)
+    return false;
+  uint64_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
+  if (NewSize > LocalMemLimit || WorkGroupSize == 0 ||
+      ElemBytes > (LocalMemLimit - NewSize) / WorkGroupSize) {
+    LLVM_DEBUG(dbgs() << "  local memory not available to promote\n");
     return false;
   }
+  uint64_t AllocSize = ElemBytes * WorkGroupSize;
+  NewSize += AllocSize;
 
   CurrentLocalMemUsage = NewSize;
 
@@ -1533,18 +1417,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(AA.Alloca->getAlign());
 
-  Value *TCntY, *TCntZ;
-
-  std::tie(TCntY, TCntZ) = getLocalSizeYZ(Builder);
-  Value *TIdX = getWorkitemID(Builder, 0);
-  Value *TIdY = getWorkitemID(Builder, 1);
-  Value *TIdZ = getWorkitemID(Builder, 2);
-
-  Value *Tmp0 = Builder.CreateMul(TCntY, TCntZ, "", true, true);
-  Tmp0 = Builder.CreateMul(Tmp0, TIdX);
-  Value *Tmp1 = Builder.CreateMul(TIdY, TCntZ, "", true, true);
-  Value *TID = Builder.CreateAdd(Tmp0, Tmp1);
-  TID = Builder.CreateAdd(TID, TIdZ);
+  Value *TID = AMDGPU::buildLinearThreadId(Builder, TM);
 
   LLVMContext &Context = Mod.getContext();
   Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};

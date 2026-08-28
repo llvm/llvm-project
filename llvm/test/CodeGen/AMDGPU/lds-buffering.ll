@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes='amdgpu-lds-buffering<max-bytes=64>' -S %s | FileCheck %s
+; NOTE: Do not autogenerate. The checks focus on which patterns are transformed.
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes='amdgpu-lds-buffering<max-bytes=64>' -S < %s | FileCheck %s
 
 %state = type { <4 x i32>, <4 x i32> }
 

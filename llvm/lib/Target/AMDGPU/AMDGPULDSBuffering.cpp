@@ -24,8 +24,7 @@
 // Current implementation handles the simplest pattern: a load from global
 // memory whose only use is a store back to the same pointer. This pattern is
 // transformed into a pair of memcpy operations (global->LDS and LDS->global),
-// effectively moving the value through LDS instead of accessing global memory
-// directly.
+// parking the value in LDS to shorten its VGPR live range.
 //
 // This pass was inspired by finding that some rocrand performance tests
 // show better performance when global memory is buffered through LDS
@@ -37,22 +36,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULDSUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPULDSUtils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+#include <utility>
 
 #define DEBUG_TYPE "amdgpu-lds-buffering"
 
@@ -72,18 +70,16 @@ public:
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "[LDSBuffer] Visit function: " << F.getName() << '\n');
-    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    if (!TM.getTargetTriple().isAMDGCN() ||
+        !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
       return false;
 
     Mod = F.getParent();
     DL = &Mod->getDataLayout();
 
     AMDGPU::AMDGPULDSBudget Budget = AMDGPU::computeLDSBudget(F, TM);
-    if (!Budget.promotable)
+    if (!Budget.Promotable)
       return false;
-    uint32_t localUsage = Budget.currentUsage;
-    uint32_t localLimit = Budget.limit;
-
     const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
     unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
 
@@ -121,12 +117,14 @@ public:
         if (SPtr != Ptr)
           continue;
 
-        TypeSize TS = DL->getTypeStoreSize(ValTy);
-        if (TS.isScalable())
+        TypeSize StoreSize = DL->getTypeStoreSize(ValTy);
+        TypeSize AllocSize = DL->getTypeAllocSize(ValTy);
+        if (StoreSize.isScalable() || AllocSize.isScalable())
           continue;
-        uint64_t Size = TS.getFixedValue();
-        if (Size == 0 || Size > MaxBytes)
+        uint64_t CopySize = StoreSize.getFixedValue();
+        if (CopySize == 0 || CopySize > MaxBytes)
           continue;
+        uint64_t SlotSize = AllocSize.getFixedValue();
         Align MinAlign = Align(16);
         Align LoadAlign = LI->getAlign();
         Align StoreAlign = SI->getAlign();
@@ -138,7 +136,7 @@ public:
         LLVM_DEBUG({
           dbgs() << "[LDSBuffer] Candidate found: load->store same ptr in "
                  << F.getName() << '\n';
-          dbgs() << "            size=" << Size
+          dbgs() << "            size=" << CopySize
                  << "B, loadAlign=" << LoadAlign.value()
                  << ", storeAlign=" << StoreAlign.value()
                  << ", chosenAlign=" << Alignment.value()
@@ -147,25 +145,24 @@ public:
         IRBuilder<> BLoad(LI);
 
         // Ensure LDS budget allows allocating a per-thread slot.
-        uint32_t NewSize = alignTo(localUsage, Alignment);
-        NewSize += WorkGroupSize * static_cast<uint32_t>(Size);
-        if (NewSize > localLimit)
+        if (WorkGroupSize == 0 || SlotSize > Budget.Limit / WorkGroupSize)
           continue;
-        localUsage = NewSize;
-        auto [GV, SlotPtr] =
-            createLDSGlobalAndThreadSlot(F, ValTy, Alignment, "ldsbuf", BLoad);
+        if (!Budget.tryReserve(SlotSize * WorkGroupSize, Alignment))
+          continue;
+        auto [GV, SlotPtr] = createLDSGlobalAndThreadSlot(
+            F, ValTy, WorkGroupSize, Alignment, BLoad);
         // memcpy p3 <- p1
         LLVM_DEBUG(dbgs() << "[LDSBuffer] Insert memcpy global->LDS: "
-                          << GV->getName() << ", bytes=" << Size
+                          << GV->getName() << ", bytes=" << CopySize
                           << ", align=" << Alignment.value() << '\n');
-        BLoad.CreateMemCpy(SlotPtr, Alignment, Ptr, LoadAlign, TS);
+        BLoad.CreateMemCpy(SlotPtr, Alignment, Ptr, LoadAlign, StoreSize);
 
         // Replace the final store with memcpy LDS->global.
         IRBuilder<> BStore(SI);
         LLVM_DEBUG(dbgs() << "[LDSBuffer] Insert memcpy LDS->global: "
-                          << GV->getName() << ", bytes=" << Size
+                          << GV->getName() << ", bytes=" << CopySize
                           << ", align=" << Alignment.value() << '\n');
-        BStore.CreateMemCpy(SPtr, StoreAlign, SlotPtr, Alignment, TS);
+        BStore.CreateMemCpy(SPtr, StoreAlign, SlotPtr, Alignment, StoreSize);
 
         ToErase.push_back(SI);
         ToErase.push_back(LI);
@@ -188,14 +185,13 @@ private:
   // Create an LDS array [WGSize x ElemTy] and return pointer to per-thread
   // slot.
   std::pair<GlobalVariable *, Value *>
-  createLDSGlobalAndThreadSlot(Function &F, Type *ElemTy, Align Alignment,
-                               StringRef BaseName, IRBuilder<> &Builder) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-    unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
+  createLDSGlobalAndThreadSlot(Function &F, Type *ElemTy,
+                               unsigned WorkGroupSize, Align Alignment,
+                               IRBuilder<> &Builder) {
     Type *ArrTy = ArrayType::get(ElemTy, WorkGroupSize);
     GlobalVariable *GV = new GlobalVariable(
         *Mod, ArrTy, /*isConstant=*/false, GlobalValue::InternalLinkage,
-        PoisonValue::get(ArrTy), (F.getName() + "." + BaseName).str(), nullptr,
+        PoisonValue::get(ArrTy), (F.getName() + ".ldsbuf").str(), nullptr,
         GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     GV->setAlignment(Alignment);
@@ -206,7 +202,7 @@ private:
              << ", align=" << Alignment.value() << '\n';
     });
 
-    Value *LinearTID = AMDGPU::buildLinearThreadId(Builder, *Mod, ST);
+    Value *LinearTID = AMDGPU::buildLinearThreadId(Builder, TM);
     LLVMContext &Ctx = Mod->getContext();
     Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Ctx)),
                         LinearTID};

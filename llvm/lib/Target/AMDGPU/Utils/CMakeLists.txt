@@ -4,7 +4,6 @@ add_llvm_component_library(LLVMAMDGPUUtils
   AMDGPUDelayedMCExpr.cpp
   AMDGPUPALMetadata.cpp
   AMDKernelCodeTUtils.cpp
-  AMDGPULDSUtils.cpp
 
   LINK_COMPONENTS
   Analysis

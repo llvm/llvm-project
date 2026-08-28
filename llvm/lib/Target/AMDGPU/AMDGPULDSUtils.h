@@ -10,38 +10,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
-#define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPULDSUTILS_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPULDSUTILS_H
 
+#include "llvm/Support/Alignment.h"
 #include <cstdint>
-#include <utility>
 
 namespace llvm {
 
-class AMDGPUSubtarget;
 class Function;
 class IRBuilderBase;
-class Module;
 class TargetMachine;
 class Value;
 
 namespace AMDGPU {
 
-/// Get workitem id for dimension N (0,1,2).
-Value *getWorkitemID(IRBuilderBase &Builder, Module &M,
-                     const AMDGPUSubtarget &ST, unsigned N);
-
 /// Compute linear thread id within a workgroup.
-Value *buildLinearThreadId(IRBuilderBase &Builder, Module &M,
-                           const AMDGPUSubtarget &ST);
+Value *buildLinearThreadId(IRBuilderBase &Builder, const TargetMachine &TM);
 
 struct AMDGPULDSBudget {
-  uint32_t currentUsage = 0;
-  uint32_t limit = 0;
-  unsigned maxOccupancy = 0;
-  bool promotable = false;
-  bool disabledDueToLocalArg = false;
-  bool disabledDueToExternDynShared = false;
+  uint64_t CurrentUsage = 0;
+  uint64_t Limit = 0;
+  unsigned MaxOccupancy = 0;
+  bool Promotable = false;
+  bool DisabledDueToLocalArg = false;
+  bool DisabledDueToExternDynShared = false;
+
+  /// Reserve an allocation while allowing for any possible leading padding.
+  bool tryReserve(uint64_t AllocSize, Align Alignment);
 };
 
 AMDGPULDSBudget computeLDSBudget(const Function &F, const TargetMachine &TM);
@@ -50,4 +46,4 @@ AMDGPULDSBudget computeLDSBudget(const Function &F, const TargetMachine &TM);
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPULDSUTILS_H
