@@ -6161,6 +6161,10 @@ def mcrbits : Flag<["-"], "mcrbits">, Group<m_ppc_Features_Group>,
              "(the enablement of CR-bit tracking support) is the default for "
              "POWER8 and above, as well as for all other CPUs when "
              "optimization is applied (-O2 and above).">;
+def mfloat16 : Flag<["-"], "mfloat16">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable half-precision floating point (experimental).">,
+  MarshallingInfoFlag<LangOpts<"PPCFloat16">>;
 def mno_crbits : Flag<["-"], "mno-crbits">, Group<m_ppc_Features_Group>;
 def minvariant_function_descriptors :
   Flag<["-"], "minvariant-function-descriptors">, Group<m_ppc_Features_Group>;

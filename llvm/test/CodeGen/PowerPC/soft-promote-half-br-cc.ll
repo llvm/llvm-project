@@ -8,11 +8,7 @@
 define i32 @test_br_cc_olt(half %a, half %b) nounwind {
 ; CHECK-P9-LABEL: test_br_cc_olt:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    clrlwi 3, 3, 16
-; CHECK-P9-NEXT:    clrlwi 4, 4, 16
-; CHECK-P9-NEXT:    mtfprwz 0, 4
-; CHECK-P9-NEXT:    mtfprwz 1, 3
-; CHECK-P9-NEXT:    xscvhpdp 0, 0
+; CHECK-P9-NEXT:    xscvhpdp 0, 2
 ; CHECK-P9-NEXT:    xscvhpdp 1, 1
 ; CHECK-P9-NEXT:    fcmpu 0, 1, 0
 ; CHECK-P9-NEXT:    bge 0, .LBB0_2
@@ -26,19 +22,19 @@ define i32 @test_br_cc_olt(half %a, half %b) nounwind {
 ; CHECK-P8-LABEL: test_br_cc_olt:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    mflr 0
-; CHECK-P8-NEXT:    std 30, -24(1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stfd 30, -16(1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stdu 1, -64(1)
-; CHECK-P8-NEXT:    mr 30, 3
-; CHECK-P8-NEXT:    clrldi 3, 4, 48
-; CHECK-P8-NEXT:    std 0, 80(1)
-; CHECK-P8-NEXT:    bl __extendhfsf2
-; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    clrldi 3, 30, 48
+; CHECK-P8-NEXT:    stdu 1, -48(1)
 ; CHECK-P8-NEXT:    fmr 31, 1
+; CHECK-P8-NEXT:    fmr 1, 2
+; CHECK-P8-NEXT:    std 0, 64(1)
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    fcmpu 0, 1, 31
+; CHECK-P8-NEXT:    fmr 30, 1
+; CHECK-P8-NEXT:    fmr 1, 31
+; CHECK-P8-NEXT:    bl __extendhfsf2
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    fcmpu 0, 1, 30
 ; CHECK-P8-NEXT:    bge 0, .LBB0_2
 ; CHECK-P8-NEXT:  # %bb.1: # %if.then
 ; CHECK-P8-NEXT:    li 3, 1
@@ -46,10 +42,10 @@ define i32 @test_br_cc_olt(half %a, half %b) nounwind {
 ; CHECK-P8-NEXT:  .LBB0_2: # %if.else
 ; CHECK-P8-NEXT:    li 3, 0
 ; CHECK-P8-NEXT:  .LBB0_3: # %if.then
-; CHECK-P8-NEXT:    addi 1, 1, 64
+; CHECK-P8-NEXT:    addi 1, 1, 48
 ; CHECK-P8-NEXT:    ld 0, 16(1)
 ; CHECK-P8-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld 30, -24(1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lfd 30, -16(1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr 0
 ; CHECK-P8-NEXT:    blr
   %cmp = fcmp olt half %a, %b
@@ -64,10 +60,8 @@ if.else:
 define i32 @test_br_cc_constant(half %a) nounwind {
 ; CHECK-P9-LABEL: test_br_cc_constant:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    clrlwi 3, 3, 16
+; CHECK-P9-NEXT:    xscvhpdp 0, 1
 ; CHECK-P9-NEXT:    xxlxor 1, 1, 1
-; CHECK-P9-NEXT:    mtfprwz 0, 3
-; CHECK-P9-NEXT:    xscvhpdp 0, 0
 ; CHECK-P9-NEXT:    fcmpu 0, 0, 1
 ; CHECK-P9-NEXT:    ble 0, .LBB1_2
 ; CHECK-P9-NEXT:  # %bb.1: # %if.then
@@ -81,7 +75,6 @@ define i32 @test_br_cc_constant(half %a) nounwind {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    mflr 0
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
-; CHECK-P8-NEXT:    clrldi 3, 3, 48
 ; CHECK-P8-NEXT:    std 0, 48(1)
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop
@@ -110,10 +103,8 @@ if.else:
 define fastcc i16 @test_vector_reduce_br(half %arg) nounwind {
 ; CHECK-P9-LABEL: test_vector_reduce_br:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    clrlwi 3, 3, 16
+; CHECK-P9-NEXT:    xscvhpdp 0, 1
 ; CHECK-P9-NEXT:    xxlxor 1, 1, 1
-; CHECK-P9-NEXT:    mtfprwz 0, 3
-; CHECK-P9-NEXT:    xscvhpdp 0, 0
 ; CHECK-P9-NEXT:    fcmpu 0, 0, 1
 ; CHECK-P9-NEXT:    bc 12, 0, .LBB2_3
 ; CHECK-P9-NEXT:  # %bb.1:
@@ -130,7 +121,6 @@ define fastcc i16 @test_vector_reduce_br(half %arg) nounwind {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    mflr 0
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
-; CHECK-P8-NEXT:    clrldi 3, 3, 48
 ; CHECK-P8-NEXT:    std 0, 48(1)
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop

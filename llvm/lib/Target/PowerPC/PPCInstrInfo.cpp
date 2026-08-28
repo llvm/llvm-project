@@ -1935,7 +1935,12 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     OpcodeIndex = SOK_VRVectorSpill;
   } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_VSXVectorSpill;
-  } else if (PPC::VSFRCRegClass.hasSubClassEq(RC)) {
+  } else if (PPC::VSFRCRegClass.hasSubClassEq(RC) ||
+             PPC::VHFRCRegClass.hasSubClassEq(RC)) {
+    // VHFRC (f16) shares the 64-bit VSX scalar registers with VSFRC. Spill the
+    // full doubleword: the 16-bit value occupies the low bits, so a full-width
+    // store/reload is value-preserving and works on both P8 and P9 (no
+    // halfword VSX store exists on P8).
     OpcodeIndex = SOK_VectorFloat8Spill;
   } else if (PPC::VSSRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_VectorFloat4Spill;
