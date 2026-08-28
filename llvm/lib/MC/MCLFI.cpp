@@ -26,6 +26,8 @@
 
 static const char NoteNamespace[] = "LFI";
 
+static constexpr unsigned X86BundleSize = 32;
+
 namespace llvm {
 
 cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
@@ -48,6 +50,14 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
     Streamer.setLFIRewriter(std::unique_ptr<MCLFIRewriter>(
         TheTarget->createMCLFIRewriter(Ctx, std::move(MRI), std::move(MII))));
   }
+}
+
+void emitLFIBundleAlign(MCStreamer &Streamer, MCContext &Ctx) {
+  const Triple &TheTriple = Ctx.getTargetTriple();
+  assert(TheTriple.isLFI());
+
+  if (TheTriple.getArch() == Triple::x86_64)
+    Streamer.emitBundleAlignMode(Align(X86BundleSize));
 }
 
 void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {

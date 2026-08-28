@@ -14,6 +14,15 @@ contains
     allocate(r(n))
     r = 7
   end function
+  function frchar(n) result(r)
+    integer, value :: n
+    character(len=:), allocatable, managed :: r
+    allocate(character(len=n) :: r)
+  end function
+  function frcharfix() result(r)
+    character(len=4), allocatable, managed :: r
+    allocate(r)
+  end function
 end module
 
 ! Assignments that are data transfers.
@@ -309,4 +318,16 @@ subroutine managed_component_attr_section_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_section_assign()
+! CHECK-NOT: cuf.data_transfer
+
+! A scalar character result carries its length outside of a descriptor, so a
+! transfer would copy raw bytes instead of padding or truncating the destination.
+subroutine managed_char_func_result()
+  use mfr
+  character(len=16) :: h
+  h = frchar(4)
+  h = frcharfix()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_char_func_result()
 ! CHECK-NOT: cuf.data_transfer

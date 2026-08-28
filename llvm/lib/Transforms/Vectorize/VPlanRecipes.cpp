@@ -484,7 +484,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     AssertOperandType(1, Op0Ty);
     return Type::getVoidTy(Ctx);
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
@@ -617,7 +616,7 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+  assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
           getNumOperandsForOpcode() == getNumOperands() ||
@@ -666,7 +665,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::ExtractVectorForPart:
     return 2;
@@ -717,7 +715,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
@@ -851,15 +848,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return V1;
     Value *V2 = State.get(getOperand(1));
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
-  }
-  case VPInstruction::CalculateTripCountMinusVF: {
-    Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *VFxUF = State.get(getOperand(1), VPLane(0));
-    Value *Sub = Builder.CreateSub(ScalarTC, VFxUF);
-    Value *Cmp =
-        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, VFxUF);
-    Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
-    return Builder.CreateSelect(Cmp, Sub, Zero);
   }
   case VPInstruction::ExplicitVectorLength: {
     // TODO: Restructure this code with an explicit remainder loop, vsetvli can
@@ -1436,7 +1424,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(this->getScalarType(), VF);
     return Ctx.TTI.getShuffleCost(
         TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
-        cast<VectorType>(VectorTy), {}, Ctx.CostKind, -1);
+        cast<VectorType>(VectorTy), Ctx.CostKind, {}, -1);
   }
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask: {
@@ -1468,7 +1456,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
       return 0;
     auto *VectorTy = cast<VectorType>(toVectorTy(EltTy, VF));
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                                  VectorTy, /*Mask=*/{}, Ctx.CostKind,
+                                  VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
   }
   case VPInstruction::ExtractLastLane: {
@@ -1597,7 +1585,7 @@ void VPInstruction::execute(VPTransformState &State) {
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+  assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
   State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
@@ -1646,7 +1634,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
@@ -1714,7 +1701,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
@@ -1802,9 +1788,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnTwoConds:
     O << "branch-on-two-conds";
-    break;
-  case VPInstruction::CalculateTripCountMinusVF:
-    O << "TC > VF ? TC - VF : 0";
     break;
   case VPInstruction::CanonicalIVIncrementForPart:
     O << "VF * Part +";
@@ -2574,8 +2557,11 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode, Type *ResultTy) {
   case Instruction::FPTrunc:
     return FastMathFlags();
   case Instruction::Select:
-    // Selects only have fast-math flags if they produce a floating-point value.
-    if (ResultTy && FPMathOperator::isSupportedFloatingPointType(ResultTy))
+  case Instruction::PHI:
+  case Instruction::Call:
+    // Selects, phis and calls only have fast-math flags if they have a
+    // supported floating-point result type.
+    if (FPMathOperator::isSupportedFloatingPointType(ResultTy))
       return FastMathFlags();
     return VPIRFlags();
   case Instruction::ICmp:
@@ -2629,7 +2615,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   llvm_unreachable("Unknown OperationType enum");
 }
 
-bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
+bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode,
+                                          Type *ResultTy) const {
   // Handle opcodes without default flags.
   if (Opcode == Instruction::ICmp)
     return OpType == OperationType::Cmp;
@@ -2638,7 +2625,7 @@ bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
   if (Opcode == VPInstruction::ComputeReductionResult)
     return OpType == OperationType::ReductionOp;
 
-  OperationType Required = getDefaultFlags(Opcode).OpType;
+  OperationType Required = getDefaultFlags(Opcode, ResultTy).OpType;
   return Required == OperationType::Other || Required == OpType;
 }
 #endif
@@ -3440,13 +3427,15 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReductionEVLRecipe::execute(VPTransformState &State) {
 
+  assert(State.VF.isVector() &&
+         "Shouldn't generate VPReductionEVLRecipe with scalar VF");
   auto &Builder = State.Builder;
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
   Builder.setFastMathFlags(getFastMathFlagsOrNone());
 
   RecurKind Kind = getRecurrenceKind();
-  Value *Prev = State.get(getChainOp(), /*IsScalar*/ true);
+  Value *Prev = State.get(getChainOp(), /*IsScalar*/ !isPartialReduction());
   Value *VecOp = State.get(getVecOp());
   Value *EVL = State.get(getEVL(), VPLane(0));
 
@@ -3457,7 +3446,27 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
 
   Value *NewRed;
-  if (isOrdered()) {
+  if (isPartialReduction()) {
+    // For partial reductions, we need to generate a predicated select
+    // (vp.merge) since `@llvm.vector.partial.reduce()` doesn't have a vector
+    // predicated version.
+    VectorType *VecTy = cast<VectorType>(VecOp->getType());
+    Value *Identity = getRecurrenceIdentity(Kind, VecTy->getElementType(),
+                                            getFastMathFlagsOrNone());
+    Identity =
+        State.Builder.CreateVectorSplat(VecTy->getElementCount(), Identity);
+
+    // TODO: Calculate the predicate cost for the partial reduction.
+    Value *NewVecOp = State.Builder.CreateIntrinsic(
+        VecTy, Intrinsic::vp_merge, {Mask, VecOp, Identity, EVL});
+    assert((Kind == RecurKind::Add || Kind == RecurKind::FAdd) &&
+           "Unexpected partial reduction kind");
+    NewRed = State.Builder.CreateIntrinsic(
+        Prev->getType(),
+        Kind == RecurKind::Add ? Intrinsic::vector_partial_reduce_add
+                               : Intrinsic::vector_partial_reduce_fadd,
+        {Prev, NewVecOp}, State.Builder.getFastMathFlags(), "partial.reduce");
+  } else if (isOrdered()) {
     NewRed = createOrderedReduction(Builder, Kind, VecOp, Prev, Mask, EVL);
   } else {
     NewRed = createSimpleReduction(Builder, VecOp, Kind, Mask, EVL);
@@ -3468,7 +3477,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
           (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
           Prev);
   }
-  State.set(this, NewRed, /*IsScalar*/ true);
+  State.set(this, NewRed, !isPartialReduction());
 }
 
 InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
@@ -3576,7 +3585,7 @@ VPExpressionRecipe::VPExpressionRecipe(
       R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
-void VPExpressionRecipe::decompose() {
+SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
     // Since the list could contain duplicates, make sure the recipe hasn't
     // already been inserted.
@@ -3587,7 +3596,9 @@ void VPExpressionRecipe::decompose() {
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
 
   replaceAllUsesWith(ExpressionRecipes.back());
+  SmallVector<VPSingleDefRecipe *> DecomposedRecipes(ExpressionRecipes);
   ExpressionRecipes.clear();
+  return DecomposedRecipes;
 }
 
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
@@ -3695,8 +3706,23 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  VPValue *RdxStart =
-      getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1));
+  VPValue *Mask = getOperand(getNumOperands() - 1);
+  VPValue *EVL =
+      isa<VPReductionEVLRecipe>(Red)
+          ? getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1))
+          : nullptr;
+  VPValue *RdxStart = getOperand(
+      getNumOperands() - (Red->isConditional() ? 2 : 1) - (EVL ? 1 : 0));
+  auto PrintEVLAndMask = [&]() {
+    if (EVL) {
+      O << ", ";
+      EVL->printAsOperand(O, SlotTracker);
+    }
+    if (Red->isConditional()) {
+      O << ", ";
+      Mask->printAsOperand(O, SlotTracker);
+    }
+  };
 
   switch (ExpressionType) {
   case ExpressionTypes::NegatedExtendedReduction:
@@ -3715,10 +3741,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
       << *Ext0->getScalarType();
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
+    PrintEVLAndMask();
     O << ")";
     break;
   }
@@ -3739,10 +3762,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
     O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
       << *Ext1->getScalarType() << ")";
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
+    PrintEVLAndMask();
     O << "))";
     break;
   }
@@ -3774,10 +3794,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
         << *Ext1->getScalarType() << ")";
     }
-    if (Red->isConditional()) {
-      O << ", ";
-      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    }
+    PrintEVLAndMask();
     O << ")";
     break;
   }
@@ -3808,7 +3825,10 @@ void VPReductionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPReductionEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                        VPSlotTracker &SlotTracker) const {
-  O << Indent << "REDUCE ";
+  if (isPartialReduction())
+    O << Indent << "PARTIAL-REDUCE ";
+  else
+    O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
@@ -4869,7 +4889,7 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
 
   return Cost + IG->getNumMembers() *
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, VectorTy, {}, Ctx.CostKind,
+                                           VectorTy, VectorTy, Ctx.CostKind, {},
                                            0);
 }
 

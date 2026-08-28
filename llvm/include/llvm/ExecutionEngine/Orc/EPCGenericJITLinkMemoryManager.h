@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // Implements JITLinkMemoryManager by calling executor-side wrapper functions
-// through rt::Proxy objects.
+// through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericJITLinkMemoryManagerSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,9 +23,11 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/GenericMemoryManagerProxies.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMap.h"
 #include "llvm/Support/Compiler.h"
+
+#include <cstdint>
 
 namespace llvm {
 namespace orc {
@@ -30,40 +35,11 @@ namespace orc {
 class LLVM_ABI EPCGenericJITLinkMemoryManager
     : public jitlink::JITLinkMemoryManager {
 public:
-  /// The resolved controller-side handle to an executor-side memory manager:
-  /// the address of the allocator instance (passed as the first argument to
-  /// each call) plus the proxies for its functions. These are
-  /// protocol-agnostic: the Create methods populate them for the runtime's SPS
-  /// controller interface, but a client targeting a different protocol can
-  /// build its own Bindings and pass them to the constructor.
-  ///
-  /// Deinitialize is part of the interface but is not currently used by this
-  /// manager.
-  struct Bindings {
-    ExecutorAddr Instance;
-    rt::MemMgrReserveProxy Reserve;
-    rt::MemMgrInitializeProxy Initialize;
-    rt::MemMgrDeinitializeProxy Deinitialize;
-    rt::MemMgrReleaseProxy Release;
-  };
-
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of
   /// memory-manager bindings.
-  EPCGenericJITLinkMemoryManager(ExecutionSession &ES, Bindings B)
+  EPCGenericJITLinkMemoryManager(ExecutionSession &ES,
+                                 SimpleMemoryMapBindings B)
       : ES(ES), B(std::move(B)) {}
-
-  /// Create an EPCGenericJITLinkMemoryManager using the given implementation
-  /// symbol names. These will be looked up in the given JITDylib.
-  static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
-                           rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
-
-  /// Create an EPCGenericJITLinkMemoryManager using the given implementation
-  /// symbol names. These will be looked up in the given ExecutionSession's
-  /// Bootstrap JITDylib.
-  static Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-  Create(ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs =
-                                   rt::orc_rt_SimpleNativeMemoryMapSPSSymbols);
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;
@@ -84,7 +60,7 @@ private:
                           OnAllocatedFunction OnAllocated);
 
   ExecutionSession &ES;
-  Bindings B;
+  SimpleMemoryMapBindings B;
 };
 
 } // end namespace orc
