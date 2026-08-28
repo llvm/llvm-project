@@ -5564,7 +5564,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   // add P1.
   if (const auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
     SCEVWrapPredicate::IncrementWrapFlags AddedFlags =
-        Signed ? SCEVWrapPredicate::IncrementNSSW
+        Signed ? SCEVWrapPredicate::IncrementNSUW
                : SCEVWrapPredicate::IncrementNUSW;
     const SCEVPredicate *AddRecPred = getWrapPredicate(AR, AddedFlags);
     Predicates.push_back(AddRecPred);
@@ -5606,9 +5606,8 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
     return std::nullopt;
   }
 
-  // The Step is always Signed (because the overflow checks are either
-  // NSSW or NUSW)
-  const SCEV *AccumExtended = getExtendedExpr(Accum, /*CreateSignExtend=*/true);
+  // The Step is unsigned in the case of nsuw, and signed in the case of nusw.
+  const SCEV *AccumExtended = getExtendedExpr(Accum, !Signed);
   if (PredIsKnownFalse(Accum, AccumExtended)) {
     LLVM_DEBUG(dbgs() << "P3 is compile-time false\n";);
     return std::nullopt;
@@ -15282,11 +15281,18 @@ public:
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Operand);
     if (AR && AR->getLoop() == L && AR->isAffine()) {
       // This couldn't be folded because the operand didn't have the nuw
-      // flag. Add the nusw flag as an assumption that we could make.
+      // flag. Add the nusw flag, falling back to irreducible,  as an assumption
+      // that we could make.
       const SCEV *Step = AR->getStepRecurrence(SE);
       Type *Ty = Expr->getType();
-      if (addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNUSW))
+      if (!SE.isKnownNegative(AR->getStart()) &&
+          addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNUSW)) {
         return SE.getAddRecExpr(SE.getZeroExtendExpr(AR->getStart(), Ty),
+                                SE.getSignExtendExpr(Step, Ty), L,
+                                AR->getNoWrapFlags());
+      }
+      if (addOverflowAssumption(AR, SCEVWrapPredicate::IncrementIrreducible))
+        return SE.getAddRecExpr(SE.getSignExtendExpr(AR->getStart(), Ty),
                                 SE.getSignExtendExpr(Step, Ty), L,
                                 AR->getNoWrapFlags());
     }
@@ -15298,10 +15304,17 @@ public:
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Operand);
     if (AR && AR->getLoop() == L && AR->isAffine()) {
       // This couldn't be folded because the operand didn't have the nsw
-      // flag. Add the nssw flag as an assumption that we could make.
+      // flag. Add the nsuw flag, falling back to irreducible, as an assumption
+      // that we could make.
       const SCEV *Step = AR->getStepRecurrence(SE);
       Type *Ty = Expr->getType();
-      if (addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNSSW))
+      if (!SE.isKnownNegative(Step) &&
+          addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNSUW)) {
+        return SE.getAddRecExpr(SE.getSignExtendExpr(AR->getStart(), Ty),
+                                SE.getZeroExtendExpr(Step, Ty), L,
+                                AR->getNoWrapFlags());
+      }
+      if (addOverflowAssumption(AR, SCEVWrapPredicate::IncrementIrreducible))
         return SE.getAddRecExpr(SE.getSignExtendExpr(AR->getStart(), Ty),
                                 SE.getSignExtendExpr(Step, Ty), L,
                                 AR->getNoWrapFlags());
@@ -15375,39 +15388,13 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
     SmallVectorImpl<const SCEVPredicate *> &Preds) {
   SmallVector<const SCEVPredicate *> TransformPreds;
   S = SCEVPredicateRewriter::rewrite(S, L, *this, &TransformPreds, nullptr);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
-
-  if (!AddRec)
-    return nullptr;
-
-  // Check if any of the transformed predicates is known to be false. In that
-  // case, it doesn't make sense to convert to a predicated AddRec, as the
-  // versioned loop will never execute.
-  for (const SCEVPredicate *Pred : TransformPreds) {
-    auto *WrapPred = dyn_cast<SCEVWrapPredicate>(Pred);
-    if (!WrapPred || WrapPred->getFlags() != SCEVWrapPredicate::IncrementNSSW)
-      continue;
-
-    const SCEVAddRecExpr *AddRecToCheck = WrapPred->getExpr();
-    const SCEV *ExitCount = getBackedgeTakenCount(AddRecToCheck->getLoop());
-    if (isa<SCEVCouldNotCompute>(ExitCount))
-      continue;
-
-    const SCEV *Step = AddRecToCheck->getStepRecurrence(*this);
-    if (!Step->isOne())
-      continue;
-
-    ExitCount = getTruncateOrSignExtend(ExitCount, Step->getType());
-    const SCEV *Add = getAddExpr(AddRecToCheck->getStart(), ExitCount);
-    if (isKnownPredicate(CmpInst::ICMP_SLT, Add, AddRecToCheck->getStart()))
-      return nullptr;
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+    // Since the transformation was successful, we can now transfer the SCEV
+    // predicates.
+    append_range(Preds, TransformPreds);
+    return AddRec;
   }
-
-  // Since the transformation was successful, we can now transfer the SCEV
-  // predicates.
-  Preds.append(TransformPreds.begin(), TransformPreds.end());
-
-  return AddRec;
+  return nullptr;
 }
 
 /// SCEV predicates
@@ -15463,8 +15450,7 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   if (Op->AR == AR)
     return true;
 
-  if (Flags != SCEVWrapPredicate::IncrementNSSW &&
-      Flags != SCEVWrapPredicate::IncrementNUSW)
+  if (Flags == SCEVWrapPredicate::IncrementAnyWrap)
     return false;
 
   const SCEV *Start = AR->getStart();
@@ -15476,31 +15462,35 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
   if (Start->getType()->isPointerTy() && Start->getType() != OpStart->getType())
     return false;
 
-  // NUSW/NSSW on a wider-type AddRec does not imply the same on a
+  // NUSW/NSUW on a wider-type AddRec does not imply the same on a
   // narrower-type AddRec.
   if (SE.getTypeSizeInBits(AR->getType()) >
       SE.getTypeSizeInBits(Op->AR->getType()))
     return false;
 
+  bool IsStepSigned = is_contained({SCEVWrapPredicate::IncrementNUSW,
+                                    SCEVWrapPredicate::IncrementIrreducible},
+                                   Flags);
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
-  if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
+  if (IsStepSigned &&
+      (!SE.isKnownNonNegative(Step) || !SE.isKnownNonNegative(OpStep)))
     return false;
 
-  // If both steps are positive, this implies N, if N's start and step are
-  // ULE/SLE (for NSUW/NSSW) than this'.
+  bool IsStartSigned = is_contained({SCEVWrapPredicate::IncrementNSUW,
+                                     SCEVWrapPredicate::IncrementIrreducible},
+                                    Flags);
   Type *WiderTy = SE.getWiderType(Step->getType(), OpStep->getType());
   Step = SE.getNoopOrZeroExtend(Step, WiderTy);
-  OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
+  Start = IsStartSigned ? SE.getNoopOrSignExtend(Start, WiderTy)
+                        : SE.getNoopOrZeroExtend(Start, WiderTy);
 
-  bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
-  OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
-                  : SE.getNoopOrSignExtend(OpStart, WiderTy);
-  Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)
-                : SE.getNoopOrSignExtend(Start, WiderTy);
-  CmpInst::Predicate Pred = IsNUW ? CmpInst::ICMP_ULE : CmpInst::ICMP_SLE;
-  return SE.isKnownPredicate(Pred, OpStep, Step) &&
-         SE.isKnownPredicate(Pred, OpStart, Start);
+  return SE.isKnownPredicate(IsStartSigned ? CmpInst::ICMP_SLE
+                                           : CmpInst::ICMP_ULE,
+                             OpStart, Start) &&
+         SE.isKnownPredicate(IsStepSigned ? CmpInst::ICMP_SLE
+                                          : CmpInst::ICMP_ULE,
+                             OpStep, Step);
 }
 
 bool SCEVWrapPredicate::isAlwaysTrue() const {
@@ -15508,7 +15498,7 @@ bool SCEVWrapPredicate::isAlwaysTrue() const {
   IncrementWrapFlags IFlags = Flags;
 
   if (ScalarEvolution::setFlags(ScevFlags, SCEV::FlagNSW) == ScevFlags)
-    IFlags = clearFlags(IFlags, IncrementNSSW);
+    IFlags = clearFlags(IFlags, IncrementIrreducible);
 
   return IFlags == IncrementAnyWrap;
 }
@@ -15517,8 +15507,10 @@ void SCEVWrapPredicate::print(raw_ostream &OS, unsigned Depth) const {
   OS.indent(Depth) << *getExpr() << " Added Flags: ";
   if (SCEVWrapPredicate::IncrementNUSW & getFlags())
     OS << "<nusw>";
-  if (SCEVWrapPredicate::IncrementNSSW & getFlags())
-    OS << "<nssw>";
+  if (SCEVWrapPredicate::IncrementNSUW & getFlags())
+    OS << "<nsuw>";
+  if (SCEVWrapPredicate::IncrementIrreducible & getFlags())
+    OS << "<irr>";
   OS << "\n";
 }
 

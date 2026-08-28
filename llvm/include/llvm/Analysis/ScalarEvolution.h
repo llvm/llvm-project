@@ -478,7 +478,7 @@ public:
 };
 
 /// This class represents an assumption made on an AddRec expression. Given an
-/// affine AddRec expression {a,+,b}, we assume that it has the nssw or nusw
+/// affine AddRec expression {a,+,b}, we assume that it has the nsuw or nusw
 /// flags (defined below) in the first X iterations of the loop, where X is a
 /// SCEV expression returned by getPredicatedBackedgeTakenCount).
 ///
@@ -489,10 +489,17 @@ public:
 /// have more than X iterations.
 class LLVM_ABI SCEVWrapPredicate final : public SCEVPredicate {
 public:
-  /// Similar to SCEV::NoWrapFlags, but with slightly different semantics
-  /// for FlagNUSW. The increment is considered to be signed, and a + b
-  /// (where b is the increment) is considered to wrap if:
+  /// IncrementNUSW and IncrementNSUW are the two primary reduced-case increment
+  /// wrap-flags. They are useful to reason about in AddRec expressions of the
+  /// form {Start, +, Step}.
+  ///
+  /// For NUSW, the increment is considered to be signed,
+  /// and a + b (where b is the increment) is considered to wrap if:
   ///    zext(a + b) != zext(a) + sext(b)
+  ///
+  /// For NSUW, the increment is considered to be unsigned,
+  /// and a + b (where b is the increment) is considered to wrap if:
+  ///    sext(a + b) != sext(a) + zext(b)
   ///
   /// If Signed is a function that takes an n-bit tuple and maps to the
   /// integer domain as the tuples value interpreted as twos complement,
@@ -502,21 +509,29 @@ public:
   ///
   /// 0 <= Unsigned(a) + Signed(b) < 2^n
   ///
-  /// The IncrementNSSW flag has identical semantics with SCEV::FlagNSW.
-  ///
-  /// Note that the IncrementNUSW flag is not commutative: if base + inc
-  /// has IncrementNUSW, then inc + base doesn't neccessarily have this
-  /// property. The reason for this is that this is used for sign/zero
-  /// extending affine AddRec SCEV expressions when a SCEVWrapPredicate is
-  /// assumed. A {base,+,inc} expression is already non-commutative with
-  /// regards to base and inc, since it is interpreted as:
+  /// Note that NUSW/NSUW are not commutative: if base + inc has one of the
+  /// flags, then inc + base doesn't neccessarily have this property. The reason
+  /// for this is that this is used for sign/zero extending affine AddRec SCEV
+  /// expressions when a SCEVWrapPredicate is assumed. A {base,+,inc} expression
+  /// is already non-commutative with regards to base and inc, since it is
+  /// interpreted as:
   ///     (((base + inc) + inc) + inc) ...
+  ///
+  /// NUSW can be thought of as weaker variant of NUW, and is useless if the LHS
+  /// of the increment is provably negative. Since we only add these to AddRecs
+  /// under (zero|sign)-extending operations, our speculative zero-extend of the
+  /// LHS would not fit in the narrower type. Similarly, NSUW can be thought of
+  /// as a weaker variant of NSW, and is only useful when the RHS of the
+  /// increment is not provably negative. When the appropriate operand is
+  /// provably negative, we simply fall back to sign-extending both operands,
+  /// and mark this case as Irreducible.
   enum IncrementWrapFlags {
-    IncrementAnyWrap = 0,     // No guarantee.
-    IncrementNUSW = (1 << 0), // No unsigned with signed increment wrap.
-    IncrementNSSW = (1 << 1), // No signed with signed increment wrap
-                              // (equivalent with SCEV::NSW)
-    IncrementNoWrapMask = (1 << 2) - 1
+    IncrementAnyWrap = 0,            // No guarantee.
+    IncrementNUSW = (1 << 0),        // No unsigned with signed increment wrap.
+    IncrementNSUW = (1 << 1),        // No signed with unsigned increment wrap.
+    IncrementIrreducible = (1 << 2), // No signed with signed increment wrap.
+    IncrementNoWrapMask = (1 << 3) - 1,
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IncrementNoWrapMask)
   };
 
   /// Convenient IncrementWrapFlags manipulation methods.
