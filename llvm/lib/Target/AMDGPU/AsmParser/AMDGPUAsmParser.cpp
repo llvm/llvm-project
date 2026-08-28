@@ -9327,6 +9327,10 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst, const OperandVector &Operands,
   // Parse a dummy operand as a placeholder for the SWZ operand. This enforces
   // agreement between MCInstrDesc.getNumOperands and MCInst.getNumOperands.
   Inst.addOperand(MCOperand::createImm(0));
+  // The LDS variants carry a trailing IsAsync operand. Parse a dummy the same
+  // way as the SWZ operand.
+  if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::IsAsync))
+    Inst.addOperand(MCOperand::createImm(0));
 }
 
 //===----------------------------------------------------------------------===//
