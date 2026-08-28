@@ -4300,6 +4300,9 @@ def warn_unguarded_availability_new :
 def warn_unguarded_availability_unavailable_new :
   Warning<warn_unguarded_availability_unavailable.Summary>,
   InGroup<UnguardedAvailabilityNew>;
+def warn_zippered_unguarded_availability :
+  Warning<"%0 is only available on %1 %2 and %3 %4 or newer">,
+  InGroup<UnguardedAvailabilityNew>;
 def note_decl_unguarded_availability_silence : Note<
   "annotate %select{%1|anonymous %1}0 with an availability attribute to silence this warning">;
 def note_unguarded_available_silence : Note<

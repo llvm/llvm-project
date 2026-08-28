@@ -8893,7 +8893,10 @@ static CXAvailabilityKind getCursorAvailabilityForDecl(const Decl *D) {
   if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->isDeleted())
     return CXAvailability_NotAvailable;
 
-  switch (D->getAvailability()) {
+  const TargetInfo &TI =
+      D->getTranslationUnitDecl()->getASTContext().getTargetInfo();
+  switch (
+      D->getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion())) {
   case AR_Available:
   case AR_NotYetIntroduced:
     if (const EnumConstantDecl *EnumConst = dyn_cast<EnumConstantDecl>(D))

@@ -298,6 +298,7 @@ LANGOPT(ConstantNSNumberLiterals , 1, 0, NotCompatible, "constant number literal
 LANGOPT(ConstantNSArrayLiterals , 1, 0, NotCompatible, "constant array literals")
 LANGOPT(ConstantNSDictionaryLiterals , 1, 0, NotCompatible, "constant dictionary literals")
 LANGOPT(InlineVisibilityHidden , 1, 0, Benign, "hidden visibility for inline C++ methods")
+LANGOPT(ZipperedAvailabilityChecks , 1, 0, NotCompatible, "check availability for target variant platform")
 ENUM_LANGOPT(DefaultVisibilityExportMapping, DefaultVisiblityExportMapping, 2, DefaultVisiblityExportMapping::None, Benign, "controls mapping of default visibility to dllexport")
 LANGOPT(IgnoreXCOFFVisibility, 1, 0, Benign, "All the visibility attributes that are specified in the source code are ignored in aix XCOFF.")
 LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0, Benign,

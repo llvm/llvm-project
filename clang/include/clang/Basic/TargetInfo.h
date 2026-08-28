@@ -260,6 +260,8 @@ protected:
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
+  mutable StringRef TargetVariantPlatform;
+  mutable VersionTuple TargetVariantPlatformMinVersion;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasAlignMac68kSupport : 1;
@@ -1736,6 +1738,28 @@ public:
   /// Retrieve the minimum desired version of the platform, to
   /// which the program should be compiled.
   VersionTuple getPlatformMinVersion() const { return PlatformMinVersion; }
+
+  /// Returns true when are building for an auxillary target variant platform.
+  bool hasTargetVariantPlatform() const {
+    return !TargetVariantPlatform.empty();
+  }
+
+  /// Retrieve the name of the target variant platform as it is used in the
+  /// availability attribute.
+  StringRef getTargetVariantPlatform() const {
+    assert(hasTargetVariantPlatform() &&
+           "no target variant platform specified");
+    return TargetVariantPlatform;
+  }
+
+  /// Retrieve the minimum desired deployment version of the target variant
+  /// platform,
+  /// for which the program should be compiled.
+  VersionTuple getTargetVariantPlatformMinVersion() const {
+    assert(hasTargetVariantPlatform() &&
+           "no target variant platform specified");
+    return TargetVariantPlatformMinVersion;
+  }
 
   bool isBigEndian() const { return BigEndian; }
   bool isLittleEndian() const { return !BigEndian; }

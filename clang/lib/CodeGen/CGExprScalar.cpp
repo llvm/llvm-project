@@ -634,14 +634,23 @@ public:
   }
 
   Value *VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
-    VersionTuple Version = E->getVersion();
+    VersionTuple Version = E->getVersionAsWritten();
+    VersionTuple VariantVersion = E->getVariantVersionAsWritten();
 
     // If we're checking for a platform older than our minimum deployment
     // target, we can fold the check away.
-    if (Version <= CGF.CGM.getTarget().getPlatformMinVersion())
+    if (!Version.empty() &&
+        Version <= CGF.CGM.getTarget().getPlatformMinVersion())
+      Version = VersionTuple();
+    if (!VariantVersion.empty() &&
+        VariantVersion <=
+            CGF.CGM.getTarget().getTargetVariantPlatformMinVersion())
+      VariantVersion = VersionTuple();
+
+    if (Version.empty() && VariantVersion.empty())
       return llvm::ConstantInt::get(Builder.getInt1Ty(), 1);
 
-    return CGF.EmitBuiltinAvailable(Version);
+    return CGF.EmitBuiltinAvailable(Version, VariantVersion);
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);
