@@ -421,7 +421,7 @@ void ChangeReporter<T>::handleIRAfterPass(Any IR, StringRef PassID,
                                           StringRef PassName) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
 
-  std::string Name = getIRName(IR, this->context);
+  std::string Name = getIRName(IR, context);
 
   if (isIgnored(PassID)) {
     if (VerboseMode)
@@ -825,7 +825,7 @@ void PrintIRInstrumentation::pushPassRunDescriptor(StringRef PassID, Any IR,
                                                    unsigned PassNumber) {
   const Module *M = unwrapModule(IR);
   PassRunDescriptorStack.emplace_back(M, PassNumber, getIRFileDisplayName(IR),
-                                      getIRName(IR, this->IRContext), PassID);
+                                      getIRName(IR, IRContext), PassID);
 }
 
 PrintIRInstrumentation::PassRunDescriptor
@@ -873,7 +873,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
 
   if (shouldPrintPassNumbers())
     dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
-           << " on " << getIRName(IR, this->IRContext) << "\n";
+           << " on " << getIRName(IR, IRContext) << "\n";
 
   if (shouldPrintAfterCurrentPassNumber())
     pushPassRunDescriptor(PassID, IR, CurrentPassNumber);
@@ -885,7 +885,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
     Stream << "; *** IR Dump Before ";
     if (shouldPrintBeforeSomePassNumber())
       Stream << CurrentPassNumber << "-";
-    Stream << PassID << " on " << getIRName(IR, this->IRContext)
+    Stream << PassID << " on " << getIRName(IR, IRContext)
            << " ***\n";
     unwrapAndPrint(Stream, IR);
   };
@@ -1058,7 +1058,7 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
 
   if (!ShouldRun && DebugLogging) {
     errs() << "Skipping pass " << PassID << " on "
-           << getIRName(IR, this->IRContext)
+           << getIRName(IR, IRContext)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -1070,7 +1070,7 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
 
   bool ShouldRun =
       Context.getOptPassGate().shouldRunPass(PassName,
-                         getIRName(IR, this->IRContext));
+                         getIRName(IR, IRContext));
   if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
     // invocations
@@ -1137,7 +1137,7 @@ void PrintPassInstrumentation::registerCallbacks(
 
     auto &OS = print();
      OS << "Running pass: " << PassID << " on "
-       << getIRName(IR, this->IRContext);
+      << getIRName(IR, this->IRContext);
     if (const auto *F = unwrapIR<Function>(IR)) {
       unsigned Count = F->getInstructionCount();
       OS << " (" << Count << " instruction";
@@ -1608,7 +1608,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, getIRName(IR, this->IRContext));
+  timeTraceProfilerBegin(PassID, getIRName(IR, IRContext));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
