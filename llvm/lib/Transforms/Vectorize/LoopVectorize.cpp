@@ -203,6 +203,13 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+// Tighter threshold for inner loops where runtime memory checks execute on
+// every outer-loop iteration, unlike top-level loops where they run only once.
+static cl::opt<unsigned> VectorizeMemoryCheckInnerLoopThreshold(
+    "vectorize-memory-check-inner-loop-threshold", cl::init(12), cl::Hidden,
+    cl::desc("The maximum allowed number of runtime memory checks for inner "
+             "loops where checks execute per outer-loop iteration"));
+
 static cl::opt<bool> ForcePartialAliasingVectorization(
     "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Replace pointer diff checks with alias masks."));
@@ -1588,8 +1595,20 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh =
-        LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
+    unsigned NumChecks = LAI.getNumRuntimePointerChecks();
+    unsigned EffectiveThreshold = VectorizeMemoryCheckThreshold;
+
+    // For inner loops, apply a tighter threshold. When vectorizing an inner
+    // loop, runtime memory overlap checks execute on every iteration of the
+    // enclosing outer loop. If the vectorizer's outer-loop interleaving creates
+    // a large number of pointer groups (from multiple memory ptrs derived from
+    // the same base ptr), the resulting O(N^2) pairwise checks become a
+    // significant overhead that the existing cost model does not account for.
+    if (L->getParentLoop() &&
+        NumChecks > VectorizeMemoryCheckInnerLoopThreshold)
+      EffectiveThreshold = VectorizeMemoryCheckInnerLoopThreshold;
+
+    CostTooHigh = NumChecks > EffectiveThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -1600,7 +1619,8 @@ public:
                    L->getHeader())
                << "loop not vectorized: too many memory checks needed";
       });
-      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
+      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed (" << NumChecks
+                        << " > " << EffectiveThreshold << ").\n");
       return;
     }
 
