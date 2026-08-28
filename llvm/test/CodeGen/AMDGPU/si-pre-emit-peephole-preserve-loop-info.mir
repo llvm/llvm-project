@@ -3,7 +3,9 @@
 # CHECK: Running analysis: MachineDominatorTreeAnalysis on vcc_and_removal_preserves_mli
 # CHECK: Running analysis: MachineLoopAnalysis on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Running pass: SIPreEmitPeepholePass on vcc_and_removal_preserves_mli
+# CHECK-NEXT: Running analysis: ReachingDefAnalysis on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Invalidating analysis: MachineDominatorTreeAnalysis on vcc_and_removal_preserves_mli
+# CHECK-NEXT: Invalidating analysis: ReachingDefAnalysis on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Running pass: MachineLoopPrinterPass on vcc_and_removal_preserves_mli
 # CHECK-NEXT: Machine loop info for machine function 'vcc_and_removal_preserves_mli':
 # CHECK-NOT: Running analysis: MachineLoopAnalysis on vcc_and_removal_preserves_mli
@@ -11,12 +13,17 @@
 
 ---
 name: vcc_and_removal_preserves_mli
+tracksRegLiveness: true
 body: |
   bb.0:
+    liveins: $vgpr0
+
     S_BRANCH %bb.1
 
   ; S_AND gets removed
   bb.1:
+    liveins: $vgpr0
+
     V_CMP_EQ_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc
@@ -27,12 +34,14 @@ body: |
 ...
 
 # CHECK-LABEL: Running pass: SIPreEmitPeepholePass on vcc_branch_destroys_loop
+# CHECK-NEXT: Running analysis: ReachingDefAnalysis on vcc_branch_destroys_loop
 # CHECK-NOT: Running analysis: MachineLoopAnalysis on vcc_branch_destroys_loop
 # CHECK: Machine loop info for machine function 'vcc_branch_destroys_loop':
 # CHECK-NOT: Loop at depth
 
 ---
 name: vcc_branch_destroys_loop
+tracksRegLiveness: true
 body: |
   bb.0:
     S_BRANCH %bb.1

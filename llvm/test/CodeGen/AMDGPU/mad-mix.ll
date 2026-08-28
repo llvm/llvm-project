@@ -353,8 +353,7 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX9GEN-NEXT:    v_mad_f32 v0, v3, v0, v2
-; GFX9GEN-NEXT:    v_mac_f32_e32 v2, v4, v1
-; GFX9GEN-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9GEN-NEXT:    v_mad_f32 v1, v4, v1, v2
 ; GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_mad_mix_v2f32_shuffle:
@@ -366,8 +365,7 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; VI-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI-NEXT:    v_mad_f32 v0, v3, v0, v2
-; VI-NEXT:    v_mac_f32_e32 v2, v4, v1
-; VI-NEXT:    v_mov_b32_e32 v1, v2
+; VI-NEXT:    v_mad_f32 v1, v4, v1, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mix_v2f32_shuffle:
@@ -532,8 +530,7 @@ define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v2
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; SDAG-CI-NEXT:    v_mac_f32_e32 v1, v0, v3
-; SDAG-CI-NEXT:    v_mov_b32_e32 v0, v1
+; SDAG-CI-NEXT:    v_mad_f32 v0, v0, v3, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mix_f32_absf16lo_f16lo_f16lo:

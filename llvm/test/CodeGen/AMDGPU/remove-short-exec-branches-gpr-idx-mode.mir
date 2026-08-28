@@ -5,6 +5,7 @@
 ---
 
 name: need_skip_gpr_idx_mode
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_mode
   ; CHECK: bb.0:
@@ -34,6 +35,7 @@ body: |
 ---
 
 name: need_skip_gpr_idx_on
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_on
   ; CHECK: bb.0:
@@ -67,6 +69,7 @@ body: |
 ---
 
 name: need_skip_gpr_idx_off
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_off
   ; CHECK: bb.0:
@@ -96,6 +99,7 @@ body: |
 ---
 
 name: need_skip_gpr_idx_idx
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_gpr_idx_idx
   ; CHECK: bb.0:

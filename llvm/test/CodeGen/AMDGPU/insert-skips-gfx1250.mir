@@ -3,6 +3,7 @@
 
 ---
 name: skip_wait_xcnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_wait_xcnt
   ; CHECK: bb.0:
@@ -33,6 +34,7 @@ body: |
 
 ---
 name: skip_wait_asynccnt
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: skip_wait_asynccnt
   ; CHECK: bb.0:

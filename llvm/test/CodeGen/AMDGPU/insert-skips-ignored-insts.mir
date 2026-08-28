@@ -4,6 +4,7 @@
 ---
 
 name: no_count_dbg_value
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: no_count_dbg_value
   ; CHECK: bb.0:

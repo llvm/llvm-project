@@ -6,6 +6,7 @@
 ---
 
 name: need_skip_setreg_imm32_b32
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_setreg_imm32_b32
   ; CHECK: bb.0:
@@ -37,6 +38,7 @@ body: |
 ---
 
 name: need_skip_setreg_b32
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_setreg_b32
   ; CHECK: bb.0:
@@ -71,6 +73,7 @@ body: |
 ---
 
 name: need_skip_denorm_mode
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_denorm_mode
   ; CHECK: bb.0:
@@ -101,6 +104,7 @@ body: |
 ---
 
 name: need_skip_round_mode
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_round_mode
   ; CHECK: bb.0:
@@ -131,15 +135,18 @@ body: |
 ---
 
 name: need_skip_writelane_b32
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_writelane_b32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
@@ -147,10 +154,12 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr0
     successors: %bb.1, %bb.2
     S_CBRANCH_EXECZ %bb.2, implicit $exec
 
   bb.1:
+    liveins: $vgpr0
     successors: %bb.2
     $sgpr0 = IMPLICIT_DEF
     $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
@@ -161,6 +170,7 @@ body: |
 
 ---
 name: need_skip_readlane_b32
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: need_skip_readlane_b32
   ; CHECK: bb.0:

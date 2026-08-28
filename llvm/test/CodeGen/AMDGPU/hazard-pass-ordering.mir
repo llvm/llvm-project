@@ -10,8 +10,11 @@
 # GCN-NEXT: s_nop
 # GCN-NEXT: flat_load_dword
 name:            mai_hazard_pass_ordering_optimize_vcc_branch
+tracksRegLiveness: true
 body:             |
   bb.0:
+    liveins: $agpr0, $vgpr1
+
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
     $sgpr8_sgpr9 = S_MOV_B64 -1
