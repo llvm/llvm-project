@@ -550,6 +550,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
+- Fixed a crash in codegen on 32-bit targets caused by a struct too large to
+  represent in `size_t`. The `err_struct_too_large` check now scales the
+  threshold to the target's `size_t` width instead of using a fixed
+  threshold of `1 << 60` regardless of the target.
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 
 ### OpenACC Specific Changes
