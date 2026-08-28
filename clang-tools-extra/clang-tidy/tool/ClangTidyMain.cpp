@@ -773,7 +773,8 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS, SarifOS.get());
+               WErrorCount, BaseFS, SarifOS.get(),
+               SarifOS && ExportSarif == "-");
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

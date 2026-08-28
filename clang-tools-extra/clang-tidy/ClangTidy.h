@@ -119,7 +119,8 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                  llvm::raw_ostream *SarifOS = nullptr);
+                  llvm::raw_ostream *SarifOS = nullptr,
+                  bool ExportSarifToStdout = false);
 
 /// Serializes replacements into YAML and writes them to the specified
 /// output stream.
