@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_TARGETDETAILS_H
-#define ORC_RT_TARGETDETAILS_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_TARGETDETAILS_H
+#define ORC_RT_INTERNAL_BEDROCK_TARGETDETAILS_H
 
 #include <string_view>
 
@@ -48,4 +48,4 @@ inline constexpr std::string_view sha3 = "sha3";
 
 } // namespace orc_rt::target_detail
 
-#endif // ORC_RT_TARGETDETAILS_H
+#endif // ORC_RT_INTERNAL_BEDROCK_TARGETDETAILS_H

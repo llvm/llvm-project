@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_STRINGEXTRAS_H
-#define ORC_RT_SUPPORT_STRINGEXTRAS_H
+#ifndef ORC_RT_INTERNAL_SUPPORT_STRINGEXTRAS_H
+#define ORC_RT_INTERNAL_SUPPORT_STRINGEXTRAS_H
 
 #include <cassert>
 #include <charconv>

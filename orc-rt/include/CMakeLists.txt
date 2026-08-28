@@ -1,3 +1,8 @@
+# Headers installed with the runtime.
+#
+# Headers under orc-rt-internal/ are deliberately not listed: they are not
+# installed. Don't add them here to "complete" the list. An installed header
+# must not include an internal one, or the installed tree won't compile.
 set(ORC_RT_HEADERS
     orc-rt-c/bedrock/Session.h
     orc-rt-c/support/Compiler.h
@@ -5,7 +10,6 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/Error.h
     orc-rt-c/support/Logging.h
     orc-rt-c/support/WrapperFunction.h
-    orc-rt-utils/CommandLine.h
     orc-rt/bedrock/BootstrapInfo.h
     orc-rt/bedrock/ExecutorProcessInfo.h
     orc-rt/bedrock/InProcessControllerAccess.h
@@ -31,7 +35,6 @@ set(ORC_RT_HEADERS
     orc-rt/support/CCallback.h
     orc-rt/support/CallableTraitsHelper.h
     orc-rt/support/Compiler.h
-    orc-rt/support/Endian.h
     orc-rt/support/Error.h
     orc-rt/support/ExecutorAddress.h
     orc-rt/support/IntervalMap.h
@@ -47,7 +50,6 @@ set(ORC_RT_HEADERS
     orc-rt/support/SPSWrapperFunction.h
     orc-rt/support/SPSWrapperFunctionBuffer.h
     orc-rt/support/SimplePackedSerialization.h
-    orc-rt/support/StringExtras.h
     orc-rt/support/StringPool.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h

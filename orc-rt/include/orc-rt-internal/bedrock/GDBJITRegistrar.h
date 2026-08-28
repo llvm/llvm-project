@@ -10,16 +10,12 @@
 // interface (also implemented by LLDB and other tools).
 //
 // These functions exist to implement the GDBJITRegistrar allocation actions in
-// the SPS controller interface (see sps-ci/GDBJITRegistrarSPSCI.cpp). They can
-// be called directly, but that isn't their purpose: this is a private
-// implementation header, not part of the public orc-rt API. If a direct client
-// ever appears, promote this header to include/orc-rt/ rather than reaching
-// into lib/.
+// the SPS controller interface (see sps/GDBJITRegistrarSPSCI.cpp).
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_GDBJITREGISTRAR_H
-#define ORC_RT_GDBJITREGISTRAR_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_GDBJITREGISTRAR_H
+#define ORC_RT_INTERNAL_BEDROCK_GDBJITREGISTRAR_H
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/span.h"
@@ -43,4 +39,4 @@ Error deregisterObject(span<char> Obj);
 
 } // namespace orc_rt::gdb_jit
 
-#endif // ORC_RT_GDBJITREGISTRAR_H
+#endif // ORC_RT_INTERNAL_BEDROCK_GDBJITREGISTRAR_H
