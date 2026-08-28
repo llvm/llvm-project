@@ -273,11 +273,11 @@ TEST(FoldingSetTest, Iterator) {
 }
 
 // FoldingSetNode has a non-zero offset here, so operator* must adjust it.
-struct PolymorphicBase {
-  virtual ~PolymorphicBase() = default;
+struct NonEmptyBase {
+  int Dummy = 0;
 };
 
-struct MultiplyInheritedNode : public PolymorphicBase, public FoldingSetNode {
+struct MultiplyInheritedNode : public NonEmptyBase, public FoldingSetNode {
   void Profile(FoldingSetNodeID &ID) const { ID.AddInteger(0); }
 };
 
