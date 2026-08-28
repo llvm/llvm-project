@@ -267,10 +267,10 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   if (MI.isConvergent())
     return true;
 
-  // If it defines SGPR it depends on EXEC
+  // If it defines an SGPR it depends on EXEC, unless it's dead.
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   for (const MachineOperand &Def : MI.defs()) {
-    if (!Def.isReg())
+    if (Def.isDead())
       continue;
 
     Register Reg = Def.getReg();
@@ -6544,8 +6544,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
 
   if (MO.getSubReg()) {
-    const MachineFunction *MF = MO.getParent()->getMF();
-    const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
+    const TargetRegisterClass *SuperRC =
+        RI.getLargestLegalSuperClass(RC, MRI.getMF());
     if (!SuperRC)
       return false;
     return RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg()) != nullptr;

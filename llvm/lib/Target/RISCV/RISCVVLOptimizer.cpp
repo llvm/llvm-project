@@ -938,11 +938,11 @@ bool RISCVVLOptimizerImpl::isSupportedInstr(const MachineInstr &MI) const {
   return true;
 }
 
-/// Return true if MO is a vector operand but is used as a scalar operand.
-static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
-  const MachineInstr *MI = MO.getParent();
+/// Return true if operand \p OpIdx of \p MI is a vector operand but is used as
+/// a scalar operand.
+static bool isVectorOpUsedAsScalarOp(const MachineInstr &MI, unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI->getOpcode());
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
 
   if (!RVV)
     return false;
@@ -965,10 +965,10 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    return MO.getOperandNo() == 3;
+    return OpIdx == 3;
   case RISCV::VMV_X_S:
   case RISCV::VFMV_F_S:
-    return MO.getOperandNo() == 1;
+    return OpIdx == 1;
   default:
     return false;
   }
@@ -1098,7 +1098,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
-  if (isVectorOpUsedAsScalarOp(UserOp)) {
+  if (isVectorOpUsedAsScalarOp(UserMI, UserMI.getOperandNo(&UserOp))) {
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
     return MachineOperand::CreateImm(1);
   }
