@@ -1,6 +1,7 @@
 ! RUN: rm -rf %t && split-file %s %t
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -module-dir %t %t/declare_target_module.f90 -o - > /dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -J %t %t/use_declare_target_module.f90 -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-target-device -J %t %t/use_declare_target_module.f90 -o - | FileCheck %s
 
 !--- declare_target_module.f90
 module declare_target_module
