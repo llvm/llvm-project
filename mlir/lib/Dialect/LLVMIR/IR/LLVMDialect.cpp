@@ -3325,6 +3325,10 @@ LogicalResult LLVMFuncOp::verify() {
     return failure();
 
   if (isExternal()) {
+    if (getFunctionEntryCountAttr())
+      return emitOpError() << "external functions cannot have "
+                           << getFunctionEntryCountAttrName() << " attribute";
+
     if (getLinkage() != LLVM::Linkage::External &&
         getLinkage() != LLVM::Linkage::ExternWeak)
       return emitOpError() << "external functions must have '"

@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
+#include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/StringExtras.h"
 
 #include <optional>
 
