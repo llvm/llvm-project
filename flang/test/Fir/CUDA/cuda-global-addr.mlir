@@ -205,16 +205,20 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-DAG: %[[CSRC:.*]] = fir.address_of(@_QMcon4Ecsrc) : !fir.ref<i32>
 // CHECK-DAG: %[[CDST:.*]] = fir.address_of(@_QMcon4Ecdst) : !fir.ref<i32>
 
+// The fourth operand is the transfer mode: 0 is host to device, 1 is device to
+// host. It must never be 2 (device to device) here, since a host shadow cannot
+// be an operand of a device to device copy.
+
 // constant = constant: copy through the shadows, then push to constant memory.
 // CHECK: %[[V:.*]] = fir.load %[[CSRC]] : !fir.ref<i32>
 // CHECK: fir.store %[[V]] to %[[CDST]] : !fir.ref<i32>
-// CHECK: %[[A0:.*]] = fir.call @_FortranACUFGetDeviceAddress
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[A0]],
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
 
 // constant = device: pull into the shadow first, then push to constant memory.
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[CDST]],
-// CHECK: %[[A1:.*]] = fir.call @_FortranACUFGetDeviceAddress
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[A1]],
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c1_i32
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
 
 // device = constant: the shadow is already the host source.
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[CSRC]],
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %{{[^,]*}}, %{{[^,]*}}, %c0_i32
