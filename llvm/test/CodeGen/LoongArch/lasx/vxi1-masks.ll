@@ -463,3 +463,16 @@ define void @and_sext_masks_v16i16(ptr %res, ptr %a, ptr %b) nounwind {
   store <16 x i16> %r, ptr %res
   ret void
 }
+
+define <4 x i64> @or_zext_cmp_masks_v4i64(<4 x i8> %x) {
+; LA32-LABEL: or_zext_cmp_masks_v4i64:
+; LA32:       vext2xv.d.b
+;
+; LA64-LABEL: or_zext_cmp_masks_v4i64:
+; LA64:       vext2xv.d.b
+  %a = icmp ult <4 x i8> %x, splat (i8 1)
+  %b = icmp eq <4 x i8> %x, zeroinitializer
+  %m = or <4 x i1> %a, %b
+  %ext = zext <4 x i1> %m to <4 x i64>
+  ret <4 x i64> %ext
+}

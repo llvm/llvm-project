@@ -2361,6 +2361,9 @@ def : Pat<(v4i32 (sext_invec v16i8:$vj)),
 def : Pat<(v4i32 (sext_invec v8i16:$vj)),
           (v4i32 (EXTRACT_SUBREG (VEXT2XV_W_H (SUBREG_TO_REG v8i16:$vj, sub_128)),
                                  sub_128))>;
+def : Pat<(v4i64 (sext_invec v16i8:$vj)),
+          (v4i64 (VEXT2XV_D_B
+                    (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
 def : Pat<(v4i64 (sext_invec v32i8:$xj)), (v4i64 (VEXT2XV_D_B v32i8:$xj))>;
 def : Pat<(v4i64 (sext_invec v16i16:$xj)), (v4i64 (VEXT2XV_D_H v16i16:$xj))>;
 def : Pat<(v4i64 (sext_invec v8i32:$xj)), (v4i64 (VEXT2XV_D_W v8i32:$xj))>;
