@@ -26,7 +26,7 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 8 x i32> [[VEC_IND]], splat (i32 2)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> [[TMP6]], <vscale x 8 x i32> [[TMP3]], <vscale x 8 x i32> [[TMP2]], i32 [[TMP11]])
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i32> [[TMP3]], <vscale x 8 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <vscale x 8 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <vscale x 8 x i32> [[TMP7]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP8]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT4]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]])

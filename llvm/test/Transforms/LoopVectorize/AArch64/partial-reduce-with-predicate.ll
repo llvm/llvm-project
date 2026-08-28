@@ -525,7 +525,7 @@ define i32 @chained_pred_reduction(ptr %src, ptr noalias %src_b, ptr %cond, i64 
 ; CHECK-TAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP6:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD1]] to <vscale x 16 x i32>
-; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> [[TMP6]], <vscale x 16 x i32> zeroinitializer
+; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i32> [[TMP6]], <vscale x 16 x i32> zeroinitializer
 ; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC_B]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP8]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
