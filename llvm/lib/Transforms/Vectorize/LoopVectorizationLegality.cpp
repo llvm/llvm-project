@@ -76,7 +76,7 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
                 "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
-    "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
+    "enable-histogram-loop-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
 /// Maximum vectorization interleave count.
