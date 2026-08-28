@@ -124,7 +124,7 @@ define i1 @vsetvli_runtime_avl_gt_max_folds(i64 %avl) {
   ret i1 %c
 }
 
-; vl known > 0, so range must be 0
+; vl known > 0, so range must be > 0
 define i64 @vsetvli_vl_known_nonzero(i64 %x) {
 ; CHECK-LABEL: define i64 @vsetvli_vl_known_nonzero(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
