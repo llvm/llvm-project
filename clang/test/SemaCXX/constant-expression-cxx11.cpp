@@ -1947,7 +1947,7 @@ namespace InitializerList {
 
 namespace ConstexprForRangeVar {
   void invalid() {
-    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note-re {{'__begin{{[0-9]+}}'-variable of range-based 'for' loop is not a constant expression}}
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
   }
 
   struct S {
@@ -1983,7 +1983,7 @@ namespace ConstexprForRangeVar {
   void member_read() {
     for (constexpr int x : T()) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
                                    // expected-note-re {{in call to '__begin{{[0-9]+}}.operator*()'}} \
-                                   // expected-note-re@#member-read {{'__begin{{[0-9]+}}'-variable of range-based 'for' loop is not a constant expression}}
+                                   // expected-note-re@#member-read {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
   }
 
 #if __cplusplus >= 202002L
@@ -2002,7 +2002,7 @@ namespace ConstexprForRangeVar {
     Sentinel s = {};
     for (int n : s) {} // cxx20_23-error-re {{call to consteval function '{{.*}}operator!=' is not a constant expression}} \
                        // cxx20_23-note-re {{in call to '{{.*}}operator!=({{.*}})'}} \
-                       // cxx20_23-note-re@#sentinel-read {{'__end{{[0-9]+}}'-variable of range-based 'for' loop is not a constant expression}}
+                       // cxx20_23-note-re@#sentinel-read {{read of implicit variable '__end{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
   }
 #endif
 
@@ -2015,7 +2015,7 @@ namespace ConstexprForRangeVar {
     ByValueBegin r = {nullptr};
     for (int n : r) {} // cxx23-error-re {{call to consteval function '{{.*}}begin' is not a constant expression}} \
                        // cxx23-note-re {{in call to 'ByValueBegin(__range{{[0-9]+}})'}} \
-                       // cxx23-note-re {{'__range{{[0-9]+}}'-variable of range-based 'for' loop is not a constant expression}}
+                       // cxx23-note-re {{read of implicit variable '__range{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
   }
 #endif
 }
