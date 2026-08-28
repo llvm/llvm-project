@@ -171,7 +171,17 @@ struct VPlanTransforms {
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
-      const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
+      const SmallPtrSetImpl<PHINode *> &InLoopReductions,
+      const MapVector<PHINode *, RecurrenceDescriptor> &LinearRecurrences,
+      bool AllowReordering);
+
+  /// Replace the chain of recipes computing the next value of each linear
+  /// recurrence h = C*h + x in \p Plan with a VPLinearRecurrenceChainRecipe,
+  /// which computes the chunked formulation
+  ///   h_next = C^VF * h + sum_l C^(VF-1-l) * x_{i+l}
+  /// in the vector loop. Returns false if a linear recurrence cannot be
+  /// handled.
+  static bool createLinearRecurrenceRecipes(VPlan &Plan);
 
   /// Finalize SCEV predicates by adding induction predicates from \p Plan to
   /// \p PSE and checking constraints. Returns false if predicated IVs have

@@ -89,6 +89,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
+  case VPLinearRecurrencePHISC:
+  case VPLinearRecurrenceChainSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
   case VPExpandSCEVSC:
@@ -142,6 +144,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
+  case VPLinearRecurrencePHISC:
+  case VPLinearRecurrenceChainSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
   case VPWidenStoreEVLSC:
@@ -181,6 +185,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
+  case VPLinearRecurrencePHISC:
+  case VPLinearRecurrenceChainSC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
   case VPExpandSCEVSC:
@@ -2708,6 +2714,9 @@ static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
   case RecurKind::FMulAdd:
     OS << "fmuladd";
     break;
+  case RecurKind::IntLinear:
+    OS << "int-linear";
+    break;
   case RecurKind::AnyOf:
     OS << "any-of";
     break;
@@ -4975,6 +4984,116 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
 
   return 0;
 }
+
+void VPLinearRecurrencePHIRecipe::execute(VPTransformState &State) {
+  // The linear recurrence value is carried in a scalar register across the
+  // vector loop. Create a scalar PHI in the vector loop header, with the
+  // backedge added later by VPTransformState::fixupHeaderPhis.
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
+  Value *Start = State.get(getStartValue(), /*IsScalar=*/true);
+
+  BasicBlock *HeaderBB = State.CFG.PrevBB;
+  assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
+         "recipe must be in the vector loop header");
+  PHINode *Phi = PHINode::Create(Start->getType(), 2, "vector.linear.phi");
+  Phi->insertBefore(HeaderBB->getFirstInsertionPt());
+  State.set(this, Phi, /*IsScalar=*/true);
+
+  Phi->addIncoming(Start, VectorPH);
+}
+
+InstructionCost
+VPLinearRecurrencePHIRecipe::computeCost(ElementCount VF,
+                                         VPCostContext &Ctx) const {
+  // The recurrence value is kept in a scalar register.
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+}
+
+void VPLinearRecurrenceChainRecipe::execute(VPTransformState &State) {
+  Value *X = State.get(&getVecOp());
+  Value *Prev = State.get(&getChainOp(), /*IsScalar=*/true);
+  Type *Ty = getScalarType();
+  ConstantInt *C = getCoefficient();
+
+  Value *Next;
+  if (State.VF.isVector()) {
+    unsigned VF = State.VF.getKnownMinValue();
+    assert(!State.VF.isScalable() &&
+           "scalable VFs are not supported for linear recurrences yet");
+    // Build the weight vector [C^(VF-1), ..., C^1, C^0].
+    SmallVector<Constant *, 8> Weights(VF);
+    APInt Power(C->getValue());
+    Weights[VF - 1] = ConstantInt::get(Ty, 1);
+    for (unsigned L = 1; L != VF; ++L) {
+      Weights[VF - 1 - L] = ConstantInt::get(Ty, Power);
+      Power *= C->getValue();
+    }
+    // Power now holds C^VF for the seed update.
+    auto *CVF = cast<ConstantInt>(ConstantInt::get(Ty, Power));
+
+    // h_next = h * C^VF + sum_l C^(VF-1-l) * x_{i+l}
+    Value *W = State.Builder.CreateMul(X, ConstantVector::get(Weights));
+    Value *R = createSimpleReduction(State.Builder, W, RecurKind::Add);
+    Value *Scaled = State.Builder.CreateMul(Prev, CVF);
+    Next = State.Builder.CreateAdd(Scaled, R);
+  } else {
+    // For scalar VFs the recipe degenerates to the original computation
+    // h_next = h * C + x.
+    Value *Scaled = State.Builder.CreateMul(Prev, C);
+    Next = State.Builder.CreateAdd(Scaled, X);
+  }
+  State.set(this, Next, /*IsScalar=*/true);
+}
+
+InstructionCost
+VPLinearRecurrenceChainRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // Scalable VFs are not supported yet; the invalid cost rejects them.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
+  if (VF.isScalar()) {
+    // Matches the original scalar computation: h_next = h * C + x.
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, getScalarType(),
+                                          Ctx.CostKind) +
+           Ctx.TTI.getArithmeticInstrCost(Instruction::Add, getScalarType(),
+                                          Ctx.CostKind);
+  }
+
+  // Cost of the chunked computation:
+  //   w = x * weights                    (vector multiply)
+  //   r = sum_l w_l                      (in-loop add reduction)
+  //   h_next = h * C^VF + r              (scalar mul + add)
+  VectorType *VecTy = VectorType::get(getScalarType(), VF);
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VecTy, Ctx.CostKind);
+  Cost += Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VecTy,
+                                             std::nullopt, Ctx.CostKind);
+  Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, getScalarType(),
+                                         Ctx.CostKind);
+  Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Add, getScalarType(),
+                                         Ctx.CostKind);
+  return Cost;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPLinearRecurrencePHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "LINEAR-RECURRENCE-PHI ";
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+
+void VPLinearRecurrenceChainRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = LINEAR-RECURRENCE-CHAIN (coeff=" << *getCoefficient() << ")";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPFirstOrderRecurrencePHIRecipe::printRecipe(

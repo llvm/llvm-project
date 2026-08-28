@@ -403,9 +403,10 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
-          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
-                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+      bool NeedsScalar = isa<VPPhi>(PhiR) ||
+                         isa<VPLinearRecurrencePHIRecipe>(PhiR) ||
+                         (isa<VPReductionPHIRecipe>(PhiR) &&
+                          cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
       Value *Phi = get(PhiR, NeedsScalar);
       Value *Val = get(PhiR->getOperand(1), NeedsScalar);

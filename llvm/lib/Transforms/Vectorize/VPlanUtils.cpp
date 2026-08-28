@@ -444,6 +444,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
+  if (isa<VPLinearRecurrenceChainRecipe, VPLinearRecurrencePHIRecipe>(VPV))
+    return true;
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
           VPV))
     return true;

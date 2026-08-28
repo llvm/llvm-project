@@ -911,7 +911,9 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
-    const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
+    const SmallPtrSetImpl<PHINode *> &InLoopReductions,
+    const MapVector<PHINode *, RecurrenceDescriptor> &LinearRecurrences,
+    bool AllowReordering) {
   // Retrieve the header manually from the intial plain-CFG VPlan.
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   assert(VPDT.dominates(HeaderVPBB, LatchVPBB) &&
@@ -935,6 +937,9 @@ bool VPlanTransforms::createHeaderPhiRecipes(
       // modeled directly, enabling more efficient codegen.
       return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
     }
+
+    if (LinearRecurrences.contains(Phi))
+      return new VPLinearRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
 
     auto InductionIt = Inductions.find(Phi);
     if (InductionIt != Inductions.end())
@@ -1197,6 +1202,54 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
+}
+
+bool VPlanTransforms::createLinearRecurrenceRecipes(VPlan &Plan) {
+  auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
+    auto *PhiR = dyn_cast<VPLinearRecurrencePHIRecipe>(&R);
+    if (!PhiR)
+      continue;
+
+    // The phi must only be used by the multiply computing C * h, which in
+    // turn must only be used by the add computing C * h + x.
+    auto *MulVPI = dyn_cast<VPInstruction>(*PhiR->user_begin());
+    if (!PhiR->hasOneUse() || !MulVPI ||
+        MulVPI->getOpcode() != Instruction::Mul)
+      return false;
+    if (!MulVPI->hasOneUse())
+      return false;
+    auto *AddVPI = dyn_cast<VPInstruction>(*MulVPI->user_begin());
+    if (!AddVPI || AddVPI->getOpcode() != Instruction::Add)
+      return false;
+
+    // Determine the constant coefficient C and the per-lane value operand x.
+    auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
+    auto *MulI = cast<Instruction>(MulVPI->getUnderlyingValue());
+    auto *C = dyn_cast<ConstantInt>(
+        MulI->getOperand(0) == Phi ? MulI->getOperand(1) : MulI->getOperand(0));
+    if (!C)
+      return false;
+    VPValue *X = AddVPI->getOperand(0) == MulVPI ? AddVPI->getOperand(1)
+                                                 : AddVPI->getOperand(0);
+    // The per-lane value must be a load that will be widened to a vector load
+    // later; this also guarantees it dominates the chain recipe.
+    auto *LoadVPI = dyn_cast_or_null<VPInstruction>(X->getDefiningRecipe());
+    if (!LoadVPI || LoadVPI->getOpcode() != Instruction::Load ||
+        LoadVPI->isMasked())
+      return false;
+
+    // Replace the mul/add chain with the chunked computation
+    //   h_next = C^VF * h + sum_l C^(VF-1-l) * x_{i+l}.
+    auto *AddI = cast<Instruction>(AddVPI->getUnderlyingValue());
+    auto *Chain = new VPLinearRecurrenceChainRecipe(*PhiR, *X, C, AddI,
+                                                    AddI->getDebugLoc());
+    Chain->insertBefore(AddVPI);
+    AddVPI->replaceAllUsesWith(Chain);
+    AddVPI->eraseFromParent();
+    MulVPI->eraseFromParent();
+  }
+  return true;
 }
 
 bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
