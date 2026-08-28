@@ -350,6 +350,10 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
 
   BuiltinTypeDeclBuilder B(S, Decl);
   B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr);
+  B.addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
 
   if (T.has(TexCap::Load))
     B.addTextureLoadMethods(Dim, IsArray);
@@ -361,11 +365,6 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
     B.addArraySubscriptOperators(Dim, IsArray);
   if (T.has(TexCap::Mips))
     B.addMipsMember(Dim);
-
-  B.addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator()
-      .addStaticInitializationFunctions(false);
 
   if (T.has(TexCap::Sample))
     B.addSampleMethods(Dim, IsArray)
