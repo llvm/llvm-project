@@ -6952,7 +6952,7 @@ namespace {
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
-static VectorType trimTrailingOneDims(VectorType oldType) {
+static VectorType trimTrailingUnitDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -6974,9 +6974,114 @@ static VectorType trimTrailingOneDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
+/// Helper function that computes a new vector type based on the input vector
+/// type by removing the trailing one dims:
+///
+///   vector<4x1x1xi1> --> vector<4x1xi1>
+///
+static VectorType trimLeadingUnitDims(VectorType oldType) {
+  ArrayRef<int64_t> oldShape = oldType.getShape();
+  ArrayRef<int64_t> newShape = oldShape;
+
+  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
+  ArrayRef<bool> newScalableDims = oldScalableDims;
+
+  while (!newShape.empty() && newShape.front() == 1 &&
+         !newScalableDims.front()) {
+    newShape = newShape.drop_front(1);
+    newScalableDims = newScalableDims.drop_front(1);
+  }
+
+  // Make sure we have at least 1 dimension.
+  // TODO: Add support for 0-D vectors.
+  if (newShape.empty()) {
+    newShape = oldShape.take_back();
+    newScalableDims = oldScalableDims.take_back();
+  }
+
+  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+}
+
 /// Folds qualifying shape_cast(create_mask) into a new create_mask
 ///
-/// Looks at `vector.shape_cast` Ops that simply "drop" the trailing unit
+/// Looks at `vector.shape_cast` Ops that simply "drop" the _leading_unit
+/// dimension. If the input vector comes from `vector.create_mask` for which
+/// the corresponding mask input value is 1 (e.g. `%c1` below), then it is safe
+/// to fold shape_cast into create_mask.
+///
+/// BEFORE:
+///    %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x[4]x1xi1>
+///    %2 = vector.shape_cast %1 : vector<1x1x[4]x1xi1> to vector<[4]x1xi1>
+/// AFTER:
+///    %0 = vector.create_mask %c1, %dim : vector<[4]xi1>
+class ShapeCastCreateMaskFolderLeadingOneDim final
+    : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeOp,
+                                PatternRewriter &rewriter) const override {
+    Value shapeOpSrc = shapeOp->getOperand(0);
+    auto createMaskOp = shapeOpSrc.getDefiningOp<vector::CreateMaskOp>();
+    auto constantMaskOp = shapeOpSrc.getDefiningOp<vector::ConstantMaskOp>();
+    if (!createMaskOp && !constantMaskOp)
+      return failure();
+
+    VectorType shapeOpResTy = shapeOp.getResultVectorType();
+    VectorType shapeOpSrcTy = shapeOp.getSourceVectorType();
+
+    VectorType newVecType = trimLeadingUnitDims(shapeOpSrcTy);
+    if (newVecType != shapeOpResTy)
+      return rewriter.notifyMatchFailure(
+          shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
+
+    auto numDimsToDrop = shapeOpSrcTy.getRank() - shapeOpResTy.getRank();
+
+    // No unit dims to drop
+    if (numDimsToDrop == 0)
+      return rewriter.notifyMatchFailure(
+          shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
+
+    if (createMaskOp) {
+      auto maskOperands = createMaskOp.getOperands();
+
+      for (int64_t dimIdx = 0; dimIdx < numDimsToDrop; dimIdx++) {
+        auto constantOp =
+            maskOperands[dimIdx].getDefiningOp<arith::ConstantIndexOp>();
+        if (!constantOp || constantOp.value() != 1) {
+          return failure();
+        }
+      }
+
+      rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
+          shapeOp, shapeOpResTy, maskOperands.drop_front(numDimsToDrop));
+
+      return success();
+    }
+
+    if (constantMaskOp) {
+      auto maskDimSizes = constantMaskOp.getMaskDimSizes();
+      auto numMaskOperands = maskDimSizes.size();
+
+      // Check every mask dim size to see whether it can be dropped
+      for (uint64_t i = 0; i < numMaskOperands; ++i) {
+        if (maskDimSizes[i] != 1)
+          return failure();
+      }
+
+      auto newMaskOperands = maskDimSizes.drop_front(numDimsToDrop);
+      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(shapeOp, shapeOpResTy,
+                                                          newMaskOperands);
+      return success();
+    }
+
+    return failure();
+  }
+};
+
+/// Folds qualifying shape_cast(create_mask) into a new create_mask
+///
+/// Looks at `vector.shape_cast` Ops that simply "drop" the _trailing_ unit
 /// dimension. If the input vector comes from `vector.create_mask` for which
 /// the corresponding mask input value is 1 (e.g. `%c1` below), then it is safe
 /// to fold shape_cast into create_mask.
@@ -7002,12 +7107,11 @@ public:
     VectorType shapeOpResTy = shapeOp.getResultVectorType();
     VectorType shapeOpSrcTy = shapeOp.getSourceVectorType();
 
-    VectorType newVecType = trimTrailingOneDims(shapeOpSrcTy);
+    VectorType newVecType = trimTrailingUnitDims(shapeOpSrcTy);
     if (newVecType != shapeOpResTy)
       return failure();
 
-    auto numDimsToDrop =
-        shapeOpSrcTy.getShape().size() - shapeOpResTy.getShape().size();
+    auto numDimsToDrop = shapeOpSrcTy.getRank() - shapeOpResTy.getRank();
 
     // No unit dims to drop
     if (!numDimsToDrop)
@@ -7156,7 +7260,8 @@ public:
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder,
+  results.add<ShapeCastCreateMaskFolderTrailingOneDim,
+              ShapeCastCreateMaskFolderLeadingOneDim, ShapeCastBroadcastFolder,
               FoldShapeCastOfFromElements>(context);
 }
 
