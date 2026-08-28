@@ -51,6 +51,7 @@ namespace clang {
   class OverflowBehaviorType;
   struct TemplateIdAnnotation;
   struct LateParsedAttribute;
+  struct LateParsedTypeAttribute;
 
   /// Represents a C++ nested-name-specifier or a global scope specifier.
   ///
@@ -286,7 +287,7 @@ public:
       clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -457,7 +458,7 @@ public:
   static bool isTransformTypeTrait(TST T) {
     constexpr std::array<TST, 16> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     };
 
     return T >= Traits.front() && T <= Traits.back();
@@ -888,6 +889,10 @@ public:
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 
+  void CheckTypeSpec(Sema &S, const PrintingPolicy &Policy);
+
+  void CheckFriendSpec(Sema &S, const PrintingPolicy &Policy);
+
   const WrittenBuiltinSpecs& getWrittenBuiltinSpecs() const {
     return writtenBS;
   }
@@ -1254,20 +1259,25 @@ typedef SmallVector<Token, 4> CachedTokens;
 class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
 public:
   LateParsedAttrList(bool PSoon = false,
-                     bool LateAttrParseExperimentalExtOnly = false)
+                     bool LateAttrParseExperimentalExtOnly = false,
+                     bool LateAttrParseTypeAttrOnly = false)
       : ParseSoon(PSoon),
-        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly) {}
+        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
+        LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
 
-  bool parseSoon() { return ParseSoon; }
+  bool parseSoon() const { return ParseSoon; }
   /// returns true iff the attribute to be parsed should only be late parsed
   /// if it is annotated with `LateAttrParseExperimentalExt`
-  bool lateAttrParseExperimentalExtOnly() {
+  bool lateAttrParseExperimentalExtOnly() const {
     return LateAttrParseExperimentalExtOnly;
   }
+
+  bool lateAttrParseTypeAttrOnly() const { return LateAttrParseTypeAttrOnly; }
 
 private:
   bool ParseSoon; // Are we planning to parse these shortly after creation?
   bool LateAttrParseExperimentalExtOnly;
+  bool LateAttrParseTypeAttrOnly;
 };
 
 /// One instance of this struct is used for each type in a

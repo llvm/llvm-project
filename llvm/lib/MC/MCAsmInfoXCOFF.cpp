@@ -26,9 +26,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   IsLittleEndian = false;
 
   InternalSymbolPrefix = "L..";
-  PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
-  if (UseLEB128Directives == cl::BOU_UNSET)
+  if (UseLEB128Directives == cl::boolOrDefault::BOU_UNSET)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   AsciiDirective = nullptr; // not supported
@@ -46,18 +45,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   ParseInlineAsmUsingAsmParser = true;
 
   ExceptionsType = ExceptionHandling::AIX;
-}
-
-bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {
-  // QualName is allowed for a MCSymbolXCOFF, and
-  // QualName contains '[' and ']'.
-  if (C == '[' || C == ']')
-    return true;
-
-  // For AIX assembler, symbols may consist of numeric digits,
-  // underscores, periods, uppercase or lowercase letters, or
-  // any combination of these.
-  return isAlnum(C) || C == '_' || C == '.';
 }
 
 bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {

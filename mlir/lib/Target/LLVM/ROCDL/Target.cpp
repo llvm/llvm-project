@@ -39,7 +39,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <cstdlib>
 #include <optional>
@@ -303,7 +303,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
       target->createMCSubtargetInfo(triple, chip, features));
 
-  llvm::MCContext ctx(triple, *mai, mri.get(), sti.get(), &srcMgr);
+  llvm::MCContext ctx(triple, *mai, *mri, *sti, &srcMgr);
   std::unique_ptr<llvm::MCObjectFileInfo> mofi(target->createMCObjectFileInfo(
       ctx, /*PIC=*/false, /*LargeCodeModel=*/false));
   ctx.setObjectFileInfo(mofi.get());

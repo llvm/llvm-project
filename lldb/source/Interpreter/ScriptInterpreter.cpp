@@ -15,7 +15,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/Utility/UnimplementedError.h"
+#include "llvm/ADT/StringSwitch.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -49,6 +50,12 @@ StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
 }
 
+llvm::Expected<FileSpec> ScriptInterpreter::GenerateExtensionTemplate(
+    const std::string &name, std::vector<ExtensionTemplateRequest> &extensions,
+    bool generate_non_abstract_methods, std::string output_file) {
+  return llvm::make_error<UnimplementedError>();
+}
+
 bool ScriptInterpreter::LoadScriptingModule(
     const char *filename, const LoadScriptOptions &options,
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
@@ -72,106 +79,6 @@ std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
   llvm_unreachable("Unhandled ScriptInterpreter!");
 }
 
-lldb::DataExtractorSP
-ScriptInterpreter::GetDataExtractorFromSBData(const lldb::SBData &data) const {
-  return data.m_opaque_sp;
-}
-
-lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
-    const lldb::SBBreakpoint &breakpoint) const {
-  return breakpoint.m_opaque_wp.lock();
-}
-
-lldb::BreakpointLocationSP
-ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
-    const lldb::SBBreakpointLocation &break_loc) const {
-  return break_loc.m_opaque_wp.lock();
-}
-
-lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
-    const lldb::SBAttachInfo &attach_info) const {
-  return attach_info.m_opaque_sp;
-}
-
-lldb::ProcessLaunchInfoSP ScriptInterpreter::GetOpaqueTypeFromSBLaunchInfo(
-    const lldb::SBLaunchInfo &launch_info) const {
-  return std::make_shared<ProcessLaunchInfo>(
-      *reinterpret_cast<ProcessLaunchInfo *>(launch_info.m_opaque_sp.get()));
-}
-
-Status
-ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
-  if (error.m_opaque_up)
-    return error.m_opaque_up->Clone();
-
-  return Status();
-}
-
-lldb::ThreadSP ScriptInterpreter::GetOpaqueTypeFromSBThread(
-    const lldb::SBThread &thread) const {
-  if (thread.m_opaque_sp)
-    return thread.m_opaque_sp->GetThreadSP();
-  return nullptr;
-}
-
-lldb::StackFrameSP
-ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
-  if (frame.m_opaque_sp)
-    return frame.m_opaque_sp->GetFrameSP();
-  return nullptr;
-}
-
-Event *
-ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
-  return event.m_opaque_ptr;
-}
-
-lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
-    const lldb::SBStream &stream) const {
-  if (stream.m_opaque_up) {
-    lldb::StreamSP s = std::make_shared<lldb_private::StreamString>();
-    *s << reinterpret_cast<StreamString *>(stream.m_opaque_up.get())->m_packet;
-    return s;
-  }
-
-  return nullptr;
-}
-
-SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
-    const lldb::SBSymbolContext &sb_sym_ctx) const {
-  if (sb_sym_ctx.m_opaque_up)
-    return *sb_sym_ctx.m_opaque_up;
-  return {};
-}
-
-std::optional<lldb_private::MemoryRegionInfo>
-ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
-    const lldb::SBMemoryRegionInfo &mem_region) const {
-  if (!mem_region.m_opaque_up)
-    return std::nullopt;
-  return *mem_region.m_opaque_up.get();
-}
-
-lldb::ExecutionContextRefSP
-ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
-    const lldb::SBExecutionContext &exe_ctx) const {
-  return exe_ctx.m_exe_ctx_sp;
-}
-
-lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
-    const lldb::SBFrameList &frame_list) const {
-  return frame_list.m_opaque_sp;
-}
-
-lldb::ValueObjectSP
-ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
-  if (!value.m_opaque_sp)
-    return lldb::ValueObjectSP();
-
-  lldb_private::ValueLocker locker;
-  return locker.GetLockedSP(*value.m_opaque_sp);
-}
-
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
@@ -181,6 +88,68 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageLua)))
     return eScriptLanguageLua;
   return eScriptLanguageUnknown;
+}
+
+llvm::StringLiteral
+ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
+  switch (extension) {
+  case eScriptedExtensionInvalid:
+    return "Invalid";
+  case eScriptedExtensionOperatingSystem:
+    return "OperatingSystem";
+  case eScriptedExtensionScriptedPlatform:
+    return "ScriptedPlatform";
+  case eScriptedExtensionScriptedProcess:
+    return "ScriptedProcess";
+  case eScriptedExtensionScriptedBreakpointResolver:
+    return "ScriptedBreakpointResolver";
+  case eScriptedExtensionScriptedThreadPlan:
+    return "ScriptedThreadPlan";
+  case eScriptedExtensionScriptedFrameProvider:
+    return "ScriptedFrameProvider";
+  case eScriptedExtensionScriptedHook:
+    return "ScriptedHook";
+  case eScriptedExtensionScriptedThread:
+    return "ScriptedThread";
+  case eScriptedExtensionScriptedFrame:
+    return "ScriptedFrame";
+  case eScriptedExtensionScriptedStackFrameRecognizer:
+    return "ScriptedStackFrameRecognizer";
+  case eScriptedExtensionScriptedCommand:
+    return "ScriptedCommand";
+  case eScriptedExtensionParsedCommand:
+    return "ParsedCommand";
+  case eScriptedExtensionScriptedStringSummary:
+    return "ScriptedStringSummary";
+  case eScriptedExtensionScriptedSyntheticChildren:
+    return "ScriptedSyntheticChildren";
+  }
+  llvm_unreachable("unhandled ScriptedExtension");
+}
+
+lldb::ScriptedExtension
+ScriptInterpreter::StringToExtension(llvm::StringRef string) {
+  return llvm::StringSwitch<lldb::ScriptedExtension>(string)
+      .CaseLower("OperatingSystem", eScriptedExtensionOperatingSystem)
+      .CaseLower("ScriptedPlatform", eScriptedExtensionScriptedPlatform)
+      .CaseLower("ScriptedProcess", eScriptedExtensionScriptedProcess)
+      .CaseLower("ScriptedBreakpointResolver",
+                 eScriptedExtensionScriptedBreakpointResolver)
+      .CaseLower("ScriptedThreadPlan", eScriptedExtensionScriptedThreadPlan)
+      .CaseLower("ScriptedFrameProvider",
+                 eScriptedExtensionScriptedFrameProvider)
+      .CaseLower("ScriptedHook", eScriptedExtensionScriptedHook)
+      .CaseLower("ScriptedThread", eScriptedExtensionScriptedThread)
+      .CaseLower("ScriptedFrame", eScriptedExtensionScriptedFrame)
+      .CaseLower("ScriptedStackFrameRecognizer",
+                 eScriptedExtensionScriptedStackFrameRecognizer)
+      .CaseLower("ScriptedCommand", eScriptedExtensionScriptedCommand)
+      .CaseLower("ParsedCommand", eScriptedExtensionParsedCommand)
+      .CaseLower("ScriptedStringSummary",
+                 eScriptedExtensionScriptedStringSummary)
+      .CaseLower("ScriptedSyntheticChildren",
+                 eScriptedExtensionScriptedSyntheticChildren)
+      .Default(eScriptedExtensionInvalid);
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallback(
@@ -263,7 +232,7 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                              File::eOpenOptionWriteOnly);
   if (!nullout)
-    return nullin.takeError();
+    return nullout.takeError();
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));

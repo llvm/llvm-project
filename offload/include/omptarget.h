@@ -46,7 +46,7 @@ enum __tgt_target_return_t : int {
 };
 
 /// Data attributes for each data reference used in an OpenMP target region.
-enum tgt_map_type {
+enum tgt_map_type : uint64_t {
   // No flags
   OMP_TGT_MAPTYPE_NONE = 0x000,
   // copy data from host to device

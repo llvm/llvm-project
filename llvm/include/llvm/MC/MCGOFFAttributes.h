@@ -57,7 +57,6 @@ struct EDAttr {
   GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate;
   GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
   GOFF::ESDReserveQwords ReservedQwords = GOFF::ESD_RQ_0;
-  GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Doubleword;
   uint8_t FillByteValue = 0;
 };
 

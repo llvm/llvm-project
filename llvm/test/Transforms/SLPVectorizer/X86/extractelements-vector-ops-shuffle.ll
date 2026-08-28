@@ -5,24 +5,24 @@ define double @test() {
 ; CHECK-LABEL: define double @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 5), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 6), align 16
-; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 8), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 9), align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, double [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP17]], double [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 6), align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 8), align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr getelementptr inbounds ([13 x double], ptr null, i64 0, i64 9), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, double [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP8]], double [[TMP3]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[TMP6]], 0.000000e+00
 ; CHECK-NEXT:    store double [[TMP7]], ptr null, align 16
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul double [[TMP3]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul double [[TMP2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul double [[TMP8]], 0.000000e+00
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul double [[TMP3]], 0.000000e+00
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd double [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul double [[TMP0]], 0.000000e+00
-; CHECK-NEXT:    [[TMP16:%.*]] = fadd double [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd double [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    ret double [[TMP16]]
 ;
 entry:

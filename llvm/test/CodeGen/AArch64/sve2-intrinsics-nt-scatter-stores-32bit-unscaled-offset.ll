@@ -63,20 +63,13 @@ define void @sstnt1w_s_uxtw_float(<vscale x 4 x float> %data, <vscale x 4 x i1> 
 ; STNT1B
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
 
 ; STNT1H
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
 
 ; STNT1W
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, ptr, <vscale x 2 x i32>)
 
-declare void @llvm.aarch64.sve.stnt1.scatter.sxtw.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>)

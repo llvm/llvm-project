@@ -101,10 +101,10 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 
   SmallVector<ShapedTypeComponents> returnedShapes;
   if (shapeInterface
-          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
-                                     op->getOperands(), op->getAttrDictionary(),
-                                     op->getPropertiesStorage(),
-                                     op->getRegions(), returnedShapes)
+          .inferReturnTypeComponents(
+              op.getContext(), builder.getLoc(), op->getOperands(),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              op->getRegions(), returnedShapes)
           .failed())
     return op;
 
@@ -270,6 +270,11 @@ std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
 
   return std::nullopt;
 }
+
+// returns the value of a constant scalar int tensor, or failure if
+// the value cannot be extracted
+template <typename T>
+FailureOr<T> getConstantScalarIntValue(Value val);
 
 } // namespace tosa
 } // namespace mlir

@@ -355,12 +355,16 @@ public:
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
-                        MCRegister SrcReg, bool KillSrc, unsigned Opcode,
+                        MCRegister SrcReg, bool KillSrc,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                        const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
+  void copyPhysRegImpl(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                       const DebugLoc &DL, Register DestReg, Register SrcReg,
+                       bool KillSrc, bool RenamableDest = false,
+                       bool RenamableSrc = false) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
@@ -582,6 +586,9 @@ public:
   /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
   /// authenticate the return address. Adds an implicit def of X16 when the
   /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions. If the epilogue has callee-popped argument stack to restore,
+  /// it additionally implicit defines X15 and X17 to cover clobbered registers
+  /// for the required sequence on subtargets both with and without PAuthLR
   /// instructions.
   void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 

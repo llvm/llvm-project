@@ -256,6 +256,15 @@ struct AddUIExtendedOpLowering
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+struct SubUIExtendedOpLowering
+    : public ConvertOpToLLVMPattern<arith::SubUIExtendedOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SubUIExtendedOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 template <typename ArithMulOp, bool IsSigned>
 struct MulIExtendedOpLowering : public ConvertOpToLLVMPattern<ArithMulOp> {
   using ConvertOpToLLVMPattern<ArithMulOp>::ConvertOpToLLVMPattern;
@@ -305,9 +314,9 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
     // pair of FP types that are valid LLVM types.
     [[maybe_unused]] auto srcType = getElementTypeOrSelf(op.getIn().getType());
     [[maybe_unused]] auto dstType = getElementTypeOrSelf(op.getType());
-    assert((srcType.isBF16() && dstType.isF16()) ||
-           (srcType.isF16() && dstType.isBF16()) &&
-               "only bf16 <-> f16 conversions are supported");
+    assert(((srcType.isBF16() && dstType.isF16()) ||
+            (srcType.isF16() && dstType.isBF16())) &&
+           "only bf16 <-> f16 conversions are supported");
 
     Type convertedType = getTypeConverter()->convertType(op.getType());
     if (!convertedType)
@@ -362,13 +371,94 @@ struct SelectOpOneToNLowering : public ConvertOpToLLVMPattern<arith::SelectOp> {
 // ConstantOpLowering
 //===----------------------------------------------------------------------===//
 
+/// Retypes `attr` for a `llvm.mlir.constant` of `resultType`. `arith.constant`
+/// requires the value attribute and the result to have the same type, but the
+/// type converter may map the element type to a different one, e.g. `index` to
+/// `i32` or `i64` depending on the configured index bitwidth. Build the
+/// attribute from the converted type so that the two agree wherever that is
+/// representable. Returns a null attribute if `attr` cannot be used for
+/// `resultType`.
+static TypedAttr convertConstantValue(TypedAttr attr, Type resultType) {
+  // Compare the element types, but explicitly ignore the non-scalar portions of
+  // types. This relaxation is required to support multi-dimensional vector
+  // constant that result in nested LLVM array values.
+  Type sourceElementType = LLVM::getConstantElementType(attr.getType());
+  Type targetElementType = LLVM::getConstantElementType(resultType);
+  if (sourceElementType == targetElementType)
+    return attr;
+
+  auto targetIntType = dyn_cast<IntegerType>(targetElementType);
+  if (!targetIntType)
+    return {};
+
+  // The converter maps the low-precision float types that have no LLVM
+  // equivalent to an integer of the same width. The attribute stays a float
+  // attribute in that case.
+  if (auto sourceFloatType = dyn_cast<FloatType>(sourceElementType)) {
+    if (sourceFloatType.getWidth() != targetIntType.getWidth())
+      return {};
+    return attr;
+  }
+
+  // Apart from those floats, `index` is the only element type the converter
+  // rewrites, so anything else is a malformed `arith.constant`. Bail out rather
+  // than reinterpret its value, which would silently change the constant (e.g.
+  // sign-extending an `i1` `true` to -1).
+  if (!isa<IndexType>(sourceElementType))
+    return {};
+  // `index` is signless but holds signed values, so narrowing to a smaller
+  // index bitwidth truncates and widening sign-extends.
+  unsigned width = targetIntType.getWidth();
+
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+    return IntegerAttr::get(targetIntType,
+                            intAttr.getValue().sextOrTrunc(width));
+
+  auto retypeValues = [&](DenseIntElementsAttr values) {
+    return values.mapValues(targetIntType, [&](const APInt &value) {
+      return value.sextOrTrunc(width);
+    });
+  };
+
+  if (auto denseAttr = dyn_cast<DenseIntElementsAttr>(attr))
+    return retypeValues(denseAttr);
+
+  if (auto sparseAttr = dyn_cast<SparseElementsAttr>(attr))
+    return SparseElementsAttr::get(
+        cast<ShapedType>(attr.getType()).clone(targetIntType),
+        sparseAttr.getIndices(),
+        retypeValues(cast<DenseIntElementsAttr>(sparseAttr.getValues())));
+
+  // A resource-backed elements attribute refers to a blob laid out for its own
+  // element type, so it cannot be retyped here. Keep it rather than fail the
+  // lowering.
+  if (isa<ElementsAttr>(attr))
+    return attr;
+
+  return {};
+}
+
 LogicalResult
 ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  return LLVM::detail::oneToOneRewrite(op, LLVM::ConstantOp::getOperationName(),
-                                       adaptor.getOperands(), op->getAttrs(),
-                                       /*propAttr=*/Attribute{},
-                                       *getTypeConverter(), rewriter);
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(op, "failed to convert result type");
+
+  TypedAttr value = convertConstantValue(op.getValue(), resultType);
+  if (!value)
+    return rewriter.notifyMatchFailure(
+        op, "failed to convert value attribute to the converted result type");
+
+  // `arith.constant` has no operands and a single result, so there is nothing
+  // for `oneToOneRewrite` to do here beyond converting `resultType` a second
+  // time.
+  DictionaryAttr discardableAttrs = op->getDiscardableAttrDictionary();
+  auto constantOp =
+      LLVM::ConstantOp::create(rewriter, op.getLoc(), resultType, value);
+  constantOp->setDiscardableAttrs(discardableAttrs);
+  rewriter.replaceOp(op, constantOp);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -475,6 +565,45 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
   }
 
   if (!isa<VectorType>(sumResultType))
+    return rewriter.notifyMatchFailure(loc, "expected vector result types");
+
+  return rewriter.notifyMatchFailure(loc,
+                                     "ND vector types are not supported yet");
+}
+
+//===----------------------------------------------------------------------===//
+// SubUIExtendedOpLowering
+//===----------------------------------------------------------------------===//
+
+LogicalResult SubUIExtendedOpLowering::matchAndRewrite(
+    arith::SubUIExtendedOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Type operandType = adaptor.getLhs().getType();
+  Type diffResultType = op.getDiff().getType();
+  Type borrowResultType = op.getBorrow().getType();
+
+  if (!LLVM::isCompatibleType(operandType))
+    return failure();
+
+  MLIRContext *ctx = rewriter.getContext();
+  Location loc = op.getLoc();
+
+  // Handle the scalar and 1D vector cases.
+  if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    Type newBorrowType = typeConverter->convertType(borrowResultType);
+    Type structType =
+        LLVM::LLVMStructType::getLiteral(ctx, {diffResultType, newBorrowType});
+    Value subOverflow = LLVM::USubWithOverflowOp::create(
+        rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
+    Value diffExtracted =
+        LLVM::ExtractValueOp::create(rewriter, loc, subOverflow, 0);
+    Value borrowExtracted =
+        LLVM::ExtractValueOp::create(rewriter, loc, subOverflow, 1);
+    rewriter.replaceOp(op, {diffExtracted, borrowExtracted});
+    return success();
+  }
+
+  if (!isa<VectorType>(diffResultType))
     return rewriter.notifyMatchFailure(loc, "expected vector result types");
 
   return rewriter.notifyMatchFailure(loc,
@@ -728,6 +857,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     AddIOpLowering,
     AndIOpLowering,
     AddUIExtendedOpLowering,
+    SubUIExtendedOpLowering,
     BitcastOpLowering,
     ConstantOpLowering,
     CmpFOpLowering,

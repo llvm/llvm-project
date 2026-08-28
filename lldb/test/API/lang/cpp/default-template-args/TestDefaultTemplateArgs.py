@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class TestDefaultTemplateArgs(TestBase):
     @no_debug_info_test
     def test(self):

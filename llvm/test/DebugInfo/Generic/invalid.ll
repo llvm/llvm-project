@@ -3,16 +3,18 @@
 ; Make sure we emit this diagnostic only once (which means we don't visit the
 ; same DISubprogram twice.
 ; CHECK: subprogram definitions must have a compile unit
-; CHECK-NEXT: !3 = distinct !DISubprogram(name: "patatino", scope: null, spFlags: DISPFlagDefinition)
+; CHECK-NEXT: !3 = distinct !DISubprogram(name: "patatino", scope: null, type: !4, spFlags: DISPFlagDefinition)
 ; CHECK-NOT: subprogram definitions must have a compile unit
-; CHECK-NOT: !3 = distinct !DISubprogram(name: "patatino", scope: null, spFlags: DISPFlagDefinition)
+; CHECK-NOT: !3 = distinct !DISubprogram(name: "patatino", scope: null, type: !4, spFlags: DISPFlagDefinition)
 ; CHECK: warning: ignoring invalid debug info
 
 define void @tinkywinky() !dbg !3 { ret void }
 
-!llvm.module.flags = !{!4}
+!llvm.module.flags = !{!6}
 !llvm.dbg.cu = !{!0}
 !0 = distinct !DICompileUnit(language: 12, file: !1)
 !1 = !DIFile(filename: "/home/davide", directory: "/home/davide")
-!3 = distinct !DISubprogram(name: "patatino", isDefinition: true)
-!4 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = distinct !DISubprogram(name: "patatino", isDefinition: true, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null}
+!6 = !{i32 2, !"Debug Info Version", i32 3}

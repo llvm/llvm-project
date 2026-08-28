@@ -1,0 +1,97 @@
+// RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!rec_Whole = !cir.struct<"Whole" {data !u16i, data !u16i}>
+!rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
+
+module {
+  // Promote CIR stack slots through the generic mem2reg pass after CFG flattening.
+  // CHECK-LABEL: cir.func @promote_simple_stack_slots
+  cir.func @promote_simple_stack_slots() -> !s32i {
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<42>
+    // CHECK: cir.return %[[CONST]]
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    %1 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<42> : !s32i
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %4 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_volatile
+  cir.func @do_not_promote_volatile_load() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load volatile %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load volatile %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_volatile_store
+  cir.func @do_not_promote_volatile_store() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: cir.store volatile %{{.+}}, %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store volatile %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_atomic_load
+  cir.func @do_not_promote_atomic_load() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load atomic(acquire) %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load atomic(acquire) %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_atomic_store
+  cir.func @do_not_promote_atomic_store() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: cir.store atomic(release) %{{.+}}, %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store atomic(release) %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // A skip_tail_padding copy that covers the whole slot still promotes.
+  // CHECK-LABEL: cir.func @promote_copy_covering_slot
+  cir.func @promote_copy_covering_slot(%src: !cir.ptr<!rec_Whole>) -> !rec_Whole {
+    // CHECK-NOT: cir.alloca
+    // CHECK-NOT: cir.copy
+    %slot = cir.alloca "s" align(2) init : !cir.ptr<!rec_Whole>
+    cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_Whole>
+    %v = cir.load %slot : !cir.ptr<!rec_Whole>, !rec_Whole
+    cir.return %v : !rec_Whole
+  }
+
+  // An all-pad record has a data size of zero, so the copy leaves the slot's
+  // byte untouched and the slot cannot be promoted.
+  // CHECK-LABEL: cir.func @do_not_promote_partial_copy
+  cir.func @do_not_promote_partial_copy(%src: !cir.ptr<!rec_AllPad>) -> !rec_AllPad {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(1) init : !cir.ptr<!rec_AllPad>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] skip_tail_padding : !cir.ptr<!rec_AllPad>
+    %slot = cir.alloca "s" align(1) init : !cir.ptr<!rec_AllPad>
+    cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_AllPad>
+    %v = cir.load %slot : !cir.ptr<!rec_AllPad>, !rec_AllPad
+    cir.return %v : !rec_AllPad
+  }
+}

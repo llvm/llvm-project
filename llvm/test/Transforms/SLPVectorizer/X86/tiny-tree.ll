@@ -158,8 +158,8 @@ define void @tiny_tree_not_fully_vectorizable2(ptr noalias nocapture %dst, ptr n
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[DST_ADDR_022]], align 4
@@ -205,7 +205,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @store_splat(ptr, float) {
 ; CHECK-LABEL: @store_splat(
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP1:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -241,8 +241,8 @@ define void @tiny_vector_gather(ptr %a, ptr %v1, ptr %v2) {
 ; CHECK-LABEL: @tiny_vector_gather(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[V2:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    ret void
@@ -271,8 +271,8 @@ define void @tiny_vector_with_diff_opcode(ptr %a, ptr %v1) {
 ; CHECK-LABEL: @tiny_vector_with_diff_opcode(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[V1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 undef to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i16> [[TMP4]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    store <8 x i16> [[TMP5]], ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    ret void

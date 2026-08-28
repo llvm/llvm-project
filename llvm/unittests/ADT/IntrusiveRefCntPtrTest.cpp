@@ -38,6 +38,8 @@ TYPED_TEST(IntrusiveRefCntPtrTest, RefCountedBaseCopyDoesNotLeak) {
     TypeParam *S2 = new TypeParam(*S1);
     IntrusiveRefCntPtr<TypeParam> R2 = S2;
     EXPECT_EQ(2, NumInstances);
+    (void)R1;
+    (void)R2;
   }
   EXPECT_EQ(0, NumInstances);
 }
@@ -49,6 +51,7 @@ TYPED_TEST(IntrusiveRefCntPtrTest, InteropsWithUniquePtr) {
     IntrusiveRefCntPtr<TypeParam> R1 = std::move(S1);
     EXPECT_EQ(1, NumInstances);
     EXPECT_EQ(S1, nullptr);
+    (void)R1;
   }
   EXPECT_EQ(0, NumInstances);
 }
@@ -91,6 +94,7 @@ TEST(IntrusiveRefCntPtr, UsesTraitsToRetainAndRelease) {
   {
     InterceptRefCounted *I = new InterceptRefCounted(&Released, &Retained);
     IntrusiveRefCntPtr<InterceptRefCounted> R = I;
+    (void)R;
   }
   EXPECT_TRUE(Released);
   EXPECT_TRUE(Retained);

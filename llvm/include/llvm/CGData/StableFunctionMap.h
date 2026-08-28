@@ -99,13 +99,13 @@ struct StableFunctionMap {
     friend struct StableFunctionMapRecord;
   };
 
-  // Note: DenseMap requires value type to be copyable even if only using
-  // in-place insertion. Use STL instead. This also affects the
-  // deletion-while-iteration in finalize().
+  // Note: EntryStorage contains a std::once_flag, which is neither copyable
+  // nor movable, and the lazy-loading design relies on value addresses being
+  // stable. DenseMap relocates values on rehash, so use std::unordered_map.
   using HashFuncsMapType = std::unordered_map<stable_hash, EntryStorage>;
 
   /// Get the HashToFuncs map for serialization.
-  LLVM_ABI_FOR_TEST const HashFuncsMapType &getFunctionMap() const;
+  LLVM_ABI const HashFuncsMapType &getFunctionMap() const;
 
   /// Get the NameToId vector for serialization.
   ArrayRef<std::string> getNames() const { return IdToName; }
@@ -138,7 +138,7 @@ struct StableFunctionMap {
   /// map is lazily loaded, it will deserialize the entries if it is not already
   /// done, other requests to the same hash at the same time will be blocked
   /// until the entries are deserialized.
-  const StableFunctionEntries &
+  LLVM_ABI const StableFunctionEntries &
   at(HashFuncsMapType::key_type FunctionHash) const;
 
   enum SizeType {

@@ -730,11 +730,13 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       if (token_.kind() == TokenKind::UnsignedInteger) {
         ReportError("'AT' edit descriptor does not accept a width value");
         NextToken();
-        suppressMessageCascade_ =
-            false; // reset to allow the Read check below to also report
+        // reset to allow the Read check below to also report
+        suppressMessageCascade_ = false;
       }
       if (stmt_ == IoStmtKind::Read) {
         ReportError("'AT' edit descriptor must not be used for input");
+        // reset to allow subsequent '.' check to also report
+        suppressMessageCascade_ = false;
       }
       break;
     case TokenKind::B:

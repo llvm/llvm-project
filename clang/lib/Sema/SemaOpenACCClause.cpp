@@ -1846,6 +1846,20 @@ bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
            Expr2DRE->getDecl()->getMostRecentDecl();
   }
 
+  // References to a member.
+  if (auto *Expr1ME = dyn_cast<MemberExpr>(VarExpr1)) {
+    auto *Expr2ME = dyn_cast<MemberExpr>(VarExpr2);
+    if (!Expr2ME)
+      return false;
+
+    return Expr1ME->getMemberDecl()->getMostRecentDecl() ==
+               Expr2ME->getMemberDecl()->getMostRecentDecl() &&
+           areVarsEqual(Expr1ME->getBase(), Expr2ME->getBase());
+  }
+
+  if (isa<CXXThisExpr>(VarExpr1))
+    return isa<CXXThisExpr>(VarExpr2);
+
   llvm_unreachable("Unknown variable type encountered");
 }
 } // namespace
@@ -1894,6 +1908,15 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   if (CurType.isNull())
     return false;
 
+  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
+    Diag(Loc, PD);
+
+    for (auto [Loc, PD] : Notes)
+      Diag(Loc, PD);
+
+    return Diag(VarLoc, diag::note_acc_reduction_type_summary);
+  };
+
   // If we are still an array type, we allow 1 level of 'unpeeling' of the
   // array.  The standard isn't clear here whether this is allowed, but
   // array-of-valid-things makes sense.
@@ -1903,6 +1926,14 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
                            << diag::OACCReductionArray::ArrayTy << CurType;
     Notes.push_back({VarLoc, PD});
+    // Non-constant length arrays cannot be used in a reduction clause.
+    // To fix llvm/llvm-project#199162
+    if (!AT->isConstantArrayType()) {
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << CurType
+                                   << diag::OACCReductionTy::NotConstantArray);
+    }
+
     CurType = AT->getElementType();
   }
 
@@ -1910,15 +1941,6 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     return !Ty->isAnyComplexType() &&
            (Ty->isDependentType() ||
             (Ty->isScalarType() && !Ty->isPointerType()));
-  };
-
-  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
-    Diag(Loc, PD);
-
-    for (auto [Loc, PD] : Notes)
-      Diag(Loc, PD);
-
-    return Diag(VarLoc, diag::note_acc_reduction_type_summary);
   };
 
   // If the type is already scalar, or is dependent, just give up.

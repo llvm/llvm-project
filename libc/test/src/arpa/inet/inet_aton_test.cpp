@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcInetAton, ValidTest) {
-  in_addr a;
+  struct in_addr a;
 
   // a.b.c.d
   a.s_addr = 0;
@@ -53,12 +53,30 @@ TEST(LlvmLibcInetAton, ValidTest) {
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("036", &a));
   ASSERT_EQ(htonl(036U), a.s_addr);
+
+  // Trailing space.
+  a.s_addr = 0;
+  ASSERT_EQ(1, inet_aton("1 ", &a));
+  ASSERT_EQ(htonl(1), a.s_addr);
+  a.s_addr = 0;
+  ASSERT_EQ(1, inet_aton("1.2 ", &a));
+  ASSERT_EQ(htonl(0x01000002), a.s_addr);
+  a.s_addr = 0;
+  ASSERT_EQ(1, inet_aton("1.2.3 ", &a));
+  ASSERT_EQ(htonl(0x01020003), a.s_addr);
+  a.s_addr = 0;
+  ASSERT_EQ(1, inet_aton("1.2.3.4 ", &a));
+  ASSERT_EQ(htonl(0x01020304), a.s_addr);
+
+  // We can check for validity with a nullptr argument.
+  ASSERT_EQ(1, inet_aton("127.1.2.4", nullptr));
 }
 
 TEST(LlvmLibcInetAton, InvalidTest) {
   ASSERT_EQ(0, inet_aton("", nullptr));           // Empty.
   ASSERT_EQ(0, inet_aton("x", nullptr));          // Leading junk.
   ASSERT_EQ(0, inet_aton("127.0.0.1x", nullptr)); // Trailing junk.
+  ASSERT_EQ(0, inet_aton("127.0.1x", nullptr));   // Trailing junk.
   ASSERT_EQ(0, inet_aton("09.0.0.1", nullptr));   // Invalid octal.
   ASSERT_EQ(0, inet_aton("0xg.0.0.1", nullptr));  // Invalid hex.
   ASSERT_EQ(0, inet_aton("1.2.3.4.5", nullptr));  // Too many dots.
@@ -87,6 +105,13 @@ TEST(LlvmLibcInetAton, InvalidTest) {
 
   // Out of range octal.
   ASSERT_EQ(0, inet_aton("0400.0.0.1", nullptr));
+
+  // Signs and whitespace.
+  ASSERT_EQ(0, inet_aton(" 127.0.0.1", nullptr));
+  ASSERT_EQ(0, inet_aton("+127.0.0.1", nullptr));
+  ASSERT_EQ(0, inet_aton("-127.0.0.1", nullptr));
+  ASSERT_EQ(0, inet_aton("127. 0.0.1", nullptr));
+  ASSERT_EQ(0, inet_aton("127.+0.0.1", nullptr));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -54,7 +54,7 @@ define half @exp2_f16_sitofp_i8(i8 %x) {
 ; CHECK-LABEL: define half @exp2_f16_sitofp_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.ldexp.f16.i32(half 0xH3C00, i32 [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.ldexp.f16.i32(half 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret half [[EXP2]]
 ;
   %itofp = sitofp i8 %x to half
@@ -78,7 +78,7 @@ define fp128 @exp2_fp128_sitofp_i8(i8 %x) {
 ; CHECK-LABEL: define fp128 @exp2_fp128_sitofp_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[TMP1]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = sitofp i8 %x to fp128

@@ -257,16 +257,14 @@ public:
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
   /// Return true if this is an IntegerType of the given width.
-  LLVM_ABI bool isIntegerTy(unsigned Bitwidth) const;
+  LLVM_ABI inline bool isIntegerTy(unsigned BitWidth) const;
 
   /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }
 
   /// Return true if this is an integer type or a vector of integer types of
   /// the given width.
-  bool isIntOrIntVectorTy(unsigned BitWidth) const {
-    return getScalarType()->isIntegerTy(BitWidth);
-  }
+  LLVM_ABI inline bool isIntOrIntVectorTy(unsigned BitWidth) const;
 
   /// Return true if this is an integer type or a pointer type.
   bool isIntOrPtrTy() const { return isIntegerTy() || isPointerTy(); }
@@ -444,6 +442,10 @@ public:
   /// wide as in the original type. For vectors, preserves element count.
   LLVM_ABI inline Type *getExtendedType() const;
 
+  /// Given scalar/vector integer type, returns a type with elements half as
+  /// wide as in the original type. For vectors, preserves element count.
+  LLVM_ABI inline Type *getTruncatedType() const;
+
   /// Get the address space of this pointer or pointer vector type.
   LLVM_ABI inline unsigned getPointerAddressSpace() const;
 
@@ -517,12 +519,6 @@ public:
   //
   LLVM_ABI static Type *getWasm_ExternrefTy(LLVMContext &C);
   LLVM_ABI static Type *getWasm_FuncrefTy(LLVMContext &C);
-
-  /// Return a pointer to the current type. This is equivalent to
-  /// PointerType::get(Ctx, AddrSpace).
-  /// TODO: Remove this after opaque pointer transition is complete.
-  LLVM_ABI LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
-      PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:
   /// Derived types like structures and arrays are sized iff all of the members

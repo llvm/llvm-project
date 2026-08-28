@@ -2631,6 +2631,39 @@ define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+define i8 @sub_of_adds_2xz_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nsw(
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nsw i8 %x, %z
+  %yz = add nsw i8 %z, %y
+  %r = sub nsw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xz_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_nuw(
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add nuw i8 %x, %z
+  %yz = add nuw i8 %z, %y
+  %r = sub nuw i8 %xz, %yz
+  ret i8 %r
+}
+
+define i8 @sub_of_or_disjoint_2xz(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_or_disjoint_2xz(
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = or disjoint i8 %x, %z
+  %yz = or disjoint i8 %z, %y
+  %r = sub i8 %xz, %yz
+  ret i8 %r
+}
+
 define i8 @sub_of_adds_2xc_multiuse2_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_of_adds_2xc_multiuse2_fail(
 ; CHECK-NEXT:    [[XC:%.*]] = add i8 [[X:%.*]], 10

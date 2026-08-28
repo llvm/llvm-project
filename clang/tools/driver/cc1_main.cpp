@@ -144,13 +144,13 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo.getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
-    DescMap.insert({feature.Key, feature.Desc});
+    DescMap.insert({feature.key(), feature.desc()});
 
   if (MachineTriple.isRISCV())
     llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
@@ -187,23 +187,23 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
       TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                      BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
   // Extract the feature names that are enabled for the given target.
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
-  const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+  const std::vector<const llvm::SubtargetFeatureKV *> Features =
+      MCInfo.getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
-  for (const llvm::SubtargetFeatureKV &feature : Features)
-    EnabledFeatureNames.insert(feature.Key);
+  for (const llvm::SubtargetFeatureKV *feature : Features)
+    EnabledFeatureNames.insert(feature->key());
 
   if (MachineTriple.isAArch64())
     llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
   else if (MachineTriple.isRISCV()) {
     llvm::StringMap<llvm::StringRef> DescMap;
-    for (const llvm::SubtargetFeatureKV &feature : Features)
-      DescMap.insert({feature.Key, feature.Desc});
+    for (const llvm::SubtargetFeatureKV *feature : Features)
+      DescMap.insert({feature->key(), feature->desc()});
     llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
                                                EnabledFeatureNames, DescMap);
   } else {

@@ -65,7 +65,8 @@ fir::GlobalOp tryCreatingDenseGlobal(fir::FirOpBuilder &builder,
                                      llvm::StringRef globalName,
                                      mlir::StringAttr linkage, bool isConst,
                                      const Fortran::lower::SomeExpr &initExpr,
-                                     cuf::DataAttributeAttr dataAttr = {});
+                                     cuf::DataAttributeAttr dataAttr = {},
+                                     bool setDefaultAlignment = true);
 
 /// Lower a StructureConstructor that must be lowered in read only data although
 /// it may not be wrapped into a Constant<T> (this may be the case for derived
@@ -76,6 +77,14 @@ fir::ExtendedValue
 genInlinedStructureCtorLit(Fortran::lower::AbstractConverter &converter,
                            mlir::Location loc,
                            const Fortran::evaluate::StructureConstructor &ctor);
+
+/// Lower a constant expression from an initializer (semantics guarantees a
+/// folded Constant<T>, possibly parenthesized, or a constant
+/// StructureConstructor). Safe inside fir.global initializer regions: never
+/// allocates temporaries or outlines constants into memory.
+fir::ExtendedValue genConstantExprValue(AbstractConverter &converter,
+                                        mlir::Location loc,
+                                        const SomeExpr &expr);
 
 } // namespace Fortran::lower
 

@@ -378,10 +378,14 @@ getRecipeBounds(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(
         dataBound.getLowerbound() && dataBound.getUpperbound() &&
         "expect acc bounds for Fortran to always have lower and upper bounds");
-    std::optional<std::int64_t> lb =
-        fir::getIntIfConstant(dataBound.getLowerbound());
-    std::optional<std::int64_t> ub =
-        fir::getIntIfConstant(dataBound.getUpperbound());
+    std::optional<std::int64_t> lb;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getLowerbound()))
+      lb = constant->trySExtValue();
+    std::optional<std::int64_t> ub;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getUpperbound()))
+      ub = constant->trySExtValue();
     assert(lb.has_value() && ub.has_value() &&
            "must get constant bounds when there are no bound block arguments");
     bounds.push_back(builder.createIntegerConstant(loc, idxTy, *lb));
@@ -437,9 +441,11 @@ static RecipeOp genRecipeOp(
   RecipeOp recipe;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     recipe = mlir::acc::ReductionRecipeOp::create(modBuilder, loc, recipeName,
+                                                  /*sym_visibility=*/nullptr,
                                                   ty, op);
   } else {
-    recipe = RecipeOp::create(modBuilder, loc, recipeName, ty);
+    recipe = RecipeOp::create(modBuilder, loc, recipeName,
+                              /*sym_visibility=*/nullptr, ty);
   }
 
   assert(hlfir::isFortranVariableType(ty) && "expect Fortran variable type");
@@ -616,6 +622,18 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
   mlir::Value currentValue = value;
 
   while (currentValue) {
+    if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentValue)) {
+      if (auto computeRegion =
+              mlir::dyn_cast_if_present<mlir::acc::ComputeRegionOp>(
+                  blockArg.getOwner()->getParentOp())) {
+        if (mlir::Value operand = computeRegion.getOperand(blockArg)) {
+          currentValue = operand;
+          continue;
+        }
+      }
+      break;
+    }
+
     auto *definingOp = currentValue.getDefiningOp();
     if (!definingOp)
       break;

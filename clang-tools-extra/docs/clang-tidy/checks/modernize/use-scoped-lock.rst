@@ -7,8 +7,8 @@ Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
 alternative ``std::scoped_lock``.
 
 Fix-its are provided for single declarations of ``std::lock_guard`` and warning
-is emitted for multiple declarations of ``std::lock_guard`` that can be
-replaced with a single declaration of ``std::scoped_lock``.
+is emitted for multiple declarations of ``std::lock_guard`` or ``std::scoped_lock``
+that can be replaced with a single declaration of ``std::scoped_lock``.
 
 Examples
 --------
@@ -45,14 +45,14 @@ Transforms to:
   std::lock(M);
   std::scoped_lock L(std::adopt_lock, M);
 
-Multiple ``std::lock_guard`` declarations only emit warnings:
+Multiple consecutive lock declarations only emit warnings:
 
 .. code-block:: c++
 
   std::mutex M1, M2;
   std::lock(M1, M2);
-  std::lock_guard Lock1(M1, std::adopt_lock); // warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
-  std::lock_guard Lock2(M2, std::adopt_lock); // note: additional 'std::lock_guard' declared here
+  std::lock_guard Lock1(M1, std::adopt_lock); // warning: use single 'std::scoped_lock' instead of multiple locks
+  std::scoped_lock<std::mutex> Lock2(M2, std::adopt_lock); // note: additional 'std::scoped_lock' declared here
 
 
 Limitations

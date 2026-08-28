@@ -27,13 +27,13 @@ be added to `liboffload/src/OffloadImpl.cpp`
 
 In short, the steps to add a new function are:
 * Add the new function definition to the `.td` files.
-* Build the `LLVMOffload` target. The relevant files will be regenerated, but
+* Build the `offload` target. The relevant files will be regenerated, but
   the library will fail to link because it is missing the implementation
   function.
 * Add the new implementation function to `liboffload/src/OffloadImpl.cpp`. You
   can copy the new function declaration from the generated
-  `OffloadImplFuncDecls.inc` file.
-* Rebuild `LLVMOffload`
+  `<build-directory>/runtimes/runtimes-bins/offload/liboffload/API/OffloadImplFuncDecls.inc` file.
+* Rebuild `offload`
 
 ## API Objects
 

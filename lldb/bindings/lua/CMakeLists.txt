@@ -31,10 +31,18 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
     COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_lua_target_dir}
     DEPENDS swig_wrapper_lua liblldb
     COMMENT "LLDB Lua API")
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/LLDB")
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    # The SWIG wrapper lives in the plugin library in this mode.
+    set(liblldb_filename "liblldbPluginScriptInterpreterLua${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  elseif (LLDB_BUILD_FRAMEWORK)
+    set(liblldb_filename "LLDB")
   else()
-    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(liblldb_filename "liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  endif()
+  if(LLDB_BUILD_FRAMEWORK)
+    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/${liblldb_filename}")
+  else()
+    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/${liblldb_filename}")
   endif()
   if(WIN32)
     set(LIBLLDB_SYMLINK_OUTPUT_FILE "lldb.dll")
@@ -64,6 +72,17 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
     add_llvm_install_targets(${lldb_lua_library_install_target}
                             COMPONENT ${lldb_lua_library_target}
                             DEPENDS ${lldb_lua_library_target})
+    # Tools that link liblldb need the lua bindings installed alongside.
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
+      if(TARGET install-${tool})
+        add_dependencies(install-${tool} ${lldb_lua_library_install_target})
+      endif()
+      if(TARGET install-${tool}-stripped AND TARGET ${lldb_lua_library_install_target}-stripped)
+        add_dependencies(install-${tool}-stripped ${lldb_lua_library_install_target}-stripped)
+      endif()
+    endforeach()
   endif()
 endfunction()
 

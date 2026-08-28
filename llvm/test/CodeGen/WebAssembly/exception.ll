@@ -47,7 +47,7 @@ define void @throw(ptr %p) {
 ; CHECK:   local.get  0
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   i32.store  __wasm_lpad_context
-; CHECK:   call  _Unwind_CallPersonality
+; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0
 ; CHECK:     call  __cxa_begin_catch
@@ -648,7 +648,7 @@ try.cont:                                         ; preds = %entry
 declare void @foo()
 declare void @bar(ptr)
 declare void @take_i32(i32)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.throw(i32, ptr) #1
 ; Function Attrs: nounwind
@@ -671,6 +671,33 @@ declare ptr @_ZN4TempD2Ev(ptr returned)
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
+
+; CHECK-LABEL: empty_cleanup_pad:
+; CHECK:     try_table    (catch_all_ref 0)
+; CHECK:     throw_ref
+define void @empty_cleanup_pad(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  br label %loop
+
+loop:
+  invoke void @foo()
+          to label %loop unwind label %cleanup
+
+cleanup:
+  %exn = cleanuppad within none []
+  br label %dispatch
+
+dispatch:                                         ; preds = %cleanup, %dispatch
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %ret, label %dispatch
+
+ret:                                              ; preds = %dispatch
+  cleanupret from %exn unwind label %cleanup2
+
+cleanup2:                                         ; preds = %ret
+  %exn2 = cleanuppad within none []
+  ret void
+}
 
 ;; The exception tag should not be defined locally
 ; CHECK-NOT: __cpp_exception:

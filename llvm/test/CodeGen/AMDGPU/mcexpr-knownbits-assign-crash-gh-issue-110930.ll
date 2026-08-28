@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa < %s | FileCheck %s
 
 ; Previously, this would hit an assertion on incompatible comparison between
 ; APInts due to BitWidth differences. This was due to assignment of DenseMap

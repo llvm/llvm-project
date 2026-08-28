@@ -726,10 +726,12 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
     case tok::eof:
       break; // Block content or EOF ahead, finish this parapgaph.
 
-    case tok::unknown_command:
-      Content.push_back(S.actOnUnknownCommand(Tok.getLocation(),
-                                              Tok.getEndLocation(),
-                                              Tok.getUnknownCommandName()));
+    case tok::unknown_backslash_command:
+    case tok::unknown_at_command:
+      Content.push_back(S.actOnUnknownCommand(
+          Tok.getLocation(), Tok.getEndLocation(), Tok.getUnknownCommandName(),
+          Tok.getKind() == tok::unknown_backslash_command ? CMK_Backslash
+                                                          : CMK_At));
       consumeToken();
       continue;
 
@@ -751,9 +753,9 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
         continue;
       }
       if (Info->IsUnknownCommand) {
-        Content.push_back(S.actOnUnknownCommand(Tok.getLocation(),
-                                                Tok.getEndLocation(),
-                                                Info->getID()));
+        Content.push_back(S.actOnUnknownCommand(
+            Tok.getLocation(), Tok.getEndLocation(), Info->getID(),
+            Tok.getKind() == tok::backslash_command ? CMK_Backslash : CMK_At));
         consumeToken();
         continue;
       }
@@ -892,7 +894,8 @@ VerbatimLineComment *Parser::parseVerbatimLine() {
 BlockContentComment *Parser::parseBlockContent() {
   switch (Tok.getKind()) {
   case tok::text:
-  case tok::unknown_command:
+  case tok::unknown_backslash_command:
+  case tok::unknown_at_command:
   case tok::backslash_command:
   case tok::at_command:
   case tok::html_start_tag:

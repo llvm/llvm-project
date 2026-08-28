@@ -414,6 +414,10 @@ public:
            "Can't compare invalid VSETVLIInfos");
     assert(!isUnknown() && !Other.isUnknown() &&
            "Can't compare VTYPE in unknown state");
+    if (getTWiden() != Other.getTWiden())
+      return false;
+    if (getTWiden())
+      return getSEW() == Other.getSEW();
     return getSEWLMULRatio() == Other.getSEWLMULRatio();
   }
 

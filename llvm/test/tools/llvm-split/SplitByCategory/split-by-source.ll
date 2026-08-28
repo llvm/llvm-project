@@ -1,7 +1,7 @@
 ; Test checks that kernels are being split by attached module-id metadata and
 ; used functions are being moved with kernels that use them.
 
-; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
+; RUN: llvm-split -split-by-category=attribute --category-attribute=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefixes CHECK-TU0,CHECK
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefixes CHECK-TU1,CHECK
 

@@ -510,7 +510,18 @@ void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len) {
 }
 
 const char *LLVMGetModuleInlineAsm(LLVMModuleRef M, size_t *Len) {
-  auto &Str = unwrap(M)->getModuleInlineAsm();
+  Module *Mod = unwrap(M);
+  ArrayRef<Module::GlobalAsmFragment> Frags = Mod->getModuleInlineAsm();
+  if (Frags.empty()) {
+    *Len = 0;
+    return nullptr;
+  }
+
+  if (Frags.size() != 1)
+    reportFatalUsageError("LLVMGetModuleInlineAsm is not supported if there is "
+                          "more than one module inline assembly fragment");
+
+  auto &Str = Frags.begin()->Asm;
   *Len = Str.length();
   return Str.c_str();
 }
@@ -3486,14 +3497,14 @@ LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
 
 void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
   if (Loc)
-    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<DILocation>(Loc)));
   else
     unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
 }
 
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
-  MDNode *Loc =
-      L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
+  DILocation *Loc =
+      L ? cast<DILocation>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
   unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(Loc));
 }
 
@@ -3508,7 +3519,7 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
 }
 
 void LLVMAddMetadataToInst(LLVMBuilderRef Builder, LLVMValueRef Inst) {
-  unwrap(Builder)->AddMetadataToInst(unwrap<Instruction>(Inst));
+  unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
 void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,

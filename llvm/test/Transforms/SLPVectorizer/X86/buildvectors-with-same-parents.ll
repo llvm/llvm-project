@@ -5,7 +5,7 @@ define i32 @test(i32 %0) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[TMP0]], i64 1
 ; CHECK-NEXT:    switch i32 0, label %[[BCI_130:.*]] [
 ; CHECK-NEXT:      i32 -4, label %[[BCI_96:.*]]
 ; CHECK-NEXT:      i32 3, label %[[BCI_130]]

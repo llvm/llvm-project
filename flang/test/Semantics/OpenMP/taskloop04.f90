@@ -6,7 +6,7 @@ subroutine test
     integer :: i, sum
 
     !ERROR: TILE cannot follow TASKLOOP
-    !ERROR: SIZES clause is not allowed on the TASKLOOP directive
+    !ERROR: SIZES clause is not allowed on TASKLOOP directive
     !$omp taskloop tile sizes(2)
     do i=1,10
         sum = sum + i

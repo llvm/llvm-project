@@ -35,7 +35,7 @@ declare void @use(half)
 define nofpclass(inf zero sub norm) half @ret_only_nan(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -44,7 +44,7 @@ define nofpclass(inf zero sub norm) half @ret_only_nan(half %x, half %y) {
 define nofpclass(snan inf zero sub norm) half @ret_only_qnan(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -73,7 +73,7 @@ define nofpclass(nan inf sub norm) half @ret_only_zero(half %x, half %y) {
 define nofpclass(nan inf nzero sub norm) half @ret_only_pzero(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) half @ret_only_pzero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -82,7 +82,7 @@ define nofpclass(nan inf nzero sub norm) half @ret_only_pzero(half %x, half %y) 
 define nofpclass(nan inf pzero sub norm) half @ret_only_nzero(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) half @ret_only_nzero(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -101,7 +101,7 @@ define nofpclass(nan zero sub norm) half @ret_only_inf(half %x, half %y) {
 define nofpclass(nan ninf zero sub norm) half @ret_only_pinf(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) half @ret_only_pinf(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -110,7 +110,7 @@ define nofpclass(nan ninf zero sub norm) half @ret_only_pinf(half %x, half %y) {
 define nofpclass(nan pinf zero sub norm) half @ret_only_ninf(half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) half @ret_only_ninf(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %add = fadd half %x, %y
   ret half %add
@@ -119,7 +119,7 @@ define nofpclass(nan pinf zero sub norm) half @ret_only_ninf(half %x, half %y) {
 define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__unknown(i1 %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_OR_PINF:%.*]] = select i1 [[COND]], half [[X]], half 0xH7C00
+; CHECK-NEXT:    [[X_OR_PINF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -131,7 +131,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_select_unknown_or_pinf__un
 define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or_pinf(i1 %cond, half %x, half %y) {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__fadd_unknown__select_unknown_or_pinf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[X:%.*]], half [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_OR_PINF:%.*]] = select i1 [[COND]], half [[Y]], half 0xH7C00
+; CHECK-NEXT:    [[Y_OR_PINF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -231,7 +231,7 @@ define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(inf sub norm) half @nan_result_demands_inf_input_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(nan inf zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half 0xH7C00
+; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X_OR_INF]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -246,7 +246,7 @@ define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(inf sub norm) half @nan_result_demands_inf_input_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half 0xH7C00
+; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[X]], [[Y_OR_INF]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -291,7 +291,7 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_lhs(i1 %
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_pinf_input_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half 0xH7C00
+; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X_OR_INF]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -306,7 +306,7 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_pinf_input_rhs(i1 %
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_pinf_input_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half 0xH7C00
+; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half +inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y_OR_INF]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -321,7 +321,7 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_lhs(i1 %
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_ninf_input_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf()
-; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half 0xHFC00
+; CHECK-NEXT:    [[X_OR_INF:%.*]] = select i1 [[COND]], half [[X]], half -inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X_OR_INF]], [[Y]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -336,7 +336,7 @@ define nofpclass(nan sub norm zero) half @inf_result_demands_ninf_input_rhs(i1 %
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @inf_result_demands_ninf_input_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half nofpclass(zero) [[X:%.*]], half nofpclass(zero) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf()
-; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half 0xHFC00
+; CHECK-NEXT:    [[Y_OR_INF:%.*]] = select i1 [[COND]], half [[Y]], half -inf
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[X]], [[Y_OR_INF]]
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
@@ -681,7 +681,7 @@ define nofpclass(snan) half @unknown__fadd__pzero(half %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) half @unknown__fadd__pzero(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], 0xH0000
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], 0.000000e+00
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %pzero = call half @returns_pzero()
@@ -693,7 +693,7 @@ define nofpclass(snan) half @pzero__fadd__unknown(half %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) half @pzero__fadd__unknown(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], 0xH0000
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[UNKNOWN]], 0.000000e+00
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %pzero = call half @returns_pzero()
@@ -705,7 +705,7 @@ define nofpclass(nan) half @ret_nonan__unknown__fadd__pzero(half %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__unknown__fadd__pzero(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], 0xH0000
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], 0.000000e+00
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %pzero = call half @returns_pzero()
@@ -717,7 +717,7 @@ define nofpclass(nan) half @ret_nonan__pzero__fadd__unknown(half %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nonan__pzero__fadd__unknown(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], 0xH0000
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan half [[UNKNOWN]], 0.000000e+00
 ; CHECK-NEXT:    ret half [[ADD]]
 ;
   %pzero = call half @returns_pzero()
@@ -1908,7 +1908,7 @@ define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_sel
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ieee_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub
@@ -1973,7 +1973,7 @@ define nofpclass(norm sub pzero) half @demand_nzero_select_nsub_source__fadd_sel
 ; CHECK-LABEL: define nofpclass(pzero sub norm) half @demand_nzero_select_nsub_source__fadd_self__ftpz_ieee(
 ; CHECK-SAME: i1 [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call noundef half @returns_nsub()
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %nsub = call noundef half @returns_nsub()
   %select = select i1 %cond, half %unknown, half %nsub

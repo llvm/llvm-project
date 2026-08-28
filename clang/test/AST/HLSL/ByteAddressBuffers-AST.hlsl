@@ -37,8 +37,8 @@ RESOURCE Buffer;
 // CHECK: CXXRecordDecl {{.*}} implicit referenced class [[RESOURCE]] definition
 // CHECK: FinalAttr {{.*}}  Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(char8_t)]]
 
@@ -298,6 +298,9 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
+// CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
+// CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
 // CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
@@ -306,6 +309,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'element_type *'
+// CHECK-LOAD-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)
@@ -410,7 +414,11 @@ RESOURCE Buffer;
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-STORE-NEXT: CXXScalarValueInitExpr {{.*}} 'element_type *'
+// CHECK-STORE-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
+// CHECK-STORE-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue ParmVar {{.*}} 'Value' 'element_type'
+// CHECK-STORE-NEXT: IntegerLiteral {{.*}} 'int' 0
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // GetDimensions method

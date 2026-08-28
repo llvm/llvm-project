@@ -177,6 +177,11 @@ Pass *FunctionPass::createPrinterPass(raw_ostream &OS,
   return createPrintFunctionPass(OS, Banner);
 }
 
+bool FunctionPass::printIRUnit(raw_ostream &OS, Function &F) {
+  F.print(OS);
+  return true;
+}
+
 PassManagerType FunctionPass::getPotentialPassManagerType() const {
   return PMT_FunctionPassManager;
 }

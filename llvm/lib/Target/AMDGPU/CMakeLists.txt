@@ -20,13 +20,13 @@ tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUGISel.td)
-tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPreLegalizerCombiner")
+              -combiners="AMDGPUPreLegalizerCombiner" -gisel-extended-llt)
 tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPostLegalizerCombiner")
+              -combiners="AMDGPUPostLegalizerCombiner" -gisel-extended-llt)
 tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPURegBankCombiner")
+              -combiners="AMDGPURegBankCombiner" -gisel-extended-llt)
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
 tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
@@ -61,6 +61,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHazardLatency.cpp
   AMDGPUHSAMetadataStreamer.cpp
+  AMDGPUHWEvents.cpp
   AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUUniformIntrinsicCombine.cpp

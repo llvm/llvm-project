@@ -23,7 +23,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4-IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC1:       vector.ph:
-; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4-IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC1:       vector.body:
@@ -77,7 +77,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC2:       vector.ph:
-; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       vector.body:
@@ -141,7 +141,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF1-IC2:       vector.ph:
-; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       vector.body:
@@ -239,7 +239,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4-IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC1:       vector.ph:
-; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4-IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC1:       vector.body:
@@ -293,7 +293,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC2:       vector.ph:
-; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       vector.body:
@@ -357,7 +357,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF1-IC2:       vector.ph:
-; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       vector.body:
@@ -466,7 +466,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC1:       vector.ph:
-; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4-IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC1:       vector.body:
@@ -575,7 +575,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC2:       vector.ph:
-; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       vector.body:
@@ -734,7 +734,7 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-VF1-IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF1-IC2:       vector.ph:
-; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       vector.body:
@@ -868,7 +868,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4-IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC1:       vector.ph:
-; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4-IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4-IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC1:       vector.body:
@@ -925,7 +925,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF4-IC2:       vector.ph:
-; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       vector.body:
@@ -992,7 +992,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF1-IC2:       vector.ph:
-; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       vector.body:
@@ -1099,7 +1099,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF4-IC1-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC1-NEXT:    [[MAX_015:%.*]] = phi float [ -inf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC1-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC1-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]
@@ -1124,7 +1124,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ -inf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]
@@ -1149,7 +1149,7 @@ define i32 @multi_user_cmp_fmax(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ 0xFFF0000000000000, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[MAX_015:%.*]] = phi float [ -inf, [[ENTRY]] ], [ [[DOTMAX_0:%.*]], [[FOR_BODY]] ]
 ; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[LOAD1]], [[MAX_015]]

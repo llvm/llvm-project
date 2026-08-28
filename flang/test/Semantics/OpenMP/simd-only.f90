@@ -235,9 +235,9 @@ end subroutine
 subroutine test_sections()
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
   !$omp sections
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
   !$omp end sections
 end subroutine
@@ -253,7 +253,7 @@ module test_threadprivate_mod
   ! CHECK: Name = 'x'
   ! CHECK: Name = 'y'
   common /vars/ x, y
-  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPThreadprivate
+  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpThreadprivateDirective
   !$omp threadprivate(/vars/)
 end module
 

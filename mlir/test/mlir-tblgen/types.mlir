@@ -204,7 +204,7 @@ func.func @ranked_tensor_success(%arg0: tensor<i8>, %arg1: tensor<1xi32>, %arg2:
 // -----
 
 func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (tensor<*xf32>) -> ()
   return
 }
@@ -212,7 +212,7 @@ func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
 // -----
 
 func.func @ranked_tensor_success(%arg0: vector<2xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (vector<2xf32>) -> ()
   return
 }
@@ -510,7 +510,7 @@ func.func @does_not_have_i32(%arg0: tensor<1x2xi32>, %arg1: none) {
 // -----
 
 func.func @does_not_have_static_memref(%arg0: memref<?xi32>) {
-  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any type values}}
+  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any non-token type values}}
   "test.takes_static_memref"(%arg0) : (memref<?xi32>) -> ()
 }
 

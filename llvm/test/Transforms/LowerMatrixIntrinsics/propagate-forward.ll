@@ -27,7 +27,7 @@ define void @transpose_store(<8 x double> %a, ptr %Ptr) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[SPLIT3]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP14]], i64 3
 ; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[PTR]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    store <4 x double> [[TMP15]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -513,12 +513,17 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
 }
 
 static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
-                              uint64_t OldOffsetInBits, uint64_t OldSizeInBits,
-                              uint64_t NewSizeInBits, bool IsOverwriteEnd) {
+                              uint64_t OldSizeInBits, uint64_t NewSizeInBits,
+                              bool IsOverwriteEnd) {
   const DataLayout &DL = Inst->getDataLayout();
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
-  uint64_t DeadSliceOffsetInBits =
-      OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);
+  // The dead slice offset is relative to OriginalDest, the slice start we hand
+  // calculateFragmentIntersect. Shortening the end keeps the front of the
+  // store, so the dead bits start where the new store ends; shortening the
+  // beginning kills the bits at OriginalDest itself. Don't add OriginalDest's
+  // offset from its base object here. calculateFragmentIntersect already
+  // measures that pointer against the marker's address.
+  uint64_t DeadSliceOffsetInBits = IsOverwriteEnd ? NewSizeInBits : 0;
   auto SetDeadFragExpr = [](auto *Assign,
                             DIExpression::FragmentInfo DeadFragment) {
     // createFragmentExpression expects an offset relative to the existing
@@ -560,8 +565,10 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                                         DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
-      // We couldn't calculate the intersecting fragment for some reason. Be
-      // cautious and unlink the whole assignment from the store.
+      // Either the intersection couldn't be worked out, or it covers the
+      // entire variable region described by the record. Full coverage leaves
+      // NewFragment empty rather than making calculateFragmentIntersect fail,
+      // so unlink the whole assignment from the store in both cases.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
       continue;
@@ -700,8 +707,7 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.
-  shortenAssignment(DeadI, OrigDest, DeadStart * 8, DeadSize * 8, NewSize * 8,
-                    IsOverwriteEnd);
+  shortenAssignment(DeadI, OrigDest, DeadSize * 8, NewSize * 8, IsOverwriteEnd);
 
   // Finally update start and size of dead access.
   if (!IsOverwriteEnd)
@@ -772,45 +778,60 @@ tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
                                    int64_t KillingOffset, int64_t DeadOffset,
                                    const DataLayout &DL, BatchAAResults &AA,
                                    DominatorTree *DT) {
+  assert(KillingI);
+  assert(DeadI);
 
-  if (DeadI && isa<ConstantInt>(DeadI->getValueOperand()) &&
-      DL.typeSizeEqualsStoreSize(DeadI->getValueOperand()->getType()) &&
-      KillingI && isa<ConstantInt>(KillingI->getValueOperand()) &&
-      DL.typeSizeEqualsStoreSize(KillingI->getValueOperand()->getType()) &&
-      memoryIsNotModifiedBetween(DeadI, KillingI, AA, DL, DT)) {
-    // If the store we find is:
-    //   a) partially overwritten by the store to 'Loc'
-    //   b) the killing store is fully contained in the dead one and
-    //   c) they both have a constant value
-    //   d) none of the two stores need padding
-    // Merge the two stores, replacing the dead store's value with a
-    // merge of both values.
-    // TODO: Deal with other constant types (vectors, etc), and probably
-    // some mem intrinsics (if needed)
+  // If the store we find is:
+  //   a) partially overwritten by the store to 'Loc'
+  //   b) the killing store is fully contained in the dead one and
+  //   c) they both have a constant value
+  //   d) none of the two stores need padding
+  // Merge the two stores, replacing the dead store's value with a
+  // merge of both values.
+  //
+  // TODO: Deal with other constant types (vectors, etc), and probably
+  // some mem intrinsics (if needed)
+  if (!isa<ConstantInt>(DeadI->getValueOperand()) ||
+      !DL.typeSizeEqualsStoreSize(DeadI->getValueOperand()->getType()) ||
+      !isa<ConstantInt>(KillingI->getValueOperand()) ||
+      !DL.typeSizeEqualsStoreSize(KillingI->getValueOperand()->getType()) ||
+      !memoryIsNotModifiedBetween(DeadI, KillingI, AA, DL, DT))
+    return nullptr;
 
-    APInt DeadValue = cast<ConstantInt>(DeadI->getValueOperand())->getValue();
-    APInt KillingValue =
-        cast<ConstantInt>(KillingI->getValueOperand())->getValue();
-    unsigned KillingBits = KillingValue.getBitWidth();
-    assert(DeadValue.getBitWidth() > KillingValue.getBitWidth());
-    KillingValue = KillingValue.zext(DeadValue.getBitWidth());
+  // The merge erases KillingI and writes its bytes via DeadI. For that to be
+  // safe:
+  //   - KillingI must be deletable (not volatile, ordering at most unordered),
+  //   - DeadI must be safe to rewrite, and
+  //   - their orderings must match, so the bytes originally written by
+  //     KillingI keep the same atomicity after they are folded into DeadI.
+  // This allows merging two simple stores or two unordered-atomic stores with
+  // matching ordering, while leaving volatile and ordered-atomic stores in
+  // place.
+  if (!KillingI->isUnordered() || !DeadI->isUnordered() ||
+      KillingI->getOrdering() != DeadI->getOrdering())
+    return nullptr;
 
-    // Offset of the smaller store inside the larger store
-    unsigned BitOffsetDiff = (KillingOffset - DeadOffset) * 8;
-    unsigned LShiftAmount =
-        DL.isBigEndian() ? DeadValue.getBitWidth() - BitOffsetDiff - KillingBits
-                         : BitOffsetDiff;
-    APInt Mask = APInt::getBitsSet(DeadValue.getBitWidth(), LShiftAmount,
-                                   LShiftAmount + KillingBits);
-    // Clear the bits we'll be replacing, then OR with the smaller
-    // store, shifted appropriately.
-    APInt Merged = (DeadValue & ~Mask) | (KillingValue << LShiftAmount);
-    LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Dead: " << *DeadI
-                      << "\n  Killing: " << *KillingI
-                      << "\n  Merged Value: " << Merged << '\n');
-    return ConstantInt::get(DeadI->getValueOperand()->getType(), Merged);
-  }
-  return nullptr;
+  APInt DeadValue = cast<ConstantInt>(DeadI->getValueOperand())->getValue();
+  APInt KillingValue =
+      cast<ConstantInt>(KillingI->getValueOperand())->getValue();
+  unsigned KillingBits = KillingValue.getBitWidth();
+  assert(DeadValue.getBitWidth() > KillingValue.getBitWidth());
+  KillingValue = KillingValue.zext(DeadValue.getBitWidth());
+
+  // Offset of the smaller store inside the larger store
+  unsigned BitOffsetDiff = (KillingOffset - DeadOffset) * 8;
+  unsigned LShiftAmount =
+      DL.isBigEndian() ? DeadValue.getBitWidth() - BitOffsetDiff - KillingBits
+                       : BitOffsetDiff;
+  APInt Mask = APInt::getBitsSet(DeadValue.getBitWidth(), LShiftAmount,
+                                 LShiftAmount + KillingBits);
+  // Clear the bits we'll be replacing, then OR with the smaller
+  // store, shifted appropriately.
+  APInt Merged = (DeadValue & ~Mask) | (KillingValue << LShiftAmount);
+  LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Dead: " << *DeadI
+                    << "\n  Killing: " << *KillingI
+                    << "\n  Merged Value: " << Merged << '\n');
+  return ConstantInt::get(DeadI->getValueOperand()->getType(), Merged);
 }
 
 // Returns true if \p I is an intrinsic that does not read or write memory.
@@ -1165,8 +1186,8 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                       EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         capturesNothing(
-             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
+         capturesNothing(EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt=*/true,
+                                              /*ReturnCaptures=*/false));
 }
 
 DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
@@ -1218,9 +1239,8 @@ DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 LocationSize DSEState::strengthenLocationSize(const Instruction *I,
                                               LocationSize Size) const {
   if (auto *CB = dyn_cast<CallBase>(I)) {
-    LibFunc F;
-    if (TLI.getLibFunc(*CB, F) && TLI.has(F) &&
-        (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
+    LibFunc F = TLI.getLibFunc(*CB);
+    if (TLI.has(F) && (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
       // Use the precise location size specified by the 3rd argument
       // for determining KillingI overwrites DeadLoc if it is a memset_chk
       // instruction. memset_chk will write either the amount specified as 3rd
@@ -1396,8 +1416,8 @@ bool DSEState::isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
   }
   auto I = InvisibleToCallerAfterRet.insert({V, false});
   if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
-    I.first->second = capturesNothing(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
+    I.first->second = capturesNothing(
+        PointerMayBeCaptured(V, CaptureComponents::Provenance).WithRet);
   return I.first->second;
 }
 
@@ -1414,8 +1434,8 @@ bool DSEState::isInvisibleToCallerOnUnwind(const Value *V) {
     // with the killing MemoryDef. But we refrain from doing so for now to
     // limit compile-time and this does not cause any changes to the number
     // of stores removed on a large test set in practice.
-    I.first->second = capturesAnything(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
+    I.first->second = capturesAnything(
+        PointerMayBeCaptured(V, CaptureComponents::Provenance).WithoutRet);
   return !I.first->second;
 }
 
@@ -1605,7 +1625,7 @@ bool DSEState::isGuaranteedLoopIndependent(const Instruction *Current,
   // would also be valid but we currently disable that to limit compile time).
   if (Current->getParent() == KillingDef->getParent())
     return true;
-  const Cycle *CurrentC = CI.getCycle(Current->getParent());
+  CycleRef CurrentC = CI.getCycle(Current->getParent());
   if (CurrentC && CurrentC == CI.getCycle(KillingDef->getParent()))
     return true;
   // Otherwise check the memory location is invariant to any loops.
@@ -2273,10 +2293,9 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   auto *InnerCallee = Malloc->getCalledFunction();
   if (!InnerCallee)
     return false;
-  LibFunc Func = NotLibFunc;
+  LibFunc Func = TLI.getLibFunc(*InnerCallee);
   StringRef ZeroedVariantName;
-  if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-      Func != LibFunc_malloc) {
+  if (Func != LibFunc_malloc || !TLI.has(Func)) {
     Attribute Attr = Malloc->getFnAttr("alloc-variant-zeroed");
     if (!Attr.isValid())
       return false;
@@ -2342,6 +2361,9 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   }
   if (!Calloc)
     return false;
+
+  if (MDNode *MD = Malloc->getMetadata(LLVMContext::MD_alloc_token))
+    cast<Instruction>(Calloc)->setMetadata(LLVMContext::MD_alloc_token, MD);
 
   MemorySSAUpdater Updater(&MSSA);
   auto *NewAccess = Updater.createMemoryAccessAfter(cast<Instruction>(Calloc),
@@ -2866,13 +2888,10 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addRequired<CycleInfoWrapperPass>();
-    AU.addPreserved<CycleInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
   }
 };

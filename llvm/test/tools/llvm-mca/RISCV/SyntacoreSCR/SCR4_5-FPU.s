@@ -158,4 +158,4 @@ fdiv.d ft7, ft7, ft7
 # CHECK-NEXT:   13.    1     0.0    0.0    0.0       fmadd.d	ft5, ft5, ft5, ft5
 # CHECK-NEXT:   14.    1     0.0    0.0    0.0       fdiv.s	ft6, ft6, ft6
 # CHECK-NEXT:   15.    1     0.0    0.0    0.0       fdiv.d	ft7, ft7, ft7
-# CHECK-NEXT:          1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        16    0.0    0.0    0.0       <total>

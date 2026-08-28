@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,36 +35,37 @@ MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {X86::S_ABS8, "ABS8"},
-    {X86::S_DTPOFF, "DTPOFF"},
-    {X86::S_DTPREL, "DTPREL"},
-    {X86::S_GOT, "GOT"},
-    {X86::S_GOTENT, "GOTENT"},
-    {X86::S_GOTNTPOFF, "GOTNTPOFF"},
-    {X86::S_GOTOFF, "GOTOFF"},
-    {X86::S_GOTPCREL, "GOTPCREL"},
-    {X86::S_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
-    {X86::S_GOTREL, "GOTREL"},
-    {X86::S_GOTTPOFF, "GOTTPOFF"},
-    {X86::S_INDNTPOFF, "INDNTPOFF"},
-    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
-    {X86::S_NTPOFF, "NTPOFF"},
-    {X86::S_PCREL, "PCREL"},
-    {X86::S_PLT, "PLT"},
-    {X86::S_PLTOFF, "PLTOFF"},
-    {X86::S_COFF_SECREL, "SECREL32"},
-    {X86::S_SIZE, "SIZE"},
-    {X86::S_TLSCALL, "tlscall"},
-    {X86::S_TLSDESC, "tlsdesc"},
-    {X86::S_TLSGD, "TLSGD"},
-    {X86::S_TLSLD, "TLSLD"},
-    {X86::S_TLSLDM, "TLSLDM"},
-    {X86::S_TLVP, "TLVP"},
-    {X86::S_TLVPPAGE, "TLVPPAGE"},
-    {X86::S_TLVPPAGEOFF, "TLVPPAGEOFF"},
-    {X86::S_TPOFF, "TPOFF"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"ABS8"}, X86::S_ABS8},
+    {{"DTPOFF"}, X86::S_DTPOFF},
+    {{"DTPREL"}, X86::S_DTPREL},
+    {{"GOT"}, X86::S_GOT},
+    {{"GOTENT"}, X86::S_GOTENT},
+    {{"GOTNTPOFF"}, X86::S_GOTNTPOFF},
+    {{"GOTOFF"}, X86::S_GOTOFF},
+    {{"GOTPCREL"}, X86::S_GOTPCREL},
+    {{"GOTPCREL_NORELAX"}, X86::S_GOTPCREL_NORELAX},
+    {{"GOTREL"}, X86::S_GOTREL},
+    {{"GOTTPOFF"}, X86::S_GOTTPOFF},
+    {{"INDNTPOFF"}, X86::S_INDNTPOFF},
+    {{"IMGREL"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
+    {{"NTPOFF"}, X86::S_NTPOFF},
+    {{"PCREL"}, X86::S_PCREL},
+    {{"PLT"}, X86::S_PLT},
+    {{"PLTOFF"}, X86::S_PLTOFF},
+    {{"SECREL32"}, X86::S_COFF_SECREL},
+    {{"SIZE"}, X86::S_SIZE},
+    {{"tlscall"}, X86::S_TLSCALL},
+    {{"tlsdesc"}, X86::S_TLSDESC},
+    {{"TLSGD"}, X86::S_TLSGD},
+    {{"TLSLD"}, X86::S_TLSLD},
+    {{"TLSLDM"}, X86::S_TLSLDM},
+    {{"TLVP"}, X86::S_TLVP},
+    {{"TLVPPAGE"}, X86::S_TLVPPAGE},
+    {{"TLVPPAGEOFF"}, X86::S_TLVPPAGEOFF},
+    {{"TPOFF"}, X86::S_TPOFF},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 void X86MCAsmInfoDarwin::anchor() { }
 
@@ -154,7 +156,6 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
     : MCAsmInfoMicrosoft(Options) {
   if (Triple.isX86_64()) {
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
   } else {
@@ -187,44 +188,15 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(
   AllowAtAtStartOfIdentifier = true;
 }
 
-static bool isValidX86UnquotedName(const MCAsmInfo &MAI,
-                                   const StringSet<> &ReservedIdentifiers,
-                                   StringRef Name) {
-  if (!MAI.MCAsmInfo::isValidUnquotedName(Name))
-    return false;
-  // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
-  // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
-  // keywords.
-  return MAI.getOutputAssemblerDialect() == 0 ||
-         !ReservedIdentifiers.contains(Name.lower());
-}
-
-bool X86MCAsmInfoDarwin::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
-}
-
-bool X86ELFMCAsmInfo::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
-}
-
-bool X86MCAsmInfoMicrosoft::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
-}
-
-bool X86MCAsmInfoGNUCOFF::isValidUnquotedName(StringRef Name) const {
-  return isValidX86UnquotedName(*this, ReservedIdentifiers, Name);
-}
-
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
                                          const MCTargetOptions &Options)
     : MCAsmInfoGNUCOFF(Options) {
-  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
+  assert(Triple.isOSWindowsOrUEFI() &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
     ExceptionsType = ExceptionHandling::WinEH;

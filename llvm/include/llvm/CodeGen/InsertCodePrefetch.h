@@ -22,9 +22,9 @@ namespace llvm {
 
 // Returns the symbol name for a prefetch target at function `FunctionName`,
 // basic block `BBID` and callsite index `CallsiteIndex`.
-SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
-                                             const UniqueBBID &BBID,
-                                             unsigned CallsiteIndex);
+LLVM_ABI SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
+                                                      const UniqueBBID &BBID,
+                                                      unsigned CallsiteIndex);
 
 } // end namespace llvm
 

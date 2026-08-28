@@ -22,14 +22,12 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 -1000, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE:%.*]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i1, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i1, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> poison, i1 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i1> [[TMP6]], i1 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> poison, i1 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i1> [[TMP6]], i1 [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[ALLOCA]], i16 [[OFFSET_IDX]]

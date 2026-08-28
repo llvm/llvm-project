@@ -24,8 +24,7 @@ define <8 x i8> @test_uaba_v8i8(<8 x i8> %lhs, <8 x i8> %rhs) {
 define <8 x i8> @test_uaba_or_v8i8(<8 x i8> %lhs, <8 x i8> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uaba v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %abd = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %lhs, <8 x i8> %rhs)
   %aba = or disjoint <8 x i8> %lhs, %abd
@@ -54,8 +53,7 @@ define <8 x i8> @test_saba_v8i8(<8 x i8> %lhs, <8 x i8> %rhs) {
 define <8 x i8> @test_saba_or_v8i8(<8 x i8> %lhs, <8 x i8> %rhs) {
 ; CHECK-LABEL: test_saba_or_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    saba v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %abd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %lhs, <8 x i8> %rhs)
   %aba = or disjoint <8 x i8> %lhs, %abd
@@ -84,8 +82,7 @@ define <16 x i8> @test_uaba_v16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 define <16 x i8> @test_uaba_or_v16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uaba v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %abd = call <16 x i8> @llvm.aarch64.neon.uabd.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
   %aba = or disjoint <16 x i8> %lhs, %abd
@@ -114,8 +111,7 @@ define <16 x i8> @test_saba_v16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 define <16 x i8> @test_saba_or_v16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 ; CHECK-LABEL: test_saba_or_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    saba v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %abd = call <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
   %aba = or disjoint <16 x i8> %lhs, %abd
@@ -144,8 +140,7 @@ define <4 x i16> @test_uaba_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 define <4 x i16> @test_uaba_or_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uaba v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %abd = call <4 x i16> @llvm.aarch64.neon.uabd.v4i16(<4 x i16> %lhs, <4 x i16> %rhs)
   %aba = or disjoint <4 x i16> %lhs, %abd
@@ -174,8 +169,7 @@ define <4 x i16> @test_saba_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 define <4 x i16> @test_saba_or_v4i16(<4 x i16> %lhs, <4 x i16> %rhs) {
 ; CHECK-LABEL: test_saba_or_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    saba v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %abd = call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %lhs, <4 x i16> %rhs)
   %aba = or disjoint <4 x i16> %lhs, %abd
@@ -204,8 +198,7 @@ define <8 x i16> @test_uaba_v8i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 define <8 x i16> @test_uaba_or_v8i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uaba v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %abd = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %lhs, <8 x i16> %rhs)
   %aba = or disjoint <8 x i16> %lhs, %abd
@@ -234,8 +227,7 @@ define <8 x i16> @test_saba_v8i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 define <8 x i16> @test_saba_or_v8i16(<8 x i16> %lhs, <8 x i16> %rhs) {
 ; CHECK-LABEL: test_saba_or_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    saba v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %abd = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %lhs, <8 x i16> %rhs)
   %aba = or disjoint <8 x i16> %lhs, %abd
@@ -264,8 +256,7 @@ define <2 x i32> @test_uaba_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 define <2 x i32> @test_uaba_or_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uaba v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %abd = call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   %aba = or disjoint <2 x i32> %lhs, %abd
@@ -294,8 +285,7 @@ define <2 x i32> @test_saba_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 define <2 x i32> @test_saba_or_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: test_saba_or_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    saba v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %abd = call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %lhs, <2 x i32> %rhs)
   %aba = or disjoint <2 x i32> %lhs, %abd
@@ -345,8 +335,7 @@ define <4 x i32> @test_uaba_v4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 define <4 x i32> @test_uaba_or_v4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-LABEL: test_uaba_or_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uaba v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %abd = call <4 x i32> @llvm.aarch64.neon.uabd.v4i32(<4 x i32> %lhs, <4 x i32> %rhs)
   %aba = or disjoint <4 x i32> %lhs, %abd
@@ -375,8 +364,7 @@ define <4 x i32> @test_saba_v4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 define <4 x i32> @test_saba_or_v4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-LABEL: test_saba_or_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    saba v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %abd = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %lhs, <4 x i32> %rhs)
   %aba = or disjoint <4 x i32> %lhs, %abd
@@ -500,11 +488,11 @@ define <4 x i32> @test_sabd_knownbits_vec4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI43_0]
-; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %and1 = and <4 x i32> %lhs, <i32 255, i32 -1, i32 -1, i32 255>
   %and2 = and <4 x i32> %rhs, <i32 255, i32 255, i32 -1, i32 -1>
@@ -532,9 +520,9 @@ define <4 x i32> @knownbits_sabd_and_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI44_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = and <4 x i32> %a1, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -557,11 +545,11 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI45_0]
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -594,11 +582,11 @@ define <4 x i32> @knownbits_sabd_and_xor_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_0]
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = xor <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -622,11 +610,11 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_0]
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>
@@ -660,9 +648,9 @@ define <4 x i32> @knownbits_sabd_and_mul_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    and v2.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v3.4s
 ; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI48_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI48_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = mul <4 x i32> %a0, %1

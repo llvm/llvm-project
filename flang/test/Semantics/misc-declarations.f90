@@ -43,3 +43,28 @@ module m
     real, intent(in) :: x(..)[*]
   end
 end module
+
+! Submodule host-association: same C867/C868-equivalent constraints apply
+! when VOLATILE names a host variable from the ancestor module.
+module m2
+  real :: smCoarray[*]
+  type :: hasCoarray2
+    real, allocatable :: coarray[:]
+  end type
+  type(hasCoarray2) :: smCoarrayComp
+  interface
+    module subroutine smProc()
+    end subroutine
+  end interface
+end module
+submodule(m2) sm2
+  !ERROR: VOLATILE attribute may not apply to a coarray accessed by USE or host association
+  volatile :: smCoarray
+  !ERROR: VOLATILE attribute may not apply to a type with a coarray ultimate component accessed by USE or host association
+  volatile :: smCoarrayComp
+  volatile :: smProc
+contains
+  !ERROR: VOLATILE attribute may apply only to a variable
+  module subroutine smProc()
+  end subroutine
+end submodule

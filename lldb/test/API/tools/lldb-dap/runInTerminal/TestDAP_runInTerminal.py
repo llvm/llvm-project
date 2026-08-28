@@ -66,6 +66,7 @@ def read_pipe_message(pipe):
 
 
 @skipIfBuildType(["debug"])
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -130,6 +131,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn(program, request["arguments"]["args"])
         self.assertIn("foobar", request["arguments"]["args"])
         self.assertIn("FOO", request["arguments"]["env"])
+        if sys.platform == "win32":
+            self.assertIn("_NO_DEBUG_HEAP", request["arguments"]["env"])
 
         breakpoint_line = line_number(source, "// breakpoint")
 
@@ -150,6 +153,10 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         # We verify we were able to set the environment
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
+
+        if sys.platform == "win32":
+            env = self.dap_server.request_evaluate("nodebugheap")["body"]["result"]
+            self.assertIn('"1"', env)
 
         self.continue_to_exit()
 
@@ -180,20 +187,24 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
         response = self.launch_and_configurationDone(
-            "INVALIDPROGRAM",
+            self.getBuildArtifact("INVALIDPROGRAM"),
             console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "'INVALIDPROGRAM' does not exist",
+            f"'{self.getBuildArtifact('INVALIDPROGRAM')}' does not exist",
             response["body"]["error"]["format"],
         )
 
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run(
-            [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
+            [
+                self.lldbDAPExec,
+                "--launch-target",
+                self.getBuildArtifact("INVALIDPROGRAM"),
+            ],
             capture_output=True,
             universal_newlines=True,
         )
@@ -210,7 +221,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                     "--comm-file",
                     comm_file,
                     "--launch-target",
-                    "INVALIDPROGRAM",
+                    self.getBuildArtifact("INVALIDPROGRAM"),
                 ],
                 universal_newlines=True,
                 stderr=subprocess.PIPE,

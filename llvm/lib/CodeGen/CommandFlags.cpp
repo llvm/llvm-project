@@ -23,6 +23,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -75,7 +76,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
@@ -231,13 +231,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoSignedZerosFPMath(
-      "enable-no-signed-zeros-fp-math",
-      cl::desc("Enable FP math optimizations that assume "
-               "the sign of 0 is insignificant"),
-      cl::init(false));
-  CGBINDOPT(EnableNoSignedZerosFPMath);
 
   static cl::opt<bool> EnableNoTrappingFPMath(
       "enable-no-trapping-fp-math",
@@ -592,13 +585,10 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
-  if (getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = getFloatABIForCalls();
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
@@ -755,8 +745,6 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
-
   if ((DenormalFPMathView->getNumOccurrences() > 0 ||
        DenormalFP32MathView->getNumOccurrences() > 0) &&
       !F.hasFnAttribute(Attribute::DenormalFPEnv)) {
@@ -785,13 +773,33 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
 
 void codegen::setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU) {
+  // Synthesize the "float-abi" module flag from the -float-abi option.
+  FloatABI::ABIType ABI = getFloatABIForCalls();
+  if (ABI != FloatABI::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi"))) {
+      // The module already records a float ABI; -float-abi must not contradict
+      // it.
+      if (Existing->getString() != FloatABI::getABITypeName(ABI))
+        reportFatalUsageError(
+            "-float-abi=" + FloatABI::getABITypeName(ABI) +
+            " conflicts with the \"float-abi\" module flag \"" +
+            Existing->getString() + "\"");
+    } else {
+      M.addModuleFlag(
+          Module::Error, "float-abi",
+          MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+    }
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
+codegen::createTargetMachineForTriple(const Triple &TargetTriple,
                                       CodeGenOptLevel OptLevel) {
+  // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
   const auto *TheTarget =
@@ -806,7 +814,7 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!Target)
     return createStringError(inconvertibleErrorCode(),
                              Twine("could not allocate target machine for ") +
-                                 TargetTriple);
+                                 TheTriple.str());
   return std::unique_ptr<TargetMachine>(Target);
 }
 

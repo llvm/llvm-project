@@ -32,18 +32,18 @@
 #ifdef __linux__
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__ftxw = */ {0},     /* .__priority_inherit = */ 0,                  \
-      /* .__recursive = */ 0,  /* .__robust = */ 0,                            \
-      /* .__pshared = */ 0,    /* .__owner = */ 0,                             \
-      /* .__lock_count = */ 0,                                                 \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #else
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \
-      /* .__ftxw = */ {0},     /* .__priority_inherit = */ 0,                  \
-      /* .__recursive = */ 0,  /* .__robust = */ 0,                            \
-      /* .__pshared = */ 0,    /* .__owner = */ 0,                             \
-      /* .__lock_count = */ 0,                                                 \
+      /* .__ftxw = */ {0},    /* .__priority_inherit = */ 0,                   \
+      /* .__recursive = */ 0, /* .__robust = */ 0,                             \
+      /* .__pshared = */ 0,   /* .__error_checking = */ 0,                     \
+      /* .__owner = */ 0,     /* .__lock_count = */ 0,                         \
   }
 #endif
 
@@ -76,5 +76,8 @@
 #define PTHREAD_RWLOCK_PREFER_READER_NP 0
 #define PTHREAD_RWLOCK_PREFER_WRITER_NP 1
 #define PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 2
+
+// llvm libc extensions
+#define PTHREAD_STACK_DYNAMIC_NP 0
 
 #endif // LLVM_LIBC_MACROS_PTHREAD_MACRO_H

@@ -175,8 +175,7 @@ BasicBlock::~BasicBlock() {
   // is no indirect branch).  Handle these cases by zapping the BlockAddress
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
-    assert(!use_empty() && "There should be at least one blockaddress!");
-    BlockAddress *BA = cast<BlockAddress>(user_back());
+    BlockAddress *BA = BlockAddress::lookup(this);
 
     Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
     BA->replaceAllUsesWith(
@@ -240,14 +239,6 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
-
-    // Look through the optional bitcast.
-    if (auto *BI = dyn_cast<BitCastInst>(Prev)) {
-      RV = BI->getOperand(0);
-      Prev = BI->getPrevNode();
-      if (!Prev || RV != Prev)
-        return nullptr;
-    }
   }
 
   if (auto *CI = dyn_cast<CallInst>(Prev)) {
@@ -289,20 +280,6 @@ const Instruction *BasicBlock::getFirstMayFaultInst() const {
     return nullptr;
   for (const Instruction &I : *this)
     if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallBase>(I))
-      return &I;
-  return nullptr;
-}
-
-const Instruction* BasicBlock::getFirstNonPHI() const {
-  for (const Instruction &I : *this)
-    if (!isa<PHINode>(I))
-      return &I;
-  return nullptr;
-}
-
-Instruction *BasicBlock::getFirstNonPHI() {
-  for (Instruction &I : *this)
-    if (!isa<PHINode>(I))
       return &I;
   return nullptr;
 }

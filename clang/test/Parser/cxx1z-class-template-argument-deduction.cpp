@@ -259,9 +259,10 @@ void f() {
 namespace GH107887 {
 
 namespace a {
-template <class> struct pair; // expected-note 3{{declared here}}
+template <class> struct pair; // expected-note 2{{declared here}}
 }
-template <class T2> pair() -> pair<T2>;   // expected-error 2{{no template named 'pair'}} \
+template <class T2> pair() -> pair<T2>;   // expected-error {{no template named 'pair'}} \
+                                          // expected-error {{out-of-line declaration of '<deduction guide for pair>' does not match any declaration}} \
                                           // expected-error {{deduction guide must be declared in the same scope}} \
                                           // expected-error {{cannot be deduced}} \
                                           // expected-note {{non-deducible template parameter 'T2'}}

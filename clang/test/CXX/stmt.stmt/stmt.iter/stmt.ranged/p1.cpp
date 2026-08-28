@@ -176,7 +176,7 @@ void g() {
     void *end();
   };
   for (auto u : NoIncr()) { // expected-error {{arithmetic on a pointer to void}}\
-    expected-note {{in implicit call to 'operator++' for iterator of type 'NoIncr'}}
+    expected-note {{in implicit call to 'operator++' for iterator of type 'void *'}}
   }
 
   struct NoNotEq {

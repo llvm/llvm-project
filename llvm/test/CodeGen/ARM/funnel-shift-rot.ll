@@ -45,12 +45,10 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 define i16 @rotl_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotl_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    and r2, r1, #15
-; CHECK-NEXT:    rsb r1, r1, #0
 ; CHECK-NEXT:    and r1, r1, #15
-; CHECK-NEXT:    lsl r2, r0, r2
-; CHECK-NEXT:    uxth r0, r0
-; CHECK-NEXT:    orr r0, r2, r0, lsr r1
+; CHECK-NEXT:    pkhbt r0, r0, r0, lsl #16
+; CHECK-NEXT:    lsl r0, r0, r1
+; CHECK-NEXT:    lsr r0, r0, #16
 ; CHECK-NEXT:    bx lr
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f

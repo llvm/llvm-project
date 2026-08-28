@@ -87,3 +87,20 @@ subroutine s6()
   do concurrent(i=1:5) reduce(+:ch)
   end do
 end subroutine s6
+
+subroutine s7()
+! The '-' reduction operator is not supported for a DO CONCURRENT REDUCE
+! locality-spec, regardless of the reduction variable's type.
+  integer :: i1
+  real :: r1
+  complex :: c1
+!ERROR: '-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier
+  do concurrent(i=1:5) reduce(-:i1)
+  end do
+!ERROR: '-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier
+  do concurrent(i=1:5) reduce(-:r1)
+  end do
+!ERROR: '-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier
+  do concurrent(i=1:5) reduce(-:c1)
+  end do
+end subroutine s7

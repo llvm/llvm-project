@@ -239,7 +239,6 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       FunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();

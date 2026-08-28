@@ -18,6 +18,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -93,6 +94,12 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
   assert(Key == "a_key" || Key == "b_key");
+  if (STI.getTargetTriple().isOSWindows() && Key == "a_key" &&
+      GetSignReturnAddress(F) != SignReturnAddress::None) {
+    F.getContext().diagnose(DiagnosticInfoUnsupported{
+        F, "A-key return address signing is unsupported on AArch64 Windows"});
+    return true;
+  }
   return Key == "b_key";
 }
 

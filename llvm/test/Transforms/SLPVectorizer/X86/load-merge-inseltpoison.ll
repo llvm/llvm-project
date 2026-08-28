@@ -12,7 +12,7 @@ define i32 @_Z9load_le32Ph(ptr nocapture readonly %data) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[DATA:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
 ; CHECK-NEXT:    [[OR11:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[OR11]]
 ;
@@ -107,13 +107,13 @@ define void @PR43578_prefer128(ptr %r, ptr %p, ptr %q) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[P2]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[Q2]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP10]]
 ; CHECK-NEXT:    ret void
 ;

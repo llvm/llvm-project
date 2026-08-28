@@ -17,8 +17,9 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 1)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 2)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 1) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret float
 
@@ -47,8 +48,9 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret float
 
@@ -84,8 +86,9 @@ export uint TestGetDimensions() {
 }
 
 // CHECK: @TestGetDimensions()()
-// CHECK: call void @hlsl::Buffer<float>::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr {{.*}})
-// CHECK: call void @hlsl::RWBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&)(ptr {{.*}} @RWBuf, ptr {{.*}})
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call void @hlsl::Buffer<float>::GetDimensions(unsigned int&)(ptr {{.*}} @Buf, ptr {{.*}}) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call void @hlsl::RWBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&)(ptr {{.*}} @RWBuf, ptr {{.*}}) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret
 

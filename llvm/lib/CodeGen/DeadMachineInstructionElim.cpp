@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -105,6 +106,8 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
     // Now scan the instructions and delete dead ones, tracking physreg
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
+      if (MI.isDebugInstr())
+        continue;
       // If the instruction is dead, delete it!
       if (MI.isDead(*MRI, &LivePhysRegs)) {
         if (MI.isPHI()) {

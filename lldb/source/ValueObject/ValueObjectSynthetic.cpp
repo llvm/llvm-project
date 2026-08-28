@@ -286,6 +286,9 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       if (!synth_guy)
         return synth_guy;
 
+      if (synth_guy->IsSyntheticChildrenGenerated())
+        synth_guy->SetLogicalParent(this);
+
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
         if (synth_guy->IsSyntheticChildrenGenerated())
@@ -480,4 +483,9 @@ void ValueObjectSynthetic::GetExpressionPath(Stream &stream,
       return raw_value->GetExpressionPath(stream, epformat);
   }
   return ValueObject::GetExpressionPath(stream, epformat);
+}
+
+SyntheticChildrenFrontEnd *
+ValueObjectSynthetic::GetSyntheticChildrenFrontEnd() {
+  return m_synth_filter_up.get();
 }

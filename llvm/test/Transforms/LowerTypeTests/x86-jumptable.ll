@@ -3,13 +3,17 @@
 ; RUN: opt -S -passes=lowertypetests -mtriple=i686 %s | FileCheck --check-prefixes=X86_32 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64 %s
 
-@0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
+@0 = private unnamed_addr constant [3 x ptr] [ptr @f, ptr @g, ptr @h], align 16
 
 define void @f() !type !0 {
   ret void
 }
 
 define internal void @g() !type !0 {
+  ret void
+}
+
+define dso_local void @h() !type !0 {
   ret void
 }
 
@@ -24,17 +28,18 @@ define i1 @foo(ptr %p) {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 8, !"cf-protection-branch", i32 1}
 
-
 ;.
-; X86_32: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
+; X86_32: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [3 x ptr] [ptr @f, ptr @g, ptr @h], align 16
 ; X86_32: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; X86_32: @f = alias [16 x i8], ptr @.cfi.jumptable
-; X86_32: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i32 0, i32 1)
+; X86_32: @g = internal alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i32 0, i32 1)
+; X86_32: @h = dso_local alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i32 0, i32 2)
 ;.
-; X86_64: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
+; X86_64: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [3 x ptr] [ptr @f, ptr @g, ptr @h], align 16
 ; X86_64: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; X86_64: @f = alias [16 x i8], ptr @.cfi.jumptable
-; X86_64: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; X86_64: @g = internal alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; X86_64: @h = dso_local alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 2)
 ;.
 ; X86_32-LABEL: @f.cfi(
 ; X86_32-NEXT:    ret void
@@ -44,11 +49,15 @@ define i1 @foo(ptr %p) {
 ; X86_32-NEXT:    ret void
 ;
 ;
+; X86_32-LABEL: @h.cfi(
+; X86_32-NEXT:    ret void
+;
+;
 ; X86_32-LABEL: @foo(
 ; X86_32-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i32
-; X86_32-NEXT:    [[TMP2:%.*]] = sub i32 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i32 16) to i32), [[TMP1]]
+; X86_32-NEXT:    [[TMP2:%.*]] = sub i32 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i32 32) to i32), [[TMP1]]
 ; X86_32-NEXT:    [[TMP3:%.*]] = call i32 @llvm.fshr.i32(i32 [[TMP2]], i32 [[TMP2]], i32 4)
-; X86_32-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP3]], 1
+; X86_32-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP3]], 2
 ; X86_32-NEXT:    ret i1 [[TMP4]]
 ;
 ;
@@ -56,6 +65,7 @@ define i1 @foo(ptr %p) {
 ; X86_32-NEXT:  entry:
 ; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
 ; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
+; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @h.cfi)
 ; X86_32-NEXT:    unreachable
 ;
 ;
@@ -67,11 +77,15 @@ define i1 @foo(ptr %p) {
 ; X86_64-NEXT:    ret void
 ;
 ;
+; X86_64-LABEL: @h.cfi(
+; X86_64-NEXT:    ret void
+;
+;
 ; X86_64-LABEL: @foo(
 ; X86_64-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; X86_64-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 16) to i64), [[TMP1]]
+; X86_64-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 32) to i64), [[TMP1]]
 ; X86_64-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 4)
-; X86_64-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 1
+; X86_64-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 2
 ; X86_64-NEXT:    ret i1 [[TMP4]]
 ;
 ;
@@ -79,6 +93,7 @@ define i1 @foo(ptr %p) {
 ; X86_64-NEXT:  entry:
 ; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
 ; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
+; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @h.cfi)
 ; X86_64-NEXT:    unreachable
 ;
 ;.

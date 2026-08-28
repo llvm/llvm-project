@@ -66,6 +66,14 @@ def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                       SDNPVariadic]>;
 
+// LPAD aligned calls
+def riscv_lpad_call
+    : RVSDNode<"LPAD_CALL", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+def riscv_lpad_call_indirect
+    : RVSDNode<"LPAD_CALL_INDIRECT", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
 def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
@@ -198,6 +206,7 @@ class ImmXLenAsmOperand<string prefix, string suffix = ""> : AsmOperandClass {
 
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
+  let PredicateMethod = "is" # prefix # "Imm" # width # suffix;
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
 }
@@ -226,11 +235,11 @@ def GPRMemZeroOffset : MemOperand<GPR> {
   let PrintMethod = "printZeroOffsetMemOp";
 }
 
-def GPRMem : MemOperand<GPR>;
+def BasePtr : MemOperand<GPR>;
 
 def SPMem : MemOperand<SP>;
 
-def GPRCMem : MemOperand<GPRC>;
+def BasePtrC : MemOperand<GPRC>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -243,6 +252,18 @@ class UImmAsmOperand<int width, string suffix = "">
 class BareSImmNLsb0AsmOperand<int width>
     : ImmAsmOperand<"BareS", width, "Lsb0"> {
   let PredicateMethod = "isBareSimmNLsb0<" # width # ">";
+}
+
+// Use for memory operands where offset may be omitted entirely: "lb a0, (a1)"
+// parses as an offset of 0 without needing a separate zero-offset InstAlias
+// for every load/store instruction.
+class OptionalMemOffsetAsmOperand<AsmOperandClass base> : AsmOperandClass {
+  let Name = "Optional" # base.Name;
+  let PredicateMethod = "isOptionalMemOffset<&RISCVOperand::" # base.PredicateMethod # ">";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = base.DiagnosticType;
+  let IsOptional = 1;
+  let DefaultMethod = "defaultZeroOffset";
 }
 
 class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
@@ -264,6 +285,41 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
+
+// Variant of RISCVUImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "c.lbu a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLeafOp<int bitsNum> : RISCVUImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<UImmAsmOperand<bitsNum>>;
+}
+
+// A N-bit unsigned immediate where the least significant bits are zero.
+class RISCVUImmLsbZeroOp<int width, int zeros>
+    : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
+                       [{, }] # zeros # [{>(Imm);}]> {
+
+  // Create suffix with the appropriate number of 0s to append to all names
+  string Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+
+  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<" # width # ">";
+  let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
+
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
+  }];
+}
+
+// Variant of RISCVUImmLsbZeroOp for memory-operand offsets that may be
+// omitted entirely, e.g. "c.lw a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLsbZeroOp<int width, int zeros>
+    : RISCVUImmLsbZeroOp<width, zeros> {
+  let ParserMatchClass =
+      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix>>;
+}
 
 class RISCVSImmOp<int bitsNum> : RISCVOp {
   let ParserMatchClass = SImmAsmOperand<bitsNum>;
@@ -341,8 +397,10 @@ def uimm32 : RISCVUImmOp<32>;
 def uimm48 : RISCVUImmOp<48>;
 def uimm64 : RISCVUImmOp<64>;
 
-def simm12_lo : RISCVSImmLeafOp<12> {
-  let ParserMatchClass = SImmAsmOperand<12, "LO">;
+def simm12 : RISCVSImmLeafOp<12>;
+
+class Simm12LoOp : RISCVSImmLeafOp<12> {
+  let DecoderMethod = "decodeSImm12LoOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -350,6 +408,19 @@ def simm12_lo : RISCVSImmLeafOp<12> {
     return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_SIMM12_LO";
+}
+
+def simm12_lo : Simm12LoOp {
+  let ParserMatchClass = SImmAsmOperand<12, "LO">;
+}
+
+// Variants of simm12(_lo) for memory-operand offsets that may be omitted
+// entirely, e.g. "lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+def simm12_optional : RISCVSImmLeafOp<12> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12.ParserMatchClass>;
+}
+def simm12_lo_optional : Simm12LoOp {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12_lo.ParserMatchClass>;
 }
 
 // A 12-bit signed immediate which cannot fit in 6-bit signed immediate,
@@ -385,6 +456,7 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
+  let DecoderMethod = "decodeUImm20Operand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -645,7 +717,8 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12),
+    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd),
+              (ins BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -661,7 +734,7 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstS<funct3, OPC_STORE, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>
@@ -757,7 +830,7 @@ def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
                   "jal", "$rd, $imm20">, Sched<[WriteJal]>;
 
 def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
-                   (ins GPR:$rs1, simm12_lo:$imm12),
+                   (ins GPR:$rs1, simm12_lo_optional:$imm12),
                    "jalr", "$rd, ${imm12}(${rs1})">,
            Sched<[WriteJalr, ReadJalr]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
@@ -1025,7 +1098,7 @@ def DRET : Priv<"dret", 0b0111101>, Sched<[]> {
 // matter since PseudoLI is currently only used in the AsmParser where it gets
 // expanded to real instructions immediately.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm_li:$imm), [],
                       "li", "$rd, $imm">;
 
@@ -1097,11 +1170,12 @@ def : InstAlias<"j $offset",   (JAL X0, simm21_lsb0_jal:$offset)>;
 def : InstAlias<"jal $offset", (JAL X1, simm21_lsb0_jal:$offset)>;
 
 // Non-zero offset aliases of "jalr" are the lowest weight, followed by the
-// two-register form, then the one-register forms and finally "ret".
+// two-register form, then the one-register forms and finally "ret". The
+// "(${rs})" offset-less forms are covered by simm12_lo_optional.
 def : InstAlias<"jr $rs",                (JALR      X0, GPR:$rs, 0), 3>;
-def : InstAlias<"jr ${offset}(${rs})",   (JALR      X0, GPR:$rs, simm12_lo:$offset)>;
+def : InstAlias<"jr ${offset}(${rs})",   (JALR      X0, GPR:$rs, simm12_lo_optional:$offset)>;
 def : InstAlias<"jalr $rs",              (JALR      X1, GPR:$rs, 0), 3>;
-def : InstAlias<"jalr ${offset}(${rs})", (JALR      X1, GPR:$rs, simm12_lo:$offset)>;
+def : InstAlias<"jalr ${offset}(${rs})", (JALR      X1, GPR:$rs, simm12_lo_optional:$offset)>;
 def : InstAlias<"jalr $rd, $rs",         (JALR GPR:$rd, GPR:$rs, 0), 2>;
 def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 
@@ -1109,9 +1183,6 @@ def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12_lo:$offset), 0>;
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12_lo:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12_lo:$offset), 0>;
-def : InstAlias<"jr (${rs})",             (JALR      X0, GPR:$rs, 0), 0>;
-def : InstAlias<"jalr (${rs})",           (JALR      X1, GPR:$rs, 0), 0>;
-def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
@@ -1151,11 +1222,13 @@ def : InstAlias<"csrrc $rd, $csr, $imm", (CSRRCI GPR:$rd, csr_sysreg:$csr, uimm5
 def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0), 2>;
 def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
 
+let Predicates = [HasStdExtH] in {
 def : InstAlias<"hfence.gvma",     (HFENCE_GVMA      X0, X0), 2>;
 def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 
 def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0), 2>;
 def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
+}
 
 // ntl.* hints are always available in the assembler and disassembler, even
 // without enabling Zihintntl, per psABI decision
@@ -1166,24 +1239,6 @@ def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
 def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
 
 let EmitPriority = 0 in {
-def : InstAlias<"lb $rd, (${rs1})",
-                (LB  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lh $rd, (${rs1})",
-                (LH  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lw $rd, (${rs1})",
-                (LW  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lbu $rd, (${rs1})",
-                (LBU  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lhu $rd, (${rs1})",
-                (LHU  GPR:$rd, GPR:$rs1, 0)>;
-
-def : InstAlias<"sb $rs2, (${rs1})",
-                (SB  GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sh $rs2, (${rs1})",
-                (SH  GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sw $rs2, (${rs1})",
-                (SW  GPR:$rs2, GPR:$rs1, 0)>;
-
 def : InstAlias<"add $rd, $rs1, $imm12",
                 (ADDI  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
 def : InstAlias<"and $rd, $rs1, $imm12",
@@ -1199,13 +1254,6 @@ def : InstAlias<"srl $rd, $rs1, $shamt",
 def : InstAlias<"sra $rd, $rs1, $shamt",
                 (SRAI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 let Predicates = [IsRV64] in {
-def : InstAlias<"lwu $rd, (${rs1})",
-                (LWU  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"ld $rd, (${rs1})",
-                (LD  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"sd $rs2, (${rs1})",
-                (SD  GPR:$rs2, GPR:$rs1, 0)>;
-
 def : InstAlias<"addw $rd, $rs1, $imm12",
                 (ADDIW  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
 def : InstAlias<"sllw $rd, $rs1, $shamt",
@@ -1296,7 +1344,7 @@ def InsnI : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$
 def InsnI_Mem : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                        uimm3:$funct3,
                                                        AnyReg:$rs1,
-                                                       simm12_lo:$imm12),
+                                                       simm12_lo_optional:$imm12),
                                "$opcode, $funct3, $rd, ${imm12}(${rs1})">;
 def InsnB : DirectiveInsnB<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs1, AnyReg:$rs2,
@@ -1310,7 +1358,7 @@ def InsnJ : DirectiveInsnJ<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                            "$opcode, $rd, $imm20">;
 def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
-                                        simm12_lo:$imm12),
+                                        simm12_lo_optional:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
 } // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
@@ -1334,10 +1382,7 @@ def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
                        simm12_lo:$imm12)>;
 def : InstAlias<".insn_i $opcode, $funct3, $rd, ${imm12}(${rs1})",
                 (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
-                           AnyReg:$rs1, simm12_lo:$imm12)>;
-def : InstAlias<".insn_i $opcode, $funct3, $rd, (${rs1})",
-                (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
-                           AnyReg:$rs1, 0)>;
+                           AnyReg:$rs1, simm12_lo_optional:$imm12)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, bare_simm13_lsb0:$imm12)>;
@@ -1354,10 +1399,7 @@ def : InstAlias<".insn_uj $opcode, $rd, $imm20",
                 (InsnJ AnyReg:$rd, uimm7_opcode:$opcode, simm21_lsb0_jal:$imm20)>;
 def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
                 (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
-                       AnyReg:$rs1, simm12_lo:$imm12)>;
-def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
-                (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
-                       AnyReg:$rs1, 0)>;
+                       AnyReg:$rs1, simm12_lo_optional:$imm12)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1374,11 +1416,6 @@ class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
 class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
-
-class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
-                     ValueType ScalarVT = XLenVT>
-    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
-          (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprImm<SDPatternOperator OpNode, RVInst Inst, SDPatternOperator ImmType,
                 ValueType vt = XLenVT>
@@ -1545,14 +1582,6 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-// Transforms frameindex -> tframeindex.
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
-}]>;
-
-def : GICustomOperandRenderer<"renderFrameIndex">,
-      GISDNodeXFormEquiv<to_tframeindex>;
-
 def : Pat<(frameindex:$fi), (ADDI (iPTR (to_tframeindex $fi)), 0)>;
 
 def : Pat<(riscv_add_like frameindex:$fi, simm12_lo:$offset),
@@ -1681,22 +1710,23 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
              (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
+// The condition codes that can be compressed to c.beqz/c.bnez.
+def CompressibleCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
-
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
-                          (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
-                                                 (NegImm simm12_lo:$Constant))),
-                                   (XLenVT X0),
-                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
 let Predicates = [HasStdExtZca, OptForMinSize] in {
-  def : SelectCompressOpt<SETEQ>;
-  def : SelectCompressOpt<SETNE>;
+  def  : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, CompressibleCond:$cc,
+                             (XLenVT GPR:$truev), GPR:$falsev),
+             (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                    (NegImm simm12_lo:$Constant))),
+                                      (XLenVT X0),
+                                      (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 }
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
@@ -1753,7 +1783,6 @@ class LongBccPseudo : Pseudo<(outs),
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1767,7 +1796,6 @@ class LongBcciPseudo<DAGOperand InTyImm, int size>
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1786,10 +1814,14 @@ let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
 // Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
 // in cf-protection-branch. The NonX7 constraint is applied unconditionally
 // to simplify the code at a negligible performance cost.
-def PseudoBRIND : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
-                  PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
-                    PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
+def PseudoBRIND : Pseudo<(outs),
+                         (ins GPRJALRNonX7:$rs1, simm12_lo_optional:$imm12), []>,
+                  PseudoInstExpansion<(JALR X0, GPR:$rs1,
+                                       simm12_lo_optional:$imm12)>;
+def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo_optional:$imm12),
+                           []>,
+                    PseudoInstExpansion<(JALR X0, GPR:$rs1,
+                                         simm12_lo_optional:$imm12)>;
 }
 
 def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
@@ -1805,7 +1837,7 @@ def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
 // destination.
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), [],
                            "call", "$rd, $func">,
@@ -1824,6 +1856,31 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+// PseudoCALLLpadAlign is used for calls to returns_twice functions (e.g.,
+// setjmp) when Zicfilp is enabled. RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] call <func> [.option noexact] lpad <label>
+// Size = 12: 8-byte call (auipc+jalr) + 4-byte lpad (auipc x0, label).
+// Note: The 2-byte alignment padding is not included in Size because it's
+// emitted separately via .p2align directive.
+let isCall = 1, Defs = [X1], Size = 12, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in
+def PseudoCALLLpadAlign : Pseudo<(outs),
+                                 (ins call_symbol:$func, uimm20_auipc:$lpad_label),
+                                 []>,
+                          Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+
+// PseudoCALLIndirectLpadAlign is the indirect call version.
+// RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] jalr ra, <rs1>, 0 [.option noexact] lpad <label>
+// Size = 8: 4-byte jalr + 4-byte lpad.
+let isCall = 1, Defs = [X1], Size = 8, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in
+def PseudoCALLIndirectLpadAlign : Pseudo<(outs),
+                                         (ins GPRJALRNonX7:$rs1,
+                                              uimm20_auipc:$lpad_label),
+                                         []>,
+                                  Sched<[WriteJalr, ReadJalr]>;
 
 def : Pat<(riscv_sret_glue), (SRET)>;
 def : Pat<(riscv_mret_glue), (MRET)>;
@@ -1888,14 +1945,22 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, uimm20_lui:$hi), []>,
+      Sched<[WriteIALU, ReadIALU]>;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLAImm : Pseudo<(outs GPR:$dst), (ins ixlenimm_li_restricted:$imm), [],
                           "lla", "$dst, $imm">;
 def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
@@ -1903,35 +1968,40 @@ def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
 def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
 def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lga", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                       "la", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLAImm : Pseudo<(outs GPR:$rd), (ins ixlenimm_li_restricted:$imm), [],
                          "la", "$rd, $imm">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0 in
-def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tlsdesc", "$dst, $src">;
+defvar TLSDESCVClobbers = !listconcat(
+    !foreach(i, !range(32), !cast<Register>("V"#i)),
+    [VTYPE, VL, VXSAT, VXRM]);
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []> {
+  let Defs = !listconcat([X5, X10], TLSDESCVClobbers);
+}
 
 def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
@@ -1949,13 +2019,13 @@ def tlsdesc_call_symbol : Operand<XLenVT> {
 // fourth operand to emit a relocation on a symbol relating to this instruction.
 // The relocation does not affect any bits of the instruction itself but is used
 // as a hint to the linker.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
                          "jalr", "$rd, ${imm12}(${rs1}), $src">,
                          Sched<[WriteJalr, ReadJalr]> {
-  let Defs = [X10];
+  let Defs = !listconcat([X10], TLSDESCVClobbers);
   let Uses = [X10];
 }
 
@@ -1965,7 +2035,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
 // There are single-instruction versions of these in Zbb, so disable these
 // Pseudos if that extension is present.
 let hasSideEffects = 0, mayLoad = 0,
-    mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+    mayStore = 0, isCodeGenOnly = 0 in {
 def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
 def PseudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.h", "$rd, $rs">;
 // rv64's sext.w is defined above, using InstAlias<"sext.w ...
@@ -1974,7 +2044,7 @@ def PseudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.h", "$rd, $rs
 } // hasSideEffects = 0, ...
 
 let Predicates = [IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-  isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+  isCodeGenOnly = 0 in {
 def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
 } // Predicates = [IsRV64], ...
 
@@ -1982,8 +2052,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
             ValueType PtrVT = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (PtrVT GPRMem:$rs1), simm12_lo:$imm12))),
-          (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
+    : Pat<(vt (LoadOp (AddrRegImm (PtrVT BasePtr:$rs1), simm12_lo:$imm12))),
+          (Inst BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -1997,9 +2067,9 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt, ValueType PtrVT = XLenVT>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT GPRMem:$rs1),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT BasePtr:$rs1),
                    simm12_lo:$imm12)),
-          (Inst StTy:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+          (Inst StTy:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
@@ -2134,6 +2204,11 @@ def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 }
 
 /// Other pseudo-instructions
+
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), []>,
+                     PseudoInstExpansion<(ADDI GPR:$rd, X0, 0)>;
 
 // Pessimistically assume the stack pointer will be clobbered
 let Defs = [X2], Uses = [X2] in {
@@ -2338,6 +2413,11 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZilsd.td"
 include "RISCVInstrInfoZibi.td"
+include "RISCVInstrInfoZilx.td"
+
+// Privileged
+include "RISCVInstrInfoSmcsps.td"
+include "RISCVInstrInfoSmip.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2354,10 +2434,13 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
+include "RISCVInstrInfoZvdota.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
 include "RISCVInstrInfoZvzip.td"
+include "RISCVInstrInfoZvvm.td"
+include "RISCVInstrInfoZvbdota.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"
@@ -2374,6 +2457,9 @@ include "RISCVInstrInfoZicfiss.td"
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
 
+// CHERI
+include "RISCVInstrInfoY.td"
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
@@ -2386,8 +2472,8 @@ include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
+include "RISCVInstrInfoXqccmt.td"
 include "RISCVInstrInfoXMips.td"
-include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
 include "RISCVInstrInfoXAIF.td"

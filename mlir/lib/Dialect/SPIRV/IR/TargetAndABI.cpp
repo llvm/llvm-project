@@ -134,7 +134,7 @@ spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
   if (!op)
     return {};
 
-  if (auto attr = op->getAttrOfType<spirv::EntryPointABIAttr>(
+  if (auto attr = op->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName()))
     return attr;
 
@@ -167,6 +167,10 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
 
 StringRef spirv::getLoopControlAttrName() { return "spirv.loop_control"; }
 
+StringRef spirv::getSelectionControlAttrName() {
+  return "spirv.selection_control";
+}
+
 StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }
 
 spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
@@ -185,7 +189,7 @@ spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {
     if (!op)
       break;
 
-    if (auto attr = op->getAttrOfType<spirv::TargetEnvAttr>(
+    if (auto attr = op->getDiscardableAttrOfType<spirv::TargetEnvAttr>(
             spirv::getTargetEnvAttrName()))
       return attr;
 

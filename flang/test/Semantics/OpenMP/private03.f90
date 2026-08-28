@@ -1,7 +1,7 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! Variables that appear in expressions for statement function definitions
-! may not appear in private, firstprivate or lastprivate clauses.
+! may not appear in private, firstprivate, lastprivate or linear clauses.
 
 subroutine stmt_function(temp)
 
@@ -33,6 +33,14 @@ subroutine stmt_function(temp)
   t(i) = v(temp) + i - s
   end do
   !$omp end parallel do
+
+  !ERROR: Variable 'p' in statement function expression cannot be in a LINEAR clause
+  !$omp parallel do simd linear(p)
+  do i = 1, 10
+  t(i) = v(temp) + i
+  p = p + 1
+  end do
+  !$omp end parallel do simd
 
   print *, t
 

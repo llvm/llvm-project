@@ -57,6 +57,7 @@ public:
     }
     shrink(aligned_size<T>());
   }
+  void discardSlow();
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {

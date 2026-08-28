@@ -57,6 +57,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -71,11 +72,11 @@ using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
-static cl::opt<unsigned, true>
-VectorizationFactor("force-vector-width", cl::Hidden,
-                    cl::desc("Sets the SIMD width. Zero is autoselect."),
-                    cl::location(VectorizerParams::VectorizationFactor));
-unsigned VectorizerParams::VectorizationFactor;
+static cl::opt<ElementCount, true>
+    VectorizationFactor("force-vector-width", cl::Hidden,
+                        cl::desc("Sets the SIMD width. Zero is autoselect."),
+                        cl::location(VectorizerParams::VectorizationFactor));
+ElementCount VectorizerParams::VectorizationFactor;
 
 static cl::opt<unsigned, true>
 VectorizationInterleave("force-vector-interleave", cl::Hidden,
@@ -220,13 +221,17 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!StartPtr)
     return false;
   const Loop *L = AR->getLoop();
-  bool CheckForNonNull, CheckForFreed;
+  bool CheckForNonNull;
   Value *StartPtrV = StartPtr->getValue();
+  // We can ignore frees, as the fact that an object of a certain size existed
+  // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
-      DL, CheckForNonNull, CheckForFreed);
+      DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
-  if (DerefBytes && (CheckForNonNull || CheckForFreed))
-    return false;
+  // If the deref size is only known when the pointer is non-null, ignore it
+  // here and fall back to a dereferenceable assumption below.
+  if (DerefBytes && CheckForNonNull)
+    DerefBytes = 0;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
@@ -238,25 +243,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  RetainedKnowledge DerefRK;
-  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
-                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-                         if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         if (StartPtrV->canBeFreed() &&
-                             !willNotFreeBetween(Assume, CtxI))
-                           return false;
-                         DerefRK = std::max(DerefRK, RK);
-                         return true;
-                       });
-  if (DerefRK) {
-    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    Type *CommonTy =
-        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
-  }
+  getKnowledgeForValue(
+      StartPtrV, Attribute::Dereferenceable, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        Type *CommonTy =
+            SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+        DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+        DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+        DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
+        // Continue with other assumptions.
+        return false;
+      });
 
   if (DerefBytesSCEV->isZero())
     return false;
@@ -265,10 +265,15 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
     return false;
 
+  WiderTy = SE.getWiderType(WiderTy, DerefBytesSCEV->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
   // For the computations below, make sure they don't unsigned wrap.
+  // FIXME: for a negative step the lowest accessed address is not
+  // AR->getStart() but AR->evaluateAtIteration(MaxBTC, SE); the check below
+  // therefore compares StartPtr against the highest accessed address instead
+  // of the lowest.
   if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
     return false;
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
@@ -278,45 +283,51 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
-  const SCEV *OffsetAtLastIter =
-      mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-  if (!OffsetAtLastIter) {
+  const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
+  // Total distance (in bytes) between the first and the last
+  // accessed pointer.
+  const SCEV *DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+  if (!DistToLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
     MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
     if (isa<SCEVCouldNotCompute>(MaxBTC))
       return false;
-    MaxBTC = SE.getNoopOrZeroExtend(
-        MaxBTC, WiderTy);
-    OffsetAtLastIter =
-        mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-    if (!OffsetAtLastIter)
+    MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
+    DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+    if (!DistToLastIter)
       return false;
   }
 
-  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
-      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!OffsetEndBytes)
+  // Total length in bytes of the accessed range (from the first accessed
+  // byte through the end of the last access).
+  const SCEV *AccessedBytes = addSCEVNoOverflow(
+      DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!AccessedBytes)
     return false;
 
+  // Compute MaxOffset per direction: exclusive upper offset of the
+  // accessed range.
+  const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    // For positive steps, check if
-    //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
-    // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
-    if (!EndBytes)
+    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
+    if (!MaxOffset)
       return false;
-
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
+  } else {
+    // FIXME: two independent off-by-EltSize bugs on this branch:
+    //  1. StartOffset here is actually the HIGHEST offset, because it is
+    //     computed from AR->getStart() rather than
+    //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
+    //  2. The lower check is over-strict by EltSize and the upper is
+    //     under-counted by EltSize.
+    assert(SE.isKnownNegative(Step) && "must be known negative");
+    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, AccessedBytes))
+      return false;
+    MaxOffset = StartOffset;
   }
-
-  // For negative steps check if
-  //  * StartOffset >= (MaxBTC * Step + EltSize)
-  //  * StartOffset <= DerefBytes.
-  assert(SE.isKnownNegative(Step) && "must be known negative");
-  return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
-         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV);
+  // MaxOffset must not exceed the deref-region end.
+  return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
@@ -970,11 +981,10 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute a constant stride for \p AR. Used by getPtrStride and
-/// isNoWrap.
-static std::optional<int64_t>
-getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+std::optional<int64_t>
+llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
+                          Type *AccessTy, Value *Ptr,
+                          PredicatedScalarEvolution &PSE) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -1022,11 +1032,13 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 }
 
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
-/// informating from the IR pointer value to determine no-wrap.
-static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
-                     Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
-                     const DominatorTree &DT,
-                     std::optional<int64_t> Stride = std::nullopt) {
+/// information from the IR pointer value to determine no-wrap. If \p Predicates
+/// is not nullptr add no-wrap assumptions if needed.
+static bool
+isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
+         Type *AccessTy, const Loop *L, const DominatorTree &DT,
+         std::optional<int64_t> Stride = std::nullopt,
+         SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
   if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
     return true;
@@ -1067,8 +1079,12 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
       return true;
   }
 
-  if (Ptr && Assume) {
-    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+  if (Ptr && Predicates) {
+    ScalarEvolution &SE = *PSE.getSE();
+    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
+        SCEVWrapPredicate::IncrementNUSW,
+        SCEVWrapPredicate::getImpliedFlags(AR, SE));
+    Predicates->push_back(SE.getWrapPredicate(AR, Flags));
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
@@ -1296,6 +1312,7 @@ bool AccessAnalysis::createCheckForAccess(
 
   /// Check whether all pointers can participate in a runtime bounds check. They
   /// must either be invariant or non-wrapping affine AddRecs.
+  SmallVector<const SCEVPredicate *> Predicates;
   for (auto &P : RTCheckPtrs) {
     // The bounds for loop-invariant pointer is trivial.
     if (SE->isLoopInvariant(P.getPointer(), TheLoop))
@@ -1303,22 +1320,28 @@ bool AccessAnalysis::createCheckForAccess(
 
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
     if (!AR && Assume)
-      AR = PSE.getAsAddRec(Ptr);
+      AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine())
       return false;
 
-    // If there's only one option for Ptr, look it up after bounds and wrap
-    // checking, because assumptions might have been added to PSE.
+    // If there's only one option for Ptr, commit the predicates collected by
+    // getAsAddRec and look Ptr up again afterwards: the lookup below reads the
+    // assumptions back from PSE, so they need to be committed first.
     if (RTCheckPtrs.size() == 1) {
-      AR =
-          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+      PSE.addPredicates(Predicates);
+      Predicates.clear();
+      if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
+              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+        AR = StrideAR;
       P.setPointer(AR);
     }
 
     if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume, DT))
+                  TheLoop, DT, /*Stride=*/std::nullopt,
+                  Assume ? &Predicates : nullptr))
       return false;
   }
+  PSE.addPredicates(Predicates);
 
   for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
@@ -1647,11 +1670,10 @@ void AccessAnalysis::buildDependenceSets() {
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t>
-llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                   const Loop *Lp, const DominatorTree &DT,
-                   const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap) {
+std::optional<int64_t> llvm::getPtrStride(
+    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
+    const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
+    bool ShouldCheckWrap, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1659,8 +1681,10 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (Assume && !AR)
-    AR = PSE.getAsAddRec(Ptr);
+  if (Predicates && !AR) {
+    AR = PSE.getSE()->convertSCEVToAddRecWithPredicates(PtrScev, Lp,
+                                                        *Predicates);
+  }
 
   if (!AR) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not an AddRecExpr pointer " << *Ptr
@@ -1673,13 +1697,27 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, DT, Stride))
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, DT, Stride, Predicates))
     return Stride;
 
   LLVM_DEBUG(
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
+}
+
+/// Check whether the access through \p Ptr has a constant stride.
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp, const DominatorTree &DT,
+                   const DenseMap<Value *, const SCEV *> &StridesMap,
+                   bool Assume, bool ShouldCheckWrap) {
+  SmallVector<const SCEVPredicate *> Predicates;
+  std::optional<int64_t> Stride =
+      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
+                   Assume ? &Predicates : nullptr);
+  PSE.addPredicates(Predicates);
+  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
@@ -1934,6 +1972,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+
+    if (MaxVF < 2) {
+      LLVM_DEBUG(
+          dbgs() << "LAA: strided access with Distance " << Distance
+                 << " that could cause a store-load forwarding conflict\n");
+      return true;
+    }
   }
   return false;
 }
@@ -2094,10 +2139,14 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       BPtr->getType()->getPointerAddressSpace())
     return MemoryDepChecker::Dependence::Unknown;
 
-  std::optional<int64_t> StrideAPtr = getPtrStride(
-      PSE, ATy, APtr, InnermostLoop, *DT, SymbolicStrides, true, true);
-  std::optional<int64_t> StrideBPtr = getPtrStride(
-      PSE, BTy, BPtr, InnermostLoop, *DT, SymbolicStrides, true, true);
+  SmallVector<const SCEVPredicate *> Predicates;
+  std::optional<int64_t> StrideAPtr =
+      getPtrStride(PSE, ATy, APtr, InnermostLoop, *DT, SymbolicStrides,
+                   /*ShouldCheckWrap=*/true, &Predicates);
+  std::optional<int64_t> StrideBPtr =
+      getPtrStride(PSE, BTy, BPtr, InnermostLoop, *DT, SymbolicStrides,
+                   /*ShouldCheckWrap=*/true, &Predicates);
+  PSE.addPredicates(Predicates);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -2163,8 +2212,8 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   uint64_t BSz = DL.getTypeAllocSize(BTy);
   uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
 
-  uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
-  uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
+  uint64_t StrideAScaled = AbsoluteValue(StrideAPtrInt) * ASz;
+  uint64_t StrideBScaled = AbsoluteValue(StrideBPtrInt) * BSz;
 
   uint64_t MaxStride = std::max(StrideAScaled, StrideBScaled);
 
@@ -2233,11 +2282,16 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  // The rest of this function relies on ConstDist being at most 64-bits, which
-  // is checked earlier. Will assert if the calling code changes.
   const APInt *APDist = nullptr;
-  uint64_t ConstDist =
-      match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
+  uint64_t ConstDist = 0;
+  if (match(Dist, m_scev_APInt(APDist))) {
+    std::optional<uint64_t> Val = APDist->abs().tryZExtValue();
+    if (!Val) {
+      LLVM_DEBUG(dbgs() << "LAA: Constant distance does not fit in 64 bits.\n");
+      return Dependence::Unknown;
+    }
+    ConstDist = *Val;
+  }
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
@@ -2293,7 +2347,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Forward;
   }
 
-  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
+  std::optional<int64_t> MinDistanceOpt =
+      SE.getSignedRangeMin(Dist).trySExtValue();
+  if (!MinDistanceOpt) {
+    LLVM_DEBUG(dbgs() << "LAA: Minimum distance does not fit in 64 bits.\n");
+    return Dependence::Unknown;
+  }
+  int64_t MinDistance = *MinDistanceOpt;
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
     return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
@@ -2308,12 +2368,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
   // Bail out early if passed-in parameters make vectorization not feasible.
-  unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
-                           VectorizerParams::VectorizationFactor : 1);
+  unsigned MinForcedFactor =
+      std::max(1U, VectorizerParams::VectorizationFactor.getKnownMinValue());
   unsigned ForcedUnroll = (VectorizerParams::VectorizationInterleave ?
                            VectorizerParams::VectorizationInterleave : 1);
   // The minimum number of iterations for a vectorized/unrolled version.
-  unsigned MinNumIter = std::max(ForcedFactor * ForcedUnroll, 2U);
+  unsigned MinNumIter = std::max(MinForcedFactor * ForcedUnroll, 2U);
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in
@@ -2901,14 +2961,8 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
-  bool HasForcedDistribution = false;
-  std::optional<const MDOperand *> Value =
-      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
-  if (Value) {
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
-  }
+  bool HasForcedDistribution =
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution
@@ -2964,6 +3018,7 @@ bool LoopAccessInfo::blockNeedsPredication(const BasicBlock *BB,
 
   // Blocks that do not dominate the latch need predication.
   const BasicBlock *Latch = TheLoop->getLoopLatch();
+  assert(Latch && "Loop expected to have a single latch.");
   return !DT->dominates(BB, Latch);
 }
 
@@ -3229,12 +3284,11 @@ void LoopAccessInfoManager::clear() {
   // analyzed loop or SCEVs that may have been modified or invalidated. At the
   // moment, that is loops requiring memory or SCEV runtime checks, as those cache
   // SCEVs, e.g. for pointer expressions.
-  for (const auto &[L, LAI] : LoopAccessInfoMap) {
-    if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
-        LAI->getPSE().getPredicate().isAlwaysTrue())
-      continue;
-    LoopAccessInfoMap.erase(L);
-  }
+  LoopAccessInfoMap.remove_if([](const auto &Entry) {
+    const auto &LAI = Entry.second;
+    return !(LAI->getRuntimePointerChecking()->getChecks().empty() &&
+             LAI->getPSE().getPredicate().isAlwaysTrue());
+  });
 }
 
 bool LoopAccessInfoManager::invalidate(

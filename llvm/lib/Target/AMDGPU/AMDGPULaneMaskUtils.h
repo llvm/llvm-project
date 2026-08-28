@@ -27,6 +27,7 @@ public:
   const unsigned AndN2Opc;
   const unsigned AndN2SaveExecOpc;
   const unsigned AndN2TermOpc;
+  const unsigned AndN2WrExecOpc; // GFX10+ (HasNoSdstCMPX) only
   const unsigned AndSaveExecOpc;
   const unsigned AndSaveExecTermOpc;
   const unsigned BfmOpc;
@@ -52,6 +53,8 @@ public:
                                   : AMDGPU::S_ANDN2_SAVEEXEC_B64),
         AndN2TermOpc(IsWave32 ? AMDGPU::S_ANDN2_B32_term
                               : AMDGPU::S_ANDN2_B64_term),
+        AndN2WrExecOpc(IsWave32 ? AMDGPU::S_ANDN2_WREXEC_B32
+                                : AMDGPU::S_ANDN2_WREXEC_B64),
         AndSaveExecOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32
                                 : AMDGPU::S_AND_SAVEEXEC_B64),
         AndSaveExecTermOpc(IsWave32 ? AMDGPU::S_AND_SAVEEXEC_B32_term

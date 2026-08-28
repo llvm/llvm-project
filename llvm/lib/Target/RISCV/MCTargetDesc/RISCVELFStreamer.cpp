@@ -29,10 +29,9 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
-                                          MAB.getTargetOptions().getABIName()));
+  setTargetABI(
+      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
@@ -41,8 +40,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
   //      mapping symbol is emitted before the first instruction, recording
   //      the full ISA in the object even when no .option directive is present.
-  if (auto ParseResult = RISCVFeatures::parseFeatureBits(
-          STI.hasFeature(RISCV::Feature64Bit), Features)) {
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
     InitialArchString = (*ParseResult)->toString();
     ArchString = InitialArchString;
     getStreamer().setMappingSymbolArch(ArchString);
@@ -123,18 +121,26 @@ void RISCVTargetELFStreamer::finish() {
 
   switch (ABI) {
   case RISCVABI::ABI_ILP32:
+  case RISCVABI::ABI_IL32PC64:
   case RISCVABI::ABI_LP64:
+  case RISCVABI::ABI_L64PC128:
     break;
   case RISCVABI::ABI_ILP32F:
+  case RISCVABI::ABI_IL32PC64F:
   case RISCVABI::ABI_LP64F:
+  case RISCVABI::ABI_L64PC128F:
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
     break;
   case RISCVABI::ABI_ILP32D:
+  case RISCVABI::ABI_IL32PC64D:
   case RISCVABI::ABI_LP64D:
+  case RISCVABI::ABI_L64PC128D:
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
     break;
   case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_IL32PC64E:
   case RISCVABI::ABI_LP64E:
+  case RISCVABI::ABI_CHERIOT:
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:

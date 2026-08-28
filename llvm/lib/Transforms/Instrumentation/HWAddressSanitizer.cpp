@@ -687,7 +687,7 @@ void HWAddressSanitizer::initializeModule() {
     if (TagMaskByte < 4)
       reportFatalUsageError(
           "need more than 4 bits of tag to have non-short-granule tags");
-    TagMaskByte &= (1 << ClTagBits) - 1;
+    TagMaskByte &= (1ULL << ClTagBits) - 1;
   }
 
   Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
