@@ -168,8 +168,7 @@ public:
     requires sized_range<_RARange> // freestanding-deleted
   [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) {
     if (__index < 0 || __index >= ranges::distance(__derived())) {
-      std::__throw_out_of_range(
-          "Precondition `0 <= __index < distance()` not satisfied. `.at(__index)` called with out-of-bounds index.");
+      std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
     }
     return (*this)[__index];
   }
@@ -178,8 +177,7 @@ public:
     requires sized_range<_RARange> // freestanding-deleted
   [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) const {
     if (__index < 0 || __index >= ranges::distance(__derived())) {
-      std::__throw_out_of_range(
-          "Precondition `0 <= __index < distance()` not satisfied. `.at(__index)` called with out-of-bounds index.");
+      std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
     }
     return (*this)[__index];
   }
