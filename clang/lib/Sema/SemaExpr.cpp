@@ -5979,7 +5979,6 @@ ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
   assert(Field->hasInClassInitializer());
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
 
   // C++11 [class.base.init]p7:
   //   The initialization of each base and member constitutes a
@@ -5994,10 +5993,18 @@ ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
   if (!InitContext)
     InitContext.emplace(Loc, Field, CurContext);
 
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
+  //
+  // A default member initializer used by a constructor is a separate
+  // full-expression, we don't need extend temporaries lifetime in this
+  // situation, the NeedRebuild will always false.
   ExprResult Init = BuildCXXDefaultInitInternal(
       Loc, Field,
       InitializedEntity::InitializeMemberFromDefaultMemberInitializer(Field),
-      NestedDefaultChecking, NeedRebuild);
+      NestedDefaultChecking, /*NeedRebuild=*/false);
   if (Init.isInvalid())
     return ExprError();
 
@@ -6032,6 +6039,15 @@ Sema::BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
   auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
   if (!InitContext)
     InitContext.emplace(Loc, Field, CurContext);
+
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
+  //
+  // A default member initializer used by an aggregate initialization belongs to
+  // the full-expression containing the aggregate initialization. we need extend
+  // temporaries lifetime in this situation, the NeedRebuild will always true.
 
   // CWG1815: always rebuild, never share the AST built when the field was
   // declared. Only a copy rebuilt here has its MaterializeTemporaryExprs

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-unused-value -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -Wno-unused-value -emit-llvm -o - %s | FileCheck %s
 
 struct A {
   int &x;
