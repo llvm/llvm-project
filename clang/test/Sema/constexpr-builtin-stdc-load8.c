@@ -166,6 +166,15 @@ void test_block_scope_vardecl(void) {
 constexpr __UINT_LEAST8_TYPE__ strlit_ok = stdc_load8_aligned_leu8((const unsigned char *)u8"\xAB");
 static_assert(strlit_ok == (__UINT_LEAST8_TYPE__)0xAB, "");
 
+// Multi-byte loads from a string literal: string-literal pointers have no
+// Descriptor, so this exercises the byte-loop/indexing path for that
+// pointer kind, LE and BE.
+constexpr __UINT_LEAST32_TYPE__ strlit_plain_le = stdc_load8_leu32((const unsigned char *)u8"\x78\x56\x34\x12");
+static_assert(strlit_plain_le == 0x12345678U, "");
+
+constexpr __INT_LEAST16_TYPE__ strlit_plain_be = stdc_load8_bes16((const unsigned char *)u8"\xFF\x80");
+static_assert(strlit_plain_be == -128, "");
+
 constexpr __UINT_LEAST16_TYPE__ strlit_fail = stdc_load8_aligned_leu16((const unsigned char *)u8"\x34\x12"); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu16' requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
 
 constexpr __UINT_LEAST32_TYPE__ complit_fail = stdc_load8_aligned_leu32((unsigned char[4]){0x78, 0x56, 0x34, 0x12}); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
