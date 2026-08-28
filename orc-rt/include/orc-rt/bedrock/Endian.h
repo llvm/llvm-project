@@ -13,7 +13,7 @@
 #ifndef ORC_RT_ENDIAN_H
 #define ORC_RT_ENDIAN_H
 
-#include "bit.h"
+#include "orc-rt/bedrock/bit.h"
 #include <cstring>
 #include <type_traits>
 

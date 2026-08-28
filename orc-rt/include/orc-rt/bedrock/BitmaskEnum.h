@@ -16,8 +16,8 @@
 #ifndef ORC_RT_BITMASKENUM_H
 #define ORC_RT_BITMASKENUM_H
 
-#include "Math.h"
-#include "bit.h"
+#include "orc-rt/bedrock/Math.h"
+#include "orc-rt/bedrock/bit.h"
 
 #include <cassert>
 #include <type_traits>
