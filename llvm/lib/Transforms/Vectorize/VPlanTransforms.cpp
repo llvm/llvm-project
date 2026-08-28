@@ -5481,10 +5481,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         return ReplaceWith(VPI, StoreR);
       });
 
-  // Lower safe uniform (potentially masked) loads to unconditional scalar
+  // convert safe uniform (potentially masked) loads to unconditional scalar
   // loads.
   VPlanTransforms::runPass(
-      "lowerSafeUniformLoads", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+      "convertToSingleScalarMemOps", ProcessSubset, Plan,
+      [&](VPInstruction *VPI) {
         if (VPI->getOpcode() != Instruction::Load)
           return false;
         VPValue *Addr = VPI->getOperand(0);
