@@ -824,6 +824,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
 
   eraseEmptyAndUnusedBlocks(fn);
+
+  if (fnRetAlloca && fnRetAlloca->use_empty())
+    fnRetAlloca->getDefiningOp()->erase();
+
   return fn;
 }
 
