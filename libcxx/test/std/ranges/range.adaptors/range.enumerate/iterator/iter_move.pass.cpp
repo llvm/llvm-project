@@ -64,7 +64,8 @@ constexpr void test() {
   {
     // !is_nothrow_move_constructible_v<range_rvalue_reference_t<Base>>
     // underlying iter_move may throw
-    auto throwingMoveRange = std::views::iota(0, 9) | std::views::transform([](auto) noexcept { return ThrowingMove{}; });
+    auto throwingMoveRange = 
+        std::views::iota(0, 9) | std::views::transform([](auto) noexcept { return ThrowingMove{}; });
     std::ranges::enumerate_view v(throwingMoveRange);
     auto it = v.begin();
     static_assert(!noexcept(std::ranges::iter_move(it)));
