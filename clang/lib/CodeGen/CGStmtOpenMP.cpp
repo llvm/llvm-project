@@ -8164,8 +8164,8 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
   RCG.setAction(PrivAction);
 
   // Emit region code.
-  CGM.getOpenMPRuntime().emitTargetDataCalls(*this, S, IfCond, Device, RCG,
-                                             Info);
+  CGM.getOpenMPRuntime().emitTargetDataCalls(
+      *this, S, IfCond, Device, RCG, Info, getOMPReplayableCond(*this, S));
 }
 
 void CodeGenFunction::EmitOMPTargetEnterDataDirective(

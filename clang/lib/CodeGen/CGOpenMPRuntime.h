@@ -1476,18 +1476,23 @@ public:
                                llvm::Value *NumThreads,
                                llvm::Value *KernelArgsPtr);
 
-  /// Record a standalone 'target {enter|exit} data' / 'target update' directive
-  /// nested inside a taskgraph by emitting the matching
-  /// __kmpc_taskgraph_target_{enter,exit}_data / _update call. The map-info
-  /// arrays are passed directly, and depend clauses of \p D are forwarded to
-  /// the entry point, which satisfies them synchronously; a replayable
-  /// target-data directive is never wrapped in a hidden helper task.
+  /// Record a data-mapping action nested inside a taskgraph by emitting the
+  /// matching __kmpc_taskgraph_target_{enter,exit}_data / _update call. The
+  /// map-info arrays are passed directly, and depend clauses of \p D are
+  /// forwarded to the entry point, which satisfies them synchronously; a
+  /// replayable target-data directive is never wrapped in a hidden helper task.
+  ///
+  /// \p ActionKind names the action to record. For the standalone directives it
+  /// is the directive kind itself; a 'target data' block is recorded as two
+  /// actions around its body, so it passes OMPD_target_enter_data and then
+  /// OMPD_target_exit_data.
   void emitTaskgraphTargetDataCall(
-      CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
-      llvm::Value *DeviceID, unsigned NumTargetItems,
-      llvm::Value *BasePointersArray, llvm::Value *PointersArray,
-      llvm::Value *SizesArray, llvm::Value *MapTypesArray,
-      llvm::Value *MapNamesArray, llvm::Value *MappersArray);
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      OpenMPDirectiveKind ActionKind, SourceLocation Loc, llvm::Value *DeviceID,
+      unsigned NumTargetItems, llvm::Value *BasePointersArray,
+      llvm::Value *PointersArray, llvm::Value *SizesArray,
+      llvm::Value *MapTypesArray, llvm::Value *MapNamesArray,
+      llvm::Value *MappersArray);
 
   /// Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if
@@ -1565,11 +1570,15 @@ public:
   /// target directive, or null if no device clause is used.
   /// \param Info A record used to store information that needs to be preserved
   /// until the region is closed.
+  /// \param ReplayableCond Condition under which the construct is recorded into
+  /// a taskgraph as an enter-data and an exit-data node around its body, or
+  /// null if it cannot be.
   virtual void emitTargetDataCalls(CodeGenFunction &CGF,
                                    const OMPExecutableDirective &D,
                                    const Expr *IfCond, const Expr *Device,
                                    const RegionCodeGenTy &CodeGen,
-                                   CGOpenMPRuntime::TargetDataInfo &Info);
+                                   CGOpenMPRuntime::TargetDataInfo &Info,
+                                   const Expr *ReplayableCond = nullptr);
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.
@@ -2376,7 +2385,8 @@ public:
   void emitTargetDataCalls(CodeGenFunction &CGF,
                            const OMPExecutableDirective &D, const Expr *IfCond,
                            const Expr *Device, const RegionCodeGenTy &CodeGen,
-                           CGOpenMPRuntime::TargetDataInfo &Info) override;
+                           CGOpenMPRuntime::TargetDataInfo &Info,
+                           const Expr *ReplayableCond = nullptr) override;
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.
