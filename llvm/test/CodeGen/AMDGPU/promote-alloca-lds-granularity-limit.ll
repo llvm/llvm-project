@@ -22,7 +22,7 @@
 ; CHECK-LABEL: @test(
 ; CHECK: %stack = alloca [10 x i8], align 1, addrspace(5)
 
-define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) #0 {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) "amdgpu-flat-work-group-size"="64,64" {
 
   %stack = alloca [10 x i8], align 1, addrspace(5)
   %lds.ptr = getelementptr inbounds [12800 x i8], ptr addrspace(3) @lds_12800, i32 0, i32 0
@@ -34,5 +34,3 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) #0 {
   store i8 %load, ptr addrspace(1) %out, align 1
   ret void
 }
-
-attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
