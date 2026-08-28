@@ -3515,7 +3515,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   // and the BinOp cost in the getMinMaxReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, Ctx.CostKind, FMFs);
+    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
   // Note that TTI should model the cost of moving result to the scalar register

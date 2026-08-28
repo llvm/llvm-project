@@ -1572,8 +1572,8 @@ SystemZTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost
 SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       FastMathFlags FMF) const {
+                                       FastMathFlags FMF,
+                                       TTI::TargetCostKind CostKind) const {
   // Return custom costs only on subtargets with vector enhancements.
   if (ST->hasVectorEnhancements1()) {
     unsigned NumVectors = getNumVectorRegs(Ty);
@@ -1588,7 +1588,7 @@ SystemZTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return Cost;
   }
   // For other targets, fall back to the standard implementation
-  return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
+  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
 static int

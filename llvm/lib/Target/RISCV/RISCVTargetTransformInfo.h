@@ -220,9 +220,9 @@ public:
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;
 
-  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                         TTI::TargetCostKind CostKind,
-                                         FastMathFlags FMF) const override;
+  InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const override;
 
   std::optional<InstructionCost> getCombinedArithmeticInstructionCost(
       unsigned ISDOpcode, Type *Ty, TTI::TargetCostKind CostKind,

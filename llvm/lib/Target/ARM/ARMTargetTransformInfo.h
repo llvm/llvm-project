@@ -272,9 +272,9 @@ public:
                          VectorType *ValTy,
                          TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                         TTI::TargetCostKind CostKind,
-                                         FastMathFlags FMF) const override;
+  InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

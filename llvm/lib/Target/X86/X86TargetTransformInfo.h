@@ -165,9 +165,9 @@ public:
                                 TTI::TargetCostKind CostKind,
                                 FastMathFlags FMF) const;
 
-  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                         TTI::TargetCostKind CostKind,
-                                         FastMathFlags FMF) const override;
+  InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,

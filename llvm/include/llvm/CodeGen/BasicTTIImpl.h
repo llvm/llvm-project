@@ -2552,7 +2552,7 @@ public:
     case Intrinsic::vector_reduce_fmaximumnum:
     case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
-                                             VecOpTy, CostKind, ICA.getFlags());
+                                             VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {
       auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
@@ -3413,9 +3413,9 @@ public:
 
   /// Try to calculate op costs for min/max reduction operations.
   /// \param CondTy Conditional type for the Select instruction.
-  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                         TTI::TargetCostKind CostKind,
-                                         FastMathFlags FMF) const override {
+  InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const override {
     // Targets must implement a default value for the scalable case, since
     // we don't know how many lanes the vector has.
     if (isa<ScalableVectorType>(Ty))

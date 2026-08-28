@@ -1327,12 +1327,11 @@ InstructionCost TargetTransformInfo::getArithmeticReductionCost(
   return Cost;
 }
 
-InstructionCost
-TargetTransformInfo::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                            TTI::TargetCostKind CostKind,
-                                            FastMathFlags FMF) const {
+InstructionCost TargetTransformInfo::getMinMaxReductionCost(
+    Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
-      TTIImpl->getMinMaxReductionCost(IID, Ty, CostKind, FMF);
+      TTIImpl->getMinMaxReductionCost(IID, Ty, FMF, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

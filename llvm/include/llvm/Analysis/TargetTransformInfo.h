@@ -1757,10 +1757,9 @@ public:
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind) const;
 
-  LLVM_ABI InstructionCost getMinMaxReductionCost(Intrinsic::ID IID,
-                                                  VectorType *Ty,
-                                                  TTI::TargetCostKind CostKind,
-                                                  FastMathFlags FMF) const;
+  LLVM_ABI InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add/Sub reduction with multiply and

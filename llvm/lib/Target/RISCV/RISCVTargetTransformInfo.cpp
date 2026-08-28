@@ -2119,14 +2119,14 @@ unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) const {
 
 InstructionCost
 RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
-                                     TTI::TargetCostKind CostKind,
-                                     FastMathFlags FMF) const {
+                                     FastMathFlags FMF,
+                                     TTI::TargetCostKind CostKind) const {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
-    return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (Ty->getScalarSizeInBits() > ST->getELen())
-    return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1)) {

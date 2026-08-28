@@ -4383,8 +4383,8 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   RecurKind RK = RdxDesc.getRecurrenceKind();
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
     Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(RK);
-    BaseCost = TTI.getMinMaxReductionCost(MinMaxID, VectorTy, Config.CostKind,
-                                          RdxDesc.getFastMathFlags());
+    BaseCost = TTI.getMinMaxReductionCost(
+        MinMaxID, VectorTy, RdxDesc.getFastMathFlags(), Config.CostKind);
   } else {
     BaseCost = TTI.getArithmeticReductionCost(RdxDesc.getOpcode(), VectorTy,
                                               RdxDesc.getFastMathFlags(),

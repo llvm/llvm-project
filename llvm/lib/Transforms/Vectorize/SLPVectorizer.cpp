@@ -32378,7 +32378,7 @@ private:
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, CostKind, FMF);
+          VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
         } else {
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.

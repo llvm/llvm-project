@@ -6122,10 +6122,10 @@ InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
   return getIntrinsicInstrCost(ICA, CostKind);
 }
 
-InstructionCost X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID,
-                                                   VectorType *ValTy,
-                                                   TTI::TargetCostKind CostKind,
-                                                   FastMathFlags FMF) const {
+InstructionCost
+X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
+                                   FastMathFlags FMF,
+                                   TTI::TargetCostKind CostKind) const {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   MVT MTy = LT.second;
@@ -6329,7 +6329,7 @@ InstructionCost X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID,
   // by type legalization.
   if (!isPowerOf2_32(ValVTy->getNumElements()) ||
       ScalarSize != MTy.getScalarSizeInBits())
-    return BaseT::getMinMaxReductionCost(IID, ValTy, CostKind, FMF);
+    return BaseT::getMinMaxReductionCost(IID, ValTy, FMF, CostKind);
 
   // Now handle reduction with the legal type, taking into account size changes
   // at each level.

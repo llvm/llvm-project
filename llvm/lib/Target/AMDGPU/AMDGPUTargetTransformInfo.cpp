@@ -998,16 +998,16 @@ GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   return LT.first * getFullRateInstrCost();
 }
 
-InstructionCost GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID,
-                                                   VectorType *Ty,
-                                                   TTI::TargetCostKind CostKind,
-                                                   FastMathFlags FMF) const {
+InstructionCost
+GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                   FastMathFlags FMF,
+                                   TTI::TargetCostKind CostKind) const {
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
   // 16-bit types only).
   if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
-    return BaseT::getMinMaxReductionCost(IID, Ty, CostKind, FMF);
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   return LT.first * getHalfRateInstrCost(CostKind);
