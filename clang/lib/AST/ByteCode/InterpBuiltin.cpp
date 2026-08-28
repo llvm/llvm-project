@@ -2142,11 +2142,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   QualType ElemTy;
   if (Ptr.isStringPointer()) {
     IsArray = true;
-    ElemTy = Ptr.asStringPointer()
-                 .getLiteral()
-                 ->getType()
-                 ->getAsArrayTypeUnsafe()
-                 ->getElementType();
+    ElemTy = getElemType(Ptr);
   } else {
     const Descriptor *Desc = Ptr.getFieldDesc();
     IsArray = Desc->isArray();
