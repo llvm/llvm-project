@@ -3351,10 +3351,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
   Instruction *Sel = nullptr;
+  Value *BrCond = BI->getCondition();
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
-    Value *BrCond = BI->getCondition();
     Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
@@ -3434,7 +3434,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
-  Value *BrCond = BI->getCondition();
   for (PHINode &PN : EndBB->phis()) {
     unsigned OrigI = PN.getBasicBlockIndex(BB);
     unsigned ThenI = PN.getBasicBlockIndex(ThenBB);
