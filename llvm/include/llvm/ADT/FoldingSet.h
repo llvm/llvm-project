@@ -659,7 +659,7 @@ public:
 
   T &operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
-    return *static_cast<T *>(*Bucket);
+    return *static_cast<T *>(static_cast<FoldingSetNode *>(*Bucket));
   }
 
   T *operator->() const { return &operator*(); }
