@@ -1663,12 +1663,11 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // silently trusted to region forwarding.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout) {
-    // The carried position may have no requirement at all: scf.while's "after"
-    // arguments are tied to no init operand, and a loop's layout_operand_N can
-    // be unset. Either way propagation never assigned that position a layout,
-    // so there is nothing to conflict with.
-    if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(
-            consumerOp))
+    // TODO: handle scf.while's "after" region arguments. They are tied to no
+    // init operand, so nothing records the layout they require, and the
+    // conflict on the scf.condition operand feeding them is left unresolved
+    // rather than converted.
+    if (isa<RegionBranchTerminatorOpInterface>(consumerOp))
       return success();
     return consumerOp->emitError(
         "No consumer layout found for vector operand.");

@@ -2869,9 +2869,6 @@ static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
     return nullptr;
   xegpu::DistributeLayoutAttr iterArgLayout;
   for (Value input : it->second) {
-    // One operand can forward to a block argument and to a parent result at
-    // once; only the block argument matters, since the value re-enters the
-    // region in that layout.
     auto arg = dyn_cast<BlockArgument>(input);
     if (!arg)
       continue;
@@ -2886,8 +2883,6 @@ static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
 
 // For the terminator of a region op that carries nothing back into its regions
 // (scf.if), returns the layout of the parent result the operand feeds.
-// propagateYieldOperandsToRegionResults copied that layout from this operand
-// earlier in the pass, so the two agree and no conversion follows.
 static xegpu::DistributeLayoutAttr getParentResultLayoutForYieldOperand(
     RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
   auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
@@ -2918,6 +2913,8 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
   // the required operand layout as the layout_operand_N that
   // propagateRegionArgsToInits back-propagated from the region argument.
+  // TODO: derive that layout from the region argument here instead, so this
+  // function is the only place an operand's required layout comes from.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
   // A region terminator requires the layout of the successor input its operand
