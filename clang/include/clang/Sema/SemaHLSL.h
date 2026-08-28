@@ -285,7 +285,7 @@ private:
 
   // Information about the current subtree being flattened.
   struct SemanticInfo {
-    HLSLParsedSemanticAttr *Semantic;
+    Attr *Semantic;
     std::optional<uint32_t> Index = std::nullopt;
   };
 

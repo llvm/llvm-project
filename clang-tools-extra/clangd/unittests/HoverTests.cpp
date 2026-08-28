@@ -5574,6 +5574,22 @@ TEST(Hover, HLSLSemanticAnnotations) {
   }
 }
 
+TEST(Hover, HLSLUnparsedSemanticName) {
+  Annotations T(R"hlsl(
+    typedef float float4 __attribute__((ext_vector_type(4)));
+    float4 main(float4 pos : ^COLOR) : SV_Target {
+      return pos;
+    }
+  )hlsl");
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H) << "Hover should have been returned for COLOR semantic!";
+  llvm::errs() << "HI.Name = " << H->Name << "\n";
+  llvm::errs() << "HI.Definition = " << H->Definition << "\n";
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
