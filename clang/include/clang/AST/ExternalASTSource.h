@@ -439,46 +439,38 @@ public:
   }
 };
 
-/// A lazy value (of type T) that is within an AST node of type Owner,
-/// where the value might change in later generations of the external AST
-/// source.
-template<typename Owner, typename T, void (ExternalASTSource::*Update)(Owner)>
-struct LazyGenerationalUpdatePtr {
+/// A lazy Decl value where the value might change in later generations of the
+/// external AST source.
+struct LazyGenerationalDeclPtr {
   /// A cache of the value of this pointer, in the most recent generation in
   /// which we queried it.
   struct LazyData {
     ExternalASTSource *ExternalSource;
     uint32_t LastGeneration = 0;
-    T LastValue;
+    Decl *LastValue;
 
-    LazyData(ExternalASTSource *Source, T Value)
+    LazyData(ExternalASTSource *Source, Decl *Value)
         : ExternalSource(Source), LastValue(Value) {}
   };
 
-  // Our value is represented as simply T if there is no external AST source.
-  using ValueType = llvm::PointerUnion<T, LazyData*>;
+  // Our value is represented as simply a Decl pointer if there is no external
+  // AST source.
+  using ValueType = llvm::PointerUnion<Decl *, LazyData *>;
   ValueType Value;
 
-  LazyGenerationalUpdatePtr(ValueType V) : Value(V) {}
+  LazyGenerationalDeclPtr(ValueType V) : Value(V) {}
 
-  // Defined in ASTContext.h
-  static ValueType makeValue(const ASTContext &Ctx, T Value);
+  static ValueType makeValue(const ASTContext &Ctx, Decl *Value);
 
 public:
-  explicit LazyGenerationalUpdatePtr(const ASTContext &Ctx, T Value = T())
+  explicit LazyGenerationalDeclPtr(const ASTContext &Ctx, Decl *Value = nullptr)
       : Value(makeValue(Ctx, Value)) {}
-
-  /// Create a pointer that is not potentially updated by later generations of
-  /// the external AST source.
-  enum NotUpdatedTag { NotUpdated };
-  LazyGenerationalUpdatePtr(NotUpdatedTag, T Value = T())
-      : Value(Value) {}
 
   /// Forcibly set this pointer (which must be lazy) as needing updates.
   void markIncomplete() { cast<LazyData *>(Value)->LastGeneration = 0; }
 
   /// Set the value of this pointer, in the current generation.
-  void set(T NewValue) {
+  void set(Decl *NewValue) {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
       LazyVal->LastValue = NewValue;
       return;
@@ -486,31 +478,28 @@ public:
     Value = NewValue;
   }
 
-  /// Set the value of this pointer, for this and all future generations.
-  void setNotUpdated(T NewValue) { Value = NewValue; }
-
   /// Get the value of this pointer, updating its owner if necessary.
-  T get(Owner O) {
+  Decl *get(const Decl *O) {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
       if (LazyVal->LastGeneration != LazyVal->ExternalSource->getGeneration()) {
         LazyVal->LastGeneration = LazyVal->ExternalSource->getGeneration();
-        (LazyVal->ExternalSource->*Update)(O);
+        LazyVal->ExternalSource->CompleteRedeclChain(O);
       }
       return LazyVal->LastValue;
     }
-    return cast<T>(Value);
+    return cast<Decl *>(Value);
   }
 
   /// Get the most recently computed value of this pointer without updating it.
-  T getNotUpdated() const {
+  Decl *getNotUpdated() const {
     if (auto *LazyVal = Value.template dyn_cast<LazyData *>())
       return LazyVal->LastValue;
-    return cast<T>(Value);
+    return cast<Decl *>(Value);
   }
 
   void *getOpaqueValue() { return Value.getOpaqueValue(); }
-  static LazyGenerationalUpdatePtr getFromOpaqueValue(void *Ptr) {
-    return LazyGenerationalUpdatePtr(ValueType::getFromOpaqueValue(Ptr));
+  static LazyGenerationalDeclPtr getFromOpaqueValue(void *Ptr) {
+    return LazyGenerationalDeclPtr(ValueType::getFromOpaqueValue(Ptr));
   }
 };
 
@@ -518,13 +507,10 @@ public:
 
 namespace llvm {
 
-/// Specialize PointerLikeTypeTraits to allow LazyGenerationalUpdatePtr to be
+/// Specialize PointerLikeTypeTraits to allow LazyGenerationalDeclPtr to be
 /// placed into a PointerUnion.
-template<typename Owner, typename T,
-         void (clang::ExternalASTSource::*Update)(Owner)>
-struct PointerLikeTypeTraits<
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>> {
-  using Ptr = clang::LazyGenerationalUpdatePtr<Owner, T, Update>;
+template <> struct PointerLikeTypeTraits<clang::LazyGenerationalDeclPtr> {
+  using Ptr = clang::LazyGenerationalDeclPtr;
 
   static void *getAsVoidPointer(Ptr P) { return P.getOpaqueValue(); }
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
