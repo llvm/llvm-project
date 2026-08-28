@@ -49,4 +49,12 @@ def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
 def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+
+// (and (setcc a, b, ne), c) -> (czero.eqz c, (xor a, b))
+// (and (setcc a, b, eq), c) -> (czero.nez c, (xor a, b))
+// where c is known to be 0 or 1.
+def : Pat<(XLenVT (and (riscv_setne_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
+          (CZERO_EQZ GPR:$rc, GPR:$rs1)>;
+def : Pat<(XLenVT (and (riscv_seteq_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
+          (CZERO_NEZ GPR:$rc, GPR:$rs1)>;
 } // Predicates = [HasStdExtZicond]
