@@ -462,8 +462,9 @@ void VirtRegRewriter::addMBBLiveIns() {
     MBB.sortUniqueLiveIns();
 }
 
-/// Returns true if the given machine operand \p MO only reads undefined lanes.
-/// The function only works for use operands with a subregister set.
+/// Returns true if the given machine operand \p MO of \p MI only reads
+/// undefined lanes.  The function only works for use operands with a
+/// subregister set.
 bool VirtRegRewriter::readsUndefSubreg(const MachineInstr &MI,
                                        const MachineOperand &MO) const {
   // Shortcut if the operand is already marked undef.
