@@ -2852,9 +2852,10 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   return nullptr;
 }
 
-// For a yield operand, return the layout of the region iter_arg it forwards
-// into (the authoritative loop-carried layout), or nullptr if it feeds no block
-// argument (e.g. scf.if's yield, which only feeds results).
+// For a loop terminator operand (scf.for's scf.yield, scf.while's
+// scf.condition), returns the layout of the region iter_arg it forwards into,
+// which is the authoritative loop-carried layout, or nullptr when that position
+// was never assigned a layout.
 static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
     RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
   auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
@@ -2866,14 +2867,11 @@ static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
   auto it = mapping.find(&operand);
   if (it == mapping.end())
     return nullptr;
-  // One operand can forward to a block argument and to a parent result at once.
-  // Only the block argument matters here, since the value re-enters the region
-  // in that layout. A parent result needs nothing: recovery already gives every
-  // terminator feeding that result the same required layout, taken from the
-  // result's use points, and a user wanting something else is reconciled at the
-  // user's own operand.
   xegpu::DistributeLayoutAttr iterArgLayout;
   for (Value input : it->second) {
+    // One operand can forward to a block argument and to a parent result at
+    // once; only the block argument matters, since the value re-enters the
+    // region in that layout.
     auto arg = dyn_cast<BlockArgument>(input);
     if (!arg)
       continue;
@@ -2884,6 +2882,27 @@ static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
       iterArgLayout = layout;
   }
   return iterArgLayout;
+}
+
+// For the terminator of a region op that carries nothing back into its regions
+// (scf.if), returns the layout of the parent result the operand feeds.
+// propagateYieldOperandsToRegionResults copied that layout from this operand
+// earlier in the pass, so the two agree and no conversion follows.
+static xegpu::DistributeLayoutAttr getParentResultLayoutForYieldOperand(
+    RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
+  auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branch)
+    return nullptr;
+  RegionBranchSuccessorMapping mapping;
+  branch.getSuccessorOperandInputMapping(mapping,
+                                         RegionBranchPoint(terminator));
+  auto it = mapping.find(&operand);
+  if (it == mapping.end())
+    return nullptr;
+  for (Value input : it->second)
+    if (auto result = dyn_cast<OpResult>(input))
+      return xegpu::getDistributeLayoutAttr(result);
+  return nullptr;
 }
 
 /// Returns the layout required on `operand`: anchor ops report their declared
@@ -2901,10 +2920,14 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // propagateRegionArgsToInits back-propagated from the region argument.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
-  // Region terminators (scf.yield/scf.condition) inherit the layout of the
-  // region iter_arg their operand feeds.
-  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
-    return getLoopCarriedLayoutForYieldOperand(terminator, operand);
+  // A region terminator requires the layout of the successor input its operand
+  // feeds: the region iter_arg for a loop, and the parent result for a region
+  // op with no loop-carried values (scf.if).
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+    if (isa<LoopLikeOpInterface>(op->getParentOp()))
+      return getLoopCarriedLayoutForYieldOperand(terminator, operand);
+    return getParentResultLayoutForYieldOperand(terminator, operand);
+  }
   // For non-anchor ops, derive the operand layout from the op's result
   // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;
