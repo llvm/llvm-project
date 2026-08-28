@@ -13574,7 +13574,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //   "RHS - (Start - Stride) - 1" does not overflow, which is the
       //   reassociated numerator.
       //
-      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV ",
+      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV",
       //   where MaxV is the maximum signed/unsigned value. Let MinV be the
       //   matching minimum value. "Start >= MinV" gives
       //   "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV" is
