@@ -26,7 +26,7 @@
 //   HAS_GATHER         defined for types that have the Gather* methods
 //   HAS_LOD            defined for types that have CalculateLevelOfDetail*
 //
-// Writable (UAV) textures have no sampling, gathering or LOD methods; cube
+// Writable (UAV) textures have no sampling, gathering or LOD methods.
 
 TEXTURE<float4> Tex;
 SamplerState Samp;
