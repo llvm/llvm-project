@@ -2133,7 +2133,8 @@ public:
                         bool RebranchResolvesAllPaths = true,
                         const Expr *RebranchTryLock2 = nullptr,
                         const llvm::SmallPtrSetImpl<const Expr *>
-                            *CheckedAroundLoop = nullptr);
+                            *CheckedAroundLoop = nullptr,
+                        bool SealedEntry = false);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind LEK) {
@@ -4285,12 +4286,33 @@ bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B,
 /// of clearing it: the variable holds either call's result and both
 /// resolve the capability identically, so the outgoing edges resolve the
 /// merged fact like a single call's.
+///
+/// At loop joins there is a second, terminator-free exemption: facts on
+/// the two sides that carry the same origin call C both denote "held iff
+/// C's result" -- a held fact is merely edge-strengthened by a check of a
+/// previous execution of C, and a failure-edge negative is "C's result is
+/// falsy" -- so try-held(C) is their exact join and the demotion is
+/// silent. A negative fact on either side that spent C's result refutes
+/// the shared condition (the result stays truthy while the hold is gone)
+/// and keeps the diagnosis. Applied at loop joins always -- the
+/// check-first loop idioms (`if (ok) continue; ok = mu.TryLock();`)
+/// create this shape at continue latches -- and for a one-sided fact at
+/// branch joins under -Wthread-safety-beta, where the unchecked-result
+/// diagnostics keep the hidden leak reported; a mixed same-origin branch
+/// join means a re-branch failed to resolve all paths and stays
+/// diagnosed eagerly.
+///
+/// \param SealedEntry The entry set belongs to an already-analyzed loop
+/// head (the back-edge comparison): suppression still applies, but the
+/// set must not be rewritten in place -- the head's edges were processed
+/// long ago.
 void ThreadSafetyAnalyzer::intersectAndWarn(
     FactSet &EntrySet, const FactSet &ExitSet, SourceLocation JoinLoc,
     LockErrorKind EntryLEK, LockErrorKind ExitLEK,
     const Expr *RebranchTryLock, bool RebranchResolvesAllPaths,
     const Expr *RebranchTryLock2,
-    const llvm::SmallPtrSetImpl<const Expr *> *CheckedAroundLoop) {
+    const llvm::SmallPtrSetImpl<const Expr *> *CheckedAroundLoop,
+    bool SealedEntry) {
   FactSet EntrySetOrig = EntrySet;
 
   auto IsTrylockRebranched = [RebranchTryLock](const FactEntry &FE) {
@@ -4324,6 +4346,31 @@ void ThreadSafetyAnalyzer::intersectAndWarn(
                                         JoinLoc, LEK,
                                         /*ReentrancyMismatch=*/true);
     return cloneWithTryLock(FE, FE.tryLockCall(), /*Conditional=*/true);
+  };
+  // The same-origin analogue of the re-branch exemption for a one-sided
+  // fact: the join's other side carries this fact's own call's
+  // failure-edge negative, so the sides are exactly "held iff C's result"
+  // and "C's result is falsy", and their join is try-held(C). A weak
+  // negative proves less (failure on only some of that side's paths) and
+  // a spent one refutes the stored result instead; neither qualifies.
+  auto SameOriginFailureNegative = [&, this](const FactSet &OtherSet,
+                                             const FactEntry &FE) {
+    if (!FE.tryLockCall())
+      return false;
+    const FactEntry *Neg = OtherSet.findLock(FactMan, !FE);
+    return Neg && !Neg->weak() && !Neg->spentTryLock() &&
+           Neg->tryLockCall() == FE.tryLockCall();
+  };
+  // Where the demotion applies: at loop joins always, and at branch joins
+  // only in beta mode -- there the try-held machinery reports an eventual
+  // leak, while without beta the eager lost-hold diagnosis at the join is
+  // the only coverage and is retained.
+  auto SameOriginJoinAllowed = [&, this](const FactSet &OtherSet,
+                                         const FactEntry &FE,
+                                         LockErrorKind LEK) {
+    return (LEK == LEK_LockedSomeLoopIterations ||
+            Handler.issueBetaWarnings()) &&
+           SameOriginFailureNegative(OtherSet, FE);
   };
   // Warn about a fact the intersection removes (or weakens to try-held).
   // However, a capability managed by a scoped object is exempt -- the
@@ -4366,27 +4413,47 @@ void ThreadSafetyAnalyzer::intersectAndWarn(
     FactSet::iterator EntryIt = EntrySet.findLockIter(FactMan, ExitFact);
     if (EntryIt != EntrySet.end()) {
       const FactEntry &EntryFact = FactMan[*EntryIt];
-      if (EntryFact.tryHeld() != ExitFact.tryHeld()) {
-        if (!(IsTrylockRebranched(EntryFact) && IsTrylockRebranched(ExitFact) &&
-              RebranchResolvesAllPaths)) {
-          // The capability is held on one path but only try-held on the other,
-          // and the re-branch exemption does not apply: either the terminator
-          // does not re-branch on the try-acquire call both facts originate
-          // from, or the re-branch sits behind a short-circuit whose other
-          // edge escapes without resolving the result. Warn about this as if
-          // the try-held path did not hold the capability at all.
-          if (ExitFact.tryHeld())
-            WarnRemovedEntryFact(EntryFact);
-          else
-            WarnRemovedExitFact(ExitFact);
-        } else {
-          if (EntryLEK != LEK_LockedSomeLoopIterations &&
-              EntryFact.getReentrancyDepth() != ExitFact.getReentrancyDepth())
-            Handler.handleMutexHeldEndOfScope(ExitFact.getKind(),
-                                              ExitFact.toString(),
-                                              ExitFact.loc(), JoinLoc, EntryLEK,
-                                              /*ReentrancyMismatch=*/true);
-        }
+      const bool Mixed = EntryFact.tryHeld() != ExitFact.tryHeld();
+      const bool RebranchExempt = IsTrylockRebranched(EntryFact) &&
+                                  IsTrylockRebranched(ExitFact) &&
+                                  RebranchResolvesAllPaths;
+      // The same-origin loop-join exemption (see above): both sides'
+      // states are conditioned on the same call's result, so the mixed
+      // join loses nothing -- unless a negative on either side spent that
+      // result.
+      const Expr *SharedOrigin =
+          EntryFact.tryLockCall() == ExitFact.tryLockCall()
+              ? EntryFact.tryLockCall()
+              : nullptr;
+      auto SpentNegative = [&, this](const FactSet &Set) {
+        const FactEntry *Neg = Set.findLock(FactMan, !EntryFact);
+        return Neg && Neg->spentTryLock() == SharedOrigin;
+      };
+      const bool SameOriginExempt =
+          Mixed && SharedOrigin && EntryLEK == LEK_LockedSomeLoopIterations &&
+          !SpentNegative(EntrySetOrig) && !SpentNegative(ExitSet);
+      if (Mixed && !RebranchExempt && !SameOriginExempt) {
+        // The capability is held on one path but only try-held on the other,
+        // and no exemption applies: either the terminator does not
+        // re-branch on the try-acquire call both facts originate from (and
+        // this is not a same-origin loop join), or the re-branch sits
+        // behind a short-circuit whose other edge escapes without
+        // resolving the result. Warn about this as if the try-held path
+        // did not hold the capability at all.
+        if (ExitFact.tryHeld())
+          WarnRemovedEntryFact(EntryFact);
+        else
+          WarnRemovedExitFact(ExitFact);
+      } else if (Mixed && RebranchExempt &&
+                 EntryLEK != LEK_LockedSomeLoopIterations &&
+                 EntryFact.getReentrancyDepth() !=
+                     ExitFact.getReentrancyDepth()) {
+        // A forgiven mixed join with unequal reentrancy depths is otherwise
+        // silent: diagnose the mismatch here.
+        Handler.handleMutexHeldEndOfScope(ExitFact.getKind(),
+                                          ExitFact.toString(), ExitFact.loc(),
+                                          JoinLoc, EntryLEK,
+                                          /*ReentrancyMismatch=*/true);
       }
       const Expr *EntryOrigin = EntryFact.tryLockCall();
       const bool EntryTryHeld = EntryFact.tryHeld();
@@ -4452,34 +4519,58 @@ void ThreadSafetyAnalyzer::intersectAndWarn(
           NewFact->setSpentTryLock(EitherSpent);
         EntrySet.replaceLock(FactMan, EntryIt, NewFact);
       }
+      // Under the same-origin exemption the merged fact must be the
+      // try-held one: join() keeps the entry fact at loop joins, which
+      // may be the held side -- demote it so the merged set carries the
+      // conditional state (reentrancy depth loss is still diagnosed).
+      if (SameOriginExempt && !SealedEntry && !FactMan[*EntryIt].tryHeld())
+        EntrySet.replaceLock(FactMan, EntryIt,
+                             DemoteToTryHeld(FactMan[*EntryIt], EntryLEK));
     } else if (ExitFact.negative()) {
       // A negative fact on this predecessor only: keep it in the merged
-      // set as a weak fact at branch joins -- evidence for the try-held
-      // machinery that the capability was released, or a try-acquire of it
-      // failed, on some path (see RebranchVetoedByNegative above and
-      // getEdgeLockset()'s re-materialization veto). Under a re-branch
-      // this loses nothing: the failure edge re-derives the real negative
-      // over it. Skipped in functions without try-lock facts: nothing
-      // consults weak facts there.
-      if (EntryLEK == LEK_LockedSomePredecessors && !TryAcquireCapsMap.empty()) {
+      // set as a weak fact at branch joins and continue-latch joins --
+      // evidence for the try-held machinery that the capability was
+      // released, or a try-acquire of it failed, on some path (see
+      // RebranchVetoedByNegative above and getEdgeLockset()'s
+      // re-materialization veto). Under a re-branch this loses nothing:
+      // the failure edge re-derives the real negative over it. Skipped in
+      // functions without try-lock facts: nothing consults weak facts
+      // there.
+      if ((EntryLEK == LEK_LockedSomePredecessors ||
+           (EntryLEK == LEK_LockedSomeLoopIterations && !SealedEntry)) &&
+          !TryAcquireCapsMap.empty()) {
         if (ExitFact.weak())
           EntrySet.addLockByID(Fact);
         else
           EntrySet.addLock(FactMan, cloneAsWeak(ExitFact));
       }
-    } else if (IsTrylockRebranched(ExitFact) &&
-               !RebranchVetoedByNegative(EntrySetOrig, ExitFact)) {
-      // Held on this predecessor only, but the terminator re-branches on
-      // the try-acquire that created the fact: demote it to try-held
-      // without warning, as getEdgeLockset will re-resolve it on the
-      // outgoing edges.
+    } else if (IsTrylockRebranched(ExitFact)
+                   // The spent-veto compares against RebranchTryLock and so
+                   // belongs to the re-branch exemption only; the
+                   // same-origin form refuses weak and spent negatives
+                   // itself.
+                   ? !RebranchVetoedByNegative(EntrySetOrig, ExitFact)
+                   : SameOriginJoinAllowed(EntrySetOrig, ExitFact,
+                                           EntryLEK)) {
+      // Held on this predecessor only, and either the terminator
+      // re-branches on the try-acquire that created the fact (getEdgeLockset
+      // will re-resolve it on the outgoing edges) or the other side carries
+      // the call's own failure-edge negative: demote it to try-held.
       if (EntryLEK != LEK_LockedSomeLoopIterations) {
         // A re-branch behind a short-circuit does not resolve the result on
         // the escaping edge: a definite hold weakened here can leak there,
         // so it is diagnosed at this join after all (the demotion stands,
         // for the paths that do re-branch).
-        if (!RebranchResolvesAllPaths && !ExitFact.tryHeld())
+        if (IsTrylockRebranched(ExitFact) && !RebranchResolvesAllPaths &&
+            !ExitFact.tryHeld())
           WarnRemovedExitFact(ExitFact);
+        EntrySet.addLock(FactMan, DemoteToTryHeld(ExitFact, EntryLEK));
+      } else if (!SealedEntry &&
+                 SameOriginFailureNegative(EntrySetOrig, ExitFact)) {
+        // Same-origin loop join of a hold with its call's failure-edge
+        // negative: their join is try-held(C). The entry side's real
+        // negative is weakened by the second loop below, as at branch
+        // joins.
         EntrySet.addLock(FactMan, DemoteToTryHeld(ExitFact, EntryLEK));
       }
     } else if (ExitFact.tryHeld()) {
@@ -4512,9 +4603,13 @@ void ThreadSafetyAnalyzer::intersectAndWarn(
     if (!ExitFact) {
       if (EntryFact->negative()) {
         // As above: a one-sided negative is kept in the merged set as a
-        // weak fact at branch joins (or dropped, in functions without
-        // try-lock facts); other joins leave the entry set unmodified.
-        if (ExitLEK == LEK_LockedSomePredecessors && !EntryFact->weak()) {
+        // weak fact at branch joins and continue-latch joins (or dropped,
+        // in functions without try-lock facts); other joins leave the
+        // entry set unmodified.
+        if ((ExitLEK == LEK_LockedSomePredecessors ||
+             (ExitLEK == LEK_LockedSomeLoopIterations && !SealedEntry &&
+              !TryAcquireCapsMap.empty())) &&
+            !EntryFact->weak()) {
           if (!TryAcquireCapsMap.empty())
             EntrySet.replaceLock(FactMan, *EntryFact,
                                  cloneAsWeak(*EntryFact));
@@ -4523,17 +4618,28 @@ void ThreadSafetyAnalyzer::intersectAndWarn(
         }
         continue;
       }
-      if (IsTrylockRebranched(*EntryFact) &&
-          !RebranchVetoedByNegative(ExitSet, *EntryFact)) {
+      if (IsTrylockRebranched(*EntryFact)
+              // As above: the spent-veto belongs to the re-branch
+              // exemption only.
+              ? !RebranchVetoedByNegative(ExitSet, *EntryFact)
+              : SameOriginJoinAllowed(ExitSet, *EntryFact, EntryLEK)) {
         // As above, but here the fact is kept in the intersection in its
         // demoted try-held form (except at a loop join, where the entry set
-        // is left unmodified).
+        // is left unmodified unless the same-origin exemption applies).
         if (EntryLEK != LEK_LockedSomeLoopIterations &&
             !EntryFact->tryHeld()) {
           // As above: an escaping short-circuit edge means the weakened
           // definite hold is diagnosed at the join after all.
-          if (!RebranchResolvesAllPaths)
+          if (IsTrylockRebranched(*EntryFact) && !RebranchResolvesAllPaths)
             WarnRemovedEntryFact(*EntryFact);
+          EntrySet.replaceLock(FactMan, *EntryFact,
+                               DemoteToTryHeld(*EntryFact, ExitLEK));
+        } else if (EntryLEK == LEK_LockedSomeLoopIterations && !SealedEntry &&
+                   SameOriginFailureNegative(ExitSet, *EntryFact) &&
+                   !EntryFact->tryHeld()) {
+          // Same-origin loop join, held on the entry side only: demote in
+          // place; the exit side's failure-edge negative was weakened
+          // into the merged set by the first loop.
           EntrySet.replaceLock(FactMan, *EntryFact,
                                DemoteToTryHeld(*EntryFact, ExitLEK));
         }
@@ -4652,8 +4758,16 @@ void ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp,
                 : (A->isShared() ? Caps.FalsyShared : Caps.FalsyExclusive);
     CapExprSet AttrCaps;
     getMutexIDs(AttrCaps, A, Exp, D, Self);
-    for (const auto &M : AttrCaps)
+    for (const auto &M : AttrCaps) {
       Group.push_back_nodup(M);
+      // A recorded CallExpr always tracks facts (handleCall() creates them
+      // when its block is visited), and an edge processed before that -- a
+      // loop-top check on a stored result -- may already re-materialize
+      // against the record; a constructor sets TracksFacts when its facts
+      // are created instead.
+      if (isa_and_nonnull<CallExpr>(Exp))
+        Caps.TracksFacts = true;
+    }
   }
   reconcileTryAcquireCaps(Caps);
 }
@@ -5139,7 +5253,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
                        LEK_LockedSomeLoopIterations,
                        LEK_LockedSomeLoopIterations, RebranchTryLock,
                        /*RebranchResolvesAllPaths=*/true,
-                       /*RebranchTryLock2=*/nullptr, CheckedInLoopPtr);
+                       /*RebranchTryLock2=*/nullptr, CheckedInLoopPtr,
+                       /*SealedEntry=*/true);
       // A negative fact reaching the loop head on its back edge is
       // evidence that an iteration may have released the capability (or
       // failed to re-acquire it). The head was analyzed before its back
