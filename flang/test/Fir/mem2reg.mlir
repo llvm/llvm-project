@@ -410,6 +410,46 @@ func.func @declare_changing_pointee() {
 
 // -----
 
+// A floating-point slot is not aliased, so it is promoted only when all its
+// uses are in one block, where no block argument is needed.
+
+// CHECK-LABEL: func.func @fp_declare_single_block(
+// CHECK-SAME: %[[ARG0:.*]]: f32) -> f32 {
+// CHECK-NOT: fir.alloca
+// CHECK: fir.declare_value %[[ARG0]]
+// CHECK: return %[[ARG0]] : f32
+func.func @fp_declare_single_block(%arg: f32) -> f32 {
+  %alloca = fir.alloca f32
+  %d = fir.declare %alloca {uniq_name = "_QFEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  fir.store %arg to %d : !fir.ref<f32>
+  %v = fir.load %d : !fir.ref<f32>
+  return %v : f32
+}
+
+// -----
+
+// Without an alias, mem2reg does not see the write in the other block, so a
+// floating-point slot used across blocks stays in memory.
+
+// CHECK-LABEL: func.func @fp_declare_multi_block(
+// CHECK: fir.alloca f32
+// CHECK: fir.declare
+// CHECK: fir.load
+func.func @fp_declare_multi_block(%arg: f32, %cdt: i1) -> f32 {
+  %alloca = fir.alloca f32
+  %d = fir.declare %alloca {uniq_name = "_QFEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  fir.store %arg to %d : !fir.ref<f32>
+  llvm.cond_br %cdt, ^bb1, ^bb2
+^bb1:
+  fir.store %arg to %d : !fir.ref<f32>
+  llvm.br ^bb2
+^bb2:
+  %v = fir.load %d : !fir.ref<f32>
+  return %v : f32
+}
+
+// -----
+
 // A memory space lets the cast relocate the storage, so it is not an alias.
 
 // CHECK-LABEL: func.func @memref_memory_space_not_promoted(

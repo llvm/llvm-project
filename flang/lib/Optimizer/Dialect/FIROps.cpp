@@ -2136,6 +2136,15 @@ llvm::LogicalResult fir::ConvertOp::verify() {
          << getValue().getType() << " / " << getType();
 }
 
+/// Check whether a slot of this pointee may be exposed as an alias. Promoting a
+/// floating-point slot lets its value be folded or, when nothing reads it,
+/// deleted, either of which loses an IEEE exception that the running program
+/// can observe through ieee_get_flag. Hence, restrict to Integer and Logical
+/// types.
+static bool isAliasableSlotPointee(mlir::Type pointee) {
+  return mlir::isa<mlir::IntegerType, fir::LogicalType>(pointee);
+}
+
 /// Pointee of a reference to a simple scalar, or null. Both fir.ref and rank-0
 /// memref qualify, since the storage of a scalar is cast between those forms.
 static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
@@ -2151,8 +2160,7 @@ static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
   } else {
     return {};
   }
-  if (!mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
-                 fir::LogicalType>(eleTy))
+  if (!isAliasableSlotPointee(eleTy))
     return {};
   return eleTy;
 }
@@ -6185,7 +6193,8 @@ void fir::DeclareOp::getPromotableSlotAliases(
     const mlir::MemorySlot &parentSlot,
     llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
   // fir.declare only attaches source information; the storage is the same.
-  if (mlir::Type pointee = getPromotablePointeeOfDeclare(*this))
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (pointee && isAliasableSlotPointee(pointee))
     newMemorySlots.push_back({getResult(), pointee});
 }
 
@@ -6193,10 +6202,19 @@ bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
     mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
     const mlir::DataLayout &dataLayout) {
-  if (!getPromotablePointeeOfDeclare(*this))
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (!pointee)
     return false;
-  for (mlir::OpOperand &use : getResult().getUses())
+  // Without an alias, mem2reg does not see writes made through this declare as
+  // definitions, so uses have to stay in one block for no block argument to be
+  // needed.
+  bool aliased = isAliasableSlotPointee(pointee);
+  mlir::Block *declBlock = getOperation()->getBlock();
+  for (mlir::OpOperand &use : getResult().getUses()) {
+    if (!aliased && use.getOwner()->getBlock() != declBlock)
+      return false;
     newBlockingUses.push_back(&use);
+  }
   return true;
 }
 
