@@ -2589,7 +2589,7 @@ let Predicates = [hasNarrowFPConversionSupport] in {
 }
 
 // ue5m3x2 conversions.
-let Predicates = [hasUE5M3TypeSupport] in {
+let Predicates = [hasRubinFamilySupport] in {
   def : Pat<(int_nvvm_ue5m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_ue5m3x2 $a, CvtRN)>;
   
@@ -2637,7 +2637,7 @@ let Predicates = [hasUE5M3TypeSupport] in {
                 (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, rp_mode)>;
     }
   }
-} // let Predicates = [hasUE5M3TypeSupport]
+} // let Predicates = [hasRubinFamilySupport]
 
 def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
   SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 

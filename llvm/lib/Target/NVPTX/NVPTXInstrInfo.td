@@ -169,6 +169,7 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
+//  - conversions involving ue5m3x2
 def hasRubinFamilySupport : PredOr<[SM107f]>;
 
 // Checks tcgen05.shift instruction support.
@@ -222,9 +223,6 @@ def hasS2F6X2ConversionSupport
 // Checks support for conversions from narrow FP types to bf16x2.
 def hasNarrowFPToBF16x2ConversionSupport
   : PredAnd<[PTX92, PredOr<[SM100f, SM110f, SM120f]>]>;
-
-// Checks support for conversions involving ue5m3x2.
-def hasUE5M3TypeSupport : PredAnd<[PTX94, PredOr<[SM107f]>]>;
 
 def hasTensormapReplaceSwizzleAtomicitySupport
   : PredOr<[PredAnd<[PTX88, PredOr<[SM100f, SM110f, SM120f]>]>,
@@ -928,15 +926,15 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
   def CVT_f16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src), (ins CvtMode:$mode),
             "cvt${mode:base}.f16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
   def CVT_bf16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src), (ins CvtMode:$mode),
             "cvt${mode:base}${mode:satfinite}.bf16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
   def CVT_bf16x2_ue5m3x2_scale_n2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
             "cvt${mode:base}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
 
   class CVT_TO_UE5M3X2_SCALE_N1<dag ins, string SrcType, string SrcOps>
       : NVPTXInst<(outs B16:$dst), ins,
@@ -946,12 +944,12 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
             "cvt${mode:base}${mode:satfinite}.scaled::n1::ue8m0.ue5m3x2." #
             SrcType # " \t$dst, " # SrcOps # ", %b8_in; \n\t" #
             "}}", []>,
-        Requires<[hasUE5M3TypeSupport]>;
+        Requires<[hasRubinFamilySupport]>;
 
   def CVT_ue5m3x2_f32 : BasicFlagsNVPTXInst<(outs B16:$dst),
             (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
             "cvt${mode:base}${mode:satfinite}.ue5m3x2.f32">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
   def CVT_ue5m3x2_f32_scale_n1
       : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
                                 "f32", "$src1, $src2">;
@@ -960,7 +958,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
     def CVT_ue5m3x2_ # type : BasicFlagsNVPTXInst<(outs B16:$dst),
               (ins B32:$src), (ins CvtMode:$mode),
               "cvt${mode:base}${mode:satfinite}.ue5m3x2." # type>,
-      Requires<[hasUE5M3TypeSupport]>;
+      Requires<[hasRubinFamilySupport]>;
     def CVT_ue5m3x2_ # type # _scale_n1
         : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode), type, "$src1">;
   }
