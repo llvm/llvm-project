@@ -1450,7 +1450,6 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
                                                    bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
 
   uint32_t VecSize = 1;
@@ -1587,7 +1586,6 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
 
@@ -1604,7 +1602,6 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
                                               bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
