@@ -2277,7 +2277,7 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 
   const MachineOperand *BaseOp = nullptr;
 
-  auto Offset = TII->getImmOrMaterializedImm(*Src1);
+  auto Offset = TII->getImmOrMaterializedImm(*MRI, *Src1);
 
   if (Offset) {
     BaseOp = Src0;
@@ -2341,11 +2341,11 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   MachineOperand *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
 
-  auto Offset0P = TII->getImmOrMaterializedImm(*Src0);
+  auto Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src0);
   if (Offset0P)
     BaseLo = *Src1;
   else {
-    if (!(Offset0P = TII->getImmOrMaterializedImm(*Src1)))
+    if (!(Offset0P = TII->getImmOrMaterializedImm(*MRI, *Src1)))
       return;
     BaseLo = *Src0;
   }

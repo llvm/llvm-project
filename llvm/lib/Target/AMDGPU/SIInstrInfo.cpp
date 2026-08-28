@@ -1309,13 +1309,13 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
 }
 
 std::optional<int64_t>
-SIInstrInfo::getImmOrMaterializedImm(MachineOperand &Op) const {
+SIInstrInfo::getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                                     MachineOperand &Op) const {
   if (Op.isImm())
     return Op.getImm();
 
   if (!Op.isReg() || !Op.getReg().isVirtual())
     return std::nullopt;
-  MachineRegisterInfo &MRI = Op.getParent()->getMF()->getRegInfo();
   const MachineInstr *Def = MRI.getVRegDef(Op.getReg());
   if (Def && Def->isMoveImmediate()) {
     const MachineOperand &ImmSrc = Def->getOperand(1);
