@@ -672,7 +672,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
     unsigned VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",
-                                              DefaultAccumOffset);
+                                                       DefaultAccumOffset);
     if (VGPRCap == DefaultAccumOffset) {
       MaxNumVGPRs = MaxVectorRegs / 2;
     } else {
