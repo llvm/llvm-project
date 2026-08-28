@@ -370,11 +370,10 @@ Args ProcessProperties::GetAlwaysRunThreadNames() const {
 }
 
 OptionValueProperties *ProcessProperties::GetExperimentalProperties() const {
-  const Property *exp_property =
-      m_collection_sp->GetProperty(Properties::GetExperimentalSettingsName());
-  if (!exp_property)
+  if (const Property *exp_property =
+      m_collection_sp->GetProperty(Properties::GetExperimentalSettingsName()))
+      return exp_property->GetValue()->GetAsProperties();
     return nullptr;
-  return exp_property->GetValue()->GetAsProperties();
 }
 
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
