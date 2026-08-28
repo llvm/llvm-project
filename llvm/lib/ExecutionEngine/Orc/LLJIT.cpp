@@ -821,6 +821,9 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;
+    case Triple::systemz:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }

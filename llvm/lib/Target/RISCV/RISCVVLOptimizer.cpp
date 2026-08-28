@@ -54,35 +54,24 @@ struct DemandedVL {
     return !VL.isIdenticalTo(Other.VL);
   }
 
-  DemandedVL max(const DemandedVL &X) const {
-    if (RISCV::isVLKnownLE(VL, X.VL))
+  DemandedVL max(const MachineRegisterInfo &MRI, const DemandedVL &X) const {
+    if (RISCV::isVLKnownLE(MRI, VL, X.VL))
       return X;
-    if (RISCV::isVLKnownLE(X.VL, VL))
+    if (RISCV::isVLKnownLE(MRI, X.VL, VL))
       return *this;
     return DemandedVL::vlmax();
   }
 };
 
-class RISCVVLOptimizer : public MachineFunctionPass {
+class RISCVVLOptimizerImpl {
   MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  RISCVVLOptimizerImpl(const MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  RISCVVLOptimizer() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return PASS_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
   DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
@@ -105,6 +94,24 @@ private:
              RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
     });
   }
+};
+
+class RISCVVLOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVVLOptimizerLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return PASS_NAME; }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -151,13 +158,14 @@ struct OperandInfo {
 
 } // end anonymous namespace
 
-char RISCVVLOptimizer::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+char RISCVVLOptimizerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-FunctionPass *llvm::createRISCVVLOptimizerPass() {
-  return new RISCVVLOptimizer();
+FunctionPass *llvm::createRISCVVLOptimizerLegacyPass() {
+  return new RISCVVLOptimizerLegacy();
 }
 
 [[maybe_unused]]
@@ -591,9 +599,10 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VCLMULH_VX:
 
   // Zvabd
-  case RISCV::VABS_V:
   case RISCV::VABD_VV:
+  case RISCV::VABD_VX:
   case RISCV::VABDU_VV:
+  case RISCV::VABDU_VX:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -661,7 +670,9 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFWCVTBF16_F_F_V:
   // Zvabd
   case RISCV::VWABDA_VV:
+  case RISCV::VWABDA_VX:
   case RISCV::VWABDAU_VV:
+  case RISCV::VWABDAU_VX:
     return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
@@ -901,7 +912,7 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
 static bool isTupleInsertInstr(const MachineInstr &MI);
 
 /// Return true if we can reason about demanded VLs elementwise for \p MI.
-bool RISCVVLOptimizer::isSupportedInstr(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::isSupportedInstr(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
@@ -927,11 +938,11 @@ bool RISCVVLOptimizer::isSupportedInstr(const MachineInstr &MI) const {
   return true;
 }
 
-/// Return true if MO is a vector operand but is used as a scalar operand.
-static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
-  const MachineInstr *MI = MO.getParent();
+/// Return true if operand \p OpIdx of \p MI is a vector operand but is used as
+/// a scalar operand.
+static bool isVectorOpUsedAsScalarOp(const MachineInstr &MI, unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI->getOpcode());
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
 
   if (!RVV)
     return false;
@@ -954,16 +965,16 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    return MO.getOperandNo() == 3;
+    return OpIdx == 3;
   case RISCV::VMV_X_S:
   case RISCV::VFMV_F_S:
-    return MO.getOperandNo() == 1;
+    return OpIdx == 1;
   default:
     return false;
   }
 }
 
-bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
@@ -1036,8 +1047,8 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   const MachineOperand &SlideAmt = MI.getOperand(3);
   if (!SlideAmt.getReg().isVirtual())
     return std::nullopt;
-  MachineInstr *SlideAmtDef = MRI->getUniqueVRegDef(SlideAmt.getReg());
-  if (SlideAmtDef->getOpcode() != RISCV::ADDI ||
+  MachineInstr *SlideAmtDef = MRI->getVRegDef(SlideAmt.getReg());
+  if (!SlideAmtDef || SlideAmtDef->getOpcode() != RISCV::ADDI ||
       SlideAmtDef->getOperand(2).getImm() != -AVL.getImm() ||
       !SlideAmtDef->getOperand(1).getReg().isVirtual())
     return std::nullopt;
@@ -1045,7 +1056,7 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
 }
 
 DemandedVL
-RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
+RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
@@ -1078,7 +1089,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
+    if (!RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1087,14 +1098,14 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
-  if (isVectorOpUsedAsScalarOp(UserOp)) {
+  if (isVectorOpUsedAsScalarOp(UserMI, UserMI.getOperandNo(&UserOp))) {
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
     return MachineOperand::CreateImm(1);
   }
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
+  if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
@@ -1148,7 +1159,7 @@ static bool isSegmentedStoreInstr(const MachineInstr &MI) {
   }
 }
 
-bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
@@ -1223,8 +1234,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
-                                   MachineOperand CommonVL) const {
+bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
+                                       MachineOperand CommonVL) const {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
@@ -1237,12 +1248,12 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   // vleff's AVL. It will be greater than or equal to the output VL.
   if (CommonVL.isReg()) {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+    if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
         !MDT->dominates(VLMI, &MI))
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*MRI, CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
@@ -1260,6 +1271,9 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     return true;
   }
   MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
+  if (!VLMI)
+    return false;
+
   auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
     return MDT->dominates(VLMI, &MI);
   };
@@ -1294,25 +1308,21 @@ static bool isPhysical(const MachineOperand &MO) {
 }
 
 /// Look through \p MI's operands and propagate what it demands to its uses.
-void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
+void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
     DemandedVLs[&MI] = DemandedVL::vlmax();
 
   for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(*MRI, getMinimumVLForUser(MO));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }
 }
 
-bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
@@ -1351,4 +1361,26 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   DemandedVLs.clear();
   return MadeChange;
+}
+
+bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return RISCVVLOptimizerImpl(MDT).run(MF);
+}
+
+PreservedAnalyses
+RISCVVLOptimizerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = RISCVVLOptimizerImpl(MDT).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
 }
