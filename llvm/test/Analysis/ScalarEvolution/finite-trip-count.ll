@@ -58,13 +58,13 @@ define void @sle_pre_inc_infinite(i32 %len) {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (0 smax (1 + (sext i32 %len to i64))<nsw>)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i64 2147483648
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (0 smax (1 + (sext i32 %len to i64))<nsw>)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%for.body> Added Flags: <nsuw>
 ;
 entry:
   br label %for.body
