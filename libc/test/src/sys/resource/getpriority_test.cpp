@@ -31,11 +31,10 @@ TEST_F(LlvmLibcGetpriorityTest, BasicTest) {
   // Increase to the max on Linux (i.e. minimal priority, which doesn't require
   // special privileges), so that we can confirm we get it back correctly.
   int nice = 19;
-  // Make sure we're not setting it to the same priority by chance
-  // however unlikely it may be.
-  if (nice == current_nice) {
-    nice -= 1;
-  }
+  // Make sure we're not setting it to the same priority by chance. If the below
+  // assertion ever fails, we'll need to re-think this test.
+  ASSERT_GT(nice, current_nice);
+
   ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, 0, nice), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::getpriority(PRIO_PROCESS, 0), Succeeds(nice));
 }
