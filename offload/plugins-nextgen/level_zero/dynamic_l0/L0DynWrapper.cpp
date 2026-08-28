@@ -9,7 +9,6 @@
 #include <memory>
 #include <mutex>
 
-#include "APIHelpers.h"
 #include "DLWrap.h"
 #include "Shared/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -95,8 +94,6 @@ DLWRAP(zeCommandListHostSynchronize, 2)
 DLWRAP(zeCommandListAppendSignalEvent, 2)
 DLWRAP(zeCommandListAppendWaitOnEvents, 3)
 DLWRAP(zeEventQueryStatus, 1)
-DLWRAP(zeDriverGetDefaultContext, 1)
-DLWRAP(zeCommandListAppendHostFunction, 7)
 
 DLWRAP_FINALIZE()
 
@@ -112,23 +109,6 @@ DLWRAP_FINALIZE()
 #ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "TARGET " GETNAME(TARGET_NAME) " RTL"
 #endif
-
-// Macro used to make APIs that are returning
-// ZE_RESULT_ERROR_UNSUPPORTED_FEATURE nullptr in dlwrap.
-#define INVALIDATE_LEVEL_ZERO_API(function)                                    \
-  if (dlwrap::function##_loaded() &&                                           \
-      api_helper::callWithDefaultArgs(function) ==                             \
-          ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {                               \
-    for (size_t I = 0; I < dlwrap::size(); I++) {                              \
-      const char *Sym = dlwrap::symbol(I);                                     \
-      if (std::strcmp(Sym, #function) != 0)                                    \
-        continue;                                                              \
-      ODBG(OLDT_Init) << #function                                             \
-                      << " returns ZE_RESULT_ERROR_UNSUPPORTED_FEATURE, "      \
-                         "fallback might be available";                        \
-      *dlwrap::pointer(I) = nullptr;                                           \
-    }                                                                          \
-  }
 
 // Extension function pointer for getting argument sizes.
 static ze_result_t (*zexKernelGetArgumentSize_ptr)(ze_kernel_handle_t, uint32_t,
@@ -296,15 +276,6 @@ static bool loadLevelZero() {
   return true;
 }
 
-// Some APIs might be invalid in some Level Zero and
-// compute runtime environments. They will return
-// `ZE_RESULT_ERROR_UNSUPPORTED_FEATURE`. This
-// function sets their dlwrap pointers to null
-// in this situation.
-static void invalidateLevelZeroSymbols() {
-  INVALIDATE_LEVEL_ZERO_API(zeCommandListAppendLaunchKernelWithArguments);
-}
-
 static void addLevelZeroFallbacks() {
   std::string L0Library{LEVEL_ZERO_LIBRARY};
 
@@ -334,13 +305,6 @@ ze_result_t ZE_APICALL zeInit(ze_init_flags_t flags) {
     return ZE_RESULT_ERROR_UNKNOWN;
 
   auto InitResult = dlwrap_zeInit(flags);
-
-  if (InitResult != ZE_RESULT_SUCCESS)
-    return InitResult;
-
-  // Some functions might be present in loader but return
-  // ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-  invalidateLevelZeroSymbols();
 
   // Add fallbacks after calling zeInit, so we can
   // use level_zero APIs to check if they work

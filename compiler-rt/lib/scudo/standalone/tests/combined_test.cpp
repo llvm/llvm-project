@@ -50,15 +50,36 @@ template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Size = scudo::roundUp(Size, MinAlignment);
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
   if (Allocator->useMemoryTaggingTestOnly()) {
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[-1] = 'A', "");
   }
-  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
-          ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment &&
-                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
-    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[Size] = 'A', "");
+  bool ShouldDie = false;
+  scudo::uptr DeathOffset = Size;
+
+  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)) {
+    if (Allocator->useMemoryTaggingTestOnly()) {
+      ShouldDie = true;
+      DeathOffset = scudo::roundUp(Size, MinAlignment);
+    }
+  } else {
+    // Secondary allocation
+    if (Alignment == MinAlignment &&
+        AllocatorT::SecondaryT::getGuardPageSize() > 0) {
+      ShouldDie = true;
+      if (Allocator->useMemoryTaggingTestOnly()) {
+        // If MTE is enabled, Secondary allocator forces PageSize alignment,
+        // so the guard page starts at the next PageSize boundary.
+        DeathOffset = scudo::roundUp(Size, PageSize);
+      } else {
+        // Otherwise, it starts at the next MinAlignment boundary.
+        DeathOffset = scudo::roundUp(Size, MinAlignment);
+      }
+    }
+  }
+
+  if (ShouldDie) {
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[DeathOffset] = 'A', "");
   }
 }
 

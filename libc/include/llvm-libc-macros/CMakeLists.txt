@@ -173,6 +173,7 @@ add_macro_header(
     math-function-macros.h
   DEPENDS
     .math_macros
+    .float16_macros
 )
 
 add_macro_header(
@@ -199,6 +200,12 @@ add_macro_header(
   sched_macros
   HDR
     sched-macros.h
+)
+
+add_macro_header(
+  semaphore_macros
+  HDR
+    semaphore-macros.h
 )
 
 add_macro_header(
@@ -335,6 +342,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
@@ -344,6 +357,12 @@ add_macro_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h
+)
+
+add_macro_header(
+  sys_sysmacros_macros
+  HDR
+    sys-sysmacros-macros.h
 )
 
 add_macro_header(
@@ -486,4 +505,10 @@ add_macro_header(
   alloca_macros
   HDR
     alloca-macros.h
+)
+
+add_macro_header(
+  syslog_macros
+  HDR
+    syslog-macros.h
 )

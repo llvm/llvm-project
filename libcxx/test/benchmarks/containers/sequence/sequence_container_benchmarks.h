@@ -60,6 +60,10 @@ void sequence_container_benchmarks(std::string container) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(8192);
   };
 
+  auto bench_unsized = [&](std::string operation, auto f) {
+    benchmark::RegisterBenchmark(container + "::" + operation, f);
+  };
+
   /////////////////////////
   // Constructors
   /////////////////////////
@@ -184,7 +188,7 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   // Insertion
   /////////////////////////
-  for (auto gen : generators)
+  for (auto gen : generators) {
     bench("insert(begin)" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
       auto const size = st.range(0);
       std::vector<ValueType> in;
@@ -205,8 +209,29 @@ void sequence_container_benchmarks(std::string container) {
       }
     });
 
+    bench("emplace(begin)" + tostr(gen), [gen](auto& st) {
+      auto const size = st.range(0);
+      std::vector<ValueType> in;
+      std::generate_n(std::back_inserter(in), size, gen);
+      DoNotOptimizeData(in);
+
+      Container c(in.begin(), in.end());
+      DoNotOptimizeData(c);
+
+      ValueType value = gen();
+      benchmark::DoNotOptimize(value);
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.emplace(c.begin(), value);
+        DoNotOptimizeData(c);
+
+        c.erase(std::prev(c.end())); // avoid growing indefinitely
+      }
+    });
+  }
+
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
-    for (auto gen : generators)
+    for (auto gen : generators) {
       bench("insert(middle)" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
         auto const size = st.range(0);
         std::vector<ValueType> in;
@@ -224,9 +249,30 @@ void sequence_container_benchmarks(std::string container) {
           c.insert(mid, value);
           DoNotOptimizeData(c);
 
-          c.erase(c.end() - 1); // avoid growing indefinitely
+          c.pop_back(); // avoid growing indefinitely
         }
       });
+      bench("emplace(middle)" + tostr(gen), [gen](auto& st) {
+        auto const size = st.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
+
+        Container c(in.begin(), in.end());
+        DoNotOptimizeData(c);
+
+        ValueType value = gen();
+        benchmark::DoNotOptimize(value);
+
+        for ([[maybe_unused]] auto _ : st) {
+          auto mid = c.begin() + (size / 2); // requires random-access iterators in order to make sense
+          c.emplace(mid, value);
+          DoNotOptimizeData(c);
+
+          c.pop_back(); // avoid growing indefinitely
+        }
+      });
+    }
   }
 
   if constexpr (requires(Container c) { c.reserve(0); }) {
@@ -319,7 +365,7 @@ void sequence_container_benchmarks(std::string container) {
     if constexpr (has_capacity) {
       // For containers where we can observe capacity(), push_back a single element
       // without reserving to ensure the container needs to grow
-      for (auto gen : generators)
+      for (auto gen : generators) {
         bench("push_back() (growing)" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
           auto const size = st.range(0);
           std::vector<ValueType> in;
@@ -348,12 +394,41 @@ void sequence_container_benchmarks(std::string container) {
             st.ResumeTiming();
           }
         });
+        bench("emplace_back() (growing)" + tostr(gen), [gen](auto& st) {
+          auto const size = st.range(0);
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), size, gen);
+          DoNotOptimizeData(in);
+
+          auto at_capacity = [](Container c) {
+            while (c.size() < c.capacity())
+              c.push_back(c.back());
+            return c;
+          };
+
+          std::vector<Container> c(BatchSize, at_capacity(Container(in.begin(), in.end())));
+
+          while (st.KeepRunningBatch(BatchSize)) {
+            for (std::size_t i = 0; i != BatchSize; ++i) {
+              c[i].emplace_back(in[i]);
+              DoNotOptimizeData(c[i]);
+            }
+
+            st.PauseTiming();
+            for (std::size_t i = 0; i != BatchSize; ++i) {
+              c[i] = at_capacity(Container(in.begin(), in.end()));
+              assert(c[i].size() == c[i].capacity());
+            }
+            st.ResumeTiming();
+          }
+        });
+      }
     }
 
     // For containers where we can reserve, push_back a single element after reserving to
     // ensure the container doesn't grow
     if constexpr (has_reserve) {
-      for (auto gen : generators)
+      for (auto gen : generators) {
         bench("push_back() (with reserve)" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
           auto const size = st.range(0);
           std::vector<ValueType> in;
@@ -374,10 +449,35 @@ void sequence_container_benchmarks(std::string container) {
             c.erase(c.end() - BatchSize, c.end());
           }
         });
+
+        bench_unsized("emplace_back() (with reserve)" + tostr(gen), [gen](auto& st) {
+          constexpr auto batch_size = 8192;
+
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), batch_size, gen);
+          DoNotOptimizeData(in);
+
+          Container c;
+          // Ensure the container has enough capacity
+          c.reserve(batch_size);
+          DoNotOptimizeData(c);
+
+          while (st.KeepRunningBatch(batch_size)) {
+            for (std::size_t i = 0; i != BatchSize; ++i) {
+              c.emplace_back(in[i]);
+            }
+            DoNotOptimizeData(c);
+
+            st.PauseTiming();
+            c.clear();
+            st.ResumeTiming();
+          }
+        });
+      }
     }
 
     // push_back many elements: this is amortized constant for std::vector but not all containers
-    for (auto gen : generators)
+    for (auto gen : generators) {
       bench("push_back() (many elements)" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
         auto const size = st.range(0);
         std::vector<ValueType> in;
@@ -397,6 +497,26 @@ void sequence_container_benchmarks(std::string container) {
           st.ResumeTiming();
         }
       });
+      bench("emplace_back() (many elements)" + tostr(gen), [gen](auto& st) {
+        auto const size = st.range(0);
+        std::vector<ValueType> in;
+        std::generate_n(std::back_inserter(in), size, gen);
+        DoNotOptimizeData(in);
+
+        Container c;
+        DoNotOptimizeData(c);
+        while (st.KeepRunningBatch(size)) {
+          for (int i = 0; i != size; ++i) {
+            c.emplace_back(in[i]);
+          }
+          DoNotOptimizeData(c);
+
+          st.PauseTiming();
+          c = Container();
+          st.ResumeTiming();
+        }
+      });
+    }
 
 #if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
     for (auto gen : generators)
@@ -413,7 +533,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           state.PauseTiming();
-          c.clear();
+          c = Container();
           state.ResumeTiming();
         }
       });
@@ -440,7 +560,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           state.PauseTiming();
-          c.clear();
+          c = Container();
           state.ResumeTiming();
         }
       });

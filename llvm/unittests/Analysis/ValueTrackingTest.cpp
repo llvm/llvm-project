@@ -1912,6 +1912,18 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
+  parseAssembly("declare float @llvm.pow.f32(float, float)\n"
+                "define float @test(float nofpclass(ninf nsub nnorm) %base,\n"
+                "                   float nofpclass(pnorm) %exp) {\n"
+                "  %A = call float @llvm.pow.f32(float %base, float %exp)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcNegative);
+  EXPECT_EQ(~(fcNegNormal | fcNegSubnormal | fcNegZero), Known.KnownFPClasses);
+}
+
 TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
   parseAssembly(
       "declare float @llvm.powi.f32.i32(float, i32)\n"
@@ -1978,6 +1990,27 @@ TEST_F(ComputeKnownFPClassTest, PowiInfSecond) {
   expectKnownFPClass(~fcInf, std::nullopt, A5);
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
   expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, Atan2DemandXSign) {
+  parseAssembly("declare float @llvm.atan2.f32(float, float)\n"
+                "declare float @llvm.fabs.f32(float)\n"
+                "define float @test(float %y, float %x) #0 {\n"
+                "  %abs = call float @llvm.fabs.f32(float %x)\n"
+                "  %sum = fadd float %abs, 1.0\n"
+                "  %negative = fneg float %sum\n"
+                "  %A = call float @llvm.atan2.f32(float %y, float %negative)\n"
+                "  ret float %A\n"
+                "}\n"
+                "attributes #0 = { \"denormal-fp-math\"=\"ieee,ieee\" }\n");
+  // atan2(y, -(|x| + 1.0))
+  // Note that -(|x| + 1.0) is never positive, zero, or subnormal.
+  // atan2(y, negative_x) is never zero or subnormal. But we need to know that
+  // x is never positive or a negative subnormal to make this deduction. Which
+  // requires us to pass more than just InterestedClasses, which is the purpose
+  // of this test.
+  KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcPosZero);
+  EXPECT_EQ(fcNan | fcNormal, Known.KnownFPClasses);
 }
 
 TEST_F(ComputeKnownFPClassTest, Phi) {

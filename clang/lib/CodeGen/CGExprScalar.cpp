@@ -786,6 +786,7 @@ public:
     if (E->isStoredAsBoolean())
       return llvm::ConstantInt::get(ConvertType(E->getType()),
                                     E->getBoolValue());
+    assert(E->getType()->isIntegerType() && "not a scalar type trait");
     assert(E->getAPValue().isInt() && "APValue type not supported");
     return llvm::ConstantInt::get(ConvertType(E->getType()),
                                   E->getAPValue().getInt());
@@ -4982,10 +4983,10 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // Otherwise, this is a pointer subtraction.
 
   // Do the raw subtraction part.
-  llvm::Value *LHS
-    = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS
-    = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  llvm::Value *LHS =
+      Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  llvm::Value *RHS =
+      Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
@@ -5367,6 +5368,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     // vector integer type and return it (don't convert to bool).
     if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
+
+    if (LHSTy->isMatrixType())
+      return Result;
 
   } else {
     // Complex Comparison: can only be an equality comparison.

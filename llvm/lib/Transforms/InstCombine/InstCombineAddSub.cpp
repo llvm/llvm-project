@@ -1822,13 +1822,20 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // Align-up idiom:
-  // X + ((-X) & (C - 1)) --> (X + C - 1) & -C, for a power-of-two C.
-  // Note -C == ~(C - 1), so the mask is simply the inverted low-bit mask.
+  // X + ((-X) & (C - 1)) --> (X + C - 1) & -C
+  // ((X - 1) | (C - 1)) + 1 -> (X + C - 1) & -C
+  // For a power-of-two C. Note -C == ~(C - 1), so the mask is simply the
+  // inverted low-bit mask.
   {
     const APInt *LowMask;
     if (match(&I,
               m_c_Add(m_OneUse(m_And(m_Neg(m_Value(A)), m_LowBitMask(LowMask))),
-                      m_Deferred(A)))) {
+                      m_Deferred(A))) ||
+        match(&I, m_Add(m_OneUse(m_Or(m_Add(m_Value(A), m_AllOnes()),
+                                      m_LowBitMask(LowMask))),
+                        m_One()))
+
+    ) {
       Value *NewAdd = Builder.CreateAdd(A, ConstantInt::get(Ty, *LowMask));
       return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, ~*LowMask));
     }
@@ -1919,20 +1926,26 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
     // Match: (X >> C) + zext((X & Mask) != 0)
     // or:    zext((X & Mask) != 0) + (X >> C)
-    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))),
-                          m_ZExt(m_SpecificICmp(
-                              ICmpInst::ICMP_NE,
-                              m_And(m_Deferred(X), m_LowBitMask(Mask)),
-                              m_ZeroInt())))) &&
+    if (match(&I,
+              m_c_Add(m_ZExt(m_SpecificICmp(
+                          ICmpInst::ICMP_NE,
+                          m_And(m_Value(X), m_LowBitMask(Mask)), m_ZeroInt())),
+                      m_OneUse(m_ZExtOrSelf(m_OneUse(
+                          m_LShr(m_Deferred(X), m_APInt(ShiftAmt))))))) &&
         Mask->popcount() == *ShiftAmt) {
 
       // Check if X + Mask doesn't overflow
-      Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
-      if (willNotOverflowUnsignedAdd(X, MaskC, I)) {
+      unsigned Xbits = X->getType()->getScalarSizeInBits();
+      unsigned Ibits = Ty->getScalarSizeInBits();
+      bool NeedZext = Ibits > Xbits;
+      Constant *MaskC = ConstantInt::get(Ty, Mask->zext(Ibits));
+      if (NeedZext || willNotOverflowUnsignedAdd(X, MaskC, I)) {
+        if (NeedZext)
+          X = Builder.CreateZExt(X, Ty);
         // (X + Mask) >> ShiftAmt
         Value *Add = Builder.CreateNUWAdd(X, MaskC);
         return BinaryOperator::CreateLShr(
-            Add, ConstantInt::get(X->getType(), *ShiftAmt));
+            Add, ConstantInt::get(Ty, ShiftAmt->zext(Ibits)));
       }
     }
   }

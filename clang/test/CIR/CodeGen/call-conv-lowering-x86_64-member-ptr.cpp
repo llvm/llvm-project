@@ -14,7 +14,7 @@ struct S {
 // two eightbytes, whose coerce record is that same type.  Equal types still
 // need the rewrite, because the coercion is what flattens the record into the
 // two registers it passes in.
-// CIR: ![[MEMPTR:rec_anon_struct[0-9]*]] = !cir.struct<{!s64i, !s64i}>
+// CIR: ![[MEMPTR:rec_anon_struct[0-9]*]] = !cir.struct<{data !s64i, data !s64i}>
 void take_method_ptr(void (S::*p)()) { (void)p; }
 
 // CIR: cir.func {{.*}}@_Z15take_method_ptrM1SFvvE(%arg0: !s64i{{.*}}, %arg1: !s64i{{.*}})
