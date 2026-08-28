@@ -177,9 +177,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         )
 
         self.assert_vector_info("v0", 8, 2)
-        self.expect(
-            "register info v0", matching=False, substrs=["Vector elements: 4"]
-        )
+        self.expect("register info v0", matching=False, substrs=["Vector elements: 4"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
