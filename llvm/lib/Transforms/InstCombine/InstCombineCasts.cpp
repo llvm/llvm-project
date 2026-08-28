@@ -1241,7 +1241,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         bool NUW = Trunc.hasNoUnsignedWrap() && WideShl->hasNoUnsignedWrap();
         bool NSW = Trunc.hasNoSignedWrap() && WideShl->hasNoSignedWrap();
         Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr",
-                                              /*IsNUW=*/NUW);
+                                              /*IsNUW=*/NUW, /*IsNSW=*/NSW);
         auto *NewShl = BinaryOperator::Create(
             Instruction::Shl, NewTrunc, ConstantExpr::getTrunc(C, DestTy));
         NewShl->setHasNoUnsignedWrap(NUW);
