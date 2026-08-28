@@ -291,6 +291,14 @@ features cannot lower the translation-unit ABI level;
   will an acquisition, blocking or try, that changes the kind (shared vs.
   exclusive) of a held or try-held capability, even for a re-entrant one.
 
+- Thread safety analysis now tracks a scoped capability initialized or
+  returned by value from a function annotated with an acquire attribute under
+  C++11/14, where the initialization goes through an elidable copy of the
+  returned temporary. The temporary's capabilities transfer to the
+  destination as if the copy were elided -- matching C++17 guaranteed copy
+  elision -- instead of being spuriously released at the end of the
+  full-expression.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
