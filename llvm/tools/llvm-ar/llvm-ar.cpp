@@ -1369,7 +1369,7 @@ static int ar_main(int argc, char **argv) {
   if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     BitMode = getBitMode(getenv("OBJECT_MODE"));
     if (BitMode == BitModeTy::Unknown)
-      BitMode = BitModeTy::Bit32;
+      BitMode = BitModeTy::Any;
   }
 
   for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
