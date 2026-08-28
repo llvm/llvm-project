@@ -710,7 +710,7 @@ SPIRVNonSemanticDebugHandler::resolveLexicalBlockParent(
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
     const DIScope *S, MCRegister VoidTypeReg, MCRegister I32TypeReg,
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
-  assert((isa<DILexicalBlock>(S) || isa<DINamespace>(S)) &&
+  assert((isa<DILexicalBlock, DINamespace>(S)) &&
          "S must be a DILexicalBlock or DINamespace in emitDebugLexicalBlock");
   auto ParentRegOpt = resolveLexicalBlockParent(S->getScope());
   if (!ParentRegOpt)
@@ -1582,9 +1582,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // DINamespace never chains through a DISubprogram (DINamespace::getScope()
   // returns DIScope, not DILocalScope), so this never depends on
   // DebugFunctionRegs.
-  for (const DIScope *S : LexicalBlocks) {
-    if (!isa<DINamespace>(S))
-      continue;
+  for (const DIScope *S :
+       make_filter_range(LexicalBlocks, IsaPred<DINamespace>)) {
     if (auto LBReg = emitDebugLexicalBlock(S, VoidTypeReg, I32TypeReg,
                                            ExtInstSetReg, MAI))
       DebugLexicalBlockRegs[S] = *LBReg;
@@ -1638,9 +1637,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // before-child order. Placed after DebugFunction so a block directly
   // enclosed by a function (the common case) can resolve its Parent operand;
   // DINamespace entries were already emitted above.
-  for (const DIScope *S : LexicalBlocks) {
-    if (!isa<DILexicalBlock>(S))
-      continue;
+  for (const DIScope *S :
+       make_filter_range(LexicalBlocks, IsaPred<DILexicalBlock>)) {
     if (auto LBReg = emitDebugLexicalBlock(S, VoidTypeReg, I32TypeReg,
                                            ExtInstSetReg, MAI))
       DebugLexicalBlockRegs[S] = *LBReg;
