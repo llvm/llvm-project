@@ -2032,19 +2032,24 @@ public:
 };
 
 /// Adds a specific immediate to the instruction being built.
-/// If a LLT is passed, a ConstantInt immediate is created instead.
+/// If a LLT is passed, a ConstantInt immediate is created instead, unless
+/// IsFP is set, in which case the immediate is interpreted as a
+/// floating-point value (a double) and a ConstantFP immediate is created.
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
   int64_t Imm;
   std::optional<LLTCodeGenOrTempType> CImmLLT;
+  bool IsFP = false;
 
 public:
   ImmRenderer(unsigned InsnID, int64_t Imm)
       : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
 
-  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGenOrTempType &CImmLLT)
-      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT) {
+  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGenOrTempType &CImmLLT,
+              bool IsFP = false)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT),
+        IsFP(IsFP) {
     if (CImmLLT.isLLTCodeGen())
       KnownTypes.insert(CImmLLT.getLLTCodeGen());
   }
