@@ -1514,21 +1514,21 @@ bool SIFoldOperandsImpl::foldOperand(
       //
       // Excerpt from AMDGPUGenRegisterInfoEnums.inc
       // NoSubRegister, //0
-      // hi16, // 1
-      // lo16, // 2
+      // lo16, // 1
+      // hi16, // 2
       // sub0, // 3
+      // sub1, // 4
       // ...
-      // sub1, // 11
-      // sub1_hi16, // 12
-      // sub1_lo16, // 13
-      static_assert(AMDGPU::sub1_hi16 == 12, "Subregister layout has changed");
+      // sub1_lo16, // 35
+      // sub1_hi16, // 36
+      static_assert(AMDGPU::sub1_hi16 == 36, "Subregister layout has changed");
       if (Size == 2 && TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
           TRI->isSGPRReg(*MRI, UseReg)) {
         // Produce the 32 bit subregister index to which the 16-bit subregister
         // is aligned.
         if (SubRegIdx > AMDGPU::sub1) {
           LaneBitmask M = TRI->getSubRegIndexLaneMask(SubRegIdx);
-          M |= M.getLane(M.getHighestLane() - 1);
+          M |= M.getLane(M.getHighestLane() + 1);
           SmallVector<unsigned, 4> Indexes;
           TRI->getCoveringSubRegIndexes(TRI->getRegClassForReg(*MRI, UseReg), M,
                                         Indexes);

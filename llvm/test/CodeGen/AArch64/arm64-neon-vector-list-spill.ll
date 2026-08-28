@@ -8,25 +8,21 @@
 define i32 @spill.DPairReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DPairReg:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
-; CHECK-NEXT:    cbz w1, .LBB0_2
-; CHECK-NEXT:  // %bb.1: // %if.end
-; CHECK-NEXT:    mov w0, v0.s[1]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %if.then
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st1 { v0.2d, v1.2d }, [x8] // 32-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    ld2 { v8.2s, v9.2s }, [x0]
+; CHECK-NEXT:    cbnz w1, .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ld1 { v0.2d, v1.2d }, [x8] // 32-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:  .LBB0_2: // %if.end
+; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    mov w0, v0.s[1]
+; CHECK-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0(ptr %arg1)
@@ -46,25 +42,24 @@ if.end:
 define i16 @spill.DTripleReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DTripleReg:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x0]
-; CHECK-NEXT:    cbz w1, .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %if.end
-; CHECK-NEXT:    umov w0, v0.h[1]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: // %if.then
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    stp x29, x30, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st1 { v0.2d, v1.2d, v2.2d }, [x8] // 48-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset b8, -16
+; CHECK-NEXT:    .cfi_offset b9, -24
+; CHECK-NEXT:    .cfi_offset b10, -32
+; CHECK-NEXT:    ld3 { v8.4h, v9.4h, v10.4h }, [x0]
+; CHECK-NEXT:    cbnz w1, .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ldp x29, x30, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ld1 { v0.2d, v1.2d, v2.2d }, [x8] // 48-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:  .LBB1_2: // %if.end
+; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    umov w0, v0.h[1]
+; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0(ptr %arg1)
@@ -84,25 +79,25 @@ if.end:
 define i16 @spill.DQuadReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DQuadReg:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld4 { v0.4h, v1.4h, v2.4h, v3.4h }, [x0]
-; CHECK-NEXT:    cbz w1, .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %if.end
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: // %if.then
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st1 { v0.2d, v1.2d, v2.2d, v3.2d }, [x8] // 64-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    ld4 { v8.4h, v9.4h, v10.4h, v11.4h }, [x0]
+; CHECK-NEXT:    cbnz w1, .LBB2_2
+; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ld1 { v0.2d, v1.2d, v2.2d, v3.2d }, [x8] // 64-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:  .LBB2_2: // %if.end
+; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    ldp d11, d10, [sp], #48 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0(ptr %arg1)

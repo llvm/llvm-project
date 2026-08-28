@@ -517,18 +517,19 @@ define void @transpose_s16_8x8_simpler(ptr nocapture noundef %a) {
 ; CHECK-IAENABLED-NEXT:    .cfi_startproc
 ; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
 ; CHECK-IAENABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #64]
-; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #64]
 ; CHECK-IAENABLED-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-IAENABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
 ; CHECK-IAENABLED-NEXT:    trn1 v1.8h, v2.8h, v3.8h
 ; CHECK-IAENABLED-NEXT:    trn1 v2.8h, v4.8h, v5.8h
 ; CHECK-IAENABLED-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-IAENABLED-NEXT:    trn1 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v1.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    str q2, [x0, #64]
+; CHECK-IAENABLED-NEXT:    trn1 v0.4s, v0.4s, v2.4s
+; CHECK-IAENABLED-NEXT:    trn1 v2.4s, v1.4s, v3.4s
+; CHECK-IAENABLED-NEXT:    zip2 v3.4s, v0.4s, v2.4s
+; CHECK-IAENABLED-NEXT:    fmov d1, d0
+; CHECK-IAENABLED-NEXT:    st2 { v1.2s, v2.2s }, [x0]
+; CHECK-IAENABLED-NEXT:    str q3, [x0, #64]
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: transpose_s16_8x8_simpler:
@@ -594,14 +595,15 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #96]
 ; CHECK-IAENABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
 ; CHECK-IAENABLED-NEXT:    zip1 v1.8h, v2.8h, v3.8h
+; CHECK-IAENABLED-NEXT:    trn1 v2.8h, v4.8h, v5.8h
+; CHECK-IAENABLED-NEXT:    trn1 v0.4s, v0.4s, v1.4s
+; CHECK-IAENABLED-NEXT:    dup v1.4s, v2.s[2]
 ; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-IAENABLED-NEXT:    trn1 v4.8h, v4.8h, v5.8h
 ; CHECK-IAENABLED-NEXT:    zip1 v3.8h, v2.8h, v3.8h
-; CHECK-IAENABLED-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    dup v0.4s, v4.s[2]
-; CHECK-IAENABLED-NEXT:    zip2 v0.4s, v2.4s, v0.4s
+; CHECK-IAENABLED-NEXT:    zip2 v1.4s, v0.4s, v1.4s
+; CHECK-IAENABLED-NEXT:    fmov d2, d0
+; CHECK-IAENABLED-NEXT:    str q1, [x0, #64]
 ; CHECK-IAENABLED-NEXT:    st2 { v2.2s, v3.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    str q0, [x0, #64]
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: transpose_s16_8x8_simpler2:
@@ -662,42 +664,46 @@ define void @transpose_s16_8x8(ptr nocapture noundef %0, ptr nocapture noundef %
 ; CHECK-IAENABLED:       .Lfunc_begin9:
 ; CHECK-IAENABLED-NEXT:    .cfi_startproc
 ; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr q0, [x0]
-; CHECK-IAENABLED-NEXT:    ldr q1, [x1]
-; CHECK-IAENABLED-NEXT:    ldr q3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr q4, [x5]
-; CHECK-IAENABLED-NEXT:    ldr q2, [x2]
-; CHECK-IAENABLED-NEXT:    ldr q5, [x3]
-; CHECK-IAENABLED-NEXT:    trn1 v16.8h, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECK-IAENABLED-NEXT:    ldr q0, [x2]
+; CHECK-IAENABLED-NEXT:    ldr q1, [x0]
+; CHECK-IAENABLED-NEXT:    ldr q2, [x1]
+; CHECK-IAENABLED-NEXT:    ldr q3, [x3]
+; CHECK-IAENABLED-NEXT:    ldr q4, [x4]
+; CHECK-IAENABLED-NEXT:    ldr q5, [x5]
+; CHECK-IAENABLED-NEXT:    trn1 v16.8h, v1.8h, v2.8h
+; CHECK-IAENABLED-NEXT:    trn2 v1.8h, v1.8h, v2.8h
 ; CHECK-IAENABLED-NEXT:    ldr q6, [x6]
 ; CHECK-IAENABLED-NEXT:    ldr q7, [x7]
-; CHECK-IAENABLED-NEXT:    trn1 v17.8h, v3.8h, v4.8h
-; CHECK-IAENABLED-NEXT:    trn2 v1.8h, v3.8h, v4.8h
-; CHECK-IAENABLED-NEXT:    trn1 v18.8h, v2.8h, v5.8h
-; CHECK-IAENABLED-NEXT:    trn2 v2.8h, v2.8h, v5.8h
+; CHECK-IAENABLED-NEXT:    trn1 v17.8h, v0.8h, v3.8h
+; CHECK-IAENABLED-NEXT:    trn1 v18.8h, v4.8h, v5.8h
+; CHECK-IAENABLED-NEXT:    trn2 v0.8h, v0.8h, v3.8h
+; CHECK-IAENABLED-NEXT:    trn2 v2.8h, v4.8h, v5.8h
 ; CHECK-IAENABLED-NEXT:    trn1 v19.8h, v6.8h, v7.8h
 ; CHECK-IAENABLED-NEXT:    trn2 v3.8h, v6.8h, v7.8h
-; CHECK-IAENABLED-NEXT:    trn1 v4.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    trn1 v6.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn2 v16.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    trn2 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v5.4s, v18.4s, v19.4s
-; CHECK-IAENABLED-NEXT:    trn1 v7.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    trn2 v17.4s, v18.4s, v19.4s
-; CHECK-IAENABLED-NEXT:    trn2 v1.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    st2 { v4.2s, v5.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    zip2 v2.4s, v4.4s, v5.4s
-; CHECK-IAENABLED-NEXT:    zip2 v3.4s, v6.4s, v7.4s
-; CHECK-IAENABLED-NEXT:    zip2 v4.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    st2 { v6.2s, v7.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    st2 { v16.2s, v17.2s }, [x2]
-; CHECK-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x3]
-; CHECK-IAENABLED-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    str q2, [x4]
-; CHECK-IAENABLED-NEXT:    str q3, [x5]
+; CHECK-IAENABLED-NEXT:    trn1 v4.4s, v16.4s, v18.4s
+; CHECK-IAENABLED-NEXT:    trn2 v16.4s, v16.4s, v18.4s
+; CHECK-IAENABLED-NEXT:    trn1 v7.4s, v1.4s, v2.4s
+; CHECK-IAENABLED-NEXT:    trn2 v1.4s, v1.4s, v2.4s
+; CHECK-IAENABLED-NEXT:    trn1 v6.4s, v17.4s, v19.4s
+; CHECK-IAENABLED-NEXT:    trn1 v21.4s, v0.4s, v3.4s
+; CHECK-IAENABLED-NEXT:    trn2 v18.4s, v17.4s, v19.4s
+; CHECK-IAENABLED-NEXT:    trn2 v3.4s, v0.4s, v3.4s
+; CHECK-IAENABLED-NEXT:    zip2 v19.4s, v4.4s, v6.4s
+; CHECK-IAENABLED-NEXT:    fmov d5, d4
+; CHECK-IAENABLED-NEXT:    zip2 v0.4s, v7.4s, v21.4s
+; CHECK-IAENABLED-NEXT:    fmov d20, d7
+; CHECK-IAENABLED-NEXT:    zip2 v4.4s, v16.4s, v18.4s
+; CHECK-IAENABLED-NEXT:    fmov d17, d16
+; CHECK-IAENABLED-NEXT:    st2 { v5.2s, v6.2s }, [x0]
+; CHECK-IAENABLED-NEXT:    zip2 v5.4s, v1.4s, v3.4s
+; CHECK-IAENABLED-NEXT:    fmov d2, d1
+; CHECK-IAENABLED-NEXT:    st2 { v20.2s, v21.2s }, [x1]
+; CHECK-IAENABLED-NEXT:    st2 { v17.2s, v18.2s }, [x2]
+; CHECK-IAENABLED-NEXT:    st2 { v2.2s, v3.2s }, [x3]
+; CHECK-IAENABLED-NEXT:    str q19, [x4]
+; CHECK-IAENABLED-NEXT:    str q0, [x5]
 ; CHECK-IAENABLED-NEXT:    str q4, [x6]
-; CHECK-IAENABLED-NEXT:    str q0, [x7]
+; CHECK-IAENABLED-NEXT:    str q5, [x7]
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: transpose_s16_8x8:

@@ -1230,9 +1230,15 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   Sets.addExpander("RegisterTuples",
                    std::make_unique<TupleExpander>(SynthDefs));
 
-  // Read in the user-defined (named) sub-register indices.
+  // Read in the user-defined (named) sub-register indices. Do this in the order
+  // they were declared instead of alphabetical order, so that the order in
+  // which bits are chosen for the LaneBitmasks is more controllable and less
+  // surprising.
   // More indices will be synthesized later.
-  for (const Record *SRI : Records.getAllDerivedDefinitions("SubRegIndex"))
+  std::vector<const Record *> SRIs(
+      Records.getAllDerivedDefinitions("SubRegIndex"));
+  llvm::sort(SRIs, LessRecordByID());
+  for (const Record *SRI : SRIs)
     getSubRegIdx(SRI);
   // Build composite maps from ComposedOf fields.
   for (auto &Idx : SubRegIndices)

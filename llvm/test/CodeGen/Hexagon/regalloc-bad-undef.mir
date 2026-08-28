@@ -155,7 +155,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.for.body:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $d2:0x0000000000000002, $d8:0x0000000000000001, $d13, $r20
+  ; CHECK-NEXT:   liveins: $d2:0x0000000000000001, $d8:0x0000000000000002, $d13, $r20
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S2_storerd_io %stack.0, 0, renamable $d2 :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
@@ -192,7 +192,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.end82:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $d2:0x0000000000000002, $d8:0x0000000000000001, $d13, $r20
+  ; CHECK-NEXT:   liveins: $d2:0x0000000000000001, $d8:0x0000000000000002, $d13, $r20
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r20 = A2_addi killed renamable $r20, -1
   ; CHECK-NEXT:   renamable $p0 = C2_cmpeqi renamable $r20, 0
