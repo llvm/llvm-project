@@ -1215,7 +1215,7 @@ define void @first_order_recurrence_single_vector_iteration(ptr noalias %pkt, pt
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PKT]], align 1
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; VF8UF1-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> zeroinitializer, <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; VF8UF1-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0>, <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = extractelement <8 x i8> [[TMP1]], i64 7
 ; VF8UF1-NEXT:    store i8 [[TMP2]], ptr [[DST]], align 1
 ; VF8UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -1234,7 +1234,7 @@ define void @first_order_recurrence_single_vector_iteration(ptr noalias %pkt, pt
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PKT]], align 1
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; VF8UF2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> zeroinitializer, <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; VF8UF2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0>, <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLAT]], <8 x i8> [[BROADCAST_SPLAT]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
 ; VF8UF2-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF8UF2:       [[PRED_STORE_IF]]:
@@ -1348,7 +1348,7 @@ define void @first_order_recurrence_single_vector_iteration(ptr noalias %pkt, pt
 ; VF16UF1-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PKT]], align 1
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-; VF16UF1-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> zeroinitializer, <16 x i8> [[BROADCAST_SPLAT]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+; VF16UF1-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0>, <16 x i8> [[BROADCAST_SPLAT]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; VF16UF1-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF16UF1:       [[PRED_STORE_IF]]:
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = extractelement <16 x i8> [[TMP1]], i64 0

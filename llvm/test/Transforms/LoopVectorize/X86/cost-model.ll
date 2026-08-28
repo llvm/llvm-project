@@ -988,7 +988,7 @@ define void @replicating_sdiv_operand_profitable_to_scalarize(i32 %x) #3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> splat (i32 2), <16 x i32> [[BROADCAST_SPLAT]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> zeroinitializer, <16 x i32> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, <16 x i32> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <16 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <16 x i32> [[TMP0]], splat (i32 3)
