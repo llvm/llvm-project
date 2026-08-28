@@ -455,3 +455,187 @@ bb.2:
 exit:
   ret ptr null
 }
+
+; %x <u %n <u 1024, hence %x * 3 fits an i64 unsigned and signed.
+define i64 @mul_from_transitive_unsigned_bound(i64 %x, i64 %n) {
+; CHECK-LABEL: define i64 @mul_from_transitive_unsigned_bound(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[N]], 1024
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[X]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+entry:
+  %c.0 = icmp ult i64 %n, 1024
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp ult i64 %x, %n
+  call void @llvm.assume(i1 %c.1)
+  %mul = mul i64 %x, 3
+  ret i64 %mul
+}
+
+; Same as above, but there is no upper bound for %n.
+define i64 @mul_no_flags_unbounded_transitive_operand(i64 %x, i64 %n) {
+; CHECK-LABEL: define i64 @mul_no_flags_unbounded_transitive_operand(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[X]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+entry:
+  %c.1 = icmp ult i64 %x, %n
+  call void @llvm.assume(i1 %c.1)
+  %mul = mul i64 %x, 3
+  ret i64 %mul
+}
+
+; %x <=u %x + %y <u 1024 due to the nuw add, hence %x << 3 fits an i64 unsigned.
+define i64 @shl_nuw_from_sum_bound(i64 %x, i64 %y) {
+; CHECK-LABEL: define i64 @shl_nuw_from_sum_bound(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = add nuw i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[S]], 1024
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[SHL]]
+;
+entry:
+  %s = add nuw i64 %x, %y
+  %c.0 = icmp ult i64 %s, 1024
+  call void @llvm.assume(i1 %c.0)
+  %shl = shl i64 %x, 3
+  ret i64 %shl
+}
+
+; The bound on %x is one too weak for %x << 3 to fit an i64 unsigned.
+define i64 @shl_no_nuw_bound_too_weak(i64 %x) {
+; CHECK-LABEL: define i64 @shl_no_nuw_bound_too_weak(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[X]], 2305843009213693953
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X]], 3
+; CHECK-NEXT:    ret i64 [[SHL]]
+;
+entry:
+  %c.0 = icmp ult i64 %x, 2305843009213693953
+  call void @llvm.assume(i1 %c.0)
+  %shl = shl i64 %x, 3
+  ret i64 %shl
+}
+
+; %x >=s %z >=s 0 and %y >=s 0, hence the nsw product also fits unsigned.
+define i64 @mul_nuw_from_nsw_and_non_negative(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: define i64 @mul_nuw_from_nsw_and_non_negative(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i64 [[X]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i64 [[Z]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i64 [[Y]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+entry:
+  %c.0 = icmp sge i64 %x, %z
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i64 %z, 0
+  call void @llvm.assume(i1 %c.1)
+  %c.2 = icmp sge i64 %y, 0
+  call void @llvm.assume(i1 %c.2)
+  %mul = mul nsw i64 %x, %y
+  ret i64 %mul
+}
+
+; Same as above, but %y may be negative.
+define i64 @mul_no_nuw_from_nsw_second_operand_may_be_negative(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: define i64 @mul_no_nuw_from_nsw_second_operand_may_be_negative(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i64 [[X]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i64 [[Z]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+entry:
+  %c.0 = icmp sge i64 %x, %z
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i64 %z, 0
+  call void @llvm.assume(i1 %c.1)
+  %mul = mul nsw i64 %x, %y
+  ret i64 %mul
+}
+
+; %x >=s %z >=s 0, hence the nsw shift also fits unsigned, for any shift amount.
+define i64 @shl_nuw_from_nsw_and_non_negative(i64 %x, i64 %s, i64 %z) {
+; CHECK-LABEL: define i64 @shl_nuw_from_nsw_and_non_negative(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[S:%.*]], i64 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i64 [[X]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i64 [[Z]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[X]], [[S]]
+; CHECK-NEXT:    ret i64 [[SHL]]
+;
+entry:
+  %c.0 = icmp sge i64 %x, %z
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i64 %z, 0
+  call void @llvm.assume(i1 %c.1)
+  %shl = shl nsw i64 %x, %s
+  ret i64 %shl
+}
+
+; Same as above, but the shift does not have nsw.
+define i64 @shl_no_nuw_non_negative_without_nsw(i64 %x, i64 %s, i64 %z) {
+; CHECK-LABEL: define i64 @shl_no_nuw_non_negative_without_nsw(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[S:%.*]], i64 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i64 [[X]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i64 [[Z]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X]], [[S]]
+; CHECK-NEXT:    ret i64 [[SHL]]
+;
+entry:
+  %c.0 = icmp sge i64 %x, %z
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i64 %z, 0
+  call void @llvm.assume(i1 %c.1)
+  %shl = shl i64 %x, %s
+  ret i64 %shl
+}
+
+; -8 <=s %x <=s 7 implies %x * 16 does not wrap signed, but it may wrap
+; unsigned.
+define i8 @mul_nsw_only_from_signed_bounds(i8 %x) {
+; CHECK-LABEL: define i8 @mul_nsw_only_from_signed_bounds(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sle i8 [[X]], 7
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[X]], -8
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X]], 16
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+entry:
+  %c.0 = icmp sle i8 %x, 7
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i8 %x, -8
+  call void @llvm.assume(i1 %c.1)
+  %mul = mul i8 %x, 16
+  ret i8 %mul
+}
