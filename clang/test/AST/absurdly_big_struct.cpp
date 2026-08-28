@@ -13,10 +13,12 @@ long long x3() { return sizeof(a::x2); }
 long long x4() { return sizeof(z); }
 
 // On 32-bit architectures, the struct size must be below (1 << 32).
+// This used to crash in CodeGen.
 struct b { // bit32-error {{structure 'b' is too large, which exceeds maximum allowed size of 4294967296 bytes}}
-  char c[0xFFFFFFFF];
-  char c2[1];
+  char c[0xFFFFFFFE];
+  char c1[4];
+  char c2[2];
 };
 
-long long y() { return sizeof(b); }
+long long y(int i) { return __builtin_offsetof(b, c2[i]); }
 
