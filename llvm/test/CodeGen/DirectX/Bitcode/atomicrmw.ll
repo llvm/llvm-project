@@ -13,7 +13,7 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 ; LLVM-LABEL: define void @main()
 ; LLVM: atomicrmw add ptr addrspace(3) @gsm, i32 1 monotonic
 ; BITCODE-LABEL: <FUNCTION_BLOCK
-; BITCODE: <UnknownCode38
+; BITCODE: <INST_ATOMICRMW_OLD codeid=38
 ; BITCODE-NEXT: <INST_RET
 
 define void @main() #0 {
