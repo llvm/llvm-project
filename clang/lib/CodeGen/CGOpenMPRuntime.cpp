@@ -6766,8 +6766,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   auto CheckForConstExpr = [&](const Expr *E, const Expr **EPtr) {
     if (E->isIntegerConstantExpr(CGF.getContext())) {
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
-        mergeThreadCountUpperBound(UpperBound,
-                                   int32_t(Constant->getZExtValue()));
+        mergeThreadCountUpperBound(
+            UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
