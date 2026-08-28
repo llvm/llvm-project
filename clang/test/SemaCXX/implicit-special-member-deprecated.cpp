@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++20 -Wdeprecated-declarations -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wdeprecated-declarations -I%S/Inputs -verify %s
+
+#include "std-compare.h"
 
 namespace GH147293 {
 struct A {
@@ -26,6 +28,22 @@ struct B {
 
 }
 
+namespace GH147293_regression {
+
+struct A {
+  [[deprecated("use something else")]] int x = 42;
+
+  auto operator<=>(const A&) const = default;
+};
+
+void foo() {
+  A x, y;
+  // FIXME: We want the deprecation warnings because operator<=> uses A.x!
+  (void)(x == y);
+}
+
+}
+
 namespace GH160543 {
 
 template<class F>
@@ -36,3 +54,4 @@ void f() {
 }
 
 }
+

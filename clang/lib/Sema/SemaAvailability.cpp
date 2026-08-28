@@ -213,8 +213,7 @@ static bool ShouldDiagnoseAvailabilityInContext(
       if (C->isDeprecated())
         return true;
       // Don't emit deprecated warnings when defining special member functions.
-      if (const auto *FD = dyn_cast<FunctionDecl>(C);
-          FD && FD->isDefaulted() && FD->isImplicit())
+      if (const auto *FD = dyn_cast<FunctionDecl>(C); FD && FD->isDefaulted())
         return true;
     } else if (K == AR_Unavailable) {
       // It is perfectly fine to refer to an 'unavailable' Objective-C method
