@@ -1365,7 +1365,6 @@ class getVSrcOp<ValueType vt> {
 }
 
 // Class for binary integer operations with the clamp bit set for saturation
-// TODO: Add sub with negated inline constant pattern.
 class VOPBinOpClampPat<SDPatternOperator node, Instruction inst, ValueType vt> :
   GCNPat<(node vt:$src0, vt:$src1),
          (inst getVSrcOp<vt>.ret:$src0, getVSrcOp<vt>.ret:$src1,

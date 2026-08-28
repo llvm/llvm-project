@@ -1002,6 +1002,10 @@ def : ThreeOp_i32_Pats<uaddsat, umin, V_ADD_MIN_U32_e64>;
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
+def : GCNPat<
+  (saddsat i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (V_SUB_I32_e64 VSrc_b32:$src0, NegSubInlineConst32:$src1, DSTCLAMP.ENABLE)>;
+
 def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
              (REG_SEQUENCE VReg_64,
                (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -1029,14 +1033,35 @@ class OpSelBinOpClampPat<SDPatternOperator node,
 let SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
+
+  let AddedComplexity = 15 in {
+  def : GCNPat<
+    (saddsat i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
+    (V_SUB_I16_e64 (i32 0), VSrc_b16:$src0, (i32 0),
+                    NegSubInlineIntConst16:$src1, DSTCLAMP.ENABLE, (i32 0))>;
+  }
 } // End SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts
 let True16Predicate = UseRealTrue16Insts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_t16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_t16_e64>;
+
+  let AddedComplexity = 15 in {
+  def : GCNPat<
+    (saddsat i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
+    (V_SUB_I16_t16_e64 (i32 0), VSrcT_b16:$src0, (i32 0),
+                        NegSubInlineIntConst16:$src1, DSTCLAMP.ENABLE, (i32 0))>;
+  }
 } // End True16Predicate = UseRealTrue16Insts
 let True16Predicate = UseFakeTrue16Insts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_fake16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_fake16_e64>;
+
+  let AddedComplexity = 15 in {
+  def : GCNPat<
+    (saddsat i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
+    (V_SUB_I16_fake16_e64 (i32 0), VSrc_b16:$src0, (i32 0),
+                          NegSubInlineIntConst16:$src1, DSTCLAMP.ENABLE, (i32 0))>;
+  }
 } // End True16Predicate = UseFakeTrue16Insts
 
 multiclass IMAD32_Pats <VOP3_Pseudo inst> {
