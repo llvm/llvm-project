@@ -207,6 +207,7 @@ add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
 add_header(struct_sigevent HDR struct_sigevent.h DEPENDS .union_sigval .pthread_attr_t .pid_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
+add_header(struct_itimerspec HDR struct_itimerspec.h DEPENDS .struct_timespec)
 add_header(
   struct_stat
   HDR struct_stat.h
