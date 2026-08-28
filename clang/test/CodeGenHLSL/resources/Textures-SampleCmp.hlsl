@@ -11,13 +11,13 @@
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=5 -DRW=0 -DDIM=3
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL,CHECK-NOOFFSET,DXIL-NOOFFSET -DDXIL_TY=5 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=9 -DRW=0 -DDIM=3
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL,CHECK-NOOFFSET,DXIL-NOOFFSET -DDXIL_TY=9 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2D \
@@ -32,14 +32,14 @@
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=0 -DSAMPLED=1 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL,CHECK-NOOFFSET,SPIRV-NOOFFSET -DARRAYED=0 -DSAMPLED=1 \
 // RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=1 -DSAMPLED=1 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL,CHECK-NOOFFSET,SPIRV-NOOFFSET -DARRAYED=1 -DSAMPLED=1 \
 // RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
@@ -86,6 +86,8 @@
 //   OFFSET             the sampling and gathering methods have offset
 //                      overloads
 //   NOTEXEL            the type has no integer texel addressing
+//   NOOFFSET           the sampling methods have no offset overloads, so
+//                      their clamp overload takes the offset's place
 
 // DXIL-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
 // DXIL-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) }
@@ -123,6 +125,7 @@ float test_cmp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK-OFFSET: %[[CALL_OFFSET:.*]] = call {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, int vector[[[DIM]]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerComparisonState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <[[DIM]] x i32> noundef [[OFFSET_CONST]])
 // CHECK-OFFSET: ret float %[[CALL_OFFSET]]
 
+
 #ifdef HAS_OFFSET
 float test_offset(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
   return t.SampleCmp(s, loc, 0.0f, OFFSET_ARG);
@@ -147,9 +150,19 @@ float test_offset(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK-OFFSET: %[[CALL_CLAMP:.*]] = call {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, int vector[[[DIM]]], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerComparisonState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <[[DIM]] x i32> noundef [[OFFSET_CONST]], float {{.*}} 1.000000e+00)
 // CHECK-OFFSET: ret float %[[CALL_CLAMP]]
 
+// CHECK-NOOFFSET: @test_clamp(
+// CHECK-NOOFFSET: %[[CALL_NC:.*]] = call {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerComparisonState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, float {{.*}} 1.000000e+00)
+// CHECK-NOOFFSET: ret float %[[CALL_NC]]
+
 #ifdef HAS_OFFSET
 float test_clamp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
   return t.SampleCmp(s, loc, 0.0f, OFFSET_ARG, 1.0f);
+}
+#else
+// Cube textures have no offset overload, so the clamp takes the offset's place
+// in the method signature; the intrinsic still receives a zero offset.
+float test_clamp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
+  return t.SampleCmp(s, loc, 0.0f, 1.0f);
 }
 #endif
 
@@ -168,3 +181,14 @@ float test_clamp(COORD_TYPE loc : LOC, float cmp : CMP) : SV_Target {
 // CHECK-OFFSET: %[[CLAMP_CAST3:.*]] = fptrunc {{.*}} double {{.*}} to float
 // DXIL-OFFSET: call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.samplecmp.clamp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <[[DIM]] x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])
 // SPIRV-OFFSET: call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.samplecmp.clamp.f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], <[[COORD_DIM]] x float> %[[COORD_VAL3]], float %[[CMP_CAST3]], <[[DIM]] x i32> %[[OFFSET_VAL3]], float %[[CLAMP_CAST3]])
+
+// CHECK-NOOFFSET: define linkonce_odr hidden {{.*}} float @hlsl::[[TEXTURE]]<float vector[4]>::SampleCmp(hlsl::SamplerComparisonState, float vector[[[COORD_DIM]]], float, float)(
+// CHECK-NOOFFSET: %[[THIS_VAL_NC:.*]] = load ptr, ptr %{{.*}}
+// CHECK-NOOFFSET: %[[HANDLE_GEP_NC:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL_NC]], i32 0, i32 0
+// CHECK-NOOFFSET: %[[HANDLE_NC:.*]] = load target{{.*}}, ptr %[[HANDLE_GEP_NC]]
+// CHECK-NOOFFSET: %[[SAMPLER_GEP_NC:.*]] = getelementptr inbounds nuw %"class.hlsl::SamplerComparisonState", ptr %{{.*}}, i32 0, i32 0
+// CHECK-NOOFFSET: %[[SAMPLER_H_NC:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP_NC]]
+// CHECK-NOOFFSET: %[[CMP_CAST_NC:.*]] = fptrunc {{.*}} double {{.*}} to float
+// CHECK-NOOFFSET: %[[CLAMP_CAST_NC:.*]] = fptrunc {{.*}} double {{.*}} to float
+// DXIL-NOOFFSET: call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.samplecmp.clamp.f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], <[[COORD_DIM]] x float> %{{.*}}, float %[[CMP_CAST_NC]], <[[DIM]] x i32> zeroinitializer, float %[[CLAMP_CAST_NC]])
+// SPIRV-NOOFFSET: call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.samplecmp.clamp.f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], <[[COORD_DIM]] x float> %{{.*}}, float %[[CMP_CAST_NC]], <[[DIM]] x i32> zeroinitializer, float %[[CLAMP_CAST_NC]])

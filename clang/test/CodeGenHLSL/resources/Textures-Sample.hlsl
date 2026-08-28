@@ -11,13 +11,13 @@
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=5 -DRW=0 -DDIM=3
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL,CHECK-NOOFFSET,DXIL-NOOFFSET -DDXIL_TY=5 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=9 -DRW=0 -DDIM=3
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL,CHECK-NOOFFSET,DXIL-NOOFFSET -DDXIL_TY=9 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2D \
@@ -32,14 +32,14 @@
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=0 -DSAMPLED=1 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL,CHECK-NOOFFSET,SPIRV-NOOFFSET -DARRAYED=0 -DSAMPLED=1 \
 // RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=1 -DSAMPLED=1 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL,CHECK-NOOFFSET,SPIRV-NOOFFSET -DARRAYED=1 -DSAMPLED=1 \
 // RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
@@ -86,6 +86,8 @@
 //   OFFSET             the sampling and gathering methods have offset
 //                      overloads
 //   NOTEXEL            the type has no integer texel addressing
+//   NOOFFSET           the sampling methods have no offset overloads, so
+//                      their clamp overload takes the offset's place
 
 // DXIL-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
 // DXIL-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) }
@@ -125,6 +127,7 @@ float4 main(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[CALL:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]], int vector[[[DIM]]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, <[[DIM]] x i32> {{.*}} [[OFFSET_CONST]])
 // CHECK-OFFSET: ret <4 x float> %[[CALL]]
 
+
 #ifdef HAS_OFFSET
 float4 test_offset(COORD_TYPE loc : LOC) : SV_Target {
   return t.Sample(s, loc, OFFSET_ARG);
@@ -153,9 +156,19 @@ float4 test_offset(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[CALL:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]], int vector[[[DIM]]], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}}, <[[DIM]] x i32> {{.*}} [[OFFSET_CONST]], float {{.*}} 1.000000e+00)
 // CHECK-OFFSET: ret <4 x float> %[[CALL]]
 
+// CHECK-NOOFFSET: @test_clamp(
+// CHECK-NOOFFSET: %[[CALL_NC:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}}, float {{.*}} 1.000000e+00)
+// CHECK-NOOFFSET: ret <4 x float> %[[CALL_NC]]
+
 #ifdef HAS_OFFSET
 float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
   return t.Sample(s, loc, OFFSET_ARG, 1.0f);
+}
+#else
+// Cube textures have no offset overload, so the clamp takes the offset's place
+// in the method signature; the intrinsic still receives a zero offset.
+float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
+  return t.Sample(s, loc, 1.0f);
 }
 #endif
 
@@ -180,3 +193,13 @@ float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
 // DXIL-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], <[[DIM]] x i32> %[[OFFSET_VAL]], float %[[CLAMP_CAST]]) [ "convergencectrl"(token %0) ]
 // SPIRV-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], <[[DIM]] x i32> %[[OFFSET_VAL]], float %[[CLAMP_CAST]]) [ "convergencectrl"(token %0) ]
 // CHECK-OFFSET: ret <4 x float> %[[RES]]
+
+// CHECK-NOOFFSET: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]], float)(
+// CHECK-NOOFFSET: %[[THIS_VAL_NC:.*]] = load ptr, ptr %{{.*}}
+// CHECK-NOOFFSET: %[[HANDLE_GEP_NC:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL_NC]], i32 0, i32 0
+// CHECK-NOOFFSET: %[[HANDLE_NC:.*]] = load target{{.*}}, ptr %[[HANDLE_GEP_NC]]
+// CHECK-NOOFFSET: %[[SAMPLER_GEP_NC:.*]] = getelementptr inbounds nuw %"class.hlsl::SamplerState", ptr %{{.*}}, i32 0, i32 0
+// CHECK-NOOFFSET: %[[SAMPLER_H_NC:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP_NC]]
+// CHECK-NOOFFSET: %[[CLAMP_CAST_NC:.*]] = fptrunc {{.*}} double {{.*}} to float
+// DXIL-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], <[[COORD_DIM]] x float> %{{.*}}, <[[DIM]] x i32> zeroinitializer, float %[[CLAMP_CAST_NC]])
+// SPIRV-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], <[[COORD_DIM]] x float> %{{.*}}, <[[DIM]] x i32> zeroinitializer, float %[[CLAMP_CAST_NC]])

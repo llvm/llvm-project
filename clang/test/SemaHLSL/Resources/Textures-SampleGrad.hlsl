@@ -53,40 +53,33 @@ void main() {
   tex.SampleGrad(samp, loc, ddx, ddy, offset);
   tex.SampleGrad(samp, loc, ddx, ddy, offset, clamp);
 #else
-  // This type has no overload that takes an offset.
-  // nooffset-note@* {{'SampleGrad' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 4, have 5}}
-  tex.SampleGrad(samp, loc, ddx, ddy, offset);
+  // This type has no overload that takes an offset, but it does have one that
+  // takes a clamp, so the 5th parameter is the clamp.
+  tex.SampleGrad(samp, loc, ddx, ddy, clamp);
 
-  // nooffset-note@* {{'SampleGrad' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 4, have 6}}
-  tex.SampleGrad(samp, loc, ddx, ddy, offset, clamp);
+  // Passing an offset therefore selects the clamp overload and truncates.
+  // nooffset-warning@+1 {{implicit conversion turns vector to scalar}}
+  tex.SampleGrad(samp, loc, ddx, ddy, offset);
 #endif
 
   // Too few arguments.
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 3 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 5 arguments, but 3 were provided}}
   // offset-note@*:* {{candidate function not viable: requires 6 arguments, but 3 were provided}}
-  // nooffset-note@* {{'SampleGrad' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleGrad'}}
-  // nooffset-error@+1 {{too few arguments to function call, expected 4, have 3}}
+  // expected-error@+1 {{no matching member function for call to 'SampleGrad'}}
   tex.SampleGrad(samp, loc, ddx);
 
   // Too many arguments.
   // offset-note@*:* {{candidate function not viable: requires 6 arguments, but 7 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 7 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 7 were provided}}
-  // nooffset-note@* {{'SampleGrad' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleGrad'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 4, have 7}}
+  // expected-note@*:* {{candidate function not viable: requires 5 arguments, but 7 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 7 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleGrad'}}
   tex.SampleGrad(samp, loc, ddx, ddy, offset, clamp, 0);
 
   // Invalid argument types.
   // offset-note@*:* {{no known conversion from 'const char[8]' to 'float' for 6th argument}}
-  // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 6 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
-  // nooffset-note@* {{'SampleGrad' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleGrad'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 4, have 6}}
+  // expected-note@*:* {{candidate function not viable: requires 5 arguments, but 6 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleGrad'}}
   tex.SampleGrad(samp, loc, ddx, ddy, offset, "invalid");
 }

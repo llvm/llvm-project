@@ -48,42 +48,35 @@ void main(COORD_TYPE loc, float cmp) {
   t.SampleCmp(s, loc, cmp, OFFSET_ARG);
   t.SampleCmp(s, loc, cmp, OFFSET_ARG, 1.0f);
 #else
-  // This type has no overload that takes an offset.
-  // nooffset-note@* {{'SampleCmp' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 4}}
-  t.SampleCmp(s, loc, cmp, OFFSET_ARG);
+  // This type has no overload that takes an offset, but it does have one that
+  // takes a clamp, so the 4th parameter is the clamp.
+  t.SampleCmp(s, loc, cmp, 1.0f);
 
-  // nooffset-note@* {{'SampleCmp' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 5}}
-  t.SampleCmp(s, loc, cmp, OFFSET_ARG, 1.0f);
+  // Passing an offset therefore selects the clamp overload and truncates.
+  // nooffset-warning@+1 {{implicit conversion turns vector to scalar}}
+  t.SampleCmp(s, loc, cmp, OFFSET_ARG);
 #endif
 
   // expected-error@* {{'SampleCmp' and 'SampleCmpLevelZero' require resource to contain a floating point type}}
   // expected-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}::SampleCmp' requested here}}
   t_int.SampleCmp(s, loc, cmp);
 
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 1 was provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 1 was provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 1 was provided}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 1 was provided}}
   // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 1 was provided}}
-  // nooffset-note@* {{'SampleCmp' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleCmp'}}
-  // nooffset-error@+1 {{too few arguments to function call, expected 3, have 1}}
+  // expected-error@+1 {{no matching member function for call to 'SampleCmp'}}
   t.SampleCmp(loc);
 
   // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 6 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 6 were provided}}
-  // nooffset-note@* {{'SampleCmp' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleCmp'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 6}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 6 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleCmp'}}
   t.SampleCmp(s, loc, cmp, OFFSET_ARG, 1.0f, 1.0f);
 
-  // offset-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'hlsl::SamplerComparisonState' for 1st argument}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'hlsl::SamplerComparisonState' for 1st argument}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}
   // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 3 were provided}}
-  // nooffset-note@*:* {{candidate constructor not viable: no known conversion from 'SamplerState' to 'const hlsl::SamplerComparisonState &' for 1st argument}}
-  // offset-error@+2 {{no matching member function for call to 'SampleCmp'}}
-  // nooffset-error@+1 {{no viable conversion from 'SamplerState' to 'hlsl::SamplerComparisonState'}}
+  // expected-error@+1 {{no matching member function for call to 'SampleCmp'}}
   t.SampleCmp(s2, loc, cmp);
 
 #ifdef HAS_OFFSET

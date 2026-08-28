@@ -296,6 +296,31 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(false);
 }
 
+/// Set up TextureCube and TextureCubeArray types: SRV cube textures. Locations
+/// are direction vectors into the cube rather than texel coordinates, so cube
+/// textures have no Load, no operator[] and no mips member. Their sampling and
+/// gather methods also have no offset overloads.
+static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl, Sema &S,
+                                                   bool IsArray) {
+  const ResourceDimension Dim = ResourceDimension::Cube;
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false)
+      .addSampleMethods(Dim, IsArray)
+      .addSampleBiasMethods(Dim, IsArray)
+      .addSampleGradMethods(Dim, IsArray)
+      .addSampleLevelMethods(Dim, IsArray)
+      .addSampleCmpMethods(Dim, IsArray)
+      .addSampleCmpLevelZeroMethods(Dim, IsArray)
+      .addCalculateLodMethods(Dim)
+      .addGetDimensionsMethods(Dim)
+      .addGatherMethods(Dim, IsArray)
+      .addGatherCmpMethods(Dim, IsArray);
+}
+
 /// Set up Texture2DMS (multisampled) type: SRV texture with only operator[]
 /// and sample-indexed Load. It does not support sampling, gather, LOD, or mips.
 static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
@@ -816,16 +841,14 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Cube)
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
         .completeDefinition();
   });
 
   auto *PartialSpecCube = addVectorTexturePartialSpecialization(
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpecCube, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Cube)
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
         .completeDefinition();
   });
 
@@ -837,17 +860,13 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/true, ResourceDimension::Cube)
-        .completeDefinition();
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
   });
 
   auto *PartialSpecCubeArray = addVectorTexturePartialSpecialization(
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpecCubeArray, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/true, ResourceDimension::Cube)
-        .completeDefinition();
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
   });
 }
 
