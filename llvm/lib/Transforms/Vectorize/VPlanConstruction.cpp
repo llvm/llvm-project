@@ -2085,13 +2085,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
-    // If the loop is tailfolded MinOrMaxOp should only feed into the predicated
-    // select MinOrMaxBackedgeR. This is ensured by the MinOrMaxBackedgeR
-    // select-matching.
-    if ((!HeaderMask && MinOrMaxOp->getNumUsers() != 2) ||
-        (HeaderMask && MinOrMaxOp->getNumUsers() != 1))
-      return false;
-
     // MinOrMaxBackedgeR must have 2 users: 1) MinOrMaxPhiR and 2)
     // ComputeReductionResult.
     assert(MinOrMaxBackedgeR->getNumUsers() == 2 &&
