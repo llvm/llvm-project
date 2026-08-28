@@ -58,6 +58,29 @@ func.func @test_fir_scalar_written_in_kernels() {
 
 // -----
 
+// A store through a pointer that may alias the target scalar has to keep the
+// copy-back - the write does not appear on the scalar's own uses.
+func.func @test_fir_target_scalar_written_through_pointer_in_kernels() {
+  %0 = fir.alloca i32 {bindc_name = "n"}
+  %n = fir.declare %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "p"}
+  %p = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  acc.kernels {
+    %c5 = arith.constant 5 : i32
+    %box = fir.load %p : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %addr = fir.box_addr %box : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    fir.store %c5 to %addr : !fir.ptr<i32>
+    %v = fir.load %n : !fir.ref<i32>
+    acc.terminator
+  }
+  return
+}
+
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("n") -> !fir.ref<i32>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<i32>) to varPtr({{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("n")
+
+// -----
+
 // The store goes through a fir.convert - the write still has to be seen.
 func.func @test_fir_scalar_written_through_convert_in_kernels() {
   %livein = fir.alloca f64 {bindc_name = "scalarvar"}

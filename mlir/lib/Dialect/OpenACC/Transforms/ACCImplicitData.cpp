@@ -208,13 +208,11 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -427,38 +425,21 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
   }
 }
 
-/// Returns true when no operation in `region` can write to `var`. Views and
-/// casts of the variable are followed; a user whose effect on it cannot be
-/// established is treated as a write.
-static bool isNeverWrittenInRegion(Value var, Region &region) {
-  SmallVector<Value> worklist{var};
-  llvm::SmallPtrSet<Value, 8> visited;
-  while (!worklist.empty()) {
-    Value val = worklist.pop_back_val();
-    if (!visited.insert(val).second)
-      continue;
-    for (Operation *user : val.getUsers()) {
-      if (!region.isAncestor(user->getParentRegion()))
-        continue;
-      if (isa<ViewLikeOpInterface, CastOpInterface>(user)) {
-        worklist.append(user->result_begin(), user->result_end());
-        continue;
-      }
-      auto memInterface = dyn_cast<MemoryEffectOpInterface>(user);
-      if (!memInterface)
-        return false;
-      SmallVector<MemoryEffects::EffectInstance> effects;
-      memInterface.getEffectsOnValue(val, effects);
-      if (effects.empty())
-        return false;
-      if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &e) {
-            return isa<MemoryEffects::Write, MemoryEffects::Free>(
-                e.getEffect());
-          }))
-        return false;
-    }
-  }
-  return true;
+/// Returns true when no operation in `region` can write to `var`. Ops with
+/// nested effects are skipped because the walk visits their bodies. Alias
+/// analysis answers ModRef when it cannot tell, so a write reaching `var`
+/// through an alias keeps the copy.
+static bool isNeverWrittenInRegion(Value var, Region &region,
+                                   AliasAnalysis &aliasAnalysis) {
+  return !region
+              .walk([&](Operation *op) {
+                if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+                  return WalkResult::advance();
+                return aliasAnalysis.getModRef(op, var).isMod()
+                           ? WalkResult::interrupt()
+                           : WalkResult::advance();
+              })
+              .wasInterrupted();
 }
 
 // Generates the data entry data op clause so that it adheres to OpenACC
@@ -551,7 +532,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                 accSupport.getVariableName(var));
       // Keep the copy-back only when the region can actually write the scalar.
       // Otherwise it is an async race against the host code that follows.
-      if (!isNeverWrittenInRegion(var, computeConstructOp->getRegion(0)))
+      if (!isNeverWrittenInRegion(var, computeConstructOp->getRegion(0),
+                                  this->getAnalysis<AliasAnalysis>()))
         copyinOp.setDataClause(acc::DataClause::acc_copy);
       return copyinOp.getOperation();
     } else {
