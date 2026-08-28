@@ -164,8 +164,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Keep track which DISubprogram is attached to which function.
   DenseMap<const DISubprogram *, const Function *> DISubprogramAttachments;
 
-  /// Cache of whether following a DIScope's scope chain repeats a node.
-  DenseMap<const Metadata *, bool> DIScopeCycleCache;
+  /// For each visited DIScope, whether walking its scope chain reaches a
+  /// repeated node.
+  DenseMap<const Metadata *, bool> DIScopeChainReachesCycle;
 
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
@@ -272,7 +273,7 @@ public:
 
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
-    DIScopeCycleCache.clear();
+    DIScopeChainReachesCycle.clear();
     LandingPadResultTy = nullptr;
     SawFrameEscape = false;
     SiblingFuncletInfo.clear();
@@ -318,7 +319,7 @@ public:
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
-    DIScopeCycleCache.clear();
+    DIScopeChainReachesCycle.clear();
     return !Broken;
   }
 
@@ -981,13 +982,13 @@ bool Verifier::hasDIScopeCycle(const Metadata *S) {
   SmallPtrSet<const Metadata *, 8> Seen;
   auto CacheSeen = [&](bool HasCycle) {
     for (const Metadata *M : Seen)
-      DIScopeCycleCache[M] = HasCycle;
+      DIScopeChainReachesCycle[M] = HasCycle;
     return HasCycle;
   };
 
   while (auto *Scope = dyn_cast_or_null<DIScope>(S)) {
-    auto It = DIScopeCycleCache.find(Scope);
-    bool IsInCache = It != DIScopeCycleCache.end();
+    auto It = DIScopeChainReachesCycle.find(Scope);
+    bool IsInCache = It != DIScopeChainReachesCycle.end();
     if (IsInCache)
       return CacheSeen(It->second);
     bool AlreadySeen = !Seen.insert(Scope).second;
