@@ -856,9 +856,7 @@ public:
 
   // C++
   mlir::Value VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: materialize temporary");
-    return {};
+    return emitLoadOfLValue(e);
   }
   mlir::Value VisitSourceLocExpr(SourceLocExpr *e) {
     ASTContext &ctx = cgf.getContext();

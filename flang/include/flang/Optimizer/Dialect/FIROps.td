@@ -2889,7 +2889,8 @@ class AtMostRegion<int numBlocks> : Region<
   CPred<"$_self.getBlocks().size() <= " # numBlocks>,
   "region with " # numBlocks # " blocks">;
 
-def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
+def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
+                                     SymbolVisibility, Symbol]> {
   let summary = "Global data";
   let description = [{
     A global variable or constant with initial values.
@@ -2921,7 +2922,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
-    OptionalAttr<I64Attr>:$alignment
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -2975,8 +2977,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
     mlir::FlatSymbolRefAttr getSymbol() {
       return mlir::FlatSymbolRefAttr::get(getContext(),
-          (*this)->getAttrOfType<mlir::StringAttr>(
-              mlir::SymbolTable::getSymbolAttrName()).getValue());
+          getNameAttr().getValue());
     }
 
     bool isInitialized() {
@@ -3094,7 +3095,8 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
 }
 
 def fir_TypeInfoOp : fir_Op<"type_info",
-    [IsolatedFromAbove, Symbol, ImplicitFirTerminator]> {
+    [IsolatedFromAbove, SymbolName, SymbolVisibility, Symbol,
+     ImplicitFirTerminator]> {
   let summary = "Derived type information";
 
   let description = [{
@@ -3130,6 +3132,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     TypeAttr:$type,
     OptionalAttr<TypeAttr>:$parent_type,
     UnitAttr:$abstract,
@@ -3151,7 +3154,8 @@ def fir_TypeInfoOp : fir_Op<"type_info",
   ];
 
   let assemblyFormat = [{
-    $sym_name (`abstract` $abstract^)? (`noinit` $no_init^)?
+    ($sym_visibility^)? $sym_name (`abstract` $abstract^)?
+    (`noinit` $no_init^)?
     (`nodestroy` $no_destroy^)? (`nofinal` $no_final^)?
     (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
@@ -3679,7 +3683,10 @@ def YieldOp : fir_Op<"yield",
   let assemblyFormat = "( `(` $results^ `:` type($results) `)` )? attr-dict";
 }
 
-def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
+def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove,
+                                                SymbolName,
+                                                SymbolVisibility,
+                                                Symbol]> {
   let summary = "Provides declaration of local and local_init logic.";
   let description = [{
     This operation provides a declaration of how to implement the
@@ -3753,6 +3760,7 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttrOf<AnyType>:$type,
                        LocalitySpecifierTypeAttr:$locality_specifier_type);
 
@@ -3761,7 +3769,7 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $locality_specifier_type $sym_name `:` $type
+    $locality_specifier_type ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?
@@ -3801,6 +3809,8 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
 }
 
 def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
+                                                         SymbolName,
+                                                         SymbolVisibility,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
@@ -3854,6 +3864,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type,
                        OptionalAttr<TypeAttr>:$byref_element_type);
 
@@ -3864,7 +3875,8 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$cleanupRegion,
                         AnyRegion:$dataPtrPtrRegion);
 
-  let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
+  let assemblyFormat = "($sym_visibility^)? $sym_name `:` $type "
+                       "attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
