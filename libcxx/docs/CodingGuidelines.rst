@@ -225,3 +225,24 @@ after the function they are measuring, with a few transformations to help filter
 When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
 after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
 would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.
+
+Mark strengthened ``noexcept`` specifiers with ``// strengthened(reason)``
+==========================================================================
+
+The C++ standard explicitly permits implementations to add ``noexcept`` to non-virtual library
+functions whose specification does not require it (`[res.on.exception.handling]/5
+<http://eel.is/c++draft/res.on.exception.handling#5>`_):
+
+  An implementation may strengthen the exception specification for a non-virtual function by
+  adding a non-throwing exception specification.
+
+Every libc++ ``noexcept`` clause that goes beyond what the standard mandates is annotated with an
+end-of-line ``// strengthened(reason)`` comment:
+
+.. code-block:: cpp
+
+  constexpr reference span<T>::operator[](size_type __idx) const noexcept { // strengthened(throws nothing)
+    return __data_[__idx];
+  }
+
+Keep the reason concise but helpful.
