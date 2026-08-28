@@ -7,6 +7,12 @@ llvm.func @llvm_nvvm_tcgen05_alloc(%addr : !llvm.ptr, %ncols : i32) {
 
   // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 false)
   nvvm.tcgen05.alloc %addr, %ncols , group = <cta_2> : !llvm.ptr, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.alloc %addr, %ncols exclusive = true : !llvm.ptr, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.alloc %addr, %ncols, group = <cta_2> exclusive = true : !llvm.ptr, i32
   llvm.return
 }
 
@@ -17,6 +23,12 @@ llvm.func @llvm_nvvm_tcgen05_alloc_shared(%addr : !llvm.ptr<3>, %ncols : i32) {
 
   // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 false)
   nvvm.tcgen05.alloc %addr, %ncols , group = <cta_2> : !llvm.ptr<3>, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.alloc %addr, %ncols exclusive = true : !llvm.ptr<3>, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.alloc %addr, %ncols, group = <cta_2> exclusive = true : !llvm.ptr<3>, i32
   llvm.return
 }
 
@@ -27,6 +39,12 @@ llvm.func @llvm_nvvm_tcgen05_dealloc(%addr : !llvm.ptr<6>, %ncols : i32) {
 
   // CHECK-LLVM: call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 false)
   nvvm.tcgen05.dealloc %addr, %ncols , group = <cta_2> : !llvm.ptr<6>, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.dealloc %addr, %ncols exclusive = true : !llvm.ptr<6>, i32
+
+  // CHECK-LLVM: call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %{{.*}}, i32 %{{.*}}, /* is_exclusive= */ i1 true)
+  nvvm.tcgen05.dealloc %addr, %ncols, group = <cta_2> exclusive = true : !llvm.ptr<6>, i32
   llvm.return
 }
 

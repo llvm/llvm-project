@@ -5517,7 +5517,8 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
+  args.push_back(
+      llvm::ConstantInt::getBool(mt.getLLVMContext(), curOp.getIsExclusive()));
 
   return id;
 }
@@ -5533,7 +5534,8 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getTaddr()));
   args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
+  args.push_back(
+      llvm::ConstantInt::getBool(mt.getLLVMContext(), curOp.getIsExclusive()));
 
   return id;
 }
