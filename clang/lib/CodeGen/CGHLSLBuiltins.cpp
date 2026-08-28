@@ -812,7 +812,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       // A UAV descriptor binds a single mip slice, so a RWTexture location is
       // all coordinate and there is no mip level to select.
       CoordOp = CoordLODOp;
-      LODOp = llvm::ConstantInt::get(Int32Ty, 0);
+      LODOp = llvm::PoisonValue::get(Int32Ty);
     } else {
       auto *CoordLODVecTy = cast<llvm::FixedVectorType>(CoordLODOp->getType());
       unsigned NumElts = CoordLODVecTy->getNumElements();
