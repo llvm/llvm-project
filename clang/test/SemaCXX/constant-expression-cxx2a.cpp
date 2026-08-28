@@ -1552,11 +1552,11 @@ namespace GH211286 {
   };
   struct B : A {
     constexpr int f() const { return 42; }
-    constexpr B() : A(f()) {} 
+    constexpr B() : A(f()) {} // expected-note 2{{subexpression not valid in a constant expression}}
   };
   constexpr int foo() {
-    constexpr B b{}; 
+    constexpr B b{}; // expected-error {{constexpr variable 'b' must be initialized by a constant expression}} expected-note 2{{in call to 'B()'}}
     return b.val;
   }
-  constexpr auto x = foo(); 
+  constexpr auto x = foo(); // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{in call to 'foo()'}}
 }
