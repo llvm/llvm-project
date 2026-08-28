@@ -55,9 +55,9 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
@@ -1016,7 +1016,7 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
       auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__layout_.__begin_ptr()).__in_;
       __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
-      pointer __m = std::__copy(std::move(__first), __last, this->__layout_.__begin_ptr()).__out_;
+      pointer __m = std::__copy_n<_AlgPolicy>(std::move(__first), __n, this->__layout_.__begin_ptr()).__out_;
       this->__destruct_at_end(__m);
     }
   } else {

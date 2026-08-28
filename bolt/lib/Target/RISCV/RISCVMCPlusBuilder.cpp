@@ -306,6 +306,59 @@ public:
     return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
   }
 
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert(((DirectCall.getOpcode() == RISCV::PseudoCALL && !IsTailCall) ||
+            (DirectCall.getOpcode() == RISCV::PseudoTAIL && IsTailCall)) &&
+           "RISC-V direct (tail) call instruction expected");
+
+    // Load the resolved function address directly from its GOT slot:
+    //
+    //   auipc t3, %pcrel_hi(TargetLocation)
+    //   l[dw] t3, %pcrel_lo(.Lpcrel_hi)(t3)
+    //   jalr  ra, t3, 0
+    //
+    // A tail call uses zero instead of ra as the JALR destination.
+    InstructionListType Code;
+    // Use t3 (x28), the scratch register used by linker-generated RISC-V
+    // PLT/IPLT entries. It is caller-saved, is not an argument register, and
+    // the original call through the PLT already clobbers it.
+    const MCPhysReg PLTScratchReg = RISCV::X28;
+    MCSymbol *AUIPCLabel = Ctx->createNamedTempSymbol("pcrel_hi");
+
+    MCInst InstAUIPC =
+        MCInstBuilder(RISCV::AUIPC).addReg(PLTScratchReg).addImm(0);
+    // TargetLocation is already registered at the existing GOT slot, so use a
+    // direct PC-relative relocation to that slot instead of R_RISCV_GOT_HI20,
+    // which is used when starting from the referenced function symbol.
+    setOperandToSymbolRef(InstAUIPC, /*OpNum=*/1, TargetLocation,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(InstAUIPC, AUIPCLabel);
+    Code.emplace_back(std::move(InstAUIPC));
+
+    // Load the call target from the GOT slot using LD on RV64 or LW on RV32.
+    MCInst InstLoad = MCInstBuilder(loadOpc())
+                          .addReg(PLTScratchReg)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    // Pair the I-type LD/LW immediate with the label on AUIPC. RISC-V
+    // R_RISCV_PCREL_LO12_I relocations name the corresponding HI20 location.
+    setOperandToSymbolRef(InstLoad, /*OpNum=*/2, AUIPCLabel,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_LO12_I);
+    Code.emplace_back(std::move(InstLoad));
+
+    MCInst InstCall = MCInstBuilder(RISCV::JALR)
+                          .addReg(IsTailCall ? RISCV::X0 : RISCV::X1)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    moveAnnotations(std::move(DirectCall), InstCall);
+    Code.emplace_back(std::move(InstCall));
+
+    return Code;
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
