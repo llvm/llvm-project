@@ -288,6 +288,23 @@ functions:
     return_type: int
     arguments:
       - type: FILE *
+  - name: getline
+    standards:
+      - posix
+    return_type: ssize_t
+    arguments:
+      - type: char **__restrict
+      - type: size_t *__restrict
+      - type: FILE *
+  - name: getdelim
+    standards:
+      - posix
+    return_type: ssize_t
+    arguments:
+      - type: char **__restrict
+      - type: size_t *__restrict
+      - type: int
+      - type: FILE *
   - name: getchar
     standards:
       - stdc
