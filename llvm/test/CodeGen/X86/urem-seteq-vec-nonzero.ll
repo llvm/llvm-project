@@ -276,7 +276,7 @@ define <4 x i1> @t32_tautological(<4 x i32> %X) nounwind {
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2863311531,2863311531,2863311531,2863311531]
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295,4294967295,1431655764]
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,u,u,1431655764]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
