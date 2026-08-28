@@ -178,6 +178,13 @@ private:
   Block *constructCmpxchgLoop(Value ptr, Type type, Value expr,
                               ConversionPatternRewriter &rewriter) const;
 
+  /// Emit a single atomicrmw for a `x = x <binop> expr` capture, or fail so
+  /// the caller falls back to the cmpxchg loop.
+  LogicalResult
+  tryEmitCaptureAtomicRMW(AtomicCaptureOp capture, AtomicUpdateOp update,
+                          AtomicReadOp read,
+                          ConversionPatternRewriter &rewriter) const;
+
   Value genUpdateCmpxchgLoop(AtomicUpdateOp update,
                              ConversionPatternRewriter &rewriter) const;
 };
@@ -533,6 +540,31 @@ static std::optional<LLVM::AtomicBinOp> getAtomicBinOp(Operation *op,
       .Default([](Operation *) { return std::nullopt; });
 }
 
+/// Match an update region computing `x = x <binop> expr`, and return the
+/// atomicrmw kind with the binary operation. Shared by the update and capture
+/// conversions so the same region cannot take atomicrmw in one and the cmpxchg
+/// loop in the other.
+static std::optional<std::pair<LLVM::AtomicBinOp, Operation *>>
+matchAtomicBinOpUpdate(AtomicUpdateOp update) {
+  Block &block = update.getRegion().front();
+  Value arg = block.getArgument(0);
+  Operation *yield = block.getTerminator();
+  if (!yield || yield->getNumOperands() != 1)
+    return std::nullopt;
+  Operation *binOp = yield->getOperand(0).getDefiningOp();
+  if (!binOp || binOp->getBlock() != &block || binOp->getNumOperands() != 2 ||
+      binOp->getNumResults() != 1)
+    return std::nullopt;
+  // The updated value has to feed the binop and nothing else.
+  if (!arg.hasOneUse() || arg.use_begin()->getOwner() != binOp)
+    return std::nullopt;
+  bool updateIsLhs = binOp->getOperand(0) == arg;
+  std::optional<LLVM::AtomicBinOp> kind = getAtomicBinOp(binOp, updateIsLhs);
+  if (!kind)
+    return std::nullopt;
+  return std::make_pair(*kind, binOp);
+}
+
 /// Generate llvm.atomicrmw or an llvm.cmpxchg loop.
 template <>
 LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
@@ -594,11 +626,11 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
   Operation &firstOp = ops.front();
   Operation &yield = ops.back();
 
-  if (dependents.size() == 2 && firstOp.getResult(0) == yield.getOperand(0)) {
-    bool updateIsLhs = firstOp.getOperand(0) == updateArgument;
-    kind = getAtomicBinOp(&firstOp, updateIsLhs);
-    if (kind)
-      val = firstOp.getOperand(updateIsLhs ? 1 : 0);
+  if (auto matched = matchAtomicBinOpUpdate(update)) {
+    Operation *binOp = matched->second;
+    bool updateIsLhs = binOp->getOperand(0) == updateArgument;
+    kind = matched->first;
+    val = binOp->getOperand(updateIsLhs ? 1 : 0);
   }
 
   // Per-component atomicrmw info for complex type decomposition.
@@ -709,43 +741,55 @@ static bool exprReadsMemory(Value expr) {
   return false;
 }
 
-/// Match an update region holding a single `x = x <binop> expr`. Returns the
-/// atomicrmw kind and the binary operation, or nullopt when the region needs a
-/// cmpxchg loop.
-static std::optional<std::pair<LLVM::AtomicBinOp, Operation *>>
-matchSimpleAtomicUpdate(AtomicUpdateOp update, const TypeConverter *converter) {
-  Block &block = update.getRegion().front();
-  if (!llvm::hasNItems(block.getOperations(), 2))
-    return std::nullopt;
-  Operation &binOp = block.front();
-  Operation &yield = block.back();
-  if (binOp.getNumOperands() != 2 || binOp.getNumResults() != 1)
-    return std::nullopt;
-  if (yield.getNumOperands() != 1 || yield.getOperand(0) != binOp.getResult(0))
-    return std::nullopt;
+/// Emit a single atomicrmw for a `x = x <binop> expr` capture.
+template <typename AtomicOpTy>
+LogicalResult ACCAtomicOpConversion<AtomicOpTy>::tryEmitCaptureAtomicRMW(
+    AtomicCaptureOp capture, AtomicUpdateOp update, AtomicReadOp read,
+    ConversionPatternRewriter &rewriter) const {
+  if (read.getX() != update.getX())
+    return failure();
+  auto matched = matchAtomicBinOpUpdate(update);
+  if (!matched)
+    return failure();
+  auto [kind, binOp] = *matched;
 
-  // The updated value must be used exactly once, as an operand of the binop.
-  Value arg = block.getArgument(0);
-  bool updateIsLhs = binOp.getOperand(0) == arg;
-  if (updateIsLhs == (binOp.getOperand(1) == arg))
-    return std::nullopt;
-  if (!arg.hasOneUse())
-    return std::nullopt;
+  Value arg = update.getRegion().front().getArgument(0);
+  bool updateIsLhs = binOp->getOperand(0) == arg;
+  Value expr = binOp->getOperand(updateIsLhs ? 1 : 0);
 
   // Keep serialized and aggregate types on the cmpxchg path.
   Type argTy = arg.getType();
-  if (!argTy.isIntOrFloat() || converter->convertType(argTy) != argTy)
-    return std::nullopt;
+  if (!argTy.isIntOrFloat() ||
+      this->getTypeConverter()->convertType(argTy) != argTy)
+    return failure();
+  // The operand must already be available, and must not be the captured value.
+  Operation *exprDef = expr.getDefiningOp();
+  if (exprDef && exprDef->getBlock() == &update.getRegion().front())
+    return failure();
+  if (exprReadsMemory(expr))
+    return failure();
 
-  // The other operand has to be available outside the region.
-  Operation *exprDef = binOp.getOperand(updateIsLhs ? 1 : 0).getDefiningOp();
-  if (exprDef && exprDef->getBlock() == &block)
-    return std::nullopt;
+  Location loc = capture.getLoc();
+  Value xRef = update.getX();
+  Value vRef = read.getV();
+  Value xPtr =
+      getAtomicPointer(xRef, rewriter.getRemappedValue(xRef), loc, rewriter);
+  Value vPtr =
+      getAtomicPointer(vRef, rewriter.getRemappedValue(vRef), loc, rewriter);
 
-  std::optional<LLVM::AtomicBinOp> kind = getAtomicBinOp(&binOp, updateIsLhs);
-  if (!kind)
-    return std::nullopt;
-  return std::make_pair(*kind, &binOp);
+  rewriter.setInsertionPoint(capture);
+  auto rmw = LLVM::AtomicRMWOp::create(rewriter, loc, kind, xPtr,
+                                       rewriter.getRemappedValue(expr),
+                                       LLVM::AtomicOrdering::monotonic);
+  // atomicrmw yields the old value; `{update, read}` captures the new one.
+  Value captured = rmw.getRes();
+  if (capture.getFirstOp() == update.getOperation()) {
+    rewriter.moveOpAfter(binOp, rmw);
+    binOp->replaceUsesOfWith(arg, captured);
+    captured = binOp->getResult(0);
+  }
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(capture, captured, vPtr);
+  return success();
 }
 
 /// Generate an llvm.cmpxchg loop.
@@ -760,47 +804,10 @@ LogicalResult ACCAtomicOpConversion<AtomicCaptureOp>::matchAndRewrite(
 
   // A single `x = x <binop> expr` capture becomes one atomicrmw. The cmpxchg
   // loop below serializes retries and collapses under contention.
-  auto update = dyn_cast<AtomicUpdateOp>(firstOp)
-                    ? cast<AtomicUpdateOp>(firstOp)
-                    : dyn_cast<AtomicUpdateOp>(secondOp);
-  auto read = dyn_cast<AtomicReadOp>(firstOp)
-                  ? cast<AtomicReadOp>(firstOp)
-                  : dyn_cast<AtomicReadOp>(secondOp);
-  if (update && read && read.getX() == update.getX()) {
-    std::optional<std::pair<LLVM::AtomicBinOp, Operation *>> matched =
-        matchSimpleAtomicUpdate(update, this->getTypeConverter());
-    Value arg = update.getRegion().front().getArgument(0);
-    Value xRef = update.getX();
-    Value vRef = read.getV();
-    if (matched) {
-      auto [kind, binOp] = *matched;
-      bool updateIsLhs = binOp->getOperand(0) == arg;
-      Value expr = binOp->getOperand(updateIsLhs ? 1 : 0);
-      if (exprReadsMemory(expr))
-        matched = std::nullopt;
-      else {
-        Location loc = capture.getLoc();
-        Value xPtr = getAtomicPointer(xRef, rewriter.getRemappedValue(xRef),
-                                      loc, rewriter);
-        Value vFastPtr = getAtomicPointer(vRef, rewriter.getRemappedValue(vRef),
-                                          loc, rewriter);
-        rewriter.setInsertionPoint(capture);
-        auto rmw = LLVM::AtomicRMWOp::create(rewriter, loc, kind, xPtr,
-                                             rewriter.getRemappedValue(expr),
-                                             LLVM::AtomicOrdering::monotonic);
-        // atomicrmw yields the old value; `{update, read}` captures the new
-        // one.
-        Value captured = rmw.getRes();
-        if (isa<AtomicUpdateOp>(firstOp)) {
-          rewriter.moveOpAfter(binOp, rmw);
-          binOp->replaceUsesOfWith(arg, captured);
-          captured = binOp->getResult(0);
-        }
-        rewriter.replaceOpWithNewOp<LLVM::StoreOp>(capture, captured, vFastPtr);
+  if (AtomicUpdateOp update = capture.getAtomicUpdateOp())
+    if (AtomicReadOp read = capture.getAtomicReadOp())
+      if (succeeded(tryEmitCaptureAtomicRMW(capture, update, read, rewriter)))
         return success();
-      }
-    }
-  }
 
   if (auto firstReadStmt = dyn_cast<AtomicReadOp>(firstOp)) {
     Location loc = capture.getLoc();
