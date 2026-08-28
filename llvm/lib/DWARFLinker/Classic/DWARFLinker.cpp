@@ -2013,8 +2013,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     // No DW_AT_str_offsets_base seen, add it to the DIE.
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
