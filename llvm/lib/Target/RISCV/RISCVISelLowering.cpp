@@ -18150,13 +18150,11 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  bool N0IsSExt = N0.getOpcode() == ISD::SIGN_EXTEND;
-  bool N0IsZExt = N0.getOpcode() == ISD::ZERO_EXTEND;
-  bool N1IsSExt = N1.getOpcode() == ISD::SIGN_EXTEND;
-  bool N1IsZExt = N1.getOpcode() == ISD::ZERO_EXTEND;
-  if (!(N0IsSExt || N0IsZExt) || !(N1IsSExt || N1IsZExt) || !N0.hasOneUse() ||
-      !N1.hasOneUse())
+  unsigned ExtendOpcode = N0.getOpcode();
+  if ((ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND) ||
+      N1.getOpcode() != ExtendOpcode || !N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
+  bool IsSExt = ExtendOpcode == ISD::SIGN_EXTEND;
 
   SDValue A = N0.getOperand(0);
   SDValue B = N1.getOperand(0);
@@ -18165,12 +18163,10 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
   if (A.getValueType() != SrcVT || B.getValueType() != SrcVT)
     return SDValue();
 
-  if (VT == MVT::v4i16 && (!N0IsSExt || !N1IsSExt))
+  if (VT == MVT::v4i16 && !IsSExt)
     return SDValue();
 
-  bool IsPM2Halfword =
-      VT == MVT::v2i32 &&
-      ((N0IsSExt && N1IsSExt) || (Opcode == ISD::ADD && N0IsZExt && N1IsZExt));
+  bool IsPM2Halfword = VT == MVT::v2i32 && (IsSExt || Opcode == ISD::ADD);
   if (VT == MVT::v2i32 && !IsPM2Halfword)
     return SDValue();
 
@@ -18189,12 +18185,12 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
   }
 
   SDValue Ones = DAG.getConstant(1, DL, LegalSrcVT);
-  if (N0IsSExt && N1IsSExt) {
+  if (IsSExt) {
     unsigned Opc = Opcode == ISD::ADD ? RISCVISD::PM2ADD_H : RISCVISD::PM2SUB_H;
     return DAG.getNode(Opc, DL, VT, Zip, Ones);
   }
 
-  if (Opcode == ISD::ADD && N0IsZExt && N1IsZExt)
+  if (Opcode == ISD::ADD)
     return DAG.getNode(RISCVISD::PM2ADDU_H, DL, VT, Zip, Ones);
 
   return SDValue();
