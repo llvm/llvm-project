@@ -23,6 +23,41 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 
+namespace {
+
+struct WellKnownArg {
+  ArrayRef<uint64_t> AcceptedValues;
+  ArrayRef<StringRef> FunctionNames;
+  unsigned ArgIndex;
+};
+
+constexpr uint64_t CommonBases[] = {8, 10, 16};
+
+constexpr StringRef BaseAtArg2[] = {
+    "strtol",     "strtoll",   "strtoul",   "strtoull",  "strtoimax",
+    "strtoumax",  "wcstol",    "wcstoll",   "wcstoul",   "wcstoull",
+    "wcstoimax",  "wcstoumax", "strtol_l",  "strtoll_l", "strtoul_l",
+    "strtoull_l", "wcstol_l",  "wcstoll_l", "wcstoul_l", "wcstoull_l",
+    "stoi",       "stol",      "stoul",     "stoll",     "stoull",
+};
+
+constexpr StringRef BaseAtArg3[] = {
+    "from_chars",
+    "to_chars",
+};
+
+constexpr StringRef BaseAtArg0[] = {
+    "setbase",
+};
+
+constexpr WellKnownArg WellKnownArgs[] = {
+    {CommonBases, BaseAtArg2, 2},
+    {CommonBases, BaseAtArg3, 3},
+    {CommonBases, BaseAtArg0, 0},
+};
+
+} // namespace
+
 static bool isUsedToInitializeAConstant(const MatchFinder::MatchResult &Result,
                                         const DynTypedNode &Node) {
   const auto *AsDecl = Node.get<DeclaratorDecl>();
@@ -65,6 +100,47 @@ static bool isUsedToDefineABitField(const MatchFinder::MatchResult &Result,
                       });
 }
 
+static bool isUsedAsAConversionBase(const MatchFinder::MatchResult &Result,
+                                    const DynTypedNode &Node,
+                                    const Expr &Literal, uint64_t Base) {
+  const auto *Call = Node.get<CallExpr>();
+  if (!Call) {
+    if (!isa_and_nonnull<ImplicitCastExpr, ParenExpr, FullExpr>(
+            Node.get<Expr>()))
+      return false;
+
+    return llvm::any_of(Result.Context->getParents(Node),
+                        [&Result, &Literal, Base](const DynTypedNode &Parent) {
+                          return isUsedAsAConversionBase(Result, Parent,
+                                                         Literal, Base);
+                        });
+  }
+
+  unsigned ArgIndex = 0;
+  for (; ArgIndex < Call->getNumArgs(); ++ArgIndex)
+    if (Call->getArg(ArgIndex)->IgnoreParenImpCasts() == &Literal)
+      break;
+
+  if (ArgIndex == Call->getNumArgs())
+    return false;
+
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee || !Callee->getIdentifier())
+    return false;
+
+  if (!Callee->getDeclContext()->getRedeclContext()->isTranslationUnit() &&
+      !Callee->isInStdNamespace())
+    return false;
+
+  const StringRef Name = Callee->getName();
+  for (const WellKnownArg &Entry : WellKnownArgs)
+    if (Entry.ArgIndex == ArgIndex &&
+        llvm::is_contained(Entry.FunctionNames, Name))
+      return llvm::is_contained(Entry.AcceptedValues, Base);
+
+  return false;
+}
+
 namespace tidy::readability {
 
 const char DefaultIgnoredIntegerValues[] = "1;2;3;4;";
@@ -80,6 +156,8 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)),
       IgnoreUserDefinedLiterals(
           Options.get("IgnoreUserDefinedLiterals", false)),
+      IgnoreWellKnownFunctionArgs(
+          Options.get("IgnoreWellKnownFunctionArgs", true)),
       RawIgnoredIntegerValues(
           Options.get("IgnoredIntegerValues", DefaultIgnoredIntegerValues)),
       RawIgnoredFloatingPointValues(Options.get(
@@ -130,6 +208,8 @@ void MagicNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 IgnorePowersOf2IntegerValues);
   Options.store(Opts, "IgnoreTypeAliases", IgnoreTypeAliases);
   Options.store(Opts, "IgnoreUserDefinedLiterals", IgnoreUserDefinedLiterals);
+  Options.store(Opts, "IgnoreWellKnownFunctionArgs",
+                IgnoreWellKnownFunctionArgs);
   Options.store(Opts, "IgnoredIntegerValues", RawIgnoredIntegerValues);
   Options.store(Opts, "IgnoredFloatingPointValues",
                 RawIgnoredFloatingPointValues);
@@ -249,6 +329,26 @@ bool MagicNumbersCheck::isUserDefinedLiteral(
   if (Parents.empty())
     return false;
   return Parents[0].get<UserDefinedLiteral>() != nullptr;
+}
+
+bool MagicNumbersCheck::isWellKnownFunctionArg(
+    const ast_matchers::MatchFinder::MatchResult &Result,
+    const Expr &Literal) const {
+  if (!IgnoreWellKnownFunctionArgs)
+    return false;
+
+  const std::optional<llvm::APSInt> Value =
+      Literal.getIntegerConstantExpr(*Result.Context);
+  if (!Value || Value->isNegative())
+    return false;
+
+  const uint64_t Base = Value->getZExtValue();
+
+  return llvm::any_of(Result.Context->getParents(Literal),
+                      [&Result, &Literal, Base](const DynTypedNode &Parent) {
+                        return isUsedAsAConversionBase(Result, Parent, Literal,
+                                                       Base);
+                      });
 }
 
 } // namespace tidy::readability

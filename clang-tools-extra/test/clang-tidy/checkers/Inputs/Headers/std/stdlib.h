@@ -13,4 +13,16 @@ void abort(void);
 void _Exit(int);
 void quick_exit(int);
 
+long strtol(const char *Str, char **End, int Base);
+long long strtoll(const char *Str, char **End, int Base);
+unsigned long strtoul(const char *Str, char **End, int Base);
+unsigned long long strtoull(const char *Str, char **End, int Base);
+
+double strtod(const char *Str, char **End);
+float strtof(const char *Str, char **End);
+long double strtold(const char *Str, char **End);
+
+int atoi(const char *Str);
+long atol(const char *Str);
+
 #endif // _STDLIB_H_

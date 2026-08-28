@@ -206,6 +206,11 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+- Improved {doc}`readability-magic-numbers
+  <clang-tidy/checks/readability/magic-numbers>` check by adding
+  {option}`IgnoreWellKnownFunctionArgs` to ignore common base arguments passed
+  into well-known base conversion functions. This option is enabled by default.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
