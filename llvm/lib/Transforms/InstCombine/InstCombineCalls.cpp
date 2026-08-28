@@ -2216,6 +2216,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                               {XY, II->getArgOperand(1)});
     }
 
+    // abs(x, false) -> abs(x, true) if x != INT_MIN
+    if (!IntMinIsPoison) {
+      if (auto *IntTy = dyn_cast<IntegerType>(IIOperand->getType())) {
+        unsigned BitWidth = IntTy->getBitWidth();
+        Constant *IntMin =
+            ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
+
+        if (isKnownNonEqual(IIOperand, IntMin, SQ.getWithInstruction(II)))
+          return CallInst::Create(II->getCalledFunction(),
+                                  {IIOperand, Builder.getTrue()});
+      }
+    }
+
     if (std::optional<bool> Known =
             getKnownSignOrZero(IIOperand, SQ.getWithInstruction(II))) {
       // abs(x) -> x if x >= 0 (include abs(x-y) --> x - y where x >= y)

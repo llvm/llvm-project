@@ -1199,3 +1199,28 @@ define i1 @abs_cmp_ugt_poison_multiuse(i32 %x) {
   %cmp = icmp ugt i32 %x.abs, 31
   ret i1 %cmp
 }
+
+define i8 @abs_no_poison_ne_int_min(i8 %x) {
+; CHECK-LABEL: @abs_no_poison_ne_int_min(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], -128
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
+; CHECK-NEXT:    ret i8 [[ABS]]
+;
+  %cmp = icmp ne i8 %x, -128
+  call void @llvm.assume(i1 %cmp)
+  %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
+  ret i8 %abs
+}
+
+define i1 @abs_no_poison_ne_int_min_eq_fold(i32 %x) {
+; CHECK-LABEL: @abs_no_poison_ne_int_min_eq_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x1 = or i32 %x, 1
+  %abs = call i32 @llvm.abs.i32(i32 %x1, i1 false)
+  %cmp = icmp eq i32 %abs, %x1
+  ret i1 %cmp
+}
+
