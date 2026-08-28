@@ -390,8 +390,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
   // There is no vector conditional select instruction
-  for (auto T :
-       {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64})
+  for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+                 MVT::v2f64, MVT::v8f16})
     setOperationAction(ISD::SELECT_CC, T, Expand);
 
   // We have custom switch handling.
