@@ -1,6 +1,19 @@
 add_custom_target(libc_sys_resource_unittests)
 
 add_libc_test(
+  getpriority_test
+  SUITE
+    libc_sys_resource_unittests
+  SRCS
+    getpriority_test.cpp
+  DEPENDS
+    libc.hdr.sys_resource_macros
+    libc.hdr.types.id_t
+    libc.src.sys.resource.getpriority
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   getrlimit_setrlimit_test
   SUITE
     libc_sys_resource_unittests

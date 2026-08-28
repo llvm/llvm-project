@@ -27,7 +27,8 @@ LLVM_LIBC_FUNCTION(int, getpriority, (int which, id_t who)) {
     libc_errno = result.error();
     return -1;
   }
-  return 0;
+  // The syscall returns (20 - nice), but we must return nice itself.
+  return 20 - result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

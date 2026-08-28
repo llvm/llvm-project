@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getpriority(int which, id_t who) {
-  return syscall_checked<int>(SYS_getprioriry, which, who);
+  return syscall_checked<int>(SYS_getpriority, which, who);
 }
 
 } // namespace linux_syscalls
