@@ -351,6 +351,8 @@ public:
   void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
 
 private:
+  size_t getStubSize() const;
+
   std::vector<Defined *> symbols;
   Symbol *objcMsgSend = nullptr;
 };

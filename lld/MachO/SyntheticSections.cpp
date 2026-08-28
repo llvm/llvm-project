@@ -899,15 +899,19 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+size_t ObjCStubsSection::getStubSize() const {
+  return config->objcStubsMode == ObjCStubsMode::fast
+             ? target->objcStubsFastSize
+             : target->objcStubsSmallSize;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
+  size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/symbols.size() * stubSize,
@@ -940,17 +944,11 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
-  return stubSize * symbols.size();
+  return getStubSize() * symbols.size();
 }
 
 void ObjCStubsSection::sortSymbols(
     const llvm::DenseMap<const Symbol *, int> &priorities) {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
   llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
     auto priority = [&](const Defined *sym) {
       auto it = priorities.find(sym);
@@ -959,6 +957,7 @@ void ObjCStubsSection::sortSymbols(
     };
     return priority(a) < priority(b);
   });
+  size_t stubSize = getStubSize();
   for (auto [idx, sym] : llvm::enumerate(symbols))
     sym->value = idx * stubSize;
 }
