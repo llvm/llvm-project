@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 
-#include "../TargetDetails.h"
+#include "orc-rt-internal/bedrock/TargetDetails.h"
 
 #include <cstdint>
 #include <sys/sysctl.h>

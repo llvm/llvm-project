@@ -949,6 +949,7 @@ public:
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     ExternalUsesWithNonUsers.clear();
+    ExternalUseReplacements.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
     HasNonCheckableMemBlocker = false;
@@ -2504,6 +2505,7 @@ public:
         if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
+            !ExternalUseReplacements.contains(OpI) &&
             (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
                return Entry->VectorizedValue == OpI;
              })))
@@ -2553,6 +2555,7 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
+              !ExternalUseReplacements.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(
                    VectorValuesAndScales,
@@ -3959,6 +3962,11 @@ private:
   /// A list of scalar to be extracted without specific user necause of too many
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
+
+  /// Replacements emitted for the external uses without users, consumed after
+  /// the tree vectorization; must not be collected as dead operands of the
+  /// erased scalars.
+  SmallPtrSet<Value *, 4> ExternalUseReplacements;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -25891,7 +25899,17 @@ Value *BoUpSLP::vectorizeTree(
         assert((!isa<ExtractElementInst>(Scalar) ||
                 !IgnoredExtracts.contains(cast<ExtractElementInst>(Scalar))) &&
                "Extractelements should not be replaced.");
+        // Reduced values that are not operands of the reduction ops (e.g.
+        // narrowed reduction leaves) lose all users once the tree scalars are
+        // erased; keep the replacement alive for the reduction epilogue.
+        bool NeedsProtection =
+            UserIgnoreList && none_of(Scalar->users(), [&](llvm::User *U) {
+              return UserIgnoreList->contains(U);
+            });
         Scalar->replaceAllUsesWith(NewInst);
+        if (NeedsProtection)
+          if (auto *I = dyn_cast<Instruction>(NewInst))
+            ExternalUseReplacements.insert(I);
       }
       continue;
     }

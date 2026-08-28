@@ -996,6 +996,17 @@ TEST(DWARFExpression, DW_OP_implicit_value) {
                        llvm::HasValue(0x40302010u));
 }
 
+TEST(DWARFExpression, DW_OP_implicit_value_piece) {
+  const std::vector<uint8_t> expected = {0x9c, 0xee, 0x4c, 0x86};
+
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_implicit_value, 4, 0x9c, 0xee, 0x4c,
+                                 0x86, DW_OP_piece, 4}),
+                       ExpectHostAddress(expected));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_implicit_value, 4, 0x9c, 0xee, 0x4c,
+                                 0x86, DW_OP_bit_piece, 32, 0}),
+                       ExpectHostAddress(expected));
+}
+
 TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),

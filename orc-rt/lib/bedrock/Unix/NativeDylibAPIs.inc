@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/StringExtras.h"
+#include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt/support/Error.h"
 
 #include <dlfcn.h>
 

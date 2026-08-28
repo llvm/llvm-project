@@ -1904,24 +1904,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if (KnowSomethingUseful || WantPositive)
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
 
-    // Inf REM x and x REM 0 produce NaN.
-    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-        KnownLHS.isKnownNeverInfinity() &&
-        KnownRHS.isKnownNeverLogicalZero(Mode)) {
-      Known.knownNot(fcNan);
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (KnownLHS.cannotBeOrderedLessThanZero())
-      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-    if (KnownLHS.cannotBeOrderedGreaterThanZero())
-      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-
-    // See if we can be more aggressive about the sign of 0.
-    if (KnownLHS.isKnownNever(fcNegative))
-      Known.knownNot(fcNegative);
-    if (KnownLHS.isKnownNever(fcPositive))
-      Known.knownNot(fcPositive);
+    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
     break;
   }

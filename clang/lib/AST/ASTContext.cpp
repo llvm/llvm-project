@@ -15171,15 +15171,6 @@ LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
   return getLangASFromTargetAS(AS);
 }
 
-// Explicitly instantiate this in case a Redeclarable<T> is used from a TU that
-// doesn't include ASTContext.h
-template
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::ValueType
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::makeValue(
-        const clang::ASTContext &Ctx, Decl *Value);
-
 unsigned char ASTContext::getFixedPointScale(QualType Ty) const {
   assert(Ty->isFixedPointType());
 

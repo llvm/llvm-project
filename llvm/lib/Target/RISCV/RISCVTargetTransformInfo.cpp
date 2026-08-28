@@ -3752,6 +3752,67 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
 
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  // Attach a range return attribute describing the result of vsetvli/vsetvlimax
+  // so generic value analyses can reason about it. The verifier guarantees an
+  // XLen result and constant VSEW/VLMUL encoding a valid vtype, so no defensive
+  // validation is needed here.
+  if (is_contained({Intrinsic::riscv_vsetvli, Intrinsic::riscv_vsetvlimax},
+                   II.getIntrinsicID())) {
+    // These intrinsics require the V extension; without it the VLEN queries
+    // below would assert. Such IR would fail isel anyway, so just bail out.
+    if (!ST->hasVInstructions())
+      return {};
+
+    bool HasAVL = II.getIntrinsicID() == Intrinsic::riscv_vsetvli;
+    unsigned Offset = HasAVL ? 1 : 0;
+    unsigned BitWidth = II.getType()->getIntegerBitWidth();
+    ConstantRange VLenRange(APInt(BitWidth, ST->getRealMinVLen()),
+                            APInt(BitWidth, ST->getRealMaxVLen()) + 1);
+
+    uint64_t VSEW = cast<ConstantInt>(II.getArgOperand(Offset))->getZExtValue();
+    auto VLMUL = static_cast<RISCVVType::VLMUL>(
+        cast<ConstantInt>(II.getArgOperand(Offset + 1))->getZExtValue());
+    unsigned SEW = RISCVVType::decodeVSEW(VSEW);
+    unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+
+    // VLMAX = VLEN / (SEW / LMUL), clamped to >= 1 for any usable vtype.
+    ConstantRange VLMAXRange =
+        VLenRange.udiv(ConstantRange(APInt(BitWidth, Ratio)))
+            .umax(ConstantRange(APInt(BitWidth, 1)));
+
+    // vsetvlimax returns exactly VLMAX; vsetvli returns vl with
+    // 0 <= vl <= min(AVL, VLMAX). vl == AVL only when AVL <= the smallest
+    // possible VLMAX; otherwise vl can shrink below VLMAX (to 0 at runtime), so
+    // only the VLMAX upper bound is sound.
+    ConstantRange VLRange = VLMAXRange;
+    if (HasAVL) {
+      APInt MaxVL = VLMAXRange.getUnsignedMax();
+      Value *AVL = II.getArgOperand(0);
+      // vl > 0 if AVL > 0
+      APInt MinVL = APInt(BitWidth, isKnownNonZero(AVL, DL) ? 1 : 0);
+      if (auto *AVLC = dyn_cast<ConstantInt>(AVL)) {
+        const APInt &C = AVLC->getValue();
+        // A constant AVL not exceeding the smallest possible VLMAX means vl is
+        // exactly AVL, so replace the intrinsic with that constant.
+        if (C.ule(VLMAXRange.getUnsignedMin()))
+          return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), C));
+        VLRange =
+            ConstantRange::getNonEmpty(MinVL, APIntOps::umin(C, MaxVL) + 1);
+      } else {
+        VLRange = ConstantRange::getNonEmpty(MinVL, MaxVL + 1);
+      }
+    }
+
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
+    ConstantRange NewRange = VLRange.intersectWith(OldRange);
+    if (NewRange != OldRange) {
+      II.addRangeRetAttr(NewRange);
+      return &II;
+    }
+    return {};
+  }
+
   // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale
   // the vmv.v.x, enabling removal of the bitcast. The transform helps avoid
   // creating redundant masks.

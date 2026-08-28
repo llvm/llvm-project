@@ -747,6 +747,45 @@ value gives an undefined result.
 }
 
 //===----------------------------------------------------------------------===//
+// Raw Buffer Atomic Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatRawBufferAtomic : DocumentationCategory<"Raw Buffer Atomic Builtins"> {
+  let Content = [{
+These builtins perform an atomic read-modify-write on a location addressed
+through a buffer resource, and return the value that was in memory before the
+operation.
+
+The buffer resource is passed as ``__amdgpu_buffer_rsrc_t``, which can be
+created with ``__builtin_amdgcn_make_buffer_rsrc``. The address is formed from
+the resource base plus ``offset`` and ``soffset``; the ``raw`` addressing form
+does not take a record index.
+
+Each builtin requires the target feature listed in its description, and is only
+available when that feature is enabled for the target.
+}];
+}
+
+def DocRawPtrBufferAtomicFAddF64 : Documentation {
+  let Category = DocCatRawBufferAtomic;
+  let Content = [{
+Atomically adds a double-precision value to a location in a buffer and returns
+the value previously stored there.
+
+- ``vdata``: value added to the value in memory.
+- ``rsrc``: buffer resource descriptor.
+- ``offset``: byte offset from the base of the buffer, held in a VGPR.
+- ``soffset``: additional byte offset, held in an SGPR.
+- ``aux``: cache-policy and control flags. Must be a compile-time constant.
+  The encoding is target-dependent; see the corresponding field of
+  ``__builtin_amdgcn_s_buffer_load_*`` for the common fields.
+
+Requires target feature ``flat-buffer-global-fadd-f64-inst``. Maps to the
+``buffer_atomic_add_f64`` instruction.
+}];
+}
+
+//===----------------------------------------------------------------------===//
 // S-Buffer Load Builtins
 //===----------------------------------------------------------------------===//
 

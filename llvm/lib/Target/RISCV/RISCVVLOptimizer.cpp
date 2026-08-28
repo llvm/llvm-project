@@ -54,10 +54,10 @@ struct DemandedVL {
     return !VL.isIdenticalTo(Other.VL);
   }
 
-  DemandedVL max(const DemandedVL &X) const {
-    if (RISCV::isVLKnownLE(VL, X.VL))
+  DemandedVL max(const MachineRegisterInfo &MRI, const DemandedVL &X) const {
+    if (RISCV::isVLKnownLE(MRI, VL, X.VL))
       return X;
-    if (RISCV::isVLKnownLE(X.VL, VL))
+    if (RISCV::isVLKnownLE(MRI, X.VL, VL))
       return *this;
     return DemandedVL::vlmax();
   }
@@ -938,11 +938,11 @@ bool RISCVVLOptimizerImpl::isSupportedInstr(const MachineInstr &MI) const {
   return true;
 }
 
-/// Return true if MO is a vector operand but is used as a scalar operand.
-static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
-  const MachineInstr *MI = MO.getParent();
+/// Return true if operand \p OpIdx of \p MI is a vector operand but is used as
+/// a scalar operand.
+static bool isVectorOpUsedAsScalarOp(const MachineInstr &MI, unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI->getOpcode());
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
 
   if (!RVV)
     return false;
@@ -965,10 +965,10 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    return MO.getOperandNo() == 3;
+    return OpIdx == 3;
   case RISCV::VMV_X_S:
   case RISCV::VFMV_F_S:
-    return MO.getOperandNo() == 1;
+    return OpIdx == 1;
   default:
     return false;
   }
@@ -1089,7 +1089,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (UserOp.isTied()) {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
+    if (!RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1098,14 +1098,14 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
-  if (isVectorOpUsedAsScalarOp(UserOp)) {
+  if (isVectorOpUsedAsScalarOp(UserMI, UserMI.getOperandNo(&UserOp))) {
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
     return MachineOperand::CreateImm(1);
   }
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
+  if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     return DemandedVLs.lookup(&UserMI);
 
   return VLOp;
@@ -1253,7 +1253,7 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*MRI, CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
@@ -1315,7 +1315,7 @@ void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(*MRI, getMinimumVLForUser(MO));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }

@@ -1415,13 +1415,13 @@ __device__ void nvvm_cvt_sm100a_sm103a() {
 #define NANBF16X2 {NANBF16, NANBF16}
 
 // CHECK-LABEL: nvvm_abs_neg_bf16_bf16x2_sm80
-__device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
+__device__ void nvvm_abs_neg_bf16_bf16x2_sm80(__bf16 a) {
 #if __CUDA_ARCH__ >= 800
 
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat 1.000980e-01)
-  __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> splat (bfloat 1.000980e-01))
-  __nvvm_abs_bf16x2(BF16X2);
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat
+  __nvvm_abs_bf16(a);
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat>
+  __nvvm_abs_bf16x2({a, a});
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 1.000980e-01)
   __nvvm_neg_bf16(BF16);

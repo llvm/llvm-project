@@ -32,5 +32,6 @@ add_llvm_target_unittest(AMDGPUTests
   InstSizes.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
+  RCIUpdateReservedRegsTest.cpp
   UniformityAnalysisTest.cpp
   )

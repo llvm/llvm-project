@@ -431,6 +431,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexpl
     libc.src.math.lgamma
     libc.src.math.lgamma_r
+    libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl

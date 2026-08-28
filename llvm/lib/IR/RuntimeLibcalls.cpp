@@ -113,6 +113,12 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
     : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
                           EABIVersion, ABIName, VecLib) {}
 
+bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
+  // TODO: Drive this from module-level state (e.g. the linked runtime). For now
+  // every named library is reported as available.
+  return true;
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,

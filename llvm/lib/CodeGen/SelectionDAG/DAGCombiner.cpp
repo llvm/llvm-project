@@ -4723,9 +4723,9 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
       for (unsigned NarrowBits = PowerOf2Ceil(ActiveBits);
            NarrowBits != 0 && NarrowBits < ScalarBits; NarrowBits *= 2) {
         unsigned Scale = ScalarBits / NarrowBits;
-        unsigned NumElts = VT.getVectorNumElements() * Scale;
+        ElementCount ScaledEC = VT.getVectorElementCount() * Scale;
         MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
-        MVT NarrowVT = MVT::getVectorVT(NarrowSVT, NumElts);
+        EVT NarrowVT = EVT::getVectorVT(*DAG.getContext(), NarrowSVT, ScaledEC);
 
         if (!TLI.isOperationLegalOrCustom(ISD::USUBSAT, NarrowVT))
           continue;

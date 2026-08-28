@@ -1,54 +1,63 @@
+# Headers installed with the runtime.
+#
+# Headers under orc-rt-internal/ are deliberately not listed: they are not
+# installed. Don't add them here to "complete" the list. An installed header
+# must not include an internal one, or the installed tree won't compile.
 set(ORC_RT_HEADERS
-    orc-rt-c/Compiler.h
-    orc-rt-c/CoreTyspe.h
-    orc-rt-c/Error.h
-    orc-rt-c/Logging.h
-    orc-rt-c/WrapperFunction.h
-    orc-rt-c/orc-rt.h
-    orc-rt/bedrock/AllocAction.h
-    orc-rt/bedrock/BitmaskEnum.h
+    orc-rt-c/bedrock/Session.h
+    orc-rt-c/support/Compiler.h
+    orc-rt-c/support/CoreTypes.h
+    orc-rt-c/support/Error.h
+    orc-rt-c/support/Logging.h
+    orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
-    orc-rt/bedrock/CCallback.h
-    orc-rt/bedrock/Compiler.h
-    orc-rt/bedrock/Error.h
-    orc-rt/bedrock/ExecutorAddress.h
+    orc-rt/bedrock/ExecutorProcessInfo.h
     orc-rt/bedrock/InProcessControllerAccess.h
-    orc-rt/bedrock/IntervalMap.h
-    orc-rt/bedrock/IntervalSet.h
-    orc-rt/bedrock/LockedAccess.h
-    orc-rt/bedrock/MacroUtils.h
-    orc-rt/bedrock/Math.h
-    orc-rt/bedrock/MemoryFlags.h
     orc-rt/bedrock/NativeDylibManager.h
-    orc-rt/bedrock/Proxy.h
     orc-rt/bedrock/QueueingRunner.h
-    orc-rt/bedrock/RTTI.h
-    orc-rt/bedrock/SPSAllocAction.h
-    orc-rt/bedrock/SPSMemoryFlags.h
-    orc-rt/bedrock/SPSWrapperFunction.h
-    orc-rt/bedrock/SPSWrapperFunctionBuffer.h
     orc-rt/bedrock/Service.h
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
-    orc-rt/bedrock/SimplePackedSerialization.h
-    orc-rt/bedrock/SimpleSymbolTable.h
     orc-rt/bedrock/SimpleRemoteCA.h
+    orc-rt/bedrock/SimpleSymbolTable.h
     orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h
-    orc-rt/bedrock/StringPool.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
-    orc-rt/bedrock/WrapperFunction.h
-    orc-rt/bedrock/bind.h
-    orc-rt/bedrock/bit.h
-    orc-rt/bedrock/move_only_function.h
-    orc-rt/bedrock/scope_exit.h
-    orc-rt/bedrock/span.h
-    orc-rt/bedrock/sps-ci/AllSPSCI.h
-    orc-rt/bedrock/sps-ci/CallSPSCI.h
-    orc-rt/bedrock/sps-ci/GDBJITRegistrarSPSCI.h
-    orc-rt/bedrock/sps-ci/MemoryAccessSPSCI.h
-    orc-rt/bedrock/sps-ci/NativeDylibManagerSPSCI.h
-    orc-rt/bedrock/sps-ci/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/bedrock/sps/AllSPSCI.h
+    orc-rt/bedrock/sps/CallSPSCI.h
+    orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
+    orc-rt/bedrock/sps/MemoryAccessSPSCI.h
+    orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
+    orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h
+    orc-rt/support/AllocAction.h
+    orc-rt/support/BitmaskEnum.h
+    orc-rt/support/CCallback.h
+    orc-rt/support/CallableTraitsHelper.h
+    orc-rt/support/Compiler.h
+    orc-rt/support/Error.h
+    orc-rt/support/ExecutorAddress.h
+    orc-rt/support/IntervalMap.h
+    orc-rt/support/IntervalSet.h
+    orc-rt/support/LockedAccess.h
+    orc-rt/support/MacroUtils.h
+    orc-rt/support/Math.h
+    orc-rt/support/MemoryFlags.h
+    orc-rt/support/Proxy.h
+    orc-rt/support/RTTI.h
+    orc-rt/support/SPSAllocAction.h
+    orc-rt/support/SPSMemoryFlags.h
+    orc-rt/support/SPSWrapperFunction.h
+    orc-rt/support/SPSWrapperFunctionBuffer.h
+    orc-rt/support/SimplePackedSerialization.h
+    orc-rt/support/StringPool.h
+    orc-rt/support/WrapperFunction.h
+    orc-rt/support/bind.h
+    orc-rt/support/bit.h
+    orc-rt/support/iterator_range.h
+    orc-rt/support/move_only_function.h
+    orc-rt/support/scope_exit.h
+    orc-rt/support/span.h
 )
 
 # Add generated config header

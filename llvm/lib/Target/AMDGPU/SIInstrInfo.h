@@ -325,7 +325,8 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
-  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
+  std::optional<int64_t> getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                                                 MachineOperand &Op) const;
 
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,

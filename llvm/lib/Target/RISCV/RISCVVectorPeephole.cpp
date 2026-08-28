@@ -363,7 +363,7 @@ bool RISCVVectorPeepholeImpl::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   const MachineOperand &TrueVL =
       True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
   Register FalseReg = MI.getOperand(2).getReg();
-  if (!RISCV::isVLKnownLE(MIVL, TrueVL)) {
+  if (!RISCV::isVLKnownLE(*MRI, MIVL, TrueVL)) {
     Register PassthruReg = MI.getOperand(1).getReg();
     if (FalseReg.isValid() && FalseReg != PassthruReg)
       return false;
@@ -530,7 +530,7 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
     MachineOperand &SrcPolicy =
         Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
 
-    if (RISCV::isVLKnownLE(MIVL, SrcVL))
+    if (RISCV::isVLKnownLE(*MRI, MIVL, SrcVL))
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
   }
 
@@ -594,7 +594,7 @@ bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
   // so we don't need to handle a smaller source VL here.  However, the
   // user's VL may be larger
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-  if (!RISCV::isVLKnownLE(SrcVL, MI.getOperand(3)))
+  if (!RISCV::isVLKnownLE(*MRI, SrcVL, MI.getOperand(3)))
     return false;
 
   // If the new passthru doesn't dominate Src, try to move Src so it does.
@@ -621,7 +621,7 @@ bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
     // If MI was tail agnostic and the VL didn't increase, preserve it.
     int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
-        RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
+        RISCV::isVLKnownLE(*MRI, MI.getOperand(3), SrcVL))
       Policy |= RISCVVType::TAIL_AGNOSTIC;
     Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
   }
@@ -721,9 +721,9 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
       True.getOperand(RISCVII::getVLOpNum(True.getDesc()));
 
   MachineOperand MinVL = MachineOperand::CreateImm(0);
-  if (RISCV::isVLKnownLE(TrueVL, VMergeVL))
+  if (RISCV::isVLKnownLE(*MRI, TrueVL, VMergeVL))
     MinVL = TrueVL;
-  else if (RISCV::isVLKnownLE(VMergeVL, TrueVL))
+  else if (RISCV::isVLKnownLE(*MRI, VMergeVL, TrueVL))
     MinVL = VMergeVL;
   else if (!TruePassthru && !True.mayLoadOrStore())
     // If True's passthru is undef, we can use vmerge's vl.
@@ -746,7 +746,7 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   // to the tail. In that case we always need to use tail undisturbed to
   // preserve them.
   uint64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if (!PassthruReg && RISCV::isVLKnownLE(VMergeVL, MinVL))
+  if (!PassthruReg && RISCV::isVLKnownLE(*MRI, VMergeVL, MinVL))
     Policy |= RISCVVType::TAIL_AGNOSTIC;
 
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
@@ -869,7 +869,7 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
         Cmp.getOperand(RISCVII::getVLOpNum(Cmp.getDesc()));
     const MachineOperand &MIVL =
         MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
-    if (!RISCV::isVLKnownLE(MIVL, CmpVL))
+    if (!RISCV::isVLKnownLE(*MRI, MIVL, CmpVL))
       continue;
 
     const MachineOperand &MaskOp = MI.getOperand(MaskIdx);

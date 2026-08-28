@@ -12,8 +12,8 @@
 
 #include "orc-rt/bedrock/SimpleRemoteCA.h"
 
-#include "orc-rt/bedrock/Compiler.h"
-#include "orc-rt/bedrock/SimplePackedSerialization.h"
+#include "orc-rt/support/Compiler.h"
+#include "orc-rt/support/SimplePackedSerialization.h"
 
 #include <string>
 

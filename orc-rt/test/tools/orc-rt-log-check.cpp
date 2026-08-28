@@ -23,9 +23,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
-#include "orc-rt-utils/CommandLine.h"
+#include "orc-rt-internal/tools/CommandLine.h"
 
 #include <iostream>
 

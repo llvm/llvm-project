@@ -1200,14 +1200,14 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     if (State.second)
       SubregsSeen.push_back(State.second);
 
-    assert(MRI.hasOneDef(State.first));
-    MachineInstr &Inst = *MRI.def_begin(State.first)->getParent();
-    CurInst = Inst.getIterator();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
+    assert(Inst && "Virtual register has no def");
+    CurInst = Inst->getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
+    if (!Inst->isCopyLike() && !TII.isCopyLikeInstr(*Inst))
       break;
-    State = GetRegAndSubreg(Inst);
+    State = GetRegAndSubreg(*Inst);
   };
 
   // Helper lambda to apply additional subregister substitutions to a known
@@ -1233,7 +1233,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   // instruction / operand pair after adding subregister qualifiers.
   if (State.first.isVirtual()) {
     // Virtual register def -- we can just look up where this happens.
-    MachineInstr *Inst = MRI.def_begin(State.first)->getParent();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
     for (auto &MO : Inst->all_defs()) {
       if (MO.getReg() != State.first)
         continue;

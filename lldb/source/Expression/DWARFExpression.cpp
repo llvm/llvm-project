@@ -1183,6 +1183,15 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
       }
     } break;
     case Value::ValueType::HostAddress: {
+      // DW_OP_implicit_value uses a host-address Value to own its bytes. For
+      // a full-width piece, the address is only an implementation detail and
+      // the backing bytes are the value of the piece.
+      if (piece_locdesc == Implicit &&
+          curr_piece_source_value.GetBuffer().GetByteSize() ==
+              piece_byte_size) {
+        curr_piece = curr_piece_source_value;
+        break;
+      }
       return llvm::createStringError(
           "failed to read memory DW_OP_piece(%" PRIu64
           ") from host address 0x%" PRIx64,
@@ -2050,7 +2059,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return llvm::createStringError(
             "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
-        UpdateValueTypeFromLocationDescription(eval_ctx, eval_ctx.loc_desc_kind,
+        const LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
+        UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
                                                &stack.back());
         // Reset for the next piece.
         eval_ctx.loc_desc_kind = Memory;
@@ -2073,7 +2083,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
         case Value::ValueType::FileAddress:
         case Value::ValueType::LoadAddress:
+          return llvm::createStringError(
+              "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
+              ", bit_offset = %" PRIu64 ") from an address value.",
+              piece_bit_size, piece_bit_offset);
+
         case Value::ValueType::HostAddress:
+          // As above, a full-width DW_OP_implicit_value piece refers to the
+          // backing bytes, not the address of that backing storage.
+          if (piece_locdesc == Implicit && piece_bit_offset == 0 &&
+              piece_bit_size % 8 == 0 &&
+              stack.back().GetBuffer().GetByteSize() == piece_bit_size / 8)
+            break;
           return llvm::createStringError(
               "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
               ", bit_offset = %" PRIu64 ") from an address value.",

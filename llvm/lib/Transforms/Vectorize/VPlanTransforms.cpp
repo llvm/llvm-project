@@ -1031,10 +1031,8 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   DebugLoc DL = ExtractR->getDebugLoc();
   VPBuilder Builder(ExtractR);
   VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
-  VPValue *StartVPV = Expander.tryToExpand(Start);
-  VPValue *StepVPV = Expander.tryToExpand(Step);
-  if (!StartVPV || !StepVPV)
-    return nullptr;
+  VPValue *StartVPV = Expander.expand(Start);
+  VPValue *StepVPV = Expander.expand(Step);
 
   Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
@@ -1375,10 +1373,14 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     CmpPredicate Pred;
     if (match(A, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
       auto *Cmp = cast<VPRecipeWithIRFlags>(A);
-      if (all_of(Cmp->users(),
-                 match_fn(m_CombineOr(
-                     m_Not(m_Specific(Cmp)),
-                     m_Select(m_Specific(Cmp), m_VPValue(), m_VPValue()))))) {
+      // Only fold if every user is a Not of the cmp, or a select using the cmp
+      // solely as its condition.
+      if (all_of(Cmp->users(), [Cmp](VPUser *U) {
+            return match(U, m_Not(m_Specific(Cmp))) ||
+                   (match(U, m_Select(m_Specific(Cmp), m_VPValue(),
+                                      m_VPValue())) &&
+                    U->getOperand(1) != Cmp && U->getOperand(2) != Cmp);
+          })) {
         Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
         for (VPUser *U : to_vector(Cmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
@@ -2620,32 +2622,31 @@ void VPlanTransforms::replaceSymbolicStrides(
   };
   ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
-    using namespace SCEVPatternMatch;
-    auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+    Value *StrideV = cast<SCEVUnknown>(Stride)->getValue();
     const APInt *StrideConst;
-    if (!match(PSE.getSCEV(StrideV), m_scev_APInt(StrideConst)))
+    const SCEV *StrideExpr = PSE.getSCEV(StrideV);
+    if (!match(StrideExpr, m_scev_APInt(StrideConst)))
       // Only handle constant strides for now.
       continue;
-
-    auto *CI = Plan.getConstantInt(*StrideConst);
     if (VPValue *StrideVPV = Plan.getLiveIn(StrideV))
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+      StrideVPV->replaceUsesWithIf(Plan.getConstantInt(*StrideConst),
+                                   CanUseVersionedStride);
 
-    // The versioned value may not be used in the loop directly but through a
-    // sext/zext. Add new live-ins in those cases.
+    // The versioned value may not be used in the loop directly but through an
+    // integral cast (sext/zext/trunc). Add new live-ins in those cases.
     for (Value *U : StrideV->users()) {
-      if (!isa<SExtInst, ZExtInst>(U))
+      if (!isa<SExtInst, ZExtInst, TruncInst>(U))
         continue;
       VPValue *StrideVPV = Plan.getLiveIn(U);
       if (!StrideVPV)
         continue;
       unsigned BW = U->getType()->getScalarSizeInBits();
-      APInt C =
-          isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
-      VPValue *CI = Plan.getConstantInt(C);
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+      APInt C = isa<SExtInst>(U) ? StrideConst->sext(BW)
+                                 : StrideConst->zextOrTrunc(BW);
+      StrideVPV->replaceUsesWithIf(Plan.getConstantInt(C),
+                                   CanUseVersionedStride);
     }
-    RewriteMap[StrideV] = PSE.getSCEV(StrideV);
+    RewriteMap[StrideV] = StrideExpr;
   }
 
   for (VPRecipeBase &R : *Plan.getEntry()) {
@@ -5793,10 +5794,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
       // supports a general VPValue as the start value.
-      VPValue *StartVPV = VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc())
-                              .tryToExpand(Start);
-      if (!StartVPV)
-        StartVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Start);
+      VPValue *StartVPV =
+          VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&

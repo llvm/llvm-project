@@ -7362,7 +7362,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
   DenseMap<BasicBlock *, Instruction *> InsertedTruncs;
 
   bool MadeChange = false;
-  for (Use &U : Src->uses()) {
+  for (Use &U : make_early_inc_range(Src->uses())) {
     Instruction *User = cast<Instruction>(U.getUser());
 
     // Figure out which BB this ext is used in.

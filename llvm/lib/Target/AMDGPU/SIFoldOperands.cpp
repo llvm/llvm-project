@@ -1702,7 +1702,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src0 = &MI->getOperand(Src0Idx);
-  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
+  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*MRI, *Src0);
 
   if ((Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
        Opc == AMDGPU::S_NOT_B32) &&
@@ -1718,7 +1718,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src1 = &MI->getOperand(Src1Idx);
-  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
+  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
 
   if (!Src0Imm && !Src1Imm)
     return false;
@@ -1831,11 +1831,11 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0)) {
-    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
     if (!Src1Imm)
       return false;
 
-    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
+    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*MRI, *Src0);
     if (!Src0Imm || *Src0Imm != *Src1Imm)
       return false;
   }
@@ -1874,11 +1874,11 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
     return std::nullopt;
 
   std::optional<int64_t> MaskImm =
-      TII->getImmOrMaterializedImm(AndMI.getOperand(1));
+      TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(1));
   if (MaskImm && AndMI.getOperand(2).isReg())
     return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
 
-  MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
+  MaskImm = TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(2));
   if (MaskImm && AndMI.getOperand(1).isReg())
     return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
 
@@ -2460,7 +2460,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
 
     // If there is an immediate operand, it must be Src1
     std::optional<int64_t> Src1Imm =
-        TII->getImmOrMaterializedImm(const_cast<MachineOperand &>(*Src1));
+        TII->getImmOrMaterializedImm(*MRI, const_cast<MachineOperand &>(*Src1));
     if (!Src1Imm)
       return {nullptr, SIOutMods::NONE};
 
@@ -2514,7 +2514,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
 
     // If there is an immediate operand, it must be Src1
     std::optional<int64_t> Src1Imm =
-        TII->getImmOrMaterializedImm(const_cast<MachineOperand &>(*Src1));
+        TII->getImmOrMaterializedImm(*MRI, const_cast<MachineOperand &>(*Src1));
     if (!Src1Imm)
       return {nullptr, SIOutMods::NONE};
 

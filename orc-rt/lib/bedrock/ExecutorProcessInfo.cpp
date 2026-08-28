@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/ExecutorProcessInfo.h
-// header.
+// Contains the implementation of APIs in the
+// orc-rt/bedrock/ExecutorProcessInfo.h header.
 //
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
-#include "orc-rt/bedrock/Math.h"
-#include "orc-rt/bedrock/StringExtras.h"
+#include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt/support/Math.h"
 
 #include <cassert>
 #include <cstring>

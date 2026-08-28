@@ -4070,12 +4070,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;

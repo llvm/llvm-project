@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Runtime support for the os_log logging backend declared in
-// orc-rt-c/Logging.h.
+// orc-rt-c/support/Logging.h.
 //
 // The log records themselves are emitted at the call site by os_log_with_type
 // (see the ORC_RT_LOG_* macros). The only runtime support needed here is a
@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
 #include <os/log.h>
 

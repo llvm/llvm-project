@@ -246,7 +246,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_bitops",
-            "values": {"c++20": 201907},
+            "values": {
+                "c++20": 201907,
+                # "c++29": 202606,  # P3793R2 Better shifting
+                # "c++29": 202607,  # P3104R6 Bit permutations
+            },
             "headers": ["bit"],
         },
         {
@@ -561,7 +565,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_expected",
-            "values": {"c++23": 202211},
+            "values": {
+                "c++23": 202211,
+                # "c++29": 202606 # P3798R1 The unexpected in std::expected
+            },
             "headers": ["expected"],
         },
         {
@@ -744,10 +751,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_hazard_pointer",
-            "values": {"c++26": 202306},  # P2530R3 Hazard Pointers for C++26
-            "headers": [
-                "hazard_pointer"  # TODO verify this entry since the paper was underspecified.
-            ],
+            "values": {
+                "c++26": 202306,  # P2530R3 Hazard Pointers for C++26
+                # "c++29": 202606,  # P3428R4 Hazard Pointer Batches
+            },
+            "headers": ["hazard_pointer"],
             "unimplemented": True,
         },
         {
@@ -951,6 +959,14 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_map_lookup",
+            "values": {
+                "c++29": 202606
+            },  # P3091R6 Better Lookups for map, unordered_map, and flat_map
+            "headers": ["flat_map", "map", "unordered_map"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_map_try_emplace",
             "values": {"c++17": 201411},
             "headers": ["map"],
@@ -973,6 +989,12 @@ feature_test_macros = [
                 "c++26": 202406,
             },
             "headers": ["mdspan"],
+        },
+        {
+            "name": "__cpp_lib_mdspan_copy",
+            "values": {"c++29": 202606},  # P3242R4 Copy and fill for mdspan
+            "headers": ["mdspan"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_memory_resource",
@@ -1071,6 +1093,12 @@ feature_test_macros = [
             },  # P2075R6 Philox as an extension of the C++ RNG engines
             # Note the paper mentions 202310L as value, which differs from the typical procedure.
             "headers": ["random"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_pointer_tag_pair",
+            "values": {"c++29": 202606},  # P3125R6 constexpr pointer tagging
+            "headers": ["memory"],
             "unimplemented": True,
         },
         {
@@ -1309,6 +1337,37 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_simd",
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_bitops",
+            "values": {
+                # "c++29": 202606 # P3793R2 Better shifting
+                "c++29": 202607  # P3772R2 std::simd overloads for bit permutations
+            },
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_complex",
+            "values": {"c++29": 202502},  # P3793R2 Better shifting
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_permutations",
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_smart_ptr_for_overwrite",
             "values": {"c++20": 202002},
             "headers": ["memory"],
@@ -1426,6 +1485,12 @@ feature_test_macros = [
             "headers": ["text_encoding"],
         },
         {
+            "name": "__cpp_lib_thread_attributes",
+            "values": {"c++29": 202606},  # P2019R9 Thread attributes
+            "headers": ["thread"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_three_way_comparison",
             "values": {"c++20": 201907},
             "headers": ["compare"],
@@ -1445,6 +1510,7 @@ feature_test_macros = [
             "values": {
                 "c++17": 201611,
                 "c++26": 202306,  # P2497R0 Testing for success or failure of <charconv> functions
+                # "c++29": 202606   # P3505R4 Fix the default floating-point representation in std::format
             },
             "headers": ["charconv"],
             "unimplemented": True,

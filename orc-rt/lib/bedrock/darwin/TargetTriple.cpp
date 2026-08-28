@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../TargetDetails.h"
+#include "orc-rt-internal/bedrock/TargetDetails.h"
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 
 #include <TargetConditionals.h>

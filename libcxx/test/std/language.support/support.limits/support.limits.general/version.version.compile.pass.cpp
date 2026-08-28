@@ -576,6 +576,10 @@
 #    error "__cpp_lib_make_unique should not be defined before c++14"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should not be defined before c++17"
 #  endif
@@ -590,6 +594,10 @@
 
 #  ifdef __cpp_lib_mdspan
 #    error "__cpp_lib_mdspan should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_memory_resource
@@ -642,6 +650,10 @@
 
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -804,6 +816,22 @@
 #    error "__cpp_lib_shift should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_simd
+#    error "__cpp_lib_simd should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_permutations
+#    error "__cpp_lib_simd_permutations should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
 #  endif
@@ -878,6 +906,10 @@
 
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_three_way_comparison
@@ -1555,6 +1587,10 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++14"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should not be defined before c++17"
 #  endif
@@ -1569,6 +1605,10 @@
 
 #  ifdef __cpp_lib_mdspan
 #    error "__cpp_lib_mdspan should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_memory_resource
@@ -1624,6 +1664,10 @@
 
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -1810,6 +1854,22 @@
 #    error "__cpp_lib_shift should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_simd
+#    error "__cpp_lib_simd should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_permutations
+#    error "__cpp_lib_simd_permutations should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
 #  endif
@@ -1887,6 +1947,10 @@
 
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_three_way_comparison
@@ -2672,6 +2736,10 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++17"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should be defined in c++17"
 #  endif
@@ -2698,6 +2766,10 @@
 
 #  ifdef __cpp_lib_mdspan
 #    error "__cpp_lib_mdspan should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -2783,6 +2855,10 @@
 
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_polymorphic_allocator
@@ -2999,6 +3075,22 @@
 #    error "__cpp_lib_shift should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_simd
+#    error "__cpp_lib_simd should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_permutations
+#    error "__cpp_lib_simd_permutations should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
 #  endif
@@ -3079,6 +3171,10 @@
 
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_three_way_comparison
@@ -4080,6 +4176,10 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should be defined in c++20"
 #  endif
@@ -4109,6 +4209,10 @@
 
 #  ifdef __cpp_lib_mdspan
 #    error "__cpp_lib_mdspan should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -4197,6 +4301,10 @@
 
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -4440,6 +4548,22 @@
 #    error "__cpp_lib_shift should have the value 201806L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_simd
+#    error "__cpp_lib_simd should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_permutations
+#    error "__cpp_lib_simd_permutations should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
 #  endif
@@ -4544,6 +4668,10 @@
 
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison
@@ -5644,6 +5772,10 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should be defined in c++23"
 #  endif
@@ -5676,6 +5808,10 @@
 #  endif
 #  if __cpp_lib_mdspan != 202207L
 #    error "__cpp_lib_mdspan should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -5779,6 +5915,10 @@
 
 #  ifdef __cpp_lib_philox_engine
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -6106,6 +6246,22 @@
 #    error "__cpp_lib_shift should have the value 202202L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_simd
+#    error "__cpp_lib_simd should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_permutations
+#    error "__cpp_lib_simd_permutations should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
 #  endif
@@ -6237,6 +6393,10 @@
 
 #  ifdef __cpp_lib_text_encoding
 #    error "__cpp_lib_text_encoding should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison
@@ -7583,6 +7743,10 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++26"
 #  endif
 
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should be defined in c++26"
 #  endif
@@ -7615,6 +7779,10 @@
 #  endif
 #  if __cpp_lib_mdspan != 202406L
 #    error "__cpp_lib_mdspan should have the value 202406L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_mdspan_copy
+#    error "__cpp_lib_mdspan_copy should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -7736,6 +7904,10 @@
 #    ifdef __cpp_lib_philox_engine
 #      error "__cpp_lib_philox_engine should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_pointer_tag_pair
+#    error "__cpp_lib_pointer_tag_pair should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -8096,6 +8268,40 @@
 #    error "__cpp_lib_shift should have the value 202202L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd
+#      error "__cpp_lib_simd should be defined in c++26"
+#    endif
+#    if __cpp_lib_simd != 202606L
+#      error "__cpp_lib_simd should have the value 202606L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd
+#      error "__cpp_lib_simd should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifdef __cpp_lib_simd_bitops
+#    error "__cpp_lib_simd_bitops should not be defined before c++29"
+#  endif
+
+#  ifdef __cpp_lib_simd_complex
+#    error "__cpp_lib_simd_complex should not be defined before c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_permutations
+#      error "__cpp_lib_simd_permutations should be defined in c++26"
+#    endif
+#    if __cpp_lib_simd_permutations != 202606L
+#      error "__cpp_lib_simd_permutations should have the value 202606L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_permutations
+#      error "__cpp_lib_simd_permutations should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
 #  endif
@@ -8251,6 +8457,10 @@
 #  endif
 #  if __cpp_lib_text_encoding != 202306L
 #    error "__cpp_lib_text_encoding should have the value 202306L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison
@@ -9606,6 +9816,19 @@
 #    error "__cpp_lib_make_unique should have the value 201304L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_map_lookup
+#      error "__cpp_lib_map_lookup should be defined in c++29"
+#    endif
+#    if __cpp_lib_map_lookup != 202606L
+#      error "__cpp_lib_map_lookup should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_map_lookup
+#      error "__cpp_lib_map_lookup should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_map_try_emplace
 #    error "__cpp_lib_map_try_emplace should be defined in c++29"
 #  endif
@@ -9638,6 +9861,19 @@
 #  endif
 #  if __cpp_lib_mdspan != 202406L
 #    error "__cpp_lib_mdspan should have the value 202406L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_mdspan_copy
+#      error "__cpp_lib_mdspan_copy should be defined in c++29"
+#    endif
+#    if __cpp_lib_mdspan_copy != 202606L
+#      error "__cpp_lib_mdspan_copy should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_mdspan_copy
+#      error "__cpp_lib_mdspan_copy should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -9758,6 +9994,19 @@
 #  else
 #    ifdef __cpp_lib_philox_engine
 #      error "__cpp_lib_philox_engine should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_pointer_tag_pair
+#      error "__cpp_lib_pointer_tag_pair should be defined in c++29"
+#    endif
+#    if __cpp_lib_pointer_tag_pair != 202606L
+#      error "__cpp_lib_pointer_tag_pair should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_pointer_tag_pair
+#      error "__cpp_lib_pointer_tag_pair should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -10119,6 +10368,58 @@
 #    error "__cpp_lib_shift should have the value 202202L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd
+#      error "__cpp_lib_simd should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd != 202606L
+#      error "__cpp_lib_simd should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd
+#      error "__cpp_lib_simd should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_bitops
+#      error "__cpp_lib_simd_bitops should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd_bitops != 202607L
+#      error "__cpp_lib_simd_bitops should have the value 202607L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_bitops
+#      error "__cpp_lib_simd_bitops should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_complex
+#      error "__cpp_lib_simd_complex should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd_complex != 202502L
+#      error "__cpp_lib_simd_complex should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_complex
+#      error "__cpp_lib_simd_complex should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_permutations
+#      error "__cpp_lib_simd_permutations should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd_permutations != 202606L
+#      error "__cpp_lib_simd_permutations should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_permutations
+#      error "__cpp_lib_simd_permutations should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
 #    error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++29"
 #  endif
@@ -10274,6 +10575,19 @@
 #  endif
 #  if __cpp_lib_text_encoding != 202306L
 #    error "__cpp_lib_text_encoding should have the value 202306L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should be defined in c++29"
+#    endif
+#    if __cpp_lib_thread_attributes != 202606L
+#      error "__cpp_lib_thread_attributes should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison

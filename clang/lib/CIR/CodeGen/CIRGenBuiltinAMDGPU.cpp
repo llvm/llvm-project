@@ -990,6 +990,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +

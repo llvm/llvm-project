@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt-c/Logging.h header.
+// Contains the implementation of APIs in the orc-rt-c/support/Logging.h header.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
 #include <array>
 #include <cassert>

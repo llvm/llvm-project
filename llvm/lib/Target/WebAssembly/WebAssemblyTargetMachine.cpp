@@ -67,7 +67,7 @@ cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
 cl::opt<bool>
     WebAssembly::WasmEnableEH("wasm-enable-eh",
                               cl::desc("WebAssembly exception handling"));
-// setjmp/longjmp handling using wasm EH instrutions
+// setjmp/longjmp handling using wasm EH instructions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
 // If true, use the legacy Wasm EH proposal:
@@ -91,8 +91,8 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeWebAssemblyPreLegalizerCombinerPass(PR);
-  initializeWebAssemblyPostLegalizerCombinerPass(PR);
+  initializeWebAssemblyPreLegalizerCombinerLegacyPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerLegacyPass(PR);
   initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -128,7 +128,7 @@ LLVMInitializeWebAssemblyTarget() {
 //===----------------------------------------------------------------------===//
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
-  // Default to static relocation model.  This should always be more optimial
+  // Default to static relocation model.  This should always be more optimal
   // than PIC since the static linker can determine all global addresses and
   // assume direct function calls.
   return RM.value_or(Reloc::Static);
@@ -522,7 +522,7 @@ bool WebAssemblyPassConfig::addIRTranslator() {
 
 void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPreLegalizerCombiner());
+    addPass(createWebAssemblyPreLegalizerCombinerLegacyPass());
   }
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
@@ -532,7 +532,7 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPostLegalizerCombiner());
+    addPass(createWebAssemblyPostLegalizerCombinerLegacyPass());
   }
 }
 

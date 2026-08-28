@@ -1176,17 +1176,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.firstbitlow");
   }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "normalize operand must have a float representation");
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(),
-        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
-        nullptr, "hlsl.normalize");
-  }
   case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
     return handleElementwiseF16ToF32(*this, E);
   }

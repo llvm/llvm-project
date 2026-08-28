@@ -1616,6 +1616,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         }
       }
 
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.starts_with("ldexp.")) {
         // Target specific intrinsic became redundant
         NewFn = Intrinsic::getOrInsertDeclaration(
@@ -5171,6 +5176,21 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->takeName(CI);
     return NewCall;
   }
+  }
+
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
   }
 
   AtomicRMWInst::BinOp RMWOp =

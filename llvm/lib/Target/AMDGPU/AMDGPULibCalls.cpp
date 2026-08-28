@@ -1696,7 +1696,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
     // sincos call there. Otherwise, right after the allocas works well enough
     // if it's an argument or constant.
 
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(*ArgInst->getInsertionPointAfterDef());
 
     // SetInsertPoint unwelcomely always tries to set the debug loc.
     B.SetCurrentDebugLocation(DL);
@@ -1807,6 +1807,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   if (SinCalls.empty() || CosCalls.empty())
+    return false;
+
+  // insertSinCos needs an insertion point after the argument's def.
+  if (auto *ArgInst = dyn_cast<Instruction>(CArgVal);
+      ArgInst && !ArgInst->getInsertionPointAfterDef())
     return false;
 
   B.setFastMathFlags(FMF);

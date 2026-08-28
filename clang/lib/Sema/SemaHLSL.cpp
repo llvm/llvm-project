@@ -4583,18 +4583,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(RetTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
-    break;
-  }
   case Builtin::BI__builtin_elementwise_fma: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckAllArgsHaveSameType(&SemaRef, TheCall)) {

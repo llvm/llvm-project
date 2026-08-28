@@ -421,7 +421,7 @@ void Writer::layoutMemory() {
   }
 
   // In single-threaded builds we set __tls_base statically.
-  // Even in the absense of any actual TLS data, this symbol can still be
+  // Even in the absence of any actual TLS data, this symbol can still be
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
   if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {

@@ -1915,7 +1915,7 @@ static bool isIndvarOverflowCheckKnownFalse(
     const LoopVectorizationCostModel *Cost,
     ElementCount VF, std::optional<unsigned> UF = std::nullopt) {
   // Always be conservative if we don't know the exact unroll factor.
-  unsigned MaxUF = UF ? *UF
+  uint64_t MaxUF = UF ? *UF
                       : std::max(Cost->TTI.getMaxInterleaveFactor(VF, false),
                                  Cost->TTI.getMaxInterleaveFactor(VF, true));
 
@@ -1929,8 +1929,8 @@ static bool isIndvarOverflowCheckKnownFalse(
           Cost->PSE, Cost->TheLoop,
           /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
           /*ComputeUpperBoundOnly=*/true)) {
-    unsigned MaxVF = VF.getKnownMinValue();
-    unsigned MaxTC = TC->getKnownMinValue();
+    uint64_t MaxVF = VF.getKnownMinValue();
+    uint64_t MaxTC = TC->getKnownMinValue();
     if (VF.isScalable() || TC->isScalable()) {
       std::optional<unsigned> MaxVScale =
           getMaxVScale(*Cost->TheFunction, Cost->TTI);
@@ -1938,15 +1938,17 @@ static bool isIndvarOverflowCheckKnownFalse(
         return false;
       if (VF.isScalable())
         MaxVF *= *MaxVScale;
-      if (TC->isScalable()) {
-        bool Overflow;
-        MaxTC = SaturatingMultiply(MaxTC, *MaxVScale, &Overflow);
-        if (Overflow)
-          return false;
-      }
+      if (TC->isScalable())
+        MaxTC *= *MaxVScale;
     }
 
-    return (MaxUIntTripCount - MaxTC).ugt(MaxVF * MaxUF);
+    // Bail out if the maximum trip count is not representable in the induction
+    // variable's type.
+    if (MaxUIntTripCount.ult(MaxTC))
+      return false;
+
+    uint64_t MaxStep = MaxVF * MaxUF;
+    return (MaxUIntTripCount - MaxTC).ugt(MaxStep);
   }
 
   return false;
