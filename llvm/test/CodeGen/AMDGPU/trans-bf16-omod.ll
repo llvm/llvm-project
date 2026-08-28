@@ -6,7 +6,7 @@
 
 ; FIXME: GlobalISel does not work with bf16
 
-define amdgpu_ps void @v_cos_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_cos_bf16_mul2(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_cos_bf16_mul2:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -34,7 +34,7 @@ define amdgpu_ps void @v_cos_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_exp_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_exp_bf16_mul4(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_exp_bf16_mul4:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -62,7 +62,7 @@ define amdgpu_ps void @v_exp_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_log_bf16_div2(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_log_bf16_div2(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_log_bf16_div2:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -90,7 +90,7 @@ define amdgpu_ps void @v_log_bf16_div2(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_cos_bf16_mul2_imm_first(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_cos_bf16_mul2_imm_first(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_cos_bf16_mul2_imm_first:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -118,7 +118,7 @@ define amdgpu_ps void @v_cos_bf16_mul2_imm_first(bfloat %in, ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_ps void @v_exp_bf16_mul4_imm_first(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_exp_bf16_mul4_imm_first(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_exp_bf16_mul4_imm_first:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -146,7 +146,7 @@ define amdgpu_ps void @v_exp_bf16_mul4_imm_first(bfloat %in, ptr addrspace(1) %o
   ret void
 }
 
-define amdgpu_ps void @v_log_bf16_div2_imm_first(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_log_bf16_div2_imm_first(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_log_bf16_div2_imm_first:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -175,7 +175,7 @@ define amdgpu_ps void @v_log_bf16_div2_imm_first(bfloat %in, ptr addrspace(1) %o
 }
 
 
-define amdgpu_ps void @v_rcp_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_rcp_bf16_mul2(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_rcp_bf16_mul2:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -203,7 +203,7 @@ define amdgpu_ps void @v_rcp_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_rsq_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_rsq_bf16_mul4(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_rsq_bf16_mul4:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -231,7 +231,7 @@ define amdgpu_ps void @v_rsq_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_sin_bf16_div2(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_sin_bf16_div2(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_sin_bf16_div2:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -259,7 +259,7 @@ define amdgpu_ps void @v_sin_bf16_div2(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_sqrt_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_sqrt_bf16_mul2(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_sqrt_bf16_mul2:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -287,7 +287,7 @@ define amdgpu_ps void @v_sqrt_bf16_mul2(bfloat %in, ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_ps void @v_tanh_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
+define amdgpu_ps void @v_tanh_bf16_mul4(bfloat %in, ptr addrspace(1) %out) #0 {
 ; SDAG-FAKE16-LABEL: v_tanh_bf16_mul4:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -314,3 +314,5 @@ define amdgpu_ps void @v_tanh_bf16_mul4(bfloat %in, ptr addrspace(1) %out) {
   store bfloat %mul4, ptr addrspace(1) %out
   ret void
 }
+
+attributes #0 = { nounwind denormal_fpenv(preservesign) }

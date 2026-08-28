@@ -2505,9 +2505,8 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
   }
   case AMDGPU::V_PK_MUL_BF16: {
     // OMOD folding for BF16 packed multiply
-    // PK_*_BF16 ignores DENORM controls, and always preserves denorms
-
-    if (MI.mayRaiseFPException())
+    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign ||
+        MI.mayRaiseFPException())
       return {nullptr, SIOutMods::NONE};
 
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -2538,7 +2537,8 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
   }
   case AMDGPU::V_PK_ADD_BF16: {
     // OMOD folding for BF16 packed add: x + x -> x * 2
-    // PK_*_BF16 ignores DENORM controls, and always preserves denorms
+    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign)
+      return {nullptr, SIOutMods::NONE};
 
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
