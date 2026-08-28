@@ -2,6 +2,9 @@
 # RUN:   -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" \
 # RUN:   -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN:   -passes="require<machine-register-class-info>,dead-mi-elimination,require<machine-register-class-info>" \
+# RUN:   -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s --check-prefix=INVALIDATE
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
 
 # Verify that SIPreAllocateWWMRegsPass updates the
@@ -13,6 +16,16 @@
 # CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
 # CHECK:      Running pass: RequireAnalysisPass<{{.*}}MachineRegisterClassAnalysis, {{.*}}MachineFunction{{.*}}> on test_wwm_reserved
 # CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
+
+# Verify that a pass which changes the MachineFunction without preserving
+# MachineRegisterClassAnalysis invalidates the cached result.
+
+# INVALIDATE: Running pass: RequireAnalysisPass<{{.*}}MachineRegisterClassAnalysis, {{.*}}MachineFunction{{.*}}> on test_wwm_reserved
+# INVALIDATE-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
+# INVALIDATE: Running pass: DeadMachineInstructionElimPass on test_wwm_reserved
+# INVALIDATE: Invalidating analysis: MachineRegisterClassAnalysis on test_wwm_reserved
+# INVALIDATE: Running pass: RequireAnalysisPass<{{.*}}MachineRegisterClassAnalysis, {{.*}}MachineFunction{{.*}}> on test_wwm_reserved
+# INVALIDATE-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
 
 # MIR: wwmReservedRegs:
 # MIR-NEXT: - '$vgpr0'
