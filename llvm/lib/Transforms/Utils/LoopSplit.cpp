@@ -31,19 +31,20 @@
 // The latch keeps iterating while the value the next iteration would use is
 // still in the partition. That is written as the strict "i < sel_i" on the
 // induction PHI rather than "i + 1 <= sel_i" on the step value; the two agree
-// because isLegal() has established that the space does not wrap, and the
-// strict form never forms i + 1, so it remains a real test even when sel_i is
-// the last value of the type, where the inclusive one would be a tautology and
-// the partition would never exit.
+// because legality analysis has established that the space does not wrap, and
+// the strict form never forms i + 1, so it remains a real test even when sel_i
+// is the last value of the type, where the inclusive one would be a tautology
+// and the partition would never exit.
 //
 // A descending (step -1) loop uses the same structure mirrored: partitions run
 // high-to-low and the clamp and predicates flip (>=/>).
 //
 // Usage guidelines:
 //  - Caller bounds must not wrap the induction type. The clamp absorbs a bound
-//    past the runtime trip count, and isLegal() reserves the one step past the
-//    induction start that an empty partition needs, but a bound reaching any
-//    further wraps in the bound arithmetic and cannot be repaired here.
+//    past the runtime trip count, and legality analysis reserves the one step
+//    past the induction start that an empty partition needs, but a bound
+//    reaching any further wraps in the bound arithmetic and cannot be repaired
+//    here.
 //  - Bounds must be loop-invariant: they are expanded in guard0, so a bound
 //    depending on a value defined inside the loop cannot be placed.
 //  - The partitions must tile the original iteration space exactly -- same
@@ -54,12 +55,12 @@
 // rebuilds a value that flows between partitions, so no SSA reconstruction is
 // needed.
 //
-// Not yet supported, and rejected by isLegal(): loop-carried values, values
-// that escape the loop (exit values), non-unit and non-integer inductions,
-// top-tested loops, and multiple exits. Also rejected is an induction start at
-// the extreme of the iteration direction, which leaves nowhere to put a
-// boundary. An induction *end* at that extreme is fine, because the latch stays
-// strict.
+// Not yet supported, and rejected during legality analysis: loop-carried
+// values, values that escape the loop (exit values), non-unit and non-integer
+// inductions, top-tested loops, and multiple exits. Also rejected is an
+// induction start at the extreme of the iteration direction, which leaves
+// nowhere to put a boundary. An induction *end* at that extreme is fine,
+// because the latch stays strict.
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,7 +95,7 @@ using namespace llvm::SCEVPatternMatch;
 
 /// Per-split() scratch shared by the phase helpers; lives for one split() call.
 /// Everything derived from the induction lives on LoopSplit itself, filled in
-/// by isLegal(); this holds only what the transform creates.
+/// by legality analysis; this holds only what the transform creates.
 struct LoopSplit::SplitState {
   // Partition 0 reuses the original loop's preheader, exit, and entry guard;
   // those blocks live in Partitions[0] rather than being duplicated here.
@@ -105,7 +106,7 @@ struct LoopSplit::SplitState {
 
 // Record a new partition with the given inclusive iteration range.
 void LoopSplit::addPartition(const SCEV *Start, const SCEV *End) {
-  assert(InductionEnd && "addPartition() requires a successful isLegal()");
+  assert(InductionEnd && "addPartition() requires prior legality analysis");
   // The bounds are combined with the induction end and expanded in its type. A
   // mismatch would otherwise surface either as a bare "Operand types don't
   // match!" from inside ScalarEvolution, or worse, as a silent cast.
@@ -197,15 +198,36 @@ static bool isEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
                                      SE.applyLoopGuards(RHS, L));
 }
 
+// Latch "keep iterating" predicate, comparing the induction PHI against the
+// partition end: `i < sel` ascending, `i > sel` descending.
+static ICmpInst::Predicate continuePredicate(bool Signed, bool Descending) {
+  ICmpInst::Predicate P = Descending ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULT;
+  return Signed ? ICmpInst::getSignedPredicate(P) : P;
+}
+
+// Guard "enter this partition" predicate: the latch test made non-strict, so
+// `start <= sel` ascending and `start >= sel` descending. Also used during
+// legality analysis to prove the iteration space is monotonic.
+static ICmpInst::Predicate guardPredicate(bool Signed, bool Descending) {
+  return ICmpInst::getNonStrictPredicate(continuePredicate(Signed, Descending));
+}
+
+struct LoopSplitAnalysis {
+  const SCEV *InductionEnd;
+  bool InductionIsSigned;
+  bool Descending;
+};
+
 // Check every structural precondition and record the induction analysis.
-bool LoopSplit::isLegal() {
+static std::optional<LoopSplitAnalysis>
+analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
   // Require a bottom-tested single-exit loop in LCSSA form. Simplify form gives
   // the preheader, single latch and dedicated exits; the rest pin the exit to
   // the latch, so the latch compare can be rewritten per partition.
   if (!L->isLoopSimplifyForm() || !L->isLCSSAForm(*DT) ||
       L->getExitingBlock() != L->getLoopLatch() || !L->getExitBlock()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not in expected form\n");
-    return false;
+    return std::nullopt;
   }
 
   // The latch compare must exist and reside in the latch: it is rewritten in
@@ -213,7 +235,7 @@ bool LoopSplit::isLegal() {
   ICmpInst *LatchCmp = L->getLatchCmpInst();
   if (!LatchCmp || LatchCmp->getParent() != L->getLoopLatch()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": latch compare not in the loop latch\n");
-    return false;
+    return std::nullopt;
   }
 
   // Exit values are unsupported. Look for an LCSSA PHI and for a use outside
@@ -221,34 +243,34 @@ bool LoopSplit::isLegal() {
   // value escaping with no PHI to find.
   if (!L->getExitBlock()->phis().empty()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has exit values\n");
-    return false;
+    return std::nullopt;
   }
   for (BasicBlock *BB : L->blocks())
     for (Instruction &I : *BB)
       for (User *U : I.users())
         if (auto *UI = dyn_cast<Instruction>(U); UI && !L->contains(UI)) {
           LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has exit values\n");
-          return false;
+          return std::nullopt;
         }
 
   // Splitting a loop clones it, so cloning must be safe.
   if (!L->isSafeToClone()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not safe to clone\n");
-    return false;
+    return std::nullopt;
   }
 
   // A computable backedge-taken count fixes the iteration space we rebuild.
   const SCEV *BTC = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BTC)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop trip count uncomputable\n");
-    return false;
+    return std::nullopt;
   }
 
   const SCEVAddRecExpr *IndAR = analyzeInduction(L, SE);
   if (!IndAR) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                ": no unique unit-step integer induction\n");
-    return false;
+    return std::nullopt;
   }
 
   PHINode *Induction = L->getInductionVariable(*SE);
@@ -259,23 +281,23 @@ bool LoopSplit::isLegal() {
   for (PHINode &HeaderPHI : L->getHeader()->phis())
     if (&HeaderPHI != Induction) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has carried values\n");
-      return false;
+      return std::nullopt;
     }
 
   std::optional<bool> Signed = computeSignedness(*SE, L, IndAR);
   if (!Signed)
-    return false;
-  InductionIsSigned = *Signed;
-  Descending =
+    return std::nullopt;
+  const bool InductionIsSigned = *Signed;
+  const bool Descending =
       cast<SCEVConstant>(IndAR->getStepRecurrence(*SE))->getAPInt().isAllOnes();
 
   // Start and end must share the induction type; reject any width mismatch.
   // evaluateAtIteration coerces to the start's type for an affine recurrence,
   // so this is defensive rather than reachable.
-  InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
+  const SCEV *InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
   if (InductionEnd->getType() != IndAR->getStart()->getType()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": induction end/start type mismatch\n");
-    return false;
+    return std::nullopt;
   }
 
   // Partition bounds and entry guards assume the space runs monotonically from
@@ -283,15 +305,12 @@ bool LoopSplit::isLegal() {
   // flag on the recurrence asserts that directly.
   bool NoWrap =
       InductionIsSigned ? IndAR->hasNoSignedWrap() : IndAR->hasNoUnsignedWrap();
-  ICmpInst::Predicate Ordered =
-      Descending
-          ? (InductionIsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE)
-          : (InductionIsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE);
-  if (!NoWrap &&
-      !isEntryGuardedByCond(*SE, L, Ordered, IndAR->getStart(), InductionEnd)) {
+  if (!NoWrap && !isEntryGuardedByCond(
+                     *SE, L, guardPredicate(InductionIsSigned, Descending),
+                     IndAR->getStart(), InductionEnd)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                ": iteration space may wrap past the type extreme\n");
-    return false;
+    return std::nullopt;
   }
 
   // A boundary can sit one step beyond the start, so that step has to be
@@ -302,28 +321,24 @@ bool LoopSplit::isLegal() {
                    : cannotBeMaxInLoop(Start, L, *SE, InductionIsSigned))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                ": induction start at a type extreme, no room for a boundary\n");
-    return false;
+    return std::nullopt;
   }
 
-  return true;
+  return LoopSplitAnalysis{InductionEnd, InductionIsSigned, Descending};
+}
+
+std::optional<LoopSplit>
+LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
+  std::optional<LoopSplitAnalysis> Analysis = analyzeLegality(L, LI, SE, DT);
+  if (!Analysis)
+    return std::nullopt;
+  return LoopSplit(L, LI, SE, DT, Analysis->InductionEnd,
+                   Analysis->InductionIsSigned, Analysis->Descending);
 }
 
 //===----------------------------------------------------------------------===//
 // Transform
 //===----------------------------------------------------------------------===//
-
-// Latch "keep iterating" predicate, comparing the induction PHI against the
-// partition end: `i < sel` ascending, `i > sel` descending.
-static ICmpInst::Predicate continuePredicate(bool Signed, bool Descending) {
-  ICmpInst::Predicate P = Descending ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULT;
-  return Signed ? ICmpInst::getSignedPredicate(P) : P;
-}
-
-// Guard "enter this partition" predicate: the latch test made non-strict, so
-// `start <= sel` ascending and `start >= sel` descending.
-static ICmpInst::Predicate guardPredicate(bool Signed, bool Descending) {
-  return ICmpInst::getNonStrictPredicate(continuePredicate(Signed, Descending));
-}
 
 static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
                             DominatorTree *DT, LoopInfo *LI);
@@ -331,7 +346,7 @@ static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
 // Drive the whole transform: set up scratch state and run each phase in order.
 bool LoopSplit::split() {
   PHINode *Induction = L->getInductionVariable(*SE);
-  assert(Induction && "split() requires a successful isLegal()");
+  assert(Induction && "split() requires prior legality analysis");
   if (getNumPartitions() < 2)
     return false;
 
@@ -371,8 +386,8 @@ void LoopSplit::splitFinalExit(SplitState &S) {
   BasicBlock *OrigExit = Partitions[0].Exit;
 
   // Splitting at begin() moves everything into FinalExit; the exit block has no
-  // PHIs because isLegal() rejects escaping values. SplitBlock also re-parents
-  // the dominator-tree children of the exit onto FinalExit.
+  // PHIs because legality analysis rejects escaping values. SplitBlock also
+  // re-parents the dominator-tree children of the exit onto FinalExit.
   S.FinalExit = SplitBlock(OrigExit, OrigExit->begin(), DT, LI,
                            /*MSSAU=*/nullptr, "ls.final.exit");
 }
@@ -426,7 +441,7 @@ void LoopSplit::expandPartitionBounds(SplitState &S, SCEVExpander &Expander) {
 // (partition 0 reuses the original loop).
 void LoopSplit::clonePartitions(SplitState &S) {
   Function &F = *L->getHeader()->getParent();
-  LLVMContext &Ctx = F.getContext();
+  LLVMContext &Ctx = SE->getContext();
 
   const unsigned N = getNumPartitions();
   // Partition 0 reuses the original loop; clone the rest off its preheader.
@@ -503,7 +518,7 @@ void LoopSplit::chainPartitions(SplitState &S) {
   // Emit each guard, clamp each latch, and chain partitions; a skipped
   // partition falls through to the next guard.
   const unsigned N = getNumPartitions();
-  IRBuilder<> B(L->getHeader()->getContext());
+  IRBuilder<> B(SE->getContext());
 
   for (unsigned I = 0; I < N; ++I) {
     PartitionInfo &P = Partitions[I];

@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -29,33 +30,30 @@ class ScalarEvolution;
 ///
 /// Usage:
 /// \code
-///   LoopSplit LS(L, LI, SE, DT);
-///   if (!LS.isLegal())
-///     return false;
-///   LS.addPartition(S0, E0);   // one call per partition, in order
-///   LS.addPartition(S1, E1);
-///   LS.split();
+///   if (auto LS = LoopSplit::get(L, LI, SE, DT)) {
+///     LS->addPartition(S0, E0);   // one call per partition, in order
+///     LS->addPartition(S1, E1);
+///     LS->split();
+///   }
 /// \endcode
 class LoopSplit {
 public:
-  LLVM_ABI LoopSplit(Loop *L, LoopInfo *LI, ScalarEvolution *SE,
-                     DominatorTree *DT)
-      : L(L), LI(LI), SE(SE), DT(DT) {}
+  /// Analyze \p L and, if it is a counted loop this utility can split, return a
+  /// LoopSplit ready for addPartition() and split(). Otherwise return
+  /// std::nullopt. Eligible loops are bottom-tested single-exit loops in LCSSA
+  /// form with dedicated exits, no loop-carried and no escaping values, a
+  /// unique unit-step integer induction, and a computable trip count that
+  /// cannot wrap.
+  LLVM_ABI static std::optional<LoopSplit>
+  get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT);
 
-  /// Analyze \p L and return true if it is a counted loop this utility can
-  /// split: a bottom-tested single-exit loop in LCSSA form with dedicated
-  /// exits, no loop-carried and no escaping values, a unique unit-step integer
-  /// induction, and a computable trip count that cannot wrap. Must succeed
-  /// before split().
-  LLVM_ABI bool isLegal();
-
-  /// Return the loop's induction variable. Valid only after isLegal() succeeds.
+  /// Return the loop's induction variable. Valid only on a legal LoopSplit.
   LLVM_ABI PHINode *getInductionVariable() const {
     return L->getInductionVariable(*SE);
   }
 
   /// The induction value on the last iteration, which the final partition must
-  /// end at. Valid only after isLegal() succeeds.
+  /// end at. Valid only on a legal LoopSplit.
   LLVM_ABI const SCEV *getInductionEnd() const { return InductionEnd; }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
@@ -65,19 +63,24 @@ public:
   ///
   /// Both bounds must have the induction type and be loop-invariant. They must
   /// also stay within the iteration space, extended by the one step past its
-  /// start that an empty partition needs; isLegal() has proven that much
-  /// representable. Reaching further wraps past TYPE_MAX/MIN/0 into a bound
-  /// that still looks in range, which silently miscompiles. See LoopSplit.cpp
-  /// for the rationale.
+  /// start that an empty partition needs; legality analysis has proven that
+  /// much representable. Reaching further wraps past TYPE_MAX/MIN/0 into a
+  /// bound that still looks in range, which silently miscompiles. See
+  /// LoopSplit.cpp for the rationale.
   LLVM_ABI void addPartition(const SCEV *Start, const SCEV *End);
 
-  LLVM_ABI unsigned getNumPartitions() const { return Partitions.size(); }
+  LLVM_ABI size_t getNumPartitions() const { return Partitions.size(); }
 
-  /// Perform the split. Requires a successful isLegal() and at least two
-  /// partitions. Returns true if the loop was rewritten.
+  /// Perform the split. Requires at least two partitions. Returns true if the
+  /// loop was rewritten.
   LLVM_ABI bool split();
 
 private:
+  LoopSplit(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+            const SCEV *InductionEnd, bool InductionIsSigned, bool Descending)
+      : L(L), LI(LI), SE(SE), DT(DT), InductionEnd(InductionEnd),
+        InductionIsSigned(InductionIsSigned), Descending(Descending) {}
+
   /// Everything known about one partition: the caller-supplied range plus the
   /// state split() derives. Indexed by partition number in \c Partitions.
   struct PartitionInfo {
@@ -108,7 +111,7 @@ private:
   ScalarEvolution *SE;
   DominatorTree *DT;
 
-  // Induction analysis, populated by isLegal().
+  // Induction analysis, populated during legality analysis.
   const SCEV *InductionEnd = nullptr; // value on the last iteration.
   bool InductionIsSigned = false;     // iteration ordering signedness.
   bool Descending = false;            // step is -1 (the loop counts down).
