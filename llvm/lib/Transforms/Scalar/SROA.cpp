@@ -5519,8 +5519,10 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         LogSelection("aggregate-int-widen", IntTy, nullptr, true);
         return {IntTy, true, nullptr};
       }
-      if (areAllUsesWholePartitionPromotable(P, IntTy, DL))
-        TypePartitionTy = IntTy;
+      if (areAllUsesWholePartitionPromotable(P, IntTy, DL)) {
+        LogSelection("aggregate-int-whole", IntTy, nullptr, false);
+        return {IntTy, false, nullptr};
+      }
     }
     // There was no common type used, so we prefer integer widening promotion.
     if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
