@@ -109,13 +109,6 @@ Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
-Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
-Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll
-Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-compressstore.ll
-Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-expandload.ll
-Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-load.ll
-Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-store.ll
-Transforms/ScalarizeMaskedMemIntrin/X86/metadata.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll
