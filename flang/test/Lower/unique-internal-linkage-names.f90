@@ -9,12 +9,9 @@
 ! CHECK: func.func private @_QFtestPfoo.__uniq.{{[0-9]+}}
 ! CHECK-SAME: attributes {fir.host_symbol = @_QPtest, llvm.linkage = #llvm.linkage<internal>}
 
-subroutine test(x)
-  integer, intent(inout) :: x
-  call foo(x)
+subroutine test()
+  call foo()
 contains
-  subroutine foo(y)
-    integer, intent(inout) :: y
-    y = y + 1
+  subroutine foo()
   end subroutine
 end subroutine

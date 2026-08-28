@@ -3104,7 +3104,7 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       emitError(funcOp.getLoc())
           << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
   }
-  
+
   if (llvm::Attribute attr =
           func->getFnAttribute("sample-profile-suffix-elision-policy");
       attr.isStringAttribute())
