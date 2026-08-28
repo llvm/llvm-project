@@ -7,12 +7,8 @@
 // RUN:     FileCheck %s
 
 func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) -> tensor<16x8xf32> {
-  %abs = linalg.elementwise kind=#linalg.elementwise_kind<abs>
-    ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %ceil = linalg.elementwise kind=#linalg.elementwise_kind<ceil>
-    ins(%abs : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %floor = linalg.elementwise kind=#linalg.elementwise_kind<floor>
-    ins(%ceil : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
+    ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %negf = linalg.elementwise kind=#linalg.elementwise_kind<negf>
     ins(%floor : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %recip = linalg.elementwise kind=#linalg.elementwise_kind<reciprocal>
@@ -34,14 +30,8 @@ func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) -> tensor<16x
 
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>)
-// CHECK: %[[ABS:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<abs>
-// CHECK-SAME: ins(%[[A]] : tensor<16x8xf32>)
-// CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
-// CHECK: %[[CEIL:.+]] = linalg.ceil
-// CHECK-SAME: ins(%[[ABS]] : tensor<16x8xf32>)
-// CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
 // CHECK: %[[FLOOR:.+]] = linalg.floor
-// CHECK-SAME: ins(%[[CEIL]] : tensor<16x8xf32>)
+// CHECK-SAME: ins(%[[A]] : tensor<16x8xf32>)
 // CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
 // CHECK: %[[NEGF:.+]] = linalg.negf
 // CHECK-SAME: ins(%[[FLOOR]] : tensor<16x8xf32>)

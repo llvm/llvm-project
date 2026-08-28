@@ -4,12 +4,12 @@
 // RUN: mlir-opt %s -linalg-morph-ops=named-to-category |  \
 // RUN:   mlir-opt -linalg-morph-ops=category-to-generic | FileCheck %s  --check-prefix=CATEGORY_TO_GENERIC
 
-func.func @ceil(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
-  %ceil = linalg.ceil ins(%A : tensor<16x8xf32>) outs(%B :  tensor<16x8xf32>) -> tensor<16x8xf32>
-  return %ceil :  tensor<16x8xf32>
+func.func @floor(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
+  %floor = linalg.floor ins(%A : tensor<16x8xf32>) outs(%B :  tensor<16x8xf32>) -> tensor<16x8xf32>
+  return %floor :  tensor<16x8xf32>
 }
 // NAMED_TO_CATEGORY: linalg.elementwise
-// NAMED_TO_CATEGORY-NOT: linalg.ceil
+// NAMED_TO_CATEGORY-NOT: linalg.floor
 
 // CATEGORY_TO_GENERIC: linalg.generic
 // CATEGORY_TO_GENERIC-NOT: linalg.elementwise

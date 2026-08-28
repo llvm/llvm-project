@@ -5,8 +5,7 @@
 // RUN:     FileCheck %s  --check-prefix=ALL,ROUND_TRIP
 
 func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
-  %ceil = linalg.ceil ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %floor = linalg.floor ins(%ceil : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
+  %floor = linalg.floor ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %negf = linalg.negf ins(%floor : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %recip = linalg.reciprocal ins(%negf : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
   %round = linalg.round ins(%recip : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
@@ -20,8 +19,7 @@ func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16
 
 // ALL-LABEL: unary_ops
 
-// NAMED_TO_GENERIC-COUNT-10: linalg.generic
-// NAMED_TO_GENERIC-NOT: linalg.ceil
+// NAMED_TO_GENERIC-COUNT-9: linalg.generic
 // NAMED_TO_GENERIC-NOT: linalg.floor
 // NAMED_TO_GENERIC-NOT: linalg.negf
 // NAMED_TO_GENERIC-NOT: linalg.reciprocal
@@ -32,7 +30,6 @@ func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16
 // NAMED_TO_GENERIC-NOT: linalg.tanh
 // NAMED_TO_GENERIC-NOT: linalg.erf
 
-// ROUND_TRIP: linalg.ceil
 // ROUND_TRIP: linalg.floor
 // ROUND_TRIP: linalg.negf
 // ROUND_TRIP: linalg.reciprocal

@@ -147,8 +147,8 @@ std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
 
 /// Checks whether a given `genericOp` is semantically equivalent to a single
-/// linalg elementwise unary op, e.g. `linalg.ceil` or
-/// `linalg.elementwise kind=#linalg.elementwise_kind<ceil>`.
+/// linalg elementwise unary op, e.g. `linalg.floor` or
+/// `linalg.elementwise kind=#linalg.elementwise_kind<floor>`.
 /// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
 /// included in the check. Note that these operations can only be represented by
 /// the category op.

@@ -46,8 +46,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     };
 
     switch (op.getKind()) {
-    case ElementwiseKind::ceil:
-      return replaceWith(CeilOp{});
     case ElementwiseKind::floor:
       return replaceWith(FloorOp{});
     case ElementwiseKind::negf:

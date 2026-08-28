@@ -22,18 +22,6 @@ def copy(
 
 
 @linalg_structured_op
-def ceil(
-    I=TensorDef(T1),
-    O=TensorDef(T1, output=True),
-):
-    """Applies ceil(x) elementwise.
-
-    No numeric casting is performed on the input operand.
-    """
-    O[None] = UnaryFn.ceil(I[None])
-
-
-@linalg_structured_op
 def floor(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),

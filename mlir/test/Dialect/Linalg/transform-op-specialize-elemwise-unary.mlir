@@ -2,16 +2,9 @@
 
 #umap = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @specialize(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  %3 = linalg.generic
-          {indexing_maps = [#umap, #umap], iterator_types = ["parallel", "parallel","parallel"]}
-          ins(%arg0 : tensor<?x?x?xf32>) outs(%arg1 : tensor<?x?x?xf32>) {
-  ^bb0(%in: f32, %out: f32):
-    %v = math.ceil %in : f32
-    linalg.yield %v : f32
-  } -> tensor<?x?x?xf32>
   %4 = linalg.generic
           {indexing_maps = [#umap, #umap], iterator_types = ["parallel", "parallel","parallel"]}
-          ins(%3 : tensor<?x?x?xf32>) outs(%arg1 : tensor<?x?x?xf32>) {
+          ins(%arg0 : tensor<?x?x?xf32>) outs(%arg1 : tensor<?x?x?xf32>) {
   ^bb0(%in: f32, %out: f32):
     %v = math.floor %in : f32
     linalg.yield %v : f32
@@ -78,8 +71,7 @@ func.func @specialize(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>) -> ten
 // CHECK-LABEL: specialize
 // CHECK-SAME: %[[ARG0:.+]]: tensor<?x?x?xf32>, %[[ARG1:.+]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CHECK-NOT: linalg.generic
-// CHECK: %[[RES3:.+]] = linalg.ceil ins(%[[ARG0]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CHECK: %[[RES4:.+]] = linalg.floor ins(%[[RES3]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CHECK: %[[RES4:.+]] = linalg.floor ins(%[[ARG0]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CHECK: %[[RES5:.+]] = linalg.negf ins(%[[RES4]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CHECK: %[[RES6:.+]] = linalg.reciprocal ins(%[[RES5]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CHECK: %[[RES7:.+]] = linalg.round ins(%[[RES6]] : tensor<?x?x?xf32>) outs(%[[ARG1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>

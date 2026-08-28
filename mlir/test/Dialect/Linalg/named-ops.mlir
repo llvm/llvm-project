@@ -2170,37 +2170,6 @@ func.func @div_unsigned_tensor(%arg0: tensor<4x8x16xi32>, %arg1: tensor<4x8x16xi
 
 // -----
 
-// CHECK-LABEL: func @ceil_dynamic
-func.func @ceil_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
-  // CHECK: linalg.ceil
-  // CHECK-SAME: ins(%{{.+}} : memref<?x?x?xf32>) outs(%{{.+}} : memref<?x?x?xf32>)
-  linalg.ceil ins(%arg0 : memref<?x?x?xf32>) outs(%arg1: memref<?x?x?xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @ceil_static
-func.func @ceil_static(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>) {
-  // CHECK: linalg.ceil
-  // CHECK-SAME: ins(%{{.+}} : memref<4x8x16xf32>) outs(%{{.+}} : memref<4x8x16xf32>)
-  linalg.ceil ins(%arg0 : memref<4x8x16xf32>) outs(%arg1: memref<4x8x16xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @ceil_tensor
-func.func @ceil_tensor(%arg0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32> {
-  %0 = tensor.empty() : tensor<4x8x16xf32>
-  // CHECK: linalg.ceil
-  // CHECK-SAME: ins(%{{.+}} : tensor<4x8x16xf32>) outs(%{{.+}} : tensor<4x8x16xf32>)
-  %1 = linalg.ceil ins(%arg0 : tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
-  return %1 : tensor<4x8x16xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @floor_dynamic
 func.func @floor_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>) {
   // CHECK: linalg.floor
