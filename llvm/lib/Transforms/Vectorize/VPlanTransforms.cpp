@@ -5729,7 +5729,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
       // TODO: Transform reverse access into strided access with -1 stride.
-      // TODO: Transform gather/scatter with uniform address into strided access
+      // TODO: Transform scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
       if (!MemR || MemR->isConsecutive())
@@ -5831,6 +5831,39 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!StoredValue)
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::convertToSingleScalarMemOps(
+    VPlan &Plan, const TargetLibraryInfo &TLI) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *UniformGather = dyn_cast<VPWidenLoadRecipe>(&R);
+      if (!UniformGather ||
+          !vputils::isUniformAcrossVFsAndUFs(UniformGather->getAddr()))
+        continue;
+
+      auto &LI = cast<LoadInst>(UniformGather->getIngredient());
+      VPValue *Addr = UniformGather->getAddr();
+      Value *Underlying = Addr->getUnderlyingValue();
+      if (!Underlying ||
+          !isDereferenceableAndAlignedPointer(
+              Underlying, LI.getType(), LI.getAlign(),
+              SimplifyQuery(Plan.getDataLayout(), &TLI, /*DT=*/nullptr,
+                            /*AC=*/nullptr, &LI)))
+        continue;
+      DebugLoc DbgLoc = UniformGather->getDebugLoc();
+      VPBuilder Builder(UniformGather);
+      VPSingleDefRecipe *ScalarLoad = VPBuilder::createSingleScalarOp(
+          Instruction::Load, Addr,
+          /*Mask=*/nullptr, {}, *UniformGather, DbgLoc, &LI);
+      ScalarLoad->insertBefore(UniformGather);
+      VPInstruction *Broadcast =
+          Builder.createNaryOp(VPInstruction::Broadcast, ScalarLoad, DbgLoc);
+      UniformGather->replaceAllUsesWith(Broadcast);
+      UniformGather->eraseFromParent();
     }
   }
 }
