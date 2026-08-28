@@ -3291,15 +3291,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           Register UsedVAddr;
           if (MachineOperand *VAddr =
                   TII->getNamedOperand(*MI, AMDGPU::OpName::vaddr)) {
+            MachineOperand *VData =
+                TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
+            bool CanReuseVAddr = VAddr->isKill() &&
+                                 !(VData && VAddr->getReg() == VData->getReg());
+
             // SVS form: add RemainderOffset to vaddr.
             Register Src = VAddr->getReg();
-            Register Dst = VAddr->isKill() ? Src
-                                           : RS->scavengeRegisterBackwards(
-                                                 AMDGPU::VGPR_32RegClass, MI,
-                                                 false, 0, /*AllowSpill=*/true);
+            Register Dst = CanReuseVAddr ? Src
+                                         : RS->scavengeRegisterBackwards(
+                                               AMDGPU::VGPR_32RegClass, MI,
+                                               false, 0, /*AllowSpill=*/true);
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), Dst)
                 .addImm(RemainderOffset)
-                .addReg(Src, getKillRegState(VAddr->isKill()));
+                .addReg(Src, getKillRegState(CanReuseVAddr));
             UsedVAddr = Dst;
           } else {
             // SS form: no vaddr, materialize remainder as vgpr.
