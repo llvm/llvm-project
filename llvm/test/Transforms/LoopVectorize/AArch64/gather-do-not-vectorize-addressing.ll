@@ -212,8 +212,7 @@ define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %sr
 ; SVE:       [[VECTOR_PH]]:
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; SVE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
+; SVE-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
 ; SVE-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
 ; SVE-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 0, i32 [[TMP4]]
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -345,8 +344,7 @@ define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias
 ; SVE:       [[VECTOR_PH]]:
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; SVE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
+; SVE-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
 ; SVE-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
 ; SVE-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[A]], i32 [[TMP4]]
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
