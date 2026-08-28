@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 29
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp shl(_Tp __t, _Shift __cnt) noexcept {
@@ -53,8 +53,8 @@ template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
   return __t >> __cnt;
 }
 
-#endif // _LIBCPP_STD_VER >= 29
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 29
 
 #endif // _LIBCPP___BIT_SHIFT_H
