@@ -34,7 +34,7 @@ func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) -> tensor<16x
 
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>)
-// CHECK: %[[ABS:.+]] = linalg.abs
+// CHECK: %[[ABS:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<abs>
 // CHECK-SAME: ins(%[[A]] : tensor<16x8xf32>)
 // CHECK-SAME: outs(%[[B]] : tensor<16x8xf32>) -> tensor<16x8xf32>
 // CHECK: %[[CEIL:.+]] = linalg.ceil

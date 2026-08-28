@@ -22,18 +22,6 @@ def copy(
 
 
 @linalg_structured_op
-def abs(
-    I=TensorDef(T1),
-    O=TensorDef(T1, output=True),
-):
-    """Applies abs(x) elementwise.
-
-    No numeric casting is performed on the input operand.
-    """
-    O[None] = UnaryFn.abs(I[None])
-
-
-@linalg_structured_op
 def ceil(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),
