@@ -111,3 +111,11 @@ if config.flang_rt_fortran_modules:
 # Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "64"
+
+# Tests that need REAL(16) require the runtime to have been built with a
+# quad-precision math library. The condition is the same one flang/test uses
+# (see flang/test/lit.cfg.py), and it must stay the same: the compiler and the
+# runtime derive REAL(16) support from this single CMake value, and a test that
+# disagreed with either would report a configuration difference as a defect.
+if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
+    config.available_features.add("flang-supports-f128-math")
