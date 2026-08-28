@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
@@ -173,6 +174,13 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties_def);
+    // MemoryCache divides by the cache line size and holds it in a uint32_t, so
+    // reject a value it could not use.
+    OptionValueUInt64 *line_size =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
+            ePropertyMemCacheLineSize);
+    line_size->SetMinimumValue(1);
+    line_size->SetMaximumValue(UINT32_MAX);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
