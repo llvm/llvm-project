@@ -15,4 +15,3 @@
 
 ; RUN: llvm-objdump --prefix 'my/pre\fix' --source %t.o 2>&1 | \
 ; RUN:   FileCheck %s -DFILE=%t.o -DPREFIX='my/pre\fix'
-
