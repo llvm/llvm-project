@@ -453,12 +453,12 @@ These ops are converted to their LLVM counterparts: `llvm.load` and
 following cases, based on the value of the attribute:
 
 *   **Aligned**: alignment is passed on to LLVM op builder, for example: `mlir
-    // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr spirv.Store
+    // llvm.store %ptr, %val <alignment = 4> : !llvm.ptr spirv.Store
     "Function" %ptr, %val ["Aligned", 4] : f32`
 *   **None**: same case as if there is no memory access attribute.
 
 *   **Nontemporal**: set `nontemporal` flag, for example: `mlir // %res =
-    llvm.load %ptr {nontemporal} : !llvm.ptr %res = spirv.Load "Function"
+    llvm.load %ptr <nontemporal> : !llvm.ptr %res = spirv.Load "Function"
     %ptr ["Nontemporal"] : f32`
 
 *   **Volatile**: mark the op as `volatile`, for example: `mlir // %res =

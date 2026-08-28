@@ -16,7 +16,7 @@ llvm.func @basic_memset(%memset_value: i8) -> i32 {
   // CHECK: %[[SHIFTED_16:.*]] = llvm.shl %[[VALUE_16]], %[[C16]]
   // CHECK: %[[VALUE_32:.*]] = llvm.or %[[VALUE_16]], %[[SHIFTED_16]]
   // CHECK-NOT: "llvm.intr.memset"
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   // CHECK: llvm.return %[[VALUE_32]] : i32
   llvm.return %2 : i32
 }
@@ -40,7 +40,7 @@ llvm.func @memset_float(%memset_value: i8) -> f32 {
   // CHECK: %[[VALUE_32:.*]] = llvm.or %[[VALUE_16]], %[[SHIFTED_16]]
   // CHECK: %[[VALUE_FLOAT:.+]] = llvm.bitcast %[[VALUE_32]] : i32 to f32
   // CHECK-NOT: "llvm.intr.memset"
-  %load = llvm.load %alloca  alignment = 4 : !llvm.ptr -> f32
+  %load = llvm.load %alloca <alignment = 4> : !llvm.ptr -> f32
   // CHECK: llvm.return %[[VALUE_FLOAT]] : f32
   llvm.return %load : f32
 }
@@ -62,7 +62,7 @@ llvm.func @basic_memset_inline(%memset_value: i8) -> i32 {
   // CHECK: %[[SHIFTED_16:.*]] = llvm.shl %[[VALUE_16]], %[[C16]]
   // CHECK: %[[VALUE_32:.*]] = llvm.or %[[VALUE_16]], %[[SHIFTED_16]]
   // CHECK-NOT: "llvm.intr.memset.inline"
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   // CHECK: llvm.return %[[VALUE_32]] : i32
   llvm.return %2 : i32
 }
@@ -76,7 +76,7 @@ llvm.func @basic_memset_constant() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   %memset_len = llvm.mlir.constant(4 : i32) : i32
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   // CHECK: %[[CONSTANT_VAL:..*]] = llvm.mlir.constant(707406378 : i32) : i32
   // CHECK: llvm.return %[[CONSTANT_VAL]] : i32
   llvm.return %2 : i32
@@ -105,7 +105,7 @@ llvm.func @basic_memset_inline_constant() -> i32 {
   %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 4}> : (!llvm.ptr, i8) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   // CHECK: %[[CONSTANT_VAL:..*]] = llvm.mlir.constant(707406378 : i32) : i32
   // CHECK: llvm.return %[[CONSTANT_VAL]] : i32
   llvm.return %2 : i32
@@ -132,7 +132,7 @@ llvm.func @exotic_target_memset(%memset_value: i8) -> i40 {
   // CHECK: %[[SHIFTED_COMPL:.*]] = llvm.shl %[[VALUE_32]], %[[C32]]
   // CHECK: %[[VALUE_COMPL:.*]] = llvm.or %[[VALUE_32]], %[[SHIFTED_COMPL]]
   // CHECK-NOT: "llvm.intr.memset"
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i40
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i40
   // CHECK: llvm.return %[[VALUE_COMPL]] : i40
   llvm.return %2 : i40
 }
@@ -157,7 +157,7 @@ llvm.func @exotic_target_memset_inline(%memset_value: i8) -> i40 {
   // CHECK: %[[SHIFTED_COMPL:.*]] = llvm.shl %[[VALUE_32]], %[[C32]]
   // CHECK: %[[VALUE_COMPL:.*]] = llvm.or %[[VALUE_32]], %[[SHIFTED_COMPL]]
   // CHECK-NOT: "llvm.intr.memset.inline"
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i40
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i40
   // CHECK: llvm.return %[[VALUE_COMPL]] : i40
   llvm.return %2 : i40
 }
@@ -176,7 +176,7 @@ llvm.func @no_volatile_memset() -> i32 {
   %memset_len = llvm.mlir.constant(4 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = true}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -192,7 +192,7 @@ llvm.func @no_volatile_memset_inline() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = true, len = 4 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = true, len = 4}> : (!llvm.ptr, i8) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -210,7 +210,7 @@ llvm.func @no_partial_memset() -> i32 {
   %memset_len = llvm.mlir.constant(2 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -226,7 +226,7 @@ llvm.func @no_partial_memset_inline() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 2 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 2}> : (!llvm.ptr, i8) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -244,7 +244,7 @@ llvm.func @no_overflowing_memset() -> i32 {
   %memset_len = llvm.mlir.constant(6 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -260,7 +260,7 @@ llvm.func @no_overflowing_memset_inline() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 6 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 6}> : (!llvm.ptr, i8) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i32
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i32
   llvm.return %2 : i32
 }
 
@@ -278,7 +278,7 @@ llvm.func @only_byte_aligned_integers_memset() -> i10 {
   %memset_len = llvm.mlir.constant(2 : i32) : i32
   // CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[MEMSET_VALUE]], %[[MEMSET_LEN]]) <{isVolatile = false}>
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i10
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i10
   llvm.return %2 : i10
 }
 
@@ -294,7 +294,7 @@ llvm.func @only_byte_aligned_integers_memset_inline() -> i10 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   // CHECK: "llvm.intr.memset.inline"(%[[ALLOCA]], %[[MEMSET_VALUE]]) <{isVolatile = false, len = 2 : i64}>
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 2}> : (!llvm.ptr, i8) -> ()
-  %2 = llvm.load %1  alignment = 4 : !llvm.ptr -> i10
+  %2 = llvm.load %1 <alignment = 4> : !llvm.ptr -> i10
   llvm.return %2 : i10
 }
 

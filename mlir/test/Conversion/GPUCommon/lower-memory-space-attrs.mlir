@@ -64,7 +64,7 @@ gpu.module @kernel {
 // NVVM: llvm.mlir.global internal @__dynamic_shmem__0() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>
 // CHECK-LABEL:  llvm.func @dynamic_shmem_with_vector
 // CHECK: llvm.mlir.addressof @__dynamic_shmem__0 : !llvm.ptr<3>
-// CHECK: llvm.load %{{.*}}  alignment = 4 : !llvm.ptr<3> -> vector<1xf32>
+// CHECK: llvm.load %{{.*}} <alignment = 4> : !llvm.ptr<3> -> vector<1xf32>
 // CHECK: llvm.store
 
 // -----

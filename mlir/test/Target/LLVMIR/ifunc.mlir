@@ -20,6 +20,22 @@ llvm.func @foo_1(!llvm.ptr {llvm.noundef}, i32 {llvm.noundef})
 
 // -----
 
+// CHECK-DAG: @resolver_as3 = alias ptr (), addrspacecast (ptr @resolver to ptr addrspace(3))
+// CHECK-DAG: @ifunc_as3 = dso_local ifunc float (i64), ptr addrspace(3) @resolver_as3
+llvm.mlir.ifunc @ifunc_as3 : !llvm.func<f32 (i64)>, !llvm.ptr<3> @resolver_as3 addr_space = 3, dso_local
+llvm.mlir.alias external @resolver_as3 : !llvm.func<ptr ()> {
+  %0 = llvm.mlir.addressof @resolver : !llvm.ptr
+  %1 = llvm.addrspacecast %0 : !llvm.ptr to !llvm.ptr<3>
+  llvm.return %1 : !llvm.ptr<3>
+}
+llvm.func @resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.constant(333 : i64) : i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
 llvm.mlir.alias external @resolver_alias : !llvm.func<ptr ()> {
   %0 = llvm.mlir.addressof @resolver : !llvm.ptr
   llvm.return %0 : !llvm.ptr

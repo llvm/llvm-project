@@ -609,10 +609,10 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1
 // CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
 llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthrough: vector<7xf32>) {
   // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough) <{arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}>
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
   // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
-  "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}
+  "llvm.intr.masked.compressstore"(%0, %ptr, %mask) <{arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}>
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
 }
@@ -635,7 +635,7 @@ llvm.func @trap_intrinsics() {
   // CHECK: call void @llvm.debugtrap()
   "llvm.intr.debugtrap"() : () -> ()
   // CHECK: call void @llvm.ubsantrap(i8 1)
-  "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+  "llvm.intr.ubsantrap"() <{failureKind = 1 : i8}> : () -> ()
 
   // CHECK: call void @llvm.trap()
   llvm.intr.trap

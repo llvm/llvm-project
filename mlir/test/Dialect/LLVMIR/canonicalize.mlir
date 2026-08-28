@@ -434,10 +434,10 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %0 = llvm.load volatile %x : !llvm.ptr -> i8
   // Same with monotonic atomics and any stricter modes.
   // CHECK: llvm.load %{{.*}} atomic monotonic
-  %2 = llvm.load %x atomic monotonic  alignment = 1 : !llvm.ptr -> i8
+  %2 = llvm.load %x atomic monotonic <alignment = 1> : !llvm.ptr -> i8
   // But not unordered!
   // CHECK-NOT: llvm.load %{{.*}} atomic unordered
-  %3 = llvm.load %x  atomic unordered  alignment = 1 : !llvm.ptr -> i8
+  %3 = llvm.load %x  atomic unordered <alignment = 1> : !llvm.ptr -> i8
   llvm.return
 }
 

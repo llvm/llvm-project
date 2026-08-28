@@ -22,14 +22,14 @@
 // CHECK:           %[[ICMP_0:.*]] = llvm.icmp "sgt" %[[VAL_1]], %[[MLIR_2]] : i64
 // CHECK:           llvm.cond_br %[[ICMP_0]], ^bb2, ^bb3
 // CHECK:         ^bb2:
-// CHECK:           llvm.store %[[VAL_0]], %[[ALLOCA_1]] access_groups = [#[[$ATTR_0]]] : i32, !llvm.ptr
-// CHECK:           %[[LOAD_1:.*]] = llvm.load %[[ALLOCA_1]] access_groups = [#[[$ATTR_0]]] {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
-// CHECK:           %[[LOAD_2:.*]] = llvm.load %[[ARG1]] access_groups = [#[[$ATTR_0]]] {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
+// CHECK:           llvm.store %[[VAL_0]], %[[ALLOCA_1]] <access_groups = [#[[$ATTR_0]]]> : i32, !llvm.ptr
+// CHECK:           %[[LOAD_1:.*]] = llvm.load %[[ALLOCA_1]] <access_groups = [#[[$ATTR_0]]]> {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
+// CHECK:           %[[LOAD_2:.*]] = llvm.load %[[ARG1]] <access_groups = [#[[$ATTR_0]]]> {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
 // CHECK:           %[[ADD_0:.*]] = llvm.add %[[LOAD_1]], %[[LOAD_2]] : i32
 // CHECK:           %[[SITOFP_0:.*]] = llvm.sitofp %[[ADD_0]] : i32 to f32
 // CHECK:           %[[MLIR_5:.*]] = llvm.mlir.constant(72 : i32) : i32
 // CHECK:           "llvm.intr.memcpy"(%[[ALLOCA_0]], %[[ARG3]], %[[MLIR_5]]) <{access_groups = [#[[$ATTR_0]]], arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:           %[[LOAD_3:.*]] = llvm.load %[[ARG0]] access_groups = [#[[$ATTR_0]]] {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
+// CHECK:           %[[LOAD_3:.*]] = llvm.load %[[ARG0]] <access_groups = [#[[$ATTR_0]]]> {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
 // CHECK:           %[[SEXT_1:.*]] = llvm.sext %[[LOAD_3]] : i32 to i64
 // CHECK:           %[[SEXT_2:.*]] = llvm.sext %[[LOAD_1]] : i32 to i64
 // CHECK:           %[[GETELEMENTPTR_0:.*]] = llvm.getelementptr %[[ALLOCA_0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
@@ -59,8 +59,8 @@
 // CHECK:           %[[ADD_2:.*]] = llvm.add %[[MUL_4]], %[[ADD_1]] overflow<nsw, nuw> : i64
 // CHECK:           %[[MUL_5:.*]] = llvm.mul %[[MUL_2]], %[[LOAD_9]] overflow<nsw, nuw> : i64
 // CHECK:           %[[GETELEMENTPTR_7:.*]] = llvm.getelementptr nusw|nuw %[[LOAD_4]]{{\[}}%[[ADD_2]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK:           llvm.store %[[SITOFP_0]], %[[GETELEMENTPTR_7]] access_groups = [#[[$ATTR_0]]] : f32, !llvm.ptr
-// CHECK:           %[[LOAD_11:.*]] = llvm.load %[[ALLOCA_1]] access_groups = [#[[$ATTR_0]]] {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
+// CHECK:           llvm.store %[[SITOFP_0]], %[[GETELEMENTPTR_7]] <access_groups = [#[[$ATTR_0]]]> : f32, !llvm.ptr
+// CHECK:           %[[LOAD_11:.*]] = llvm.load %[[ALLOCA_1]] <access_groups = [#[[$ATTR_0]]]> {accessGroups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
 // CHECK:           %[[ADD_3:.*]] = llvm.add %[[LOAD_11]], %[[TRUNC_0]] overflow<nsw> : i32
 // CHECK:           %[[SUB_2:.*]] = llvm.sub %[[VAL_1]], %[[MLIR_3]] : i64
 // CHECK:           llvm.br ^bb1(%[[ADD_3]], %[[SUB_2]] : i32, i64) loop_annotation = #[[$ATTR_1]]

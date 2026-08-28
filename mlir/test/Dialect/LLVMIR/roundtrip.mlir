@@ -533,23 +533,23 @@ func.func @zero() {
 
 // CHECK-LABEL: @atomic_load
 func.func @atomic_load(%ptr : !llvm.ptr) {
-  // CHECK: llvm.load %{{.*}} atomic monotonic  alignment = 4 : !llvm.ptr -> f32
-  %0 = llvm.load %ptr atomic monotonic  alignment = 4 : !llvm.ptr -> f32
-  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic  alignment = 16 : !llvm.ptr -> f32
-  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic  alignment = 16 : !llvm.ptr -> f32
-  // CHECK: llvm.load %{{.*}} atomic monotonic  alignment = 4 : !llvm.ptr -> i128
-  %2 = llvm.load %ptr atomic monotonic  alignment = 4 : !llvm.ptr -> i128
+  // CHECK: llvm.load %{{.*}} atomic monotonic <alignment = 4> : !llvm.ptr -> f32
+  %0 = llvm.load %ptr atomic monotonic <alignment = 4> : !llvm.ptr -> f32
+  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr -> f32
+  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} atomic monotonic <alignment = 4> : !llvm.ptr -> i128
+  %2 = llvm.load %ptr atomic monotonic <alignment = 4> : !llvm.ptr -> i128
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_store
 func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
-  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic  alignment = 4 : f32, !llvm.ptr
-  llvm.store %val, %ptr atomic monotonic  alignment = 4 : f32, !llvm.ptr
-  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic  alignment = 16 : f32, !llvm.ptr
-  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic  alignment = 16 : f32, !llvm.ptr
-  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic  alignment = 4 : i256, !llvm.ptr
-  llvm.store %large_val, %ptr atomic monotonic  alignment = 4 : i256, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic <alignment = 4> : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 4> : f32, !llvm.ptr
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic <alignment = 16> : f32, !llvm.ptr
+  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic <alignment = 16> : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic <alignment = 4> : i256, !llvm.ptr
+  llvm.store %large_val, %ptr atomic monotonic <alignment = 4> : i256, !llvm.ptr
   llvm.return
 }
 
@@ -557,8 +557,8 @@ func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
 func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
   %0 = llvm.atomicrmw fadd %ptr, %f32 monotonic : !llvm.ptr, f32
-  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic  alignment = 16 : !llvm.ptr, f32
-  %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic  alignment = 16 : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
+  %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
@@ -570,22 +570,22 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
 func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
   // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
   %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
-  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic  alignment = 16 : !llvm.ptr, i32
-  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic  alignment = 16 : !llvm.ptr, i32
+  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic <alignment = 16> : !llvm.ptr, i32
+  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic <alignment = 16> : !llvm.ptr, i32
   llvm.return
 }
 
 // CHECK-LABEL: @invariant_load
 func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
-  // CHECK: llvm.load %{{.+}} invariant  alignment = 4 : !llvm.ptr -> i32
-  %0 = llvm.load %ptr invariant  alignment = 4 : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} invariant <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant <alignment = 4> : !llvm.ptr -> i32
   func.return %0 : i32
 }
 
 // CHECK-LABEL: @invariant_group_load
 func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
-  // CHECK: llvm.load %{{.+}} invariant_group  alignment = 4 : !llvm.ptr -> i32
-  %0 = llvm.load %ptr invariant_group  alignment = 4 : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} invariant_group <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant_group <alignment = 4> : !llvm.ptr -> i32
   func.return %0 : i32
 }
 

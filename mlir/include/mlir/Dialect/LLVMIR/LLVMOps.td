@@ -412,10 +412,10 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     %0 = llvm.load volatile %ptr : !llvm.ptr -> f32
 
     // A nontemporal load of a float variable.
-    %0 = llvm.load %ptr {nontemporal} : !llvm.ptr -> f32
+    %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
     // An atomic load of an integer variable.
-    %0 = llvm.load %ptr atomic monotonic {alignment = 8 : i64}
+    %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
     ```
 
@@ -428,14 +428,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
     (`dereferenceable` `` $dereferenceable^)?
-    oilist<`,`>(
-      `nontemporal` $nontemporal |
-      `alignment` `=` $alignment |
-      `access_groups` `=` $access_groups |
-      `alias_scopes` `=` $alias_scopes |
-      `noalias_scopes` `=` $noalias_scopes |
-      `tbaa` `=` $tbaa
-    )
+    prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
@@ -507,10 +500,10 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     llvm.store volatile %val, %ptr : f32, !llvm.ptr
 
     // A nontemporal store of a float variable.
-    llvm.store %val, %ptr {nontemporal} : f32, !llvm.ptr
+    llvm.store %val, %ptr <nontemporal> : f32, !llvm.ptr
 
     // An atomic store of an integer variable.
-    llvm.store %val, %ptr atomic monotonic {alignment = 8 : i64}
+    llvm.store %val, %ptr atomic monotonic <alignment = 8>
         : i64, !llvm.ptr
     ```
 
@@ -521,14 +514,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     (`invariant_group` $invariantGroup^)?
-    oilist<`,`>(
-      `nontemporal` $nontemporal |
-      `alignment` `=` $alignment |
-      `access_groups` `=` $access_groups |
-      `alias_scopes` `=` $alias_scopes |
-      `noalias_scopes` `=` $noalias_scopes |
-      `tbaa` `=` $tbaa
-    )
+    prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
   string llvmBuilder = [{
@@ -2418,13 +2404,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering
-    oilist<`,`>(
-      `alignment` `=` $alignment |
-      `access_groups` `=` $access_groups |
-      `alias_scopes` `=` $alias_scopes |
-      `noalias_scopes` `=` $noalias_scopes |
-      `tbaa` `=` $tbaa
-    )
+    prop-dict
     attr-dict `:`
     qualified(type($ptr)) `,` type($val)
   }];
@@ -2480,13 +2460,7 @@ def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
   let assemblyFormat = [{
     (`weak` $weak^)? (`volatile` $volatile_^)? $ptr `,` $cmp `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $success_ordering $failure_ordering
-    oilist<`,`>(
-      `alignment` `=` $alignment |
-      `access_groups` `=` $access_groups |
-      `alias_scopes` `=` $alias_scopes |
-      `noalias_scopes` `=` $noalias_scopes |
-      `tbaa` `=` $tbaa
-    )
+    prop-dict
     attr-dict `:`
     qualified(type($ptr)) `,` type($val)
   }];

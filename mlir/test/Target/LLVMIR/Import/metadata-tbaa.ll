@@ -8,8 +8,8 @@
 ; CHECK-DAG: #[[$T1:.*]] = #llvm.tbaa_tag<base_type = #[[D1]], access_type = #[[D1]], offset = 0>
 
 ; CHECK-LABEL: llvm.func @tbaa1
-; CHECK:         llvm.store %{{.*}}, %{{.*}} alignment = 4, tbaa = [#[[$T0]]] : i8, !llvm.ptr
-; CHECK:         llvm.store %{{.*}}, %{{.*}} alignment = 4, tbaa = [#[[$T1]]] : i8, !llvm.ptr
+; CHECK:         llvm.store %{{.*}}, %{{.*}} <alignment = 4, tbaa = [#[[$T0]]]> : i8, !llvm.ptr
+; CHECK:         llvm.store %{{.*}}, %{{.*}} <alignment = 4, tbaa = [#[[$T1]]]> : i8, !llvm.ptr
 define dso_local void @tbaa1(ptr %0, ptr %1) {
   store i8 1, ptr %0, align 4, !tbaa !0
   store i8 1, ptr %1, align 4, !tbaa !3
@@ -36,8 +36,8 @@ define dso_local void @tbaa1(ptr %0, ptr %1) {
 ; CHECK-DAG: #[[D4]] = #llvm.tbaa_type_desc<id = "agg1_t", members = {<#[[D3]], 0>, <#[[D3]], 4>}>
 
 ; CHECK-LABEL: llvm.func @tbaa2
-; CHECK:         llvm.load %{{.*}} alignment = 8, tbaa = [#[[$T0]]] : !llvm.ptr -> i64
-; CHECK:         llvm.store %{{.*}}, %{{.*}} alignment = 4, tbaa = [#[[$T1]]] : i32, !llvm.ptr
+; CHECK:         llvm.load %{{.*}} <alignment = 8, tbaa = [#[[$T0]]]> : !llvm.ptr -> i64
+; CHECK:         llvm.store %{{.*}}, %{{.*}} <alignment = 4, tbaa = [#[[$T1]]]> : i32, !llvm.ptr
 %struct.agg2_t = type { i64, i64 }
 %struct.agg1_t = type { i32, i32 }
 

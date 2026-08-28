@@ -1662,7 +1662,7 @@ llvm.func @atomicrmw(
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic  alignment = 8 : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1678,7 +1678,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %val: i32) {
   // CHECK:  cmpxchg weak volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic  alignment = 8 : !llvm.ptr, i32
+  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2089,9 +2089,9 @@ llvm.func @nontemporal_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: !nontemporal ![[NODE:[0-9]+]]
-  llvm.store %val, %0  nontemporal : i32, !llvm.ptr
+  llvm.store %val, %0 <nontemporal> : i32, !llvm.ptr
   // CHECK: !nontemporal ![[NODE]]
-  %1 = llvm.load %0  nontemporal : !llvm.ptr -> i32
+  %1 = llvm.load %0 <nontemporal> : !llvm.ptr -> i32
   llvm.return
 }
 
@@ -2127,17 +2127,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
-  %1 = llvm.load %ptr atomic acquire  alignment = 4 : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic acquire <alignment = 4> : !llvm.ptr -> f32
   // CHECK: load atomic
   // CHECK-SAME:  syncscope("singlethread") acquire, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire  alignment = 4 : !llvm.ptr -> f32
+  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire <alignment = 4> : !llvm.ptr -> f32
 
   // CHECK: store atomic
   // CHECK-SAME:  release, align 4
-  llvm.store %1, %ptr atomic release  alignment = 4 : f32, !llvm.ptr
+  llvm.store %1, %ptr atomic release <alignment = 4> : f32, !llvm.ptr
   // CHECK: store atomic
   // CHECK-SAME:  syncscope("singlethread") release, align 4
-  llvm.store %2, %ptr atomic syncscope("singlethread") release  alignment = 4 : f32, !llvm.ptr
+  llvm.store %2, %ptr atomic syncscope("singlethread") release <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 
@@ -2274,15 +2274,15 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
 
 // CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, f32) -> f32
 // CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, f32) -> f32
 
 // CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
   %exp = llvm.mlir.constant(1 : i32) : i32
-  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+  %19 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, i32) -> f32
 // CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
-  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
+  %20 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, i32) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> {{.*}})

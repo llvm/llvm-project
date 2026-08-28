@@ -16,6 +16,6 @@
 // CHECK: ![[BASE]] = !{!"omnipotent char", ![[ROOT:[0-9]+]], i64 0}
 // CHECK: ![[ROOT]] = distinct !{![[ROOT]]}
 llvm.func @tbaa_anonymous_root(%arg0: !llvm.ptr) {
-  %0 = llvm.load %arg0  tbaa = [#tbaa_tag_3] : !llvm.ptr -> i64
+  %0 = llvm.load %arg0 <tbaa = [#tbaa_tag_3]> : !llvm.ptr -> i64
   llvm.return
 }

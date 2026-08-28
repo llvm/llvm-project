@@ -302,7 +302,7 @@ func.func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]]  alignment = 4 : !llvm.ptr -> vector<17xf32>
+//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] <alignment = 4> : !llvm.ptr -> vector<17xf32>
 
 func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) -> vector<[17]xf32> {
   %f7 = arith.constant 7.0: f32
@@ -318,7 +318,7 @@ func.func @transfer_read_1d_inbounds_scalable(%A : memref<?xf32>, %base: index) 
 //  CHECK-SAME: (!llvm.ptr, i64) -> !llvm.ptr, f32
 //
 // 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]]  alignment = 4 : !llvm.ptr -> vector<[17]xf32>
+//       CHECK: %[[loaded:.*]] = llvm.load %[[gep]] <alignment = 4> : !llvm.ptr -> vector<[17]xf32>
 
 // -----
 

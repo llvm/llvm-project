@@ -13,8 +13,8 @@ func.func @load(%base : memref<200x100xf32>, %i : index, %j : index) -> vector<8
 
 // ALL-LABEL: func @load
 
-// VEC-ALIGN: llvm.load %{{.*}}  alignment = 32 : !llvm.ptr -> vector<8xf32>
-// MEMREF-ALIGN: llvm.load %{{.*}}  alignment = 4 : !llvm.ptr -> vector<8xf32>
+// VEC-ALIGN: llvm.load %{{.*}} <alignment = 32> : !llvm.ptr -> vector<8xf32>
+// MEMREF-ALIGN: llvm.load %{{.*}} <alignment = 4> : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -25,8 +25,8 @@ func.func @load_with_alignment_attribute(%base : memref<200x100xf32>, %i : index
 
 // ALL-LABEL: func @load_with_alignment_attribute
 
-// VEC-ALIGN: llvm.load %{{.*}}  alignment = 8 : !llvm.ptr -> vector<8xf32>
-// MEMREF-ALIGN: llvm.load %{{.*}}  alignment = 8 : !llvm.ptr -> vector<8xf32>
+// VEC-ALIGN: llvm.load %{{.*}} <alignment = 8> : !llvm.ptr -> vector<8xf32>
+// MEMREF-ALIGN: llvm.load %{{.*}} <alignment = 8> : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -42,8 +42,8 @@ func.func @store(%base : memref<200x100xf32>, %i : index, %j : index) {
 
 // ALL-LABEL: func @store
 
-// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}}  alignment = 16 :  vector<4xf32>, !llvm.ptr
-// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}}  alignment = 4 :  vector<4xf32>, !llvm.ptr
+// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 16> :  vector<4xf32>, !llvm.ptr
+// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 4> :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -55,8 +55,8 @@ func.func @store_with_alignment_attribute(%base : memref<200x100xf32>, %i : inde
 
 // ALL-LABEL: func @store_with_alignment_attribute
 
-// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}}  alignment = 8 :  vector<4xf32>, !llvm.ptr
-// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}}  alignment = 8 :  vector<4xf32>, !llvm.ptr
+// VEC-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 8> :  vector<4xf32>, !llvm.ptr
+// MEMREF-ALIGN: llvm.store %{{.*}}, %{{.*}} <alignment = 8> :  vector<4xf32>, !llvm.ptr
 
 // -----
 
