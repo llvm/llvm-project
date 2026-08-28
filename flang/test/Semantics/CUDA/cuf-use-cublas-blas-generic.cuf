@@ -1,0 +1,86 @@
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -emit-obj -x cuda -module-dir %t %t/cublas.cuf -o %t/cublas.o
+! RUN: %flang_fc1 -emit-obj -module-dir %t %t/blas.f90 -o %t/blas.o
+! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/external-first.cuf 2>&1 | FileCheck --check-prefix=UNPREFIXED %s
+! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/cublas-first.cuf 2>&1 | FileCheck --check-prefix=UNPREFIXED %s
+! RUN: not %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/cublas-prefixed.cuf 2>&1 | FileCheck --check-prefix=CUBLAS-PREFIXED %s
+
+! Unprefixed generics in the intrinsic CUBLAS module model the legacy BLAS
+! interface.  Compatible external interfaces may not override those generics.
+! CUBLAS-prefixed API generics do not receive this compatibility treatment.
+
+!--- cublas.cuf
+module cublas
+  implicit none
+  interface
+    subroutine saxpy(n, x)
+      integer :: n
+      real :: x(*)
+    end subroutine
+    subroutine saxpycu(n, x)
+      integer, value :: n
+      real, device :: x(*)
+    end subroutine
+    subroutine cublasaxpy(n, x)
+      integer :: n
+      real :: x(*)
+    end subroutine
+    subroutine cublasaxpycu(n, x)
+      integer, value :: n
+      real, device :: x(*)
+    end subroutine
+  end interface
+  interface saxpy
+    procedure :: saxpy, saxpycu
+  end interface
+  interface cublasaxpy
+    procedure :: cublasaxpy, cublasaxpycu
+  end interface
+end module
+
+!--- blas.f90
+module blas
+  implicit none
+  interface
+    subroutine saxpy(n, x)
+      integer :: n
+      real :: x(*)
+    end subroutine
+    subroutine cublasaxpy(n, x)
+      integer :: n
+      real :: x(*)
+    end subroutine
+  end interface
+end module
+
+!--- external-first.cuf
+module external_first
+  use blas, only: saxpy
+  use, intrinsic :: cublas, only: saxpy
+contains
+  subroutine test_cuda_specific()
+    real, device :: x(1)
+    call saxpy(1, x)
+  end subroutine
+end module
+
+!--- cublas-first.cuf
+module cublas_first
+  use, intrinsic :: cublas, only: saxpy
+  use blas, only: saxpy
+contains
+  subroutine test_cuda_specific()
+    real, device :: x(1)
+    call saxpy(1, x)
+  end subroutine
+end module
+
+!--- cublas-prefixed.cuf
+module cublas_prefixed
+  use blas, only: cublasaxpy
+  use, intrinsic :: cublas, only: cublasaxpy
+  procedure(cublasaxpy), pointer :: p
+end module
+
+! UNPREFIXED: warning: USE association selects intrinsic 'cublas' generic 'saxpy' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
+! CUBLAS-PREFIXED: error: 'cublasaxpy' must be an abstract interface or a procedure with an explicit interface
