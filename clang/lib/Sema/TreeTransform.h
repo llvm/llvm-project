@@ -9605,8 +9605,36 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
     }
   }
 
-  if (TransformStmts(Instantiations, S->getInstantiations()))
-    return StmtError();
+  // The expansion variable's initializer is rebuilt, so redo its lifetime
+  // extension.
+  bool IsEnumerating = S->getParent()->getExpansionPattern()->isEnumerating();
+  for (Stmt *OldInst : S->getInstantiations()) {
+    StmtResult NewInst;
+    if (IsEnumerating) {
+      auto *CS = cast<CompoundStmt>(OldInst);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      SmallVector<Stmt *, 2> Stmts;
+      for (Stmt *Sub : CS->body()) {
+        StmtResult R = Sub == CS->body_front()
+                           ? SemaRef.BuildEnumeratingExpansionVar([&] {
+                               return getDerived().TransformStmt(Sub);
+                             })
+                           : getDerived().TransformStmt(Sub);
+        if (R.isInvalid())
+          return StmtError();
+        Stmts.push_back(R.get());
+      }
+      NewInst = getDerived().RebuildCompoundStmt(
+          CS->getLBracLoc(), Stmts, CS->getRBracLoc(), /*IsStmtExpr=*/false);
+    } else {
+      NewInst = getDerived().TransformStmt(OldInst);
+    }
+    if (NewInst.isInvalid())
+      return StmtError();
+
+    SubStmtChanged |= NewInst.get() != OldInst;
+    Instantiations.push_back(NewInst.get());
+  }
 
   if (!getDerived().AlwaysRebuild() && !SubStmtChanged)
     return S;
@@ -9619,16 +9647,56 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXExpansionSelectExpr(
     CXXExpansionSelectExpr *E) {
-  ExprResult Range = getDerived().TransformExpr(E->getRangeExpr());
   ExprResult Idx = getDerived().TransformExpr(E->getIndexExpr());
-  if (Range.isInvalid() || Idx.isInvalid())
+  if (Idx.isInvalid())
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() && Range.get() == E->getRangeExpr() &&
-      Idx.get() == E->getIndexExpr())
-    return E;
+  InitListExpr *Range = E->getRangeExpr();
 
-  return SemaRef.BuildCXXExpansionSelectExpr(Range.getAs<InitListExpr>(),
+  // A known index means we're expanding; only the selected element is needed.
+  if (!Idx.get()->isValueDependent()) {
+    assert(llvm::none_of(Range->inits(), llvm::IsaPred<PackExpansionExpr>) &&
+           "expanding an expansion-init-list that still contains packs");
+    uint64_t I =
+        Idx.get()->EvaluateKnownConstInt(SemaRef.Context).getZExtValue();
+    return getDerived().TransformInitializer(Range->getInit(I),
+                                             /*NotCopyInit=*/false);
+  }
+
+  // Otherwise, rebuild the list. Each element is a full-expression of its own
+  // (the expansions of one pack share an evaluation context).
+  SmallVector<Expr *, 4> Inits;
+  for (Expr *Init : Range->inits()) {
+    EnterExpressionEvaluationContext Ctx(
+        SemaRef, SemaRef.currentEvaluationContext().Context);
+    SmallVector<Expr *, 2> Outputs;
+    if (getDerived().TransformExprs(&Init, 1, /*IsCall=*/false, Outputs))
+      return ExprError();
+
+    for (Expr *Out : Outputs) {
+      // Keep a pack expansion outermost by finishing its pattern instead.
+      if (auto *PE = dyn_cast<PackExpansionExpr>(Out)) {
+        Expr *Pattern = SemaRef.MaybeCreateExprWithCleanups(PE->getPattern());
+        if (Pattern != PE->getPattern()) {
+          ExprResult Res = getDerived().RebuildPackExpansion(
+              Pattern, PE->getEllipsisLoc(), PE->getNumExpansions());
+          if (Res.isInvalid())
+            return ExprError();
+          Out = Res.get();
+        }
+      } else {
+        Out = SemaRef.MaybeCreateExprWithCleanups(Out);
+      }
+      Inits.push_back(Out);
+    }
+  }
+
+  ExprResult NewRange = SemaRef.ActOnCXXExpansionInitList(
+      Inits, Range->getLBraceLoc(), Range->getRBraceLoc());
+  if (NewRange.isInvalid())
+    return ExprError();
+
+  return SemaRef.BuildCXXExpansionSelectExpr(cast<InitListExpr>(NewRange.get()),
                                              Idx.get());
 }
 

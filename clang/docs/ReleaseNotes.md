@@ -154,6 +154,10 @@ features cannot lower the translation-unit ABI level;
 - Clang now falls back to alignment-aware allocation functions for
   non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
 
+- Implemented [CWG3043](https://wg21.link/cwg3043): temporaries in an element
+  of the expansion-init-list of an enumerating expansion statement now persist
+  for the lifetime of the expansion variable initialized from that element.
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -535,6 +539,12 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+
+- Fixed an assertion failure in an enumerating expansion statement
+  (`template for`) when an element of the expansion-init-list needed cleanups,
+  e.g. a temporary bound to a reference parameter such as `{g(1), g(2)}` with
+  `int g(const int&)`, or a temporary of a type with a non-trivial destructor.
+  Each element is now a full-expression of its own. (#GH212630)
 
 #### Bug Fixes to AST Handling
 

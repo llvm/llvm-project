@@ -339,7 +339,6 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
     if (FinalizeExpansionVar(*this, ExpansionVar, Initializer))
       return StmtError();
 
-    // TODO: CWG3043 (lifetime extension in enumerating expansion statements).
     return BuildCXXEnumeratingExpansionStmtPattern(ESD, Init, DS, LParenLoc,
                                                    ColonLoc, RParenLoc);
   }
@@ -493,6 +492,25 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
       Context, ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
 }
 
+StmtResult
+Sema::BuildEnumeratingExpansionVar(llvm::function_ref<StmtResult()> Build) {
+  // CWG3043: Temporaries in the element persist for the lifetime of the
+  // expansion variable.
+  EnterExpressionEvaluationContext Ctx(*this,
+                                       currentEvaluationContext().Context);
+  currentEvaluationContext().InLifetimeExtendingContext = true;
+  currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
+
+  StmtResult Var = Build();
+  if (Var.isInvalid())
+    return StmtError();
+
+  ApplyForRangeOrExpansionStatementLifetimeExtension(
+      cast<VarDecl>(cast<DeclStmt>(Var.get())->getSingleDecl()),
+      currentEvaluationContext().ForRangeLifetimeExtendTemps);
+  return Var;
+}
+
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (!Exp || !Body)
     return StmtError();
@@ -544,17 +562,6 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     return Expansion;
   }
 
-  // Create a compound statement binding the expansion variable and body,
-  // as well as the 'iter' variable if this is an iterating expansion statement.
-  SmallVector<Stmt *, 3> StmtsToInstantiate;
-  if (Expansion->isIterating())
-    StmtsToInstantiate.push_back(Expansion->getIterVarStmt());
-  StmtsToInstantiate.push_back(Expansion->getExpansionVarStmt());
-  StmtsToInstantiate.push_back(Body);
-  Stmt *CombinedBody =
-      CompoundStmt::Create(Context, StmtsToInstantiate, FPOptionsOverride(),
-                           Body->getBeginLoc(), Body->getEndLoc());
-
   // Expand the body for each instantiation.
   SmallVector<Stmt *, 4> Instantiations;
   CXXExpansionStmtDecl *ESD = Expansion->getDecl();
@@ -574,10 +581,38 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     InstantiatingTemplate Inst(*this, Body->getBeginLoc(), Expansion, Arg,
                                Body->getSourceRange());
 
-    StmtResult Instantiation = SubstStmt(CombinedBody, MTArgList);
+    // Create a compound statement binding the expansion variable and body,
+    // as well as the 'iter' variable if this is an iterating expansion
+    // statement.
+    CompoundScopeRAII CompoundScope(*this);
+    SmallVector<Stmt *, 3> Stmts;
+    if (Expansion->isIterating()) {
+      StmtResult Iter = SubstStmt(Expansion->getIterVarStmt(), MTArgList);
+      if (Iter.isInvalid())
+        return StmtError();
+      Stmts.push_back(Iter.get());
+    }
+
+    auto SubstExpansionVar = [&] {
+      return SubstStmt(Expansion->getExpansionVarStmt(), MTArgList);
+    };
+    StmtResult ExpansionVar =
+        Expansion->isEnumerating()
+            ? BuildEnumeratingExpansionVar(SubstExpansionVar)
+            : SubstExpansionVar();
+    if (ExpansionVar.isInvalid())
+      return StmtError();
+    Stmts.push_back(ExpansionVar.get());
+
+    StmtResult Instantiation = SubstStmt(Body, MTArgList);
     if (Instantiation.isInvalid())
       return StmtError();
-    Instantiations.push_back(Instantiation.get());
+    Stmts.push_back(Instantiation.get());
+
+    Instantiations.push_back(ActOnCompoundStmt(Body->getBeginLoc(),
+                                               Body->getEndLoc(), Stmts,
+                                               /*isStmtExpr=*/false)
+                                 .get());
   }
 
   auto *InstantiationsStmt = CXXExpansionStmtInstantiation::Create(

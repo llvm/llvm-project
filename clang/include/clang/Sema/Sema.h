@@ -15839,6 +15839,12 @@ public:
 
   StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
 
+  /// Build the expansion variable of an enumerating expansion statement for
+  /// one expansion using \p Build, extending the lifetime of the temporaries
+  /// in its initializer to the variable.
+  StmtResult
+  BuildEnumeratingExpansionVar(llvm::function_ref<StmtResult()> Build);
+
   StmtResult BuildCXXEnumeratingExpansionStmtPattern(Decl *ESD, Stmt *Init,
                                                      Stmt *ExpansionVar,
                                                      SourceLocation LParenLoc,

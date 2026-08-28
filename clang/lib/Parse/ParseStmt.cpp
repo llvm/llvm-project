@@ -1965,9 +1965,11 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
     assert(Actions.CurContext->isExpansionStmt());
     Sema::ContextRAII CtxGuard(Actions, Actions.CurContext->getParent(),
                                /*NewThis=*/false);
+    // The elements of an expansion-init-list are already full-expressions.
     FRI.RangeExpr =
-        Tok.is(tok::l_brace) ? ParseExpansionInitList() : ParseExpression();
-    FRI.RangeExpr = Actions.MaybeCreateExprWithCleanups(FRI.RangeExpr);
+        Tok.is(tok::l_brace)
+            ? ParseExpansionInitList()
+            : Actions.MaybeCreateExprWithCleanups(ParseExpression());
   } else if (Tok.is(tok::l_brace)) {
     FRI.RangeExpr = ParseBraceInitializer();
   } else {
