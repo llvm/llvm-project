@@ -355,3 +355,55 @@ define i8 @test_umax_nneg(i8 %a, i8 %b) {
   %ret = call i8 @llvm.umax.i8(i8 %nneg_a, i8 %nneg_b)
   ret i8 %ret
 }
+
+; The smin is folded to %v using a range that only holds for its use on the
+; minmax -> join edge, and that rewrites the operand of %s. LVI must drop the
+; lattice element it cached for %s: intersecting the stale pre-fold range with
+; the range implied by %c makes %s look like 0 on the nonneg -> join edge, and
+; the phi is then folded to %s, which is wrong for any non-negative %v.
+;
+; FIXME: the phi below is folded away. That is the miscompile described above.
+define i16 @test_smin_at_use_invalidates_user(i8 %v, i1 %cc) {
+; CHECK-LABEL: @test_smin_at_use_invalidates_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[EARLY:%.*]], label [[MINMAX:%.*]]
+; CHECK:       early:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       minmax:
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[V:%.*]] to i16
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[V]], -1
+; CHECK-NEXT:    br i1 [[C]], label [[NONNEG:%.*]], label [[JOIN:%.*]]
+; CHECK:       nonneg:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; COM: The phi must not be folded away. Once it survives, the line below
+; COM: belongs here, and %r feeds off it instead of off %s:
+; COM: CHECK-NEXT: [[P:%.*]] = phi i16 [ 0, [[NONNEG]] ], [ [[S]], [[MINMAX]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i16 [ 7, [[EARLY]] ], [ [[S]], [[JOIN]] ]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+entry:
+  br i1 %cc, label %early, label %minmax
+
+early:
+  br label %exit
+
+minmax:
+  %m = call i8 @llvm.smin.i8(i8 %v, i8 0)
+  %s = sext i8 %m to i16
+  %c = icmp sgt i8 %v, -1
+  br i1 %c, label %nonneg, label %join
+
+nonneg:
+  br label %join
+
+join:
+  %p = phi i16 [ 0, %nonneg ], [ %s, %minmax ]
+  br label %exit
+
+exit:
+  %r = phi i16 [ 7, %early ], [ %p, %join ]
+  ret i16 %r
+}
