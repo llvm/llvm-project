@@ -1478,6 +1478,16 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
+static bool isSafePHIToSpeculate(PHINode &PN);
+
+/// Find the common load type used through a pointer PHI that SROA can
+/// speculate.
+static Type *findCommonTypeThroughPHI(PHINode &PN) {
+  if (!isSafePHIToSpeculate(PN))
+    return nullptr;
+  return cast<LoadInst>(PN.user_back())->getType();
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1501,6 +1511,8 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (auto *PN = dyn_cast<PHINode>(U->getUser())) {
+      UserTy = findCommonTypeThroughPHI(*PN);
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
