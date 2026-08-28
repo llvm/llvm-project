@@ -15384,23 +15384,23 @@ bool SCEVWrapPredicate::implies(const SCEVPredicate *N,
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   const SCEV *OpStep = Op->AR->getStepRecurrence(SE);
-  if (!SE.isKnownPositive(Step) || !SE.isKnownPositive(OpStep))
-    return false;
 
-  // If both steps are positive, this implies N, if N's start and step are
-  // ULE/SLE (for NSUW/NSSW) than this'.
+  // The widening is only for type mismatches. The kind of widening does not
+  // matter.
   Type *WiderTy = SE.getWiderType(Step->getType(), OpStep->getType());
-  Step = SE.getNoopOrZeroExtend(Step, WiderTy);
-  OpStep = SE.getNoopOrZeroExtend(OpStep, WiderTy);
+  Step = SE.getNoopOrAnyExtend(Step, WiderTy);
+  Start = SE.getNoopOrZeroExtend(Start, WiderTy);
 
-  bool IsNUW = Flags == SCEVWrapPredicate::IncrementNUSW;
-  OpStart = IsNUW ? SE.getNoopOrZeroExtend(OpStart, WiderTy)
-                  : SE.getNoopOrSignExtend(OpStart, WiderTy);
-  Start = IsNUW ? SE.getNoopOrZeroExtend(Start, WiderTy)
-                : SE.getNoopOrSignExtend(Start, WiderTy);
-  CmpInst::Predicate Pred = IsNUW ? CmpInst::ICMP_ULE : CmpInst::ICMP_SLE;
-  return SE.isKnownPredicate(Pred, OpStep, Step) &&
-         SE.isKnownPredicate(Pred, OpStart, Start);
+  bool Cond = (SE.isKnownNonNegative(Step) && SE.isKnownNonNegative(OpStep)) ||
+              SE.isKnownPredicate(CmpInst::ICMP_SGT, OpStep, Step);
+
+  // Extra conditions for nssw.
+  Cond &= Flags == SCEVWrapPredicate::IncrementNSSW
+              ? SE.isKnownPredicate(CmpInst::ICMP_SLE, OpStart, Start) &&
+                    SE.isKnownPredicate(CmpInst::ICMP_SLE, OpStep, Step)
+              : true;
+
+  return Cond;
 }
 
 bool SCEVWrapPredicate::isAlwaysTrue() const {

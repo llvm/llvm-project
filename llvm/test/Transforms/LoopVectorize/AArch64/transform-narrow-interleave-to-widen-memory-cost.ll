@@ -155,12 +155,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK5:%.*]] = icmp ult i64 [[TMP0]], 8
@@ -283,20 +278,7 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[B]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[C]], i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[C]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[C]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[TMP12]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK11:%.*]] = icmp ult i64 [[TMP0]], 8
@@ -515,12 +497,7 @@ define void @test_interleave_group_epilogue_with_preheader_phi(ptr %src, ptr %ds
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP8]], [[DST]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult ptr [[TMP11]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[IDENT_CHECK]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[IDENT_CHECK]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK5:%.*]] = icmp ult i64 [[TMP2]], 8

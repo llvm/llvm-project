@@ -148,7 +148,7 @@ define void @canonical_iv_matches_user_iv(i64 %n, ptr %A, ptr %B) {
 ; CHECK-LABEL: define void @canonical_iv_matches_user_iv(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 6
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
@@ -158,12 +158,7 @@ define void @canonical_iv_matches_user_iv(i64 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i64 24
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[TMP4]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 8

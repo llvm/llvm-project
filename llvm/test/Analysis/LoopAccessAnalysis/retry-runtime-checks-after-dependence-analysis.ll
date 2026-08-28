@@ -352,7 +352,6 @@ define void @retry_after_dep_check_with_unknown_offset(ptr %A, i32 %offset) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {(100 + %A),+,8}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:      {(100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A),+,8}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

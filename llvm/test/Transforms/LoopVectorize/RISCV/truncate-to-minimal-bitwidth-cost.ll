@@ -253,7 +253,7 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P2]], i64 8160
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P2]], i64 2040
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[P2]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:

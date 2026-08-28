@@ -257,7 +257,7 @@ define void @bounded_offset_load(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.load = getelementptr inbounds i32, ptr %a, i64 %idx.load:

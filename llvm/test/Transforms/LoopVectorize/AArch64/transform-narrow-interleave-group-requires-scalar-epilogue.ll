@@ -18,12 +18,7 @@ define void @interleave_group_exit_in_header(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[TMP1]], [[DST]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[TMP4]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], 1

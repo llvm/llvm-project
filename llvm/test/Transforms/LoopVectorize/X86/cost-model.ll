@@ -454,21 +454,16 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN10]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 24
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 18
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 1, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP9]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 1

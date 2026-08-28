@@ -26,7 +26,7 @@ define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
+; CHECK-NEXT:      {%A,+,4611686018427387905}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -75,7 +75,7 @@ define void @test_inbounds_gep_used_in_predicated_block_stored_value_operand(ptr
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
+; CHECK-NEXT:      {%A,+,4611686018427387905}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -126,7 +126,7 @@ define void @test_inbounds_gep_used_in_predicated_block_non_memop_user(ptr %A, i
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
+; CHECK-NEXT:      {%A,+,4611686018427387905}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

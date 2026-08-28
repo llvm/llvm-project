@@ -12,9 +12,7 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP0]], 4
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 8
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
@@ -32,24 +30,20 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP3]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP12]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP7]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP5]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
@@ -66,10 +60,10 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = or disjoint <4 x i64> [[TMP20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]

@@ -434,6 +434,8 @@ define i64 @for_and_ind_liveout_gep(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP4]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw i64 [[N_VEC]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 1, [[TMP11]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -453,7 +455,7 @@ define i64 @for_and_ind_liveout_gep(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
 ; THRESHOLD-LABEL: define i64 @for_and_ind_liveout_gep(

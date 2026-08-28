@@ -100,7 +100,6 @@ define void @int_and_multiple_pointer_predicates(ptr %v, ptr %w, i32 %N) {
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-NEXT:      {%v,+,4}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:      {%w,+,4}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -175,7 +174,6 @@ define void @wider_i32_nusw_does_not_imply_narrower_i4_nusw(ptr %dst, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:

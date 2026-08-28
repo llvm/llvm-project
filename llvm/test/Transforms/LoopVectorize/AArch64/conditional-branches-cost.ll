@@ -670,17 +670,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
-; DEFAULT-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT]]
-; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
-; DEFAULT-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; DEFAULT-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
@@ -822,17 +812,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; PRED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
 ; PRED-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
-; PRED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; PRED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; PRED-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP]]
-; PRED-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; PRED-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; PRED-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 [[MUL_RESULT]]
-; PRED-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP4]]
-; PRED-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; PRED-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
-; PRED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
+; PRED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; PRED-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 [[TMP0]])
