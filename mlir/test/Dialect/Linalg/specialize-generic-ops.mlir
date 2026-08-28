@@ -160,33 +160,9 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
 // ALL-LABEL: unary_ops
 // ALL-SAME: %[[A:.+]]: tensor<?x?x?xf32>, %[[OUT:.+]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
-// NAMED: %[[RES4:.+]] = linalg.floor
-// NAMED-SAME: ins(%[[A]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES5:.+]] = linalg.negf
-// NAMED-SAME: ins(%[[RES4]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES6:.+]] = linalg.reciprocal
-// NAMED-SAME: ins(%[[RES5]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES7:.+]] = linalg.round
-// NAMED-SAME: ins(%[[RES6]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES8:.+]] = linalg.sqrt
-// NAMED-SAME: ins(%[[RES7]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES9:.+]] = linalg.rsqrt
-// NAMED-SAME: ins(%[[RES8]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES10:.+]] = linalg.square
-// NAMED-SAME: ins(%[[RES9]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES11:.+]] = linalg.tanh
-// NAMED-SAME: ins(%[[RES10]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES12:.+]] = linalg.erf
-// NAMED-SAME: ins(%[[RES11]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// No unary linalg named ops remain, so generic-to-named leaves them as generics.
+// NAMED-NOT: linalg.elementwise
+// NAMED: linalg.generic
 
 // CATEGORY: %[[RES4:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<floor>
 // CATEGORY-SAME: ins(%[[A]] : tensor<?x?x?xf32>)

@@ -46,24 +46,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
     };
 
     switch (op.getKind()) {
-    case ElementwiseKind::floor:
-      return replaceWith(FloorOp{});
-    case ElementwiseKind::negf:
-      return replaceWith(NegFOp{});
-    case ElementwiseKind::reciprocal:
-      return replaceWith(ReciprocalOp{});
-    case ElementwiseKind::round:
-      return replaceWith(RoundOp{});
-    case ElementwiseKind::sqrt:
-      return replaceWith(SqrtOp{});
-    case ElementwiseKind::rsqrt:
-      return replaceWith(RsqrtOp{});
-    case ElementwiseKind::square:
-      return replaceWith(SquareOp{});
-    case ElementwiseKind::tanh:
-      return replaceWith(TanhOp{});
-    case ElementwiseKind::erf:
-      return replaceWith(ErfOp{});
     case ElementwiseKind::add:
       return replaceWith(AddOp{});
     case ElementwiseKind::sub:

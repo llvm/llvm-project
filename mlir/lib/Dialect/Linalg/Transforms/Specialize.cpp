@@ -104,10 +104,11 @@ static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
 //       linalg.yield %1 : f32
 //     } -> tensor<?x?xf32>
 //
-// is specialized to either
-//   linalg.floor ins(...) outs(...) -> ...
-// or
-//   linalg.elementwise kind=#linalg.elementwise_kind<floor> ...
+// is specialized to
+//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+//
+// A named op is emitted instead for binary/ternary ops that still have a
+// linalg.* named equivalent (e.g. linalg.add).
 //
 // Only the category op can carry non-identity indexing maps; these are
 // transferred verbatim from the `genericOp`.
@@ -191,33 +192,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   };
 
   if (isUnary) {
-    if (isa<math::FloorOp>(op))
-      return replaceOp(FloorOp{}, ElementwiseKind::floor);
-    if (isa<arith::NegFOp>(op))
-      return replaceOp(NegFOp{}, ElementwiseKind::negf);
-    if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
-      if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
-              divOp.getLhs().getDefiningOp()))
-        if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
-          return replaceOp(ReciprocalOp{}, ElementwiseKind::reciprocal,
-                           /*mayHoistScalarOperand=*/false);
-    }
-    if (isa<math::RoundOp>(op))
-      return replaceOp(RoundOp{}, ElementwiseKind::round);
-    if (isa<math::SqrtOp>(op))
-      return replaceOp(SqrtOp{}, ElementwiseKind::sqrt);
-    if (isa<math::RsqrtOp>(op))
-      return replaceOp(RsqrtOp{}, ElementwiseKind::rsqrt);
-    if (auto mulOp = dyn_cast<arith::MulFOp>(op);
-        mulOp && mulOp.getLhs() == mulOp.getRhs())
-      return replaceOp(SquareOp{}, ElementwiseKind::square);
-    if (isa<math::TanhOp>(op))
-      return replaceOp(TanhOp{}, ElementwiseKind::tanh);
-    if (isa<math::ErfOp>(op))
-      return replaceOp(ErfOp{}, ElementwiseKind::erf);
-
-    // The following ops only have the category (elementwise) form, but no
-    // linalg.* named op equivalent.
+    // Unary ops only have the category (elementwise) form; the linalg.* named
+    // unary ops have been removed.
     if (emitCategoryOp) {
       if (isa<math::ExpOp>(op))
         return replaceOp(nullptr, ElementwiseKind::exp);
@@ -225,6 +201,30 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
         return replaceOp(nullptr, ElementwiseKind::abs);
       if (isa<math::CeilOp>(op))
         return replaceOp(nullptr, ElementwiseKind::ceil);
+      if (isa<math::FloorOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::floor);
+      if (isa<arith::NegFOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::negf);
+      if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
+        if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
+                divOp.getLhs().getDefiningOp()))
+          if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
+            return replaceOp(nullptr, ElementwiseKind::reciprocal,
+                             /*mayHoistScalarOperand=*/false);
+      }
+      if (isa<math::RoundOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::round);
+      if (isa<math::SqrtOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::sqrt);
+      if (isa<math::RsqrtOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::rsqrt);
+      if (auto mulOp = dyn_cast<arith::MulFOp>(op);
+          mulOp && mulOp.getLhs() == mulOp.getRhs())
+        return replaceOp(nullptr, ElementwiseKind::square);
+      if (isa<math::TanhOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::tanh);
+      if (isa<math::ErfOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::erf);
       if (isa<math::SinOp>(op))
         return replaceOp(nullptr, ElementwiseKind::sin);
       if (isa<math::CosOp>(op))

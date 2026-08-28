@@ -571,13 +571,13 @@ module attributes {transform.with_named_sequence} {
 //     CHECK: scf.for %[[X:[A-Za-z0-9]+]] = {{.*}}
 //     CHECK:    %[[LINEAR_IDX:.+]] = affine.linearize_index disjoint [%[[X]], {{.*}} by (8, 32)
 //     CHECK:    %[[SLICE:.+]] = tensor.extract_slice %{{.*}}[0, 0, %[[LINEAR_IDX]]] [1, 1800, 32] [1, 1, 1] : tensor<1x1800x256xf32> to tensor<1x1800x32xf32>
-//     CHECK:    %[[ABS:.+]] = linalg.floor ins(%[[SLICE]]
+//     CHECK:    %[[ABS:.+]] = linalg.copy ins(%[[SLICE]]
 //     CHECK:    %[[EXPAND:.+]] = tensor.expand_shape %[[ABS]] {{\[\[}}0], [1], [2, 3]] output_shape [1, 1800, 1, 32]
 //     CHECK:    linalg.elementwise kind=#linalg.elementwise_kind<log> ins(%[[EXPAND]]
 module {
   func.func @bubble_up_extract_slice_through_expand_shape_and_fuse_with_expand_producer(%0: tensor<1x1800x256xf32>) -> tensor<1x1800x8x32xf32> {
     %empty1 = tensor.empty() : tensor<1x1800x256xf32>
-    %exp1 = linalg.floor ins(%0 : tensor<1x1800x256xf32>) outs(%empty1 : tensor<1x1800x256xf32>) -> tensor<1x1800x256xf32>
+    %exp1 = linalg.copy ins(%0 : tensor<1x1800x256xf32>) outs(%empty1 : tensor<1x1800x256xf32>) -> tensor<1x1800x256xf32>
     %expand = tensor.expand_shape %exp1 [[0], [1], [2, 3]] output_shape [1, 1800, 8, 32] : tensor<1x1800x256xf32> into tensor<1x1800x8x32xf32>
     %empty2 = tensor.empty() : tensor<1x1800x8x32xf32>
     %exp2 = linalg.elementwise kind=#linalg.elementwise_kind<log> ins(%expand : tensor<1x1800x8x32xf32>) outs(%empty2 : tensor<1x1800x8x32xf32>) -> tensor<1x1800x8x32xf32>
@@ -647,12 +647,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(
 // CHECK:           scf.for %[[X:[A-Za-z0-9]+]] = {{.*}}
 // CHECK:             %[[EXTRACT:.*]] = tensor.extract_slice
-// CHECK:             %[[ABS:.*]] = linalg.floor ins(%[[EXTRACT]]
+// CHECK:             %[[ABS:.*]] = linalg.copy ins(%[[EXTRACT]]
 // CHECK:             %[[COLLAPSE:.*]] = tensor.collapse_shape %[[ABS]]
 // CHECK:             %[[EXP:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<log> ins(%[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(%0: tensor<1x8x1800x32xf32>) -> tensor<8x1800x32xf32> {
   %empty1 = tensor.empty() : tensor<1x8x1800x32xf32>
-  %abs = linalg.floor ins(%0 : tensor<1x8x1800x32xf32>) outs(%empty1 : tensor<1x8x1800x32xf32>) -> tensor<1x8x1800x32xf32>
+  %abs = linalg.copy ins(%0 : tensor<1x8x1800x32xf32>) outs(%empty1 : tensor<1x8x1800x32xf32>) -> tensor<1x8x1800x32xf32>
   %expand = tensor.collapse_shape %abs [[0, 1], [2], [3]] : tensor<1x8x1800x32xf32> into tensor<8x1800x32xf32>
   %empty2 = tensor.empty() : tensor<8x1800x32xf32>
   %exp = linalg.elementwise kind=#linalg.elementwise_kind<log> ins(%expand : tensor<8x1800x32xf32>) outs(%empty2 : tensor<8x1800x32xf32>) -> tensor<8x1800x32xf32>

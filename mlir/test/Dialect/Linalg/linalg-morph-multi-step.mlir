@@ -4,45 +4,6 @@
 // RUN:   mlir-opt -linalg-morph-ops=generic-to-named -split-input-file | \
 // RUN:     FileCheck %s  --check-prefix=ALL,ROUND_TRIP
 
-func.func @unary_ops(%A : tensor<16x8xf32>, %B : tensor<16x8xf32>) ->  tensor<16x8xf32> {
-  %floor = linalg.floor ins(%A : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %negf = linalg.negf ins(%floor : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %recip = linalg.reciprocal ins(%negf : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %round = linalg.round ins(%recip : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %sqrt = linalg.sqrt ins(%round : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %rsqrt = linalg.rsqrt ins(%sqrt : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %square = linalg.square ins(%rsqrt : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %tanh = linalg.tanh ins(%square : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  %erf = linalg.erf ins(%tanh : tensor<16x8xf32>) outs(%B : tensor<16x8xf32>) -> tensor<16x8xf32>
-  return %erf :  tensor<16x8xf32>
-}
-
-// ALL-LABEL: unary_ops
-
-// NAMED_TO_GENERIC-COUNT-9: linalg.generic
-// NAMED_TO_GENERIC-NOT: linalg.floor
-// NAMED_TO_GENERIC-NOT: linalg.negf
-// NAMED_TO_GENERIC-NOT: linalg.reciprocal
-// NAMED_TO_GENERIC-NOT: linalg.round
-// NAMED_TO_GENERIC-NOT: linalg.sqrt
-// NAMED_TO_GENERIC-NOT: linalg.rsqrt
-// NAMED_TO_GENERIC-NOT: linalg.square
-// NAMED_TO_GENERIC-NOT: linalg.tanh
-// NAMED_TO_GENERIC-NOT: linalg.erf
-
-// ROUND_TRIP: linalg.floor
-// ROUND_TRIP: linalg.negf
-// ROUND_TRIP: linalg.reciprocal
-// ROUND_TRIP: linalg.round
-// ROUND_TRIP: linalg.sqrt
-// ROUND_TRIP: linalg.rsqrt
-// ROUND_TRIP: linalg.square
-// ROUND_TRIP: linalg.tanh
-// ROUND_TRIP: linalg.erf
-// ROUND_TRIP-NOT: linalg.generic
-
-// -----
-
 func.func @binary_ops_int(%A: tensor<?x?xi32>, %B: tensor<?x?xi32>,
                           %Out: tensor<?x?xi32>) -> tensor<?x?xi32> {
   %0 = linalg.add ins(%A, %B : tensor<?x?xi32>, tensor<?x?xi32>)
