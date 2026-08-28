@@ -9487,7 +9487,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       FrozenUndefMask.setBit(i);
       continue;
     }
-    Values.insert(Elt);
     if (!isIntOrFPConstant(Elt)) {
       IsAllConstants = false;
       NumConstants--;
@@ -9495,6 +9494,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     if (X86::isZeroNode(Elt)) {
       ZeroMask.setBit(i);
     } else {
+      Values.insert(Elt);
       NonZeroMask.setBit(i);
     }
   }
@@ -9689,13 +9689,31 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // movd/movss) to move this into the low element, then shuffle it into
     // place.
     if (EVTBits == 32) {
+      if ((VT.is256BitVector() || VT.is512BitVector()) && Idx < 4 &&
+          NumZero != 0) {
+        MVT HVT = MVT::getVectorVT(EltVT, 128 / EVTBits);
+        SDValue HItem = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, HVT, Item);
+        SDValue HShuf =
+            getShuffleVectorZeroOrUndef(HItem, Idx, true, Subtarget, DAG);
+        SDValue ZeroVec = getZeroVector(VT, Subtarget, DAG, dl);
+        return DAG.getInsertSubvector(dl, ZeroVec, HShuf, 0);
+      }
+      if (!Subtarget.hasSSE41() && NumZero > 0 && VT.is128BitVector() &&
+          Item.getOpcode() == ISD::LOAD && Item.hasOneUse()) {
+        SDValue V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
+        SDValue VZExt = DAG.getNode(X86ISD::VZEXT_MOVL, dl, VT, V);
+        SmallVector<int, 16> MaskVec(NumElems);
+        for (unsigned i = 0; i != NumElems; ++i)
+          MaskVec[i] = (i == Idx) ? 0 : 2; // Element 2 is zero!
+        return DAG.getVectorShuffle(VT, dl, VZExt, VZExt, MaskVec);
+      }
       Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
       return getShuffleVectorZeroOrUndef(Item, Idx, NumZero > 0, Subtarget, DAG);
     }
   }
 
   // Splat is obviously ok. Let legalizer expand it to a shuffle.
-  if (Values.size() == 1) {
+  if (Values.size() == 1 && NumZero == 0) {
     if (EVTBits == 32) {
       // Instead of a shuffle like this:
       // shuffle (scalar_to_vector (load (ptr + 4))), undef, <0, 0, 0, 0>
@@ -9728,7 +9746,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // If this is a splat of pairs of 32-bit elements, we can use a narrower
   // build_vector and broadcast it.
   // TODO: We could probably generalize this more.
-  if (Subtarget.hasAVX2() && EVTBits == 32 && Values.size() == 2) {
+  if (Subtarget.hasAVX2() && EVTBits == 32 && Values.size() <= 2) {
     SDValue Ops[4] = { Op.getOperand(0), Op.getOperand(1),
                        DAG.getUNDEF(EltVT), DAG.getUNDEF(EltVT) };
     auto CanSplat = [](SDValue Op, unsigned NumElems, ArrayRef<SDValue> Ops) {
