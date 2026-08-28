@@ -63,6 +63,14 @@ class SMSchedule;
 extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
 extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
 
+/// Software pipelining policy for a loop, which a target can customize by
+/// implementing TargetSubtargetInfo::overridePipelinerPolicy.
+struct MachinePipelinerPolicy {
+  /// Limit the register pressure of the scheduled loop, retrying at a higher
+  /// II when a schedule needs too many registers.
+  bool ShouldLimitRegPressure = false;
+};
+
 /// The main class in the implementation of the target independent
 /// software pipeliner pass.
 class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
@@ -287,12 +295,6 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   unsigned MII = 0;
   /// The maximum initiation interval between iterations for this schedule.
   unsigned MAX_II = 0;
-  /// The resource-constrained minimum initiation interval, i.e. the lower
-  /// bound on MII imposed by the availability of processor resources.
-  unsigned ResMII = 0;
-  /// The recurrence-constrained minimum initiation interval, i.e. the lower
-  /// bound on MII imposed by loop-carried dependence cycles.
-  unsigned RecMII = 0;
   /// Set to true if a valid pipelined schedule is found for the loop.
   bool Scheduled = false;
   MachineLoop &Loop;
@@ -300,6 +302,9 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   const RegisterClassInfo &RegClassInfo;
   unsigned II_setByPragma = 0;
   TargetInstrInfo::PipelinerLoopInfo *LoopPipelinerInfo = nullptr;
+
+  /// Policy for this loop, after target and command line overrides.
+  MachinePipelinerPolicy Policy;
 
   /// A topological ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
@@ -392,6 +397,7 @@ public:
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
         RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
         Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+    initPolicy();
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
@@ -458,6 +464,8 @@ public:
                              const MachineInstr *OtherMI) const;
 
 private:
+  /// Set the policy for this loop, allowing the target to override it.
+  void initPolicy();
   LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();

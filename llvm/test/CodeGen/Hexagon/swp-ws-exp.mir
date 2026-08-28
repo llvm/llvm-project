@@ -2,13 +2,8 @@
 # RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
 # RUN: | FileCheck %s
-# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner \
-# RUN: -window-sched=force -filetype=null -verify-machineinstrs \
-# RUN: -pass-remarks=pipeliner 2>&1 | FileCheck %s --check-prefix=REMARK
 
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
-
-# REMARK: remark: {{.*}}Window scheduled with Initiation Interval: {{[0-9]+}}
 
 --- |
   define void @exp_approx_top_six(i32 %N, ptr noalias %x, ptr noalias %y) #0 {

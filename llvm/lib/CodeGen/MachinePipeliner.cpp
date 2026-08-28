@@ -585,7 +585,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
 
   LI.LoopInductionVar = nullptr;
   LI.LoopCompare = nullptr;
-  LI.LoopPipelinerInfo = TII->analyzeLoopForPipelining(L.getTopBlock(), ORE);
+  LI.LoopPipelinerInfo = TII->analyzeLoopForPipelining(L.getTopBlock());
   if (!LI.LoopPipelinerInfo) {
     LLVM_DEBUG(dbgs() << "Unable to analyzeLoop, can NOT pipeline Loop\n");
     NumFailLoop++;
@@ -716,23 +716,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   Context.RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   WindowScheduler WS(&Context, L);
-  bool Scheduled = WS.run();
-  if (Scheduled) {
-    unsigned II = WS.getBestII();
-    ORE->emit([&]() {
-      return MachineOptimizationRemark(DEBUG_TYPE, "window-schedule",
-                                       L.getStartLoc(), L.getHeader())
-             << "Window scheduled with Initiation Interval: "
-             << ore::NV("II", II);
-    });
-  } else {
-    ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "window-schedule",
-                                             L.getStartLoc(), L.getHeader())
-             << "Failed to find a valid window schedule";
-    });
-  }
-  return Scheduled;
+  return WS.run();
 }
 
 bool MachinePipeliner::useSwingModuloScheduler() {
@@ -1668,7 +1652,7 @@ private:
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getVRegDef(Reg)->getParent() == OrigMBB;
+    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -2793,6 +2777,15 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   });
 }
 
+/// Set the policy for this loop, allowing the target to override it.
+void SwingSchedulerDAG::initPolicy() {
+  MF.getSubtarget().overridePipelinerPolicy(Policy);
+
+  // After subtarget overrides, apply command line options.
+  if (LimitRegPressure.getNumOccurrences())
+    Policy.ShouldLimitRegPressure = LimitRegPressure;
+}
+
 /// Process the nodes in the computed order and create the pipelined schedule
 /// of the instructions, if possible. Return true if a schedule is found.
 bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
@@ -2804,7 +2797,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
   bool scheduleFound = false;
   std::unique_ptr<HighRegisterPressureDetector> HRPDetector;
-  if (LimitRegPressure) {
+  if (Policy.ShouldLimitRegPressure) {
     HRPDetector =
         std::make_unique<HighRegisterPressureDetector>(Loop.getHeader(), MF);
     HRPDetector->init(RegClassInfo);
@@ -2888,9 +2881,9 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     if (scheduleFound)
       scheduleFound = Schedule.isValidSchedule(this);
 
-    // If a schedule was found and the option is enabled, check if the schedule
-    // might generate additional register spills/fills.
-    if (scheduleFound && LimitRegPressure)
+    // If a schedule was found and the detector is enabled, check if the
+    // schedule might generate additional register spills/fills.
+    if (scheduleFound && HRPDetector)
       scheduleFound =
           !HRPDetector->detect(this, Schedule, Schedule.getMaxStageCount());
   }
@@ -2913,10 +2906,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
              << "Schedule found with Initiation Interval: "
              << ore::NV("II", Schedule.getInitiationInterval())
              << ", MaxStageCount: "
-             << ore::NV("MaxStageCount", Schedule.getMaxStageCount())
-             << ", ResMII: " << ore::NV("ResMII", ResMII)
-             << ", RecMII: " << ore::NV("RecMII", RecMII) << ", Bound: "
-             << ore::NV("Bound", ResMII >= RecMII ? "Resource" : "Recurrence");
+             << ore::NV("MaxStageCount", Schedule.getMaxStageCount());
     });
   } else
     Schedule.reset();
@@ -2931,7 +2921,7 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
     Register Reg = Use.getReg();
     if (!Reg.isVirtual())
       return Register();
-    if (MRI.getVRegDef(Reg)->getParent() != MI.getParent())
+    if (MRI.getDefBlock(Reg) != MI.getParent())
       continue;
     if (Result)
       return Register();

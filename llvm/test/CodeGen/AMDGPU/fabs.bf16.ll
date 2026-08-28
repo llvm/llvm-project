@@ -240,8 +240,6 @@ define amdgpu_kernel void @s_fabs_v4bf16(ptr addrspace(1) %out, <4 x bfloat> %in
 ; VI-NEXT:    s_lshr_b32 s2, s2, 16
 ; VI-NEXT:    s_and_b32 s3, s3, 0x7fff
 ; VI-NEXT:    s_and_b32 s2, s2, 0x7fff
-; VI-NEXT:    s_and_b32 s4, 0xffff, s4
-; VI-NEXT:    s_and_b32 s5, 0xffff, s5
 ; VI-NEXT:    s_lshl_b32 s3, s3, 16
 ; VI-NEXT:    s_lshl_b32 s2, s2, 16
 ; VI-NEXT:    s_or_b32 s3, s4, s3

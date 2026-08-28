@@ -3,9 +3,10 @@
 ; RUN:   | FileCheck %s
 ;
 ; Test non-volatile memmoves of small constant lengths in both aligned and
-; unaligned cases.
+; unaligned cases. Also test memmoves with i32 length operands.
 
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
+declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
 define void @fun1(ptr %Dst, ptr %Src) {
 ; CHECK-LABEL: fun1:
@@ -981,5 +982,13 @@ define void @displ2(ptr %Dst, ptr %Src) {
   %Src.fld = getelementptr inbounds nuw i8, ptr %Src, i64 4096
   call void @llvm.memmove.p0.p0.i64(ptr align 8 %Dst.fld, ptr align 8 %Src.fld, i64 3,
                                     i1 false)
+  ret void
+}
+
+; Test memmoves with i32 length operand (must not crash).
+define void @fun_i32len_40(ptr %Dst, ptr %Src) {
+; CHECK-LABEL: fun_i32len_40:
+; CHECK-NOT: memmove
+  call void @llvm.memmove.p0.p0.i32(ptr %Dst, ptr %Src, i32 40, i1 false)
   ret void
 }

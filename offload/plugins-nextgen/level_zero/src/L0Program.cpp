@@ -43,6 +43,14 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
+bool L0GlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  // Images returned by the Level Zero runtime do not correctly expose kernel
+  // functions as global symbols. Bypass the normal ELF handling.here.
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return !(Flags & Ignored);
+}
+
 inline L0DeviceTy &L0ProgramTy::getL0Device() const {
   return L0DeviceTy::makeL0Device(getDevice());
 }

@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCComputeLowering.cpp
   ACCRoutineLowering.cpp
   ACCRoutineToGPUFunc.cpp
+  ACCDeclareCtorDtorConversion.cpp
   ACCDeclareGPUModuleInsertion.cpp
   ACCEmitRemarksLoop.cpp
   ACCEmitRemarksPrivate.cpp
@@ -45,6 +46,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIRGPUDialect
   MLIRGPUUtils
   MLIRIR
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRNVVMDialect
   MLIRPass
