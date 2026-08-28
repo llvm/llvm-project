@@ -46,6 +46,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
+  case RecurKind::IntLinear:
   case RecurKind::Or:
   case RecurKind::And:
   case RecurKind::Xor:
@@ -1222,6 +1223,99 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     }
   }
 
+  return true;
+}
+
+bool RecurrenceDescriptor::isLinearRecurrencePHI(PHINode *Phi, Loop *TheLoop,
+                                                 RecurrenceDescriptor &RedDes,
+                                                 ScalarEvolution *SE,
+                                                 Value **Coeff, Value **X) {
+  // Basic structural checks: the PHI must be in the loop header, with two
+  // incoming values, and of integer type.
+  if (Phi->getNumIncomingValues() != 2 ||
+      Phi->getParent() != TheLoop->getHeader() ||
+      !Phi->getType()->isIntegerTy())
+    return false;
+  auto *Preheader = TheLoop->getLoopPreheader();
+  auto *Latch = TheLoop->getLoopLatch();
+  if (!Preheader || !Latch)
+    return false;
+
+  Value *Start = Phi->getIncomingValueForBlock(Preheader);
+  auto *Exit = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
+  if (!Exit || !TheLoop->contains(Exit))
+    return false;
+
+  // The backedge value must be an add of the form add(mul(Phi, C), X) (the
+  // add and mul operands may be swapped), where C is loop-invariant and X is a
+  // loop-varying value that does not depend on Phi.
+  auto *Add = dyn_cast<BinaryOperator>(Exit);
+  if (!Add || Add->getOpcode() != Instruction::Add)
+    return false;
+
+  BinaryOperator *Mul = dyn_cast<BinaryOperator>(Add->getOperand(0));
+  Value *XVal = Add->getOperand(1);
+  if (!Mul || Mul->getOpcode() != Instruction::Mul) {
+    Mul = dyn_cast<BinaryOperator>(Add->getOperand(1));
+    XVal = Add->getOperand(0);
+  }
+  if (!Mul || Mul->getOpcode() != Instruction::Mul)
+    return false;
+
+  // The mul must use Phi and a loop-invariant coefficient.
+  Value *C = nullptr;
+  if (Mul->getOperand(0) == Phi)
+    C = Mul->getOperand(1);
+  else if (Mul->getOperand(1) == Phi)
+    C = Mul->getOperand(0);
+  else
+    return false;
+  if (!SE->isLoopInvariant(SE->getSCEV(C), TheLoop))
+    return false;
+
+  // X must be an in-loop value that does not depend on Phi.
+  auto *XI = dyn_cast<Instruction>(XVal);
+  if (!XI || !TheLoop->contains(XI))
+    return false;
+  SmallPtrSet<Value *, 8> Visited;
+  SmallVector<Value *, 4> Worklist({XVal});
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (V == Phi)
+      return false;
+    if (!Visited.insert(V).second)
+      continue;
+    if (auto *I = dyn_cast<Instruction>(V))
+      for (Value *Op : I->operands())
+        Worklist.push_back(Op);
+  }
+
+  // Phi may only be used in-loop by the mul and must not have outside uses.
+  // The mul may only feed the add, and in-loop uses of the add other than the
+  // PHI backedge are not allowed.
+  for (User *U : Phi->users()) {
+    Instruction *UI = cast<Instruction>(U);
+    if (!TheLoop->contains(UI) || UI != Mul)
+      return false;
+  }
+  if (!Mul->hasOneUse())
+    return false;
+  for (User *U : Add->users()) {
+    Instruction *UI = cast<Instruction>(U);
+    if (UI == Phi)
+      continue;
+    if (TheLoop->contains(UI))
+      return false;
+  }
+
+  RedDes = RecurrenceDescriptor(Start, Exit, /*Store=*/nullptr,
+                                RecurKind::IntLinear, FastMathFlags(),
+                                /*ExactFP=*/nullptr, Phi->getType());
+  if (Coeff)
+    *Coeff = C;
+  if (X)
+    *X = XVal;
+  LLVM_DEBUG(dbgs() << "Found a linear recurrence PHI." << *Phi << "\n");
   return true;
 }
 

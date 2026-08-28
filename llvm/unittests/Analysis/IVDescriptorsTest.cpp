@@ -386,6 +386,148 @@ for.end:
       });
 }
 
+// This tests that a linear recurrence h = C * h + x with a loop-invariant
+// coefficient C is recognized.
+TEST(IVDescriptorsTest, LinearRecurrence) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define i32 @rabin_karp(ptr %s, i64 %n) {
+    entry:
+      br label %for.body
+
+    for.body:
+      %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+      %h = phi i32 [ 0, %entry ], [ %h.next, %for.body ]
+      %arrayidx = getelementptr inbounds i32, ptr %s, i64 %i
+      %ld = load i32, ptr %arrayidx
+      %mul = mul i32 %h, 31
+      %h.next = add i32 %ld, %mul
+      %i.next = add nsw i64 %i, 1
+      %cmp = icmp slt i64 %i.next, %n
+      br i1 %cmp, label %for.body, label %for.end
+
+    for.end:
+      %h.lcssa = phi i32 [ %h.next, %for.body ]
+      ret i32 %h.lcssa
+    })");
+
+  runWithLoopInfoAndSE(
+      *M, "rabin_karp", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        ++BBI;
+        PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+        assert(Phi->getName() == "h");
+        RecurrenceDescriptor Rdx;
+        bool IsRdxPhi =
+            RecurrenceDescriptor::isLinearRecurrencePHI(Phi, L, Rdx, &SE);
+        EXPECT_TRUE(IsRdxPhi);
+        EXPECT_EQ(Rdx.getRecurrenceKind(), RecurKind::IntLinear);
+        EXPECT_EQ(Rdx.getLoopExitInstr()->getName(), "h.next");
+      });
+}
+
+// Linear recurrences with a loop-varying coefficient, with in-loop uses of the
+// recurrence outside the chain, or with direct outside uses of the recurrence
+// must not be recognized.
+TEST(IVDescriptorsTest, UnsupportedLinearRecurrence) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define i32 @varying_coeff(ptr %s, ptr %cptr, i64 %n) {
+    entry:
+      br label %for.body
+
+    for.body:
+      %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+      %h = phi i32 [ 0, %entry ], [ %h.next, %for.body ]
+      %c = load i32, ptr %cptr
+      %arrayidx = getelementptr inbounds i32, ptr %s, i64 %i
+      %ld = load i32, ptr %arrayidx
+      %mul = mul i32 %h, %c
+      %h.next = add i32 %ld, %mul
+      %i.next = add nsw i64 %i, 1
+      %cmp = icmp slt i64 %i.next, %n
+      br i1 %cmp, label %for.body, label %for.end
+
+    for.end:
+      %h.lcssa = phi i32 [ %h.next, %for.body ]
+      ret i32 %h.lcssa
+    }
+
+    define i32 @used_in_loop(ptr %s, ptr %dst, i64 %n) {
+    entry:
+      br label %for.body
+
+    for.body:
+      %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+      %h = phi i32 [ 0, %entry ], [ %h.next, %for.body ]
+      %arrayidx = getelementptr inbounds i32, ptr %s, i64 %i
+      %ld = load i32, ptr %arrayidx
+      %mul = mul i32 %h, 31
+      %h.next = add i32 %ld, %mul
+      store i32 %h, ptr %dst
+      %i.next = add nsw i64 %i, 1
+      %cmp = icmp slt i64 %i.next, %n
+      br i1 %cmp, label %for.body, label %for.end
+
+    for.end:
+      %h.lcssa = phi i32 [ %h.next, %for.body ]
+      ret i32 %h.lcssa
+    }
+
+    define i32 @used_outside(ptr %s, i64 %n) {
+    entry:
+      br label %for.body
+
+    for.body:
+      %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+      %h = phi i32 [ 0, %entry ], [ %h.next, %for.body ]
+      %arrayidx = getelementptr inbounds i32, ptr %s, i64 %i
+      %ld = load i32, ptr %arrayidx
+      %mul = mul i32 %h, 31
+      %h.next = add i32 %ld, %mul
+      %i.next = add nsw i64 %i, 1
+      %cmp = icmp slt i64 %i.next, %n
+      br i1 %cmp, label %for.body, label %for.end
+
+    for.end:
+      ret i32 %h
+    })");
+
+  auto Check = [&](StringRef FuncName) {
+    runWithLoopInfoAndSE(
+        *M, FuncName, [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+          Function::iterator FI = F.begin();
+          // First basic block is entry - skip it.
+          BasicBlock *Header = &*(++FI);
+          Loop *L = LI.getLoopFor(Header);
+          EXPECT_NE(L, nullptr);
+          BasicBlock::iterator BBI = Header->begin();
+          assert((&*BBI)->getName() == "i");
+          ++BBI;
+          PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+          EXPECT_NE(Phi, nullptr);
+          RecurrenceDescriptor Rdx;
+          bool IsRdxPhi =
+              RecurrenceDescriptor::isLinearRecurrencePHI(Phi, L, Rdx, &SE);
+          EXPECT_FALSE(IsRdxPhi);
+        });
+  };
+  Check("varying_coeff");
+  Check("used_in_loop");
+  Check("used_outside");
+}
+
 // Make sure isReductionPHI doesn't crash when SE is not passed to it.
 TEST(IVDescriptorsTest, InvariantStoreNoSCEV) {
   // Parse the module.
