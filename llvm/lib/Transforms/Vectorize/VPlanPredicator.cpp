@@ -382,11 +382,30 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       continue;
     }
 
+    auto Terms = computeBlendTerms(PhiR);
+    SmallVector<VPBasicBlock *> MaskBlocks;
+    for (auto [_, ConstMaskBlock] : Terms)
+      MaskBlocks.push_back(const_cast<VPBasicBlock *>(ConstMaskBlock));
+
+    // The in-mask of the common dominator is true on all paths from an
+    // incoming block to the phi. Remove it from the blend masks.
+    VPBasicBlock *CommonIncomingDom =
+        cast<VPBasicBlock>(VPDT.findNearestCommonDominator(
+            make_range(MaskBlocks.begin(), MaskBlocks.end())));
+    VPValue *CommonIncomingMask = getBlockInMask(CommonIncomingDom);
+
     SmallVector<VPValue *, 2> OperandsWithMask;
-    for (auto [V, MaskBlock] : computeBlendTerms(PhiR)) {
+    for (auto [V, ConstMaskBlock] : Terms) {
+      auto *MaskBlock = const_cast<VPBasicBlock *>(ConstMaskBlock);
       VPValue *Mask = getBlockInMask(MaskBlock);
-      OperandsWithMask.append({V, Mask ? Mask : Plan.getTrue()});
+      VPValue *RemainingMask = nullptr;
+      bool RemovedCommonMask =
+          CommonIncomingMask && Mask &&
+          match(Mask, m_RemoveMask(CommonIncomingMask, RemainingMask));
+      VPValue *BlendMask = RemovedCommonMask ? RemainingMask : Mask;
+      OperandsWithMask.append({V, BlendMask ? BlendMask : Plan.getTrue()});
     }
+
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
         new VPBlendRecipe(IRPhi, OperandsWithMask, *PhiR, PhiR->getDebugLoc());
