@@ -256,12 +256,12 @@ jobs:
       id: setup-stage
       shell: bash
       run: |
-        build_prefix="$GITHUB_WORKSPACE"
-        if [ "$RUNNER_OS" = "Linux" ]; then
-          sudo chown "$USER:$USER" /mnt/
+        build_prefix=`pwd`
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          sudo chown $USER:$USER /mnt/
           build_prefix=/mnt/
         fi
-        echo "build-prefix=$build_prefix" >> "$GITHUB_OUTPUT"
+        echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
     - name: Configure Linux/MacOS
       id: build
