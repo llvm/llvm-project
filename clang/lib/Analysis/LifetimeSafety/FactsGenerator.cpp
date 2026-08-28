@@ -1033,22 +1033,31 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool IsInstance =
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getParamDeclAt = [FD, IsInstance](unsigned I) -> const ParmVarDecl * {
+  auto getArgCaptureByAttr =
+      [FD, IsInstance](
+          unsigned I) -> std::pair<const LifetimeCaptureByAttr *, QualType> {
     if (IsInstance) {
-      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
-      if (I > 0 && I - 1 < FD->getNumParams())
-        return FD->getParamDecl(I - 1);
+      if (I == 0) {
+        auto *MethodDecl = cast<CXXMethodDecl>(FD);
+        QualType ParamType = MethodDecl->getFunctionObjectParameterType();
+        return {getCaptureByAttrFromFunctionType(FD), ParamType};
+      }
+      if (I > 0 && I - 1 < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     } else {
-      if (I < FD->getNumParams())
-        return FD->getParamDecl(I);
+      if (I < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     }
-    return nullptr;
+    return {nullptr, QualType()};
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const ParmVarDecl *PVD = getParamDeclAt(I);
-    if (!PVD)
-      continue;
-    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
+    auto [Attr, ParamType] = getArgCaptureByAttr(I);
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
@@ -1056,7 +1065,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       continue;
     // For references to pointer-like types, peel the outer origin (the pointer
     // object itself) so that we capture the underlying data (the inner origin).
-    if (QualType ParamType = PVD->getType();
+    if (!ParamType.isNull() &&
         (ParamType->isReferenceType() &&
          isPointerLikeType(ParamType->getPointeeType())) &&
         CapturedOriginList->getLength() > 1)
@@ -1067,13 +1076,8 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
           CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
           CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
         continue;
-      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
-      const Expr *CapturedByArg =
-          (CapturingArgIdx == LifetimeCaptureByAttr::This)
-              ? Args[0]
-              : CallArgs[CapturingArgIdx];
+      const Expr *CapturedByArg = Args[CapturingArgIdx];
       assert(CapturedByArg && "Capturer expression must be valid");
-
       OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
       OriginList *Dest = getRValueOrigins(CapturedByArg, CapturingOriginList);
       if (!Dest)

@@ -60,6 +60,12 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
+/// Check if a function has a lifetime_capture_by attribute on its declaration
+/// or its function type (which represents the implicit 'this' parameter for
+/// methods). Returns the attribute if found, nullptr otherwise.
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD);
+
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 

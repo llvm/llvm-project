@@ -136,6 +136,24 @@ FunctionCallInfo getFunctionCallInfo(const Expr *Call) {
   return Info;
 }
 
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  // Walk through the type layers looking for a capture_by attribute.
+  TypeLoc TL = TSI->getTypeLoc();
+  while (true) {
+    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
+    if (!ATL)
+      break;
+    if (auto *Attr = ATL.getAttrAs<LifetimeCaptureByAttr>())
+      return Attr;
+    TL = ATL.getModifiedLoc();
+  }
+  return nullptr;
+}
+
 std::optional<LifetimeBoundParamInfo>
 getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
                   unsigned I) {
