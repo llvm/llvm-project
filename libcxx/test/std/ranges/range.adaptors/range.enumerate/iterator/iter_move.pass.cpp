@@ -29,6 +29,11 @@
 
 #include "../types.h"
 
+struct ThrowingMove {
+  ThrowingMove() = default;
+  ThrowingMove(ThrowingMove&&) {}
+};
+
 template <class Iterator, bool HasNoexceptIterMove>
 constexpr void test() {
   using Sentinel          = sentinel_wrapper<Iterator>;
@@ -38,19 +43,30 @@ constexpr void test() {
 
   std::array array{0, 1, 2, 3, 4};
 
-  View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
-  EnumerateView ev{std::move(mv)};
-  EnumerateIterator const it = ev.begin();
+  {
+    View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
+    EnumerateView ev{std::move(mv)};
+    EnumerateIterator const it = ev.begin();
 
-  auto&& result = iter_move(it);
+    auto&& result = iter_move(it);
 
-  using DifferenceT = std::iter_difference_t<EnumerateIterator>;
-  static_assert(std::is_same_v<decltype(result), std::tuple<DifferenceT, int&&>&&>);
+    using DifferenceT = std::iter_difference_t<EnumerateIterator>;
+    static_assert(std::is_same_v<decltype(result), std::tuple<DifferenceT, int&&>&&>);
 
-  assert(get<0>(result) == 0);
-  assert(&get<1>(result) == std::to_address(base(array.begin())));
+    assert(get<0>(result) == 0);
+    assert(&get<1>(result) == std::to_address(base(array.begin())));
 
-  static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
+    static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
+  }
+
+  {
+    // !is_nothrow_move_constructible_v<range_rvalue_reference_t<Base>>
+    // underlying iter_move may throw
+    auto throwingMoveRange = std::views::iota(0, 9) | std::views::transform([](auto) noexcept { return ThrowingMove{}; });
+    std::ranges::enumerate_view v(throwingMoveRange);
+    auto it = v.begin();
+    static_assert(!noexcept(std::ranges::iter_move(it)));
+  }
 }
 
 constexpr bool tests() {
