@@ -107,7 +107,7 @@ llvm::Expected<EntityPointerLevelSet>
 translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
                             TUSummaryExtractor &Extractor);
 
-/// Same as `translateEntityPointerLevel`, except it returns raw
+/// Same as \c translateEntityPointerLevel, except it returns raw
 /// `(NamedDecl *, pointer level, is-return)` tuples (a.k.a. DeclPointerLevels)
 /// instead of assembling an `EntityPointerLevelSet` directly.
 llvm::Expected<DeclPointerLevels>
