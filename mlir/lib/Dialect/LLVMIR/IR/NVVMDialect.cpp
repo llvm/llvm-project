@@ -154,6 +154,41 @@ static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
   return success();
 }
 
+LogicalResult CpAsyncBulkTensorOverrideAddrCommonVerifier(
+    OperandRange coordinates, OperandRange tensorSize, OperandRange lowerStride,
+    Value upperStride, bool isTile, Location loc) {
+  LogicalResult res = success();
+  if (!tensorSize.empty() && coordinates.size() != tensorSize.size()) {
+    res =
+        emitError(loc, "Expected coordinates size to be equal to tensor size");
+  }
+
+  if (!lowerStride.empty() && tensorSize.empty()) {
+    res = emitError(
+        loc,
+        "Expected tensor_size to be present when lower_stride is provided");
+  } else if (!lowerStride.empty() &&
+             lowerStride.size() != tensorSize.size() - 1) {
+    res = emitError(
+        loc,
+        "Expected lower_stride size to be equal to one less than tensor size");
+  }
+
+  if (!lowerStride.empty() != static_cast<bool>(upperStride)) {
+    res = emitError(loc,
+                    "Expected lower_stride and upper_stride to be either both "
+                    "present or both absent");
+  }
+
+  bool isDimStride = tensorSize.size() > 0;
+  if (!isTile && isDimStride) {
+    res = emitError(
+        loc, "Only tile mode supports override address with dim and stride");
+  }
+
+  return res;
+}
+
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   TMAStoreMode mode = getMode();
   // We lower through inline-ptx when getPredicate() is true.
@@ -178,6 +213,25 @@ LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
       return emitError("Scatter4 mode expects 5 coordinates");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp::verify() {
+  TMAStoreMode mode = getMode();
+  bool isIm2Col =
+      mode == TMAStoreMode::IM2COL || mode == TMAStoreMode::IM2COL_W;
+  bool isTile = mode == TMAStoreMode::TILE;
+
+  LogicalResult commonRes = cpAsyncBulkTensorCommonVerifier(
+      getCoordinates().size(), isIm2Col, 0, getLoc());
+
+  LogicalResult overrideAddrRes = CpAsyncBulkTensorOverrideAddrCommonVerifier(
+      getCoordinates(), getTensorSize(), getLowerStride(), getUpperStride(),
+      isTile, getLoc());
+
+  if (mode == TMAStoreMode::TILE_SCATTER4 && getCoordinates().size() != 5)
+    overrideAddrRes = emitError("Mode tile scatter4 expects 5 coordinates");
+
+  return failed(commonRes) || failed(overrideAddrRes) ? failure() : success();
 }
 
 LogicalResult CpAsyncOp::verify() {
@@ -277,6 +331,25 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorReduceOverrideAddrOp::verify() {
+  bool isIm2Col =
+      getMode() == TMAStoreMode::IM2COL || getMode() == TMAStoreMode::IM2COL_W;
+  bool isTile = getMode() == TMAStoreMode::TILE;
+
+  LogicalResult commonRes = cpAsyncBulkTensorCommonVerifier(
+      getCoordinates().size(), isIm2Col, 0, getLoc());
+
+  LogicalResult overrideAddrRes = CpAsyncBulkTensorOverrideAddrCommonVerifier(
+      getCoordinates(), getTensorSize(), getLowerStride(), getUpperStride(),
+      isTile, getLoc());
+
+  if (getMode() == TMAStoreMode::TILE_SCATTER4)
+    overrideAddrRes = emitError(
+        "Scatter mode unsupported for CpAsyncBulkTensorReduceOverrideAddrOp");
+
+  return failed(commonRes) || failed(overrideAddrRes) ? failure() : success();
 }
 
 LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
@@ -4737,6 +4810,76 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+NVVM::IDArgPair
+CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp =
+      cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+  args.push_back(mt.lookupValue(thisOp.getOverrideAddr()));
+  for (Value v : thisOp.getTensorSize())
+    args.push_back(mt.lookupValue(v));
+  for (Value v : thisOp.getLowerStride())
+    args.push_back(mt.lookupValue(v));
+  if (thisOp.getUpperStride())
+    args.push_back(mt.lookupValue(thisOp.getUpperStride()));
+  for (Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  // clang-format off
+  // override_addr variants, indexed [mode][dim].
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_1d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_2d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_5d},
+      {NI, NI, NI, NI, NI,
+       nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_override_addr_2d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_5d}};
+
+  // Tile-only override_addr_dim (1D) / override_addr_dim_stride (2D-5D)
+  // variants, indexed [dim].
+  static constexpr ID dimStrideIDTable[] = {
+      NI, nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_1d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_2d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_3d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_4d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_5d};
+  // clang-format on
+
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  bool isDimStride = !thisOp.getTensorSize().empty();
+
+  assert(mode < std::size(IDTable) &&
+         "Invalid mode for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+  assert(dim < std::size(IDTable[mode]) && dim < std::size(dimStrideIDTable) &&
+         "Invalid dim for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+
+  ID intrinsicID = isDimStride ? dimStrideIDTable[dim] : IDTable[mode][dim];
+  assert(
+      intrinsicID != NI &&
+      "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+  return {intrinsicID, std::move(args)};
+}
+
 NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
@@ -4780,6 +4923,74 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
   ID intrinsicID = IDTable[mode][dim];
   assert(intrinsicID != NI &&
          "Invalid intrinsic for CpAsyncBulkTensorReduceOp");
+  return {intrinsicID, std::move(args)};
+}
+
+NVVM::IDArgPair CpAsyncBulkTensorReduceOverrideAddrOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOverrideAddrOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+  args.push_back(mt.lookupValue(thisOp.getOverrideAddr()));
+
+  for (Value v : thisOp.getTensorSize())
+    args.push_back(mt.lookupValue(v));
+  for (Value v : thisOp.getLowerStride())
+    args.push_back(mt.lookupValue(v));
+  if (thisOp.getUpperStride())
+    args.push_back(mt.lookupValue(thisOp.getUpperStride()));
+  for (Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt32(static_cast<uint32_t>(thisOp.getRedKind())));
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  // clang-format off
+// override_addr variants, indexed [mode][dim].
+static constexpr ID IDTable[][6] = {
+    {NI, nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_1d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_2d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_5d},
+    {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_5d},
+    {NI, NI, NI, NI, NI, NI}, // scatter4 not supported for reduce
+    {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_5d}};
+
+// Tile-only override_addr_dim (1D) / override_addr_dim_stride (2D-5D)
+// variants, indexed [dim].
+static constexpr ID dimStrideIDTable[] = {
+    NI, nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_1d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_2d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_3d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_4d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_5d};
+  // clang-format on
+
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  bool isDimStride = !thisOp.getTensorSize().empty();
+
+  assert(mode < std::size(IDTable) &&
+         "Invalid mode for CpAsyncBulkTensorReduceOverrideAddrOp");
+  assert(dim < std::size(IDTable[mode]) && dim < std::size(dimStrideIDTable) &&
+         "Invalid dim for CpAsyncBulkTensorReduceOverrideAddrOp");
+
+  ID intrinsicID = isDimStride ? dimStrideIDTable[dim] : IDTable[mode][dim];
+  assert(intrinsicID != NI &&
+         "Invalid intrinsic for CpAsyncBulkTensorReduceOverrideAddrOp");
   return {intrinsicID, std::move(args)};
 }
 
