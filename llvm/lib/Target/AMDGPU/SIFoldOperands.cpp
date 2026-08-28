@@ -2504,8 +2504,10 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     return {nullptr, SIOutMods::NONE};
   }
   case AMDGPU::V_PK_MUL_BF16: {
-    // OMOD folding for BF16 packed multiply
-    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign ||
+    // OMOD folding for BF16 packed multiply. bf16 has no denormal mode of its
+    // own; it follows the default ("denormal-fp-math") mode, which is the same
+    // field as f64/f16.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign ||
         MI.mayRaiseFPException())
       return {nullptr, SIOutMods::NONE};
 
@@ -2536,8 +2538,9 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     return {Src0, OMod};
   }
   case AMDGPU::V_PK_ADD_BF16: {
-    // OMOD folding for BF16 packed add: x + x -> x * 2
-    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign)
+    // OMOD folding for BF16 packed add: x + x -> x * 2. See the bf16 denormal
+    // mode note in the V_PK_MUL_BF16 case above.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign)
       return {nullptr, SIOutMods::NONE};
 
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
