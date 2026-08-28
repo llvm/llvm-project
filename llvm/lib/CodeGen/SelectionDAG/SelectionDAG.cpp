@@ -12266,84 +12266,29 @@ SDVTList SelectionDAG::getVTList(EVT VT) {
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(2U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(2);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 2);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2, EVT VT3) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(3U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-  ID.AddInteger(VT3.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(3);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Array[2] = VT3;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 3);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2, VT3};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2, EVT VT3, EVT VT4) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(4U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-  ID.AddInteger(VT3.getRawBits());
-  ID.AddInteger(VT4.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(4);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Array[2] = VT3;
-    Array[3] = VT4;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 4);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2, VT3, VT4};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(ArrayRef<EVT> VTs) {
-  unsigned NumVTs = VTs.size();
-  FoldingSetNodeID ID;
-  ID.AddInteger(NumVTs);
-  for (unsigned index = 0; index < NumVTs; index++) {
-    ID.AddInteger(VTs[index].getRawBits());
-  }
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(NumVTs);
+  auto It = VTLists.find(VTs);
+  if (It == VTLists.end()) {
+    EVT *Array = Allocator.Allocate<EVT>(VTs.size());
     llvm::copy(VTs, Array);
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, NumVTs);
-    VTListMap.InsertNode(Result, IP);
+    It = VTLists.insert(ArrayRef(Array, VTs.size())).first;
   }
-  return Result->getSDVTList();
+  return makeVTList(It->data(), It->size());
 }
-
 
 /// UpdateNodeOperands - *Mutate* the specified node in-place to have the
 /// specified operands.  If the resultant node already exists in the DAG,

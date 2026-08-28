@@ -3334,9 +3334,17 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
 
   Type *ResultTy = toVectorTy(this->getScalarType(), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  return (getNumIncomingValues() - 1) *
-         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
+
+  InstructionCost Cost = 0;
+  for (unsigned I = 1, E = getNumIncomingValues(); I != E; ++I) {
+    CmpPredicate Pred;
+    if (!match(getMask(I), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+      Pred = getScalarType()->isFloatingPointTy() ? CmpInst::BAD_FCMP_PREDICATE
+                                                  : CmpInst::BAD_ICMP_PREDICATE;
+    Cost += Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
+                                       Pred, Ctx.CostKind);
+  }
+  return Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
