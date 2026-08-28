@@ -74,6 +74,51 @@ void should_warn(){
     } else { //   23     21
         int sum = 24;
     } //          25
+
+
+    for (int i = 0; i < 10; ++i) {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: for loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+        int sum = 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19
+                + 20;
+    }
+
+    while (true) {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: while loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+        int sum = 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19
+                + 20;
+    }
 }
 
 void should_not_warn(){
@@ -121,5 +166,48 @@ void should_not_warn(){
                 + 19
                 + 20
                 + 21;
+    }
+
+
+    for (int i = 0; i < 10; ++i) {
+        int sum = 2
+                + 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19;
+    }
+
+    while (true) {
+        int sum = 2
+                + 3
+                + 4
+                + 5
+                + 6
+                + 7
+                + 8
+                + 9
+                + 10
+                + 11
+                + 12
+                + 13
+                + 14
+                + 15
+                + 16
+                + 17
+                + 18
+                + 19;
     }
 }
