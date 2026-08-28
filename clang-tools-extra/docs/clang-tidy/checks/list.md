@@ -385,6 +385,7 @@ readability/*
 | {doc}`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>` |  |
 | {doc}`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>` | Yes |
 | {doc}`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>` |  |
+| {doc}`readability-block-size <readability/block-size>` |  |
 | {doc}`readability-braces-around-statements <readability/braces-around-statements>` | Yes |
 | {doc}`readability-const-return-type <readability/const-return-type>` | Yes |
 | {doc}`readability-container-contains <readability/container-contains>` | Yes |
@@ -399,7 +400,6 @@ readability/*
 | {doc}`readability-function-size <readability/function-size>` |  |
 | {doc}`readability-identifier-length <readability/identifier-length>` |  |
 | {doc}`readability-identifier-naming <readability/identifier-naming>` | Yes |
-| {doc}`readability-if-block-size <readability/if-block-size>` | Yes |
 | {doc}`readability-implicit-bool-conversion <readability/implicit-bool-conversion>` | Yes |
 | {doc}`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>` | Yes |
 | {doc}`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>` | Yes |

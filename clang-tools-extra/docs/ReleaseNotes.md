@@ -119,8 +119,8 @@ infrastructure are described first, followed by tool-specific sections.
   Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
   using the build system for improved portability.
 
-- New {doc}`readability-if-block-size
-  <clang-tidy/checks/readability/if-block-size>` check.
+- New {doc}`readability-block-size
+  <clang-tidy/checks/readability/block-size>` check.
 
   FIXME: Write a short description.
 

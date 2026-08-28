@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s readability-if-block-size %t
+// RUN: %check_clang_tidy %s readability-block-size %t
 
 void should_warn(){
     if (true){ // 1
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
         int sum = 3
                 + 4
                 + 5
@@ -27,7 +27,7 @@ void should_warn(){
     if (true){ // 1
         int sum = 2;
     } else { //   3      1
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: else block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: else block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
         int sum = 5   // 3
                 + 6   // 4
                 + 7   // 5
@@ -52,7 +52,7 @@ void should_warn(){
     if (true){ // 1
         int sum = 2;
     } else if (true){ // 1
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: if block spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
         int sum = 5   // 3
                 + 6   // 4
                 + 7   // 5
@@ -77,7 +77,7 @@ void should_warn(){
 
 
     for (int i = 0; i < 10; ++i) {
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: for loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: for loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
         int sum = 3
                 + 4
                 + 5
@@ -99,7 +99,7 @@ void should_warn(){
     }
 
     while (true) {
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: while loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-if-block-size]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: while loop spans 21 lines of code, which exceeds the threshold of 20 lines [readability-block-size]
         int sum = 3
                 + 4
                 + 5

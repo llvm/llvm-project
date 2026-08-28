@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IfBlockSizeCheck.h"
+#include "BlockSizeCheck.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -15,13 +15,13 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-void IfBlockSizeCheck::registerMatchers(MatchFinder *Finder) {
+void BlockSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(ifStmt().bind("if"), this);
   Finder->addMatcher(forStmt().bind("for"), this);
   Finder->addMatcher(whileStmt().bind("while"), this);
 }
 
-void IfBlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
+void BlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &SrcMgr = Result.SourceManager;
 
   if (const auto *IfBlk = Result.Nodes.getNodeAs<IfStmt>("if")) {

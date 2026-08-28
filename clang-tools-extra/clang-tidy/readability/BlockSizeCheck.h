@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IFBLOCKSIZECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IFBLOCKSIZECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_BLOCKSIZECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_BLOCKSIZECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,10 +16,10 @@ namespace clang::tidy::readability {
 /// Warns about large if blocks
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/readability/if-block-size.html
-class IfBlockSizeCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/block-size.html
+class BlockSizeCheck : public ClangTidyCheck {
 public:
-  IfBlockSizeCheck(StringRef Name, ClangTidyContext *Context)
+  BlockSizeCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -33,4 +33,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IFBLOCKSIZECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_BLOCKSIZECHECK_H
