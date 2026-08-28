@@ -1633,15 +1633,12 @@ void addInstrRequirements(const MachineInstr &MI,
     unsigned NumComponents = MI.getOperand(2).getImm();
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
-    else if (NumComponents != 2 && NumComponents != 3 && NumComponents != 4) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
-        reportFatalUsageError(
-            "Vector type with " + Twine(NumComponents) +
-            " components requires the following SPIR-V extension: "
-            "SPV_EXT_long_vector");
-      Reqs.addExtension(SPIRV::Extension::SPV_EXT_long_vector);
-      Reqs.addCapability(SPIRV::Capability::LongVectorEXT);
-    }
+    else if (requiresLongVectorEXT(NumComponents))
+      // Such widths are only expressible as OpTypeVectorIdEXT.
+      reportFatalUsageError(
+          "OpTypeVector with " + Twine(NumComponents) +
+          " components requires the following SPIR-V extension: "
+          "SPV_EXT_long_vector");
 
     maybeAddScatterGatherReq(MI, Reqs, ST);
     break;
