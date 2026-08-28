@@ -1,5 +1,4 @@
-; RUN: opt -passes='print<mem-derefs>' -S < %s -disable-output  -use-dereferenceable-at-point-semantics=false 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
-; RUN: opt -passes='print<mem-derefs>' -S < %s -disable-output  -use-dereferenceable-at-point-semantics 2>&1 | FileCheck %s --check-prefixes=CHECK,POINT
+; RUN: opt -passes='print<mem-derefs>' -S < %s -disable-output 2>&1 | FileCheck %s
 
 
 ; Uses the print-deref (+ analyze to print) pass to run
@@ -43,12 +42,10 @@ define void @test(ptr addrspace(1) dereferenceable(8) %dparam,
 entry:
   call void @mayfree()
 
-; GLOBAL: %dparam{{.*}}(unaligned)
-; POINT-NOT: %dparam{{.*}}(unaligned)
+; CHECK-NOT: %dparam{{.*}}(unaligned)
     %load3 = load i32, ptr addrspace(1) %dparam
 
-; GLOBAL: %relocate{{.*}}(unaligned)
-; POINT-NOT: %relocate{{.*}}(unaligned)
+; CHECK-NOT: %relocate{{.*}}(unaligned)
     %tok = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %dparam)]
     %relocate = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0)
     %load4 = load i32, ptr addrspace(1) %relocate
@@ -64,8 +61,7 @@ entry:
     %load6 = load i32, ptr %nd_load
 
     ; Load from a dereferenceable load
-; GLOBAL: %d4_load{{.*}}(unaligned)
-; POINT-NOT: %d4_load{{.*}}(unaligned)
+; CHECK-NOT: %d4_load{{.*}}(unaligned)
     %d4_load = load ptr, ptr @globali32ptr, !dereferenceable !0
     call void @mayfree()
     %load7 = load i32, ptr %d4_load
@@ -81,29 +77,22 @@ entry:
     %load9 = load i32, ptr %d_or_null_load
 
     ; Load from a non-null pointer with dereferenceable_or_null
-; GLOBAL: %d_or_null_non_null_load{{.*}}(unaligned)
-; POINT-NOT: %d_or_null_non_null_load{{.*}}(unaligned)
+; CHECK-NOT: %d_or_null_non_null_load{{.*}}(unaligned)
     %d_or_null_non_null_load = load ptr, ptr @globali32ptr, !nonnull !2, !dereferenceable_or_null !0
     call void @mayfree()
     %load10 = load i32, ptr %d_or_null_non_null_load
 
     ; Loads from aligned arguments
-; GLOBAL: %dparam.align1{{.*}}(unaligned)
-; POINT-NOT: %dparam.align1{{.*}}(unaligned)
-; POINT-NOT: %dparam.align16{{.*}}(aligned)
-; GLOBAL: %dparam.align16{{.*}}(aligned)
+; CHECK-NOT: %dparam.align1{{.*}}(unaligned)
+; CHECK-NOT: %dparam.align16{{.*}}(aligned)
     %load15 = load i8, ptr addrspace(1) %dparam.align1, align 16
     %load16 = load i8, ptr addrspace(1) %dparam.align16, align 16
 
     ; Loads from GEPs
-; GLOBAL: %gep.align1.offset1{{.*}}(unaligned)
-; GLOBAL: %gep.align16.offset1{{.*}}(unaligned)
-; GLOBAL: %gep.align1.offset16{{.*}}(unaligned)
-; GLOBAL: %gep.align16.offset16{{.*}}(aligned)
-; POINT-NOT: %gep.align1.offset1{{.*}}(unaligned)
-; POINT-NOT: %gep.align16.offset1{{.*}}(unaligned)
-; POINT-NOT: %gep.align1.offset16{{.*}}(unaligned)
-; POINT-NOT: %gep.align16.offset16{{.*}}(aligned)
+; CHECK-NOT: %gep.align1.offset1{{.*}}(unaligned)
+; CHECK-NOT: %gep.align16.offset1{{.*}}(unaligned)
+; CHECK-NOT: %gep.align1.offset16{{.*}}(unaligned)
+; CHECK-NOT: %gep.align16.offset16{{.*}}(aligned)
     %gep.align1.offset1 = getelementptr inbounds i8, ptr addrspace(1) %dparam.align1, i32 1
     %gep.align16.offset1 = getelementptr inbounds i8, ptr addrspace(1) %dparam.align16, i32 1
     %gep.align1.offset16 = getelementptr inbounds i8, ptr addrspace(1) %dparam.align1, i32 16
@@ -114,10 +103,8 @@ entry:
     %load22 = load i8, ptr addrspace(1) %gep.align16.offset16, align 16
 
 ; CHECK-NOT: %no_deref_return
-; GLOBAL: %deref_return{{.*}}(unaligned)
-; GLOBAL: %deref_and_aligned_return{{.*}}(aligned)
-; POINT-NOT: %deref_return{{.*}}(unaligned)
-; POINT-NOT: %deref_and_aligned_return{{.*}}(aligned)
+; CHECK-NOT: %deref_return{{.*}}(unaligned)
+; CHECK-NOT: %deref_and_aligned_return{{.*}}(aligned)
     %no_deref_return = call ptr @foo()
     %deref_return = call dereferenceable(32) ptr @foo()
     %deref_and_aligned_return = call dereferenceable(32) align 16 ptr @foo()
@@ -127,10 +114,8 @@ entry:
     %load25 = load i32, ptr %deref_and_aligned_return, align 16
 
     ; Load from a dereferenceable and aligned load
-; GLOBAL: %d4_unaligned_load{{.*}}(unaligned)
-; GLOBAL: %d4_aligned_load{{.*}}(aligned)
-; POINT-NOT: %d4_unaligned_load{{.*}}(unaligned)
-; POINT-NOT: %d4_aligned_load{{.*}}(aligned)
+; CHECK-NOT: %d4_unaligned_load{{.*}}(unaligned)
+; CHECK-NOT: %d4_aligned_load{{.*}}(aligned)
     %d4_unaligned_load = load ptr, ptr @globali32ptr, !dereferenceable !0
     %d4_aligned_load = load ptr, ptr @globali32ptr, !dereferenceable !0, !align !{i64 16}
     call void @mayfree()
@@ -230,8 +215,7 @@ define void @byval(ptr byval(i8) %i8_byval,
 }
 
 ; CHECK-LABEL: 'f_0'
-; GLOBAL: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
-; POINT-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
+; CHECK-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
 define i32 @f_0(i32 %val) {
   %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
   call void @mayfree()
@@ -243,8 +227,7 @@ define i32 @f_0(i32 %val) {
 ; The most basic case showing the difference between legacy global deref
 ; attribute semantics and the new point-in-time semantics.
 ; CHECK-LABEL: 'negative'
-; GLOBAL: %p
-; POINT-NOT: %p
+; CHECK-NOT: %p
 define void @negative(ptr dereferenceable(8) %p) {
   call void @mayfree()
   %v = load i32, ptr %p
@@ -284,8 +267,7 @@ define void @infer_noalias2(ptr dereferenceable(8) noalias readonly %p) {
 }
 
 ; CHECK-LABEL: 'infer_missing_noalias1'
-; GLOBAL: %p
-; POINT-NOT: %p
+; CHECK-NOT: %p
 define void @infer_missing_noalias1(ptr dereferenceable(8) nofree %p) {
   call void @mayfree()
   %v = load i32, ptr %p
@@ -293,8 +275,7 @@ define void @infer_missing_noalias1(ptr dereferenceable(8) nofree %p) {
 }
 
 ; CHECK-LABEL: 'infer_missing_noalias2'
-; GLOBAL: %p
-; POINT-NOT: %p
+; CHECK-NOT: %p
 define void @infer_missing_noalias2(ptr dereferenceable(8) readonly %p) {
   call void @mayfree()
   %v = load i32, ptr %p
@@ -334,8 +315,7 @@ if.end:
 }
 
 ; CHECK-LABEL: 'dereferenceable_arg_freed_between'
-; GLOBAL: %a
-; POINT-NOT: %a
+; CHECK-NOT: %a
 define void @dereferenceable_arg_freed_between(ptr dereferenceable(16) %a) {
   call void @mayfree()
   %v = load i32, ptr %a
@@ -343,8 +323,7 @@ define void @dereferenceable_arg_freed_between(ptr dereferenceable(16) %a) {
 }
 
 ; CHECK-LABEL: 'dereferenceable_arg_freed_between2'
-; GLOBAL: %a
-; POINT-NOT: %a
+; CHECK-NOT: %a
 define void @dereferenceable_arg_freed_between2(ptr dereferenceable(16) %a, ptr %p) {
   load atomic i32, ptr %p acquire, align 4
   %v = load i32, ptr %a
@@ -360,8 +339,7 @@ define void @dereferenceable_arg_not_freed_between(ptr dereferenceable(16) %a) {
 }
 
 ; CHECK-LABEL: 'dereferenceable_ret_freed_between'
-; GLOBAL: %a
-; POINT-NOT: %a
+; CHECK-NOT: %a
 define void @dereferenceable_ret_freed_between() {
   %a = call dereferenceable(16) ptr @foo()
   call void @mayfree()
@@ -370,8 +348,7 @@ define void @dereferenceable_ret_freed_between() {
 }
 
 ; CHECK-LABEL: 'dereferenceable_ret_freed_between2'
-; GLOBAL: %a
-; POINT-NOT: %a
+; CHECK-NOT: %a
 define void @dereferenceable_ret_freed_between2(ptr %p) {
   %a = call dereferenceable(16) ptr @foo()
   load atomic i32, ptr %p acquire, align 4
