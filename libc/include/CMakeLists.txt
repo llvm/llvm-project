@@ -356,6 +356,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  netdb
+  ../libc/include/netdb.yaml
+  netdb.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.netdb_macros
+    .llvm-libc-types.struct_addrinfo
+)
+
+add_header_macro(
   regex
   ../libc/include/regex.yaml
   regex.h

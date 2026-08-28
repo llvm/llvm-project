@@ -341,6 +341,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
