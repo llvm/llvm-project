@@ -8,8 +8,8 @@ define i32 @assume_range(i32 %v0, i32 %v2) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i32 [[V0]], 46
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
-; CHECK:         [[TMP2:%.*]] = bitcast i32 [[TMP1:%.*]] to i32
-; CHECK:         [[TMP1]] = bitcast i32 [[V0]] to i32
+; CHECK:         [[TMP1:%.*]] = bitcast i32 [[V0]] to i32
+; CHECK:         [[TMP2:%.*]] = bitcast i32 [[TMP1]] to i32
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[V2]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;

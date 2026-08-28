@@ -11,10 +11,8 @@ define void @assume_range(i32 %a) {
 ; CHECK-NEXT:    [[BC:%.*]] = select i1 [[LT]], i1 [[GT]], i1 false
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[A]], 105
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[A]], 105
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i32 [[A]], 50
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -35,7 +33,7 @@ define void @assume_range(i32 %a) {
 }
 
 define i32 @issue219130(i32 %v0, i32 %v1, i32 %v2) {
-; CHECK-LABEL: define range(i32 -2, 195) i32 @issue219130(
+; CHECK-LABEL: define range(i32 2, 4) i32 @issue219130(
 ; CHECK-SAME: i32 [[V0:%.*]], i32 [[V1:%.*]], i32 [[V2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 39, [[V0]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[V0]], 46
@@ -49,8 +47,7 @@ define i32 @issue219130(i32 %v0, i32 %v1, i32 %v2) {
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp ule i32 [[V2]], 194
 ; CHECK-NEXT:    [[OR_COND13:%.*]] = select i1 [[CMP7]], i1 [[CMP9]], i1 false
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OR_COND13]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[V2]], [[V0]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[DIV]], [[V1]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 4, [[V1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cmp = icmp ule i32 39, %v0
