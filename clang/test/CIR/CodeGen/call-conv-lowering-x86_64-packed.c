@@ -8,6 +8,8 @@
 typedef struct __attribute__((packed)) { char c; int i; } CharInt;
 typedef struct __attribute__((packed)) { char c; int i : 32; } CharIntBF;
 typedef struct __attribute__((packed)) { char c; unsigned long long w : 64; } CharWideBF;
+typedef struct __attribute__((packed)) { char c; int i : 25; int j : 17; int k : 4; } CharMultipleBFInt;
+typedef struct __attribute__((packed)) { char c; int i : 19; } CharUndersizedIntBF;
 typedef struct __attribute__((packed)) { char c; int i : 32; char pad[3]; double d; } BFDouble;
 typedef struct __attribute__((packed)) { int a; int b; char c; } Nine;
 typedef struct __attribute__((packed)) { short a; short b; char c; } FiveShort;
@@ -29,6 +31,8 @@ typedef struct { char c; int i; } PragmaPacked;
 // CIR-DAG: !rec_CharInt = !cir.struct<"CharInt" packed {data !s8i, data !s32i}>
 // CIR-DAG: !rec_CharIntBF = !cir.struct<"CharIntBF" packed {data !s8i, bitfield !u32i}>
 // CIR-DAG: !rec_CharWideBF = !cir.struct<"CharWideBF" packed {data !s8i, bitfield !u64i}>
+// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.array<!u8i x 6>}>
+// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.array<!u8i x 3>}>
 // CIR-DAG: !rec_BFDouble = !cir.struct<"BFDouble" packed {data !s8i, bitfield !u32i, data !cir.array<!s8i x 3>, data !cir.double}>
 // CIR-DAG: !rec_Nine = !cir.struct<"Nine" packed {data !s32i, data !s32i, data !s8i}>
 // CIR-DAG: !rec_FiveShort = !cir.struct<"FiveShort" packed {data !s16i, data !s16i, data !s8i}>
@@ -82,6 +86,26 @@ CharWideBF ret_char_wide_bf(unsigned long long x) { CharWideBF v = {0, x}; retur
 // CIR: cir.func{{.*}} @ret_char_wide_bf(%arg0: !u64i {llvm.noundef}{{.*}}) -> ![[I64U8]]
 // LLVM: define dso_local i32 @take_char_wide_bf(i64 %{{.+}}, i8 %{{.+}})
 // LLVM: define dso_local { i64, i8 } @ret_char_wide_bf(i64 noundef %{{.+}})
+
+// Three bit-fields share one unit, so the unit spans the bits of all three
+// and the record coerces to the seven bytes it occupies.
+int take_multiple_bf(CharMultipleBFInt v) { return v.i; }
+CharMultipleBFInt ret_multiple_bf(int x) { CharMultipleBFInt v = {0, x, x, x}; return v; }
+
+// CIR: cir.func{{.*}} @take_multiple_bf(%arg0: !cir.int<u, 56>{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_multiple_bf(%arg0: !s32i {llvm.noundef}{{.*}}) -> !cir.int<u, 56>
+// LLVM: define dso_local i32 @take_multiple_bf(i56 %{{.+}})
+// LLVM: define dso_local i56 @ret_multiple_bf(i32 noundef %{{.+}})
+
+// A unit narrower than the type its bit-field was declared with.  The three
+// bytes it occupies and the leading char round up to the same eightbyte.
+int take_undersized_bf(CharUndersizedIntBF v) { return v.i; }
+CharUndersizedIntBF ret_undersized_bf(int x) { CharUndersizedIntBF v = {0, x}; return v; }
+
+// CIR: cir.func{{.*}} @take_undersized_bf(%arg0: !u32i{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_undersized_bf(%arg0: !s32i {llvm.noundef}{{.*}}) -> !u32i
+// LLVM: define dso_local i32 @take_undersized_bf(i32 %{{.+}})
+// LLVM: define dso_local i32 @ret_undersized_bf(i32 noundef %{{.+}})
 
 // The unit decides the low eightbyte while the double decides the high one.
 double take_bf_double(BFDouble v) { return v.d; }
