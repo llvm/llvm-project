@@ -167,3 +167,84 @@ define i32 @udiv_select_multi_use(i32 %x, i1 %c, ptr %p) {
   %r = udiv i32 %x, %d
   ret i32 %r
 }
+
+define float @fdiv_fast(float %x, i1 %c) {
+; CHECK-LABEL: @fdiv_fast(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 9.999990e+02, float 6.666660e+02
+; CHECK-NEXT:    [[R:%.*]] = fdiv fast float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 999.999, float 666.666
+  %r = fdiv fast float %x, %d
+  ret float %r
+}
+
+define <8 x float> @fdiv_fast_vector(<8 x float> %x, i1 %c) {
+; CHECK-LABEL: @fdiv_fast_vector(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 9.999990e+02, float 6.666660e+02
+; CHECK-NEXT:    [[I:%.*]] = insertelement <8 x float> poison, float [[D]], i64 0
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x float> [[I]], <8 x float> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = fdiv fast <8 x float> [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %d = select i1 %c, float 999.999, float 666.666
+  %i = insertelement <8 x float> poison, float %d, i64 0
+  %s = shufflevector <8 x float> %i, <8 x float> poison, <8 x i32> zeroinitializer
+  %r = fdiv fast <8 x float> %x, %s
+  ret <8 x float> %r
+}
+
+define float @negative_fdiv_no_arcp(float %x, i1 %c) {
+; CHECK-LABEL: @negative_fdiv_no_arcp(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 9.999990e+02, float 6.666660e+02
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 999.999, float 666.666
+  %r = fdiv float %x, %d
+  ret float %r
+}
+
+define float @fdiv_exact_inverse_no_arcp(float %x, i1 %c) {
+; CHECK-LABEL: @fdiv_exact_inverse_no_arcp(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 4.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 2.0, float 4.0
+  %r = fdiv float %x, %d
+  ret float %r
+}
+
+define float @negative_fdiv_one_exact_one_not(float %x, i1 %c) {
+; CHECK-LABEL: @negative_fdiv_one_exact_one_not(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 3.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 2.0, float 3.0
+  %r = fdiv float %x, %d
+  ret float %r
+}
+
+define float @negative_fdiv_denormal_arcp(float %x, i1 %c) {
+; CHECK-LABEL: @negative_fdiv_denormal_arcp(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 1.401300e-45, float 3.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fdiv arcp float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 0x36A0000000000000, float 3.0
+  %r = fdiv arcp float %x, %d
+  ret float %r
+}
+
+define float @negative_fdiv_zero_arm(float %x, i1 %c) {
+; CHECK-LABEL: @negative_fdiv_zero_arm(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 0.000000e+00, float 2.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fdiv arcp float [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = select i1 %c, float 0.0, float 2.0
+  %r = fdiv arcp float %x, %d
+  ret float %r
+}
