@@ -2695,6 +2695,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       to the addressable number of architectural VGPRs. Values below 
                                                       the granularity are treated as 4, the smallest representable offset.
 
+                                                      This value can be ignored if satisfying it would violate other allocation
+                                                      constraints.
+
                                                       The behavior is undefined if a function which allocates more
                                                       architectural VGPRs than this bound is reached through any
                                                       function marked with a lower value of this attribute.
