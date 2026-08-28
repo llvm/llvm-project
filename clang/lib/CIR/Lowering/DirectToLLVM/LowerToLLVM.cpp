@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVM.h"
+#include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
 #include <optional>
@@ -2634,27 +2635,33 @@ mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-/// Convert the `cir.func` attributes to `llvm.func` attributes.
-/// Only retain those attributes that are not constructed by
-/// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out
-/// argument attributes.
+/// Return true for attributes constructed by `LLVMFuncOp::build`.
+static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
+                                    mlir::StringRef linkageAttrName) {
+  return attr.getName() == func.getSymNameAttrName() ||
+         attr.getName() == func.getFunctionTypeAttrName() ||
+         attr.getName() == linkageAttrName ||
+         attr.getName() == func.getCallingConvAttrName() ||
+         attr.getName() == func.getDsoLocalAttrName() ||
+         attr.getName() == func.getInlineKindAttrName() ||
+         attr.getName() == func.getSideEffectAttrName() ||
+         attr.getName() == CIRDialect::getNoReturnAttrName() ||
+         attr.getName() == CIRDialect::getStrictFPAttrName() ||
+         attr.getName() == func.getAnnotationsAttrName();
+}
+
+/// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
+/// Drop attributes populated by the destination op builder. If
+/// `includeFunctionOnlyAttrs` is false, also omit attributes that are only
+/// valid on functions.
 void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
-    cir::FuncOp func, bool filterArgAndResAttrs,
+    cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
+  OpenCLFunctionMetadataLowering openCLMetadataLowering(func.getContext());
   for (mlir::NamedAttribute attr : func->getAttrs()) {
-    if (attr.getName() == func.getSymNameAttrName() ||
-        attr.getName() == func.getFunctionTypeAttrName() ||
-        attr.getName() == getLinkageAttrNameString() ||
-        attr.getName() == func.getCallingConvAttrName() ||
-        attr.getName() == func.getDsoLocalAttrName() ||
-        attr.getName() == func.getInlineKindAttrName() ||
-        attr.getName() == func.getSideEffectAttrName() ||
-        attr.getName() == CIRDialect::getNoReturnAttrName() ||
-        attr.getName() == CIRDialect::getStrictFPAttrName() ||
-        attr.getName() == func.getAnnotationsAttrName() ||
-        (filterArgAndResAttrs &&
-         (attr.getName() == func.getArgAttrsAttrName() ||
-          attr.getName() == func.getResAttrsAttrName())))
+    if (shouldDropFuncAttribute(func, attr, getLinkageAttrNameString()))
+      continue;
+    if (openCLMetadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
@@ -2667,13 +2674,16 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     }
     result.push_back(attr);
   }
+
+  if (includeFunctionOnlyAttrs)
+    openCLMetadataLowering.appendAttrs(result);
 }
 
 mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
     cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
+  lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/false, attributes);
 
   mlir::Location loc = op.getLoc();
   auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
@@ -2734,7 +2744,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   mlir::LLVM::CConv cconv = convertCallingConv(op.getCallingConv());
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
+  lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/true, attributes);
 
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
