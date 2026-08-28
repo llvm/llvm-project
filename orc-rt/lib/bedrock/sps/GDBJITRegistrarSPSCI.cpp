@@ -13,7 +13,7 @@
 #include "orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h"
 #include "orc-rt/support/SPSAllocAction.h"
 
-#include "../GDBJITRegistrar.h"
+#include "orc-rt-internal/bedrock/GDBJITRegistrar.h"
 
 using namespace orc_rt;
 

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_LIB_EXECUTOR_ENVIRONMENT_H
-#define ORC_RT_LIB_EXECUTOR_ENVIRONMENT_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_ENVIRONMENT_H
+#define ORC_RT_INTERNAL_BEDROCK_ENVIRONMENT_H
 
 namespace orc_rt {
 
@@ -25,4 +25,4 @@ const char *secureGetenv(const char *Name);
 
 } // namespace orc_rt
 
-#endif // ORC_RT_LIB_EXECUTOR_ENVIRONMENT_H
+#endif // ORC_RT_INTERNAL_BEDROCK_ENVIRONMENT_H

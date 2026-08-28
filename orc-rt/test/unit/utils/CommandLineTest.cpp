@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-utils/CommandLine.h"
+#include "orc-rt-internal/tools/CommandLine.h"
 #include "orc-rt/support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
