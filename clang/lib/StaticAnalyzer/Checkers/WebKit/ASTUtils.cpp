@@ -38,11 +38,30 @@ static bool tryToFindPtrOriginImpl(
 
 namespace {
 
+bool isStdViewType(QualType T) {
+  return !T.isNull() &&
+         isStdView(T.getNonReferenceType()->getAsCXXRecordDecl());
+}
+
+void appendPresumedBorrowSources(
+    const FunctionDecl *Callee, ArrayRef<const Expr *> Args,
+    SmallVectorImpl<const Expr *> &LifetimeBoundArgs) {
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    QualType ParamType;
+    if (Callee && I < Callee->getNumParams())
+      ParamType = Callee->getParamDecl(I)->getType();
+    QualType ArgType = Args[I]->getType();
+    if ((!ParamType.isNull() && ParamType->isReferenceType()) ||
+        (!ArgType.isNull() && isView(ArgType)))
+      LifetimeBoundArgs.push_back(Args[I]);
+  }
+}
+
 /// Collects the entries of \p Args that \p Callee declares
 /// [[clang::lifetimebound]].
 void findLifetimeBoundArgs(const FunctionDecl *Callee,
                            ArrayRef<const Expr *> Args,
-                           SmallVectorImpl<const Expr *> &BoundArgs) {
+                           SmallVectorImpl<const Expr *> &LifetimeBoundArgs) {
   if (!Callee)
     return;
   const FunctionDecl *Canon =
@@ -50,23 +69,29 @@ void findLifetimeBoundArgs(const FunctionDecl *Callee,
   unsigned Count = std::min<unsigned>(Canon->getNumParams(), Args.size());
   for (unsigned I = 0; I < Count; ++I) {
     if (Canon->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
-      BoundArgs.push_back(Args[I]);
+      LifetimeBoundArgs.push_back(Args[I]);
   }
 }
 
 /// Collects the arguments that \p Construct declares [[clang::lifetimebound]].
+/// Absent annotations, a std view constructor is treated as if libc++ had
+/// annotated it.
 void findLifetimeBoundArgs(const CXXConstructExpr *Construct,
-                           SmallVectorImpl<const Expr *> &BoundArgs) {
-  findLifetimeBoundArgs(
-      Construct->getConstructor(),
-      ArrayRef<const Expr *>(Construct->getArgs(), Construct->getNumArgs()),
-      BoundArgs);
+                           SmallVectorImpl<const Expr *> &LifetimeBoundArgs) {
+  const auto *Ctor = Construct->getConstructor();
+  ArrayRef<const Expr *> Args(Construct->getArgs(), Construct->getNumArgs());
+  findLifetimeBoundArgs(Ctor, Args, LifetimeBoundArgs);
+  if (!LifetimeBoundArgs.empty() || !Ctor || !isStdView(Ctor->getParent()))
+    return;
+  appendPresumedBorrowSources(Ctor, Args, LifetimeBoundArgs);
 }
 
 /// Collects the arguments that \p Call declares [[clang::lifetimebound]],
-/// including the implicit 'this' argument.
+/// including the implicit 'this' argument. Absent annotations, a call that
+/// returns or operates on a std view, or to std::data or std::get, is treated
+/// as if libc++ had annotated it.
 void findLifetimeBoundArgs(const CallExpr *Call,
-                           SmallVectorImpl<const Expr *> &BoundArgs) {
+                           SmallVectorImpl<const Expr *> &LifetimeBoundArgs) {
   const FunctionDecl *Callee = Call->getDirectCallee();
 
   const Expr *ObjectArg = nullptr;
@@ -77,16 +102,27 @@ void findLifetimeBoundArgs(const CallExpr *Call,
     ArgOffset = 1;
   } else if (auto *MemberCall = dyn_cast<CXXMemberCallExpr>(Call))
     ObjectArg = MemberCall->getImplicitObjectArgument();
+  ArrayRef<const Expr *> Args(Call->getArgs() + ArgOffset,
+                              Call->getNumArgs() - ArgOffset);
 
   if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(Callee)) {
     if (ObjectArg && lifetimes::implicitObjectParamIsLifetimeBound(MD))
-      BoundArgs.push_back(ObjectArg);
+      LifetimeBoundArgs.push_back(ObjectArg);
   }
+  findLifetimeBoundArgs(Callee, Args, LifetimeBoundArgs);
+  if (!LifetimeBoundArgs.empty() || !Callee)
+    return;
 
-  findLifetimeBoundArgs(Callee,
-                        ArrayRef<const Expr *>(Call->getArgs() + ArgOffset,
-                                               Call->getNumArgs() - ArgOffset),
-                        BoundArgs);
+  bool IsStdAccessor =
+      Callee->isInStdNamespace() &&
+      (safeGetName(Callee) == "data" || safeGetName(Callee) == "get");
+  if (!isStdViewType(Callee->getReturnType()) &&
+      !(ObjectArg && isStdViewType(ObjectArg->getType())) && !IsStdAccessor)
+    return;
+
+  if (ObjectArg)
+    LifetimeBoundArgs.push_back(ObjectArg);
+  appendPresumedBorrowSources(Callee, Args, LifetimeBoundArgs);
 }
 
 /// Traces each of \p Args independently and requires every one to be safe.
@@ -165,20 +201,14 @@ static bool tryToFindPtrOriginImpl(
                           PtrIsLifetimeBoundToOrigin);
 
         if (FollowLifetimeBound) {
-          SmallVector<const Expr *, 2> BoundArgs;
-          findLifetimeBoundArgs(tempExpr, BoundArgs);
-          if (!BoundArgs.empty())
-            PtrIsLifetimeBoundToOrigin = true;
-          if (BoundArgs.size() == 1) {
-            E = BoundArgs.front();
-            continue;
-          }
-          if (BoundArgs.size() > 1)
+          SmallVector<const Expr *, 2> LifetimeBoundArgs;
+          findLifetimeBoundArgs(tempExpr, LifetimeBoundArgs);
+          if (!LifetimeBoundArgs.empty())
             return tryToFindPtrOriginOfEach(
-                BoundArgs, StopAtFirstRefCountedObj, isSafePtr, isSafePtrType,
-                isSafeGlobalDecl, callback,
-                OriginDependsOnFullExpressionTemporary,
-                PtrIsLifetimeBoundToOrigin);
+                LifetimeBoundArgs, StopAtFirstRefCountedObj, isSafePtr,
+                isSafePtrType, isSafeGlobalDecl, callback,
+                /*OriginDependsOnFullExpressionTemporary=*/false,
+                /*PtrIsLifetimeBoundToOrigin=*/true);
         }
         break;
       }
@@ -370,20 +400,14 @@ static bool tryToFindPtrOriginImpl(
       }
 
       if (FollowLifetimeBound) {
-        SmallVector<const Expr *, 2> BoundArgs;
-        findLifetimeBoundArgs(call, BoundArgs);
-        if (!BoundArgs.empty())
-          PtrIsLifetimeBoundToOrigin = true;
-        if (BoundArgs.size() == 1) {
-          E = BoundArgs.front();
-          continue;
-        }
-        if (BoundArgs.size() > 1)
+        SmallVector<const Expr *, 2> LifetimeBoundArgs;
+        findLifetimeBoundArgs(call, LifetimeBoundArgs);
+        if (!LifetimeBoundArgs.empty())
           return tryToFindPtrOriginOfEach(
-              BoundArgs, StopAtFirstRefCountedObj, isSafePtr, isSafePtrType,
-              isSafeGlobalDecl, callback,
-              OriginDependsOnFullExpressionTemporary,
-              PtrIsLifetimeBoundToOrigin);
+              LifetimeBoundArgs, StopAtFirstRefCountedObj, isSafePtr,
+              isSafePtrType, isSafeGlobalDecl, callback,
+              /*OriginDependsOnFullExpressionTemporary=*/false,
+              /*PtrIsLifetimeBoundToOrigin=*/true);
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
