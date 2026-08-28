@@ -50802,8 +50802,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   // CTTZ_ZERO_POISON is poison at Y == 0, while the mul form is well-defined
   // (0) at Y == 0 - so the rewrite would be a miscompile for Y == 0 without
   // that guard.
-  if (Subtarget.hasBMI() && VT.isScalarInteger() &&
-      (VT == MVT::i32 || VT == MVT::i64)) {
+  if (Subtarget.hasBMI() && (VT == MVT::i32 || VT == MVT::i64)) {
     SDValue X, Y;
     if (sd_match(N, m_Mul(m_Value(X),
                           m_OneUse(m_And(m_Neg(m_Value(Y)), m_Deferred(Y))))) &&
