@@ -5539,7 +5539,31 @@ TEST(Hover, HLSLParamModifiers) {
               ^result = 1.0;
             }
           )hlsl",
-                   "inout float"}};
+                   "inout float"},
+               {
+                   R"hlsl(
+            void main(in float ^result) {}
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(in float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(float ^result) {}
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "float"}};
 
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
