@@ -16,13 +16,13 @@ set(ORC_RT_SOURCES
   SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
-  sps-ci/AllSPSCI.cpp
-  sps-ci/CallSPSCI.cpp
-  sps-ci/GDBJITRegistrarSPSCI.cpp
-  sps-ci/MemoryAccessSPSCI.cpp
-  sps-ci/NativeDylibManagerSPSCI.cpp
-  sps-ci/SimpleNativeMemoryMapSPSCI.cpp
-  sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  sps/AllSPSCI.cpp
+  sps/CallSPSCI.cpp
+  sps/GDBJITRegistrarSPSCI.cpp
+  sps/MemoryAccessSPSCI.cpp
+  sps/NativeDylibManagerSPSCI.cpp
+  sps/SimpleNativeMemoryMapSPSCI.cpp
+  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 
@@ -64,13 +64,6 @@ endif()
 add_library(orc-rt-bedrock STATIC ${ORC_RT_SOURCES})
 
 target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
-
-add_library(orc-rt-bedrock-impl-headers INTERFACE)
-# Add it via lib so that to include impl details its "bedrock/"
-# to prevent collisions down the line
-target_include_directories(orc-rt-bedrock-impl-headers INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>
-)
 
 # Apply RTTI and exceptions compile flags
 target_compile_options(orc-rt-bedrock PRIVATE ${ORC_RT_COMPILE_FLAGS})

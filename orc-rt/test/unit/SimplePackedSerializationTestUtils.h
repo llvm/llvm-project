@@ -9,8 +9,8 @@
 #ifndef ORC_RT_UNITTEST_SIMPLEPACKEDSERIALIZATIONTESTUTILS_H
 #define ORC_RT_UNITTEST_SIMPLEPACKEDSERIALIZATIONTESTUTILS_H
 
-#include "orc-rt/bedrock/SimplePackedSerialization.h"
-#include "orc-rt/bedrock/WrapperFunction.h"
+#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/WrapperFunction.h"
 #include "gtest/gtest.h"
 
 #include <optional>
