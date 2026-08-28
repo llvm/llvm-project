@@ -23,4 +23,4 @@ int getpriority(int which, id_t who);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC_SYS_RESOURCE_GETPRIORITY_H
+#endif // LLVM_LIBC_SRC_SYS_RESOURCE_GETPRIORITY_H

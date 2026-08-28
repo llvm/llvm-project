@@ -31,4 +31,4 @@ LIBC_INLINE ErrorOr<int> setpriority(int which, id_t who, int niceval) {
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_SETPRIORITY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_SETPRIORITY_H

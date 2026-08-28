@@ -22,7 +22,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcSetpriorityTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST_F(LlvmLibcSetpriorityTest,  BasicTest) {
+TEST_F(LlvmLibcSetpriorityTest, BasicTest) {
   int nice = LIBC_NAMESPACE::getpriority(PRIO_PROCESS, 0);
   ASSERT_ERRNO_SUCCESS();
 
@@ -30,7 +30,8 @@ TEST_F(LlvmLibcSetpriorityTest,  BasicTest) {
 }
 
 TEST_F(LlvmLibcSetpriorityTest, TestBadPid) {
-  ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, -1, 19), Fails(ESRCH, -1));
+  ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, -1, 19),
+              Fails(ESRCH, -1));
 }
 
 TEST_F(LlvmLibcSetpriorityTest, TestBadWho) {

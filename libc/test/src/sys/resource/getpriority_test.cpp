@@ -28,8 +28,8 @@ TEST_F(LlvmLibcGetpriorityTest, BasicTest) {
   ASSERT_GE(current_nice, -20);
   ASSERT_LE(current_nice, 19);
 
-  // Increase to the max on Linux (i.e. minimal priority, which doesn't require special
-  // privileges), so that we can confirm we get it back correctly.
+  // Increase to the max on Linux (i.e. minimal priority, which doesn't require
+  // special privileges), so that we can confirm we get it back correctly.
   int nice = 19;
   // Make sure we're not setting it to the same priority by chance
   // however unlikely it may be.
