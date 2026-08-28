@@ -1786,6 +1786,7 @@ More information can be found [here](https://clang.llvm.org/docs/Modules.html).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+|``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -2058,6 +2059,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
+- `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`, 
+  and `std::strong_ordering::equal` if they are the same type.
 
 In addition, the following expression traits are supported:
 
@@ -2564,6 +2568,8 @@ Further examples of these attributes are available in the static analyzer's
 
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
+
+(langext-objective-c-available)=
 
 ### Objective-C @available
 
@@ -5714,6 +5720,8 @@ commandline.
   - Enable frame pointers
 ```
 
+(langext-loop-hint-optimizations)=
+
 ## Extensions for loop hint optimizations
 
 The `#pragma clang loop` directive is used to specify hints for optimizing the
@@ -6086,6 +6094,8 @@ for(...) {
   a = b[i] * c[i] + e;
 }
 ```
+
+(langext-atomic-code-generation)=
 
 ## Extensions for controlling atomic code generation
 
@@ -6509,6 +6519,8 @@ Clang treats it as being at file scope when it appears within other scopes.
 When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
+
+(langext-evaluating-object-size)=
 
 ## Evaluating Object Size
 

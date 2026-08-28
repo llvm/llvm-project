@@ -1321,8 +1321,13 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasNeedsAligned2addrDS() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
     offsetsCanBeCombined(CI, *STM, Paired, true);
+  }
 
   if (CI.InstClass == DS_WRITE) {
     // Both data operands must be AGPR or VGPR, so the data registers needs to
@@ -2681,6 +2686,16 @@ SILoadStoreOptimizer::collectMergeableInsts(
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
       }
+    } else if (InstClass == MIMG) {
+      // Do not merge MIMG instructions with tfe or lwe enabled.
+      // TFE/LWE add a status result that the image merge path does not model.
+      const auto *TFEOp = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+      if (TFEOp && TFEOp->getImm())
+        continue;
+
+      const auto *LWEOp = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+      if (LWEOp && LWEOp->getImm())
+        continue;
     }
 
     CombineInfo CI;

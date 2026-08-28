@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # platform shell needs a connected remote
+@requireNotWasm("platform shell needs a connected remote")
 class PlatformPythonTestCase(TestBase):
     @add_test_categories(["pyapi"])
     @no_debug_info_test
