@@ -4003,6 +4003,12 @@ void Verifier::visitCallBase(CallBase &Call) {
                 Call);
         }
       }
+      if (auto *CI = dyn_cast<ConstantInt>(ArgVal))
+        Check(Intrinsic::isImmArgValueInRangeSet(Call.getIntrinsicID(), i,
+                                                 CI->getValue()),
+              formatv("immarg value {} for arg {} out of range set",
+                      CI->getValue(), i),
+              Call);
     }
 
     if (Call.paramHasAttr(i, Attribute::Preallocated)) {
