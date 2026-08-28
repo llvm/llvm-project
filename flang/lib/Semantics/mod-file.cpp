@@ -382,7 +382,7 @@ static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
 
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
     if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
@@ -397,7 +397,7 @@ static void PutOpenMPRequirements(
 
 static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
     const SymbolVector &symbols, SemanticsContext &semaCtx) {
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
