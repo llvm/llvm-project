@@ -234,6 +234,7 @@ TEST_F(VPIntrinsicTest, CanIgnoreVectorLength) {
   LLVMContext C;
   SMDiagnostic Err;
 
+  // clang-format off
   std::unique_ptr<Module> M =
       parseAssemblyString(
 "declare <256 x i64> @llvm.vp.sdiv.v256i64(<256 x i64>, <256 x i64>, <256 x i1>, i32)"
@@ -262,6 +263,7 @@ TEST_F(VPIntrinsicTest, CanIgnoreVectorLength) {
 "  ret void "
 "}",
           Err, C);
+  // clang-format on
 
   auto *F = M->getFunction("test_static_vlen");
   assert(F);
