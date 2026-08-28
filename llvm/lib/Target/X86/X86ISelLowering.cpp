@@ -53569,6 +53569,21 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                        DAG.getVTList(VT, MVT::i32), X,
                        DAG.getConstant(0, DL, VT), EFLAGS);
   }
+  if (!IsSub && CC == X86::COND_O &&
+      (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+      DAG.getSubtarget<X86Subtarget>().hasADX()) {
+    // X + (overflow_from_OF ? 1 : 0) --> adox X, 0
+    // NOTE: For i8/i16, ADOX32's OF output does not match the original iN
+    // overflow. This is safe because this ADOX replaces an ISD::ADD, so its OF
+    // output is natively dead. Its ANY_EXTEND operands ensure future transforms
+    // cannot mathematically prove the OF output is useful, preventing misuse.
+    EVT AdoxVT = (VT == MVT::i8 || VT == MVT::i16) ? MVT::i32 : VT;
+    SDValue AdoxX = DAG.getAnyExtOrTrunc(X, DL, AdoxVT);
+    SDValue Adox =
+        DAG.getNode(X86ISD::ADOX, DL, DAG.getVTList(AdoxVT, MVT::i32), AdoxX,
+                    DAG.getConstant(0, DL, AdoxVT), EFLAGS);
+    return DAG.getAnyExtOrTrunc(Adox, DL, VT);
+  }
 
   if (ZeroSecondOpOnly)
     return SDValue();
@@ -59817,6 +59832,57 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Optimize RES, EFLAGS = X86ISD::ADOX LHS, RHS, EFLAGS
+static SDValue combineADOX(SDNode *N, SelectionDAG &DAG) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CarryIn = N->getOperand(2);
+  auto *LHSC = dyn_cast<ConstantSDNode>(LHS);
+  auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
+
+  // Canonicalize constant to RHS.
+  if (LHSC && !RHSC)
+    return DAG.getNode(X86ISD::ADOX, SDLoc(N), N->getVTList(), RHS, LHS,
+                       CarryIn);
+
+  // Fold ADOX(ADD(X,Y),0,Carry) -> ADOX(X,Y,Carry)
+  // ISD::ADD produces no EFLAGS, so we only need to ensure the ADOX's own
+  // flag output is not needed before replacing it with a 2-operand ADOX.
+  SDValue AddOp = LHS;
+
+  // Unwrap extensions. This changes what the wide intermediate represents,
+  // but we will verify later that all uses of the wide result are
+  // truncations to the original width.
+  if (AddOp.getOpcode() == ISD::ANY_EXTEND ||
+      AddOp.getOpcode() == ISD::ZERO_EXTEND)
+    AddOp = AddOp.getOperand(0);
+
+  if (AddOp.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
+      !needCarryOrOverflowFlag(SDValue(N, 1))) {
+    if (AddOp != LHS) {
+      unsigned OrigBits = AddOp.getValueSizeInBits();
+      for (SDUse &Use : N->uses()) {
+        if (Use.getResNo() == 0) {
+          SDNode *User = Use.getUser();
+          if (User->getOpcode() != ISD::TRUNCATE ||
+              User->getValueSizeInBits(0) > OrigBits)
+            return SDValue();
+        }
+      }
+    }
+
+    SDValue X = AddOp.getOperand(0);
+    SDValue Y = AddOp.getOperand(1);
+    if (AddOp != LHS) {
+      X = DAG.getNode(LHS.getOpcode(), SDLoc(N), LHS.getValueType(), X);
+      Y = DAG.getNode(LHS.getOpcode(), SDLoc(N), LHS.getValueType(), Y);
+    }
+    return DAG.getNode(X86ISD::ADOX, SDLoc(N), N->getVTList(), X, Y, CarryIn);
+  }
+
+  return SDValue();
+}
+
 static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
                             const SDLoc &DL, EVT VT,
                             const X86Subtarget &Subtarget) {
@@ -63511,6 +63577,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CLOAD:
   case X86ISD::CSTORE:      return combineX86CloadCstore(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);
+  case X86ISD::ADOX:        return combineADOX(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
   case ISD::UDIV:
