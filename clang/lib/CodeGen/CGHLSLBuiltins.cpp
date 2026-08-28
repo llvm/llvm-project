@@ -717,10 +717,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleIntrinsic(), Args,
                                RetTy);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleClampIntrinsic(),
@@ -745,10 +744,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasIntrinsic(),
                                Args, RetTy);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
@@ -774,10 +772,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *RetTy = ConvertType(E->getType());
 
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleGradIntrinsic(), Args);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return Builder.CreateIntrinsic(
@@ -871,10 +868,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
-    if (E->getNumArgs() <= ClampIdx) {
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleCmpIntrinsic(), Args);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, ClampIdx));
     return Builder.CreateIntrinsic(
