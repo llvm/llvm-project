@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SIMPLEREMOTECA_H
-#define ORC_RT_SIMPLEREMOTECA_H
+#ifndef ORC_RT_BEDROCK_SIMPLEREMOTECA_H
+#define ORC_RT_BEDROCK_SIMPLEREMOTECA_H
 
 #include "orc-rt/bedrock/BootstrapInfo.h"
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/ExecutorAddress.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/WrapperFunction.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/ExecutorAddress.h"
+#include "orc-rt/support/WrapperFunction.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -111,4 +111,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SIMPLEREMOTECA_H
+#endif // ORC_RT_BEDROCK_SIMPLEREMOTECA_H

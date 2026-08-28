@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBJITRegistrar.h"
-#include "orc-rt/bedrock/Compiler.h"
+#include "orc-rt/support/Compiler.h"
 
 #include <cstdint>
 #include <mutex>

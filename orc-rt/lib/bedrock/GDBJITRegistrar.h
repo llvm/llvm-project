@@ -21,8 +21,8 @@
 #ifndef ORC_RT_GDBJITREGISTRAR_H
 #define ORC_RT_GDBJITREGISTRAR_H
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/span.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/span.h"
 
 namespace orc_rt::gdb_jit {
 

@@ -22,8 +22,8 @@
 #include <string_view>
 #include <vector>
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/StringExtras.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/StringExtras.h"
 
 namespace orc_rt {
 namespace detail {

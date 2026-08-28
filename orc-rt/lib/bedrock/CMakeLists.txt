@@ -16,13 +16,13 @@ set(ORC_RT_SOURCES
   SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
-  sps-ci/AllSPSCI.cpp
-  sps-ci/CallSPSCI.cpp
-  sps-ci/GDBJITRegistrarSPSCI.cpp
-  sps-ci/MemoryAccessSPSCI.cpp
-  sps-ci/NativeDylibManagerSPSCI.cpp
-  sps-ci/SimpleNativeMemoryMapSPSCI.cpp
-  sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  sps/AllSPSCI.cpp
+  sps/CallSPSCI.cpp
+  sps/GDBJITRegistrarSPSCI.cpp
+  sps/MemoryAccessSPSCI.cpp
+  sps/NativeDylibManagerSPSCI.cpp
+  sps/SimpleNativeMemoryMapSPSCI.cpp
+  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 

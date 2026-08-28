@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of the printf logging backend declared in orc-rt-c/Logging.h.
+// Implementation of the printf logging backend declared in
+// orc-rt-c/support/Logging.h.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/support/Logging.h"
 
 #include "Environment.h"
 
