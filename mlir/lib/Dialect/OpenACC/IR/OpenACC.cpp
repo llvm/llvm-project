@@ -641,6 +641,7 @@ static BodyExecution getBodyExecution(LoopOp loopOp) {
     std::optional<ArrayRef<bool>> inclusiveUbs =
         loopOp.getInclusiveUpperbound();
     bool inclusiveUb = inclusiveUbs && (*inclusiveUbs)[i];
+    assert(*step != 0 && "zero step should have been filtered out");
     bool runsOnce = *step > 0 ? (inclusiveUb ? *lb <= *ub : *lb < *ub)
                               : (inclusiveUb ? *lb >= *ub : *lb > *ub);
     // The dimensions are iterated as a nest, so one empty dimension empties
