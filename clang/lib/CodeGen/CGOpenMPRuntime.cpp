@@ -1125,8 +1125,9 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
       In, CGF.EmitLoadOfPointerLValue(AddrIn, PtrTy->castAs<PointerType>())
               .getAddress());
   Address AddrOut = CGF.GetAddrOfLocalVar(OmpOutParm);
-  Address OutDerefAddr = CGF.EmitLoadOfPointerLValue(
-      AddrOut, PtrTy->castAs<PointerType>()).getAddress();
+  Address OutDerefAddr =
+      CGF.EmitLoadOfPointerLValue(AddrOut, PtrTy->castAs<PointerType>())
+          .getAddress();
   Scope.addPrivate(Out, OutDerefAddr);
   (void)Scope.Privatize();
   if (!IsCombiner && Out->hasInit() &&
@@ -1146,13 +1147,11 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
             // Synthesize CXXConstructExpr for default construction.
             // Collect default arguments for parameters with defaults.
             ASTContext &Ctx = CGM.getContext();
-            SmallVector<Expr*, 4> Args;
-            for (unsigned I = 0; I < Ctor->getNumParams(); ++I) {
-              const ParmVarDecl *Param = Ctor->getParamDecl(I);
-              if (Param->hasDefaultArg()) {
-                Args.push_back(const_cast<Expr*>(Param->getDefaultArg()));
-              }
-            }
+            SmallVector<Expr *, 4> Args;
+            for (unsigned I = 0; I < Ctor->getNumParams(); ++I)
+              if (const ParmVarDecl *Param = Ctor->getParamDecl(I);
+                  Param->hasDefaultArg())
+                Args.push_back(const_cast<Expr *>(Param->getDefaultArg()));
 
             CXXConstructExpr *CtorExpr = CXXConstructExpr::Create(
                 Ctx, Ty, Out->getLocation(),
@@ -1164,10 +1163,8 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
 
             // Emit the constructor call
             AggValueSlot Slot = AggValueSlot::forAddr(
-                OutDerefAddr, Ty.getQualifiers(),
-                AggValueSlot::IsDestructed,
-                AggValueSlot::DoesNotNeedGCBarriers,
-                AggValueSlot::IsNotAliased,
+                OutDerefAddr, Ty.getQualifiers(), AggValueSlot::IsDestructed,
+                AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
                 AggValueSlot::DoesNotOverlap);
             CGF.EmitCXXConstructExpr(CtorExpr, Slot);
             break;
