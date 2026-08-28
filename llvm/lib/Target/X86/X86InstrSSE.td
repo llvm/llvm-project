@@ -7995,7 +7995,6 @@ let Predicates = [HasAVX2] in {
   defm : vperm2x128_lowering<"VPERM2I128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2I128", v16f16, loadv16f16>;
   defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
-  defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
 }
 
 //===----------------------------------------------------------------------===//
