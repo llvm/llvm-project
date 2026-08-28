@@ -13,7 +13,6 @@
 #include <cassert>
 #include <concepts>
 #include <expected>
-#include <type_traits>
 #include <utility>
 
 #include "../../types.h"
