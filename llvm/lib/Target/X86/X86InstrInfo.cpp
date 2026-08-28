@@ -3279,20 +3279,20 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
 //   Conditional-compare formation hooks (see MachineConditionalCompares).
 //===----------------------------------------------------------------------===//
 
-// Parse a condition code returned by analyzeBranch. Reject the compound and any
-// explicitly unsupported condition codes.
+// Parse the condition code analyzeBranch produced for a conditional Jcc, and
+// reject the explicitly unsupported (e.g. compound) codes. An X86 conditional
+// branch always carries a single valid condition-code immediate.
 static bool parseCCMPCond(ArrayRef<MachineOperand> Cond, X86::CondCode &CC,
                           ArrayRef<X86::CondCode> UnsupportedCCs = {}) {
-  if (Cond.size() != 1)
-    return false;
-
+  assert(Cond.size() == 1 && "Unexpected X86 branch condition");
   CC = static_cast<X86::CondCode>(Cond[0].getImm());
+  assert(CC != X86::COND_INVALID && "Invalid X86 branch condition");
 
-  for (const auto &UnsupportedCC : UnsupportedCCs)
+  for (X86::CondCode UnsupportedCC : UnsupportedCCs)
     if (CC == UnsupportedCC)
       return false;
 
-  return CC != X86::COND_INVALID;
+  return true;
 }
 
 // Count the number of conditional branches in the terminator sequence of MBB.
@@ -3459,21 +3459,19 @@ static unsigned getCCMPOpcode(unsigned CmpOpc) {
   }
 }
 
-// Layout of Info.TargetData for X86.
-enum { TDHeadCC = 0, TDTailCC = 1 };
+// Indices into Info.TargetData: the parsed Head->CmpBB and CmpBB->Tail
+// condition codes.
+enum { HeadCCIdx = 0, TailCCIdx = 1 };
 
 MCRegister X86InstrInfo::getConditionalCompareFlagReg() const {
   return X86::EFLAGS;
 }
 
-bool X86InstrInfo::canConvertToCCMP(MachineBasicBlock &Head,
-                                    MachineBasicBlock &CmpBB,
-                                    ArrayRef<MachineOperand> HeadCond,
-                                    bool HeadTBBIsCmpBB,
-                                    ArrayRef<MachineOperand> CmpBBCond,
-                                    bool CmpBBTBBIsTail,
-                                    const MachineRegisterInfo &MRI,
-                                    CCmpConvInfo &Info) const {
+bool X86InstrInfo::canConvertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+    ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+    ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+    const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
   // CCMP/CTEST resets all the bits of EFLAGS, so Head must contain only a
   // single conditional branch.
   if (getNumOfJcc(&Head) > 1)
@@ -3499,8 +3497,8 @@ bool X86InstrInfo::canConvertToCCMP(MachineBasicBlock &Head,
     return false;
 
   Info.CmpMI = CmpMI;
-  Info.TargetData[TDHeadCC] = HeadCmpBBCC;
-  Info.TargetData[TDTailCC] = CmpBBTailCC;
+  Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
+  Info.TargetData[TailCCIdx] = CmpBBTailCC;
   return true;
 }
 
@@ -3510,9 +3508,11 @@ MachineInstr *X86InstrInfo::convertToCCMP(MachineBasicBlock &Head,
                                           ArrayRef<MachineOperand> HeadCond,
                                           const CCmpConvInfo &Info,
                                           MachineRegisterInfo &MRI) const {
+  // SpliceLoc/HeadTermDL/HeadCond are unused: an X86 Head is always a plain
+  // JCC_1, so there is no Head terminator to synthesize or re-insert.
   MachineInstr *CmpMI = Info.CmpMI;
-  auto HeadCmpBBCC = static_cast<X86::CondCode>(Info.TargetData[TDHeadCC]);
-  auto CmpBBTailCC = static_cast<X86::CondCode>(Info.TargetData[TDTailCC]);
+  auto HeadCmpBBCC = static_cast<X86::CondCode>(Info.TargetData[HeadCCIdx]);
+  auto CmpBBTailCC = static_cast<X86::CondCode>(Info.TargetData[TailCCIdx]);
 
   unsigned Opc = getCCMPOpcode(CmpMI->getOpcode());
   const MCInstrDesc &MCID = get(Opc);

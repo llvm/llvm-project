@@ -1058,9 +1058,10 @@ public:
   struct CCmpConvInfo {
     /// The convertible compare instruction found in CmpBB.
     MachineInstr *CmpMI = nullptr;
-    /// Opaque target scratch (parsed condition codes, chosen opcode, etc.);
-    /// sized to cover any target's needs.
-    int64_t TargetData[5] = {};
+    /// Opaque target scratch produced by canConvertToCCMP() and consumed by
+    /// convertToCCMP(). Both in-tree targets stash the two parsed condition
+    /// codes (Head->CmpBB and CmpBB->Tail) here.
+    int64_t TargetData[2] = {};
   };
 
   /// Return the physical flag/status register clobbered by conditional-compare
@@ -1072,7 +1073,8 @@ public:
   }
 
   /// Analyze whether the compare controlling CmpBB's terminator can be folded
-  /// into a conditional compare merged into Head (a triangle Head->CmpBB->Tail).
+  /// into a conditional compare merged into Head (a triangle
+  /// Head->CmpBB->Tail).
   ///
   /// HeadCond/CmpBBCond are analyzeBranch's opaque condition arrays. The
   /// HeadTBBIsCmpBB and CmpBBTBBIsTail flags report whether each block's
@@ -1080,35 +1082,31 @@ public:
   /// condition codes as needed.
   ///
   /// On success, fills Info (including Info.CmpMI) and returns true.
-  virtual bool canConvertToCCMP(MachineBasicBlock &Head,
-                                MachineBasicBlock &CmpBB,
-                                ArrayRef<MachineOperand> HeadCond,
-                                bool HeadTBBIsCmpBB,
-                                ArrayRef<MachineOperand> CmpBBCond,
-                                bool CmpBBTBBIsTail,
-                                const MachineRegisterInfo &MRI,
-                                CCmpConvInfo &Info) const {
+  virtual bool
+  canConvertToCCMP(MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+                   ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+                   ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+                   const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
     return false;
   }
 
   /// Emit the conditional compare that replaces Info.CmpMI, using the target
-  /// data stashed by canConvertToCCMP(). This is invoked after the generic pass
-  /// has spliced CmpBB into Head and removed Head's branch, so the target only
-  /// performs the instruction rewrite (and any Head-terminator fixup, e.g.
-  /// synthesizing a compare for a cbz/cbnz head, or re-inserting a conditional
-  /// branch when the folded compare was itself a terminator).
+  /// data stashed by canConvertToCCMP(), and perform any Head-terminator fixup.
+  /// This is invoked after the generic pass has spliced CmpBB into Head and
+  /// removed Head's branch. A target that needs no fixup only rewrites
+  /// Info.CmpMI; AArch64, for example, additionally synthesizes a compare for a
+  /// cbz/cbnz head and re-inserts a conditional branch when the folded compare
+  /// was itself a terminator.
   ///
   /// SpliceLoc is the insertion point for a synthesized Head compare (the first
   /// instruction spliced in from CmpBB); HeadTermDL is the removed Head
   /// terminator's debug location; HeadCond is its condition array. The generic
-  /// caller erases Info.CmpMI and fixes up Head's terminator afterwards. Returns
-  /// the new conditional-compare instruction.
-  virtual MachineInstr *convertToCCMP(MachineBasicBlock &Head,
-                                      MachineBasicBlock::iterator SpliceLoc,
-                                      const DebugLoc &HeadTermDL,
-                                      ArrayRef<MachineOperand> HeadCond,
-                                      const CCmpConvInfo &Info,
-                                      MachineRegisterInfo &MRI) const {
+  /// caller erases Info.CmpMI and fixes up Head's terminator afterwards.
+  /// Returns the new conditional-compare instruction.
+  virtual MachineInstr *
+  convertToCCMP(MachineBasicBlock &Head, MachineBasicBlock::iterator SpliceLoc,
+                const DebugLoc &HeadTermDL, ArrayRef<MachineOperand> HeadCond,
+                const CCmpConvInfo &Info, MachineRegisterInfo &MRI) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::convertToCCMP!");
   }
 

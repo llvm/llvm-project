@@ -2259,5 +2259,60 @@ entry:
   ret i32 %sel
 }
 
+; End-to-end CTEST formation: the CmpBB compare is a test (icmp eq (and a, b), 0),
+; so the cross-bb fold produces a CTEST rather than a CCMP.
+define void @ctest64rr_crossbb(i64 %a, i64 %b) {
+; CCMP-LABEL: ctest64rr_crossbb:
+; CCMP:       # %bb.0: # %bb
+; CCMP-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; CCMP-NEXT:    je .LBB36_2 # encoding: [0x74,A]
+; CCMP-NEXT:    # fixup A - offset: 1, value: .LBB36_2, kind: FK_PCRel_1
+; CCMP-NEXT:  # %bb.1: # %bb1
+; CCMP-NEXT:    testq %rsi, %rdi # encoding: [0x48,0x85,0xf7]
+; CCMP-NEXT:  .LBB36_2: # %bb3
+; CCMP-NEXT:    retq # encoding: [0xc3]
+;
+; CCMP_OPT-LABEL: ctest64rr_crossbb:
+; CCMP_OPT:       # %bb.0: # %bb
+; CCMP_OPT-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; CCMP_OPT-NEXT:    ctestneq {dfv=zf} %rsi, %rdi # encoding: [0x62,0xf4,0x94,0x05,0x85,0xf7]
+; CCMP_OPT-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ctest64rr_crossbb:
+; NDD:       # %bb.0: # %bb
+; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; NDD-NEXT:    je .LBB36_2 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB36_2, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %bb1
+; NDD-NEXT:    testq %rsi, %rdi # encoding: [0x48,0x85,0xf7]
+; NDD-NEXT:  .LBB36_2: # %bb3
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ctest64rr_crossbb:
+; ZU_COMMON:       # %bb.0: # %bb
+; ZU_COMMON-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; ZU_COMMON-NEXT:    je .LBB36_2 # encoding: [0x74,A]
+; ZU_COMMON-NEXT:    # fixup A - offset: 1, value: .LBB36_2, kind: FK_PCRel_1
+; ZU_COMMON-NEXT:  # %bb.1: # %bb1
+; ZU_COMMON-NEXT:    testq %rsi, %rdi # encoding: [0x48,0x85,0xf7]
+; ZU_COMMON-NEXT:  .LBB36_2: # %bb3
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+bb:
+  %cond1 = icmp eq i64 %a, 0
+  br i1 %cond1, label %bb3, label %bb1
+
+bb1:                                              ; preds = %bb
+  %and = and i64 %a, %b
+  %cond2 = icmp eq i64 %and, 0
+  br i1 %cond2, label %bb3, label %bb2
+
+bb2:                                              ; preds = %bb1
+  %tmp = ptrtoint ptr null to i64
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1, %bb
+  ret void
+}
+
 declare dso_local void @foo(...)
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone

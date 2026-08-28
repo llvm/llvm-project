@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the target-independent MachineConditionalCompares pass
-// which reduces branching by using the conditional-compare instructions
-// (CCMP/CTEST on X86; CCMP/CCMN/FCCMP on AArch64).
+// which reduces branching and code size by using the conditional-compare
+// instructions (CCMP/CTEST on X86; CCMP/CCMN/FCCMP on AArch64).
 //
 // The CFG transformations for forming conditional compares are very similar to
 // if-conversion, and this pass should run immediately before the early
@@ -58,7 +58,7 @@ static cl::opt<unsigned> BlockInstrLimit(
 
 // Stress testing mode - disable heuristics.
 static cl::opt<bool> Stress("stress-machine-ccmp", cl::Hidden,
-                            cl::desc("Turn all knobs to 11"), cl::init(false));
+                            cl::desc("Turn all knobs to 11"));
 
 STATISTIC(NumConsidered, "Number of ccmps considered");
 STATISTIC(NumPhiRejs, "Number of ccmps rejected (PHI)");
@@ -265,7 +265,8 @@ void SSACCmpConv::updateTailPHIs() {
 /// terminators are not considered. Only CmpMI is allowed to clobber the flags.
 bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
                                      const MachineInstr *CmpMI) {
-  // Reject any live-in physregs. It's very hard to get right.
+  // Reject any live-in physregs. It's probably NZCV/EFLAGS, and very hard to
+  // get right.
   if (!MBB->livein_empty()) {
     LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
     return false;
@@ -527,7 +528,8 @@ class MachineConditionalCompares {
 public:
   MachineConditionalCompares(const MachineBranchProbabilityInfo *MBPI,
                              MachineDominatorTree *DomTree,
-                             MachineLoopInfo *Loops, MachineTraceMetrics *Traces,
+                             MachineLoopInfo *Loops,
+                             MachineTraceMetrics *Traces,
                              MachineOptimizationRemarkEmitter *ORE)
       : MBPI(MBPI), DomTree(DomTree), Loops(Loops), Traces(Traces), ORE(ORE) {}
 
@@ -601,6 +603,14 @@ bool MachineConditionalCompares::shouldConvert() {
     // CodeSizeDelta == 0, continue with the regular heuristics.
   }
 
+  // Heuristic: The compare conversion delays the execution of the branch
+  // instruction because we must wait for the inputs to the second compare as
+  // well. The branch has no dependent instructions, but delaying it increases
+  // the cost of a misprediction.
+  //
+  // Set a limit on the delay we will accept.
+  unsigned DelayLimit = STI->getMispredictionPenalty() * 3 / 4;
+
   // Instruction depths can be computed for all trace instructions above CmpBB.
   unsigned HeadDepth =
       Trace.getInstrCycles(*CmpConv.Head->getFirstTerminator()).Depth;
@@ -611,20 +621,22 @@ bool MachineConditionalCompares::shouldConvert() {
   // of the misprediction penalty.
   unsigned CmpBBDepth =
       Trace.getInstrCycles(*CmpConv.CmpBB->getFirstTerminator()).Depth;
-  unsigned DelayLimit = STI->getMispredictionPenalty() * 3 / 4;
-  LLVM_DEBUG(dbgs() << "Head depth:  " << HeadDepth
-                    << "\nCmpBB depth: " << CmpBBDepth
-                    << "\nDelay limit: " << DelayLimit << '\n');
+  LLVM_DEBUG(dbgs() << "Head depth:  " << HeadDepth << "\nCmpBB depth: "
+                    << CmpBBDepth << "\nDelay limit: " << DelayLimit << '\n');
   if (CmpBBDepth > HeadDepth + DelayLimit) {
     LLVM_DEBUG(dbgs() << "Branch delay would be larger than " << DelayLimit
                       << " cycles.\n");
     return false;
   }
 
-  // The speculated instructions at the bottom of CmpBB must fit under the Head
-  // critical path, i.e. their resource depth must not exceed it.
+  // Check the resource depth at the bottom of CmpBB - these instructions will
+  // be speculated.
   unsigned ResDepth = Trace.getResourceDepth(true);
   LLVM_DEBUG(dbgs() << "Resources:   " << ResDepth << '\n');
+
+  // Heuristic: The speculatively executed instructions must all be able to
+  // merge into the Head block. The Head critical path should dominate the
+  // resource cost of the speculated instructions.
   if (ResDepth > HeadDepth) {
     LLVM_DEBUG(dbgs() << "Too many instructions to speculate.\n");
     return false;

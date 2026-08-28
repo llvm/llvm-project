@@ -322,7 +322,7 @@ LLVM_ABI extern char &EarlyIfPredicatorID;
 LLVM_ABI extern char &MachineCombinerID;
 
 /// MachineConditionalCompares - This pass performs target-independent
-/// conditional-compare formation on SSA form, reducing branching.
+/// conditional-compare formation on SSA form, reducing branching and code size.
 LLVM_ABI extern char &MachineConditionalComparesLegacyID;
 
 /// StackSlotColoring - This pass performs stack coloring and merging.
