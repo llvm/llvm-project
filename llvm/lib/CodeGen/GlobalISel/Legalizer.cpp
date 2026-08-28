@@ -423,7 +423,7 @@ PreservedAnalyses LegalizerPass::run(MachineFunction &MF,
   bool Changed = runLegalizerOnMachineFunction(
       MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
-      &MLLI->getLibcallLowering(Subtarget));
+      &getLibcallLowering(*MLLI, Subtarget));
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();

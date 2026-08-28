@@ -91,8 +91,8 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeWebAssemblyPreLegalizerCombinerPass(PR);
-  initializeWebAssemblyPostLegalizerCombinerPass(PR);
+  initializeWebAssemblyPreLegalizerCombinerLegacyPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerLegacyPass(PR);
   initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -522,7 +522,7 @@ bool WebAssemblyPassConfig::addIRTranslator() {
 
 void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPreLegalizerCombiner());
+    addPass(createWebAssemblyPreLegalizerCombinerLegacyPass());
   }
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
@@ -532,17 +532,17 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPostLegalizerCombiner());
+    addPass(createWebAssemblyPostLegalizerCombinerLegacyPass());
   }
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
 
   // We insert only if ISelDAG won't insert these at a later point.
   if (isGlobalISelAbortEnabled()) {

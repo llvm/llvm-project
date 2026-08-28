@@ -1035,6 +1035,67 @@ def testExtDialectWithInterfaces():
             print("static spec query error:", e)
 
 
+# CHECK: TEST: testExtDialectWithPublicInterfaces
+@run
+def testExtDialectWithPublicInterfaces():
+    class TestPublicIface(Dialect, name="ext_public_iface"):
+        pass
+
+    class NoEffectOp(
+        TestPublicIface.Operation, name="no_effect", traits=[NoMemoryEffect]
+    ):
+        pass
+
+    class AlwaysSpeculatableOp(
+        TestPublicIface.Operation,
+        name="always_speculatable",
+        traits=[AlwaysSpeculatable],
+    ):
+        pass
+
+    class RecursivelySpeculatableOp(
+        TestPublicIface.Operation,
+        name="recursively_speculatable",
+        traits=[NoTerminatorTrait, RecursivelySpeculatable],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestPublicIface.load()
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            no_effect = NoEffectOp()
+            always_speculatable = AlwaysSpeculatableOp()
+            recursively_speculatable = RecursivelySpeculatableOp()
+            recursively_speculatable.body.blocks.append()
+            with InsertionPoint(recursively_speculatable.body.blocks[0]):
+                AlwaysSpeculatableOp()
+
+        assert module.operation.verify()
+
+        no_effect_iface = ir.MemoryEffectsOpInterface(no_effect)
+        always_speculatable_iface = ir.ConditionallySpeculatable(always_speculatable)
+        recursively_speculatable_iface = ir.ConditionallySpeculatable(
+            recursively_speculatable
+        )
+
+        # CHECK: public no memory effects: 0
+        print("public no memory effects:", len(no_effect_iface.get_effects()))
+        # CHECK: public always speculatable: True
+        print(
+            "public always speculatable:",
+            always_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.Speculatable,
+        )
+        # CHECK: public recursively speculatable: True
+        print(
+            "public recursively speculatable:",
+            recursively_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.RecursivelySpeculatable,
+        )
+
+
 # CHECK: TEST: testExtDialectWithPure
 @run
 def testExtDialectWithPure():
@@ -1078,6 +1139,16 @@ def testExtDialectWithPure():
         # CHECK:   %[[NP:.*]] = "ext_pure.no_pure"(%[[P0]], %[[P1]]) : (i32, i32) -> i32
         # CHECK: }
         print(module)
+
+        pure_memory_iface = ir.MemoryEffectsOpInterface(p1)
+        pure_spec_iface = ir.ConditionallySpeculatable(p1)
+        # CHECK: pure memory effects: 0
+        print("pure memory effects:", len(pure_memory_iface.get_effects()))
+        # CHECK: pure speculatable: True
+        print(
+            "pure speculatable:",
+            pure_spec_iface.getSpeculatability() == ir.Speculatability.Speculatable,
+        )
 
         patterns = RewritePatternSet()
         apply_patterns_and_fold_greedily(module, patterns.freeze())

@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 using namespace llvm;
@@ -29,11 +31,17 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
-int printGPUsByKFD() {
+// Exposed for testing
+int printGPUsByKFD(StringRef NodePath) {
   SmallVector<std::pair<long, long>> Devices;
   std::error_code EC;
-  for (sys::fs::directory_iterator Begin(KFD_SYSFS_NODE_PATH, EC), End;
-       Begin != End; Begin.increment(EC)) {
+  sys::fs::directory_iterator Begin(NodePath, EC), End;
+
+  // Fail if the sysfs topology does not exist (e.g., WSL)
+  if (EC)
+    return 1;
+
+  for (; Begin != End; Begin.increment(EC)) {
     if (EC)
       return 1;
 
@@ -70,8 +78,10 @@ int printGPUsByKFD() {
   // Sort the devices by their node to make sure it prints in order.
   llvm::sort(Devices, [](auto &L, auto &R) { return L.first < R.first; });
   for (const auto &[Node, GFXVersion] : Devices)
-    std::fprintf(stdout, "gfx%ld%ld%lx\n", getMajor(GFXVersion),
-                 getMinor(GFXVersion), getStep(GFXVersion));
+    outs() << "gfx" << getMajor(GFXVersion) << getMinor(GFXVersion)
+           << format_hex_no_prefix(getStep(GFXVersion), 1) << '\n';
 
   return 0;
 }
+
+int printGPUsByKFD() { return printGPUsByKFD(KFD_SYSFS_NODE_PATH); }

@@ -33,7 +33,6 @@ class MultiAffineFunction;
 } // namespace presburger
 
 namespace affine {
-class AffineCondition;
 class AffineForOp;
 class AffineIfOp;
 class AffineParallelOp;

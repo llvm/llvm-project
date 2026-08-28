@@ -602,7 +602,28 @@ define amdgpu_kernel void @sqrt_fpmath_f32_assume_nosub(ptr addrspace(1) %out, f
   ret void
 }
 
+; f16 sqrt is left alone on a target without 16-bit instructions: this
+; expansion only emits f32 instructions.
+define amdgpu_kernel void @sqrt_fpmath_f16(ptr addrspace(1) %out, half %x) {
+; CHECK-LABEL: define amdgpu_kernel void @sqrt_fpmath_f16
+; CHECK-SAME: (ptr addrspace(1) [[OUT:%.*]], half [[X:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-NEXT:    [[NO_MD:%.*]] = call half @llvm.sqrt.f16(half [[X]])
+; CHECK-NEXT:    store volatile half [[NO_MD]], ptr addrspace(1) [[OUT]], align 2
+; CHECK-NEXT:    [[MD_1ULP:%.*]] = call half @llvm.sqrt.f16(half [[X]]), !fpmath !2
+; CHECK-NEXT:    store volatile half [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 2
+; CHECK-NEXT:    ret void
+;
+  %no.md = call half @llvm.sqrt.f16(half %x)
+  store volatile half %no.md, ptr addrspace(1) %out, align 2
+
+  %md.1ulp = call half @llvm.sqrt.f16(half %x), !fpmath !2
+  store volatile half %md.1ulp, ptr addrspace(1) %out, align 2
+
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float)
+declare half @llvm.sqrt.f16(half)
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)

@@ -173,6 +173,7 @@ add_macro_header(
     math-function-macros.h
   DEPENDS
     .math_macros
+    .float16_macros
 )
 
 add_macro_header(
@@ -338,6 +339,12 @@ add_macro_header(
   net_if_macros
   HDR
     net-if-macros.h
+)
+
+add_macro_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
 )
 
 add_macro_header(

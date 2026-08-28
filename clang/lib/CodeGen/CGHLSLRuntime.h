@@ -204,6 +204,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsLevelsXY,
                                    resource_getdimensions_levels_xy)
   GENERATE_HLSL_INTRINSIC_FUNCTION(LoadLevel, resource_load_level)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(LoadMS, resource_load_ms)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLod, resource_calculate_lod)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CalculateLodUnclamped,
                                    resource_calculate_lod_unclamped)

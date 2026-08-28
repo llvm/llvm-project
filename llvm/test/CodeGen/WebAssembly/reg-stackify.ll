@@ -345,6 +345,33 @@ define void @simple_multiple_use(i32 %x, i32 %y) {
   ret void
 }
 
+; Multiple uses in the same block with a debug value between them.
+
+; CHECK-LABEL: same_block_use_with_dbg_value:
+; CHECK:       .functype same_block_use_with_dbg_value (i32, i32) -> (){{$}}
+; CHECK-NEXT:  i32.mul     $push[[NUM0:[0-9]+]]=, $1, $0{{$}}
+; CHECK-NEXT:  local.tee   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT:  call        use_a, $pop[[NUM1]]{{$}}
+; CHECK-NEXT:  call        use_b, $[[NUM2]]{{$}}
+; CHECK-NEXT:  return{{$}}
+; NOREGS-LABEL: same_block_use_with_dbg_value:
+; NOREGS:       .functype same_block_use_with_dbg_value (i32, i32) -> (){{$}}
+; NOREGS-NEXT:  local.get 1{{$}}
+; NOREGS-NEXT:  local.get 0{{$}}
+; NOREGS-NEXT:  i32.mul
+; NOREGS-NEXT:  local.tee   0{{$}}
+; NOREGS-NEXT:  call        use_a{{$}}
+; NOREGS-NEXT:  local.get   0{{$}}
+; NOREGS-NEXT:  call        use_b{{$}}
+; NOREGS-NEXT:  return{{$}}
+define void @same_block_use_with_dbg_value(i32 %x, i32 %y) {
+  %mul = mul i32 %y, %x
+  call void @use_a(i32 %mul)
+  call void @llvm.dbg.value(metadata i32 %mul, i64 0, metadata !7, metadata !9), !dbg !10
+  call void @use_b(i32 %mul)
+  ret void
+}
+
 ; Multiple uses of the same value in one instruction.
 
 ; CHECK-LABEL: multiple_uses_in_same_insn:
