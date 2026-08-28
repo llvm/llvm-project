@@ -1886,7 +1886,7 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
     Out << ")";
   }
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().getOpenMP());
     for (OMPClause *C : D->clauselists()) {
       Out << " ";
       Printer.Visit(C);
@@ -1897,7 +1897,7 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
 void DeclPrinter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
   Out << "#pragma omp requires ";
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().getOpenMP());
     for (auto I = D->clauselist_begin(), E = D->clauselist_end(); I != E; ++I)
       Printer.Visit(*I);
   }
@@ -1950,7 +1950,7 @@ void DeclPrinter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
     Out << D->getVarName();
     Out << ")";
     if (!D->clauselist_empty()) {
-      OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
+      OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().getOpenMP());
       for (auto *C : D->clauselists()) {
         Out << " ";
         Printer.Visit(C);
