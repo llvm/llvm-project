@@ -20,23 +20,36 @@ void IfBlockSizeCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void IfBlockSizeCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto& SrcMgr = Result.SourceManager;
+  const auto &SrcMgr = Result.SourceManager;
 
   const auto *IfBlk = Result.Nodes.getNodeAs<IfStmt>("if");
-  const unsigned FirstLine = SrcMgr->getSpellingLineNumber(IfBlk->getBeginLoc());
-  const unsigned LastLine = [&](){
-    if (const auto *ElseBlk = IfBlk->getElse())
+  const auto *ElseBlk = IfBlk->getElse();
+
+  const unsigned FirstLine =
+      SrcMgr->getSpellingLineNumber(IfBlk->getBeginLoc());
+  const unsigned LastLine = [&]() {
+    if (ElseBlk != nullptr)
       return SrcMgr->getSpellingLineNumber(ElseBlk->getBeginLoc());
     return SrcMgr->getSpellingLineNumber(IfBlk->getEndLoc());
   }();
-  const unsigned LineCount = LastLine - FirstLine  + 1;
+  const unsigned LineCount = LastLine - FirstLine + 1;
 
-  if (LineCount <= LineCountThreshold)
-    return;
+  if (LineCount > LineCountThreshold)
+    diag(IfBlk->getBeginLoc(), "if block spans %0 lines of code, which exceeds "
+                               "the threshold of %1 lines")
+        << LineCount << LineCountThreshold;
 
-  diag(IfBlk->getBeginLoc(), "if block spans %0 lines of code, which exceeds the threshold of %1 lines")
-      << LineCount
-      << LineCountThreshold;
+  if (ElseBlk != nullptr && isa<CompoundStmt>(ElseBlk)) { // i.e. is not an else if
+    const unsigned ElseLastLine =
+        SrcMgr->getSpellingLineNumber(IfBlk->getEndLoc());
+    const unsigned ElseLineCount = ElseLastLine - LastLine + 1;
+
+    if (ElseLineCount > LineCountThreshold)
+      diag(ElseBlk->getBeginLoc(),
+           "else block spans %0 lines of code, which exceeds "
+           "the threshold of %1 lines")
+          << ElseLineCount << LineCountThreshold;
+  }
 }
 
 } // namespace clang::tidy::readability

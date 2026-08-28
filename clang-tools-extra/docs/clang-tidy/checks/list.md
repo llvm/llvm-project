@@ -399,6 +399,7 @@ readability/*
 | {doc}`readability-function-size <readability/function-size>` |  |
 | {doc}`readability-identifier-length <readability/identifier-length>` |  |
 | {doc}`readability-identifier-naming <readability/identifier-naming>` | Yes |
+| {doc}`readability-if-block-size <readability/if-block-size>` | Yes |
 | {doc}`readability-implicit-bool-conversion <readability/implicit-bool-conversion>` | Yes |
 | {doc}`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>` | Yes |
 | {doc}`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>` | Yes |
