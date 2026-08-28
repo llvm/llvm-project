@@ -2370,12 +2370,9 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
                                             uint64_t AllocBeginOffset,
                                             Type *AllocaTy,
                                             const DataLayout &DL,
-                                            bool &WholeAllocaOp) {
+                                            bool &WholeAllocaOp,
+                                            bool AllowMemTransferWidening) {
   uint64_t Size = DL.getTypeStoreSize(AllocaTy).getFixedValue();
-
-  uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
-  uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
-
   Use *U = S.getUse();
 
   // Lifetime intrinsics operate over the whole alloca whose sizes are usually
@@ -2386,6 +2383,21 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
     if (II->isLifetimeStartOrEnd() || II->isDroppable())
       return true;
   }
+
+  if (AllowMemTransferWidening) {
+    if (auto *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
+      if (MI->isVolatile() || !isa<Constant>(MI->getLength()) ||
+          !S.isSplittable())
+        return false;
+      if (isa<MemTransferInst>(MI) && S.beginOffset() <= AllocBeginOffset &&
+          S.endOffset() >= AllocBeginOffset + Size)
+        WholeAllocaOp = true;
+      return true;
+    }
+  }
+
+  uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
+  uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
 
   // We can't reasonably handle cases where the load or store extends past
   // the end of the alloca's type and into its padding.
@@ -2462,7 +2474,8 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
 /// stores to a particular alloca into wider loads and stores and be able to
 /// promote the resulting alloca.
 static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
-                                    const DataLayout &DL) {
+                                    const DataLayout &DL,
+                                    bool AllowMemTransferWidening = false) {
   uint64_t SizeInBits = DL.getTypeSizeInBits(AllocaTy).getFixedValue();
   // Don't create integer types larger than the maximum bitwidth.
   if (SizeInBits > IntegerType::MAX_INT_BITS)
@@ -2491,12 +2504,14 @@ static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
 
   for (const Slice &S : P)
     if (!isIntegerWideningViableForSlice(S, P.beginOffset(), AllocaTy, DL,
-                                         WholeAllocaOp))
+                                         WholeAllocaOp,
+                                         AllowMemTransferWidening))
       return false;
 
   for (const Slice *S : P.splitSliceTails())
     if (!isIntegerWideningViableForSlice(*S, P.beginOffset(), AllocaTy, DL,
-                                         WholeAllocaOp))
+                                         WholeAllocaOp,
+                                         AllowMemTransferWidening))
       return false;
 
   return WholeAllocaOp;
@@ -5561,7 +5576,8 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         !containsNonIntegralPointer(TypePartitionTy, DL) &&
         DL.isLegalInteger(P.size() * 8)) {
       Type *IntTy = Type::getIntNTy(C, P.size() * 8);
-      if (isIntegerWideningViable(P, IntTy, DL)) {
+      if (isIntegerWideningViable(P, IntTy, DL,
+                                  /*AllowMemTransferWidening=*/true)) {
         LogSelection("array-int-widen", IntTy, nullptr, true);
         return {IntTy, true, nullptr};
       }
