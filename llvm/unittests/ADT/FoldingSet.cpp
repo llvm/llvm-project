@@ -272,6 +272,23 @@ TEST(FoldingSetTest, Iterator) {
   EXPECT_NE(It, ItCopy);
 }
 
+// FoldingSetNode has a non-zero offset here, so operator* must adjust it.
+struct NonEmptyBase {
+  int Dummy = 0;
+};
+
+struct MultiplyInheritedNode : public NonEmptyBase, public FoldingSetNode {
+  void Profile(FoldingSetNodeID &ID) const { ID.AddInteger(0); }
+};
+
+TEST(FoldingSetTest, IteratorMultipleInheritance) {
+  FoldingSet<MultiplyInheritedNode> Set;
+  MultiplyInheritedNode N;
+  Set.InsertNode(&N);
+
+  EXPECT_EQ(&*Set.begin(), &N);
+}
+
 TEST(FoldingSetTest, FoldingSetVectorBasic) {
   FoldingSetVector<TrivialPair> Vec;
   EXPECT_THAT(Vec, IsEmpty());
