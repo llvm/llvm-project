@@ -6256,28 +6256,44 @@ bool VectorCombine::foldDivRemOfSelect(Instruction &I) {
     Sel = Splat;
 
   Value *Cond;
-  const APInt *C1, *C2;
-  if (!match(Sel, m_Select(m_Value(Cond), m_APInt(C1), m_APInt(C2))))
-    return false;
-
-  // Both arms are evaluated after the split, so neither may be zero, and a
-  // signed arm may not divide by -1.
-  unsigned Opcode = I.getOpcode();
-  bool IsSigned = Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
-  if (C1->isZero() || C2->isZero() ||
-      (IsSigned && (C1->isAllOnes() || C2->isAllOnes())))
-    return false;
-
   Type *Ty = I.getType();
-  Constant *D1 = ConstantInt::get(Ty, *C1), *D2 = ConstantInt::get(Ty, *C2);
+  unsigned Opcode = I.getOpcode();
+  Constant *D1, *D2;
+
+  if (Opcode == Instruction::FDiv) {
+    // Each arm has to turn into a reciprocal multiply, which needs an exact
+    // inverse or a normal constant under arcp.
+    const APFloat *F1, *F2;
+    if (!match(Sel, m_Select(m_Value(Cond), m_APFloat(F1), m_APFloat(F2))))
+      return false;
+    bool Exact = F1->getExactInverse(nullptr) && F2->getExactInverse(nullptr);
+    if (!Exact && !(I.hasAllowReciprocal() && F1->isNormal() && F2->isNormal()))
+      return false;
+    D1 = ConstantFP::get(Ty, *F1);
+    D2 = ConstantFP::get(Ty, *F2);
+  } else {
+    // Both arms are evaluated after the split, so neither may be zero, and a
+    // signed arm may not divide by -1.
+    const APInt *A1, *A2;
+    if (!match(Sel, m_Select(m_Value(Cond), m_APInt(A1), m_APInt(A2))))
+      return false;
+    bool IsSigned = Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+    if (A1->isZero() || A2->isZero() ||
+        (IsSigned && (A1->isAllOnes() || A2->isAllOnes())))
+      return false;
+    D1 = ConstantInt::get(Ty, *A1);
+    D2 = ConstantInt::get(Ty, *A2);
+  }
+
   TTI::OperandValueInfo XInfo = TTI::getOperandInfo(X);
 
   InstructionCost OldCost = TTI.getArithmeticInstrCost(
       Opcode, Ty, CostKind, XInfo, {TTI::OK_AnyValue, TTI::OP_None});
+  unsigned ArmOpcode = Opcode == Instruction::FDiv ? Instruction::FMul : Opcode;
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Opcode, Ty, CostKind, XInfo,
+      TTI.getArithmeticInstrCost(ArmOpcode, Ty, CostKind, XInfo,
                                  TTI::getOperandInfo(D1)) +
-      TTI.getArithmeticInstrCost(Opcode, Ty, CostKind, XInfo,
+      TTI.getArithmeticInstrCost(ArmOpcode, Ty, CostKind, XInfo,
                                  TTI::getOperandInfo(D2));
   // A select with other users stays where it is, so the new one is an extra
   // instruction to cost.
@@ -6629,7 +6645,7 @@ bool VectorCombine::run() {
     if (TryEarlyFoldsOnly)
       return false;
 
-    if (I.isIntDivRem())
+    if (I.isIntDivRem() || Opcode == Instruction::FDiv)
       if (foldDivRemOfSelect(I))
         return true;
 

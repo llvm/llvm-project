@@ -170,8 +170,9 @@ define i32 @udiv_select_multi_use(i32 %x, i1 %c, ptr %p) {
 
 define float @fdiv_fast(float %x, i1 %c) {
 ; CHECK-LABEL: @fdiv_fast(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 9.999990e+02, float 6.666660e+02
-; CHECK-NEXT:    [[R:%.*]] = fdiv fast float [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float [[X:%.*]], 9.999990e+02
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float [[X]], 6.666660e+02
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = select i1 %c, float 999.999, float 666.666
@@ -181,10 +182,9 @@ define float @fdiv_fast(float %x, i1 %c) {
 
 define <8 x float> @fdiv_fast_vector(<8 x float> %x, i1 %c) {
 ; CHECK-LABEL: @fdiv_fast_vector(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 9.999990e+02, float 6.666660e+02
-; CHECK-NEXT:    [[I:%.*]] = insertelement <8 x float> poison, float [[D]], i64 0
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x float> [[I]], <8 x float> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv fast <8 x float> [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast <8 x float> [[X:%.*]], splat (float 9.999990e+02)
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast <8 x float> [[X]], splat (float 6.666660e+02)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], <8 x float> [[TMP1]], <8 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = select i1 %c, float 999.999, float 666.666
@@ -207,8 +207,9 @@ define float @negative_fdiv_no_arcp(float %x, i1 %c) {
 
 define float @fdiv_exact_inverse_no_arcp(float %x, i1 %c) {
 ; CHECK-LABEL: @fdiv_exact_inverse_no_arcp(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 4.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv float [[X]], 4.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], float [[TMP1]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = select i1 %c, float 2.0, float 4.0
