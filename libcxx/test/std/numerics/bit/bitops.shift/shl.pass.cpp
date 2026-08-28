@@ -23,8 +23,8 @@
 
 template <class T>
 constexpr bool test() {
-  using U             = std::make_unsigned_t<T>;
-  constexpr int width = std::numeric_limits<U>::digits;
+  using U               = std::make_unsigned_t<T>;
+  constexpr int width   = std::numeric_limits<U>::digits;
   constexpr U highbit_u = U(1) << (width - 1);
 
   if constexpr (std::is_signed_v<T>) {
