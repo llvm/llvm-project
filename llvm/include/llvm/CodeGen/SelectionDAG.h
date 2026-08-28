@@ -129,7 +129,7 @@ template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTLis
   }
 
   static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
+                     FoldingSetNodeID &TempID) {
     return ID == X.FastID;
   }
 };
