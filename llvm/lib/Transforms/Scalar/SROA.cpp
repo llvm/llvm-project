@@ -5466,10 +5466,11 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // type?
   if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                P.beginOffset(), P.size())) {
-    // If the partition is an aggregate without non-integral pointers that can
-    // be spanned by a legal integer type, prefer to represent it as a legal
-    // integer type because it's more likely to be promotable.
-    if (TypePartitionTy->isAggregateType() &&
+    // If the partition is an array, or a struct when aggregate canonicalization
+    // is requested, prefer a legal integer type because it's more likely to be
+    // promotable.
+    if ((TypePartitionTy->isArrayTy() ||
+         (AggregateToVector && TypePartitionTy->isStructTy())) &&
         !containsNonIntegralPointer(TypePartitionTy, DL) &&
         DL.isLegalInteger(P.size() * 8))
       TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
