@@ -1167,7 +1167,7 @@ define i32 @dot4_and_mask10_chain_not_add(i32 %x, i32 %y) {
 }
 
 ;------------------------------------------------------------------------------
-; NEGATIVE TESTS: ACCUMULATOR WIDER THAN A DOT4 CAN REPRESENT
+; Negative tests: accumulator wider than a dot4 can represent
 ;------------------------------------------------------------------------------
 
 ; i64 accumulator would lose its upper half if folded into a 32-bit dot4.
