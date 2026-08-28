@@ -17,6 +17,15 @@
 // RUN: -flax-vector-conversions=none -disable-O0-optnone -fclangir -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,sroa \
 // RUN: | FileCheck --check-prefix=LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.' --implicit-check-not=' @llvm.sqrt.' %s %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -fclangir -emit-cir -o - %s \
+// RUN: | FileCheck --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' --implicit-check-not='cir.call_llvm_intrinsic "sqrt"' %s %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -fclangir -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg,sroa \
+// RUN: | FileCheck --check-prefix=LLVM --implicit-check-not=' @llvm.fma.' --implicit-check-not=' @llvm.sqrt.' %s %}
 
 // REQUIRES: aarch64-registered-target
 
@@ -28,7 +37,28 @@
 #pragma float_control(except, on)
 #endif
 
+#include <arm_fp16.h>
 #include <arm_neon.h>
+
+// UNCONSTRAINED-LABEL: define dso_local half @test_vsqrth_f16(
+// UNCONSTRAINED-SAME: half noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[SQR:%.*]] = call half @llvm.sqrt.f16(half [[A]])
+// UNCONSTRAINED-NEXT:    ret half [[SQR]]
+//
+// CONSTRAINED-LABEL: define dso_local half @test_vsqrth_f16(
+// CONSTRAINED-SAME: half noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[SQR:%.*]] = call half @llvm.experimental.constrained.sqrt.f16(half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
+// CONSTRAINED-NEXT:    ret half [[SQR]]
+//
+// CIR-LABEL: cir.func {{.*}}@test_vsqrth_f16(
+// CIR: cir.sqrt %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vsqrth_f16(
+// LLVM: call half @llvm.experimental.constrained.sqrt.f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+float16_t test_vsqrth_f16(float16_t a) {
+  return vsqrth_f16(a);
+}
 
 // UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vsqrt_f16(
 // UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -156,6 +186,26 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // LLVM: call <8 x half> @llvm.experimental.constrained.fma.v8f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
   return vfmaq_f16(a, b, c);
+}
+
+// UNCONSTRAINED-LABEL: define dso_local half @test_vfmah_f16(
+// UNCONSTRAINED-SAME: half noundef [[A:%.*]], half noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[FMA:%.*]] = call half @llvm.fma.f16(half [[B]], half [[C]], half [[A]])
+// UNCONSTRAINED-NEXT:    ret half [[FMA]]
+//
+// CONSTRAINED-LABEL: define dso_local half @test_vfmah_f16(
+// CONSTRAINED-SAME: half noundef [[A:%.*]], half noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[FMA:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[C]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    ret half [[FMA]]
+//
+// CIR-LABEL: cir.func {{.*}}@test_vfmah_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfmah_f16(
+// LLVM: call half @llvm.experimental.constrained.fma.f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
+  return vfmah_f16(a, b, c);
 }
 
 // UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vfms_f16(
