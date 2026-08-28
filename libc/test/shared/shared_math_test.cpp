@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/math.h"
-#include "src/__support/macros/properties/types.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
