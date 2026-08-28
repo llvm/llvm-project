@@ -73,6 +73,7 @@ protected:
   /// DW_AT_containing_type attribute. This attribute points to a DIE that
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
+  DenseMap<DIE *, const DINode *> PropertyForwardMap;
 
   DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
@@ -228,6 +229,7 @@ public:
   void addSourceLine(DIE &Die, const DILabel *L);
   void addSourceLine(DIE &Die, const DIType *Ty);
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
+  void addSourceLine(DIE &Die, const DIProperty *P);
 
   /// Add constant value entry in variable DIE.
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
@@ -278,6 +280,8 @@ public:
 
   /// Construct DIEs for types that contain vtables.
   void constructContainingTypeDIEs();
+
+  void constructPropertyForwardDIEs();
 
   /// Construct function argument DIEs.
   ///
@@ -386,6 +390,7 @@ private:
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);
+  void constructPropertyDIE(DIE &Buffer, const DIProperty *P);
   void constructTemplateTypeParameterDIE(DIE &Buffer,
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,

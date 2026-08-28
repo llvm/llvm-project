@@ -733,6 +733,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_itimerspec",
+    hdrs = ["hdr/types/struct_itimerspec.h"],
+)
+
+libc_support_library(
     name = "types_time_t",
     hdrs = ["hdr/types/time_t.h"],
 )
