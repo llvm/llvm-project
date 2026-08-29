@@ -6,7 +6,7 @@
 #define _HAVE_X 0
 #define X__Y
 
-#undef for
+#undef for // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #undef final
 #undef __HAVE_X
 #undef _HAVE_X
@@ -22,30 +22,30 @@
 #define extern
 #define inline
 
-#undef while
-#undef const
-#undef static
-#undef extern
-#undef inline
+#undef while // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
+#undef const // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
+#undef static // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
+#undef extern // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
+#undef inline // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 
 #define inline __inline
-#undef  inline
+#undef  inline // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #define inline __inline__
-#undef  inline
+#undef  inline // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 
 #define inline inline__  // expected-warning {{keyword is hidden by macro definition}}
-#undef  inline
+#undef  inline // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #define extern __inline  // expected-warning {{keyword is hidden by macro definition}}
-#undef  extern
+#undef  extern // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #define extern __extern	 // expected-warning {{keyword is hidden by macro definition}}
-#undef  extern
+#undef  extern // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #define extern __extern__ // expected-warning {{keyword is hidden by macro definition}}
-#undef  extern
+#undef  extern // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 
 #define inline _inline   // expected-warning {{keyword is hidden by macro definition}}
-#undef  inline
+#undef  inline // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 #define volatile   // expected-warning {{keyword is hidden by macro definition}}
-#undef  volatile
+#undef  volatile // expected-warning {{keyword or identifier with special meaning is used as a macro name}}
 
 #pragma clang diagnostic warning "-Wreserved-macro-identifier"
 

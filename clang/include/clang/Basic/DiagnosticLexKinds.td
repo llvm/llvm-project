@@ -435,8 +435,11 @@ def note_pp_ambiguous_macro_chosen : Note<
   "expanding this definition of %0">;
 def note_pp_ambiguous_macro_other : Note<
   "other definition of %0">;
-def warn_pp_macro_hides_keyword : Extension<
+def warn_pp_macro_hides_keyword : ExtWarn<
   "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>;
+def ext_pp_macro_name_is_keyword : Extension<
+  "keyword or identifier with special meaning is used as a macro name">,
+  InGroup<KeywordAsMacroUndef>;
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;

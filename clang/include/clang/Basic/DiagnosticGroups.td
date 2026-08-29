@@ -1127,7 +1127,8 @@ def : DiagGroup<"sequence-point", [Unsequenced]>;
 
 // Preprocessor warnings.
 def AmbiguousMacro : DiagGroup<"ambiguous-macro">;
-def KeywordAsMacro : DiagGroup<"keyword-macro">;
+def KeywordAsMacroUndef : DiagGroup<"keyword-macro-undef">;
+def KeywordAsMacro : DiagGroup<"keyword-macro", [KeywordAsMacroUndef]>;
 def ReservedIdAsMacro : DiagGroup<"reserved-macro-identifier">;
 def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>;
 def ReservedAttributeIdentifier : DiagGroup<"reserved-attribute-identifier">;
