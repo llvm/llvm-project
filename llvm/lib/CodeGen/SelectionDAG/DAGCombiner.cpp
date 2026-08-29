@@ -18778,6 +18778,42 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
       }
 
+      // With aggressive fusion, the existing walk can independently
+      // reassociate FADD chains sharing an FMUL:
+      //
+      //   M  = FMUL C, D
+      //   F1 = FMA A1, B1, M       P1 = FADD F1, E1
+      //   F2 = FMA A2, B2, M       P2 = FADD F2, E2
+      //   F3 = FMA A3, B3, M       P3 = FADD F3, E3
+      //
+      // into:
+      //
+      //   P1 = FMA A1, B1, (FMA C, D, E1)
+      //   P2 = FMA A2, B2, (FMA C, D, E2)
+      //   P3 = FMA A3, B3, (FMA C, D, E3)
+      if (FMul.getOpcode() == ISD::FMUL && Aggressive &&
+          all_of(FMul->uses(), [&](SDUse &Use) {
+            if (Use.getOperandNo() != 2)
+              return false;
+            const SDValue FusedOp(Use.getUser(), 0);
+            if (!isFusedOp(FusedOp) || !FusedOp.hasOneUse())
+              return false;
+            const SDValue FAdd(*FusedOp->user_begin(), 0);
+            SDValue Addend;
+            if (!sd_match(FAdd, m_FAdd(m_Specific(FusedOp), m_Value(Addend))) ||
+                !FAdd->getFlags().hasAllowReassociation() ||
+                (!AllowFusionGlobally && !FAdd->getFlags().hasAllowContract()))
+              return false;
+            return !FMul->isPredecessorOf(Addend.getNode());
+          })) {
+        const SDValue C = FMul.getOperand(0);
+        const SDValue D = FMul.getOperand(1);
+        const SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        DAG.UpdateNodeOperands(TmpFMA.getNode(), TmpFMA->getOperand(0),
+                               TmpFMA->getOperand(1), CDE);
+        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
+      }
+
       TmpFMA = TmpFMA->getOperand(2);
     }
   }
