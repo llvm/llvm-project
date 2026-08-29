@@ -227,7 +227,7 @@ FoldingSetBase::Node *FoldingSetBase::lookup(const FoldingSetNodeID &ID,
   for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
     Node *N = static_cast<Node *>(Buckets[I]);
     if (N->getFoldingSetHash() == IDHash && nodeEquals(Info, this, N, ID)) {
-      Token = FoldingSetInsertToken();
+      Token = {};
       return N;
     }
   }

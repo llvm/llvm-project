@@ -74,38 +74,37 @@ namespace llvm {
 /// 1) If you have an existing node that you want add to the set but unsure
 /// that the node might already exist then call;
 ///
-///    MyNode *M = MyFoldingSet.GetOrInsertNode(N);
+///    MyNode *M = MyFoldingSet.getOrInsert(N);
 ///
 /// If The result is equal to the input then the node has been inserted.
 /// Otherwise, the result is the node existing in the folding set, and the
 /// input can be discarded (use the result instead.)
 ///
 /// 2) If you are ready to construct a node but want to check if it already
-/// exists, then call FindNodeOrInsertPos with a FoldingSetNodeID of the bits to
-/// check;
+/// exists, then call lookup with a FoldingSetNodeID of the bits to check;
 ///
 ///   FoldingSetNodeID ID;
 ///   ID.AddString(Name);
 ///   ID.AddInteger(Value);
-///   void *InsertPoint;
+///   FoldingSetInsertToken Token;
 ///
-///    MyNode *M = MyFoldingSet.FindNodeOrInsertPos(ID, InsertPoint);
+///    MyNode *M = MyFoldingSet.lookup(ID, Token);
 ///
-/// If found then M will be non-NULL, else InsertPoint will point to where it
-/// should be inserted using InsertNode.
+/// If found then M will be non-NULL, else Token holds what insert needs to
+/// place the node.
 ///
-/// 3) If you get a NULL result from FindNodeOrInsertPos then you can insert a
-/// new node with InsertNode;
+/// 3) If you get a NULL result from lookup then you can insert a new node with
+/// insert;
 ///
 ///    MyNode *N = new MyNode(Name, Value);
-///    MyFoldingSet.InsertNode(N, InsertPoint);
+///    MyFoldingSet.insert(N, Token);
 ///
-/// InsertPoint survives intervening insertions, but N must profile identically
-/// to the ID that produced it, or N becomes unfindable.
+/// Token survives intervening insertions, but N must profile identically to
+/// the ID that produced it, or N becomes unfindable.
 ///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
-///    bool WasRemoved = MyFoldingSet.RemoveNode(M);
+///    bool WasRemoved = MyFoldingSet.erase(M);
 ///
 /// The result indicates whether the node existed in the folding set.
 
@@ -291,16 +290,23 @@ public:
 /// Insertion token: a failed lookup fills it in, the matching insert consumes
 /// it.
 class FoldingSetInsertToken {
-  uint64_t Value = 0; // hash + 1 while holding a token, 0 otherwise.
+  uint32_t Hash = FoldingSetNodeIDRef::NotAHash;
 
-  explicit FoldingSetInsertToken(uint32_t Hash) : Value(uint64_t(Hash) + 1) {}
-  uint32_t hash() const { return uint32_t(Value - 1); }
+  explicit FoldingSetInsertToken(uint32_t Hash) : Hash(Hash) {
+    assert(Hash != FoldingSetNodeIDRef::NotAHash);
+  }
+  uint32_t hash() const {
+    assert(*this && "no token held");
+    return Hash;
+  }
 
   friend class FoldingSetBase;
 
 public:
   FoldingSetInsertToken() = default;
-  explicit operator bool() const { return Value != 0; }
+  explicit operator bool() const {
+    return Hash != FoldingSetNodeIDRef::NotAHash;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -396,19 +402,18 @@ protected:
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
-  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
-                                     void *&InsertPos,
-                                     const FoldingSetInfo &Info);
   LLVM_ABI Node *lookup(const FoldingSetNodeID &ID,
                         FoldingSetInsertToken &Token,
                         const FoldingSetInfo &Info);
+  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
+                                     void *&InsertPos,
+                                     const FoldingSetInfo &Info);
 
-  /// Insert the specified node into the folding set, knowing that
-  /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos (or lookup) for an ID that \p N profiles identically
-  /// to.
-  LLVM_ABI void InsertNode(Node *N, void *InsertPos);
+  /// Insert the specified node into the folding set, knowing that it is not
+  /// already in the folding set.  \p Token must come from lookup for an ID that
+  /// \p N profiles identically to.
   LLVM_ABI void insert(Node *N, FoldingSetInsertToken Token);
+  LLVM_ABI void InsertNode(Node *N, void *InsertPos);
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -496,42 +501,42 @@ public:
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
-  bool erase(T *N) { return RemoveNode(N); }
+  bool erase(T *N) { return FoldingSetBase::RemoveNode(N); }
+  bool RemoveNode(T *N) { return erase(N); }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
-  T *GetOrInsertNode(T *N) {
+  T *getOrInsert(T *N) {
     return static_cast<T *>(
         FoldingSetBase::GetOrInsertNode(N, getFoldingSetInfo()));
   }
-  T *getOrInsert(T *N) { return GetOrInsertNode(N); }
+  T *GetOrInsertNode(T *N) { return getOrInsert(N); }
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
-  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
-    return static_cast<T *>(FoldingSetBase::FindNodeOrInsertPos(
-        ID, InsertPos, getFoldingSetInfo()));
-  }
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return static_cast<T *>(
         FoldingSetBase::lookup(ID, Token, getFoldingSetInfo()));
   }
-
-  /// Insert the specified node into the folding set, knowing that
-  /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos (or lookup).
-  void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos);
+  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
+    return static_cast<T *>(FoldingSetBase::FindNodeOrInsertPos(
+        ID, InsertPos, getFoldingSetInfo()));
   }
+
+  /// Insert the specified node into the folding set, knowing that it is not
+  /// already in the folding set.  \p Token must come from lookup for an ID that
+  /// \p N profiles identically to.
   void insert(T *N, FoldingSetInsertToken Token) {
     FoldingSetBase::insert(N, Token);
+  }
+  void InsertNode(T *N, void *InsertPos) {
+    FoldingSetBase::InsertNode(N, InsertPos);
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
   /// already in the folding set.
   void InsertNode(T *N) {
-    T *Inserted = GetOrInsertNode(N);
+    T *Inserted = getOrInsert(N);
     (void)Inserted;
     assert(Inserted == N && "Node already inserted!");
   }
@@ -591,32 +596,32 @@ public:
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
-  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
-    return Set.FindNodeOrInsertPos(ID, InsertPos);
-  }
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return Set.lookup(ID, Token);
+  }
+  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
+    return Set.FindNodeOrInsertPos(ID, InsertPos);
   }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
-  T *GetOrInsertNode(T *N) {
-    T *Result = Set.GetOrInsertNode(N);
+  T *getOrInsert(T *N) {
+    T *Result = Set.getOrInsert(N);
     if (Result == N)
       Vector.push_back(N);
     return Result;
   }
-  T *getOrInsert(T *N) { return GetOrInsertNode(N); }
+  T *GetOrInsertNode(T *N) { return getOrInsert(N); }
 
-  /// Insert the specified node into the folding set, knowing that
-  /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos (or lookup).
-  void InsertNode(T *N, void *InsertPos) {
-    Set.InsertNode(N, InsertPos);
-    Vector.push_back(N);
-  }
+  /// Insert the specified node into the folding set, knowing that it is not
+  /// already in the folding set.  \p Token must come from lookup for an ID that
+  /// \p N profiles identically to.
   void insert(T *N, FoldingSetInsertToken Token) {
     Set.insert(N, Token);
+    Vector.push_back(N);
+  }
+  void InsertNode(T *N, void *InsertPos) {
+    Set.InsertNode(N, InsertPos);
     Vector.push_back(N);
   }
 
