@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/float16.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"

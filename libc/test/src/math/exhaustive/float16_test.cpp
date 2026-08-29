@@ -31,8 +31,8 @@ struct Float16ConversionChecker : public virtual LIBC_NAMESPACE::testing::Test {
       FPBits x_bits(bits);
       FloatType x = x_bits.get_val();
 
-      const float16 libc_result = cast<float16>(x);
-      const float16 mpfr_result = mpfr::MPFRNumber(x).as<float16>();
+      const Float16 libc_result = cast<Float16>(x);
+      const Float16 mpfr_result = mpfr::MPFRNumber(x).as<Float16>();
 
       const bool correct =
           LIBC_NAMESPACE::testing::getMatcher<
