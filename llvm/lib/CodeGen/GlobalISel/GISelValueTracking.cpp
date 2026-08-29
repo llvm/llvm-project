@@ -75,12 +75,6 @@ Align GISelValueTracking::computeKnownAlignment(Register R, unsigned Depth) {
   }
 }
 
-KnownBits GISelValueTracking::getKnownBits(MachineInstr &MI) {
-  assert(MI.getNumExplicitDefs() == 1 &&
-         "expected single return generic instruction");
-  return getKnownBits(MI.getOperand(0).getReg());
-}
-
 KnownBits GISelValueTracking::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
   // Since the number of lanes in a scalable vector is unknown at compile time,
