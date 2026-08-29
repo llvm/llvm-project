@@ -44,8 +44,7 @@
 # ODR-NEXT:       DW_AT_name ("foo1")
 # REF-ODR:        DW_AT_type (0x00000000[[S]] "ns::S")
 
-## Without it S stays in U01. FIXME: llvm-dwarfdump prefixes the partial unit's
-## name to the type (#219635).
+## Without it S stays in U01.
 # NOODR:      0x[[U01:[0-9a-f]{8}]]: DW_TAG_partial_unit
 # NOODR-NEXT:   DW_AT_producer ("by_hand")
 # NOODR-NEXT:   DW_AT_name ("U01")
@@ -60,7 +59,7 @@
 # NOODR-NEXT:     DW_AT_import (0x00000000[[U01]] "U01")
 # NOODR:        DW_TAG_subprogram
 # NOODR-NEXT:     DW_AT_name ("foo1")
-# REF-NOODR:      DW_AT_type (0x00000000[[S]] "U01::ns::S")
+# REF-NOODR:      DW_AT_type (0x00000000[[S]] "ns::S")
 
 ## U01 holds no code. The roots carry DW_AT_str_offsets_base, which the linker
 ## adds only to a DW_TAG_compile_unit root (#219365).

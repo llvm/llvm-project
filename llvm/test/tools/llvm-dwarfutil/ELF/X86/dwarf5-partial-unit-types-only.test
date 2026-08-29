@@ -22,7 +22,6 @@
 ## The two parallel links agree byte for byte.
 # RUN: cmp %t.cu.parallel %t.pu.parallel
 
-## FIXME: llvm-dwarfdump prefixes the partial unit's name to the type (#219635).
 # CLASSIC-CU:     DW_TAG_compile_unit
 # CLASSIC-PU:     DW_TAG_partial_unit
 # CLASSIC-NEXT:     DW_AT_producer ("by_hand")
@@ -36,8 +35,7 @@
 # CLASSIC-NEXT:     DW_AT_name ("U02")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "ns::S")
 
 ## S is output only in the type unit, and foo1's reference resolves there.
 # PARALLEL:      DW_AT_name ("__artificial_type_unit")
