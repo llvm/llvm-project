@@ -1911,7 +1911,18 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder.CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                        I.getName());
-    return CastInst::Create(CastOpcode, NewOp, DestTy);
+    auto *NewCast = CastInst::Create(CastOpcode, NewOp, DestTy);
+    if (auto *NewTrunc = dyn_cast<TruncInst>(NewCast)) {
+      auto *Trunc0 = cast<TruncInst>(Cast0);
+      auto *Trunc1 = cast<TruncInst>(Cast1);
+      NewTrunc->setHasNoUnsignedWrap(
+          LogicOpc == Instruction::And
+              ? Trunc0->hasNoUnsignedWrap() || Trunc1->hasNoUnsignedWrap()
+              : Trunc0->hasNoUnsignedWrap() && Trunc1->hasNoUnsignedWrap());
+      NewTrunc->setHasNoSignedWrap(Trunc0->hasNoSignedWrap() &&
+                                   Trunc1->hasNoSignedWrap());
+    }
+    return NewCast;
   }
 
   return nullptr;

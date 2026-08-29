@@ -1174,7 +1174,7 @@ Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
   auto &AI = cast<AllocaInst>(V);
   const DataLayout &DL = AI.getDataLayout();
   Value *SizeValue = nullptr;
-  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TypeSize = AI.getAllocationBaseSize(DL);
   if (TypeSize.isFixed()) {
     SizeValue = getCI(&Ty, TypeSize.getFixedValue());
   } else {
