@@ -937,18 +937,16 @@ public:
   computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
                            DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
 
-  /// Climb up the parent chain to get the compile unit or type unit DIE that
-  /// this DIE belongs to.
+  /// Climb up the parent chain to get the unit DIE that this DIE belongs to.
   ///
-  /// \returns the compile or type unit DIE that owns this DIE, or NULL if
-  /// this DIE hasn't been added to a unit DIE.
+  /// \returns the unit DIE that owns this DIE, or NULL if this DIE hasn't been
+  /// added to a unit DIE.
   LLVM_ABI const DIE *getUnitDie() const;
 
-  /// Climb up the parent chain to get the compile unit or type unit that this
-  /// DIE belongs to.
+  /// Climb up the parent chain to get the unit that this DIE belongs to.
   ///
-  /// \returns the DIEUnit that represents the compile or type unit that owns
-  /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
+  /// \returns the DIEUnit that represents the unit that owns this DIE, or NULL
+  /// if this DIE hasn't been added to a unit DIE.
   LLVM_ABI DIEUnit *getUnit() const;
 
   void setOffset(unsigned O) { Offset = O; }
@@ -980,13 +978,13 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-/// Represents a compile or type unit.
+/// Represents a DWARF unit.
 class DIEUnit {
-  /// The compile unit or type unit DIE. This variable must be an instance of
-  /// DIE so that we can calculate the DIEUnit from any DIE by traversing the
-  /// parent backchain and getting the Unit DIE, and then casting itself to a
-  /// DIEUnit. This allows us to be able to find the DIEUnit for any DIE without
-  /// having to store a pointer to the DIEUnit in each DIE instance.
+  /// The unit DIE. This variable must be an instance of DIE so that we can
+  /// calculate the DIEUnit from any DIE by traversing the parent backchain
+  /// until we reach the DIE whose Owner is this DIEUnit. This allows us to be
+  /// able to find the DIEUnit for any DIE without having to store a pointer to
+  /// the DIEUnit in each DIE instance.
   DIE Die;
   /// The section this unit will be emitted in. This may or may not be set to
   /// a valid section depending on the client that is emitting DWARF.
