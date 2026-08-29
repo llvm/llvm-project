@@ -9,9 +9,6 @@
 // REQUIRES: std-at-least-c++23
 
 // std::views::cartesian_product
-//   * Zero-argument form returns views::single(tuple()).
-//   * N-argument form returns cartesian_product_view<all_t<R>...>.
-//   * Both forms are expression-equivalent to those expressions, so they agree on potentially-throwing-ness.
 
 #include <array>
 #include <cassert>
@@ -53,8 +50,8 @@ static_assert(noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>
               noexcept(std::ranges::cartesian_product_view<SimpleCommon>(std::declval<SimpleCommon&>())));
 
 constexpr bool test() {
+  // `views::cartesian_product()` returns `views::single(tuple())`.
   {
-    // zero arguments: produces views::single(tuple()) -- a single-element view of an empty tuple
     std::same_as<std::ranges::single_view<std::tuple<>>> decltype(auto) v = std::views::cartesian_product();
     static_assert(std::ranges::sized_range<decltype(v)>);
     assert(v.size() == 1);
@@ -66,8 +63,8 @@ constexpr bool test() {
     assert(it == v.end());
   }
 
+  // `views::cartesian_product(view)` returns a `cartesian_product_view` of that view.
   {
-    // a single view
     int buffer[3] = {1, 2, 3};
     std::same_as<std::ranges::cartesian_product_view<SizedRandomAccessView>> decltype(auto) v =
         std::views::cartesian_product(SizedRandomAccessView{buffer});
@@ -75,8 +72,8 @@ constexpr bool test() {
     assert(*v.begin() == std::tuple<int&>(buffer[0]));
   }
 
+  // `views::cartesian_product(rs...)` returns a `cartesian_product_view` of `views::all_t<decltype((rs))>...`.
   {
-    // more than one range, each forwarded through views::all
     int buffer[2] = {1, 2};
     std::same_as<std::ranges::cartesian_product_view<std::ranges::ref_view<int[2]>,
                                                      std::ranges::iota_view<int, int>>> decltype(auto) v =
@@ -85,8 +82,9 @@ constexpr bool test() {
     assert(&(std::get<0>(*v.begin())) == &(buffer[0]));
   }
 
+  // `views::cartesian_product(rvalue, lvalue)` returns a `cartesian_product_view` over an `owning_view` and a
+  // `ref_view`.
   {
-    // a moved-in range is wrapped in an owning_view
     int buffer[3] = {10, 20, 30};
     std::same_as<std::ranges::cartesian_product_view<std::ranges::owning_view<std::array<int, 2>>,
                                                      std::ranges::ref_view<int[3]>>> decltype(auto) v =
