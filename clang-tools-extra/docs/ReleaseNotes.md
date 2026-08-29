@@ -219,6 +219,12 @@ infrastructure are described first, followed by tool-specific sections.
   for intermediate subobjects caused the trailing comma of the enclosing
   list to be incorrectly rewritten.
 
+- Improved {doc}`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check by ignoring
+  preprocessor directives such as `#endif` that appear immediately before an
+  enum's closing brace, which previously produced a false positive and a
+  fix-it that inserted a comma after the directive.
+
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.

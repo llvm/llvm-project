@@ -44,18 +44,6 @@ static bool isSingleLine(SourceRange Range, const SourceManager &SM) {
          SM.getExpansionLineNumber(Range.getEnd());
 }
 
-namespace {
-
-AST_POLYMORPHIC_MATCHER(isMacro,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(EnumDecl,
-                                                        InitListExpr)) {
-  return Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID();
-}
-
-AST_MATCHER(EnumDecl, isEmptyEnum) { return Node.enumerators().empty(); }
-
-AST_MATCHER(InitListExpr, isEmptyInitList) { return Node.getNumInits() == 0; }
-
 // True when Tok is a preprocessor directive (the '#' or the directive
 // identifier such as 'endif'). Those tokens can sit between the last
 // enumerator and '}', and must not be treated as a missing trailing comma.
@@ -68,6 +56,18 @@ static bool isPreprocessorDirectiveToken(const Token &Tok,
       Tok.getLocation(), SM, LangOpts, /*IncludeComments=*/false);
   return Prev && Prev->is(tok::hash);
 }
+
+namespace {
+
+AST_POLYMORPHIC_MATCHER(isMacro,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(EnumDecl,
+                                                        InitListExpr)) {
+  return Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID();
+}
+
+AST_MATCHER(EnumDecl, isEmptyEnum) { return Node.enumerators().empty(); }
+
+AST_MATCHER(InitListExpr, isEmptyInitList) { return Node.getNumInits() == 0; }
 
 } // namespace
 
