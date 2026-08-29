@@ -1013,19 +1013,15 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
 // Generates hover info for attributes.
 std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
-
-  if (AST.getLangOpts().HLSL && llvm::isa<RootSignatureAttr>(A)) {
-    // We do not use pretty print here because it would expose the internal
-    // string/macro representation instead of the original source attribute.
-    HI.Name = "RootSignature";
-    HI.Documentation = Attr::getDocumentation(A->getKind()).str();
-    return HI;
-  }
-
   HI.Name = A->getSpelling();
   if (A->hasScope())
     HI.LocalScope = A->getScopeName()->getName().str();
-  {
+  // Skip pretty-printing HLSL RootSignature attributes: printPretty()
+  // reconstructs the attribute using the compiler-generated internal
+  // identifier for the expanded macro (__hlsl_rootsig_decl_<hash>) instead
+  // of the original source text, leaking an implementation detail into the
+  // hover tooltip.
+  if (!AST.getLangOpts().HLSL || !llvm::isa<RootSignatureAttr>(A)) {
     llvm::raw_string_ostream OS(HI.Definition);
     A->printPretty(OS, AST.getASTContext().getPrintingPolicy());
   }
