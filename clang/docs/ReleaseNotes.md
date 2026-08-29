@@ -416,6 +416,8 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Fixed incorrect diagnostics for nested template parameter lists containing ``>>>`` when parsing in CUDA mode.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
