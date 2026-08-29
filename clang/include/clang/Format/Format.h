@@ -840,7 +840,7 @@ struct FormatStyle {
   ///
   /// * `InlineOnly`
   ///   Only merge functions defined inside a class. Same as `inline`,
-  ///   except it does not implies `empty`: i.e. top level empty functions
+  ///   except it does not imply `empty`: i.e. top level empty functions
   ///   are not merged either. See `Inline` of `ShortFunctionStyle`.
   ///   \code
   ///     class Foo {
@@ -1507,6 +1507,22 @@ struct FormatStyle {
     ///  according to `AfterControlStatement` flag.
     /// \endnote
     bool AfterObjCDeclaration;
+    /// Wrap requires expression body.
+    /// \code
+    ///   true:
+    ///   template <typename T>
+    ///   concept C = requires(T t)
+    ///   {
+    ///     foo(t);
+    ///   };
+    ///
+    ///   false:
+    ///   template <typename T>
+    ///   concept C = requires(T t) {
+    ///     foo(t);
+    ///   };
+    /// \endcode
+    bool AfterRequiresExpression;
     /// Wrap struct definitions.
     /// \code
     ///   true:
@@ -1535,6 +1551,15 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// Wrap export blocks.
+    /// \code
+    ///   true:                            false:
+    ///   export             vs.           export {
+    ///   {                                  int foo();
+    ///     int foo();                     }
+    ///   }
+    /// \endcode
+    bool AfterExportBlock;
     /// Wrap extern blocks.
     /// \code
     ///   true:

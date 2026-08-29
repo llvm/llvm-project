@@ -19,7 +19,7 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
   )
 
   add_custom_target(orc-rt-test-depends DEPENDS ${ORC_RT_TEST_DEPS})
-  set_target_properties(orc-rt-test-depends PROPERTIES FOLDER "orc-rt/tests")
+  set_target_properties(orc-rt-test-depends PROPERTIES FOLDER "orc-rt/Tests")
 
   add_lit_testsuite(check-orc-rt "Running the ORC-RT regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}/regression

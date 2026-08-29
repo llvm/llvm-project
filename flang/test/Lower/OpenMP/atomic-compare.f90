@@ -258,7 +258,7 @@ end
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine atomic_compare_capture_min_failonly(x, e, v)
   integer :: x, e, v
   !$omp atomic compare capture
@@ -363,7 +363,7 @@ end
 ! CHECK:             omp.yield(%[[SEL]] : i32)
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine atomic_compare_capture_fail_only(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture

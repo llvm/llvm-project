@@ -75,6 +75,10 @@ class Test(unittest.TestCase):
 // define __cpp_lib_zz_missing_FTM_in_older_standard 2026L
 #endif // _LIBCPP_STD_VER >= 26
 
+#if _LIBCPP_STD_VER >= 29
+// define __cpp_lib_view_interface 202606L
+#endif // _LIBCPP_STD_VER >= 29
+
 #endif // _LIBCPP_VERSIONH
 """
         self.assertEqual(self.ftm.version_header, expected)
