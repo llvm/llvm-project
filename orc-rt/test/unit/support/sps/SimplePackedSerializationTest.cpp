@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"

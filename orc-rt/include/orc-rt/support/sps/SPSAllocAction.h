@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SPSALLOCACTION_H
-#define ORC_RT_SUPPORT_SPSALLOCACTION_H
+#ifndef ORC_RT_SUPPORT_SPS_SPSALLOCACTION_H
+#define ORC_RT_SUPPORT_SPS_SPSALLOCACTION_H
 
 #include "orc-rt/support/AllocAction.h"
 #include "orc-rt/support/MacroUtils.h"
-#include "orc-rt/support/SPSWrapperFunctionBuffer.h"
-#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/sps/SPSWrapperFunctionBuffer.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 /// Define an allocation-action wrapper function with the given Name that
 /// uses SPS to deserialize its arguments and dispatches to Handle.
@@ -125,4 +125,4 @@ template <typename... SPSArgTs> struct SPSAllocActionFunction {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SPSALLOCACTION_H
+#endif // ORC_RT_SUPPORT_SPS_SPSALLOCACTION_H

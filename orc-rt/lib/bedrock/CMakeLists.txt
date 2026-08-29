@@ -12,7 +12,6 @@ set(ORC_RT_SOURCES
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
-  SimpleRemoteCA.cpp
   SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
@@ -22,6 +21,7 @@ set(ORC_RT_SOURCES
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
+  sps/SimpleRemoteCA.cpp
   sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 

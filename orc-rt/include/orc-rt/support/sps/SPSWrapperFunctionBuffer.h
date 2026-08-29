@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SPSWRAPPERFUNCTIONBUFFER_H
-#define ORC_RT_SUPPORT_SPSWRAPPERFUNCTIONBUFFER_H
+#ifndef ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTIONBUFFER_H
+#define ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTIONBUFFER_H
 
-#include "orc-rt/support/SimplePackedSerialization.h"
 #include "orc-rt/support/WrapperFunction.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 namespace orc_rt {
 
@@ -45,4 +45,4 @@ public:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SPSWRAPPERFUNCTIONBUFFER_H
+#endif // ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTIONBUFFER_H

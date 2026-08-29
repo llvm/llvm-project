@@ -14,13 +14,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/SimpleRemoteCA.h"
+#include "orc-rt/bedrock/sps/SimpleRemoteCA.h"
 
 #include "gtest/gtest.h"
 
 #include "CommonTestUtils.h"
 
-#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #include <optional>
 #include <string>

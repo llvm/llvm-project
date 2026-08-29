@@ -18,7 +18,6 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Service.h
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
-    orc-rt/bedrock/SimpleRemoteCA.h
     orc-rt/bedrock/SimpleSymbolTable.h
     orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/bedrock/TaskGroup.h
@@ -29,6 +28,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/sps/MemoryAccessSPSCI.h
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/bedrock/sps/SimpleRemoteCA.h
     orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h
     orc-rt/support/AllocAction.h
     orc-rt/support/BitmaskEnum.h
@@ -44,11 +44,6 @@ set(ORC_RT_HEADERS
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
-    orc-rt/support/SPSAllocAction.h
-    orc-rt/support/SPSMemoryFlags.h
-    orc-rt/support/SPSWrapperFunction.h
-    orc-rt/support/SPSWrapperFunctionBuffer.h
-    orc-rt/support/SimplePackedSerialization.h
     orc-rt/support/StringPool.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h
@@ -57,6 +52,11 @@ set(ORC_RT_HEADERS
     orc-rt/support/move_only_function.h
     orc-rt/support/scope_exit.h
     orc-rt/support/span.h
+    orc-rt/support/sps/SPSAllocAction.h
+    orc-rt/support/sps/SPSMemoryFlags.h
+    orc-rt/support/sps/SPSWrapperFunction.h
+    orc-rt/support/sps/SPSWrapperFunctionBuffer.h
+    orc-rt/support/sps/SimplePackedSerialization.h
 )
 
 # Add generated config header

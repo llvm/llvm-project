@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/SimpleRemoteCA.h"
+#include "orc-rt/bedrock/sps/SimpleRemoteCA.h"
 
 #include "orc-rt/support/Compiler.h"
-#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #include <string>
 
