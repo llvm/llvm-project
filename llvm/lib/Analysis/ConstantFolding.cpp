@@ -4412,7 +4412,8 @@ static Constant *ConstantFoldFixedVectorCall(
     Constant *Vec = Operands[0];
     Constant *SubVec = Operands[1];
     auto *Idx = dyn_cast<ConstantInt>(Operands[2]);
-    if (!Idx || !isa<FixedVectorType>(Vec->getType()))
+    if (!Idx || !isa<FixedVectorType>(Vec->getType()) ||
+        !isa<FixedVectorType>(SubVec->getType()))
       return nullptr;
 
     unsigned SubVecNumElements =
