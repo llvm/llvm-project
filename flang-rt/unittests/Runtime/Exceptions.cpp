@@ -34,11 +34,11 @@ class FenvScope {
 public:
   FenvScope() {
     FLANG_FP_TRAP_ON
-    std::fegetenv(&saved_);
+    fegetenv(&saved_);
   }
   ~FenvScope() {
     FLANG_FP_TRAP_ON
-    std::fesetenv(&saved_);
+    fesetenv(&saved_);
   }
 
 private:
