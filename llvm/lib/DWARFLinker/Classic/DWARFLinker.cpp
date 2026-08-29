@@ -1204,13 +1204,26 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     return U.getRefAddrByteSize();
   }
 
-  if (!RefInfo.Clone) {
-    // We haven't cloned this DIE yet. Just create an empty one and
-    // store it. It'll get really cloned when we process it.
-    RefInfo.UnclonedReference = true;
-    RefInfo.Clone = DIE::get(DIEAlloc, dwarf::Tag(RefDie.getTag()));
+  if (RefUnit->getOrigUnit().getDIEIndex(RefDie) == 0) {
+    // A unit root is cloned into its unit's own output DIE rather than into a
+    // DIEInfo::Clone, so resolve the reference through that DIE. The
+    // placeholder below would instead manufacture a DIE that is never adopted
+    // into a unit tree and so never gets an offset assigned.
+    NewRefDie = RefUnit->getOutputUnitDIE();
+
+    // The referenced unit is not in the output, so there is nothing left for
+    // this attribute to name.
+    if (!NewRefDie)
+      return 0;
+  } else {
+    if (!RefInfo.Clone) {
+      // We haven't cloned this DIE yet. Just create an empty one and
+      // store it. It'll get really cloned when we process it.
+      RefInfo.UnclonedReference = true;
+      RefInfo.Clone = DIE::get(DIEAlloc, dwarf::Tag(RefDie.getTag()));
+    }
+    NewRefDie = RefInfo.Clone;
   }
-  NewRefDie = RefInfo.Clone;
 
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr ||
       (Unit.hasODR() && isODRAttribute(AttrSpec.Attr))) {
@@ -2906,6 +2919,13 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
       (Emitter == nullptr) ? 0 : Emitter->getDebugInfoSectionSize();
   const uint64_t StartOutputDebugInfoSize = OutputDebugInfoSize;
 
+  // A reference to a unit root resolves through that unit's output DIE, and
+  // the referring unit may be cloned first, so every unit that will be emitted
+  // needs its output DIE before any cloning starts.
+  for (auto &CurrentUnit : CompileUnits)
+    if (CurrentUnit->getOrigUnit().getUnitDIE() && CurrentUnit->getInfo(0).Keep)
+      CurrentUnit->createOutputDIE();
+
   for (auto &CurrentUnit : CompileUnits) {
     const uint16_t DwarfVersion = CurrentUnit->getOrigUnit().getVersion();
     const uint32_t UnitHeaderSize = DwarfVersion >= 5 ? 12 : 11;
@@ -2915,13 +2935,15 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
       OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
       continue;
     }
-    if (CurrentUnit->getInfo(0).Keep) {
+    // The pre-pass gave an output DIE to exactly the units this loop clones,
+    // so having one is the same condition, spelled the way the emission loop
+    // below already spells it.
+    if (DIE *OutputDIE = CurrentUnit->getOutputUnitDIE()) {
       // Clone the InputDIE into your Unit DIE in our compile unit since it
       // already has a DIE inside of it.
-      CurrentUnit->createOutputDIE();
       rememberUnitForMacroOffset(*CurrentUnit);
       cloneDIE(InputDIE, File, *CurrentUnit, 0 /* PC offset */, UnitHeaderSize,
-               0, IsLittleEndian, CurrentUnit->getOutputUnitDIE());
+               0, IsLittleEndian, OutputDIE);
     }
 
     OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
