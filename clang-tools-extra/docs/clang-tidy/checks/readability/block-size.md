@@ -3,9 +3,9 @@
 
 # readability-block-size
 
-This check warns when `if`, `else`, `for` or `while` blocks exceed a given
-number of lines of code, and thus flags control flow structures which are
-likely difficult to reason about due to their size.
+Warns when `if`, `else`, `for` or `while` blocks exceed a given number of lines
+of code, and thus flags control flow structures which are likely difficult to
+reason about due to their size.
 
 ```cpp
 // This block will raise a warning if N > IfLineCountThreshold
