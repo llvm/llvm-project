@@ -482,12 +482,19 @@ def Bux : GICombineRule<
   (match (G_FOO $dst, $src)),
   (apply (G_CONSTANT $dst, (i32 0)))>;
 
+// Example output:
+//    %dst = G_FCONSTANT float 4.200000e+01
+def Baz : GICombineRule<
+  (defs root:$dst),
+  (match (G_FOO $dst, $src)),
+  (apply (G_FCONSTANT $dst, (f32 42)))>;
+
 // GITypeOf can be combined with this to reuse an already-matched register's
 // type instead of hardcoding one, which is handy when replacing the root:
 //
 // Example output:
 //    %dst = G_FCONSTANT float 0.0
-def Baz : GICombineRule<
+def Qux : GICombineRule<
   (defs root:$dst),
   (match (G_FOO $dst, $src)),
   (apply (G_FCONSTANT $dst, (GITypeOf<"$dst"> 0)))>;

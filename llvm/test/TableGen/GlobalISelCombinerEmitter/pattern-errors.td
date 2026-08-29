@@ -174,6 +174,13 @@ def output_imm_must_be_typed : GICombineRule<
   (match (COPY $x, (i32 0)):$d),
   (apply (G_CONSTANT $x, 0):$d)>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'G_FCONSTANT' immediate must be typed!
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: while emitting pattern 'd' (G_FCONSTANT)
+def output_fpimm_must_be_typed : GICombineRule<
+  (defs root:$x),
+  (match (COPY $x, (f32 0)):$d),
+  (apply (G_FCONSTANT $x, 0):$d)>;
+
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'G_BUILD_VECTOR' expected at least 2 operands, got 1
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(G_BUILD_VECTOR ?:$x)'
 def too_few_ops_for_variadic : GICombineRule<
@@ -339,6 +346,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   bad_imm_not_a_valuetype,
   output_imm_cannot_be_named,
   output_imm_must_be_typed,
+  output_fpimm_must_be_typed,
   too_few_ops_for_variadic,
   expected_op_name,
   bad_mo_type_not_a_valuetype,
