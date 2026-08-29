@@ -889,28 +889,109 @@ ObjCStubsSection::ObjCStubsSection()
 }
 
 bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
-  return sym->getName().starts_with(objcMsgSendStubPrefix);
+  return sym->getName().starts_with(objcMsgSendStubPrefix) ||
+         isObjCClassStubSymbol(sym);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
   auto name = sym->getName();
+  if (isObjCClassStubSymbol(sym)) {
+    std::optional<std::pair<StringRef, StringRef>> parsed =
+        parseObjCClassStubSymbol(sym);
+    assert(parsed && "malformed objc class stub");
+    return parsed->first;
+  }
   return name.drop_front(objcMsgSendStubPrefix.size());
 }
 
-size_t ObjCStubsSection::getStubSize(Symbol *) const {
-  return config->objcStubsMode == ObjCStubsMode::fast
-             ? target->objcStubsFastSize
-             : target->objcStubsSmallSize;
+bool ObjCStubsSection::isObjCClassStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(objcMsgSendClassStubPrefix);
+}
+
+std::optional<std::pair<StringRef, StringRef>>
+ObjCStubsSection::parseObjCClassStubSymbol(Symbol *sym) {
+  assert(isObjCClassStubSymbol(sym) && "not an objc class stub");
+  StringRef name = sym->getName().drop_front(objcMsgSendClassStubPrefix.size());
+  size_t classSymbolStart = name.find(classSymbolPrefix);
+  if (classSymbolStart == StringRef::npos)
+    return std::nullopt;
+  StringRef methname = name.take_front(classSymbolStart);
+  StringRef className = name.drop_front(classSymbolStart + 1);
+  if (methname.empty() || className.empty())
+    return std::nullopt;
+  return std::make_pair(methname, className);
+}
+
+void ObjCStubsSection::recordClassSymbol(Symbol *stubSym, Symbol *classSym) {
+  // SymbolTable updates symbols in place with replaceSymbol(), so this pointer
+  // remains valid if an Undefined later becomes a DylibSymbol or Defined.
+  classSymbols[stubSym] = classSym;
+}
+
+Symbol *ObjCStubsSection::lookupClassSymbol(Symbol *stubSym) const {
+  return classSymbols.lookup(stubSym);
+}
+
+size_t ObjCStubsSection::getStubSize(Symbol *sym) const {
+  if (config->objcStubsMode == ObjCStubsMode::fast)
+    return isObjCClassStubSymbol(sym) ? target->objcClassStubsFastSize
+                                      : target->objcStubsFastSize;
+  return isObjCClassStubSymbol(sym) ? target->objcClassStubsSmallSize
+                                    : target->objcStubsSmallSize;
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  StringRef methname = getMethname(sym);
+  auto replaceWithEmptyStub = [&] {
+    replaceSymbol<Defined>(
+        sym, sym->getName(), nullptr, isec, /*value=*/stubsSize, /*size=*/0,
+        /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
+        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+        /*noDeadStrip=*/false);
+  };
+
+  StringRef methname;
+  Symbol *classSym = nullptr;
+  if (isObjCClassStubSymbol(sym)) {
+    if (!target->supportsObjCClassStubs()) {
+      error("objc class stubs are not supported for " +
+            getArchitectureName(config->arch()));
+      return replaceWithEmptyStub();
+    }
+    std::optional<std::pair<StringRef, StringRef>> parsed =
+        parseObjCClassStubSymbol(sym);
+    if (!parsed) {
+      error("malformed objc class stub symbol " + sym->getName() +
+            "; expected " + objcMsgSendClassStubPrefix + "<selector>" +
+            classSymbolPrefix + "<class>");
+      return replaceWithEmptyStub();
+    }
+    methname = parsed->first;
+    classSym = lookupClassSymbol(sym);
+    if (!classSym) {
+      error("objc class stub symbol " + sym->getName() +
+            " references missing class symbol " + parsed->second);
+      return replaceWithEmptyStub();
+    }
+    if (auto *undefined = dyn_cast<Undefined>(classSym)) {
+      treatUndefinedSymbol(*undefined, "objc class stub");
+      if (isa<Undefined>(classSym))
+        return replaceWithEmptyStub();
+    }
+    if (auto *dysym = dyn_cast<DylibSymbol>(classSym)) {
+      dysym->reference(RefState::Strong);
+      in.got->addEntry(dysym);
+    }
+    classSym->used = true;
+  } else {
+    methname = getMethname(sym);
+  }
+
+  size_t stubSize = getStubSize(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  size_t stubSize = getStubSize(sym);
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/stubsSize,
@@ -971,8 +1052,16 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
     auto selrefAddr = selRef->getVA(0);
-    target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, selrefAddr, objcMsgSend);
+    if (isObjCClassStubSymbol(sym)) {
+      Symbol *classSym = classSymbols.lookup(sym);
+      assert(classSym != nullptr && "no class symbol for objc class stub");
+      target->writeObjCMsgSendClassStub(buf + stubOffset, sym,
+                                        in.objcStubs->addr, stubOffset,
+                                        selrefAddr, classSym, objcMsgSend);
+    } else {
+      target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
+                                   stubOffset, selrefAddr, objcMsgSend);
+    }
   }
 }
 

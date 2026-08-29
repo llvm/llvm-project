@@ -33,6 +33,11 @@ struct ARM64 : ARM64Common {
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                             uint64_t &stubOffset, uint64_t selrefVA,
                             Symbol *objcMsgSend) const override;
+  void writeObjCMsgSendClassStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                 uint64_t &stubOffset, uint64_t selrefVA,
+                                 Symbol *classSym,
+                                 Symbol *objcMsgSend) const override;
+  bool supportsObjCClassStubs() const override { return true; }
   void populateThunk(InputSection *thunk, Symbol *funcSym,
                      int64_t addend) override;
 
@@ -121,6 +126,25 @@ static constexpr uint32_t objcStubsSmallCode[] = {
     0x14000000, // b     _objc_msgSend
 };
 
+static constexpr uint32_t objcClassStubsFastCode[] = {
+    0x90000000, // adrp  x0, _OBJC_CLASS_$_Foo@page
+    0xf9400000, // ldr   x0, [x0, _OBJC_CLASS_$_Foo@pageoff]
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x90000010, // adrp  x16, _got@page
+    0xf9400210, // ldr   x16, [x16, _objc_msgSend@pageoff]
+    0xd61f0200, // br    x16
+    0xd4200020, // brk   #0x1
+};
+
+static constexpr uint32_t objcClassStubsSmallCode[] = {
+    0x90000000, // adrp  x0, _OBJC_CLASS_$_Foo@page
+    0xf9400000, // ldr   x0, [x0, _OBJC_CLASS_$_Foo@pageoff]
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x14000000, // b     _objc_msgSend
+};
+
 void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                                  uint64_t &stubOffset, uint64_t selrefVA,
                                  Symbol *objcMsgSend) const {
@@ -150,6 +174,70 @@ void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                                       objcMsgSendIndex);
   }
   stubOffset += objcStubSize;
+}
+
+void ARM64::writeObjCMsgSendClassStub(uint8_t *buf, Symbol *stubSym,
+                                      uint64_t stubsAddr, uint64_t &stubOffset,
+                                      uint64_t selrefVA, Symbol *classSym,
+                                      Symbol *objcMsgSend) const {
+  SymbolDiagnostic d = {stubSym, stubSym->getName()};
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf);
+
+  auto pcPageBits = [stubsAddr, stubOffset](int i) {
+    return pageBits(stubsAddr + stubOffset + i * sizeof(uint32_t));
+  };
+  auto writeClassLoad = [&](const uint32_t *code) {
+    uint64_t classVA;
+    uint32_t pageOffCode = code[1];
+    if (auto *defined = dyn_cast<Defined>(classSym)) {
+      classVA = defined->getVA();
+      pageOffCode = 0x91000000; // add x0, x0, _OBJC_CLASS_$_Foo@pageoff
+    } else {
+      classVA = in.got->addr + classSym->gotIndex * LP64::wordSize;
+    }
+    encodePage21(&buf32[0], d, code[0], pageBits(classVA) - pcPageBits(0));
+    encodePageOff12(&buf32[1], d, pageOffCode, classVA);
+  };
+
+  uint64_t objcMsgSendAddr;
+  uint64_t objcMsgSendIndex;
+
+  if (config->objcStubsMode == ObjCStubsMode::fast) {
+    writeClassLoad(objcClassStubsFastCode);
+    encodePage21(&buf32[2], d, objcClassStubsFastCode[2],
+                 pageBits(selrefVA) - pcPageBits(2));
+    encodePageOff12(&buf32[3], d, objcClassStubsFastCode[3], selrefVA);
+    objcMsgSendAddr = in.got->addr;
+    objcMsgSendIndex = objcMsgSend->gotIndex;
+    uint64_t gotOffset = objcMsgSendIndex * LP64::wordSize;
+    encodePage21(&buf32[4], d, objcClassStubsFastCode[4],
+                 pageBits(objcMsgSendAddr + gotOffset) - pcPageBits(4));
+    encodePageOff12(&buf32[5], d, objcClassStubsFastCode[5],
+                    objcMsgSendAddr + gotOffset);
+    buf32[6] = objcClassStubsFastCode[6];
+    buf32[7] = objcClassStubsFastCode[7];
+    stubOffset += target->objcClassStubsFastSize;
+    return;
+  }
+
+  assert(config->objcStubsMode == ObjCStubsMode::small);
+  writeClassLoad(objcClassStubsSmallCode);
+  encodePage21(&buf32[2], d, objcClassStubsSmallCode[2],
+               pageBits(selrefVA) - pcPageBits(2));
+  encodePageOff12(&buf32[3], d, objcClassStubsSmallCode[3], selrefVA);
+  if (auto *defined = dyn_cast<Defined>(objcMsgSend)) {
+    objcMsgSendAddr = defined->getVA();
+    objcMsgSendIndex = 0;
+  } else {
+    objcMsgSendAddr = in.stubs->addr;
+    objcMsgSendIndex = objcMsgSend->stubsIndex;
+  }
+  uint64_t msgSendStubVA =
+      objcMsgSendAddr + objcMsgSendIndex * target->stubSize;
+  uint64_t pcVA = stubsAddr + stubOffset + 4 * sizeof(uint32_t);
+  encodeBranch26(&buf32[4], {nullptr, "objc_msgSend class stub"},
+                 objcClassStubsSmallCode[4], msgSendStubVA - pcVA);
+  stubOffset += target->objcClassStubsSmallSize;
 }
 
 // A thunk is the relaxed variation of stubCode. We don't need the
@@ -215,6 +303,8 @@ ARM64::ARM64() : ARM64Common(LP64()) {
   objcStubsFastAlignment = 32;
   objcStubsSmallSize = sizeof(objcStubsSmallCode);
   objcStubsSmallAlignment = 4;
+  objcClassStubsFastSize = sizeof(objcClassStubsFastCode);
+  objcClassStubsSmallSize = sizeof(objcClassStubsSmallCode);
 
   // Branch immediate is two's complement 26 bits, which is implicitly
   // multiplied by 4 (since all functions are 4-aligned: The branch range
