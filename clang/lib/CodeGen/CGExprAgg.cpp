@@ -1061,8 +1061,9 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_ConstructorConversion:
-    assert(CGF.getContext().hasSameUnqualifiedType(E->getSubExpr()->getType(),
-                                                   E->getType()) &&
+    assert(CGF.getContext().hasSameUnqualifiedType(
+               E->getSubExpr()->getType().getAtomicUnqualifiedType(),
+               E->getType().getAtomicUnqualifiedType()) &&
            "Implicit cast types must be compatible");
     Visit(E->getSubExpr());
     break;
