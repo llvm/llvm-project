@@ -83,7 +83,8 @@ most of the supported architectures.
 
 Time Travel
 -----------
-Immediate UB in LLVM IR allows the so-called time travelling. What this means
+When using the ``willreturn`` attribute,
+immediate UB in LLVM IR allows the so-called time travelling. What this means
 is that if a program triggers UB, then we are not required to preserve any of
 its observable behavior, including I/O.
 For example, the following function triggers UB after calling ``printf``:
@@ -105,6 +106,9 @@ optimize the function to simply:
       unreachable
     }
 
+Without ``willreturn``, UB in LLVM will never exhibit time-traveling. This means
+frontends can avoid time-traveling UB by only putting ``willreturn`` on
+functions without observable behavior.
 
 Deferred UB
 ===========

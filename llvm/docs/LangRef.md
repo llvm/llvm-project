@@ -2520,6 +2520,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 
+    If the annotated function has observable behavior (such as I/O or a volatile
+    access), note that the annotation can cause UB to time-travel around such
+    behavior, i.e., code that is after the function can cause UB to occur before
+    the observable behavior of the function. See the {doc}`UB documentation
+    <UndefinedBehavior>` for further details.
+
 `nosync`
 :   This function attribute indicates that the function does not introduce any
     *synchronizes-with* edges in the sense of the memory model.
