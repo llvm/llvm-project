@@ -82,9 +82,17 @@ function(add_flangrt_unittest test_dirname)
     "LINK_LIBS"
     ${ARGN})
 
-  add_unittest(FlangRTUnitTests ${test_dirname} ${ARG_UNPARSED_ARGUMENTS})
+  add_executable(${test_dirname} EXCLUDE_FROM_ALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${test_dirname} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
-  target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
+  if (TARGET default_gtest)
+    target_link_libraries(${test_dirname} PRIVATE default_gtest_main default_gtest ${ARG_LINK_LIBS})
+  else ()
+    target_link_libraries(${test_dirname} PRIVATE llvm_gtest_main llvm_gtest ${ARG_LINK_LIBS})
+  endif ()
+
+  add_dependencies(FlangRTUnitTests ${test_dirname})
+
   add_flangrt_unittest_offload_properties(${test_dirname})
   add_flangrt_dependent_libs(${test_dirname})
 endfunction()

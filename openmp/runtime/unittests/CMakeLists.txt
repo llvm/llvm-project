@@ -40,7 +40,9 @@ target_include_directories(omp_testing PUBLIC
 )
 
 function(add_openmp_unittest test_name)
-  add_unittest(OpenMPUnitTests ${test_name} ${ARGN})
+  add_executable(${test_name} ${ARGN})
+  add_dependencies(OpenMPUnitTests ${test_name})
+  set_target_properties(${test_name} PROPERTIES FOLDER "OpenMP/Tests/Unit")
 
   # Link against the testing library which exports all symbols.
   target_link_libraries(${test_name} PRIVATE omp_testing)

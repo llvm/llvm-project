@@ -1,4 +1,5 @@
 include(GNUInstallDirs)
+include(GetSubprojectTitle)
 
 # Create sphinx target
 if (LLVM_ENABLE_SPHINX)
