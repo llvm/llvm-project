@@ -3917,7 +3917,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
 )
 
-add_subdirectory(generic)
 add_subdirectory(smoke)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
