@@ -3061,7 +3061,8 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
             return std::make_pair(state->getLValue(FD, ParamSVal),
                                   FD->getType());
           }
-          return std::make_pair(state->getLValue(FD, loc::MemRegionVal(PVR)), FD->getType());
+          return std::make_pair(state->getLValue(FD, loc::MemRegionVal(PVR)),
+                                FD->getType());
         }
       }
     }
