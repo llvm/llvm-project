@@ -21,7 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -1199,6 +1199,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
       .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1}}})
       .Any({{DivS16, P1}, {{Vgpr16}, {VgprP1}}}, usesTrue16)
+      .Any({{{UniS16, P1}, isUL}, {{Sgpr32Trunc}, {SgprP1}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{{UniS16, P1}, !isUL}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{UniS16, P1}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && !hasSMRDSmall)
       .Any({{{UniS32, P1}, isAlign4 && isUL}, {{Sgpr32}, {SgprP1}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P1}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP1}}}, hasSMRDSmall)
       .Any({{{UniS32, P1}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP1}}}, !hasSMRDSmall)
@@ -1206,10 +1209,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
       .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3}}})
       .Any({{DivS16, P3}, {{Vgpr16}, {VgprP3}}}, usesTrue16)
+      .Any({{UniS16, P3}, {{UniInVgprS16}, {SgprP3}}}, usesTrue16)
       .Any({{UniS32, P3}, {{UniInVgprS32}, {VgprP3}}})
 
       .Any({{DivS32, P4}, {{Vgpr32}, {VgprP4}}})
       .Any({{DivS16, P4}, {{Vgpr16}, {VgprP4}}}, usesTrue16)
+      .Any({{{UniS16, P4}, isUL}, {{Sgpr32Trunc}, {SgprP4}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{UniS16, P4}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && !hasSMRDSmall)
       .Any({{{UniS32, P4}, isAlign4 && isUL}, {{Sgpr32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P4}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP4}}}, hasSMRDSmall)
       .Any({{{UniS32, P4}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP4}}}, !hasSMRDSmall)
@@ -1770,26 +1776,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   using namespace Intrinsic;
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
-
-  // Note: amdgcn.icmp with i1 inputs is legalized to ballot in the legalizer,
-  // so no S1 rules are needed here.
-  addRulesForIOpcs({amdgcn_icmp})
-      .Any({{UniS64, _, S16}, {{Sgpr64}, {IntrId, Vgpr16, Vgpr16}}})
-      .Any({{UniS64, _, S32}, {{Sgpr64}, {IntrId, Vgpr32, Vgpr32}}})
-      .Any({{UniS64, _, S64}, {{Sgpr64}, {IntrId, Vgpr64, Vgpr64}}})
-
-      .Any({{UniS32, _, S16}, {{Sgpr32}, {IntrId, Vgpr16, Vgpr16}}})
-      .Any({{UniS32, _, S32}, {{Sgpr32}, {IntrId, Vgpr32, Vgpr32}}})
-      .Any({{UniS32, _, S64}, {{Sgpr32}, {IntrId, Vgpr64, Vgpr64}}});
-
-  addRulesForIOpcs({amdgcn_fcmp})
-      .Any({{UniS64, _, S16}, {{Sgpr64}, {IntrId, Vgpr16, Vgpr16}}})
-      .Any({{UniS64, _, S32}, {{Sgpr64}, {IntrId, Vgpr32, Vgpr32}}})
-      .Any({{UniS64, _, S64}, {{Sgpr64}, {IntrId, Vgpr64, Vgpr64}}})
-
-      .Any({{UniS32, _, S16}, {{Sgpr32}, {IntrId, Vgpr16, Vgpr16}}})
-      .Any({{UniS32, _, S32}, {{Sgpr32}, {IntrId, Vgpr32, Vgpr32}}})
-      .Any({{UniS32, _, S64}, {{Sgpr32}, {IntrId, Vgpr64, Vgpr64}}});
 
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {}}});
 

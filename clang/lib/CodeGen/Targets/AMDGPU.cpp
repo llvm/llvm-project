@@ -347,8 +347,30 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+
+  // __launch_bounds__ only takes effect on kernels and is silently ignored on
+  // other functions The arguments are honored only if the equivalent native
+  // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
+  // used out; those take precedence.
+  const auto *LaunchBounds =
+      IsHIPKernel ? FD->getAttr<CUDALaunchBoundsAttr>() : nullptr;
+  unsigned LBMaxThreads = 0;
+  unsigned LBMinWaves = 0;
+  if (LaunchBounds) {
+    LBMaxThreads = LaunchBounds->getMaxThreads()
+                       ->EvaluateKnownConstInt(M.getContext())
+                       .getExtValue();
+    if (const Expr *MinBlocks = LaunchBounds->getMinBlocks()) {
+      LBMinWaves =
+          MinBlocks->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    }
+  }
+
   if (ReqdWGS || FlatWGS) {
     M.handleAMDGPUFlatWorkGroupSizeAttr(F, FlatWGS, ReqdWGS);
+  } else if (LBMaxThreads > 0) {
+    F->addFnAttr("amdgpu-flat-work-group-size",
+                 "1," + llvm::utostr(LBMaxThreads));
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -361,8 +383,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
     M.handleAMDGPUWavesPerEUAttr(F, Attr);
+  } else if (LBMinWaves > 0) {
+    // HIP reinterprets the second argument as the minimum waves per EU.
+    //
+    // TODO: The third argument (maxclusterrank) could be used if the AMDGPU
+    // "clusters" feature is supported for the current subtarget.
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(LBMinWaves));
+  }
 
   if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();

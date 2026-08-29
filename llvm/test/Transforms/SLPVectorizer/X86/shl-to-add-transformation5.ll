@@ -20,11 +20,11 @@ define i32 @test(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[SUB120_3]], i64 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <5 x i32> <i32 2, i32 poison, i32 poison, i32 5, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <5 x i32> [[TMP13]], i32 [[DOTNEG_NEG]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <5 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <5 x i32> [[TMP14]], <5 x i32> [[TMP15]], <5 x i32> <i32 0, i32 1, i32 5, i32 3, i32 7>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <5 x i32> [[TMP16]], <5 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 2, i32 0, i32 3, i32 4, i32 2>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <8 x i32> <i32 2, i32 poison, i32 2, i32 poison, i32 2, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP13]], i32 [[DOTNEG_NEG]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i32> [[TMP14]], <8 x i32> [[TMP15]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 11, i32 7>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub <8 x i32> [[TMP12]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <8 x i32> [[TMP12]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> [[TMP19]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 12, i32 13, i32 6, i32 7>

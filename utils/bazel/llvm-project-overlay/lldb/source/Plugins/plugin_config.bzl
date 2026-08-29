@@ -43,7 +43,7 @@ DEFAULT_PLUGINS = [
     "InstructionPPC64",
     "InstructionRISCV",
     "InstrumentationRuntimeASan",
-    "InstrumentationRuntimeASanLibsanitizers",
+    "InstrumentationRuntimeBoundsSafety",
     "InstrumentationRuntimeMainThreadChecker",
     "InstrumentationRuntimeTSan",
     "InstrumentationRuntimeUBSan",

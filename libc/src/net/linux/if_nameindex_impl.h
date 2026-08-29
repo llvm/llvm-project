@@ -69,8 +69,7 @@ struct InterfaceEntry {
   static_assert(IF_NAMESIZE - 1 < (1u << 8));
 };
 
-// TODO: Use ErrorOr<void> when that's a thing.
-LIBC_INLINE ErrorOr<int>
+LIBC_INLINE ErrorOr<void>
 parse_netlink_messages(cpp::span<uint8_t> buf,
                        BlockStore<InterfaceEntry, 16> &store) {
   size_t len = buf.size();
@@ -119,7 +118,7 @@ parse_netlink_messages(cpp::span<uint8_t> buf,
       break;
     }
   }
-  return 0;
+  return {};
 }
 
 LIBC_INLINE ErrorOr<struct if_nameindex *>
@@ -189,7 +188,7 @@ LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
   cpp::scope_exit destroy_store(
       [&store]() { BlockStore<detail::InterfaceEntry, 16>::destroy(&store); });
 
-  if (ErrorOr<int> parse_res = detail::parse_netlink_messages(
+  if (ErrorOr<void> parse_res = detail::parse_netlink_messages(
           {buf, static_cast<size_t>(*recv_res)}, store);
       !parse_res.has_value())
     return Error(parse_res.error());
