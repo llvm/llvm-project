@@ -144,6 +144,40 @@ void nestedMultiLine() {
   // CHECK-FIXES-NEXT:   };
 }
 
+// Preprocessor directives immediately before '}' must not be treated as the
+// last enumerator. Both branches already have trailing commas; a false
+// positive would insert a comma after '#endif'.
+enum color_t {
+  COLOR_RED = 0,
+  COLOR_GREEN = 1,
+  COLOR_BLUE = 2,
+  COLOR_CYAN = 3,
+#ifdef USE_MAGENTA
+  COLOR_LAST = COLOR_CYAN,
+#else
+  COLOR_LAST = COLOR_BLUE,
+#endif
+};
+
+enum GuardedEnumerator {
+  GE_A,
+  GE_B,
+#ifdef USE_EXTRA
+  GE_C,
+#endif
+};
+
+// An enumerator named 'endif' is still diagnosed; only '#endif' is ignored.
+enum EndsWithEndifName {
+  foo,
+  endif
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum EndsWithEndifName {
+// CHECK-FIXES-NEXT:   foo,
+// CHECK-FIXES-NEXT:   endif,
+// CHECK-FIXES-NEXT: };
+
 // Macros are ignored
 #define ENUM(n, a, b) enum n { a, b }
 #define INIT {1, 2}

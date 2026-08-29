@@ -56,6 +56,19 @@ AST_MATCHER(EnumDecl, isEmptyEnum) { return Node.enumerators().empty(); }
 
 AST_MATCHER(InitListExpr, isEmptyInitList) { return Node.getNumInits() == 0; }
 
+// True when Tok is a preprocessor directive (the '#' or the directive
+// identifier such as 'endif'). Those tokens can sit between the last
+// enumerator and '}', and must not be treated as a missing trailing comma.
+static bool isPreprocessorDirectiveToken(const Token &Tok,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  if (Tok.is(tok::hash))
+    return true;
+  const std::optional<Token> Prev = Lexer::findPreviousToken(
+      Tok.getLocation(), SM, LangOpts, /*IncludeComments=*/false);
+  return Prev && Prev->is(tok::hash);
+}
+
 } // namespace
 
 TrailingCommaCheck::TrailingCommaCheck(StringRef Name,
@@ -110,10 +123,19 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const std::optional<Token> LastTok =
-      Lexer::findPreviousToken(Enum->getBraceRange().getEnd(),
-                               *Result.SourceManager, getLangOpts(), false);
+  const std::optional<Token> LastTok = Lexer::findPreviousToken(
+      Enum->getBraceRange().getEnd(), *Result.SourceManager, getLangOpts(),
+      /*IncludeComments=*/false);
   if (!LastTok)
+    return;
+
+  // `#endif` (and similar directives) can appear immediately before the
+  // closing brace when enumerators are guarded by `#ifdef`. Walking back from
+  // `}` would otherwise treat that directive as the last enumerator and insert
+  // a comma after it, even when every active enumerator already has a trailing
+  // comma.
+  if (isPreprocessorDirectiveToken(*LastTok, *Result.SourceManager,
+                                   getLangOpts()))
     return;
 
   emitDiag(LastTok->getLocation(), LastTok, DiagKind::Enum, Result, Policy);

@@ -54,3 +54,17 @@ struct PackSingle {
 
 PackSingle<int> p1;
 PackSingle<int, double, char> p3;
+
+// Preprocessor-guarded enumerators already have trailing commas; do not insert
+// a comma after '#endif'.
+enum class color_t : unsigned {
+  RED = 0,
+  GREEN = 1,
+  BLUE = 2,
+  CYAN = 3,
+#ifdef USE_MAGENTA
+  LAST = CYAN,
+#else
+  LAST = BLUE,
+#endif
+};
