@@ -78,7 +78,17 @@ namespace {
       // the qualifier.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
           !DestType->isArrayType() && !DestType.getPointerAuth()) {
-        DestType = DestType.getAtomicUnqualifiedType();
+        if (S.Context.getLangOpts().CPlusPlus) {
+          // Note that in C++, _Atomic(T) is a distinct type, not a
+          // cv-qualifier, so it is not stripped.
+          DestType = DestType.getUnqualifiedType();
+        } else {
+          DestType = DestType.getAtomicUnqualifiedType();
+        }
+
+        // Ensure ResultType matches the stripped DestType (e.g., dropping
+        // _Atomic in C)
+        ResultType = DestType.getNonLValueExprType(S.Context);
       }
 
       if (const BuiltinType *placeholder =
