@@ -54,11 +54,9 @@ define void @test3() #0 {
   ret void
 }
 
-
+; Not promoted due to multiple uses until issue #32127 is fixed.
 ; CHECK-LABEL: @test4
-; CHECK: adr r{{.*}}, [[x:.*]]
-; CHECK: [[x]]:
-; CHECK: .asciz "this string is used twice\000\000"
+; CHECK-NOT: adr
 define void @test4() #0 {
   tail call void @a(ptr @.str3) #2
   tail call void @a(ptr @.str3) #2
