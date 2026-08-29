@@ -53,9 +53,18 @@ void test() {
 
   int key = 0;
 
+#if TEST_STD_VER >= 14
+  std::set<int, TransparentCompare> ts;
+  const std::set<int, TransparentCompare> cts{};
+  TransparentKey tkey;
+#endif
+
 #if TEST_STD_VER >= 17
   s.extract(key);       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   s.extract(s.begin()); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+#if TEST_STD_VER >= 23
+  ts.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   s.get_allocator(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -65,11 +74,6 @@ void test() {
   s.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cs.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  std::set<int, TransparentCompare> ts;
-  const std::set<int, TransparentCompare> cts{};
-
-  TransparentKey tkey;
-
   ts.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cts.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
