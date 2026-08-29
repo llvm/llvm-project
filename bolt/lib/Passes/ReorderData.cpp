@@ -16,6 +16,7 @@
 // - estimate temporal locality by looking at CFG?
 
 #include "bolt/Passes/ReorderData.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/MapVector.h"
 #include <algorithm>
 
@@ -34,13 +35,6 @@ static cl::opt<bool>
     PrintReorderedData("print-reordered-data",
                        cl::desc("print section contents after reordering"),
                        cl::Hidden, cl::cat(BoltCategory));
-
-cl::list<std::string>
-ReorderData("reorder-data",
-  cl::CommaSeparated,
-  cl::desc("list of sections to reorder"),
-  cl::value_desc("section1,section2,section3,..."),
-  cl::cat(BoltOptCategory));
 
 enum ReorderAlgo : char {
   REORDER_COUNT         = 0,

@@ -1954,7 +1954,7 @@ def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     MetaVarName<"<directory>">,
     HelpText<"Generate instrumented code to collect execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fcs_profile_generate : Flag<["-"], "fcs-profile-generate">,
@@ -1975,7 +1975,7 @@ def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_generate : Flag<["-"], "fno-profile-generate">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
@@ -9133,6 +9133,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def fmodules_force_redundant_lookup
+    : Flag<["-"], "fmodules-force-redundant-lookup">,
+      Group<f_Group>,
+      HelpText<"Force redundant module lookup when loading PCM files">,
+      MarshallingInfoFlag<PreprocessorOpts<"ModulesForceRedundantLookup">>;
 def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
   HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
   Values<"default,literalone,undefined">,
@@ -10037,6 +10042,15 @@ def fhlsl_spv_use_unknown_image_format
                "attribute. If this option is not used, the format is inferred "
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
+def fhlsl_spv_use_legacy_buffer_matrix_order
+    : Flag<["-"], "fspv-use-legacy-buffer-matrix-order">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Assume the legacy matrix order (row major) when accessing "
+               "raw buffers (e.g. ByteAddressBuffer). Defaults to column "
+               "major.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseLegacyBufferMatrixOrder">>;
 
 def fhlsl_spv_enable_maximal_reconvergence
     : Flag<["-"], "fspv-enable-maximal-reconvergence">,

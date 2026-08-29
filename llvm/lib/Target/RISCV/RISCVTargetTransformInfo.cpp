@@ -1655,10 +1655,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      // vabs.v v10, v8
+      // vabs.v v10, v8 (alias for vabd.vx v10, v8, zero)
       if (ST->hasStdExtZvabd())
         return LT.first *
-               getRISCVInstructionCost({RISCV::VABS_V}, LT.second, CostKind);
+               getRISCVInstructionCost({RISCV::VABD_VX}, LT.second, CostKind);
 
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
@@ -3011,7 +3011,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices, AccessTy, CostKind);
+                         Indices, CostKind, AccessTy);
     }
   }
   return Cost;
@@ -3699,7 +3699,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
     Options.AllowedTailExpansions = {3, 5, 6};

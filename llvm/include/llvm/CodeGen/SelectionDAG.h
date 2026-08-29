@@ -110,15 +110,10 @@ class SDVTListNode : public FoldingSetNode {
   FoldingSetNodeIDRef FastID;
   const EVT *VTs;
   unsigned int NumVTs;
-  /// The hash value for SDVTList is fixed, so cache it to avoid
-  /// hash calculation.
-  unsigned HashValue;
 
 public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num) :
-      FastID(ID), VTs(VT), NumVTs(Num) {
-    HashValue = ID.ComputeHash();
-  }
+  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num)
+      : FastID(ID), VTs(VT), NumVTs(Num) {}
 
   SDVTList getSDVTList() {
     SDVTList result = {VTs, NumVTs};
@@ -127,21 +122,15 @@ public:
 };
 
 /// Specialize FoldingSetTrait for SDVTListNode
-/// to avoid computing temp FoldingSetNodeID and hash value.
+/// to avoid computing temp FoldingSetNodeID.
 template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
   static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
     ID = X.FastID;
   }
 
   static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
-    if (X.HashValue != IDHash)
-      return false;
+                     FoldingSetNodeID &TempID) {
     return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SDVTListNode &X, FoldingSetNodeID &TempID) {
-    return X.HashValue;
   }
 };
 

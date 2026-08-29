@@ -1027,14 +1027,10 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
         .setVisibility(
             cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
 
-    // Copy over all attributes other than the function name and type.
+    // Copy over the discardable attributes.
     for (NamedAttribute namedAttr :
-         funcOp->getDiscardableAttrDictionary().getValue()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setDiscardableAttr(namedAttr.getName(),
-                                      namedAttr.getValue());
-    }
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
