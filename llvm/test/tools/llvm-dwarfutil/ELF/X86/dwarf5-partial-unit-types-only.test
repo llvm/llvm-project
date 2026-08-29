@@ -6,34 +6,54 @@
 ## U02:  ns::S foo1() { ... }   // DW_FORM_ref_addr reference into U01
 
 # RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
-# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.out
-# RUN: llvm-dwarfdump --debug-info %t.cu.out | FileCheck %s --implicit-check-not='DW_AT_name ("U01")' \
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")' \
 # RUN:   --implicit-check-not=DW_TAG_structure_type
 
 # RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
-# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.out
-# RUN: llvm-dwarfdump --debug-info %t.pu.out | FileCheck %s --check-prefixes=CHECK,CHECK-PU \
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")' \
 # RUN:   --implicit-check-not=DW_TAG_structure_type
 
-## S is output only in the type unit, and foo1's reference resolves there.
-# CHECK:           DW_AT_name ("__artificial_type_unit")
-# CHECK:           DW_TAG_namespace
-# CHECK-NEXT:        DW_AT_name ("ns")
-# CHECK:         0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
-# CHECK-NEXT:        DW_AT_name ("S")
-# CHECK-NEXT:        DW_AT_byte_size (0x08)
+## The two parallel links agree byte for byte.
+# RUN: cmp %t.cu.parallel %t.pu.parallel
 
-## FIXME: the empty partial unit root is still emitted, because marking S's
-## parents does not stop at it as at a compile unit root (#219393).
-# CHECK-PU:        DW_TAG_partial_unit
-# CHECK-PU-NEXT:     DW_AT_producer ("by_hand")
-# CHECK-PU-NEXT:     DW_AT_name ("U01")
-# CHECK:           DW_TAG_compile_unit
-# CHECK-NEXT:        DW_AT_producer ("by_hand")
-# CHECK-NEXT:        DW_AT_name ("U02")
-# CHECK:           DW_TAG_subprogram
-# CHECK-NEXT:        DW_AT_name ("foo1")
-# CHECK:             DW_AT_type (0x00000000[[S]] "ns::S")
+## FIXME: llvm-dwarfdump prefixes the partial unit's name to the type (#219635).
+# CLASSIC-CU:     DW_TAG_compile_unit
+# CLASSIC-PU:     DW_TAG_partial_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U01")
+# CLASSIC:        DW_TAG_namespace
+# CLASSIC-NEXT:     DW_AT_name ("ns")
+# CLASSIC:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:        DW_TAG_compile_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U02")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo1")
+# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "ns::S")
+# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::ns::S")
+
+## S is output only in the type unit, and foo1's reference resolves there.
+# PARALLEL:      DW_AT_name ("__artificial_type_unit")
+# PARALLEL:      DW_TAG_namespace
+# PARALLEL-NEXT:   DW_AT_name ("ns")
+# PARALLEL:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL-NEXT:   DW_AT_byte_size (0x08)
+
+## U01, left empty, is dropped whatever its root tag.
+# PARALLEL:      DW_TAG_compile_unit
+# PARALLEL-NEXT:   DW_AT_producer ("by_hand")
+# PARALLEL-NEXT:   DW_AT_name ("U02")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "ns::S")
 
 ## S has no members, whose DW_TAG_base_type would stay in U01 as a plain child.
 ## The roots carry DW_AT_str_offsets_base, which the linker adds only to a
