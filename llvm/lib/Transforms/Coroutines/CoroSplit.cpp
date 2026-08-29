@@ -1903,6 +1903,7 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
                                   Suspend, TTI);
   }
+  remapReloadToSSA();
 }
 
 void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
@@ -2033,6 +2034,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
                                   Suspend, TTI);
   }
+  remapReloadToSSA();
 }
 
 namespace {
@@ -2085,6 +2087,7 @@ void coro::SwitchABI::splitCoroutine(Function &F, coro::Shape &Shape,
                                      SmallVectorImpl<Function *> &Clones,
                                      TargetTransformInfo &TTI) {
   SwitchCoroutineSplitter::split(F, Shape, Clones, TTI);
+  remapReloadToSSA();
 }
 
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
