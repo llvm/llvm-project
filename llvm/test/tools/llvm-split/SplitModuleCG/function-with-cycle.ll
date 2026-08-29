@@ -1,6 +1,9 @@
-; RUN: llvm-split -enable-split-module-CG=true -j2 -o %t %s
+; RUN: llvm-split -enable-call-graph-split-module=true -j2 -o %t %s
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
+
+; Test splitting when the call graph contains a cycle (foo -> call_foo -> foo),
+; verifying that cycle members land in the same partition.
 
 ; CHECK0-DAG: declare void @foo()
 ; CHECK0-DAG: define void @bar()

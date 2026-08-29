@@ -1,6 +1,9 @@
-; RUN: llvm-split -enable-split-module-CG=true -j2 -o %t %s
+; RUN: llvm-split -enable-call-graph-split-module=true -j2 -o %t %s
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
+
+; Test basic call graph based module splitting — functions are grouped into
+; partitions by their call relationships.
 
 ; CHECK0-DAG: declare dso_local void @foo()
 ; CHECK0-DAG: define void @bar()
