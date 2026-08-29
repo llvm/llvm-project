@@ -4035,8 +4035,7 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     NumElts = ExtElts;
   }
 
-  Type *Ty = AI.getAllocatedType();
-  TypeSize TySize = DL->getTypeAllocSize(Ty);
+  TypeSize TySize = AI.getAllocationBaseSize(*DL);
 
   Register AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
   Register TySizeReg;
