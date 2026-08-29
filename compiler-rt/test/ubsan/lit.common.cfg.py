@@ -95,3 +95,53 @@ if ubsan_lit_test_mode in ["AddressSanitizer", "MemorySanitizer", "ThreadSanitiz
         config.parallelism_group = "shadow-memory"
     if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if ubsan_lit_test_mode == "Standalone":
+    _amdgpu_ubsan_rt = any(
+        os.path.isfile(
+            os.path.join(
+                config.compiler_rt_output_dir,
+                "lib",
+                triple,
+                "libclang_rt.ubsan_standalone.a",
+            )
+        )
+        for triple in ("amdgpu-amd-amdhsa", "amdgcn-amd-amdhsa")
+    )
+    if config.ubsan_can_run_hip and _amdgpu_ubsan_rt:
+        config.available_features.add("ubsan-hip")
+        hip_common = [
+            "-xhip",
+            "--offload-arch=" + config.ubsan_gpu_arch,
+            "-nogpuinc",
+            "-nogpulib",
+            "-g",
+            "-isystem",
+            os.path.join(config.test_source_root, "Inputs"),
+            "-include",
+            "hip.h",
+            "-fsanitize=undefined",
+        ]
+        hip_libs = [
+            "-L" + config.ubsan_hip_lib_dir,
+            "-lamdhip64",
+            "-Wl,-rpath," + config.ubsan_hip_lib_dir,
+        ]
+        config.substitutions.append(
+            ("%clang_ubsan_hip ", build_invocation(hip_common) + " ")
+        )
+        config.substitutions.append(("%hip_libs", " ".join(hip_libs)))
+    if config.ubsan_can_run_openmp_offload and _amdgpu_ubsan_rt:
+        config.available_features.add("ubsan-openmp-offload")
+        omp_common = [
+            "-fopenmp",
+            "--offload-arch=" + config.ubsan_gpu_arch,
+            "-g",
+            "-frtlib-add-rpath",
+            "-fsanitize=undefined",
+        ]
+        config.substitutions.append(
+            ("%clang_ubsan_omp ", build_invocation(omp_common) + " ")
+        )
+    if config.ubsan_can_run_hip or config.ubsan_can_run_openmp_offload:
+        lit_config.parallelism_groups["gpu"] = 1

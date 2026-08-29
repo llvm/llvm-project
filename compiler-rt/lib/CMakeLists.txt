@@ -47,6 +47,9 @@ if(COMPILER_RT_BUILD_SANITIZERS)
     add_subdirectory(lsan)
     # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
     add_subdirectory(ubsan)
+  elseif(COMPILER_RT_GPU_BUILD AND COMPILER_RT_HAS_UBSAN)
+    # GPU compiler-rt has can build device UBSan shims without sanitizer_common.
+    add_subdirectory(ubsan)
   endif()
 
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
