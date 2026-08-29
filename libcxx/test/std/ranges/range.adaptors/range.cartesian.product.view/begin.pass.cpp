@@ -73,9 +73,9 @@ constexpr bool test() {
     std::ranges::cartesian_product_view v(SimpleCommon{buffer}, SimpleCommon{buffer});
     static_assert(std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
-    auto [x, y] = *std::as_const(v).begin();
-    assert(&x == &buffer[0]);
-    assert(&y == &buffer[0]);
+    std::same_as<std::tuple<const int&, const int&>> decltype(auto) val = *std::as_const(v).begin();
+    assert(&(std::get<0>(val)) == &buffer[0]);
+    assert(&(std::get<1>(val)) == &buffer[0]);
 
     using View = decltype(v);
     static_assert(HasOnlyConstBegin<View>);
@@ -87,6 +87,11 @@ constexpr bool test() {
     std::ranges::cartesian_product_view v(SimpleCommon{buffer}, NonSimpleNonCommon{buffer});
     static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
+
+    std::same_as<std::tuple<const int&, int&>> decltype(auto) val         = *v.begin();
+    std::same_as<std::tuple<const int&, const int&>> decltype(auto) c_val = *std::as_const(v).begin();
+    assert(&(std::get<0>(val)) == &buffer[0]);
+    assert(&(std::get<0>(c_val)) == &buffer[0]);
 
     using View = decltype(v);
     static_assert(!HasOnlyConstBegin<View>);
