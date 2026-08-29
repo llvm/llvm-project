@@ -410,12 +410,12 @@ let SchedRW = [Write64Bit] in {
   let SubtargetPredicate = isGFX6GFX7, IsDPMACCInstruction = 1 in {
   defm V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, cshl_64>;
   defm V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, csrl_64>;
-  defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;
+  defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32_Signed>, csra_64>;
   } // End SubtargetPredicate = isGFX6GFX7
 
   let SubtargetPredicate = isGFX8Plus in {
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
-  defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
+  defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64_Signed>, cashr_rev_64>;
   } // End SubtargetPredicate = isGFX8Plus
 
   let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
