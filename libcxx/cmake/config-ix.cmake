@@ -5,6 +5,7 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
 
 # The compiler driver may be implicitly trying to link against libunwind.
 # This is normally ok (libcxx relies on an unwinder), but if libunwind is
@@ -130,4 +131,28 @@ else()
   check_library_exists(pthread pthread_create "" LIBCXX_HAS_PTHREAD_LIB)
   check_library_exists(rt clock_gettime "" LIBCXX_HAS_RT_LIB)
   check_library_exists(atomic __atomic_fetch_add_8 "" LIBCXX_HAS_ATOMIC_LIB)
+endif()
+
+# The library calls feraiseexcept to report floating-point exceptions from the mathematical
+# special functions. On most Unix platforms that symbol lives in libm, which the library has
+# never needed before, so libm is not on the link line yet. Windows keeps it in the CRT and
+# Apple in libSystem, and neither has a separate libm to link.
+#
+# This is a C++ check rather than a check_library_exists, because CMAKE_REQUIRED_FLAGS holds
+# -nostdlib++ above: that is a C++ driver option, and check_library_exists compiles C, so on
+# a GCC toolchain the C driver rejects it and the check answers NO for any library.
+#
+# <fenv.h> rather than <cfenv>, because libc++'s <cfenv> is <fenv.h> plus a
+# `using ::feraiseexcept` -- the same declaration and the same symbol -- and the C header is
+# the one that exists while the C++ headers are still the libc++ being built.
+if((WIN32 AND NOT MINGW) OR APPLE)
+  set(LIBCXX_HAS_M_LIB NO)
+else()
+  cmake_push_check_state()
+  list(APPEND CMAKE_REQUIRED_LIBRARIES m)
+  check_cxx_source_compiles("
+#include <fenv.h>
+int main() { return feraiseexcept(0); }
+" LIBCXX_HAS_M_LIB)
+  cmake_pop_check_state()
 endif()

@@ -11,7 +11,7 @@ add_library(boost_math INTERFACE)
 
 add_library(Boost::math ALIAS boost_math)
 
-target_include_directories(boost_math INTERFACE include)
+target_include_directories(boost_math SYSTEM INTERFACE include)
 if(NOT CMAKE_VERSION VERSION_LESS "3.19")
   file(GLOB_RECURSE headers include/*.hpp)
   target_sources(boost_math PRIVATE ${headers})
