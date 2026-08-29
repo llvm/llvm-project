@@ -27,15 +27,13 @@
 
 ## The classic backend leaves the type where it found it, and the root tag
 ## survives linking. llvm-dwarfdump qualifies a type name with the names of its
-## enclosing scopes and a partial unit root is one, which a compile unit root
-## is not, so the type is printed as "U01::ns::S" for the partial unit run and
-## as "ns::S" for the control. The reference target is the same DIE either way.
+## enclosing scopes and stops that walk at either unit root, so both runs print
+## the type as "ns::S" and both resolve to the same DIE.
 # CLASSIC-CU:     DW_TAG_compile_unit
 # CLASSIC-PU:     DW_TAG_partial_unit
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "ns::S")
 # CLASSIC:        DW_TAG_namespace
 # CLASSIC-NEXT:     DW_AT_name ("ns")
 # CLASSIC:      0x[[S]]:     DW_TAG_structure_type

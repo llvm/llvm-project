@@ -33,8 +33,8 @@
 
 ## The classic backend leaves the type where it found it, so the first unit
 ## survives and the cross-unit reference resolves to the definition under it.
-## llvm-dwarfdump qualifies a type name with the names of its enclosing scopes
-## and a partial unit root is one, which a compile unit root is not.
+## llvm-dwarfdump stops the scope walk that qualifies a type name at either
+## unit root, so both runs print the type as "ns::S".
 # CLASSIC-CU:     DW_TAG_compile_unit
 # CLASSIC-PU:     DW_TAG_partial_unit
 # CLASSIC-NEXT:     DW_AT_producer ("by_hand")
@@ -48,8 +48,7 @@
 # CLASSIC-NEXT:     DW_AT_name ("U02")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "ns::S")
 
 ## The type reaches the artificial type unit under a copy of the namespace that
 ## held it, and the second unit's reference resolves into the type unit rather

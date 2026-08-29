@@ -16,14 +16,14 @@
 ## DW_TAG_compile_unit roots.
 # RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
 # RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
-# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
 # RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
 # RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
 
 ## DW_TAG_partial_unit roots.
 # RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
 # RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
-# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
 # RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
 # RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
 
@@ -37,18 +37,15 @@
 ## The classic backend keeps the first definition it saw and redirects the
 ## other unit's references to it, so U01 owns both definitions and U02 owns
 ## none. llvm-dwarfdump qualifies a type name with the names of its enclosing
-## scopes and a partial unit root is one, which a compile unit root is not.
-## The reference target is the same DIE either way, and that is what the
-## captured offsets pin.
+## scopes and stops that walk at either unit root, so the two runs print the
+## same names and pin the same captured offsets.
 # CLASSIC:        DW_AT_name ("U01")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "U01::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "S")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo2")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "ns::S")
 # CLASSIC:      0x[[S]]:   DW_TAG_structure_type
 # CLASSIC-NEXT:   DW_AT_name ("S")
 # CLASSIC:        DW_TAG_member
@@ -66,12 +63,10 @@
 # CLASSIC:        DW_AT_name ("U02")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("bar1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "S")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("bar2")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[NSS]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[NSS]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS]] "ns::S")
 
 ## The parallel backend moves the deduplicated types into an artificial type
 ## unit that precedes both input units, and every reference resolves there. It
