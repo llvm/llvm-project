@@ -5746,9 +5746,6 @@ static TemplateDeductionResult CheckDeductionConsistency(
       S,
       ArgIdx ? ::getPackIndexForParam(S, FTD, MLTAL, *ArgIdx) : std::nullopt);
   bool IsIncompleteSubstitution = false;
-  // FIXME: A substitution can be incomplete on a non-structural part of the
-  // type. Use the canonical type for now, until the TemplateInstantiator can
-  // deal with that.
 
   // Workaround: Implicit deduction guides use InjectedClassNameTypes, whereas
   // the explicit guides don't. The substitution doesn't transform these types,
@@ -5759,8 +5756,12 @@ static TemplateDeductionResult CheckDeductionConsistency(
       P = Injected->getDecl()->getCanonicalTemplateSpecializationType(
           S.Context);
   }
-  QualType InstP = S.SubstType(P.getCanonicalType(), MLTAL, FTD->getLocation(),
-                               FTD->getDeclName(), &IsIncompleteSubstitution);
+  // Substitute the adjusted parameter type, not the decay sugar over the
+  // original array or function type.
+  if (const auto *Adjusted = P->getAs<AdjustedType>())
+    P = Adjusted->getAdjustedType();
+  QualType InstP = S.SubstType(P, MLTAL, FTD->getLocation(), FTD->getDeclName(),
+                               &IsIncompleteSubstitution);
   if (InstP.isNull() && !IsIncompleteSubstitution)
     return TemplateDeductionResult::SubstitutionFailure;
   if (!CheckConsistency)
@@ -5816,10 +5817,36 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
 
   Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
 
-  // Substitute the deduced template arguments into the argument
-  // and verify that the instantiated argument is both valid
-  // and equivalent to the parameter.
+  // ***REVIEWER***: is this correct? i'm assuming i need to construct a new
+  // template instantiation scope to hold the following parameter declarations.
   LocalInstantiationScope InstScope(S);
+
+  // Yeet the function parameters into the scope so that later references can
+  // actually use them.
+  MultiLevelTemplateArgumentList MLTAL(FTD, CTAI.SugaredConverted,
+                                       /*Final=*/true);
+  for (ParmVarDecl *Param : FTD->getTemplatedDecl()->parameters()) {
+    bool IsIncompleteSubstitution = false;
+    QualType SubstT =
+        S.SubstType(Param->getType(), MLTAL, Param->getLocation(),
+                    Param->getDeclName(), &IsIncompleteSubstitution);
+    // ***REVIEWER***: [Edited from original: to be more correct and coherent]
+    // It is possible to hit this path with an incomplete parameter pack, in
+    // which case neither of these paths apply: this first because we're talking
+    // about an incomplete substitution at this point, and the second
+    // definitionally as we're excluding parameter packs.
+    // I don't know how to fix this correctly, and cannot exercise the code path
+    // due to issue #213760, so i can't even try to debug my way into
+    // understanding the state of the objects when we hit that case.
+    if (!SubstT.isNull() && !IsIncompleteSubstitution)
+      S.SubstParmVarDecl(Param, MLTAL, /*indexAdjustment=*/0,
+                         /*NumExpansions=*/std::nullopt,
+                         /*ExpectParameterPack=*/false,
+                         /*EvaluateConstraints=*/false);
+    else if (!Param->isParameterPack())
+      InstScope.InstantiatedLocal(Param, Param);
+  }
+
   return CheckDeductionConsistency(S, FTD, CTAI.SugaredConverted);
 }
 
