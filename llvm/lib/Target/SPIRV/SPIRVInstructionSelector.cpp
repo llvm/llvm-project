@@ -1840,9 +1840,9 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
     return false;
 
   // Shift the high bits over and count them too.
-  Register ShiftAmount =
-      ComponentCount == 1 ? GR.getOrCreateConstInt(32, I, SrcType, TII)
-                          : GR.getOrCreateConstVector(32, I, SrcType, TII);
+  Register ShiftAmount = ComponentCount == 1
+                             ? GR.getOrCreateConstInt(32, I, SrcType, TII)
+                             : GR.getOrCreateConstVector(32, I, SrcType, TII);
   unsigned ShiftOp = ComponentCount == 1 ? SPIRV::OpShiftRightLogicalS
                                          : SPIRV::OpShiftRightLogicalV;
   Register Shift = MRI->createVirtualRegister(GR.getRegClass(SrcType));
