@@ -11,13 +11,13 @@
 #include <thread>
 using namespace llvm;
 
-#define DEBUG_TYPE "split-module-CG"
+#define DEBUG_TYPE "split-module-cg"
 
 namespace {
 
-static cl::opt<bool> enablePrintSimplifyCallGraph(
-    "enable-print-simplify-callgraph", cl::Hidden, cl::init(false),
-    cl::desc("print SimplifyCallGraph"));
+static cl::opt<bool> enablePrintSimplifiedCallGraph(
+    "enable-print-simplified-callgraph", cl::Hidden, cl::init(false),
+    cl::desc("print SimplifiedCallGraph"));
 
 using PartitionID = unsigned;
 
@@ -38,10 +38,9 @@ static void externalize(GlobalValue *GV) {
 std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
   LLVM_DEBUG(dbgs() << "\n--Partitioning Starts--\n");
   // Performs all of the partitioning work on M.
+  assert(N != 0 && "Partition count must be at least 1");
   std::vector<DenseSet<const Function *>> Partitions;
   Partitions.resize(N);
-  if (N == 0)
-    return Partitions;
 
   auto ComparePartitions = [](const std::pair<PartitionID, CostType> &a,
                               const std::pair<PartitionID, CostType> &b) {
@@ -57,18 +56,16 @@ std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
   for (unsigned I = 0; I < N; ++I)
     BalancingQueue.emplace_back(I, 0);
 
-  // Helper function to handle assigning a function to a partition. This takes
-  // care of updating the balancing queue.
-  const auto AssignToPartition = [&](PartitionID PID,
-                                     const FunctionWithDependencies &FWD) {
+  for (auto &CurFn : FWDWorkList) {
+    // Normal "load-balancing", assign to partition with least pressure.
+    auto [PID, _] = BalancingQueue.back();
+
     // Insert the root function and its dependencies into the partition,
     // tracking the cost of newly inserted functions so the balancing queue
-    // can be updated.
+    // can be updated. CurFn.Dependencies includes the root F itself.
     auto &FnsInPart = Partitions[PID];
     CostType AddedCost = 0;
-    if (FnsInPart.insert(FWD.F).second)
-      AddedCost += FuncsCosts.at(FWD.F);
-    for (const Function *Dep : FWD.Dependencies)
+    for (const Function *Dep : CurFn.Dependencies)
       if (FnsInPart.insert(Dep).second)
         AddedCost += FuncsCosts.lookup(Dep);
 
@@ -81,12 +78,6 @@ std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
     }
 
     sort(BalancingQueue, ComparePartitions);
-  };
-
-  for (auto &CurFn : FWDWorkList) {
-    // Normal "load-balancing", assign to partition with least pressure.
-    auto [PID, CurCost] = BalancingQueue.back();
-    AssignToPartition(PID, CurFn);
   }
 
   return Partitions;
@@ -99,10 +90,8 @@ void SplitModuleCG::calculateFunctionCosts() {
       continue;
 
     CostType FnCost = 0;
-    for (const auto &BB : Fn) {
-      CostType CostVal = std::distance(BB.begin(), BB.end());
-      FnCost += CostVal;
-    }
+    for (const auto &BB : Fn)
+      FnCost += std::distance(BB.begin(), BB.end());
     assert(FnCost != 0);
     FuncsCosts[&Fn] = FnCost;
     assert((ModuleCost + FnCost) >= ModuleCost && "Overflow!");
@@ -110,71 +99,62 @@ void SplitModuleCG::calculateFunctionCosts() {
   }
 }
 
-void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I,
-                                   function_ref<bool(const GlobalValue *)> NeedsConservativeImport) {
-  // Collect promoted symbols (those that were local but are now external due
-  // to externalize(), and therefore are not in the OriginalExternals set
-  // captured at construction time).
-  //
-  // Note: here we only *record* the rename in PromotedRenames; we do not
-  // perform the actual renaming immediately. The rename is applied after the
-  // opt pipeline has completed. This is intentional: deferring the rename
-  // minimizes the impact of renaming on subsequent optimizations.
-  auto checkPromoted = [&](const GlobalValue &GV) {
-    // now is external (not local), but not in external set.
-    if (!GV.hasLocalLinkage() && !OriginalExternals.contains(GV.getName())) {
-      if (PromotedRenames.count(GV.getName()))
-        return;
-      // Use the naming convention "name.llvm.<suffix>" so the
-      // promoted local cannot clash with an external that happens to share
-      // the same name in another module/partition.
-      std::string Suffix = getUniqueModuleId(&M);
-      std::string NewName = (GV.getName() + ".llvm" + Suffix).str();
-      PromotedRenames[GV.getName()] = NewName;
-    }
-  };
-
-  auto AvailableExternalizeFunc = [&](llvm::Function &Func) {
-    Func.setLinkage(GlobalValue::AvailableExternallyLinkage);
-    Func.setComdat(nullptr);
-  };
-
-  for (const auto &GV : MPart.global_values())
-    checkPromoted(GV);
-  // Clean-up conservatively imported GVs without any users.
-  for (auto &GV : make_early_inc_range(MPart.globals())) {
-    if (NeedsConservativeImport(&GV) && GV.use_empty())
-      GV.eraseFromParent();
-  }
-
+void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I) {
+  // Downgrade duplicate definitions of external functions to
+  // available_externally. The first partition to define such a function keeps
+  // the real definition; all other partitions get available_externally copies.
   for (auto &func : MPart.functions()) {
+    if (func.isDeclaration())
+      continue;
     auto Fn = M.getFunction(func.getName());
-    if (externalFunction.count(Fn) && !func.isDeclaration()) {
-      if (!externalFunction[Fn]) {
-        AvailableExternalizeFunc(func);
-      } else {
-        externalFunction[Fn] = false;
-      }
+    if (!externalFunction.contains(Fn))
+      continue;
+    if (!externalFunction[Fn]) {
+      func.setLinkage(GlobalValue::AvailableExternallyLinkage);
+      func.setComdat(nullptr);
+    } else {
+      externalFunction[Fn] = false;
     }
   }
 
+  // Rename GlobalValues whose linkage was promoted from local to external,
+  // to avoid duplicate symbols across partitions in ThinLTO. Use the naming
+  // convention "name.llvm.<suffix>" so the promoted local cannot clash with
+  // an external that happens to share the same name. The suffix is derived
+  // from the module via getUniqueModuleId, so it is consistent across all
+  // partitions.
+  std::string Suffix = getUniqueModuleId(&M);
+  for (auto &GV : MPart.global_values()) {
+    // Now external (not local), but was not originally external.
+    if (GV.hasLocalLinkage() || OriginalExternals.contains(GV.getName()))
+      continue;
+    // Skip declarations of functions that were not explicitly externalized
+    // (e.g. skipped by the hasOneUse check). Their definitions in other
+    // partitions remain internal and are not renamed, so declarations must
+    // keep the original name to stay consistent.
+    auto *Fn = dyn_cast<Function>(&GV);
+    if (Fn && Fn->isDeclaration() &&
+        !externalFunction.contains(M.getFunction(Fn->getName())))
+      continue;
+    GV.setName((GV.getName() + ".llvm" + Suffix).str());
+  }
+
+#ifndef NDEBUG
   LLVM_DEBUG(dbgs() << MPart.getModuleIdentifier() << "  : \n");
-  for (auto &F : MPart) {
+  for (auto &F : MPart)
     if (!F.isDeclaration())
       LLVM_DEBUG(dbgs() << "   [Function: ] " << I << "  " << F.getName() << " "
                         << F.getLinkage() << "\n");
-  }
+#endif
 }
 
 void SplitModuleCG::createWorkList() {
   // First, find all the entry functions with an in-degree of 0
   // (i.e., those that are not called by any function).
-  for (auto &NodePair : *SCG) {
-    SimplifyCallGraphNode *SCGNode = NodePair.second.get();
+  for (auto &SCGNode : SCG->values()) {
     Function *F = SCGNode->getFunction();
-    if (F && SCGNode->getNumReferences() == 0) {
+    if (F && SCGNode->getNumReferences() == 0)
       EntryFuncs.insert(F);
-    }
   }
 
   // Second, find all the dependencies of each entry function.
@@ -185,19 +165,17 @@ void SplitModuleCG::createWorkList() {
   // Third, find all the functions that are not in the worklist.
   DenseSet<const Function *> SeenFunctions;
   for (const auto &FWD : FWDWorkList) {
-    SeenFunctions.insert(FWD.F);
     SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
   }
   for (auto &F : M) {
-    // This function may be in a ring, and therefore is not a dependency of
+    // This function may be in a cycle, and therefore is not a dependency of
     // any root, which is treated as a root function here.
-    if (!F.isDeclaration() && !SeenFunctions.count(&F)) {
-      FWDWorkList.emplace_back(*SCG, FuncsCosts, &F);
-      auto &FWD = FWDWorkList.back();
-      EntryFuncs.insert(&F);
-      SeenFunctions.insert(FWD.F);
-      SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
-    }
+    if (F.isDeclaration() || SeenFunctions.contains(&F))
+      continue;
+    FWDWorkList.emplace_back(*SCG, FuncsCosts, &F);
+    auto &FWD = FWDWorkList.back();
+    EntryFuncs.insert(&F);
+    SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
   }
 
   // Sort the worklist so the most expensive roots are seen first.
@@ -213,12 +191,13 @@ void SplitModuleCG::createWorkList() {
                     << FWDWorkList.size() << "   Module cost: "
                     << ModuleCost << "\n");
   LLVM_DEBUG(dbgs() << "callgraphs: \n");
-  for (auto FWD : FWDWorkList) {
+#ifndef NDEBUG
+  for (auto FWD : FWDWorkList)
     LLVM_DEBUG(dbgs() << "[root] " << FWD.F->getName() << " (totalCost:"
                       << FWD.TotalCost << ";   root function cost: "
                       << FuncsCosts[FWD.F] << ";   has dependency: "
                       << FWD.Dependencies.size() << "\n");
-  }
+#endif
 }
 
 void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
@@ -227,6 +206,11 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
     if (F.hasLocalLinkage() && F.hasOneUse() && !F.hasAddressTaken())
       continue;
     externalize(&F);
+    // Record functions that may be defined in multiple partitions so that
+    // dealWithMpart can downgrade duplicates to available_externally. This
+    // includes functions with external linkage (either originally or just
+    // promoted by externalize), as well as functions whose definitions are
+    // not exact (e.g. linkonce/weak), which may be replaced at link time.
     if (!F.isDeclaration() &&
         (F.hasExternalLinkage() || !F.isDefinitionExact()))
       externalFunction[&F] = true;
@@ -242,23 +226,12 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   auto Partitions = doPartitioning();
   assert(Partitions.size() == N);
 
-  const auto NeedsConservativeImport = [&](const GlobalValue *GV) {
-    // Conservatively clone private/internal globals into every partition;
-    // unused copies are removed by dealWithMpart afterwards.
-    const auto *Var = dyn_cast<GlobalVariable>(GV);
-    return Var && Var->hasLocalLinkage();
-  };
-
   auto ShouldCloneDefinition = [&](unsigned I, const GlobalValue *GV) {
     const auto &FnsInPart = Partitions[I];
 
     // Functions go in their assigned partition.
-    if (const auto *newFn = dyn_cast<Function>(GV)) {
-      const auto *Fn = M.getFunction(newFn->getName());
-      return FnsInPart.contains(Fn);
-    }
-    if (NeedsConservativeImport(GV))
-      return true;
+    if (const auto *FnToClone = dyn_cast<Function>(GV))
+      return FnsInPart.contains(FnToClone);
     // Everything else goes in the first partition.
     return I == 0;
   };
@@ -272,8 +245,6 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   // straightforward.
   std::vector<std::thread> Threads;
   Threads.reserve(N);
-  std::vector<std::unique_ptr<Module>> MPartInCtxs;
-  MPartInCtxs.resize(N);
   for (unsigned I = 0; I < N; ++I) {
     ValueToValueMapTy VMap;
     std::unique_ptr<Module> MPart(
@@ -281,7 +252,7 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
         return ShouldCloneDefinition(I, GV);
     }));
 
-    dealWithMpart(*MPart, I, NeedsConservativeImport);
+    dealWithMpart(*MPart, I);
 
     // Serialize the cloned partition to bitcode and re-parse it inside the
     // worker thread's own LLVMContext. This round-trip is required because
@@ -320,27 +291,27 @@ SplitModuleCG::SplitModuleCG(Module &M, unsigned LimitPartition)
   calculateFunctionCosts();
 
   // Construct a simplified call graph to facilitate worklist generation.
-  SCG = std::make_unique<SimplifyCallGraph>(CG, M);
+  SCG = std::make_unique<SimplifiedCallGraph>(CG);
 
   // Populate the worklist with root functions and their transitive
   // dependencies. This worklist serves as the foundation for the
   // subsequent module partitioning.
   createWorkList();
 
-  if (N == 0 || N > EntryFuncs.size()) {
+  if (N == 0 || N > EntryFuncs.size())
     N = EntryFuncs.size();
-  }
-  N = N == 0 ? 1 : N;
+  if (N == 0)
+    N = 1;
 }
 
-void SimplifyCallGraph::createSimplifyCallGraph() {
+SimplifiedCallGraph::SimplifiedCallGraph(CallGraph &CG) {
   for (auto &NodePair : CG) {
-    CallGraphNode *CGNode = NodePair.second.get();
+    auto &CGNode = NodePair.second;
     Function *F = CGNode->getFunction();
     if (!F || F->isDeclaration())
       continue;
 
-    SimplifyCallGraphNode *SCGNode = getOrInsertFunction(F);
+    SimplifiedCallGraphNode *SCGNode = getOrInsertFunction(F);
 
     for (const auto &CGNodeItem : *CGNode) {
       Function *Called = CGNodeItem.second->getFunction();
@@ -350,31 +321,32 @@ void SimplifyCallGraph::createSimplifyCallGraph() {
     }
   }
 
-  if (enablePrintSimplifyCallGraph)
+  if (enablePrintSimplifiedCallGraph)
     print();
 }
 
 
-void SimplifyCallGraph::print() {
+void SimplifiedCallGraph::print() {
+#ifndef NDEBUG
   for (auto &SCGItem : FunctionMap) {
     LLVM_DEBUG(dbgs() << "Call graph node for function: '"
                       << SCGItem.first->getName() << "' #uses="
                       << SCGItem.second->getNumReferences() << "\n");
 
-    for (const auto &callee : *SCGItem.second) {
+    for (const auto &callee : *SCGItem.second)
       LLVM_DEBUG(dbgs() <<"          Calls function : '"
                         << callee->getFunction()->getName() << " '\n");
-    }
   }
+#endif
 }
 
-SimplifyCallGraphNode *
-SimplifyCallGraph::getOrInsertFunction(const Function *F) {
+SimplifiedCallGraphNode *
+SimplifiedCallGraph::getOrInsertFunction(const Function *F) {
   auto &SCGN = FunctionMap[F];
   if (SCGN)
     return SCGN.get();
 
   SCGN =
-      std::make_unique<SimplifyCallGraphNode>(this, const_cast<Function *>(F));
+      std::make_unique<SimplifiedCallGraphNode>(const_cast<Function *>(F));
   return SCGN.get();
 }

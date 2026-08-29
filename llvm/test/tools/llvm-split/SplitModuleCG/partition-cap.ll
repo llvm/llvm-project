@@ -1,7 +1,9 @@
-; RUN: llvm-split -enable-split-module-CG=true -j10 -o %t %s
+; RUN: llvm-split -enable-call-graph-split-module=true -j10 -o %t %s
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; should only produce 2 output files (N capped to EntryFuncs.size()=2)
+
+; Test that partition count is capped to the number of entry functions
+; (-j10 but only 2 roots → 2 outputs).
 
 ; CHECK0: define void @foo()
 ; CHECK1: define void @bar()

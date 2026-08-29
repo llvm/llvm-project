@@ -80,8 +80,10 @@ static cl::opt<std::string>
          cl::value_desc("cpu"), cl::cat(SplitCategory));
          
 static cl::opt<bool>
-    EnableSplitModuleCG("enable-split-module-CG", cl::Prefix, cl::init(false),
-     cl::desc("Split module using call graph"), cl::cat(SplitCategory));
+    EnableCallGraphSplitModule("enable-call-graph-split-module",
+                               cl::Prefix, cl::init(false),
+                               cl::desc("Split module using call graph"),
+                               cl::cat(SplitCategory));
 
 enum class SplitByCategoryType {
   SBCT_ByAttribute,
@@ -333,7 +335,7 @@ int main(int argc, char **argv) {
               "splitModule implementation\n";
   }
 
-  if (EnableSplitModuleCG) {
+  if (EnableCallGraphSplitModule) {
     const auto HandleModulePartCG = [&](std::unique_ptr<Module> MPart, unsigned I) {
       std::error_code EC;
       std::unique_ptr<ToolOutputFile> Out(
