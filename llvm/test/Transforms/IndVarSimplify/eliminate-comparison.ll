@@ -68,6 +68,7 @@ return:
 define i32 @_ZNK4llvm5APInt3ultERKS0_(i32 %tmp2.i1, ptr %tmp65, ptr %tmp73, ptr %tmp82, ptr %tmp90) {
 ; CHECK-LABEL: @_ZNK4llvm5APInt3ultERKS0_(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMIN:%.*]]= call i32 @llvm.smin.i32(i32 %tmp2.i1, i32 -1)
 ; CHECK-NEXT:    br label [[BB18:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    [[TMP66:%.*]] = load ptr, ptr [[TMP65:%.*]], align 4
@@ -88,11 +89,11 @@ define i32 @_ZNK4llvm5APInt3ultERKS0_(i32 %tmp2.i1, ptr %tmp65, ptr %tmp73, ptr 
 ; CHECK-NEXT:    [[TMP95:%.*]] = icmp ult i64 [[TMP86]], [[TMP94]]
 ; CHECK-NEXT:    br i1 [[TMP95]], label [[BB20_LOOPEXIT]], label [[BB17:%.*]]
 ; CHECK:       bb17:
-; CHECK-NEXT:    [[TMP97:%.*]] = add nsw i32 [[I]], -1
+; CHECK-NEXT:    [[TMP97:%.*]] = add i32 [[I]], -1
 ; CHECK-NEXT:    br label [[BB18]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    [[I]] = phi i32 [ [[TMP2_I1:%.*]], [[ENTRY:%.*]] ], [ [[TMP97]], [[BB17]] ]
-; CHECK-NEXT:    [[TMP99:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[TMP99:%.*]] = icmp ne i32 [[I]], [[SMIN:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP99]], label [[BB13:%.*]], label [[BB20_LOOPEXIT]]
 ; CHECK:       bb20.loopexit:
 ; CHECK-NEXT:    [[TMP_0_PH:%.*]] = phi i32 [ 0, [[BB18]] ], [ 1, [[BB15]] ], [ 0, [[BB13]] ]
@@ -917,7 +918,7 @@ define void @func_24(ptr %init.ptr) {
 ; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       be:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp sgt i32 [[IV_DEC]], 4
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ne i32 [[IV_DEC]], 4
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LEAVE_LOOPEXIT]]
 ; CHECK:       leave.loopexit:
 ; CHECK-NEXT:    br label [[LEAVE]]

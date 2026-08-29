@@ -14,11 +14,11 @@ bb:
 bb4.preheader:                                    ; preds = %bb, %bb16
 ; CHECK-LABEL:  bb4.preheader:
   %b.03 = phi i8 [ 0, %bb ], [ %tmp17, %bb16 ]
-; CHECK: %tmp9 = icmp ugt i8 %b.03, 1
-; CHECK-NOT: %tmp9 = icmp ugt i8 0, 1
+; CHECK: %exitcond = icmp eq i8 %b.03, -1
+; CHECK-NOT: %exitcond = icmp ugt i8 0, 1
 
-  %tmp9 = icmp ugt i8 %b.03, 1
-  br i1 %tmp9, label %bb4.preheader.bb18.loopexit.split_crit_edge, label %bb4.preheader.bb4.preheader.split_crit_edge
+  %exitcond = icmp eq i8 %b.03, -1
+  br i1 %exitcond, label %bb4.preheader.bb18.loopexit.split_crit_edge, label %bb4.preheader.bb4.preheader.split_crit_edge
 
 bb4.preheader.bb4.preheader.split_crit_edge:      ; preds = %bb4.preheader
   br label %bb4.preheader.split
