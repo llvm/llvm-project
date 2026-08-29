@@ -126,8 +126,8 @@ define i1 @early_freeze_test2(ptr %ptr) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
-; CHECK-NEXT:    [[V2:%.*]] = and i32 [[V1_FR]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[V1_FR]] to i1
+; CHECK-NEXT:    [[COND:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %v1 = load i32, ptr %ptr

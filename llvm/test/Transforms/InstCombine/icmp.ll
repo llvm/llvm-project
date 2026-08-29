@@ -5228,10 +5228,9 @@ define i1 @redundant_sign_bit_count_ugt_31_30(i32 %x) {
 define i1 @zext_bool_and_eq0(i1 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @zext_bool_and_eq0(
 ; CHECK-SAME: i1 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    [[R1:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[Y]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[X]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -5243,10 +5242,9 @@ define i1 @zext_bool_and_eq0(i1 %x, i8 %y) {
 define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 ; CHECK-LABEL: define <2 x i1> @zext_bool_and_eq0_commute(
 ; CHECK-SAME: <2 x i1> [[X:%.*]], <2 x i8> [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[P]], splat (i8 1)
-; CHECK-NEXT:    [[R1:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor <2 x i1> [[X]], splat (i1 true)
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_X]], <2 x i1> splat (i1 true), <2 x i1> [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[P]] to <2 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[X]], <2 x i1> [[TMP1]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
@@ -5272,10 +5270,9 @@ define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @zext_bool_and_ne1(
 ; CHECK-SAME: i1 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    [[R1:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[Y]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[X]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP2]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
