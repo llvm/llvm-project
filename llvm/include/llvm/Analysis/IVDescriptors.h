@@ -39,6 +39,8 @@ enum class RecurKind {
   Sub,      ///< Subtraction of integers
   AddChainWithSubs, ///< A chain of adds and subs
   Mul,      ///< Product of integers.
+  IntLinear, ///< Linear recurrence of integers: h = C*h + x, where C is a
+             ///< loop-invariant coefficient and x is a loop-varying value.
   Or,       ///< Bitwise or logical OR of integers.
   And,      ///< Bitwise or logical AND of integers.
   Xor,      ///< Bitwise or logical XOR of integers.
@@ -224,6 +226,19 @@ public:
   /// check and perform the re-ordering.
   LLVM_ABI static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
                                               DominatorTree *DT);
+
+  /// Returns true if Phi is a linear recurrence of the form
+  ///   h = phi(start, h_next)
+  ///   h_next = add(mul(h, C), x)  (or with the add/mul operands swapped),
+  /// where C is loop-invariant and x is a loop-varying value that does not
+  /// depend on h. All in-loop uses of the recurrence must be part of this
+  /// chain; h itself may only be used outside the loop through h_next.
+  /// If non-null, \p Coeff and \p X are set to C and x respectively.
+  LLVM_ABI static bool isLinearRecurrencePHI(PHINode *Phi, Loop *TheLoop,
+                                             RecurrenceDescriptor &RedDes,
+                                             ScalarEvolution *SE,
+                                             Value **Coeff = nullptr,
+                                             Value **X = nullptr);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 

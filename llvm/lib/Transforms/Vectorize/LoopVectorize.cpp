@@ -347,6 +347,12 @@ cl::opt<bool> llvm::EnableVPlanNativePath(
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
 
+cl::opt<bool> llvm::EnableLinearRecurrenceVectorization(
+    "enable-linear-recurrence-vectorization", cl::init(false), cl::Hidden,
+    cl::desc("Vectorize linear recurrences of the form h = C*h + x, where C "
+             "is a loop-invariant coefficient and x is a loop-varying value "
+             "(e.g. polynomial hashes like h = 31*h + s[i])."));
+
 cl::opt<bool>
     llvm::VerifyEachVPlan("vplan-verify-each",
 #ifdef EXPENSIVE_CHECKS
@@ -3290,6 +3296,8 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPWidenIntOrFpInductionSC:
       case VPRecipeBase::VPWidenPointerInductionSC:
       case VPRecipeBase::VPReductionPHISC:
+      case VPRecipeBase::VPLinearRecurrencePHISC:
+      case VPRecipeBase::VPLinearRecurrenceChainSC:
       case VPRecipeBase::VPInterleaveEVLSC:
       case VPRecipeBase::VPInterleaveSC:
       case VPRecipeBase::VPWidenLoadEVLSC:
@@ -5407,6 +5415,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
+  // Linear recurrences are currently only supported without interleaving, as
+  // the scalar recurrence value cannot be threaded through unrolled parts yet.
+  if (UserIC > 1 && !Legal->getLinearRecurrences().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Ignoring requested interleave count; linear "
+                         "recurrences do not support interleaving yet.\n");
+    UserIC = 0;
+  }
+
   CM.collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM.ValuesToIgnore);
 
@@ -6496,9 +6512,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
           VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
           Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
-          Config.getHints().allowReordering())) {
+          Legal->getLinearRecurrences(), Config.getHints().allowReordering())) {
     return nullptr;
   }
+
+  // Replace the mul/add chain of each linear recurrence with the chunked
+  // computation; bail out if a recurrence cannot be handled.
+  if (!RUN_VPLAN_PASS(VPlanTransforms::createLinearRecurrenceRecipes, *VPlan0))
+    return nullptr;
 
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
@@ -6640,6 +6661,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
 
   TailFoldingStyle Style = CM.getTailFoldingStyle();
+  // Linear recurrences cannot be vectorized when folding the tail: the
+  // chunked computation requires full chunks (see
+  // VPLinearRecurrenceChainRecipe).
+  if (Style != TailFoldingStyle::None &&
+      !Legal->getLinearRecurrences().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Can't vectorize linear recurrences when folding "
+                         "the tail, bailing out.\n");
+    return nullptr;
+  }
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
   // that the canonical induction increment will not overflow as the vector trip
@@ -6716,7 +6746,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
+              VPVectorEndPointerRecipe, VPHistogramRecipe,
+              VPLinearRecurrenceChainRecipe>(&R) ||
           (isa<VPInstructionWithType>(R) &&
            Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
            vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
@@ -8175,6 +8206,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
+  // Linear recurrences are currently only supported without interleaving, as
+  // the scalar recurrence value cannot be threaded through unrolled parts yet.
+  if (!LVL.getLinearRecurrences().empty())
+    IC = 1;
 
   if (CM.maskPartialAliasing()) {
     LLVM_DEBUG(

@@ -333,6 +333,11 @@ public:
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
+  /// Returns the linear recurrences found in the loop.
+  const ReductionList &getLinearRecurrences() const {
+    return LinearRecurrences;
+  }
+
   /// Returns the widest induction type.
   IntegerType *getWidestInductionType() { return WidestIndTy; }
 
@@ -697,6 +702,10 @@ private:
 
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
+
+  /// Holds the phi nodes that are linear recurrences (h = C*h + x) with their
+  /// recurrence descriptors.
+  ReductionList LinearRecurrences;
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;

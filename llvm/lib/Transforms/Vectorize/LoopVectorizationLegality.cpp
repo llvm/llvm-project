@@ -910,6 +910,24 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
+    // Linear recurrences h = C*h + x are legal if vectorization of them is
+    // enabled. To be able to vectorize them, the coefficient C must be a
+    // constant and the per-lane value x must be a simple (non-volatile,
+    // non-atomic) load; these restrictions are enforced here so that the
+    // VPlan transform can rely on them.
+    RecurrenceDescriptor LinRecDes;
+    Value *C = nullptr, *X = nullptr;
+    if (EnableLinearRecurrenceVectorization && TheLoop->isInnermost() &&
+        RecurrenceDescriptor::isLinearRecurrencePHI(Phi, TheLoop, LinRecDes,
+                                                    PSE.getSE(), &C, &X)) {
+      auto *LI = dyn_cast<LoadInst>(X);
+      if (isa<ConstantInt>(C) && LI && LI->isSimple()) {
+        LinearRecurrences[Phi] = std::move(LinRecDes);
+        return true;
+      }
+      // Fall through to the unidentified PHI failure below.
+    }
+
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&

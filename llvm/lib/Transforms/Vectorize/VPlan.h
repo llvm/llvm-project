@@ -448,6 +448,7 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
+    VPLinearRecurrenceChainSC,
     VPBlendSC,
     VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
@@ -461,12 +462,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPLinearRecurrencePHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPLinearRecurrencePHISC,
+    VPLastPHISC = VPLinearRecurrencePHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -657,6 +659,8 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
+    case VPRecipeBase::VPLinearRecurrencePHISC:
+    case VPRecipeBase::VPLinearRecurrenceChainSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
       return true;
@@ -2951,6 +2955,114 @@ public:
   }
 
 protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe modeling the scalar value of a linear recurrence
+///   h = C * h + x
+/// carried in a scalar register across iterations of the vector loop, where C
+/// is a loop-invariant coefficient and x is a loop-varying value.
+class LLVM_ABI_FOR_TEST VPLinearRecurrencePHIRecipe : public VPHeaderPHIRecipe {
+public:
+  VPLinearRecurrencePHIRecipe(PHINode *Phi, VPValue &Start, VPValue &Backedge)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPLinearRecurrencePHISC, Phi, &Start) {
+    addOperand(&Backedge);
+  }
+
+  ~VPLinearRecurrencePHIRecipe() override = default;
+
+  VPLinearRecurrencePHIRecipe *clone() override {
+    return new VPLinearRecurrencePHIRecipe(
+        dyn_cast_or_null<PHINode>(getUnderlyingValue()), *getStartValue(),
+        *getBackedgeValue());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPLinearRecurrencePHISC)
+
+  /// Generate the phi nodes.
+  void execute(VPTransformState &State) override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Return the cost of the recipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe computing the next value of a linear recurrence
+///   h = C * h + x
+/// in the vector loop, using the chunked formulation
+///   h_next = C^VF * h + sum_{l=0}^{VF-1} C^(VF-1-l) * x_{i+l}
+/// where \p ChainOp is the current recurrence value h, \p VecOp is the
+/// vectorized x and \p Coeff is the loop-invariant constant coefficient C.
+/// The recipe produces a scalar value.
+class LLVM_ABI_FOR_TEST VPLinearRecurrenceChainRecipe
+    : public VPSingleDefRecipe {
+  /// The loop-invariant constant coefficient of the recurrence.
+  ConstantInt *Coeff;
+
+public:
+  VPLinearRecurrenceChainRecipe(VPValue &ChainOp, VPValue &VecOp,
+                                ConstantInt *Coeff, Instruction *I,
+                                DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPRecipeBase::VPLinearRecurrenceChainSC,
+                          {&ChainOp, &VecOp}, ChainOp.getScalarType(), I, DL),
+        Coeff(Coeff) {
+    assert(VecOp.getScalarType() == ChainOp.getScalarType() &&
+           "the recurrence value and the per-lane value must have the same "
+           "type");
+  }
+
+  ~VPLinearRecurrenceChainRecipe() override = default;
+
+  VPLinearRecurrenceChainRecipe *clone() override {
+    return new VPLinearRecurrenceChainRecipe(
+        getChainOp(), getVecOp(), Coeff,
+        dyn_cast_or_null<Instruction>(getUnderlyingValue()), getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPLinearRecurrenceChainSC)
+
+  /// Generate the recipe.
+  void execute(VPTransformState &State) override;
+
+  /// Returns the current recurrence value operand.
+  VPValue &getChainOp() { return *getOperand(0); }
+  VPValue &getChainOp() const { return *getOperand(0); }
+
+  /// Returns the vectorized per-lane value operand.
+  VPValue &getVecOp() { return *getOperand(1); }
+  VPValue &getVecOp() const { return *getOperand(1); }
+
+  /// Returns the loop-invariant constant coefficient.
+  ConstantInt *getCoefficient() const { return Coeff; }
+
+  /// Return the cost of the recipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(0);
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
