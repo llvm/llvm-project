@@ -214,16 +214,15 @@ infrastructure are described first, followed by tool-specific sections.
   option to allow customizing the set of ignored types.
 
 - Improved {doc}`readability-trailing-comma
-  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
-  positives on designated initializers, where initializer lists synthesized
-  for intermediate subobjects caused the trailing comma of the enclosing
-  list to be incorrectly rewritten.
+  <clang-tidy/checks/readability/trailing-comma>` check:
 
-- Improved {doc}`readability-trailing-comma
-  <clang-tidy/checks/readability/trailing-comma>` check by ignoring
-  preprocessor directives such as `#endif` that appear immediately before an
-  enum's closing brace, which previously produced a false positive and a
-  fix-it that inserted a comma after the directive.
+  - Fixed false positives on designated initializers, where initializer lists
+    synthesized for intermediate subobjects caused the trailing comma of the
+    enclosing list to be incorrectly rewritten.
+
+  - Ignored preprocessor directives such as `#endif` that appear immediately
+    before an enum's closing brace, which previously produced a false positive
+    and a fix-it that inserted a comma after the directive.
 
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
