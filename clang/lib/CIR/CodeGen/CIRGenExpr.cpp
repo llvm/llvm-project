@@ -2020,7 +2020,7 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
 
   if (var) {
     if (!var.getInitialValue().has_value()) {
-      var.setInitialValueAttr(cir::ZeroAttr::get(var.getSymType()));
+      var.setInitialValueAttr(builder.getZeroInitAttr(var.getSymType()));
       assert(!cir::MissingFeatures::pointerAuthentication());
       emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
     }

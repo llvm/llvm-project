@@ -24,9 +24,11 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -117,13 +119,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
-  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  const unsigned charSize = target.getCharWidth();
   uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
 
-  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
-  const unsigned sizeTypeSize =
-      astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  const unsigned sizeTypeSize = target.getTypeWidth(target.getSizeType());
+  SizeSizeInBytes = sizeTypeSize / charSize;
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   uIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -137,6 +137,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  // TODO(CIR): These attributes should eventually be replaced by
+  // TypeSizeInfoAttr once it is upstreamed.
+  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(sizeTypeSize));
+  theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(target.getIntWidth()));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -963,6 +969,10 @@ std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
 
+  if (opts.OpenCLCPlusPlus)
+    return CIRLang::OpenCLCXX;
+  if (opts.OpenCL)
+    return CIRLang::OpenCLC;
   if (opts.CPlusPlus)
     return CIRLang::CXX;
   if (opts.C99 || opts.C11 || opts.C17 || opts.C23 || opts.C2y ||
@@ -2328,7 +2338,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   mlir::Location loc = getLoc(e->getSourceRange());
 
-  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+  const ValueDecl *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
@@ -2347,13 +2357,13 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
-  const auto *fieldDecl = cast<FieldDecl>(decl);
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
   // Empty [[no_unique_address]] fields have no CIR field index; represent the
   // pointer-to-data-member by its concrete byte offset within the class.
-  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+  if (const auto *fieldDecl = dyn_cast<FieldDecl>(decl);
+      fieldDecl && isEmptyFieldForMemberPointer(fieldDecl)) {
     // This function should ONLY be accessed in reference to itself, I don't see
     // any cases/couldn't find any cases where anything else could get here, and
     // classic-codegen does the same.
@@ -2367,7 +2377,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   }
 
   std::optional<llvm::SmallVector<int32_t>> path =
-      buildMemberPath(destClass, fieldDecl);
+      buildMemberPath(destClass, decl);
   if (!path)
     return {};
   return cir::ConstantOp::create(builder, loc,
@@ -2376,9 +2386,24 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
-                              const FieldDecl *field) {
+                              const ValueDecl *decl) {
   llvm::SmallVector<int32_t> path;
-  if (!findFieldMemberPath(destClass, field, path))
+
+  // Members of an anonymous struct/union have an IndirectFieldDecl, which
+  // contains the whole chain of how to get to it, so to get the 'path', we dig
+  // through those rather than searching.
+  if (const auto *indirectField = dyn_cast<IndirectFieldDecl>(decl)) {
+    const CXXRecordDecl *currentClass = destClass;
+    for (const NamedDecl *nd : indirectField->chain()) {
+      const auto *field = cast<FieldDecl>(nd);
+      if (!findFieldMemberPath(currentClass, field, path))
+        return std::nullopt;
+      currentClass = field->getType()->getAsCXXRecordDecl();
+    }
+    return path;
+  }
+
+  if (!findFieldMemberPath(destClass, cast<FieldDecl>(decl), path))
     return std::nullopt;
   return path;
 }
@@ -2537,6 +2562,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // Indirect fields from global anonymous structs and unions can be
+  // ignored; only the actual variable requires IR gen support.
+  case Decl::IndirectField:
     break;
 
   // No code generation needed.
@@ -3888,6 +3918,23 @@ void CIRGenModule::release() {
     getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
+
+  // Precompute the mangled C++20 named-module initializer function name and
+  // stash it on the ModuleOp so LoweringPrepare (which may run without a live
+  // ASTContext in split-compilation flows) can read it back as an attribute.
+  if (langOpts.CPlusPlusModules &&
+      getCXXABI().getMangleContext().getKind() ==
+          clang::ItaniumMangleContext::MK_Itanium) {
+    if (clang::Module *primary = astContext.getCurrentNamedModule();
+        primary && !primary->isModuleImplementation()) {
+      llvm::SmallString<256> fnName;
+      llvm::raw_svector_ostream out(fnName);
+      cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
+          .mangleModuleInitializer(primary, out);
+      theModule->setAttr(cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+                         builder.getStringAttr(fnName));
+    }
+  }
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

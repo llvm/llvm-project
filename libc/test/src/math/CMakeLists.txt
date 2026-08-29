@@ -257,6 +257,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammaf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.lgammaf
+)
+
+add_fp_unittest(
   lgammaf16_test
   NEED_MPFR
   SUITE
@@ -1238,6 +1250,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.expf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  expf_static_rounding_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.src.errno.errno
     libc.src.__support.FPUtil.fp_bits
 )
 

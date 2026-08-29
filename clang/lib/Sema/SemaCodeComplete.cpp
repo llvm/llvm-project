@@ -30,6 +30,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -50,11 +51,14 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <list>
@@ -4739,13 +4743,52 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
     // Enumerate all top-level modules.
     SmallVector<Module *, 8> Modules;
     SemaRef.PP.getHeaderSearchInfo().collectAllModules(Modules);
+    // Determine the primary module interface name of the current file's
+    // declared module, if any. Prefer Sema's view, but fall back to the
+    // preprocessor's module declaration state: module declarations are
+    // processed as preprocessor directives, so the preprocessor may know the
+    // declared module before Sema has acted on it (e.g. when completing an
+    // import right after the module declaration).
+    StringRef CurrentPrimary;
+    if (Module *CurrentModule = SemaRef.getCurrentModule())
+      CurrentPrimary = CurrentModule->getPrimaryModuleInterfaceName();
+    else if (SemaRef.PP.isInNamedModule())
+      CurrentPrimary = SemaRef.PP.getNamedModuleName().split(':').first;
+    llvm::StringSet<> AddedModules;
     for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
+      // Skip module partitions that don't belong to the current file's declared
+      // module.
+      if (Modules[I]->isModulePartition()) {
+        if (CurrentPrimary.empty() ||
+            Modules[I]->getPrimaryModuleInterfaceName() != CurrentPrimary)
+          continue;
+      }
       Builder.AddTypedTextChunk(
           Builder.getAllocator().CopyString(Modules[I]->Name));
       Results.AddResult(Result(
           Builder.TakeString(), CCP_Declaration, CXCursor_ModuleImportDecl,
           Modules[I]->isAvailable() ? CXAvailability_Available
                                     : CXAvailability_NotAvailable));
+      AddedModules.insert(Modules[I]->Name);
+    }
+
+    // Also suggest C++20 named modules from -fmodule-file=<name>=<path> that
+    // haven't been loaded into the module map yet.
+    for (const auto &Entry : SemaRef.PP.getHeaderSearchInfo()
+                                 .getHeaderSearchOpts()
+                                 .PrebuiltModuleFiles) {
+      if (AddedModules.count(Entry.first))
+        continue;
+      StringRef Name = Entry.first;
+      // Apply the same partition filtering as above.
+      if (auto [Primary, Partition] = Name.split(':'); !Partition.empty()) {
+        if (CurrentPrimary.empty() || Primary != CurrentPrimary)
+          continue;
+      }
+      Builder.AddTypedTextChunk(Builder.getAllocator().CopyString(Name));
+      Results.AddResult(Result(Builder.TakeString(), CCP_Declaration,
+                               CXCursor_ModuleImportDecl,
+                               CXAvailability_Available));
     }
   } else if (getLangOpts().Modules) {
     // Load the named module.

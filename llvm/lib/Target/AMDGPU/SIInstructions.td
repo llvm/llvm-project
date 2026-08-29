@@ -1431,18 +1431,6 @@ def : GCNPat <
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
-  // TODO: we could add more variants for other types of conditionals
-
-def : GCNPat <
-  (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
-def : GCNPat <
-  (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -3100,20 +3088,22 @@ defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 // SAD Patterns
 //===----------------------------------------------------------------------===//
 
-def : GCNPat <
-  (add (sub_oneuse (umax i32:$src0, i32:$src1),
-                   (umin i32:$src0, i32:$src1)),
-       i32:$src2),
-  (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
->;
+let SubtargetPredicate = HasSadInsts in {
+  def : GCNPat <
+    (add (sub_oneuse (umax i32:$src0, i32:$src1),
+                    (umin i32:$src0, i32:$src1)),
+        i32:$src2),
+    (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
+  >;
 
-def : GCNPat <
-  (add (select_oneuse (i1 (setugt i32:$src0, i32:$src1)),
-                      (sub i32:$src0, i32:$src1),
-                      (sub i32:$src1, i32:$src0)),
-       i32:$src2),
-  (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
->;
+  def : GCNPat <
+    (add (select_oneuse (i1 (setugt i32:$src0, i32:$src1)),
+                        (sub i32:$src0, i32:$src1),
+                        (sub i32:$src1, i32:$src0)),
+        i32:$src2),
+    (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
+  >;
+} // End SubtargetPredicate = HasSadInsts
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns

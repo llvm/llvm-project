@@ -101,7 +101,7 @@ struct FactOrCheck {
     InstFact,      /// A fact that holds after Inst executed (e.g. an assume or
                    /// min/mix intrinsic.
     InstCheck,     /// An instruction to simplify (e.g. an overflow math
-                   /// intrinsics).
+                   /// intrinsics) or whose flags may be strengthened.
     UseCheck       /// An use of a compare instruction to simplify.
   };
 
@@ -146,8 +146,8 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
-    return FactOrCheck(EntryTy::InstCheck, DTN, CI);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I) {
+    return FactOrCheck(EntryTy::InstCheck, DTN, I);
   }
 
   bool isCheck() const {
@@ -172,6 +172,17 @@ struct FactOrCheck {
   bool isConditionFact() const { return Ty == EntryTy::ConditionFact; }
 };
 
+/// The senses in which an induction phi is monotonic, together with the
+/// direction it moves in.
+struct MonotonicInfo {
+  /// True if the phi steps by a negative constant.
+  bool Decreasing = false;
+  /// True if the phi is monotonic in the unsigned sense.
+  bool Unsigned = false;
+  /// True if the phi is monotonic in the signed sense.
+  bool Signed = false;
+};
+
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
@@ -188,16 +199,16 @@ struct State {
   void addInfoFor(BasicBlock &BB);
 
   /// If \p BB is a loop header, bound each induction phi in it by its start
-  /// value, if it is non-decreasing.
-  void addLowerBoundsForHeaderInductions(BasicBlock &BB);
+  /// value.
+  void addBoundsForHeaderInductions(BasicBlock &BB);
 
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
 
-  /// Returns the senses, {unsigned, signed}, in which stepping the induction
-  /// phi \p PN, starting at \p Start, to \p Step cannot decrease it.
-  std::pair<bool, bool> getNonDecreasingInfo(PHINode &PN, Value *Step);
+  /// Returns the direction the induction phi \p PN with backedge value \p Step
+  /// moves in, and the senses in which it is monotonic in that direction.
+  MonotonicInfo getMonotonicityInfo(PHINode &PN, Value *Step);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -765,7 +776,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         IsSigned, DL);
   int64_t Offset1 = ADec.Offset;
   int64_t Offset2 = BDec.Offset;
-  Offset1 *= -1;
+  if (MulOverflow(Offset1, int64_t(-1), Offset1))
+    return {};
 
   auto &VariablesA = ADec.Vars;
   auto &VariablesB = BDec.Vars;
@@ -986,40 +998,46 @@ getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
-std::pair<bool, bool> State::getNonDecreasingInfo(PHINode &PN, Value *Step) {
-  bool Unsigned = false, Signed = false;
+MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
+  MonotonicInfo Info;
   const APInt *StepOffset = nullptr;
   if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
-    if (StepOffset->isNegative())
-      return {false, false};
+    Info.Decreasing = StepOffset->isNegative();
     const auto *Add = cast<OverflowingBinaryOperator>(Step);
-    Unsigned = Add->hasNoUnsignedWrap();
-    Signed = Add->hasNoSignedWrap();
+    Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+    Info.Signed = Add->hasNoSignedWrap();
   } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
+    // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
+    // negative constant offset.
     const DataLayout &DL = PN.getDataLayout();
     APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-    Unsigned = GEP->getPointerOperand() == &PN &&
-               (GEP->hasNoUnsignedWrap() ||
-                ((GEP->hasNoUnsignedSignedWrap() &&
-                  GEP->accumulateConstantOffset(DL, GEPOffset) &&
-                  !GEPOffset.isNegative())));
+    Info.Unsigned = GEP->getPointerOperand() == &PN &&
+                    (GEP->hasNoUnsignedWrap() ||
+                     ((GEP->hasNoUnsignedSignedWrap() &&
+                       GEP->accumulateConstantOffset(DL, GEPOffset) &&
+                       !GEPOffset.isNegative())));
   }
 
   // Forming the SCEV of a phi is expensive, so only consult it for a PN + C
   // step whose no-wrap flags prove nothing.
-  if (Unsigned || Signed || !StepOffset)
-    return {Unsigned, Signed};
+  if (Info.Unsigned || Info.Signed || !StepOffset)
+    return Info;
 
   const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
   if (!AR)
-    return {false, false};
-  return {SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT) ==
-              ScalarEvolution::MonotonicallyIncreasing,
-          SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT) ==
-              ScalarEvolution::MonotonicallyIncreasing};
+    return Info;
+  ScalarEvolution::MonotonicPredicateType Expected =
+      Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
+                      : ScalarEvolution::MonotonicallyIncreasing;
+  auto IsMonotonic = [&](CmpInst::Predicate Pred) {
+    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+  };
+  Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
+  Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
+  return Info;
 }
 
-void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
+void State::addBoundsForHeaderInductions(BasicBlock &BB) {
   Loop *L = LI.getLoopFor(&BB);
   if (!L || L->getHeader() != &BB)
     return;
@@ -1036,17 +1054,22 @@ void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
     if (!Start)
       continue;
 
-    auto [Unsigned, Signed] = getNonDecreasingInfo(PN, Step);
+    MonotonicInfo Info = getMonotonicityInfo(PN, Step);
     // Every variable in the unsigned system already has a `V >= 0` row, so a
     // zero start value would just duplicate it.
     if (match(Start, m_Zero()))
-      Unsigned = false;
-    if (!Unsigned && !Signed)
+      Info.Unsigned = false;
+    if (!Info.Unsigned && !Info.Signed)
       continue;
 
-    CmpPredicate Pred(Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
-                      /*HasSameSign=*/Unsigned && Signed);
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, &PN, Start));
+    // A non-decreasing induction cannot step below its start value, and a
+    // non-increasing one cannot step above it.
+    Value *LHS = &PN, *RHS = Start;
+    if (Info.Decreasing)
+      std::swap(LHS, RHS);
+    CmpPredicate Pred(Info.Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
+                      /*HasSameSign=*/Info.Unsigned && Info.Signed);
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, LHS, RHS));
   }
 }
 
@@ -1118,9 +1141,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
-  // really the induction's post-increment.
-  if (IncStep && (*IncStep != *StepOffset || StepOffset->isNegative()))
+  // really the induction's post-increment or post-decrement.
+  if (IncStep && *IncStep != *StepOffset)
     return;
+
+  MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
 
   // Handle negative steps.
   if (StepOffset->isNegative()) {
@@ -1129,27 +1154,30 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
 
     // AR may wrap.
-    // Add StartValue >= PN conditional on B <= StartValue which guarantees that
-    // the loop exits before wrapping with a step of -1.
+    // The loop exits once the compared value reaches B, that is at PN == B when
+    // comparing the phi, and at PN == B + 1 for a post-decrement. Use
+    // non-strict predicate for the former, and a strict one for the latter to
+    // ensure the loop exits before wrapping.
+    CmpInst::Predicate UPrecond =
+        IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+    ConditionTy BBeforeStartUnsigned = {UPrecond, B, StartValue};
+    ConditionTy BBeforeStartSigned = {ICmpInst::getSignedPredicate(UPrecond), B,
+                                      StartValue};
+
+    // AR may wrap, so both facts are conditional on B being below StartValue.
+    // Add StartValue >= PN, which holds as the loop exits before wrapping.
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, StartValue, PN,
-        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, StartValue, PN,
-        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
-    // Add PN > B conditional on B <= StartValue which guarantees that the loop
-    // exits when reaching B with a step of -1.
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGT, PN, B,
-        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGT, PN, B,
-        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
+        DTN, CmpInst::ICMP_UGE, StartValue, PN, BBeforeStartUnsigned));
+    if (!(Info.Decreasing && Info.Signed))
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SGE, StartValue, PN, BBeforeStartSigned));
+    // Add PN > B, which holds as the loop exits when reaching B.
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGT, PN,
+                                                     B, BBeforeStartUnsigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGT, PN,
+                                                     B, BBeforeStartSigned));
     return;
   }
-
-  auto [MonotonicallyIncreasingUnsigned, MonotonicallyIncreasingSigned] =
-      getNonDecreasingInfo(*PN, Backedge);
 
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
@@ -1186,10 +1214,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // restrictions on B and the step above.
   ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
   ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
-  if (!MonotonicallyIncreasingUnsigned && LowerBoundNUW)
+  if (!Info.Unsigned && LowerBoundNUW)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
-  if (!MonotonicallyIncreasingSigned && LowerBoundNSW)
+  if (!Info.Signed && LowerBoundNSW)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
 
@@ -1263,8 +1291,111 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   return true;
 }
 
+/// Returns true if \p I is a candidate whose poison-generating flags may be
+/// strengthened using the constraint systems.
+static bool canStrengthenFlags(Instruction *I) {
+  auto *BO = dyn_cast<BinaryOperator>(I);
+  if (!BO || !BO->getType()->isIntegerTy())
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Sub:
+    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
+    // canonicalized to Add.
+    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A constant second operand can be used to bound the first operand to
+    // refine no-wrap flags.
+    return isa<ConstantInt>(BO->getOperand(1));
+  default:
+    return false;
+  }
+}
+
+/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
+/// a signed range if \p Signed is set and as an unsigned range otherwise.
+static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
+                            const ConstantRange &R, bool Signed) {
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+    return false;
+
+  if (R.isFullSet())
+    return true;
+
+  unsigned BitWidth = R.getBitWidth();
+  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
+  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
+  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
+                        : APInt::getMinValue(BitWidth);
+  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
+                        : APInt::getMaxValue(BitWidth);
+  Type *Ty = Op->getType();
+  if (Min != MinVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
+                     ConstantInt::get(Ty, Min)))
+    return false;
+  if (Max != MaxVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
+                     ConstantInt::get(Ty, Max)))
+    return false;
+  return true;
+}
+
+/// Try to strengthen \p I's poison generating flags using \p Info. Returns
+/// true if \p I was modified.
+static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
+                                 SmallVectorImpl<Instruction *> &ToRemove) {
+  assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
+
+  using OBO = OverflowingBinaryOperator;
+  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
+  switch (I->getOpcode()) {
+  case Instruction::Sub: {
+    // Op0 - Op1 does not wrap unsigned, if Op0 >=u Op1.
+    if (!Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1))
+      return false;
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    return true;
+  }
+  case Instruction::Mul:
+  case Instruction::Shl: {
+    auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+    bool Changed = false;
+    // For a constant Op1, the ranges of Op0 for which the operation does not
+    // wrap are known exactly; check if the systems imply one of them.
+    auto *C = cast<ConstantInt>(Op1);
+    ConstantRange Other(C->getValue());
+    if (!I->hasNoUnsignedWrap() &&
+        doesHoldInRange(Info, Op0,
+                        ConstantRange::makeGuaranteedNoWrapRegion(
+                            Opcode, Other, OBO::NoUnsignedWrap),
+                        /*Signed=*/false)) {
+      LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+      I->setHasNoUnsignedWrap();
+      Changed = true;
+    }
+    if (!I->hasNoSignedWrap() &&
+        doesHoldInRange(Info, Op0,
+                        ConstantRange::makeGuaranteedNoWrapRegion(
+                            Opcode, Other, OBO::NoSignedWrap),
+                        /*Signed=*/true)) {
+      LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+      I->setHasNoSignedWrap();
+      Changed = true;
+    }
+    return Changed;
+  }
+  default:
+    return false;
+  }
+}
+
 void State::addInfoFor(BasicBlock &BB) {
-  addLowerBoundsForHeaderInductions(BB);
+  addBoundsForHeaderInductions(BB);
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
@@ -1375,6 +1506,11 @@ void State::addInfoFor(BasicBlock &BB) {
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
+
+    // Queue instructions whose flags may be strengthened based on the facts
+    // that hold on entry to BB.
+    if (canStrengthenFlags(&I))
+      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
@@ -2130,6 +2266,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Instruction *Inst = CB.getInstructionToSimplify();
       if (!Inst)
         continue;
+      if (canStrengthenFlags(Inst)) {
+        Changed |= tryToStrengthenFlags(Inst, Info, ToRemove);
+        continue;
+      }
       LLVM_DEBUG(dbgs() << "Processing condition to simplify: " << *Inst
                         << "\n");
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {

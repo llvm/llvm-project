@@ -1785,6 +1785,10 @@ class PatAbdSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
 class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+class PatMulParts<SDPatternOperator OpNode, RVInst Inst, ValueType ResultVT,
+                  ValueType SourceVT>
+    : Pat<(ResultVT (OpNode (SourceVT GPR:$rs1), (SourceVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VT>
     : Pat<(VT (OpNode (VT GPR:$rd), (VT GPR:$rs1), (VT GPR:$rs2))),
@@ -1854,6 +1858,30 @@ def SDT_RISCVPackedWideningMul : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def riscv_pwmul   : RVSDNode<"PWMUL",   SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
 def riscv_pwmulu  : RVSDNode<"PWMULU",  SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
 def riscv_pwmulsu : RVSDNode<"PWMULSU", SDT_RISCVPackedWideningMul>;
+
+def SDT_RISCVPackedWideningMulByHalves
+    : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                           SDTCisSameAs<1, 2>,
+                           SDTCisSameSizeAs<0, 1>,
+                           SDTCisOpSmallerThanOp<1, 0>]>;
+def riscv_pmul_halves_00
+    : RVSDNode<"PMUL_HALVES_00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmul_halves_01
+    : RVSDNode<"PMUL_HALVES_01", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmul_halves_11
+    : RVSDNode<"PMUL_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
+
+def riscv_pmulu_halves_00
+    : RVSDNode<"PMULU_HALVES_00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulu_halves_01
+    : RVSDNode<"PMULU_HALVES_01", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulu_halves_11
+    : RVSDNode<"PMULU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
+
+def riscv_pmulsu_halves_00
+    : RVSDNode<"PMULSU_HALVES_00", SDT_RISCVPackedWideningMulByHalves>;
+def riscv_pmulsu_halves_11
+    : RVSDNode<"PMULSU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
 
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
@@ -1954,6 +1982,34 @@ def SDT_RISCVPackedNarrowingClipW
 def riscv_pnclipp_w  : RVSDNode<"PNCLIPP_W", SDT_RISCVPackedNarrowingClipW>;
 def riscv_pnclipup_w : RVSDNode<"PNCLIPUP_W", SDT_RISCVPackedNarrowingClipW>;
 
+// Packed "Q-format" multiply parts accumulate.
+// The scalar form merges the RV32 halfword (v2i16, was MQACC_H*) and RV64
+// word (v2i32, was MQACC_W*) variants via XLenVecQAccVT.
+def SDT_RISCVQFormatAccS
+    : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>,
+                           SDTCisVT<2, XLenVecQAccVT>,
+                           SDTCisSameAs<2, 3>]>;
+def SDT_RISCVQFormatAccP
+    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisVT<1, v2i32>,
+                           SDTCisVT<2, v4i16>, SDTCisSameAs<2, 3>]>;
+
+def riscv_mqacc_00  : RVSDNode<"MQACC_00",  SDT_RISCVQFormatAccS>;
+def riscv_mqacc_01  : RVSDNode<"MQACC_01",  SDT_RISCVQFormatAccS>;
+def riscv_mqacc_11  : RVSDNode<"MQACC_11",  SDT_RISCVQFormatAccS>;
+def riscv_mqracc_00 : RVSDNode<"MQRACC_00", SDT_RISCVQFormatAccS>;
+def riscv_mqracc_01 : RVSDNode<"MQRACC_01", SDT_RISCVQFormatAccS>;
+def riscv_mqracc_11 : RVSDNode<"MQRACC_11", SDT_RISCVQFormatAccS>;
+
+def riscv_pmqacc_h00  : RVSDNode<"PMQACC_W_H00",  SDT_RISCVQFormatAccP>;
+def riscv_pmqacc_h01  : RVSDNode<"PMQACC_W_H01",  SDT_RISCVQFormatAccP>;
+def riscv_pmqacc_h11  : RVSDNode<"PMQACC_W_H11",  SDT_RISCVQFormatAccP>;
+def riscv_pmqracc_h00 : RVSDNode<"PMQRACC_W_H00", SDT_RISCVQFormatAccP>;
+def riscv_pmqracc_h01 : RVSDNode<"PMQRACC_W_H01", SDT_RISCVQFormatAccP>;
+def riscv_pmqracc_h11 : RVSDNode<"PMQRACC_W_H11", SDT_RISCVQFormatAccP>;
+
+def riscv_mqwacc  : RVSDNode<"MQWACC",  SDT_RISCVWideningAddSubAccumulate>;
+def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVWideningAddSubAccumulate>;
+
 // The immediate for these is the number of trailing ones in the max value.
 def riscv_sati : RVSDNode<"SATI", SDTIntBinOp>;
 def riscv_usati : RVSDNode<"USATI", SDTIntBinOp>;
@@ -2045,6 +2101,7 @@ let Predicates = [HasStdExtP] in {
   // Pseudo version of MERGE without the tied constraint. Will be expanded to
   // MERGE, MVM, or MVMN after register allocation.
   // dst = (~rd & rs1) | (rd & rs2)
+  let Size = 8 in
   def PseudoMERGE : Pseudo<(outs GPR:$dst), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
                            []>;
   def : Pat<(XLenVT (or (and GPR:$rd, GPR:$rs2), (and (not GPR:$rd), GPR:$rs1))),
@@ -2242,7 +2299,43 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
+  // Packed byte multiply halves patterns.
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_00 (XLenVecI8VT GPR:$rs1),
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_01 (XLenVecI8VT GPR:$rs1),
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmul_halves_11 (XLenVecI8VT GPR:$rs1),
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMUL_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_00 (XLenVecI8VT GPR:$rs1),
+                                                 (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_01 (XLenVecI8VT GPR:$rs1),
+                                                 (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulu_halves_11 (XLenVecI8VT GPR:$rs1),
+                                                 (XLenVecI8VT GPR:$rs2))),
+            (PMULU_H_B11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_00 (XLenVecI8VT GPR:$rs1),
+                                                  (XLenVecI8VT GPR:$rs2))),
+            (PMULSU_H_B00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pmulsu_halves_11 (XLenVecI8VT GPR:$rs1),
+                                                  (XLenVecI8VT GPR:$rs2))),
+            (PMULSU_H_B11 GPR:$rs1, GPR:$rs2)>;
+
 let append Predicates = [IsRV32] in {
+  // Scalar halfword multiply-parts patterns.
+  def : PatMulParts<int_riscv_mul_00, MUL_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mul_01, MUL_H01, i32, v2i16>;
+  def : PatMulParts<int_riscv_mul_11, MUL_H11, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_00, MULU_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_01, MULU_H01, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulu_11, MULU_H11, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulsu_00, MULSU_H00, i32, v2i16>;
+  def : PatMulParts<int_riscv_mulsu_11, MULSU_H11, i32, v2i16>;
+
   def : PatGpr<bitreverse, REV_RV32>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
@@ -2339,19 +2432,18 @@ let append Predicates = [IsRV32] in {
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // Packed widening multiply patterns.
-  // The v2i32 patterns are not needed yet.
   def : Pat<(v4i16 (riscv_pwmul (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PWMUL_B   GPR:$rs1, GPR:$rs2)>;
+            (PWMUL_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pwmul (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PWMUL_H  GPR:$rs1, GPR:$rs2)>;
+            (PWMUL_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwmulu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PWMULU_B  GPR:$rs1, GPR:$rs2)>;
-  //def : Pat<(v2i32 (riscv_pwmulu  (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-  //          (PWMULU_H GPR:$rs1, GPR:$rs2)>;
+            (PWMULU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmulu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMULU_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwmulsu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
             (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
-  //def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-  //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
@@ -2717,6 +2809,26 @@ let append Predicates = [IsRV32] in {
             (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
   def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, timm:$imm)),
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
+
+  // Packed "Q-format" multiply parts accumulate, scalar halfword (RV32).
+  def : Pat<(XLenVT (riscv_mqacc_00 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQACC_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqacc_01 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQACC_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqacc_11 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_00 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQRACC_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_01 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQRACC_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_11 (XLenVT GPR:$rd),
+                        (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (MQRACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV32]
 
 let append Predicates = [IsRV64] in {
@@ -2738,6 +2850,45 @@ let append Predicates = [IsRV64] in {
             (PNCLIPP_W  GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pnclipup_w GPR:$rs1, GPR:$rs2)),
             (PNCLIPUP_W GPR:$rs1, GPR:$rs2)>;
+
+  // Packed "Q-format" multiply parts accumulate
+  def : Pat<(v2i32 (riscv_pmqacc_h00 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQACC_W_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqacc_h01 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQACC_W_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqacc_h11 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQACC_W_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqracc_h00 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQRACC_W_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqracc_h01 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQRACC_W_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqracc_h11 (v2i32 GPR:$rd),
+                        (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMQRACC_W_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(XLenVT (riscv_mqacc_00 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQACC_W00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqacc_01 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQACC_W01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqacc_11 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_00 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQRACC_W00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_01 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQRACC_W01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mqracc_11 (XLenVT GPR:$rd),
+                        (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (MQRACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
             (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
@@ -2815,6 +2966,16 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
   def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
 
+  // Scalar word multiply-parts patterns.
+  def : PatMulParts<int_riscv_mul_00, MUL_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mul_01, MUL_W01, i64, v2i32>;
+  def : PatMulParts<int_riscv_mul_11, MUL_W11, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_00, MULU_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_01, MULU_W01, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulu_11, MULU_W11, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulsu_00, MULSU_W00, i64, v2i32>;
+  def : PatMulParts<int_riscv_mulsu_11, MULSU_W11, i64, v2i32>;
+
   // 32-bit multiply high patterns
   def : PatGprGpr<mulhs, PMULH_W, v2i32>;
   def : PatGprGpr<mulhu, PMULHU_W, v2i32>;
@@ -2848,18 +3009,23 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
             (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
 
-  // 8-bit multiply high patterns
-  // FIXME custom lower
-  def : Pat<(v8i8 (mulhs GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def : Pat<(v8i8 (mulhu GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMULU_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMULU_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def : Pat<(v8i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
-            (PPAIRO_B (PMULSU_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMULSU_H_B11 GPR:$rs1, GPR:$rs2))>;
-
+  // Packed multiply halves patterns.
+  def : Pat<(v2i32 (riscv_pmul_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmul_halves_01 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmul_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulu_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulu_halves_01 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H01 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulu_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H11 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulsu_halves_00 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULSU_W_H00 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmulsu_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULSU_W_H11 GPR:$rs1, GPR:$rs2)>;
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
   def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;

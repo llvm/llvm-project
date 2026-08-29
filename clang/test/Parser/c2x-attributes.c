@@ -120,6 +120,12 @@ void f11(void) {
 
   [[]] for (;;);
   [[]] while (1);
+
+  while ([[]];) {} // expected-error {{an attribute list cannot appear here}} \
+                   // expected-error {{expected expression}}
+  while (;[[]];;) {} // expected-error {{expected expression}} \
+                     // expected-error {{expected expression}}
+
   [[]] do [[]] { } while(1);
 
   [[]] (void)1;

@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
     libc.src.sys.resource.setrlimit
 
     # sys/sem.h entrypoints
@@ -388,6 +389,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -428,6 +432,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -729,6 +734,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl
@@ -1309,6 +1315,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
@@ -1526,6 +1533,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1539,6 +1547,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
 
     # locale.h entrypoints
     libc.src.locale.localeconv
@@ -1599,9 +1611,16 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # fnmatch.h entrypoints
+      libc.src.fnmatch.fnmatch
+
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex
+
+      # netdb.h entrypoints
+      libc.src.netdb.freeaddrinfo
+      libc.src.netdb.getaddrinfo
 
       # regex.h entrypoints
       libc.src.regex.regcomp
@@ -1614,6 +1633,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # time.h entrypoints
       libc.src.time.strptime
+      libc.src.time.tz_variables
+      libc.src.time.tzset
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf
