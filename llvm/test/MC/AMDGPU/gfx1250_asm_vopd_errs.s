@@ -330,17 +330,17 @@ v_dual_cndmask_b32 v28, -v15, v15, s46 :: v_dual_cndmask_b32 v29, sext(v13), -v1
 //===----------------------------------------------------------------------===//
 
 v_dual_fma_f64 v[252:253], v[7:8], v[4:5], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX12: :[[@LINE-1]]:28: error: invalid register class: vgpr tuples must be 64 bit aligned
 // GFX12-NEXT:{{^}}v_dual_fma_f64 v[252:253], v[7:8], v[4:5], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12-NEXT:{{^}}^
+// GFX12-NEXT:{{^}}                           ^
 
 v_dual_fma_f64 v[252:253], v[6:7], v[5:6], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX12: :[[@LINE-1]]:36: error: invalid register class: vgpr tuples must be 64 bit aligned
 // GFX12-NEXT:{{^}}v_dual_fma_f64 v[252:253], v[6:7], v[5:6], v[10:11] :: v_dual_add_f32 v8, v1, v3
-// GFX12-NEXT:{{^}}^
+// GFX12-NEXT:{{^}}                                   ^
 
 v_dual_fma_f64 v[252:253], v[6:7], v[4:5], v[11:12] :: v_dual_add_f32 v8, v1, v3
-// GFX12: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX12: :[[@LINE-1]]:44: error: invalid register class: vgpr tuples must be 64 bit aligned
 // GFX12-NEXT:{{^}}v_dual_fma_f64 v[252:253], v[6:7], v[4:5], v[11:12] :: v_dual_add_f32 v8, v1, v3
-// GFX12-NEXT:{{^}}^
+// GFX12-NEXT:{{^}}                                           ^
 
