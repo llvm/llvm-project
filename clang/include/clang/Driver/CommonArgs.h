@@ -57,7 +57,7 @@ void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
+                          llvm::opt::ArgStringList &CmdArgs, Compilation &C);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
