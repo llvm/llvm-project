@@ -100,22 +100,22 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
   MI.removeOperand(1); // Remove intrinsic ID.
   MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
 
-  MachineOperand &Dst = MI.getOperand(0);
-  MachineOperand &Src = MI.getOperand(1);
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
 
   // TODO: This should be legalized to s32 if needed
-  if (MRI->getType(Dst.getReg()) == LLT::scalar(1))
+  if (MRI->getType(DstReg) == LLT::scalar(1))
     return false;
 
-  const TargetRegisterClass *DstRC
-    = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
-  const TargetRegisterClass *SrcRC
-    = TRI.getConstrainedRegClassForOperand(Src, *MRI);
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForReg(DstReg, *MRI);
+  const TargetRegisterClass *SrcRC =
+      TRI.getConstrainedRegClassForReg(SrcReg, *MRI);
   if (!DstRC || DstRC != SrcRC)
     return false;
 
-  if (!RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) ||
-      !RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI))
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
+      !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
     return false;
   const MCInstrDesc &MCID = MI.getDesc();
   if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
@@ -129,15 +129,13 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   I.setDesc(TII.get(TargetOpcode::COPY));
 
-  const MachineOperand &Src = I.getOperand(1);
-  MachineOperand &Dst = I.getOperand(0);
-  Register DstReg = Dst.getReg();
-  Register SrcReg = Src.getReg();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
 
   if (isVCC(DstReg, *MRI)) {
     if (SrcReg == AMDGPU::SCC) {
-      const TargetRegisterClass *RC
-        = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+      const TargetRegisterClass *RC =
+          TRI.getConstrainedRegClassForReg(DstReg, *MRI);
       if (!RC)
         return true;
       return RBI.constrainGenericRegister(DstReg, *RC, *MRI);
@@ -148,8 +146,8 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
       if (!RBI.constrainGenericRegister(DstReg, *TRI.getBoolRC(), *MRI))
         return false;
 
-      const TargetRegisterClass *SrcRC
-        = TRI.getConstrainedRegClassForOperand(Src, *MRI);
+      const TargetRegisterClass *SrcRC =
+          TRI.getConstrainedRegClassForReg(SrcReg, *MRI);
 
       std::optional<ValueAndVReg> ConstVal =
           getIConstantVRegValWithLookThrough(SrcReg, *MRI, true);
@@ -202,7 +200,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
     }
 
     const TargetRegisterClass *RC =
-      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+        TRI.getConstrainedRegClassForReg(DstReg, *MRI);
     if (RC && !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
       return false;
 
@@ -214,7 +212,7 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
       continue;
 
     const TargetRegisterClass *RC =
-            TRI.getConstrainedRegClassForOperand(MO, *MRI);
+        TRI.getConstrainedRegClassForReg(MO.getReg(), *MRI);
     if (!RC)
       continue;
     RBI.constrainGenericRegister(MO.getReg(), *RC, *MRI);
@@ -637,7 +635,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
     DstSize = 32;
 
   const TargetRegisterClass *DstRC =
-    TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
+      TRI.getConstrainedRegClassForReg(DstReg, *MRI);
   if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
     return false;
 
@@ -845,12 +843,13 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), DstReg);
   for (int I = 0, E = MI.getNumOperands() - 1; I != E; ++I) {
     MachineOperand &Src = MI.getOperand(I + 1);
-    MIB.addReg(Src.getReg(), getUndefRegState(Src.isUndef()));
+    Register SrcReg = Src.getReg();
+    MIB.addReg(SrcReg, getUndefRegState(Src.isUndef()));
     MIB.addImm(SubRegs[I]);
 
-    const TargetRegisterClass *SrcRC
-      = TRI.getConstrainedRegClassForOperand(Src, *MRI);
-    if (SrcRC && !RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI))
+    const TargetRegisterClass *SrcRC =
+        TRI.getConstrainedRegClassForReg(SrcReg, *MRI);
+    if (SrcRC && !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
       return false;
   }
 
@@ -887,15 +886,15 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   // used for both.
   ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SrcRC, DstSize / 8);
   for (int I = 0, E = NumDst; I != E; ++I) {
-    MachineOperand &Dst = MI.getOperand(I);
+    Register DstReg = MI.getOperand(I).getReg();
     // hi16:sreg_32 is not allowed so explicitly shift upper 16-bits.
     if (SrcBank->getID() == AMDGPU::SGPRRegBankID &&
         SubRegs[I] == AMDGPU::hi16) {
-      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst.getReg())
+      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), DstReg)
           .addReg(SrcReg)
           .addImm(16);
     } else {
-      BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
+      BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), DstReg)
           .addReg(SrcReg, {}, SubRegs[I]);
     }
 
@@ -905,8 +904,8 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
       return false;
 
     const TargetRegisterClass *DstRC =
-      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
-    if (DstRC && !RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI))
+        TRI.getConstrainedRegClassForReg(DstReg, *MRI);
+    if (DstRC && !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
       return false;
   }
 
@@ -997,9 +996,10 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
 bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {
   const MachineOperand &MO = I.getOperand(0);
 
-  // FIXME: Interface for getConstrainedRegClassForOperand needs work. The
-  // regbank check here is to know why getConstrainedRegClassForOperand failed.
-  const TargetRegisterClass *RC = TRI.getConstrainedRegClassForOperand(MO, *MRI);
+  // FIXME: Interface for getConstrainedRegClassForReg needs work. The
+  // regbank check here is to know why getConstrainedRegClassForReg failed.
+  const TargetRegisterClass *RC =
+      TRI.getConstrainedRegClassForReg(MO.getReg(), *MRI);
   if ((!RC && !MRI->getRegBankOrNull(MO.getReg())) ||
       (RC && RBI.constrainGenericRegister(MO.getReg(), *RC, *MRI))) {
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
@@ -1783,12 +1783,11 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
   MachineFunction &MF = *MBB->getParent();
   const DebugLoc &DL = I.getDebugLoc();
 
-  MachineOperand &Dst = I.getOperand(0);
-  Register DstReg = Dst.getReg();
+  Register DstReg = I.getOperand(0).getReg();
   unsigned Depth = I.getOperand(2).getImm();
 
-  const TargetRegisterClass *RC
-    = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+  const TargetRegisterClass *RC =
+      TRI.getConstrainedRegClassForReg(DstReg, *MRI);
   if (!RC->hasSubClassEq(&AMDGPU::SGPR_64RegClass) ||
       !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
     return false;
@@ -2502,7 +2501,7 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
     // bank, because it does not cover the register class that we used to represent
     // for it.  So we need to manually set the register class here.
     if (!MRI->getRegClassOrNull(CCReg))
-        MRI->setRegClass(CCReg, TRI.getConstrainedRegClassForOperand(CCOp, *MRI));
+      MRI->setRegClass(CCReg, TRI.getConstrainedRegClassForReg(CCReg, *MRI));
     MachineInstr *Select = BuildMI(*BB, &I, DL, TII.get(SelectOpcode), DstReg)
             .add(I.getOperand(2))
             .add(I.getOperand(3));
@@ -7275,7 +7274,7 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
 
   auto DstReg = I.getOperand(0).getReg();
   const TargetRegisterClass *DstRC =
-      TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
+      TRI.getConstrainedRegClassForReg(DstReg, *MRI);
   if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
     return false;
   MIB.addDef(DstReg);
@@ -7420,7 +7419,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state) {
     auto DstReg = I.getOperand(0).getReg();
     const TargetRegisterClass *DstRC =
-        TRI.getConstrainedRegClassForOperand(I.getOperand(0), *MRI);
+        TRI.getConstrainedRegClassForReg(DstReg, *MRI);
     if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
       return false;
     MIB.addDef(DstReg);

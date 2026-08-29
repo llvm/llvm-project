@@ -1688,14 +1688,13 @@ bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
-  MachineOperand Dst = MI.getOperand(0);
   Register DstReg = MI.getOperand(0).getReg();
 
   if (DstReg.isPhysical())
     return true;
 
   const TargetRegisterClass *DstRC =
-      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+      TRI.getConstrainedRegClassForReg(DstReg, *MRI);
 
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
