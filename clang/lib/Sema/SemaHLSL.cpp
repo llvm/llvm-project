@@ -875,7 +875,7 @@ static std::optional<uint32_t> getSemanticIndexOf(const Attr *A) {
     return PA->getSemanticIndex();
   if (const auto *UA = dyn_cast<HLSLUnparsedSemanticAttr>(A))
     return UA->getExplicitIndex() ? std::optional<uint32_t>(UA->getIndex())
-                                   : std::nullopt;
+                                  : std::nullopt;
   return std::nullopt;
 }
 
@@ -2036,11 +2036,11 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
   if (AL.getKind() == ParsedAttr::AT_HLSLParsedSemantic ||
-    AL.getAttrName()->getName().starts_with_insensitive("SV_")) {
+      AL.getAttrName()->getName().starts_with_insensitive("SV_")) {
     diagnoseSystemSemanticAttr(D, AL, Index);
   } else {
-    D->addAttr(HLSLUnparsedSemanticAttr::Create(
-        SemaRef.getASTContext(), IndexValue, ExplicitIndex, AL));
+    D->addAttr(HLSLUnparsedSemanticAttr::Create(SemaRef.getASTContext(),
+                                                IndexValue, ExplicitIndex, AL));
   }
 }
 
