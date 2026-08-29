@@ -25329,6 +25329,37 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(Known2.countMaxActiveBits());
     break;
   }
+  case RISCVISD::VMV_X_S: {
+    // Only handle the case where the source is a VECREDUCE_ADD_VL: it's the
+    // one situation where we know, unconditionally, that only element 0 of
+    // a multi-element-varying vector result is being read, so folding its
+    // known bits in here is sound.
+    SDValue Vec = Op.getOperand(0);
+    if (Vec.getOpcode() != RISCVISD::VECREDUCE_ADD_VL)
+      break;
+
+    SDValue Src = Vec.getOperand(1);
+    SDValue InitVal = Vec.getOperand(2);
+    SDValue VL = Vec.getOperand(4);
+    unsigned NumElts;
+
+    if (isa<ConstantSDNode>(VL)) {
+      NumElts = VL->getAsZExtVal();
+    } else {
+      const RISCVSubtarget &SubTarget = DAG.getSubtarget<RISCVSubtarget>();
+      auto [Min, Max] = computeVLMAXBounds(Src.getSimpleValueType(), SubTarget);
+      NumElts = Max;
+    }
+
+    KnownBits KnownAcrossElts =
+        DAG.computeKnownBits(Src, APInt::getAllOnes(1), Depth + 1);
+    KnownBits VecSum = KnownAcrossElts.reduceAdd(NumElts);
+    KnownBits Start = DAG.computeKnownBits(InitVal, Depth + 1);
+
+    KnownBits ReduceKnown = KnownBits::add(Start, VecSum);
+    Known = ReduceKnown.sextOrTrunc(BitWidth);
+    break;
+  }
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ:
     Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
