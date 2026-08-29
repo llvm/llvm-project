@@ -1701,10 +1701,17 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   if (llvm::MDNode *associatedMD =
           globalVar->getMetadata(llvm::LLVMContext::MD_associated)) {
-    if (associatedMD->getNumOperands() == 1) {
-      if (FlatSymbolRefAttr symbolRef =
-              getMetadataOperandSymbolRef(associatedMD->getOperand(0).get()))
-        globalOp.setAssociatedAttr(symbolRef);
+    FlatSymbolRefAttr symbolRef;
+    if (associatedMD->getNumOperands() == 1)
+      symbolRef =
+          getMetadataOperandSymbolRef(associatedMD->getOperand(0).get());
+    if (symbolRef) {
+      globalOp.setAssociatedAttr(symbolRef);
+    } else {
+      emitWarning(globalOp.getLoc())
+          << "unhandled associated metadata: "
+          << diagMD(associatedMD, llvmModule.get()) << " on "
+          << diag(*globalVar);
     }
   }
 

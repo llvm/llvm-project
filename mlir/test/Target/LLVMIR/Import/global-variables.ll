@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
 %sub_struct = type {}
 %my_struct = type { %sub_struct, i64 }
@@ -427,6 +428,13 @@ define ptr @associated_ifunc_resolver() {
   ret ptr null
 }
 !0 = !{ptr @associated_ifunc}
+
+; // -----
+
+; WARN: warning: unhandled associated metadata: {{.*}}ptr null{{.*}} on @associated_null
+; CHECK: llvm.mlir.global external @associated_null() {addr_space = 0 : i32} : i8
+@associated_null = external global i8, !associated !0
+!0 = !{ptr null}
 
 ; // -----
 
