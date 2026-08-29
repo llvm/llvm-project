@@ -30,11 +30,6 @@ add_orc_rt_unittest(CoreTests
   support/MemoryFlagsTest.cpp
   support/ProxyTest.cpp
   support/RTTITest.cpp
-  support/SPSAllocActionTest.cpp
-  support/SPSMemoryFlagsTest.cpp
-  support/SPSWrapperFunctionBufferTest.cpp
-  support/SPSWrapperFunctionTest.cpp
-  support/SimplePackedSerializationTest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
   support/WrapperFunctionBufferTest.cpp
@@ -45,6 +40,12 @@ add_orc_rt_unittest(CoreTests
   support/scope_exit-test.cpp
   support/span-test.cpp
 
+  support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSWrapperFunctionBufferTest.cpp
+  support/sps/SPSWrapperFunctionTest.cpp
+  support/sps/SimplePackedSerializationTest.cpp
+
   bedrock/BootstrapInfoTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
@@ -52,7 +53,6 @@ add_orc_rt_unittest(CoreTests
   bedrock/QueueingRunnerTest.cpp
   bedrock/SessionTest.cpp
   bedrock/SimpleNativeMemoryMapTest.cpp
-  bedrock/SimpleRemoteCATest.cpp
   bedrock/SimpleSymbolTableTest.cpp
   bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
   bedrock/TaskGroupTest.cpp
@@ -62,6 +62,7 @@ add_orc_rt_unittest(CoreTests
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
+  bedrock/sps/SimpleRemoteCATest.cpp
 
   utils/CommandLineTest.cpp
 
