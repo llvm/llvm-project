@@ -937,18 +937,16 @@ public:
   computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
                            DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
 
-  /// Climb up the parent chain to get the compile unit or type unit DIE that
-  /// this DIE belongs to.
+  /// Climb up the parent chain to get the unit DIE that this DIE belongs to.
   ///
-  /// \returns the compile or type unit DIE that owns this DIE, or NULL if
-  /// this DIE hasn't been added to a unit DIE.
+  /// \returns the unit DIE that owns this DIE, or NULL if this DIE hasn't been
+  /// added to a unit DIE.
   LLVM_ABI const DIE *getUnitDie() const;
 
-  /// Climb up the parent chain to get the compile unit or type unit that this
-  /// DIE belongs to.
+  /// Climb up the parent chain to get the unit that this DIE belongs to.
   ///
-  /// \returns the DIEUnit that represents the compile or type unit that owns
-  /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
+  /// \returns the DIEUnit that represents the unit that owns this DIE, or NULL
+  /// if this DIE hasn't been added to a unit DIE.
   LLVM_ABI DIEUnit *getUnit() const;
 
   void setOffset(unsigned O) { Offset = O; }
