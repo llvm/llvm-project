@@ -1767,9 +1767,9 @@ define i8 @select_trunc_or_2(i8 %x, i8 %y) {
 
 define i16 @select_trunc_or_signbit(i8 %x, i16 %y) {
 ; CHECK-LABEL: @select_trunc_or_signbit(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[Y:%.*]], -32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i16 [[OR]], i16 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 15
+; CHECK-NEXT:    [[SELECT:%.*]] = or i16 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i16 [[SELECT]]
 ;
   %trunc = trunc i8 %x to i1
