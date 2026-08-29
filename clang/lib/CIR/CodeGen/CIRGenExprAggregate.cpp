@@ -236,6 +236,17 @@ public:
   void VisitLambdaExpr(LambdaExpr *e);
   void VisitExprWithCleanups(ExprWithCleanups *e);
 
+  /// Attempt to look through various unimportant expressions to find a
+  /// cast of the given kind.
+  static Expr *findPeephole(Expr *op, CastKind kind, const ASTContext &ctx) {
+    op = op->IgnoreParenNoopCasts(ctx);
+    if (auto *castE = dyn_cast<CastExpr>(op)) {
+      if (castE->getCastKind() == kind)
+        return castE->getSubExpr();
+    }
+    return nullptr;
+  }
+
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
@@ -282,10 +293,32 @@ public:
       if (dest.isIgnored() || !cgf.cgm.isPaddedAtomicType(atomicType))
         return Visit(e->getSubExpr());
 
-      cgf.cgm.errorNYI(
-          e->getSourceRange(),
-          "AggExprEmitter: AtomicCast not ignored and has padded atomic type");
-      return;
+      // These two cases are reverses of each other; try to peephole them.
+      CastKind peepholeTarget =
+          (isToAtomic ? CK_AtomicToNonAtomic : CK_NonAtomicToAtomic);
+      if (Expr *op =
+              findPeephole(e->getSubExpr(), peepholeTarget, cgf.getContext())) {
+        cgf.cgm.errorNYI(op->getSourceRange(),
+                         "AggExprEmitter: VisitCastExpr peephole");
+      }
+
+      // If we're converting an r-value of non-atomic type to an r-value
+      // of atomic type, just emit directly into the relevant sub-object.
+      if (isToAtomic) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "AggExprEmitter: VisitCastExpr r-value of non-atomic "
+                         "type to an r-value of atomic type");
+        return;
+      }
+
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      AggValueSlot atomicSlot = cgf.createAggTemp(atomicType, loc);
+      cgf.emitAggExpr(e->getSubExpr(), atomicSlot);
+
+      Address valueAddr = cgf.getBuilder().createGetMember(
+          loc, atomicSlot.getAddress(), "value_addr", 0);
+      RValue rvalue = RValue::getAggregate(valueAddr, atomicSlot.isVolatile());
+      return emitFinalDestCopy(valueType, rvalue);
     }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
