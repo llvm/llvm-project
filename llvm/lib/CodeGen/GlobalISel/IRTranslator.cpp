@@ -2828,6 +2828,10 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_VECREDUCE_FMINIMUM;
     case Intrinsic::vector_reduce_fmaximum:
       return TargetOpcode::G_VECREDUCE_FMAXIMUM;
+    case Intrinsic::vector_reduce_fminimumnum:
+      return TargetOpcode::G_VECREDUCE_FMINIMUMNUM;
+    case Intrinsic::vector_reduce_fmaximumnum:
+      return TargetOpcode::G_VECREDUCE_FMAXIMUMNUM;
     case Intrinsic::vector_reduce_add:
       return TargetOpcode::G_VECREDUCE_ADD;
     case Intrinsic::vector_reduce_mul:
@@ -4031,8 +4035,7 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     NumElts = ExtElts;
   }
 
-  Type *Ty = AI.getAllocatedType();
-  TypeSize TySize = DL->getTypeAllocSize(Ty);
+  TypeSize TySize = AI.getAllocationBaseSize(*DL);
 
   Register AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
   Register TySizeReg;

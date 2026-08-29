@@ -525,13 +525,18 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
+  auto FeatureLess = [](StringRef A, StringRef B) {
+    return A.substr(1) < B.substr(1);
+  };
+
   SmallVector<StringRef, 4> UnmatchedExistingFeatures, UnmatchedReadFeatures;
-  std::set_difference(
-      ExistingFeatures.begin(), ExistingFeatures.end(), ReadFeatures.begin(),
-      ReadFeatures.end(), std::back_inserter(UnmatchedExistingFeatures));
+  std::set_difference(ExistingFeatures.begin(), ExistingFeatures.end(),
+                      ReadFeatures.begin(), ReadFeatures.end(),
+                      std::back_inserter(UnmatchedExistingFeatures),
+                      FeatureLess);
   std::set_difference(ReadFeatures.begin(), ReadFeatures.end(),
                       ExistingFeatures.begin(), ExistingFeatures.end(),
-                      std::back_inserter(UnmatchedReadFeatures));
+                      std::back_inserter(UnmatchedReadFeatures), FeatureLess);
 
   // If we are allowing compatible differences and the read feature set is
   // a strict subset of the existing feature set, there is nothing to diagnose.
@@ -924,6 +929,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -946,16 +961,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
@@ -3225,10 +3230,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // session.
   auto [EnablesBSValidation, WasValidated] =
       wasValidatedInBuildSession(F, HSOpts);
-  if (WasValidated)
-    return {std::nullopt, IgnoreError};
-  if (EnablesBSValidation &&
-      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+  const bool SkipModuleLookup =
+      !PP.getPreprocessorOpts().ModulesForceRedundantLookup &&
+      (WasValidated ||
+       (EnablesBSValidation &&
+        static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp));
+
+  if (SkipModuleLookup)
     return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
@@ -3238,7 +3246,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};

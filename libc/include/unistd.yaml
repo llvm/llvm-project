@@ -103,6 +103,14 @@ functions:
       - type: const char *
       - type: uid_t
       - type: gid_t
+  - name: confstr
+    standards:
+      - posix
+    return_type: size_t
+    arguments:
+      - type: int
+      - type: char *
+      - type: size_t
   - name: close
     standards:
       - posix
