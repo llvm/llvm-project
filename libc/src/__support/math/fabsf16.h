@@ -9,17 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FABSF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_FABSF16_H
 
-#include "include/llvm-libc-macros/float16-macros.h"
-
-#ifdef LIBC_TYPES_HAS_FLOAT16
-
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/float16.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+#ifndef LIBC_TYPES_HAS_FLOAT16
+using float16 = LIBC_NAMESPACE::fputil::Float16;
+#endif // LIBC_TYPES_HAS_FLOAT16
+
 namespace math {
 
 LIBC_INLINE constexpr float16 fabsf16(float16 x) {
@@ -29,7 +31,7 @@ LIBC_INLINE constexpr float16 fabsf16(float16 x) {
   // https://godbolt.org/z/K9orM4hTa
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) &&                                 \
     !(defined(LIBC_TARGET_ARCH_IS_X86) && defined(LIBC_COMPILER_IS_GCC)) &&    \
-    !defined(LIBC_USE_SOFT_FLOAT16)
+    defined(LIBC_TYPES_HAS_FLOAT16)
   return __builtin_fabsf16(x);
 #else
   return fputil::abs(x);
@@ -38,7 +40,5 @@ LIBC_INLINE constexpr float16 fabsf16(float16 x) {
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_FABSF16_H

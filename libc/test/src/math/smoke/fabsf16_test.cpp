@@ -10,4 +10,8 @@
 #include "src/__support/FPUtil/float16.h"
 #include "src/math/fabsf16.h"
 
+#ifndef LIBC_TYPES_HAS_FLOAT16
+using float16 = LIBC_NAMESPACE::fputil::Float16;
+#endif // LIBC_TYPES_HAS_FLOAT16
+
 LIST_FABS_TESTS(float16, LIBC_NAMESPACE::fabsf16)

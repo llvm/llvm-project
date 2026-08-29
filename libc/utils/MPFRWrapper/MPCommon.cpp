@@ -10,8 +10,8 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/FPUtil/float16.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/float16.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
@@ -641,11 +641,9 @@ template <> float16 MPFRNumber::as<float16>() const {
 }
 #endif
 
-#if !defined(LIBC_USE_SOFT_FLOAT16)
 template <> fputil::Float16 MPFRNumber::as<fputil::Float16>() const {
   return fputil::cast<fputil::Float16>(mpfr_get_d(value, mpfr_rounding));
 }
-#endif
 
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template <> float128 MPFRNumber::as<float128>() const {

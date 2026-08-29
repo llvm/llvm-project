@@ -29,6 +29,11 @@ struct Float16 {
 
   LIBC_INLINE Float16() = default;
 
+  template <size_t Bits>
+  LIBC_INLINE constexpr explicit Float16(const DyadicFloat<Bits> &df)
+      : bits(df.template as<Float16, /*ShouldSignalExceptions=*/false>().bits) {
+  }
+
   template <typename T>
   LIBC_INLINE constexpr explicit Float16(T value)
       : bits(static_cast<uint16_t>(0U)) {
