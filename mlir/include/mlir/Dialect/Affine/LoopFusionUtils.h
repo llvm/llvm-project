@@ -117,8 +117,7 @@ canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
 /// `isInnermostSiblingInsertionFusion` enables cleanup of `srcForOp` that is a
 /// single-iteration reduction loop being sibling-fused into a 'dstForOp'.
 /// If provided, `mapper` records the mapping from the source loop IR to the
-/// cloned loop IR. Single-iteration loop promotion is skipped in that case to
-/// keep those mappings usable by the caller.
+/// cloned loop IR.
 void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                const ComputationSliceState &srcSlice,
                bool isInnermostSiblingInsertionFusion = false,
