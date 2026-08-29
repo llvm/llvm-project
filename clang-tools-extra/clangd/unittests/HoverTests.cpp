@@ -5586,8 +5586,8 @@ TEST(Hover, HLSLUnparsedSemanticName) {
   auto AST = TU.build();
   auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   ASSERT_TRUE(H) << "Hover should have been returned for COLOR semantic!";
-  llvm::errs() << "HI.Name = " << H->Name << "\n";
-  llvm::errs() << "HI.Definition = " << H->Definition << "\n";
+  EXPECT_EQ(H->Name, "COLOR");
+  EXPECT_EQ(H->Definition, "[COLOR]");
 }
 
 } // namespace
