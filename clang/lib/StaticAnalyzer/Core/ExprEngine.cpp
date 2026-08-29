@@ -3053,14 +3053,15 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
               state->getStateManager().getRegionManager().getParamVarRegion(
                   CallSite, Idx, SF);
           const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
-          state =
-              state->bindLoc(loc::MemRegionVal(PVR),
-                             state->getSVal(SelfArgExpr, SF->getParent()), SF);
-          SVal ParamSVal = state->getSVal(loc::MemRegionVal(PVR));
-          if (!PVD->getType()->isReferenceType())
-            return std::make_pair(state->getLValue(FD, loc::MemRegionVal(PVR)),
+          if (PVD->getType()->isReferenceType()) {
+            state = state->bindLoc(loc::MemRegionVal(PVR),
+                                   state->getSVal(SelfArgExpr, SF->getParent()),
+                                   SF);
+            SVal ParamSVal = state->getSVal(loc::MemRegionVal(PVR));
+            return std::make_pair(state->getLValue(FD, ParamSVal),
                                   FD->getType());
-          return std::make_pair(state->getLValue(FD, ParamSVal), FD->getType());
+          }
+          return std::make_pair(state->getLValue(FD, loc::MemRegionVal(PVR)), FD->getType());
         }
       }
     }
