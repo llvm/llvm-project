@@ -2135,7 +2135,11 @@ define i1 @icmp_ult_neg_offset_or_disjoint(i16 %arg) "instcombine-no-verify-fixp
 ; CHECK-NEXT:    call void @use_i32(i32 [[ZEXT]])
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[ARG]], -32768
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT]], -32768
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[XOR]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[OR]], [[SEXT]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
