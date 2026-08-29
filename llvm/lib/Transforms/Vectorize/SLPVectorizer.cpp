@@ -904,7 +904,8 @@ public:
            (getRootNode().CombinedOp == TreeEntry::ReducedBitcast ||
             getRootNode().CombinedOp == TreeEntry::ReducedBitcastBSwap ||
             getRootNode().CombinedOp == TreeEntry::ReducedBitcastLoads ||
-            getRootNode().CombinedOp == TreeEntry::ReducedBitcastBSwapLoads) &&
+            getRootNode().CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
+            getRootNode().CombinedOp == TreeEntry::ReducedBitPack) &&
            getRootNode().State == TreeEntry::Vectorize;
   }
 
@@ -2933,6 +2934,20 @@ private:
   bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order, bool &IsBSwap,
                       bool &ForLoads) const;
 
+  /// Computes the packing layout of an or reduction of masked shifted values
+  /// packing per-lane byte fields of the scalar result (and(shl(x, s), m) per
+  /// lane). The field analysis proves the disjointness of the fields, so the
+  /// reduction operations are not required to be marked disjoint.
+  std::optional<BitPackInfo> computeBitPackLayout(const TreeEntry &TE) const;
+
+  /// Checks if the tree entry is the root of such a reduction, the tree nodes
+  /// are in the expected state and it is profitable to model as a bitcast.
+  bool matchesBitPack(const TreeEntry &TE) const;
+
+  /// True if the node's lanes are a zext from i8, so compacting them to bytes
+  /// is free.
+  bool isByteZExtNode(const TreeEntry &TE) const;
+
   /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
   /// better codegen in case like zext (icmp ne), select (icmp eq), ....
   bool matchesInversedZExtSelect(
@@ -3086,6 +3101,7 @@ private:
       ReducedBitcastBSwap,
       ReducedBitcastLoads,
       ReducedBitcastBSwapLoads,
+      ReducedBitPack,
       ReducedCmpBitcast,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
@@ -14827,6 +14843,126 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   return BitcastCost < VecCost;
 }
 
+std::optional<BitPackInfo>
+BoUpSLP::computeBitPackLayout(const TreeEntry &TE) const {
+  assert(TE.hasState() &&
+         (TE.getOpcode() == Instruction::And ||
+          TE.getOpcode() == Instruction::Shl) &&
+         "Expected And or Shl node.");
+  Type *ScalarTy = TE.getMainOp()->getType();
+  const unsigned BitWidth = DL->getTypeSizeInBits(ScalarTy);
+  const TreeEntry *ShlTE = &TE;
+  const TreeEntry *MaskTE = nullptr;
+  if (TE.getOpcode() == Instruction::And) {
+    MaskTE = getOperandEntry(&TE, 1);
+    ShlTE = getOperandEntry(&TE, 0);
+  }
+  const TreeEntry *ShiftTE = getOperandEntry(ShlTE, 1);
+  const TreeEntry *LhsTE = getOperandEntry(ShlTE, 0);
+
+  const unsigned VF = TE.getVectorFactor();
+  SmallVector<APInt> PossibleBits(VF), Masks(VF);
+  SmallVector<uint64_t> ShlAmts(VF);
+  auto IsCopyable = [](const TreeEntry *TE, unsigned Idx) {
+    return TE->hasCopyableElements() && TE->isCopyableElement(TE->Scalars[Idx]);
+  };
+  for (unsigned Idx : seq(VF)) {
+    uint64_t ShlAmt = 0;
+    const APInt *C;
+    if (!IsCopyable(ShlTE, Idx)) {
+      if (!match(ShiftTE->Scalars[Idx], m_APInt(C)) || C->uge(BitWidth))
+        return std::nullopt;
+      ShlAmt = C->getZExtValue();
+    }
+    APInt Mask = APInt::getAllOnes(BitWidth);
+    if (MaskTE && !IsCopyable(&TE, Idx)) {
+      if (!match(MaskTE->Scalars[Idx], m_APInt(C)))
+        return std::nullopt;
+      Mask = *C;
+    }
+    Value *X = LhsTE->Scalars[Idx];
+    if (isa<PoisonValue>(X)) {
+      PossibleBits[Idx] = APInt(BitWidth, 0);
+    } else {
+      PossibleBits[Idx] =
+          APInt::getLowBitsSet(BitWidth, getScalarMaxValue(X).getActiveBits()) &
+          ~computeKnownBits(X, SimplifyQuery(*DL)).Zero;
+    }
+    ShlAmts[Idx] = ShlAmt;
+    Masks[Idx] = Mask;
+  }
+  return computeBitPackInfo(BitWidth, PossibleBits, ShlAmts, Masks);
+}
+
+bool BoUpSLP::isByteZExtNode(const TreeEntry &TE) const {
+  return TE.getOpcode() == Instruction::ZExt &&
+         cast<ZExtInst>(TE.getMainOp())->getSrcTy()->isIntegerTy(8);
+}
+
+bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
+  assert(TE.hasState() &&
+         (TE.getOpcode() == Instruction::And ||
+          TE.getOpcode() == Instruction::Shl) &&
+         "Expected And or Shl node.");
+  auto IsVectorizedOneUseNode = [&](const TreeEntry *N) {
+    return N->State == TreeEntry::Vectorize && !N->isAltShuffle() &&
+           N->ReorderIndices.empty() && N->ReuseShuffleIndices.empty() &&
+           !MinBWs.contains(N) && all_of(N->Scalars, [&](Value *V) {
+             return (N->hasCopyableElements() && N->isCopyableElement(V)) ||
+                    V->hasOneUse();
+           });
+  };
+  if (!IsVectorizedOneUseNode(&TE))
+    return false;
+  Type *ScalarTy = TE.getMainOp()->getType();
+  if (!ScalarTy->isIntegerTy())
+    return false;
+  const unsigned BitWidth = DL->getTypeSizeInBits(ScalarTy);
+  if (!isPowerOf2_64(BitWidth))
+    return false;
+
+  const TreeEntry *ShlTE = &TE;
+  const TreeEntry *MaskTE = nullptr;
+  if (TE.getOpcode() == Instruction::And) {
+    MaskTE = getOperandEntry(&TE, 1);
+    ShlTE = getOperandEntry(&TE, 0);
+    if (!ShlTE->hasState() || ShlTE->getOpcode() != Instruction::Shl)
+      return false;
+  }
+  if (!IsVectorizedOneUseNode(ShlTE))
+    return false;
+  const TreeEntry *ShiftTE = getOperandEntry(ShlTE, 1);
+  const TreeEntry *LhsTE = getOperandEntry(ShlTE, 0);
+  if (!ShiftTE->isGather() || (MaskTE && !MaskTE->isGather()))
+    return false;
+  if (LhsTE->State != TreeEntry::Vectorize || LhsTE->isAltShuffle() ||
+      !LhsTE->ReorderIndices.empty() || !LhsTE->ReuseShuffleIndices.empty() ||
+      MinBWs.contains(LhsTE))
+    return false;
+  std::optional<BitPackInfo> Info = computeBitPackLayout(TE);
+  if (!Info)
+    return false;
+  auto *VecTy =
+      cast<VectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
+  FastMathFlags FMF;
+  InstructionCost VecCost =
+      TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind) +
+      TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
+                                  getOperandInfo(LhsTE->Scalars),
+                                  getOperandInfo(ShiftTE->Scalars), /*Args=*/{},
+                                  ShlTE->getMainOp(), TLI);
+  if (TE.getOpcode() == Instruction::And)
+    VecCost += TTI->getArithmeticInstrCost(
+        Instruction::And, VecTy, CostKind, getOperandInfo(ShlTE->Scalars),
+        getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
+  unsigned ShiftWidth;
+  bool FreeByteTrunc = isByteZExtNode(*LhsTE);
+  InstructionCost PackCost =
+      getBitPackCost(*TTI, cast<FixedVectorType>(VecTy), ScalarTy, *Info,
+                     FreeByteTrunc, CostKind, TLI, TE.getMainOp(), ShiftWidth);
+  return PackCost.isValid() && PackCost <= VecCost;
+}
+
 bool BoUpSLP::matchesInversedZExtSelect(
     const TreeEntry &SelectTE,
     SmallVectorImpl<unsigned> &InversedCmpsIndices) const {
@@ -15464,8 +15600,10 @@ void BoUpSLP::transformNodes() {
       }
       break;
     }
-    case Instruction::Shl: {
-      // Shl is not reassociated; guard since this case indexes operands 0/1.
+    case Instruction::Shl:
+    case Instruction::And: {
+      // Shl/And are not reassociated; guard since this case indexes operands
+      // 0/1.
       if (E.getNumOperands() != 2)
         break;
       if (E.Idx != 0 || DL->isBigEndian())
@@ -15473,47 +15611,79 @@ void BoUpSLP::transformNodes() {
       if (!UserIgnoreList)
         break;
       // Check that all reduction operands are disjoint or instructions.
+      if (E.getOpcode() == Instruction::Shl &&
+          all_of(*UserIgnoreList, [](Value *V) {
+            return match(V, m_DisjointOr(m_Value(), m_Value()));
+          })) {
+        OrdersType Order;
+        bool IsBSwap;
+        bool ForLoads;
+        if (matchesShlZExt(E, Order, IsBSwap, ForLoads)) {
+          // This node is a (reduced disjoint or) bitcast node.
+          TreeEntry::CombinedOpcode Code =
+              IsBSwap ? (ForLoads ? TreeEntry::ReducedBitcastBSwapLoads
+                                  : TreeEntry::ReducedBitcastBSwap)
+                      : (ForLoads ? TreeEntry::ReducedBitcastLoads
+                                  : TreeEntry::ReducedBitcast);
+          E.CombinedOp = Code;
+          E.ReorderIndices = std::move(Order);
+          TreeEntry *ZExtEntry = getOperandEntry(&E, 0);
+          assert(ZExtEntry->UserTreeIndex &&
+                 ZExtEntry->State == TreeEntry::Vectorize &&
+                 ZExtEntry->getOpcode() == Instruction::ZExt &&
+                 "Expected ZExt node.");
+          // The ZExt node is part of the combined node.
+          ZExtEntry->State = TreeEntry::CombinedVectorize;
+          ZExtEntry->CombinedOp = Code;
+          if (ForLoads) {
+            TreeEntry *LoadsEntry = getOperandEntry(ZExtEntry, 0);
+            assert(LoadsEntry->UserTreeIndex &&
+                   LoadsEntry->State == TreeEntry::Vectorize &&
+                   LoadsEntry->getOpcode() == Instruction::Load &&
+                   "Expected Load node.");
+            // The Load node is part of the combined node.
+            LoadsEntry->State = TreeEntry::CombinedVectorize;
+            LoadsEntry->CombinedOp = Code;
+          }
+          TreeEntry *ConstEntry = getOperandEntry(&E, 1);
+          assert(ConstEntry->UserTreeIndex && ConstEntry->isGather() &&
+                 "Expected ZExt node.");
+          // The ConstNode node is part of the combined node.
+          ConstEntry->State = TreeEntry::CombinedVectorize;
+          ConstEntry->CombinedOp = Code;
+          break;
+        }
+      }
+      // Check that all reduction operands are or instructions.
       if (any_of(*UserIgnoreList, [](Value *V) {
-            return !match(V, m_DisjointOr(m_Value(), m_Value()));
+            return !match(V, m_Or(m_Value(), m_Value()));
           }))
         break;
-      OrdersType Order;
-      bool IsBSwap;
-      bool ForLoads;
-      if (!matchesShlZExt(E, Order, IsBSwap, ForLoads))
+      if (!matchesBitPack(E))
         break;
-      // This node is a (reduced disjoint or) bitcast node.
-      TreeEntry::CombinedOpcode Code =
-          IsBSwap ? (ForLoads ? TreeEntry::ReducedBitcastBSwapLoads
-                              : TreeEntry::ReducedBitcastBSwap)
-                  : (ForLoads ? TreeEntry::ReducedBitcastLoads
-                              : TreeEntry::ReducedBitcast);
-      E.CombinedOp = Code;
-      E.ReorderIndices = std::move(Order);
-      TreeEntry *ZExtEntry = getOperandEntry(&E, 0);
-      assert(ZExtEntry->UserTreeIndex &&
-             ZExtEntry->State == TreeEntry::Vectorize &&
-             ZExtEntry->getOpcode() == Instruction::ZExt &&
-             "Expected ZExt node.");
-      // The ZExt node is part of the combined node.
-      ZExtEntry->State = TreeEntry::CombinedVectorize;
-      ZExtEntry->CombinedOp = Code;
-      if (ForLoads) {
-        TreeEntry *LoadsEntry = getOperandEntry(ZExtEntry, 0);
-        assert(LoadsEntry->UserTreeIndex &&
-               LoadsEntry->State == TreeEntry::Vectorize &&
-               LoadsEntry->getOpcode() == Instruction::Load &&
-               "Expected Load node.");
-        // The Load node is part of the combined node.
-        LoadsEntry->State = TreeEntry::CombinedVectorize;
-        LoadsEntry->CombinedOp = Code;
+      // This node is a (reduced or) bit pack node.
+      E.CombinedOp = TreeEntry::ReducedBitPack;
+      TreeEntry *ShlEntry = &E;
+      if (E.getOpcode() == Instruction::And) {
+        ShlEntry = getOperandEntry(&E, 0);
+        assert(ShlEntry->UserTreeIndex &&
+               ShlEntry->State == TreeEntry::Vectorize &&
+               ShlEntry->getOpcode() == Instruction::Shl &&
+               "Expected Shl node.");
+        // The Shl node is part of the combined node.
+        ShlEntry->State = TreeEntry::CombinedVectorize;
+        ShlEntry->CombinedOp = TreeEntry::ReducedBitPack;
+        TreeEntry *MaskEntry = getOperandEntry(&E, 1);
+        assert(MaskEntry->UserTreeIndex && MaskEntry->isGather() &&
+               "Expected constants only.");
+        MaskEntry->State = TreeEntry::CombinedVectorize;
+        MaskEntry->CombinedOp = TreeEntry::ReducedBitPack;
       }
-      TreeEntry *ConstEntry = getOperandEntry(&E, 1);
-      assert(ConstEntry->UserTreeIndex && ConstEntry->isGather() &&
-             "Expected ZExt node.");
-      // The ConstNode node is part of the combined node.
-      ConstEntry->State = TreeEntry::CombinedVectorize;
-      ConstEntry->CombinedOp = Code;
+      TreeEntry *ShiftEntry = getOperandEntry(ShlEntry, 1);
+      assert(ShiftEntry->UserTreeIndex && ShiftEntry->isGather() &&
+             "Expected constants only.");
+      ShiftEntry->State = TreeEntry::CombinedVectorize;
+      ShiftEntry->CombinedOp = TreeEntry::ReducedBitPack;
       break;
     }
     default:
@@ -16921,7 +17091,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
-  } else if (E->Idx == 0 && isReducedBitcastRoot()) {
+  } else if (E->Idx == 0 && isReducedBitcastRoot() &&
+             getRootNode().CombinedOp != TreeEntry::ReducedBitPack) {
     const TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
     ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
   }
@@ -17740,6 +17911,37 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
       }
       return LoadCost + CommonCost;
+    };
+    return GetCostDiff(GetScalarCost, GetVectorCost);
+  }
+  case TreeEntry::ReducedBitPack: {
+    auto GetScalarCost = [&, &TTI = *TTI](unsigned Idx) {
+      Instruction *I;
+      if (!match(UniqueValues[Idx], m_Instruction(I)))
+        return InstructionCost(TTI::TCC_Free);
+      InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
+      if (match(I, m_And(m_Shl(m_Value(), m_Value()), m_Value())))
+        ScalarCost += TTI.getInstructionCost(
+            cast<Instruction>(I->getOperand(0)), CostKind);
+      return ScalarCost;
+    };
+    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
+      const TreeEntry *ShlTE = E->getOpcode() == Instruction::And
+                                   ? getOperandEntry(E, /*Idx=*/0)
+                                   : E;
+      const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
+      std::optional<BitPackInfo> Info = computeBitPackLayout(*E);
+      if (!Info)
+        return InstructionCost::getInvalid();
+      unsigned ShiftWidth;
+      bool FreeByteTrunc = isByteZExtNode(*LhsTE);
+      return getBitPackCost(
+                 TTI,
+                 cast<FixedVectorType>(getWidenedType(
+                     LhsTE->getMainOp()->getType(), LhsTE->getVectorFactor())),
+                 ScalarTy, *Info, FreeByteTrunc, CostKind, TLI, E->getMainOp(),
+                 ShiftWidth) +
+             CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -18786,6 +18988,7 @@ InstructionCost BoUpSLP::getSpillCost() {
         TEPtr->CombinedOp == TreeEntry::ReducedBitcastBSwap ||
         TEPtr->CombinedOp == TreeEntry::ReducedBitcastLoads ||
         TEPtr->CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
+        TEPtr->CombinedOp == TreeEntry::ReducedBitPack ||
         TEPtr->CombinedOp == TreeEntry::ReducedCmpBitcast) {
       ScalarOrPseudoEntries.insert(TEPtr.get());
       continue;
@@ -23478,6 +23681,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case TreeEntry::ReducedBitcastBSwap:
     case TreeEntry::ReducedBitcastLoads:
     case TreeEntry::ReducedBitcastBSwapLoads:
+    case TreeEntry::ReducedBitPack:
     case TreeEntry::ReducedCmpBitcast:
       ShuffleOrOp = E->CombinedOp;
       break;
@@ -24993,6 +25197,34 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       E->VectorizedValue = V;
       return V;
     }
+    case TreeEntry::ReducedBitPack: {
+      assert(UserIgnoreList && "Expected reduction operations only.");
+      setInsertPointAfterBundle(E);
+      TreeEntry *ShlTE = E->getOpcode() == Instruction::And
+                             ? getOperandEntry(E, /*Idx=*/0)
+                             : E;
+      SmallVector<TreeEntry *> CombinedTEs;
+      if (ShlTE != E)
+        CombinedTEs.append({ShlTE, getOperandEntry(E, /*Idx=*/1)});
+      CombinedTEs.push_back(getOperandEntry(ShlTE, /*Idx=*/1));
+      for (TreeEntry *TE : CombinedTEs)
+        TE->VectorizedValue = PoisonValue::get(getWidenedType(
+            TE->Scalars.front()->getType(), TE->getVectorFactor()));
+      Value *X = vectorizeOperand(ShlTE, /*NodeIdx=*/0);
+      std::optional<BitPackInfo> Info = computeBitPackLayout(*E);
+      assert(Info && "Expected bit pack info.");
+      unsigned ShiftWidth;
+      const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
+      bool FreeByteTrunc = isByteZExtNode(*LhsTE);
+      InstructionCost PackCost = getBitPackCost(
+          *TTI, cast<FixedVectorType>(X->getType()), ScalarTy, *Info,
+          FreeByteTrunc, CostKind, TLI, E->getMainOp(), ShiftWidth);
+      assert(PackCost.isValid() && "Expected valid cost.");
+      Value *V = buildBitPack(Builder, X, *Info, ShiftWidth);
+      ++NumVectorInstructions;
+      E->VectorizedValue = V;
+      return V;
+    }
     case TreeEntry::ReducedCmpBitcast: {
       assert(UserIgnoreList && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
@@ -25511,6 +25743,7 @@ Value *BoUpSLP::vectorizeTree(
         (TE->State == TreeEntry::CombinedVectorize &&
          (TE->CombinedOp == TreeEntry::ReducedBitcast ||
           TE->CombinedOp == TreeEntry::ReducedBitcastBSwap ||
+          TE->CombinedOp == TreeEntry::ReducedBitPack ||
           ((TE->CombinedOp == TreeEntry::ReducedBitcastLoads ||
             TE->CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
             TE->CombinedOp == TreeEntry::ReducedCmpBitcast) &&
@@ -26191,6 +26424,7 @@ Value *BoUpSLP::vectorizeTree(
         Entry->CombinedOp == TreeEntry::ReducedBitcastBSwap ||
         Entry->CombinedOp == TreeEntry::ReducedBitcastLoads ||
         Entry->CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
+        Entry->CombinedOp == TreeEntry::ReducedBitPack ||
         Entry->CombinedOp == TreeEntry::ReducedCmpBitcast) {
       // Skip constant node
       if (!Entry->hasState()) {

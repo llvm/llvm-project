@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 
+#include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
@@ -23,6 +24,9 @@
 #include <utility>
 
 namespace llvm {
+class FixedVectorType;
+class Instruction;
+class TargetLibraryInfo;
 class Type;
 class Value;
 class VectorType;
@@ -55,6 +59,17 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the bitfield packing of \p SrcTy into \p ResultTy,
+/// picking the cheapest shift width. The packing is a trunc, an lshr, a byte
+/// shuffle and a bitcast. \p FreeByteTrunc marks the lanes as a zext from i8,
+/// so compacting them to bytes is free.
+InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *SrcTy, Type *ResultTy,
+                               const BitPackInfo &Info, bool FreeByteTrunc,
+                               TargetTransformInfo::TargetCostKind CostKind,
+                               const TargetLibraryInfo *TLI,
+                               const Instruction *CxtI, unsigned &ShiftWidth);
 
 } // namespace llvm::slpvectorizer
 

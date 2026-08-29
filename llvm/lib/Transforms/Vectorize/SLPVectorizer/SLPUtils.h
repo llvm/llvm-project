@@ -18,18 +18,21 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
 namespace llvm {
 class Constant;
 class DataLayout;
+class IRBuilderBase;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
@@ -364,6 +367,44 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
                            SmallVectorImpl<Instruction *> &ChainInsts);
 
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
+
+/// Returns a saturating unsigned upper bound of the scalar V. The numeric
+/// bound keeps precision on arithmetic carries, where bit-wise analysis
+/// loses it.
+APInt getScalarMaxValue(const Value *V, unsigned Depth = 0);
+
+/// Description of a bitfield packing of vector lanes into a scalar value:
+/// every lane contributes a disjoint contiguous byte field of the result.
+struct BitPackInfo {
+  static constexpr unsigned NoLane = ~0u;
+  unsigned FieldWidth = 0;
+  /// Lane covering each field, NoLane if the field is always zero.
+  SmallVector<unsigned, 8> LaneOfField;
+  /// Per-lane right-shift amounts bringing the field content to the low bits.
+  SmallVector<uint64_t, 8> LShrAmts;
+
+  /// True if any lane needs a right shift to align its field content.
+  bool needsShift() const {
+    return any_of(LShrAmts, [](uint64_t A) { return A != 0; });
+  }
+};
+
+/// Computes the bitfield packing layout from the per-lane possibly set bits
+/// of the source values, the per-lane left-shift amounts and the per-lane
+/// masks (all-ones for unmasked lanes).
+std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
+                                              ArrayRef<APInt> PossibleBits,
+                                              ArrayRef<uint64_t> ShlAmts,
+                                              ArrayRef<APInt> Masks);
+
+/// Returns the byte shuffle mask packing the per-lane fields of the shifted
+/// lanes (BytesPerLane bytes each) into the packed scalar of NumBytes bytes.
+SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
+                                unsigned NumElts, unsigned BytesPerLane);
+
+/// Builds the bitfield packing of X per the layout and the shift width.
+Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
+                    unsigned ShiftWidth);
 
 } // namespace llvm::slpvectorizer
 
