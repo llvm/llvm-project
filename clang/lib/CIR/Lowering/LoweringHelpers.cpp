@@ -16,6 +16,60 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/MissingFeatures.h"
+
+namespace {
+/// A _BitInt(N) whose padded storage integer iM has a larger alloc size than
+/// its M/8 store size is laid out by clang as a byte array, not a plain
+/// integer (e.g. _BitInt(129) -> i192 with alloc size 32 != store size 24).
+/// That "split" storage form is not yet implemented; lowerings must detect
+/// it and report errorNYI rather than emit the wrong-sized integer.
+bool isSplitStorageBitInt(cir::IntType ty, const mlir::DataLayout &dataLayout) {
+  if (!ty.isBitInt())
+    return false;
+  unsigned storageBits = ty.getStorageTypeWidth(dataLayout);
+  auto storageTy = mlir::IntegerType::get(ty.getContext(), storageBits);
+  uint64_t storeSize = storageBits / 8;
+  uint64_t allocSize =
+      llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
+  return allocSize != storeSize;
+}
+} // namespace
+
+mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                mlir::DataLayout const &dataLayout,
+                                mlir::Type type) {
+  // TODO(cir): Handle other types similarly to clang's codegen
+  // convertTypeForMemory
+  if (mlir::isa<cir::BoolType>(type)) {
+    return mlir::IntegerType::get(type.getContext(),
+                                  dataLayout.getTypeSizeInBits(type));
+  }
+
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
+    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
+      // Pad to at least one byte.
+      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
+      return mlir::IntegerType::get(type.getContext(), bytePadded);
+    }
+  }
+
+  // _BitInt(N) keeps its literal width as a value but is stored in a padded
+  // integer iM in memory, the same way bool is i1 as a value and i8 in
+  // memory. The byte-array storage form for wide split widths is not
+  // implemented; a null return signals that, and op lowerings turn it into
+  // errorNYI.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
+      intTy && intTy.isBitInt()) {
+    if (isSplitStorageBitInt(intTy, dataLayout))
+      return {};
+    return mlir::IntegerType::get(type.getContext(),
+                                  intTy.getStorageTypeWidth(dataLayout));
+  }
+
+  return converter.convertType(type);
+}
 
 static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
@@ -493,7 +547,9 @@ static mlir::Type adjustGlobalStructTypeForInit(
     mlir::Type lastInitType =
         mlir::cast<mlir::TypedAttr>(initMembers.back()).getType();
     if (mlir::cast<cir::ArrayType>(lastInitType).getSize() != 0) {
-      newBody.back() = converter.convertType(lastInitType);
+      newBody.back() =
+          adjustGlobalTypeForInit(converter.convertType(lastInitType),
+                                  initMembers.back(), converter, dataLayout);
       packed = packed || shouldPackFAMStruct(dataLayout, newBody);
       widenedFAM = true;
       changed = true;
@@ -537,8 +593,8 @@ static mlir::Type adjustGlobalUnionTypeForInit(
   // Unions can only initialize one field, so this has to be sizeof-one.
   assert(constRecord.getMembers().size() == 1);
   mlir::Attribute member = constRecord.getMembers()[0];
-  mlir::Type memberTy =
-      converter.convertType(mlir::cast<mlir::TypedAttr>(member).getType());
+  mlir::Type memberTy = convertTypeForMemory(
+      converter, dataLayout, mlir::cast<mlir::TypedAttr>(member).getType());
 
   // The active member may itself need adjusting (e.g. it is a nested union, or
   // a struct containing one), so recurse before using its type below.
@@ -568,12 +624,61 @@ static mlir::Type adjustGlobalUnionTypeForInit(
                                                 unionTy.getPacked());
 }
 
+// Unions in an array can cause individual elements to be of different types.
+// This function adjusts the array type and replaces it with a struct type if
+// necessary, OR leaves it as a 'new' array type if necessary.
+static mlir::Type adjustGlobalArrayTypeForInit(
+    mlir::LLVM::LLVMArrayType arrayTy, cir::ConstArrayAttr arrayInit,
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(arrayInit.getElts());
+
+  if (!elts)
+    return arrayTy;
+
+  mlir::Type origEltTy = arrayTy.getElementType();
+  llvm::SmallVector<mlir::Type> adjustedElts(arrayTy.getNumElements(),
+                                             origEltTy);
+  bool changed = false;
+
+  for (auto [idx, elt] : llvm::enumerate(elts)) {
+    mlir::Type adjusted =
+        adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+
+    if (idx >= arrayTy.getNumElements()) {
+      adjustedElts.push_back(adjusted);
+      changed = true;
+    } else if (adjusted != origEltTy) {
+      adjustedElts[idx] = adjusted;
+      changed = true;
+    }
+  }
+
+  if (!changed)
+    return arrayTy;
+
+  if (llvm::all_equal(adjustedElts))
+    return mlir::LLVM::LLVMArrayType::get(adjustedElts.front(),
+                                          adjustedElts.size());
+
+  // Packed, because arrays shouldn't be subject to padding.
+  return mlir::LLVM::LLVMStructType::getLiteral(
+      arrayTy.getContext(), adjustedElts, /*isPacked=*/true);
+}
+
 // Apply various adjustments required for struct/union types.
 mlir::Type
 adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                         const mlir::TypeConverter &converter,
                         const mlir::DataLayout &dataLayout,
                         llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+  if (auto arrayInit = mlir::dyn_cast_if_present<cir::ConstArrayAttr>(init)) {
+    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmType);
+    if (!arrayTy)
+      return llvmType;
+    return adjustGlobalArrayTypeForInit(arrayTy, arrayInit, converter,
+                                        dataLayout);
+  }
+
   // Conversions for both only happen if we have a record init.
   auto constRecord = mlir::dyn_cast_if_present<cir::ConstRecordAttr>(init);
   if (!constRecord)

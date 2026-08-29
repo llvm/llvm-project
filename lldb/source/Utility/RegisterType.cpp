@@ -8,6 +8,10 @@
 
 #include "lldb/Utility/RegisterType.h"
 
+#include "lldb/Utility/Stream.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <atomic>
 
 using namespace lldb_private;
@@ -18,11 +22,11 @@ RegisterType::RegisterType(RegisterTypeKind kind, std::string id)
     : m_kind(kind), m_id(std::move(id)),
       m_uid(g_next_register_type_uid.fetch_add(1, std::memory_order_relaxed)) {}
 
-void RegisterType::ToXML(
-    Stream &strm, std::unordered_set<const RegisterType *> &previously_emitted,
-    const RegisterType *user) const {
-  // If we already emitted this, don't emit it again.
-  if (!previously_emitted.insert(this).second)
+void RegisterType::ToXML(Stream &strm,
+                         std::unordered_set<std::string> &previously_emitted,
+                         const RegisterType *user) const {
+  // XML type references use IDs, so definitions must also be unique by ID.
+  if (!previously_emitted.insert(GetID()).second)
     return;
 
   // Emit this type's dependencies first.
@@ -32,3 +36,22 @@ void RegisterType::ToXML(
   // Finally emit this type.
   ToXMLElement(strm, user);
 }
+
+void RegisterType::PrintXMLAttributeValue(Stream &strm, llvm::StringRef value) {
+  std::string escaped;
+  llvm::raw_string_ostream escape_strm(escaped);
+  llvm::printHTMLEscaped(value, escape_strm);
+  strm << escaped;
+}
+
+RegisterTypeBuiltin::RegisterTypeBuiltin(std::string id,
+                                         lldb::Encoding encoding,
+                                         lldb::Format format,
+                                         std::optional<uint64_t> byte_size)
+    : RegisterType(eRegisterTypeKindBuiltin, std::move(id)),
+      m_encoding(encoding), m_format(format), m_byte_size(byte_size) {}
+
+void RegisterTypeBuiltin::ToXML(Stream &, std::unordered_set<std::string> &,
+                                const RegisterType *) const {}
+
+void RegisterTypeBuiltin::ToXMLElement(Stream &, const RegisterType *) const {}

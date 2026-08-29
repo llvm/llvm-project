@@ -1911,7 +1911,18 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder.CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                        I.getName());
-    return CastInst::Create(CastOpcode, NewOp, DestTy);
+    auto *NewCast = CastInst::Create(CastOpcode, NewOp, DestTy);
+    if (auto *NewTrunc = dyn_cast<TruncInst>(NewCast)) {
+      auto *Trunc0 = cast<TruncInst>(Cast0);
+      auto *Trunc1 = cast<TruncInst>(Cast1);
+      NewTrunc->setHasNoUnsignedWrap(
+          LogicOpc == Instruction::And
+              ? Trunc0->hasNoUnsignedWrap() || Trunc1->hasNoUnsignedWrap()
+              : Trunc0->hasNoUnsignedWrap() && Trunc1->hasNoUnsignedWrap());
+      NewTrunc->setHasNoSignedWrap(Trunc0->hasNoSignedWrap() &&
+                                   Trunc1->hasNoSignedWrap());
+    }
+    return NewCast;
   }
 
   return nullptr;
@@ -2380,6 +2391,39 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (SimplifyOnly)
     return nullptr;
   return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
+}
+
+/// The pattern div_ceil(X, P) * P, where P is a power of 2, lowers to the
+/// following conditional round-up: (X + select(C, 0, Pow2)) & -Pow2, where
+/// C is X % Pow2 == 0. This may be simplified to (X + (Pow2-1)) & -Pow2.
+static Instruction *
+foldRoundUpToPow2Alignment(BinaryOperator &I,
+                           InstCombiner::BuilderTy &Builder) {
+  const APInt *NegP;
+  Value *Add;
+  if (!match(&I, m_And(m_Value(Add), m_NegatedPower2(NegP))))
+    return nullptr;
+
+  Value *X, *Cond;
+  APInt Mask = ~*NegP;
+
+  // Match the pattern. Ensure the true arm of the select is zero, and the false
+  // one is the Pow2.
+  if (!match(Add,
+             m_OneUse(m_c_Add(m_Value(X), m_Select(m_Value(Cond), m_ZeroInt(),
+                                                   m_SpecificInt(-*NegP))))))
+    return nullptr;
+
+  // icmp ne should have already been canonicalized to the eq form for this
+  // pattern.
+  if (!match(Cond, m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                  m_And(m_Specific(X), m_SpecificInt(Mask)),
+                                  m_Zero())))
+    return nullptr;
+
+  Type *Ty = I.getType();
+  Value *NewAdd = Builder.CreateAdd(X, ConstantInt::get(Ty, Mask));
+  return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, *NegP));
 }
 
 /// Reassociate and/or expressions to see if we can fold the inner and/or ops.
@@ -2908,6 +2952,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
+
+  if (Instruction *Res = foldRoundUpToPow2Alignment(I, Builder))
+    return Res;
 
   return nullptr;
 }
