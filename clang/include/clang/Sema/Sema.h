@@ -11618,7 +11618,7 @@ public:
   /// of arguments for the named concept).
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
-                            TemplateDecl *NamedConcept, NamedDecl *FoundDecl,
+                            TemplateName NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
@@ -11827,7 +11827,7 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult CheckVarOrConceptTemplateTemplateId(
-      const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
+      const DeclarationNameInfo &NameInfo, TemplateName Template,
       const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
@@ -14687,6 +14687,15 @@ public:
       QualType T, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
   /// Collect the set of unexpanded parameter packs within the given
+  /// template name.
+  ///
+  /// \param Template The template name that will be traversed to find
+  /// unexpanded parameter packs.
+  void collectUnexpandedParameterPacks(
+      TemplateName Template,
+      SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
+
+  /// Collect the set of unexpanded parameter packs within the given
   /// type.
   ///
   /// \param TL The type that will be traversed to find
@@ -14899,6 +14908,19 @@ public:
                                    SourceLocation RSquareLoc,
                                    ArrayRef<Expr *> ExpandedExprs = {},
                                    bool FullySubstituted = false);
+
+  TemplateName ActOnPackIndexingTemplateName(TemplateName Pattern,
+                                             SourceLocation NameLoc,
+                                             Expr *IndexExpr);
+
+  TemplateName
+  BuildPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                                bool FullySubstituted = false,
+                                ArrayRef<TemplateName> Expansions = {});
+
+  TypeResult
+  ActOnPackIndexingDeducedTemplateSpecializationType(TemplateName Name,
+                                                     SourceLocation NameLoc);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
   ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,

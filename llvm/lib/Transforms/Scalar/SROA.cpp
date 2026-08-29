@@ -2048,6 +2048,11 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
       return false;
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
+    if (isa<MemSetInst>(MI)) {
+      Type *SplatTy = Type::getIntNTy(Ty->getContext(), ElementSize * 8);
+      if (!canConvertValue(DL, SplatTy, Ty->getElementType(), VScale))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;

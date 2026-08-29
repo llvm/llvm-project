@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/sps/MemoryAccessSPSCI.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include <cstring>
 #include <vector>

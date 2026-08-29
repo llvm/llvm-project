@@ -33680,7 +33680,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-      if (AI->getAllocatedType()->isScalableTy())
+      if (AI->isScalable())
         return true;
     }
   }

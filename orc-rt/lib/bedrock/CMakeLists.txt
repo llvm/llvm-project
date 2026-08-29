@@ -12,7 +12,6 @@ set(ORC_RT_SOURCES
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
-  SimpleRemoteCA.cpp
   SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
@@ -22,6 +21,7 @@ set(ORC_RT_SOURCES
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
+  sps/SimpleRemoteCA.cpp
   sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
@@ -33,6 +33,22 @@ if(ORC_RT_LOG_BACKEND STREQUAL "printf")
 elseif(ORC_RT_LOG_BACKEND STREQUAL "os_log")
   list(APPEND ORC_RT_SOURCES Logging_oslog.cpp)
 endif()
+
+# System implementations are composed, not merely selected: a target gets one
+# source list per capability it has. POSIX systems share posix/, and add their
+# OS-specific list on top; Windows shares nothing with them.
+#
+# A file belongs in a shared list only if it is uniform across every member of
+# it. Where a function needs an OS conditional, it moves down into the
+# per-OS lists instead of growing an #ifdef here -- or, if it wants to inline,
+# becomes a dispatch header under include/orc-rt-internal/ (see
+# support/sys/CacheControl.h).
+
+set(ORC_RT_POSIX_SOURCES
+  posix/DynamicLibrary.cpp
+  posix/Errno.cpp
+  posix/Memory.cpp
+)
 
 set(ORC_RT_DARWIN_SOURCES
   darwin/CPUFeatures.cpp
@@ -50,15 +66,15 @@ set(ORC_RT_WINDOWS_SOURCES
 )
 
 if (APPLE)
-    list(APPEND ORC_RT_SOURCES ${ORC_RT_DARWIN_SOURCES})
+  list(APPEND ORC_RT_SOURCES ${ORC_RT_POSIX_SOURCES} ${ORC_RT_DARWIN_SOURCES})
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND ORC_RT_SOURCES ${ORC_RT_LINUX_SOURCES})
-  elseif (WIN32)
-    list(APPEND ORC_RT_SOURCES ${ORC_RT_WINDOWS_SOURCES})
-  else()
-    message(WARNING
-      "orc-rt: no platform implementation for ${CMAKE_SYSTEM_NAME}; "
-      "Add an orc-rt/lib/bedrock/<platform>/ directory")
+  list(APPEND ORC_RT_SOURCES ${ORC_RT_POSIX_SOURCES} ${ORC_RT_LINUX_SOURCES})
+elseif (WIN32)
+  list(APPEND ORC_RT_SOURCES ${ORC_RT_WINDOWS_SOURCES})
+else()
+  message(WARNING
+    "orc-rt: no system implementation for ${CMAKE_SYSTEM_NAME}; "
+    "add an orc-rt/lib/bedrock/<system>/ directory and compose it above")
 endif()
 
 add_library(orc-rt-bedrock STATIC ${ORC_RT_SOURCES})

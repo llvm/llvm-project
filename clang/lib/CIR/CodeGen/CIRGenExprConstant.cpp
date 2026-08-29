@@ -1463,13 +1463,13 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
-    const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
     // Empty [[no_unique_address]] fields have no CIR field index; represent the
     // pointer-to-data-member by its concrete byte offset.
-    if (cgm.isEmptyFieldForMemberPointer(fieldDecl)) {
+    if (const auto *fieldDecl = dyn_cast<FieldDecl>(memberDecl);
+        fieldDecl && cgm.isEmptyFieldForMemberPointer(fieldDecl)) {
       const ASTContext &astContext = cgm.getASTContext();
       CharUnits offset =
           astContext.getMemberPointerPathAdjustment(value) +
@@ -1478,7 +1478,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     std::optional<llvm::SmallVector<int32_t>> path =
-        cgm.buildMemberPath(destClass, fieldDecl);
+        cgm.buildMemberPath(destClass, memberDecl);
     if (!path)
       return {};
     return builder.getDataMemberAttr(cirTy, *path);

@@ -142,6 +142,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
   }
+#define __packed_widen_binary_op(name, rty, ty, op)                            \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_convertvector(__rs1, rty)                                 \
+        op __builtin_convertvector(__rs2, rty);                                \
+  }
 #define __packed_widen_mul(name, rty, ty)                                      \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
                                                           ty __rs2) {          \
@@ -604,6 +610,16 @@ __packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
 __packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
 __packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
 
+/* Packed Widening Addition and Subtraction */
+__packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)
+__packed_widen_binary_op(pwadd_i32x2, int32x2_t, int16x2_t, +)
+__packed_widen_binary_op(pwaddu_u16x4, uint16x4_t, uint8x4_t, +)
+__packed_widen_binary_op(pwaddu_u32x2, uint32x2_t, uint16x2_t, +)
+__packed_widen_binary_op(pwsub_i16x4, int16x4_t, int8x4_t, -)
+__packed_widen_binary_op(pwsub_i32x2, int32x2_t, int16x2_t, -)
+__packed_widen_binary_op(pwsubu_u16x4, uint16x4_t, uint8x4_t, -)
+__packed_widen_binary_op(pwsubu_u32x2, uint32x2_t, uint16x2_t, -)
+
 /* Packed Widening Multiply (32-bit) */
 __packed_widen_mul(pwmul_i16x4, int16x4_t, int8x4_t)
 __packed_widen_mul(pwmul_i32x2, int32x2_t, int16x2_t)
@@ -1048,6 +1064,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_merge_builtin
 #undef __packed_unary_builtin
 #undef __packed_widen_convert
+#undef __packed_widen_binary_op
 #undef __packed_widen_mul
 #undef __packed_widen_mulsu
 #undef __packed_widen_high2

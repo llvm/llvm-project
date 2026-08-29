@@ -18446,7 +18446,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   //   => int_vt (any_extend elt_vt:x)
   if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
-    if (SrcScalar.getValueType().isScalarInteger())
+    EVT SrcVT = SrcScalar.getValueType();
+    if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
       return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
   }
 

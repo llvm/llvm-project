@@ -159,6 +159,12 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddDependentTemplateName(*Name.getAsDependentTemplateName());
     break;
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    AddTemplateName(PI->getPattern());
+    AddStmt(PI->getIndexExpr());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:

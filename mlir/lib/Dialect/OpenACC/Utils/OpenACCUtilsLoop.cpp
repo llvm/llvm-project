@@ -130,8 +130,9 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
     for (auto [replacement, orig] :
          llvm::zip(yieldOp.getOperands(), resultsToReplace)) {
       replaceAllUsesInRegionWith(orig, replacement, *dest->getParent());
-      replacements.push_back(replacement);
     }
+    replacements.append(yieldOp.getOperands().begin(),
+                        yieldOp.getOperands().end());
     ip = std::prev(yieldOp->getIterator());
     yieldOp.erase();
   } else {

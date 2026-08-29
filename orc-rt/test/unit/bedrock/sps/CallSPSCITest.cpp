@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/sps/CallSPSCI.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
 #include "gtest/gtest.h"

@@ -1127,7 +1127,7 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
   NamedDecl *CD = nullptr;
   bool IsTypeConcept = false;
   bool RequiresArguments = false;
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TN.getAsTemplateDecl())) {
+  if (auto *TTP = TN.getAsTemplateTemplateParmDecl()) {
     IsTypeConcept = TTP->isTypeConceptTemplateParam();
     RequiresArguments =
         TTP->getTemplateParameters()->getMinRequiredArguments() > 1;
@@ -1181,8 +1181,8 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
     return true;
 
   TemplateName TN = TypeConstr->Template.get();
-  TemplateDecl *CD = cast<TemplateDecl>(TN.getAsTemplateDecl());
   UsingShadowDecl *USD = TN.getAsUsingShadowDecl();
+  TemplateDecl *CD = TN.getAsTemplateDecl();
 
   DeclarationNameInfo ConceptName(DeclarationName(TypeConstr->Name),
                                   TypeConstr->TemplateNameLoc);
@@ -1201,7 +1201,8 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
   }
   return AttachTypeConstraint(
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
-      ConceptName, CD, /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
+      ConceptName, TN,
+      /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : cast_if_present<NamedDecl>(CD),
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
       ConstrainedParameter, EllipsisLoc);
 }
@@ -1209,7 +1210,7 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
 template <typename ArgumentLocAppender>
 static ExprResult formImmediatelyDeclaredConstraint(
     Sema &S, NestedNameSpecifierLoc NS, DeclarationNameInfo NameInfo,
-    NamedDecl *NamedConcept, NamedDecl *FoundDecl, SourceLocation LAngleLoc,
+    TemplateName NamedConcept, NamedDecl *FoundDecl, SourceLocation LAngleLoc,
     SourceLocation RAngleLoc, QualType ConstrainedType,
     SourceLocation ParamNameLoc, ArgumentLocAppender Appender,
     SourceLocation EllipsisLoc) {
@@ -1229,7 +1230,8 @@ static ExprResult formImmediatelyDeclaredConstraint(
   CXXScopeSpec SS;
   SS.Adopt(NS);
   ExprResult ImmediatelyDeclaredConstraint;
-  if (auto *CD = dyn_cast<ConceptDecl>(NamedConcept)) {
+  if (auto *CD =
+          dyn_cast_if_present<ConceptDecl>(NamedConcept.getAsTemplateDecl())) {
     ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
         SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
         /*FoundDecl=*/FoundDecl ? FoundDecl : CD, CD, &ConstraintArgs,
@@ -1239,9 +1241,8 @@ static ExprResult formImmediatelyDeclaredConstraint(
   // We have a template template parameter
   else {
     assert(SS.isEmpty() && "template parameter with a scope specifier?");
-    auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
-    ImmediatelyDeclaredConstraint =
-        S.CheckVarOrConceptTemplateTemplateId(NameInfo, CDT, &ConstraintArgs);
+    ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
+        NameInfo, NamedConcept, &ConstraintArgs);
   }
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
@@ -1268,8 +1269,7 @@ static ExprResult formImmediatelyDeclaredConstraint(
 
 bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 DeclarationNameInfo NameInfo,
-                                TemplateDecl *NamedConcept,
-                                NamedDecl *FoundDecl,
+                                TemplateName NamedConcept, NamedDecl *FoundDecl,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
                                 SourceLocation EllipsisLoc) {
@@ -1296,13 +1296,12 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
   if (ImmediatelyDeclaredConstraint.isInvalid())
     return true;
 
-  auto *CL =
-      ConceptReference::Create(Context, /*NNS=*/NS,
-                               /*TemplateKWLoc=*/SourceLocation{},
-                               /*ConceptNameInfo=*/NameInfo,
-                               /*FoundDecl=*/FoundDecl,
-                               /*NamedConcept=*/TemplateName(NamedConcept),
-                               /*ArgsWritten=*/ArgsAsWritten);
+  auto *CL = ConceptReference::Create(Context, /*NNS=*/NS,
+                                      /*TemplateKWLoc=*/SourceLocation{},
+                                      /*ConceptNameInfo=*/NameInfo,
+                                      /*FoundDecl=*/FoundDecl,
+                                      /*NamedConcept=*/NamedConcept,
+                                      /*ArgsWritten=*/ArgsAsWritten);
   ConstrainedParameter->setTypeConstraint(
       CL, ImmediatelyDeclaredConstraint.get(), std::nullopt);
   return false;
@@ -1331,7 +1330,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
     return true;
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
-      TL.getNamedConcept().getAsTemplateDecl(),
+      TL.getNamedConcept(),
       /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(), TL.getRAngleLoc(),
       BuildDecltypeType(Ref), OrigConstrainedParm->getLocation(),
       [&](TemplateArgumentListInfo &ConstraintArgs) {
@@ -3772,6 +3771,10 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
   if (!Template) {
     if (const auto *S = UnderlyingName.getAsSubstTemplateTemplateParmPack()) {
       Template = S->getParameterPack();
+    } else if (const auto *PI = UnderlyingName.getAsPackIndexingTemplate()) {
+      Template = PI->getParameterPack();
+      if (!Template)
+        Template = PI->getPattern().getAsTemplateDecl();
     } else if (const auto *DTN = UnderlyingName.getAsDependentTemplateName()) {
       if (DTN->getName().getIdentifier())
         // When building a template-id where the template-name is dependent,
@@ -4833,19 +4836,22 @@ ExprResult Sema::CheckVarTemplateId(
 }
 
 ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
-    const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
+    const DeclarationNameInfo &NameInfo, TemplateName Template,
     const TemplateArgumentListInfo *TemplateArgs) {
-  assert(Template && "A variable template id without template?");
+  TemplateTemplateParmDecl *Parameter =
+      Template.getAsTemplateTemplateParmDecl();
+  assert(Parameter && "A variable template id without template?");
 
-  if (Template->templateParameterKind() != TemplateNameKind::TNK_Var_template &&
-      Template->templateParameterKind() !=
+  if (Parameter->templateParameterKind() !=
+          TemplateNameKind::TNK_Var_template &&
+      Parameter->templateParameterKind() !=
           TemplateNameKind::TNK_Concept_template)
     return ExprResult();
 
   // Check that the template argument list is well-formed for this template.
   CheckTemplateArgumentInfo CTAI;
   if (CheckTemplateArgumentList(
-          Template, /*Template kw loc=*/{},
+          Parameter, /*Template kw loc=*/{},
           // FIXME: TemplateArgs will not be modified because
           // UpdateArgsWithConversions is false, however, we should
           // CheckTemplateArgumentList to be const-correct.
@@ -4854,8 +4860,8 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
           /*UpdateArgsWithConversions=*/false))
     return true;
 
-  return DependentTemplateIdExpr::Create(getASTContext(), NameInfo,
-                                         TemplateName(Template), *TemplateArgs);
+  return DependentTemplateIdExpr::Create(getASTContext(), NameInfo, Template,
+                                         *TemplateArgs);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
@@ -5000,8 +5006,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
     assert(TemplateKWLoc.isInvalid() &&
            "template keyword in front of a template parameter?");
     return CheckVarOrConceptTemplateTemplateId(
-        R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
-        TemplateArgs);
+        R.getLookupNameInfo(),
+        TemplateName(R.getAsSingle<TemplateTemplateParmDecl>()), TemplateArgs);
   }
 
   // Function templates

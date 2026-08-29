@@ -35,6 +35,8 @@
 
 namespace llvm {
 
+template <typename PtrTy> class SmallPtrSetIterator;
+
 /// SmallPtrSetImplBase - This is the common code shared among all the
 /// SmallPtrSet<>'s, which is almost everything.  SmallPtrSet has two modes, one
 /// for small and one for large sets.
@@ -56,7 +58,7 @@ namespace llvm {
 /// resized when the table is 2/3 or more.  When this happens, the table is
 /// doubled in size.
 class SmallPtrSetImplBase : public DebugEpochBase {
-  friend class SmallPtrSetIteratorImpl;
+  template <typename PtrTy> friend class SmallPtrSetIterator;
 
 protected:
   /// The current set of buckets, in either small or big representation.
@@ -276,37 +278,19 @@ private:
   void copyHelper(const SmallPtrSetImplBase &RHS);
 };
 
-/// SmallPtrSetIteratorImpl - This is the common base class shared between all
-/// instances of SmallPtrSetIterator.
-class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIteratorImpl
+/// This implements a const_iterator for SmallPtrSet.
+template <typename PtrTy>
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
     : public DebugEpochBase::HandleBase {
-public:
-  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E,
-                                   const DebugEpochBase &Epoch)
-      : DebugEpochBase::HandleBase(&Epoch), Bucket(BP), End(E) {
-    AdvanceIfNotValid();
-  }
+  using PtrTraits = PointerLikeTypeTraits<PtrTy>;
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate(),
+                         std::reverse_iterator<const void *const *>,
+                         const void *const *>;
 
-  bool operator==(const SmallPtrSetIteratorImpl &RHS) const {
-    return Bucket == RHS.Bucket;
-  }
-  bool operator!=(const SmallPtrSetIteratorImpl &RHS) const {
-    return Bucket != RHS.Bucket;
-  }
+  BucketItTy Bucket = {};
+  BucketItTy End = {};
 
-protected:
-  void *dereference() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Bucket < End);
-    return const_cast<void *>(*Bucket);
-  }
-  void increment() {
-    assert(isHandleInSync() && "invalid iterator access!");
-    ++Bucket;
-    AdvanceIfNotValid();
-  }
-
-private:
   /// AdvanceIfNotValid - If the current bucket isn't valid, advance to a bucket
   /// that is.   This is guaranteed to stop because the end() bucket is marked
   /// valid.
@@ -316,20 +300,6 @@ private:
       ++Bucket;
   }
 
-  using BucketItTy =
-      std::conditional_t<shouldReverseIterate(),
-                         std::reverse_iterator<const void *const *>,
-                         const void *const *>;
-
-  BucketItTy Bucket;
-  BucketItTy End;
-};
-
-/// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
-template <typename PtrTy>
-class SmallPtrSetIterator : public SmallPtrSetIteratorImpl {
-  using PtrTraits = PointerLikeTypeTraits<PtrTy>;
-
 public:
   using value_type = PtrTy;
   using reference = PtrTy;
@@ -337,23 +307,39 @@ public:
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 
-  using SmallPtrSetIteratorImpl::SmallPtrSetIteratorImpl;
+  SmallPtrSetIterator() = default;
 
-  // Most methods are provided by the base class.
+  SmallPtrSetIterator(const void *const *BP, const void *const *E,
+                      const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Bucket(BucketItTy(BP)),
+        End(BucketItTy(E)) {
+    AdvanceIfNotValid();
+  }
 
   [[nodiscard]] const PtrTy operator*() const {
-    return PtrTraits::getFromVoidPointer(dereference());
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Bucket < End);
+    return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
   }
 
   inline SmallPtrSetIterator &operator++() { // Preincrement
-    increment();
+    assert(isHandleInSync() && "invalid iterator access!");
+    ++Bucket;
+    AdvanceIfNotValid();
     return *this;
   }
 
   SmallPtrSetIterator operator++(int) { // Postincrement
     SmallPtrSetIterator tmp = *this;
-    increment();
+    ++*this;
     return tmp;
+  }
+
+  bool operator==(const SmallPtrSetIterator &RHS) const {
+    return Bucket == RHS.Bucket;
+  }
+  bool operator!=(const SmallPtrSetIterator &RHS) const {
+    return Bucket != RHS.Bucket;
   }
 };
 

@@ -78,7 +78,7 @@ func.func @load_nd_with_conflicting_tensor_desc_in_loop(%arg0: memref<64x64xf16>
       -> vector<16x16xf16>
     %3 = arith.addf %acc, %2 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
     scf.yield %3, %tdesc : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
-  } {layout_result_0 = #inst_data_8x16}
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
   xegpu.prefetch_nd %0 [%c0, %c0] <{layout = #inst_data_16x16}> : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   return
 }
@@ -220,7 +220,84 @@ func.func @conflict_inside_loop() {
     %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
     %2 = arith.addf %acc, %1 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
     scf.yield %2 : vector<16x16xf16>
-  } {layout_result_0 = #inst_data_8x16}
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  return
+}
+
+// The init operand already carries the loop-carried layout [8, 16], so it is passed
+// through unchanged. The body wants [16, 16], so the iter_arg is converted on the
+// way in and the result converted back to [8, 16] before the yield.
+// CHECK-LABEL: func.func @conflict_init_operand
+// CHECK:         %[[INIT:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<16x16xf16>
+// CHECK-NEXT:    scf.for {{.*}} iter_args(%[[ACC:.*]] = %[[INIT]]) -> (vector<16x16xf16>) {
+// CHECK-NEXT:      %[[CVT_IN:.*]] = xegpu.convert_layout %[[ACC]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK-NEXT:      %[[EXP:.*]] = math.exp %[[CVT_IN]] {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16x16xf16>
+// CHECK-NEXT:      %[[CVT_OUT:.*]] = xegpu.convert_layout %[[EXP]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:      scf.yield %[[CVT_OUT]] : vector<16x16xf16>
+// CHECK:         } {layout_operand_3 = #xegpu.layout<inst_data = [8, 16]>, layout_result_0 = #xegpu.layout<inst_data = [8, 16]>}
+func.func @conflict_init_operand() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %init = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %init) -> vector<16x16xf16> {
+    %1 = math.exp %acc {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+    scf.yield %1 : vector<16x16xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  return
+}
+
+// Nested loops carrying one value in two layouts: the outer loop carries [8, 16]
+// and the inner one [16, 16]. Both boundaries are region crossings, so the inner
+// init operand and the outer yield operand each need a convert_layout.
+// CHECK-LABEL: func.func @conflict_nested_loop_carried
+// CHECK:         scf.for {{.*}} iter_args(%[[OUTER_ACC:.*]] = %{{.*}}) -> (vector<16x16xf16>) {
+// CHECK:           %[[CVT_IN:.*]] = xegpu.convert_layout %[[OUTER_ACC]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK:           %[[INNER:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[CVT_IN]]) -> (vector<16x16xf16>) {
+// CHECK:           } {layout_operand_3 = #xegpu.layout<inst_data = [16, 16]>, layout_result_0 = #xegpu.layout<inst_data = [16, 16]>}
+// CHECK:           %[[CVT_OUT:.*]] = xegpu.convert_layout %[[INNER]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK:           scf.yield %[[CVT_OUT]] : vector<16x16xf16>
+// CHECK:         } {layout_operand_3 = #xegpu.layout<inst_data = [8, 16]>, layout_result_0 = #xegpu.layout<inst_data = [8, 16]>}
+func.func @conflict_nested_loop_carried() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%outer = %cst) -> vector<16x16xf16> {
+    %1 = scf.for %j = %c0 to %c4 step %c1 iter_args(%inner = %outer) -> vector<16x16xf16> {
+      %2 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+      %3 = arith.addf %inner, %2 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+      scf.yield %3 : vector<16x16xf16>
+    } {layout_operand_3 = #inst_data_16x16, layout_result_0 = #inst_data_16x16}
+    scf.yield %1 : vector<16x16xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  %4 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  return
+}
+
+// TODO: this scf.condition conflict is not resolved yet. The "after" region
+// argument is tied to no init operand, so it carries no layout for this pass to
+// read, and the [16, 16] value is left unconverted. Recording current behavior so
+// a fix surfaces as a test change.
+// CHECK-LABEL: func.func @negative_while_condition_operand
+// CHECK:         %[[V:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
+// CHECK-NEXT:    scf.condition(%{{.*}}) %[[V]] : vector<16x16xf16>
+// CHECK-NOT:     xegpu.convert_layout
+func.func @negative_while_condition_operand(%cond: i1) {
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.while (%before = %cst) : (vector<16x16xf16>) -> vector<16x16xf16> {
+    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+    scf.condition(%cond) %1 : vector<16x16xf16>
+  } do {
+  ^bb0(%after: vector<16x16xf16>):
+    %2 = math.exp %after {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+    scf.yield %2 : vector<16x16xf16>
+  } attributes {layout_operand_0 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }
 
@@ -248,7 +325,7 @@ func.func @conflict_postop() {
     %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
     %2 = arith.addf %acc, %1 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
     scf.yield %2 : vector<16x16xf16>
-  } {layout_result_0 = #inst_data_16x16}
+  } {layout_operand_3 = #inst_data_16x16, layout_result_0 = #inst_data_16x16}
   %1 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }

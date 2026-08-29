@@ -77,6 +77,9 @@ defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
+// C++29 compatibility with C++26 and earlier.
+defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
   defm cxx#std#_constexpr_body_invalid_stmt : CompatWarning<

@@ -639,6 +639,9 @@ public:
                                      NamedDecl *FirstQualifierInScope = nullptr,
                                      bool AllowInjectedClassName = false);
 
+  TemplateName TransformConceptTemplateName(TemplateName Name,
+                                            SourceLocation NameLoc);
+
   /// Transform the given template argument.
   ///
   /// By default, this operation transforms the type, expression, or
@@ -1143,11 +1146,10 @@ public:
   /// By default, builds a new AutoType with the given deduced type.
   QualType RebuildAutoType(DeducedKind DK, QualType DeducedAsType,
                            AutoTypeKeyword Keyword,
-                           ConceptDecl *TypeConstraintConcept,
+                           TemplateName TypeConstraintConcept,
                            ArrayRef<TemplateArgument> TypeConstraintArgs) {
-    return SemaRef.Context.getAutoType(DK, DeducedAsType, Keyword,
-                                       TemplateName(TypeConstraintConcept),
-                                       TypeConstraintArgs);
+    return SemaRef.Context.getAutoType(
+        DK, DeducedAsType, Keyword, TypeConstraintConcept, TypeConstraintArgs);
   }
 
   /// By default, builds a new DeducedTemplateSpecializationType with the given
@@ -1353,6 +1355,18 @@ public:
                                    bool Final) {
     return getSema().Context.getSubstTemplateTemplateParmPack(
         ArgPack, AssociatedDecl, Index, Final);
+  }
+
+  /// Build a new pack-index-template-name ([temp.names]).
+  ///
+  /// By default, performs semantic analysis to build the new template name.
+  /// Subclasses may override this routine to provide different behavior.
+  TemplateName
+  RebuildPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                                  bool FullySubstituted,
+                                  ArrayRef<TemplateName> Expansions = {}) {
+    return getSema().BuildPackIndexingTemplateName(
+        Pattern, IndexExpr, FullySubstituted, Expansions);
   }
 
   /// Build a new compound statement.
@@ -4976,6 +4990,101 @@ TemplateName TreeTransform<Derived>::TransformTemplateName(
         S->getFinal());
   }
 
+  if (PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate()) {
+    assert(!QualifierLoc && "Unexpected qualified pack-index-template-name");
+
+    ExprResult IndexExpr;
+    {
+      EnterExpressionEvaluationContext ConstantContext(
+          SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      IndexExpr = getDerived().TransformExpr(PI->getIndexExpr());
+      if (IndexExpr.isInvalid())
+        return TemplateName();
+    }
+
+    auto TransformOne = [&](TemplateName N) {
+      NestedNameSpecifierLoc NoQualifier;
+      return getDerived().TransformTemplateName(
+          NoQualifier, TemplateKWLoc, N, NameLoc, ObjectType,
+          FirstQualifierInScope, AllowInjectedClassName);
+    };
+
+    TemplateName Pattern = PI->getPattern();
+    SmallVector<TemplateName, 4> SubstitutedNames;
+    ArrayRef<TemplateName> Names = PI->getExpansions();
+
+    bool NotYetExpanded = Names.empty();
+    bool FullySubstituted = true;
+
+    if (Names.empty() && !PI->expandsToEmptyPack())
+      Names = ArrayRef(&Pattern, 1);
+
+    for (TemplateName N : Names) {
+      if (!N.containsUnexpandedParameterPack()) {
+        TemplateName Transformed = TransformOne(N);
+        if (Transformed.isNull())
+          return TemplateName();
+        SubstitutedNames.push_back(Transformed);
+        continue;
+      }
+
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      getSema().collectUnexpandedParameterPacks(N, Unexpanded);
+      assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
+
+      bool ShouldExpand = true;
+      bool RetainExpansion = false;
+      UnsignedOrNone NumExpansions = std::nullopt;
+      if (getDerived().TryExpandParameterPacks(
+              NameLoc, SourceRange(), Unexpanded,
+              /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+              RetainExpansion, NumExpansions))
+        return TemplateName();
+
+      if (!ShouldExpand) {
+        Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
+        TemplateName Pack = TransformOne(N);
+        if (Pack.isNull())
+          return TemplateName();
+        if (NotYetExpanded) {
+          FullySubstituted = false;
+          return getDerived().RebuildPackIndexingTemplateName(
+              Pack, IndexExpr.get(), FullySubstituted);
+        }
+        SubstitutedNames.push_back(Pack);
+        continue;
+      }
+
+      for (unsigned I = 0; I != *NumExpansions; ++I) {
+        Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
+        TemplateName Out = TransformOne(N);
+        if (Out.isNull())
+          return TemplateName();
+        SubstitutedNames.push_back(Out);
+        FullySubstituted &= !Out.containsUnexpandedParameterPack();
+      }
+
+      // If we're supposed to retain a pack expansion, do so by temporarily
+      // forgetting the partially-substituted parameter pack.
+      if (RetainExpansion) {
+        FullySubstituted = false;
+        ForgetPartiallySubstitutedPackRAII Forget(getDerived());
+        TemplateName Out = TransformOne(N);
+        if (Out.isNull())
+          return TemplateName();
+        SubstitutedNames.push_back(Out);
+      }
+    }
+
+    Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
+    TemplateName NewPattern = TransformOne(Pattern);
+    if (NewPattern.isNull())
+      return TemplateName();
+
+    return getDerived().RebuildPackIndexingTemplateName(
+        NewPattern, IndexExpr.get(), FullySubstituted, SubstitutedNames);
+  }
+
   assert(!Name.getAsDeducedTemplateName() &&
          "DeducedTemplateName should not escape partial ordering");
 
@@ -4997,6 +5106,15 @@ TemplateName TreeTransform<Derived>::TransformTemplateName(
 
   // These should be getting filtered out before they reach the AST.
   llvm_unreachable("overloaded function decl survived to here");
+}
+
+template <typename Derived>
+TemplateName
+TreeTransform<Derived>::TransformConceptTemplateName(TemplateName Name,
+                                                     SourceLocation NameLoc) {
+  NestedNameSpecifierLoc QualifierLoc;
+  return getDerived().TransformTemplateName(
+      QualifierLoc, /*TemplateKWLoc=*/SourceLocation(), Name, NameLoc);
 }
 
 template <typename Derived>
@@ -7566,14 +7684,15 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
       return QualType();
   }
 
-  ConceptDecl *NewCD = nullptr;
+  TemplateName NewCD;
   TemplateArgumentListInfo NewTemplateArgs;
   NestedNameSpecifierLoc NewNestedNameSpec;
   if (T->isConstrained()) {
     assert(TL.getConceptReference());
-    NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
-        TL.getConceptNameLoc(),
-        T->getTypeConstraintConcept().getAsTemplateDecl()));
+    NewCD = getDerived().TransformConceptTemplateName(
+        T->getTypeConstraintConcept(), TL.getConceptNameLoc());
+    if (NewCD.isNull())
+      return QualType();
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
@@ -7613,10 +7732,11 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   NewTL.setConceptReference(nullptr);
 
   if (T->isConstrained()) {
-    DeclarationName ConceptName = TL.getTypePtr()
-                                      ->getTypeConstraintConcept()
-                                      .getAsTemplateDecl()
-                                      ->getDeclName();
+    DeclarationName ConceptName =
+        SemaRef.Context
+            .getNameForTemplate(TL.getTypePtr()->getTypeConstraintConcept(),
+                                TL.getConceptNameLoc())
+            .getName();
     DeclarationNameInfo DNI =
         DeclarationNameInfo(ConceptName, TL.getConceptNameLoc(), ConceptName);
     auto *CR = ConceptReference::Create(
@@ -16567,21 +16687,20 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
     DependentTemplateIdExpr *E) {
 
-  NestedNameSpecifierLoc Loc;
-  TemplateName Name = getDerived().TransformTemplateName(
-      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
-      E->getNameLoc());
+  TemplateName Name = getDerived().TransformConceptTemplateName(
+      E->getTemplateName(), E->getNameLoc());
   if (Name.isNull())
     return ExprError();
-
-  TemplateDecl *TD = Name.getAsTemplateDecl();
-
-  assert(TD && "A dependent template id always refers to a template decl");
 
   TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
   if (getDerived().TransformTemplateArguments(
           E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
     return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+  if (!TD)
+    return SemaRef.CheckVarOrConceptTemplateTemplateId(E->getNameInfo(), Name,
+                                                       &TransArgs);
 
   CXXScopeSpec SS;
 

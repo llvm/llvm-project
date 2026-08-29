@@ -13,7 +13,7 @@
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"

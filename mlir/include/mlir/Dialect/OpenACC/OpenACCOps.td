@@ -1405,10 +1405,12 @@ def OpenACC_PrivateRecipeOp
          default initialization. The region has an argument that contains the
          original value that needs to be privatized, followed by bounds arguments
          (if any) in order from innermost to outermost dimension. The region
-         must yield the privatized copy.
+         must yield the privatized copy first and may yield additional values
+         that are used only for destruction.
       2. The destroy region specifies how to destruct the value when it reaches
          its end of life. It takes the original value, the privatized value, and
-         bounds arguments (if any) in the same order as the init region.
+         any additional destruction values yielded by the init region, followed
+         by bounds arguments (if any) in the same order as the init region.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1517,13 +1519,15 @@ def OpenACC_FirstprivateRecipeOp
          default initialization. The region has an argument that contains the
          original value that needs to be privatized, followed by bounds arguments
          (if any) in order from innermost to outermost dimension. The region must
-         yield the privatized copy.
+         yield the privatized copy first and may yield additional values that
+         are used only for destruction.
       2. The copy region specifies how to copy the initial value to the newly
          created private value. It takes the original value, the privatized
          value, followed by bounds arguments (if any) in the same order.
       3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the original value, the privatized value, and
-         bounds arguments (if any) in the same order. It is optional.
+         its end of life. It takes the original value, the privatized value, any
+         additional destruction values yielded by the init region, and bounds
+         arguments (if any) in the same order. It is optional.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.

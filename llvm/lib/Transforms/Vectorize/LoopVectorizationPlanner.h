@@ -872,8 +872,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis.
-  LoopVectorizationCostModel &CM;
+  /// The profitability analysis. Cleared after making cost based decisions.
+  std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -913,11 +913,20 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
+      std::unique_ptr<LoopVectorizationCostModel> CM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+
+  ~LoopVectorizationPlanner();
+
+  /// Return the cost model. Must not be called after clearCostModel().
+  LoopVectorizationCostModel &getCostModel() {
+    assert(CM && "Cost model has already been cleared");
+    return *CM;
+  }
+
+  /// Destroy the cost model.
+  void clearCostModel();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -981,9 +990,12 @@ public:
   /// \return A VPlan for the most profitable epilogue vectorization, with its
   /// VF narrowed to the chosen factor. The returned plan is a duplicate.
   /// Returns nullptr if epilogue vectorization is not supported or not
-  /// profitable for the loop.
-  std::unique_ptr<VPlan>
-  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
+  /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
+  /// epilogue lowering policy permits creating a scalar epilogue at all.
+  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
+                                                ElementCount MainLoopVF,
+                                                unsigned IC,
+                                                bool ScalarEpilogueAllowed);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);

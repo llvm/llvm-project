@@ -5749,8 +5749,8 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
   if (!TypeConstraintConcept.isNull()) {
-
-    assert(TypeConstraintConcept.getKind() == TemplateName::Template);
+    assert(TypeConstraintConcept.isConceptName() &&
+           "type-constraint does not name a concept");
 
     auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 

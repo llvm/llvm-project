@@ -126,6 +126,9 @@ public:
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
+
+private:
+  OptionValueProperties *GetExperimentalProperties() const;
 };
 
 // ProcessAttachInfo

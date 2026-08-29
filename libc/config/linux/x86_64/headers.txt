@@ -55,6 +55,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_ioctl
     libc.include.sys_ipc
     libc.include.sys_mman
+    libc.include.sys_mount
     libc.include.sys_param
     libc.include.sys_personality
     libc.include.sys_poll

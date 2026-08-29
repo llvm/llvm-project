@@ -1310,20 +1310,34 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
 
 std::optional<int64_t>
 SIInstrInfo::getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
-                                     MachineOperand &Op) const {
+                                     const MachineOperand &Op,
+                                     MachineInstr **DefMI) const {
+  if (DefMI)
+    *DefMI = nullptr;
+
   if (Op.isImm())
     return Op.getImm();
 
   if (!Op.isReg() || !Op.getReg().isVirtual())
     return std::nullopt;
-  const MachineInstr *Def = MRI.getVRegDef(Op.getReg());
+  MachineInstr *Def = MRI.getUniqueVRegDef(Op.getReg());
   if (Def && Def->isMoveImmediate()) {
     const MachineOperand &ImmSrc = Def->getOperand(1);
-    if (ImmSrc.isImm())
+    if (ImmSrc.isImm()) {
+      if (DefMI)
+        *DefMI = Def;
       return extractSubregFromImm(ImmSrc.getImm(), Op.getSubReg());
+    }
   }
 
   return std::nullopt;
+}
+
+std::optional<int64_t>
+SIInstrInfo::getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                                     Register Reg, MachineInstr **DefMI) const {
+  MachineOperand Op = MachineOperand::CreateReg(Reg, false);
+  return getImmOrMaterializedImm(MRI, Op, DefMI);
 }
 
 unsigned SIInstrInfo::getMovOpcode(const TargetRegisterClass *DstRC) const {
@@ -4241,29 +4255,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   return false;
 }
 
-static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
-                           int64_t &Imm, MachineInstr **DefMI = nullptr) {
-  if (Reg.isPhysical())
-    return false;
-  auto *Def = MRI.getUniqueVRegDef(Reg);
-  if (Def && SIInstrInfo::isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
-    Imm = Def->getOperand(1).getImm();
-    if (DefMI)
-      *DefMI = Def;
-    return true;
-  }
-  return false;
-}
-
-static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
-                           MachineInstr **DefMI = nullptr) {
-  if (!MO->isReg())
-    return false;
-  const MachineFunction *MF = MO->getParent()->getMF();
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  return getFoldableImm(MO->getReg(), MRI, Imm, DefMI);
-}
-
 static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
                                 MachineInstr &NewMI) {
   if (LV) {
@@ -4528,39 +4519,40 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI = nullptr;
-
+    const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    std::optional<int64_t> ImmOpt;
     int64_t Imm;
-    if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
+
+    if (!Src0Literal &&
+        (ImmOpt = getImmOrMaterializedImm(MRI, *Src2, &DefMI))) {
       unsigned NewOpc = getNewFMAAKInst(ST, Opc);
       if (pseudoToMCOpcode(NewOpc) != -1) {
         MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
                   .add(*Src0)
                   .add(*Src1)
-                  .addImm(Imm)
+                  .addImm(*ImmOpt)
                   .setMIFlags(MI.getFlags());
         U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
     unsigned NewOpc = getNewFMAMKInst(ST, Opc);
-    if (!Src0Literal && getFoldableImm(Src1, Imm, &DefMI)) {
+    if (!Src0Literal &&
+        (ImmOpt = getImmOrMaterializedImm(MRI, *Src1, &DefMI))) {
       if (pseudoToMCOpcode(NewOpc) != -1) {
         MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                   .add(*Dst)
                   .add(*Src0)
-                  .addImm(Imm)
+                  .addImm(*ImmOpt)
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
         U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
-    if (Src0Literal || getFoldableImm(Src0, Imm, &DefMI)) {
-      if (Src0Literal) {
-        Imm = Src0->getImm();
-        DefMI = nullptr;
-      }
+    if ((ImmOpt = getImmOrMaterializedImm(MRI, *Src0, &DefMI))) {
+      Imm = *ImmOpt;
       if (pseudoToMCOpcode(NewOpc) != -1 &&
           isOperandLegal(
               MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
@@ -11513,12 +11505,13 @@ static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
     return false;
   const MachineOperand &AddSrc1 = Def.getOperand(1);
   const MachineOperand &AddSrc2 = Def.getOperand(2);
-  int64_t addend;
+  const MachineRegisterInfo &MRI = Def.getMF()->getRegInfo();
+  const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(
+      Def.getMF()->getSubtarget().getInstrInfo());
 
-  if ((!AddSrc1.isImm() || AddSrc1.getImm() != 1) &&
-      (!AddSrc2.isImm() || AddSrc2.getImm() != 1) &&
-      (!getFoldableImm(&AddSrc1, addend) || addend != 1) &&
-      (!getFoldableImm(&AddSrc2, addend) || addend != 1))
+  auto Imm1 = TII->getImmOrMaterializedImm(MRI, AddSrc1);
+  auto Imm2 = TII->getImmOrMaterializedImm(MRI, AddSrc2);
+  if ((!Imm1 || *Imm1 != 1) && (!Imm2 || *Imm2 != 1))
     return false;
 
   if (Def.getOpcode() == AMDGPU::S_ADD_I32) {
@@ -11539,8 +11532,12 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (!SrcReg || SrcReg.isPhysical())
     return false;
 
-  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
-    return false;
+  if (SrcReg2) {
+    auto ImmOpt = getImmOrMaterializedImm(*MRI, SrcReg2);
+    if (!ImmOpt)
+      return false;
+    CmpValue = *ImmOpt;
+  }
 
   const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
                                   this](bool NeedInversion) -> bool {
@@ -11643,11 +11640,12 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     int64_t Mask;
-    const auto isMask = [&Mask, SrcSize](const MachineOperand *MO) -> bool {
-      if (MO->isImm())
-        Mask = MO->getImm();
-      else if (!getFoldableImm(MO, Mask))
+    const auto isMask = [&Mask, SrcSize, MRI,
+                         this](const MachineOperand *MO) -> bool {
+      auto ImmOpt = this->getImmOrMaterializedImm(*MRI, *MO);
+      if (!ImmOpt)
         return false;
+      Mask = *ImmOpt;
       Mask &= maxUIntN(SrcSize);
       return isPowerOf2_64(Mask);
     };

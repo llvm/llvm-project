@@ -127,15 +127,17 @@ static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
                                        StringRef name) {
   StringRef placeholder = acc::getVarNamePlaceholder();
   for (auto it = block->begin(); it != std::next(ip); ++it) {
-    auto attr = it->getDiscardableAttrOfType<acc::VarNameAttr>(
-        acc::getVarNameAttrName());
-    if (attr && attr.getName() == placeholder) {
+    it->walk([&](Operation *op) {
+      auto attr = op->getDiscardableAttrOfType<acc::VarNameAttr>(
+          acc::getVarNameAttrName());
+      if (!attr || attr.getName() != placeholder)
+        return;
       if (name.empty())
-        it->removeDiscardableAttr(acc::getVarNameAttrName());
+        op->removeDiscardableAttr(acc::getVarNameAttrName());
       else
-        it->setDiscardableAttr(acc::getVarNameAttrName(),
-                               acc::VarNameAttr::get(it->getContext(), name));
-    }
+        op->setDiscardableAttr(acc::getVarNameAttrName(),
+                               acc::VarNameAttr::get(op->getContext(), name));
+    });
   }
 }
 
@@ -301,7 +303,7 @@ LogicalResult ACCRecipeMaterialization::materialize(
     Block *block = &region.front();
     auto [results, ip] = acc::cloneACCRegionInto(
         &initRegion, block, block->begin(), mapping, {accPtr});
-    assert(results.size() == 1 && "expected single result from init region");
+    assert(!results.empty() && "expected a result from init region");
     saveVarName(op.getAccVar(), results[0]);
     resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // Clone the destroy region for a private, if it exists.
@@ -315,23 +317,26 @@ LogicalResult ACCRecipeMaterialization::materialize(
     Block *block = &region.front();
     auto [results, ip] = acc::cloneACCRegionInto(
         &initRegion, block, block->begin(), mapping, {accPtr});
-    assert(results.size() == 1 && "expected single result from init region");
+    assert(!results.empty() && "expected a result from init region");
     saveVarName(op.getAccVar(), results[0]);
     resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
-    // We want the copy to store the origPtr to private
-    results.insert(results.begin(), origPtr);
-    results.append(triples);
+    // The copy only consumes the original and user-visible private value.
+    SmallVector<Value> copyArgs{origPtr, results.front()};
+    copyArgs.append(triples);
+    // Destruction also consumes any cleanup values yielded by init.
+    SmallVector<Value> destroyArgs{origPtr};
+    destroyArgs.append(results);
+    destroyArgs.append(triples);
 
     // Clone the copy region for a firstprivate
     mapping.clear();
-    mapping.map(recipe.getCopyRegion().front().getArguments(), results);
+    mapping.map(recipe.getCopyRegion().front().getArguments(), copyArgs);
     // Clone the copy region for a firstprivate.
     Region &copyRegion = recipe.getCopyRegion();
     setLocation(copyRegion, loc);
     acc::cloneACCRegionInto(&copyRegion, block, std::next(ip), mapping, {});
     if (!recipe.getDestroyRegion().empty()) {
-      // origPtr was already pushed.
-      cloneDestroy(loc, recipe, block, std::prev(block->end()), results);
+      cloneDestroy(loc, recipe, block, std::prev(block->end()), destroyArgs);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,

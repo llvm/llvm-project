@@ -2269,6 +2269,80 @@ uint32x2_t test_pwcvtu_u32x2(uint16x2_t rs1) {
   return __riscv_pwcvtu_u32x2(rs1);
 }
 
+// CHECK-LABEL: test_pwadd_i16x4:
+// RV32:        pwadd.b
+// RV64:        zip8p
+// RV64:        psrai.h
+// RV64:        psext.h.b
+// RV64:        padd.h
+int16x4_t test_pwadd_i16x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pwadd_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwadd_i32x2:
+// RV32:        pwadd.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2add.h
+int32x2_t test_pwadd_i32x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pwadd_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwaddu_u16x4:
+// RV32:        pwaddu.b
+// RV64:        pwcvtu.wb
+// RV64:        pwcvtu.wb
+// RV64:        padd.h
+uint16x4_t test_pwaddu_u16x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pwaddu_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwaddu_u32x2:
+// RV32:        pwaddu.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2addu.h
+uint32x2_t test_pwaddu_u32x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwaddu_u32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsub_i16x4:
+// RV32:        pwsub.b
+// RV64:        zip8p
+// RV64:        psrai.h
+// RV64:        psext.h.b
+// RV64:        psub.h
+int16x4_t test_pwsub_i16x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pwsub_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsub_i32x2:
+// RV32:        pwsub.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2sub.h
+int32x2_t test_pwsub_i32x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pwsub_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsubu_u16x4:
+// RV32:        pwsubu.b
+// RV64:        pwcvtu.wb
+// RV64:        pwcvtu.wb
+// RV64:        psub.h
+uint16x4_t test_pwsubu_u16x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pwsubu_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsubu_u32x2:
+// RV32:        pwsubu.h
+// RV64:        pwcvtu.wh
+// RV64:        pwcvtu.wh
+// RV64:        psub.w
+uint32x2_t test_pwsubu_u32x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwsubu_u32x2(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pwcvth_i16x4:
 // RV32:        pwcvth.b
 // RV64:        pwcvth.wb

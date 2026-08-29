@@ -846,6 +846,8 @@ UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 uint64_t
 UnionType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                            ::mlir::DataLayoutEntryListRef params) const {
+  if (getPacked())
+    return 1;
   mlir::Type storage = getUnionStorageType(dataLayout);
   if (!storage)
     return 1;
@@ -1029,7 +1031,24 @@ void IntType::print(mlir::AsmPrinter &printer) const {
 llvm::TypeSize
 IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                            mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getWidth());
+  return llvm::TypeSize::getFixed(getStorageTypeWidth(dataLayout));
+}
+
+unsigned
+IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
+  if (!isBitInt())
+    return getWidth();
+  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
+}
+
+uint64_t
+IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
+  if (!isBitInt())
+    return getABIAlignment(dataLayout, {});
+  auto storageTy =
+      mlir::IntegerType::get(getContext(), getStorageTypeWidth(dataLayout));
+  return dataLayout.getTypeABIAlignment(storageTy);
 }
 
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,

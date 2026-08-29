@@ -202,11 +202,8 @@ public:
                          StringRef Asm, StringRef Default = "");
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                          char Asm);
+
 protected:
-  void printAbs(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printClamp(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
   void printOModSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printLiteral(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

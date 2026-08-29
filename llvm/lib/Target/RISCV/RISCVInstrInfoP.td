@@ -1883,6 +1883,16 @@ def riscv_pmulsu_halves_00
 def riscv_pmulsu_halves_11
     : RVSDNode<"PMULSU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
 
+def SDT_RISCVPM2Halfword
+    : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
+                           SDTCisVT<1, v4i16>,
+                           SDTCisSameAs<1, 2>]>;
+def riscv_pm2add_h
+    : RVSDNode<"PM2ADD_H", SDT_RISCVPM2Halfword, [SDNPCommutative]>;
+def riscv_pm2addu_h
+    : RVSDNode<"PM2ADDU_H", SDT_RISCVPM2Halfword, [SDNPCommutative]>;
+def riscv_pm2sub_h : RVSDNode<"PM2SUB_H", SDT_RISCVPM2Halfword>;
+
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisSameAs<0, 2>,
@@ -2430,6 +2440,24 @@ let append Predicates = [IsRV32] in {
                      zexti16:$rs1)),
             (PACK zexti16:$rs1,
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
+
+  // Packed widening addition and subtraction patterns.
+  def : Pat<(v4i16 (add (sext (v4i8 GPR:$rs1)), (sext (v4i8 GPR:$rs2)))),
+            (PWADD_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (add (sext (v2i16 GPR:$rs1)), (sext (v2i16 GPR:$rs2)))),
+            (PWADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (add (zext (v4i8 GPR:$rs1)), (zext (v4i8 GPR:$rs2)))),
+            (PWADDU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (add (zext (v2i16 GPR:$rs1)), (zext (v2i16 GPR:$rs2)))),
+            (PWADDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (sub (sext (v4i8 GPR:$rs1)), (sext (v4i8 GPR:$rs2)))),
+            (PWSUB_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (sub (sext (v2i16 GPR:$rs1)), (sext (v2i16 GPR:$rs2)))),
+            (PWSUB_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (sub (zext (v4i8 GPR:$rs1)), (zext (v4i8 GPR:$rs2)))),
+            (PWSUBU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (sub (zext (v2i16 GPR:$rs1)), (zext (v2i16 GPR:$rs2)))),
+            (PWSUBU_H GPR:$rs1, GPR:$rs2)>;
 
   // Packed widening multiply patterns.
   def : Pat<(v4i16 (riscv_pwmul (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
@@ -3026,6 +3054,14 @@ let append Predicates = [IsRV64] in {
             (PMULSU_W_H00 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pmulsu_halves_11 (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMULSU_W_H11 GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(v2i32 (riscv_pm2add_h (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PM2ADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2addu_h (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PM2ADDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2sub_h (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PM2SUB_H GPR:$rs1, GPR:$rs2)>;
+
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
   def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;

@@ -226,6 +226,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
     IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
     IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
@@ -1725,6 +1726,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterFunction=*/false,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
+                            /*AfterRequiresExpression=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
                             /*AfterExportBlock=*/false,
@@ -1767,6 +1769,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExportBlock = true;
@@ -1783,6 +1786,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
@@ -1798,6 +1802,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterFunction=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
+        /*AfterRequiresExpression=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
         /*AfterExportBlock=*/true,
@@ -1901,6 +1906,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterFunction=*/false,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
+                             /*AfterRequiresExpression=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
                              /*AfterExportBlock=*/false,
