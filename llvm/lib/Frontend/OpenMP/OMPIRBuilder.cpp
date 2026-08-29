@@ -8603,8 +8603,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
       hasGridValue(T)) {
     // An out-of-range bound is dropped rather than clamped, so clamp it here.
     const omp::GV &GridValue = getGridValue(T, Kernel);
-    MaxThreadsVal = std::min(MaxThreadsVal + int32_t(GridValue.GV_Warp_Size),
-                             int32_t(GridValue.GV_Max_WG_Size));
+    // A thread_limit near the top of the range would overflow the addition, so
+    // widen it and clamp before narrowing back.
+    MaxThreadsVal = int32_t(std::min<int64_t>(
+        int64_t(MaxThreadsVal) + int64_t(GridValue.GV_Warp_Size),
+        int64_t(GridValue.GV_Max_WG_Size)));
   }
 
   if (MaxThreadsVal > 0)
