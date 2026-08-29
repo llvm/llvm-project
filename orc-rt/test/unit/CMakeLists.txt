@@ -46,6 +46,8 @@ add_orc_rt_unittest(CoreTests
   support/sps/SPSWrapperFunctionTest.cpp
   support/sps/SimplePackedSerializationTest.cpp
 
+  support/sys/ErrnoTest.cpp
+
   bedrock/BootstrapInfoTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
