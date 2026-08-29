@@ -10,6 +10,7 @@
 
 #include <__assert>
 #include <__config>
+#include <csignal>
 #include <debugging>
 
 #if defined(_WIN32)
