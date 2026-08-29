@@ -1342,19 +1342,41 @@ def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 
-// An 'fmul' node which has contract flag
-def fmul_contract : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b),[{
-  return N->getFlags().hasAllowContract();
-}]>;
+// A node the target may contract, because it carries the flag or because the
+// whole function opted in with -fp-contract=fast
+class ContractablePatFrag<dag ops, dag frag> : PatFrag<ops, frag, [{
+  return N->getFlags().hasAllowContract() ||
+         TM.Options.AllowFPOpFusion == FPOpFusion::Fast;
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmContract) ||
+           MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+  }];
+}
+
+// An 'fmul' node the target may contract
+def fmul_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fmul node:$a, node:$b)>;
 
 // An 'fadd' node which can be contracted with fmul_contract into a fma or other relaxed instruction
-def fadd_contract : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
-  return N->getFlags().hasAllowContract();
-}]>;
+def fadd_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fadd node:$a, node:$b)>;
 
-def fsub_contract : PatFrag<(ops node:$a, node:$b), (fsub node:$a, node:$b),[{
-  return N->getFlags().hasAllowContract();
-}]>;
+// An 'fsub' node the target may contract
+def fsub_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fsub node:$a, node:$b)>;
+
+// An 'fma' node the target may contract
+def fma_contract : ContractablePatFrag<(ops node:$a, node:$b, node:$c),
+                                       (fma node:$a, node:$b, node:$c)>;
+
+// An 'fmad' node the target may contract
+def fmad_contract : ContractablePatFrag<(ops node:$a, node:$b, node:$c),
+                                        (fmad node:$a, node:$b, node:$c)>;
+
+// An 'fpround' node the target may contract
+def fpround_contract : ContractablePatFrag<(ops node:$src),
+                                           (fpround node:$src)>;
 
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
