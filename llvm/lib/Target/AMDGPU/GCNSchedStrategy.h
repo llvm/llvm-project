@@ -74,6 +74,13 @@ protected:
   bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                            SchedBoundary *Zone) const;
 
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+  void updateFragmentWindow(SUnit *SU, bool IsTopNode);
+
+  void resetFragmentWindows();
+
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
 
@@ -110,7 +117,117 @@ protected:
 
   bool UseGCNTrackers = false;
 
+  bool EnableMFMAFragmentScheduler = false;
+
   std::optional<bool> GCNTrackersOverride;
+
+  struct FragmentWindowState {
+    // Number of scheduled DS_READ fragments whose MFMA uses have not yet been
+    // scheduled from this boundary.
+    unsigned LiveFragments = 0;
+    // Prefer draining at four live fragments. Permit two extra fragments only
+    // to finish a two-read microcluster or attach an odd tail read to it.
+    unsigned UsefulWindow = 4;
+    unsigned MaxWindow = 6;
+
+    // State used to enforce DS/DS microclusters and count unrelated MFMAs
+    // between a DS_READ and its first consumer.
+    const SUnit *LastDSRead = nullptr;
+    unsigned MFMAsSinceLastDSRead = 0;
+    unsigned UnrelatedMFMAsSinceLastDSRead = 0;
+    unsigned DSReadsSinceLastMFMA = 0;
+
+    // Ramp-up ends after the first two MFMAs. Steady state begins after the
+    // first two post-opener DS microclusters have been drained.
+    unsigned PickedMFMAs = 0;
+    unsigned CompletedDSMicroclusters = 0;
+
+    // For each recent DS_READ, count MFMAs that do not consume it. Entries are
+    // removed once the required spacing is reached or a consumer is issued.
+    DenseMap<const SUnit *, unsigned> RecentDSReadUnrelatedMFMAs;
+
+    // Bottom-up scheduling sees consumers before producers. Track how many
+    // unrelated MFMAs have already been reserved ahead of each deferred read.
+    DenseMap<const SUnit *, unsigned> DeferredDSReadFillers;
+    bool LastPickWasDSRead = false;
+    bool HasPickedMFMA = false;
+  };
+
+  /// Apply the DS_READ/MFMA policy in precedence order. Each subordinate try*
+  /// routine either selects one candidate and records its reason, or returns
+  /// false without changing the comparison. Generic latency and node-order
+  /// heuristics run only when none of these fragment rules has a preference.
+  bool tryMFMAFragmentCandidate(SchedCandidate &TryCand, SchedCandidate &Cand,
+                                SchedBoundary &Zone,
+                                const FragmentWindowState &FWS,
+                                bool EnablePrologueSetupBias) const;
+
+  /// Hide the maturity window of recently issued DS_READs and form the
+  /// repeating two-read/two-MFMA pipeline. In particular, avoid consuming a
+  /// recent read while an unrelated MFMA can issue, finish a two-read
+  /// microcluster, and then drain enough MFMAs before starting the next pair:
+  ///
+  ///   DS4 MFMA(DS4) DS5 MFMA  ->  DS4 DS5 MFMA(unrelated) MFMA(...)
+  ///
+  /// A non-memory filler may take an otherwise exposed slot. Another buffered
+  /// load may not: it creates a new maturity obligation not modeled here.
+  bool tryMFMASteadyState(SchedCandidate &TryCand, SchedCandidate &Cand,
+                          SchedBoundary &Zone, const FragmentWindowState &FWS,
+                          unsigned EffectiveMaxWindow) const;
+
+  /// Build a bounded four-read opener before the first MFMA. Prefer useful
+  /// address setup and other non-memory setup once the reads are available,
+  /// but do not admit a fifth read before beginning to drain the window:
+  ///
+  ///   DS0 DS1 DS2 DS3 DS4 DS5 MFMA0
+  ///                ->
+  ///   DS0 DS1 DS2 DS3 <setup> MFMA0 DS4 DS5
+  bool tryMFMAFragmentOpener(SchedCandidate &TryCand, SchedCandidate &Cand,
+                             SchedBoundary &Zone,
+                             const FragmentWindowState &FWS,
+                             bool EnablePrologueSetupBias) const;
+
+  /// Order two DS_READ producers by how close each is to unlocking an MFMA.
+  /// Prefer fewer remaining unscheduled DS predecessors, then use stable DAG
+  /// properties as deterministic tie-breakers. This prevents breadth-first
+  /// selection from constructing a long prologue of unrelated reads.
+  bool tryMFMAProducerOrder(SchedCandidate &TryCand, SchedCandidate &Cand,
+                            SchedBoundary &Zone) const;
+
+  /// Handle MFMA issue stalls and the hard live-fragment cap. A ready producer
+  /// may occupy a short MFMA resource stall when the fragment window has room:
+  ///
+  ///   MFMA(stalled) <idle>  ->  DS(next pair) MFMA
+  ///
+  /// Otherwise prefer draining an MFMA instead of extending an overfull
+  /// fragment window. Register-pressure criteria have already run before this
+  /// policy, so this rule cannot override spilling or critical pressure.
+  bool tryMFMAResourceStall(SchedCandidate &TryCand, SchedCandidate &Cand,
+                            SchedBoundary &Zone, const FragmentWindowState &FWS,
+                            unsigned EffectiveMaxWindow) const;
+
+  /// Apply the final window-shape preferences after the more specific rules
+  /// decline: avoid pending MFMAs, fill an underfull useful window with a
+  /// producer, drain a full useful window with a ready MFMA, and reject another
+  /// producer at the hard maximum. This is deliberately last because it knows
+  /// only the window shape, not which choice best hides a particular read.
+  bool tryMFMAWindowFallback(SchedCandidate &TryCand, SchedCandidate &Cand,
+                             SchedBoundary &Zone,
+                             const FragmentWindowState &FWS,
+                             unsigned EffectiveUsefulWindow,
+                             unsigned EffectiveMaxWindow) const;
+
+  /// Protect an incumbent chosen by the fragment policy when subsequent
+  /// generic candidate comparisons revisit the same boundary. This mirrors
+  /// the steady-state preferences that would otherwise be lost merely because
+  /// the preferred node became Cand rather than TryCand.
+  bool shouldKeepMFMAFragmentCandidate(SchedCandidate &TryCand,
+                                       SchedCandidate &Cand,
+                                       SchedBoundary &Zone,
+                                       const FragmentWindowState &FWS) const;
+
+  FragmentWindowState TopFragmentWindow;
+  FragmentWindowState BotFragmentWindow;
 
 public:
   // schedule() have seen register pressure over the critical limits and had to
