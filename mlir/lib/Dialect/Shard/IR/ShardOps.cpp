@@ -1085,6 +1085,17 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
     ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (splitAxis < 0 || splitAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "Split axis " << splitAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
+  if (concatAxis < 0 || concatAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "Concat axis " << concatAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if ((axis != splitAxis && axis != concatAxis) || splitAxis == concatAxis) {
       if (failed(verifyDimensionCompatibility(
@@ -1130,6 +1141,12 @@ static LogicalResult verifyScatterOrSliceOperandAndResultShape(
     ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (tensorAxis < 0 || tensorAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "Tensor axis " << tensorAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if (axis != tensorAxis) {
       if (failed(verifyDimensionCompatibility(
