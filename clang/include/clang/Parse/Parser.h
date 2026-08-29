@@ -2338,7 +2338,7 @@ private:
   }
 
   bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs,
-                                     bool IsStmtContext = false) {
+                                     bool IsStmtContext) {
     bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {

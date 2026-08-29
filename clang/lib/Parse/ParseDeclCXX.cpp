@@ -2791,7 +2791,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   while (MaybeParseCXX11Attributes(DeclAttrs) ||
          MaybeParseGNUAttributes(DeclSpecAttrs, &CommonLateParsedAttrs) ||
-         MaybeParseMicrosoftAttributes(DeclSpecAttrs))
+         MaybeParseMicrosoftAttributes(DeclSpecAttrs, /*IsStmtContext=*/false))
     ;
 
   SourceLocation DeclStart;
