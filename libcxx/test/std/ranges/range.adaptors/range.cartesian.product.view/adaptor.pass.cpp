@@ -36,6 +36,10 @@ static_assert(std::is_invocable_v<decltype((std::views::cartesian_product)), Sim
 static_assert(!std::is_invocable_v<decltype((std::views::cartesian_product)), SimpleCommon, int>);
 static_assert(!std::is_invocable_v<decltype((std::views::cartesian_product)), OutputOnly>);
 
+// views::cartesian_product is a customization point object, not a range adaptor object, so it is not pipeable.
+static_assert(!CanBePiped<SimpleCommon&, decltype((std::views::cartesian_product))>);
+static_assert(!CanBePiped<int (&)[10], decltype((std::views::cartesian_product))>);
+
 static_assert(std::same_as<decltype(std::views::cartesian_product), decltype(std::ranges::views::cartesian_product)>);
 
 // views::cartesian_product(args) is expression-equivalent to the expression it returns.
