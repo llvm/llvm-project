@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "clang/Basic/OffloadArch.h"
-#include "clang/Basic/TargetID.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Options/Options.h"
@@ -45,10 +43,14 @@ static std::string normalizeForBundler(const llvm::Triple &OrigT,
                                        StringRef BoundArch) {
   llvm::Triple T(OrigT);
   bool HasTargetID = !BoundArch.empty();
-  if (T.getSubArch() == llvm::Triple::NoSubArch && HasTargetID) {
-    llvm::Triple::SubArchType SubArch = getOffloadArchSubArch(
-        StringToOffloadArch(getProcessorFromTargetID(T, BoundArch)));
-    T.setArch(T.getArch(), SubArch);
+
+  // FIXME: Short-term hack. The HIP runtime hardcodes the legacy
+  // "amdgcn-amd-amdhsa--" prefix when parsing the target IDs embedded in the
+  // fatbin bundle, so force it.
+  if (HasTargetID && T.isAMDGCN()) {
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
   }
 
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +

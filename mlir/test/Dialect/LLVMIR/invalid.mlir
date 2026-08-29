@@ -2105,6 +2105,67 @@ llvm.func @invalid_xevm_extf_2(%arg0: i8) {
 
 // -----
 
+llvm.func @invalid_xevm_bitcast_shuffle_1(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<8xi16>
+  llvm.return
+}
+
+// -----
+
+// Only a pack and an unpack are supported, a vector to vector repack is not.
+llvm.func @invalid_xevm_bitcast_shuffle_repack(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<4xi32>
+  llvm.return
+}
+
+// -----
+
+// Neither is a plain scalar to scalar bitcast.
+llvm.func @invalid_xevm_bitcast_shuffle_scalar(%arg0: i32) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (i32) -> i32
+  llvm.return
+}
+
+// -----
+
+// The op is bit-preserving and only accepts integer types; a producer holding
+// floating point data bitcasts it to a same-width integer beforehand.
+llvm.func @invalid_xevm_bitcast_shuffle_float_res(%arg0: vector<2xi16>) {
+  // expected-error@+1 {{op result #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<2xi16>) -> f32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_float_elem(%arg0: vector<4xbf16>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<4xbf16>) -> i64
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_2(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op src and res types must have the same total bit width}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> i64
+  llvm.return
+}
+
+// -----
+
+// The shuffle operates at byte granularity, sub-byte element types are invalid.
+llvm.func @invalid_xevm_bitcast_shuffle_3(%arg0: vector<8xi4>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi4>) -> vector<4xi8>
+  llvm.return
+}
+
+// -----
+
 llvm.func @invalid_xevm_mma_mx(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>, %scale_a: vector<2xi8>, %scale_b: vector<2xi8>) -> vector<8xf32> {
   // expected-error@+1 {{op type of C operand must match result type}}
   %c_result = xevm.mma_mx %loaded_a, %loaded_b_casted, %scale_a, %scale_b, %loaded_c_casted { shape=<m=8, n=16, k=64>,
