@@ -2672,7 +2672,7 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
 }
 
 void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
-  OS << Node->getNameInfo();
+  Node->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
   printTemplateArgumentList(OS, Node->template_arguments(), Policy,
                             Node->getParameter()->getTemplateParameters());
 }
