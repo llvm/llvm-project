@@ -496,6 +496,10 @@ features cannot lower the translation-unit ABI level;
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
 
+- Fixed an assertion failure when a parenthesized structured binding declarator
+  was followed by a function declarator and body (e.g. ``([a, b])() {}``).
+  (#GH218144, #GH193687)
+
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
@@ -535,10 +539,6 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
-
-- Fixed an assertion failure when a parenthesized structured binding declarator
-  was followed by a function declarator and body (e.g. ``([a, b])() {}``).
-  (#GH218144, #GH193687)
 
 #### Bug Fixes to AST Handling
 
