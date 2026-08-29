@@ -600,10 +600,7 @@ entry:
 define i8 @test_mask_implied_equal(i8 %x) {
 ; CHECK-LABEL: @test_mask_implied_equal(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 13
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK]], 0
-; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2]], i8 1, i8 2
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %x, 13
@@ -617,10 +614,7 @@ define i8 @test_mask_implied_equal(i8 %x) {
 define i8 @test_mask_implied_swapped_equal(i8 %x) {
 ; CHECK-LABEL: @test_mask_implied_swapped_equal(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 13
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK]], 0
-; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2]], i8 1, i8 2
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %x, 13
@@ -651,10 +645,7 @@ define i8 @test_mask_no_implication_fail(i8 %x) {
 define i8 @test_mask_boundary_true(i8 %x) {
 ; CHECK-LABEL: @test_mask_boundary_true(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 16
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK]], 0
-; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2]], i8 1, i8 2
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %x, 16
@@ -685,10 +676,7 @@ define i8 @test_mask_boundary_fail(i8 %x) {
 define <2 x i8> @test_mask_splat_true(<2 x i8> %x) {
 ; CHECK-LABEL: @test_mask_splat_true(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[X:%.*]], splat (i8 13)
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i8> [[X]], splat (i8 16)
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i8> [[MASK]], zeroinitializer
-; CHECK-NEXT:    [[INNER:%.*]] = select <2 x i1> [[CMP2]], <2 x i8> splat (i8 1), <2 x i8> splat (i8 2)
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i8> [[INNER]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[CMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %cmp1 = icmp ult <2 x i8> %x, splat (i8 13)
