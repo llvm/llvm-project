@@ -1,4 +1,4 @@
-//===- NativeMemoryAPIs.inc -------------------------------------*- C++ -*-===//
+//===- Memory.cpp - POSIX system memory operations -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,46 +6,38 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic wrappers for unix-style memory APIs (mmap, mprotect, etc.).
+// Implementation of orc-rt-internal/support/sys/Memory.h on POSIX
+// systems, in terms of mmap / munmap / mprotect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/Error.h"
-#include "orc-rt/support/MemoryFlags.h"
+#include "orc-rt-internal/support/sys/Memory.h"
+
+#include "orc-rt-internal/support/sys/CacheControl.h"
 
 #include <fcntl.h>
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/mman.h>
 
+namespace orc_rt::sys {
+
 namespace {
 
-int toNativeProtFlags(orc_rt::MemProt MP) {
+int toNativeProtFlags(MemProt MP) {
   int Prot = PROT_NONE;
-  if ((MP & orc_rt::MemProt::Read) != orc_rt::MemProt::None)
+  if ((MP & MemProt::Read) != MemProt::None)
     Prot |= PROT_READ;
-  if ((MP & orc_rt::MemProt::Write) != orc_rt::MemProt::None)
+  if ((MP & MemProt::Write) != MemProt::None)
     Prot |= PROT_WRITE;
-  if ((MP & orc_rt::MemProt::Exec) != orc_rt::MemProt::None)
+  if ((MP & MemProt::Exec) != MemProt::None)
     Prot |= PROT_EXEC;
   return Prot;
 }
 
-#if defined(__APPLE__)
-extern "C" void sys_icache_invalidate(const void *Addr, size_t Size);
-#else
-extern "C" void __clear_cache(void *Start, void *End);
-#endif
+} // namespace
 
-static void invalidateInstructionCache(void *Addr, size_t Size) {
-#if defined(__APPLE__)
-  sys_icache_invalidate(Addr, Size);
-#else
-  __clear_cache(Addr, reinterpret_cast<char *>(Addr) + Size);
-#endif
-}
-
-orc_rt::Expected<void *> hostOSMemoryReserve(size_t Size) {
+Expected<void *> reserveMemory(size_t Size) {
   if (Size == 0)
     return nullptr;
 
@@ -58,10 +50,10 @@ orc_rt::Expected<void *> hostOSMemoryReserve(size_t Size) {
   MapFlags |= MAP_ANON;
 #else // !defined(MAP_ANON)
   // Fall back to /dev/zero for strict POSIX.
-  fd = open("/dev/zero", O_RDWR);
-  if (fd == -1) {
+  FD = open("/dev/zero", O_RDWR);
+  if (FD == -1) {
     auto ErrNum = errno;
-    return make_error<orc_rt::StringError>(
+    return make_error<StringError>(
         std::string("Could not open /dev/zero for memory reserve: ") +
         strerror(ErrNum));
   }
@@ -70,34 +62,34 @@ orc_rt::Expected<void *> hostOSMemoryReserve(size_t Size) {
   void *Addr = mmap(nullptr, Size, PROT_READ | PROT_WRITE, MapFlags, FD, 0);
   if (Addr == MAP_FAILED) {
     auto ErrNum = errno;
-    return orc_rt::make_error<orc_rt::StringError>(
+    return make_error<StringError>(
         std::string("mmap for memory reserve failed: ") + strerror(ErrNum));
   }
 
   return Addr;
 }
 
-orc_rt::Error hostOSMemoryRelease(void *Base, size_t Size) {
+Error releaseMemory(void *Base, size_t Size) {
   if (munmap(Base, Size) != 0) {
     auto ErrNum = errno;
-    return orc_rt::make_error<orc_rt::StringError>(
+    return make_error<StringError>(
         std::string("munmap for memory release failed: ") + strerror(ErrNum));
   }
-  return orc_rt::Error::success();
+  return Error::success();
 }
 
-orc_rt::Error hostOSMemoryProtect(void *Base, size_t Size, orc_rt::MemProt MP) {
+Error protectMemory(void *Base, size_t Size, MemProt MP) {
   if (mprotect(Base, Size, toNativeProtFlags(MP)) != 0) {
     auto ErrNum = errno;
-    return orc_rt::make_error<orc_rt::StringError>(
+    return make_error<StringError>(
         std::string("mprotect for memory finalize failed: ") +
         strerror(ErrNum));
   }
 
-  if ((MP & orc_rt::MemProt::Exec) != orc_rt::MemProt::None)
-    invalidateInstructionCache(Base, Size);
+  if ((MP & MemProt::Exec) != MemProt::None)
+    clear_icache(Base, Size);
 
-  return orc_rt::Error::success();
+  return Error::success();
 }
 
-} // namespace
+} // namespace orc_rt::sys
