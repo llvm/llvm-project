@@ -161,6 +161,10 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+    if (MaxAtomicInlineWidth >= 64) {
+      Opts["cl_khr_int64_base_atomics"] = true;
+      Opts["cl_khr_int64_extended_atomics"] = true;
+    }
 
     Opts["__opencl_c_images"] = true;
     Opts["__opencl_c_3d_image_writes"] = true;
