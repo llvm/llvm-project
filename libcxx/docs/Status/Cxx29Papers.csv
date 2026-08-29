@@ -11,7 +11,7 @@
 "`P3154R3 <https://wg21.link/P3154R3>`__","Deprecating signed character types in iostreams","2026-06 (Brno)","","","`#204398 <https://github.com/llvm/llvm-project/issues/204398>`__",""
 "`P3428R4 <https://wg21.link/P3428R4>`__","Hazard Pointer Batches","2026-06 (Brno)","","","`#204399 <https://github.com/llvm/llvm-project/issues/204399>`__",""
 "`P3248R5 <https://wg21.link/P3248R5>`__","Require ``[u]intptr_t``","2026-06 (Brno)","","","`#204400 <https://github.com/llvm/llvm-project/issues/204400>`__",""
-"`P3793R2 <https://wg21.link/P3793R2>`__","Better shifting","2026-06 (Brno)","","","`#204401 <https://github.com/llvm/llvm-project/issues/204401>`__",""
+"`P3793R2 <https://wg21.link/P3793R2>`__","Better shifting","2026-06 (Brno)","|Partial|","","`#204401 <https://github.com/llvm/llvm-project/issues/204401>`__","No `std::simd` overloads provided yet."
 "`P3242R4 <https://wg21.link/P3242R4>`__","Copy and fill for ``mdspan``","2026-06 (Brno)","","","`#204402 <https://github.com/llvm/llvm-project/issues/204402>`__",""
 "`P3692R4 <https://wg21.link/P3692R4>`__","How to Avoid OOTA Without Really Trying","2026-06 (Brno)","","","`#204403 <https://github.com/llvm/llvm-project/issues/204403>`__",""
 "`P3104R6 <https://wg21.link/P3104R6>`__","Bit permutations","2026-06 (Brno)","","","`#204404 <https://github.com/llvm/llvm-project/issues/204404>`__",""

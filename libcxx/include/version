@@ -47,7 +47,8 @@ __cpp_lib_bind_back                                     202202L <functional>
 __cpp_lib_bind_front                                    202306L <functional>
                                                         201907L // C++20
 __cpp_lib_bit_cast                                      201806L <bit>
-__cpp_lib_bitops                                        201907L <bit>
+__cpp_lib_bitops                                        202606L <bit>
+                                                        201907L // C++20
 __cpp_lib_bitset                                        202306L <bitset>
 __cpp_lib_bool_constant                                 201505L <type_traits>
 __cpp_lib_bounded_array_traits                          201902L <type_traits>
@@ -661,6 +662,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER >= 29
+# undef  __cpp_lib_bitops
+# define __cpp_lib_bitops                               202606L
 // # define __cpp_lib_map_lookup                           202606L
 // # define __cpp_lib_mdspan_copy                          202606L
 // # define __cpp_lib_pointer_tag_pair                     202606L
