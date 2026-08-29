@@ -12,9 +12,9 @@
 
 #include "CommonTestUtils.h"
 
-#include "orc-rt/support/SPSWrapperFunction.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
 
