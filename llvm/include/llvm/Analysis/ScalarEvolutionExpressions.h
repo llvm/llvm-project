@@ -375,11 +375,6 @@ public:
     SubclassData |= static_cast<unsigned short>(Flags);
   }
 
-  /// Clear previously inferred no-wrap flags.
-  void clearNoWrapFlags() {
-    SubclassData &= ~static_cast<unsigned short>(NoWrapMask);
-  }
-
   /// Return the value of this chain of recurrences at the specified
   /// iteration number.
   LLVM_ABI const SCEV *evaluateAtIteration(const SCEV *It,

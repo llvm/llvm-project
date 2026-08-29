@@ -14074,10 +14074,6 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
   // Forget all the expressions associated with users of the old value,
   // so that future queries will recompute the expressions using the new
   // value.
-  if (const SCEV *S = SE->getExistingSCEV(getValPtr()))
-    if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
-      const_cast<SCEVAddRecExpr *>(AR)->clearNoWrapFlags();
-
   SE->forgetValue(getValPtr());
   // this now dangles!
 }
