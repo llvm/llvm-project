@@ -6,13 +6,13 @@
 
 # RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
 # RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
-# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
 # RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
 # RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
 
 # RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
 # RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
-# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
 # RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
 # RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
 
@@ -24,17 +24,14 @@
 # RUN: llvm-dwarfdump --debug-info %t.pu-noodr.parallel | FileCheck %s --check-prefix=NOODR \
 # RUN:   --implicit-check-not=__artificial_type_unit --implicit-check-not=DW_TAG_structure_type
 
-## The classic linker keeps both definitions in U01. FIXME: llvm-dwarfdump
-## prefixes the partial unit's name to the type (#219635).
+## The classic linker keeps both definitions in U01.
 # CLASSIC:        DW_AT_name ("U01")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "U01::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "S")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo2")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "ns::S")
 # CLASSIC:      0x[[S]]:   DW_TAG_structure_type
 # CLASSIC-NEXT:   DW_AT_name ("S")
 # CLASSIC:        DW_TAG_member
@@ -52,12 +49,10 @@
 # CLASSIC:        DW_AT_name ("U02")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("bar1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S]] "S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S]] "U01::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "S")
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("bar2")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[NSS]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[NSS]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS]] "ns::S")
 
 ## The parallel linker moves both types into the artificial type unit.
 # PARALLEL:      DW_AT_name ("__artificial_type_unit")

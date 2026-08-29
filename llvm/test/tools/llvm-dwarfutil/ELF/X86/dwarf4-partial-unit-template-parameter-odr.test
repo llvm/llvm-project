@@ -1,0 +1,169 @@
+## Check that the classic linker unifies a template instantiation whose
+## template argument is a type at the scope of a DW_TAG_partial_unit root. The
+## argument's name, which S is uniqued by, must not include the root's
+## DW_AT_name. The DW_TAG_compile_unit run is the control.
+##
+## U01:  struct Foo {}; template <typename T> struct S {}; // S<Foo>
+## U02:  S<Foo> foo2() { ... }   // DW_FORM_ref_addr reference into U01
+## U03:  struct Foo {}; template <typename T> struct S {}; // S<Foo>
+##       S<Foo> foo3() { ... }   // reference to U03's own S
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.out
+# RUN: llvm-dwarfdump --debug-info %t.cu.out | FileCheck %s
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.out
+# RUN: llvm-dwarfdump --debug-info %t.pu.out | FileCheck %s
+
+## Both functions return U01's S.
+# CHECK:        DW_AT_name ("U01")
+# CHECK:        DW_AT_name ("Foo")
+# CHECK:      0x[[S:[0-9a-f]{8}]]: DW_TAG_structure_type
+# CHECK-NEXT:   DW_AT_name ("S")
+# CHECK:      DW_TAG_subprogram
+# CHECK-NEXT:   DW_AT_name ("foo2")
+# CHECK:        DW_AT_type (0x00000000[[S]] "S<Foo>")
+# CHECK:      DW_TAG_subprogram
+# CHECK-NEXT:   DW_AT_name ("foo3")
+# CHECK:        DW_AT_type (0x00000000[[S]] "S<Foo>")
+
+## Each S is named without its template arguments, as with
+## -gsimple-template-names.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x20
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+            - Value: 0x1
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x1
+        - AbbrCode: 4
+          Values:
+            - Value: 0x1a
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 5
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 6
+          Values:
+            - CStr: foo2
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x20
+        - AbbrCode: 0
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 5
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+            - Value: 0x1
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x1
+        - AbbrCode: 4
+          Values:
+            - Value: 0x9a
+        - AbbrCode: 0
+        - AbbrCode: 6
+          Values:
+            - CStr: foo3
+            - Value: 0x1140
+            - Value: 0x10
+            - Value: 0xa0
+        - AbbrCode: 0
+...

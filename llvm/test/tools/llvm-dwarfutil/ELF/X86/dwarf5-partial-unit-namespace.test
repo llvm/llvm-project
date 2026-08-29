@@ -23,13 +23,11 @@
 # RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefixes=PARALLEL,PARALLEL-PU \
 # RUN:   --implicit-check-not=DW_TAG_partial_unit --implicit-check-not='DW_AT_name ("U01")'
 
-## FIXME: llvm-dwarfdump prefixes the partial unit's name to the type (#219635).
 # CLASSIC-CU:     DW_TAG_compile_unit
 # CLASSIC-PU:     DW_TAG_partial_unit
 # CLASSIC:        DW_TAG_subprogram
 # CLASSIC-NEXT:     DW_AT_name ("foo1")
-# CLASSIC-CU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "ns::S")
-# CLASSIC-PU:       DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "U01::ns::S")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "ns::S")
 # CLASSIC:        DW_TAG_namespace
 # CLASSIC-NEXT:     DW_AT_name ("ns")
 # CLASSIC:      0x[[S]]:     DW_TAG_structure_type

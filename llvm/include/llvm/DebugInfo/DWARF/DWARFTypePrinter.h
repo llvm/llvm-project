@@ -836,11 +836,8 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
 
 template <typename DieType>
 void DWARFTypePrinter<DieType>::appendScopes(DieType D) {
-  if (D.getTag() == dwarf::DW_TAG_compile_unit)
-    return;
-  if (D.getTag() == dwarf::DW_TAG_type_unit)
-    return;
-  if (D.getTag() == dwarf::DW_TAG_skeleton_unit)
+  // A unit root is not a scope; its DW_AT_name is a file path.
+  if (dwarf::isUnitType(D.getTag()))
     return;
   if (D.getTag() == dwarf::DW_TAG_subprogram)
     return;
