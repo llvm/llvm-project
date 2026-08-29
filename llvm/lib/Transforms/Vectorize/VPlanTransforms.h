@@ -26,6 +26,7 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class DominatorTree;
 class Loop;
 class LoopVersioning;
 class OptimizationRemarkEmitter;
@@ -355,7 +356,8 @@ struct VPlanTransforms {
   // Convert safe uniform (potentially masked) loads to unconditional scalar
   // loads.
   static void convertToSingleScalarMemOps(VPlan &Plan,
-                                          const TargetLibraryInfo &TLI);
+                                          PredicatedScalarEvolution &PSE,
+                                          Loop &L, DominatorTree &DT);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);

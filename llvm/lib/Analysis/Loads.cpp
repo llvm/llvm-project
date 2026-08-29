@@ -326,27 +326,29 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
     ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
+  bool IsInvariant = SE.isLoopInvariant(PtrSCEV, L);
+  if (!IsInvariant) {
+    auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
+    // Check to see if we have a repeating access pattern and it's possible
+    // to prove all accesses are well aligned.
+    if (!AddRec || AddRec->getLoop() != L || !AddRec->isAffine())
+      return false;
 
-  // Check to see if we have a repeating access pattern and it's possible
-  // to prove all accesses are well aligned.
-  if (!AddRec || AddRec->getLoop() != L || !AddRec->isAffine())
-    return false;
+    auto *Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
+    if (!Step)
+      return false;
 
-  auto *Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
-  if (!Step)
-    return false;
+    const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
+    // For the moment, restrict ourselves to the case where the access size
+    // is a multiple of the requested alignment and the base is aligned.
+    // TODO: generalize if a case found which warrants
+    if (EltSize.urem(Alignment.value()) != 0)
+      return false;
 
-  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
-  // For the moment, restrict ourselves to the case where the access size is a
-  // multiple of the requested alignment and the base is aligned.
-  // TODO: generalize if a case found which warrants
-  if (EltSize.urem(Alignment.value()) != 0)
-    return false;
-
-  // TODO: Handle overlapping accesses.
-  if (EltSize.ugt(Step->getAPInt().abs()))
-    return false;
+    // TODO: Handle overlapping accesses.
+    if (EltSize.ugt(Step->getAPInt().abs()))
+      return false;
+  }
 
   const SCEV *MaxBECount =
       Predicates ? SE.getPredicatedSymbolicMaxBackedgeTakenCount(L, *Predicates)
@@ -372,8 +374,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   if (!LoopGuards)
-    LoopGuards.emplace(
-        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
+    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(L, SE));
 
   APInt MaxPtrDiff =
       SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
@@ -422,14 +423,15 @@ bool llvm::isDereferenceableAndAlignedInLoop(
       CtxI = LoopPred->getTerminator();
   }
   SimplifyQuery SQ(DL, &DT, AC, CtxI);
-  return isDereferenceableAndAlignedPointerViaAssumption(
-             Base, Alignment, SQ, /*IgnoreFree=*/false,
-             [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
-               return SE.isKnownPredicate(
-                   CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
-                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
-             }) ||
+  return (SQ.AC &&
+          isDereferenceableAndAlignedPointerViaAssumption(
+              Base, Alignment, SQ, /*IgnoreFree=*/false,
+              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+                return SE.isKnownPredicate(
+                    CmpInst::ICMP_ULE,
+                    SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
+                    SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
+              })) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
 

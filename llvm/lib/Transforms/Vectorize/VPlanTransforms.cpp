@@ -5825,7 +5825,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 }
 
 void VPlanTransforms::convertToSingleScalarMemOps(
-    VPlan &Plan, const TargetLibraryInfo &TLI) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, DominatorTree &DT) {
+  ScalarEvolution &SE = *PSE.getSE();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -5836,12 +5837,16 @@ void VPlanTransforms::convertToSingleScalarMemOps(
 
       auto &LI = cast<LoadInst>(UniformGather->getIngredient());
       VPValue *Addr = UniformGather->getAddr();
-      Value *Underlying = Addr->getUnderlyingValue();
-      if (!Underlying ||
-          !isDereferenceableAndAlignedPointer(
-              Underlying, LI.getType(), LI.getAlign(),
-              SimplifyQuery(Plan.getDataLayout(), &TLI, /*DT=*/nullptr,
-                            /*AC=*/nullptr, &LI)))
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, &L);
+      if (isa<SCEVCouldNotCompute>(PtrSCEV))
+        continue;
+      const DataLayout &DL = Plan.getDataLayout();
+      APInt EltSize(DL.getIndexTypeSizeInBits(Addr->getScalarType()),
+                    DL.getTypeStoreSize(LI.getType()).getFixedValue());
+
+      if (!isDereferenceableAndAlignedInLoop(
+              PtrSCEV, LI.getAlign(), SE.getConstant(EltSize), &L, SE, DT,
+              /*AC=*/nullptr, /*Predicates=*/nullptr))
         continue;
       DebugLoc DbgLoc = UniformGather->getDebugLoc();
       VPBuilder Builder(UniformGather);
