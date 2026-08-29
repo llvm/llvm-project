@@ -27,6 +27,29 @@ body:             |
     ; CHECK-NEXT: RET
 ...
 ---
+name:            merge_out_of_order_fixedstack
+# CHECK-LABEL: name: merge_out_of_order_fixedstack
+tracksRegLiveness: true
+fixedStack:
+  # Fixed object indices are allocated in reverse id order. Deliberately keep
+  # their explicit offsets in the opposite order: the scheduler must use the
+  # fixed object offsets, not frame-index creation order, when sorting memory
+  # operations for clustering.
+  - { id: 0, size: 8, alignment: 8, offset: -8 }
+  - { id: 1, size: 8, alignment: 8, offset: -16 }
+body:             |
+  bb.0:
+    %0:gpr64 = LDRXui %fixed-stack.0, 0 :: (load (s64))
+    %1:gpr64 = LDRXui %fixed-stack.1, 0 :: (load (s64))
+    $x0 = ADDXrr %0, %1
+    RET_ReallyLR implicit $x0
+
+    ; CHECK: LDRXui %fixed-stack.1
+    ; CHECK-NEXT: LDRXui %fixed-stack.0
+    ; CHECK: ADDXrr
+    ; CHECK: RET
+...
+---
 name:            merge_fixedstack
 # CHECK-LABEL: name: merge_fixedstack
 tracksRegLiveness: true
