@@ -2912,9 +2912,10 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return xegpu::getDistributeLayoutAttr(operand);
   // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
   // the required operand layout as the layout_operand_N that
-  // propagateRegionArgsToInits back-propagated from the region argument.
-  // TODO: derive that layout from the region argument here instead, so this
-  // function is the only place an operand's required layout comes from.
+  // propagateRegionArgsToInits back-propagated from the region argument. Do not
+  // re-derive it from that argument here: conflict resolution inserts
+  // convert_layout ops as it walks, rewriting the argument's uses, so what
+  // those uses require depends on how far the walk has progressed.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
   // A region terminator requires the layout of the successor input its operand
