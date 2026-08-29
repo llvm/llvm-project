@@ -3641,12 +3641,14 @@ public:
   /// link to an existing RTTI descriptor if one already exists.
   llvm::Constant *BuildTypeInfo(QualType Ty);
 
-  /// BuildTypeInfo - Build the RTTI type info struct for the given type.
+  /// BuildTypeInfo - Build the RTTI type info struct for the given type. The
+  /// TypeInfo* properties apply to the type info, the others to the type name.
   llvm::Constant *BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
+      QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
       llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass);
+      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+      llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+      llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass);
 };
 }
 
@@ -4187,10 +4189,8 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   llvm_unreachable("Invalid linkage!");
 }
 
-/// Returns the visibility to use for an RTTI global with the given DLL storage
-/// class. A dllexported global must not be hidden, so dllexport takes
-/// precedence over the visibility implied by -fvisibility=hidden, as
-/// CodeGenModule::setGlobalVisibility does for other globals.
+/// A dllexported global must not be hidden, so dllexport takes precedence over
+/// the visibility implied by -fvisibility=hidden, as elsewhere in CodeGen.
 static llvm::GlobalValue::VisibilityTypes
 getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
                   llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
@@ -4249,14 +4249,30 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
   }
   llvmVisibility = getRTTIVisibility(llvmVisibility, DLLStorageClass);
 
-  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
+  // Export the typeinfo in the same circumstances as the vtable is exported.
+  llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass =
+      DLLStorageClass;
+  if (CGM.getTarget().hasPS4DLLImportExport() &&
+      TypeInfoDLLStorageClass != llvm::GlobalValue::DLLExportStorageClass) {
+    if (auto RD = Ty->getAsCXXRecordDecl()) {
+      if (RD->hasAttr<DLLExportAttr>() ||
+          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
+        TypeInfoDLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
+    }
+  }
+  llvm::GlobalValue::VisibilityTypes TypeInfoVisibility =
+      getRTTIVisibility(llvmVisibility, TypeInfoDLLStorageClass);
+
+  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass,
+                       TypeInfoVisibility, TypeInfoDLLStorageClass);
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
-      llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+    QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
+    llvm::GlobalValue::VisibilityTypes Visibility,
+    llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+    llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+    llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass) {
   SmallString<256> Name;
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
@@ -4392,22 +4408,6 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
 
-  // Export the typeinfo in the same circumstances as the vtable is exported.
-  auto GVDLLStorageClass = DLLStorageClass;
-  auto GVVisibility = Visibility;
-  if (CGM.getTarget().hasPS4DLLImportExport() &&
-      GVDLLStorageClass != llvm::GlobalVariable::DLLExportStorageClass) {
-    if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-      const auto *RD =
-          cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
-      if (RD->hasAttr<DLLExportAttr>() ||
-          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD)) {
-        GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
-        GVVisibility = getRTTIVisibility(GVVisibility, GVDLLStorageClass);
-      }
-    }
-  }
-
   // If there's already an old global variable, replace it with the new one.
   if (OldGV) {
     GV->takeName(OldGV);
@@ -4440,11 +4440,11 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   TypeName->setVisibility(Visibility);
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(GVVisibility);
+  GV->setVisibility(TypeInfoVisibility);
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
-  GV->setDLLStorageClass(GVDLLStorageClass);
+  GV->setDLLStorageClass(TypeInfoDLLStorageClass);
 
   TypeName->setPartition(CGM.getCodeGenOpts().SymbolPartition);
   GV->setPartition(CGM.getCodeGenOpts().SymbolPartition);
@@ -4748,7 +4748,7 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
         FundamentalType.withConst());
     for (QualType Type : {FundamentalType, PointerType, PointerTypeConst})
       ItaniumRTTIBuilder(*this).BuildTypeInfo(
-          Type, llvm::GlobalValue::ExternalLinkage,
+          Type, llvm::GlobalValue::ExternalLinkage, Visibility, DLLStorageClass,
           Visibility, DLLStorageClass);
   }
 }

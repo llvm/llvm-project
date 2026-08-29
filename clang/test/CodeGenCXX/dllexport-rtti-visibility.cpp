@@ -30,6 +30,19 @@ struct __declspec(dllexport) exported {
 };
 exported::~exported() {}
 
+/// PS4/PS5 also export the type info when a non-inline method is dllexported.
+// GNU-DAG: @_ZTI10partExport = linkonce_odr hidden constant
+// GNU-DAG: @_ZTS10partExport = linkonce_odr hidden constant
+// ITANIUM-DAG: @_ZTI10partExport = hidden constant
+// ITANIUM-DAG: @_ZTS10partExport = hidden constant
+// PS-DAG: @_ZTI10partExport = {{(dso_local )?}}dllexport constant
+// PS-DAG: @_ZTS10partExport = {{(linkonce_odr )?}}hidden constant
+struct partExport {
+  virtual ~partExport();
+  __declspec(dllexport) void f();
+};
+partExport::~partExport() {}
+
 /// Defining __cxxabiv1::__fundamental_type_info makes Clang implicitly emit the
 /// RTTI descriptors for the fundamental types, with the class' storage class.
 // GNU-DAG: @_ZTIN10__cxxabiv123__fundamental_type_infoE = linkonce_odr hidden constant
