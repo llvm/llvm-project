@@ -24,6 +24,7 @@
 # STREAMING-NEXT:  1      11    1.20    *                   bf2cvtlt	z0.h, z0.b
 # STREAMING-NEXT:  1      4     1.00                  U     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # STREAMING-NEXT:  1      4     2.00                  U     bfadd	za.h[w8, 0, vgx4], { z0.h - z3.h }
+# STREAMING-NEXT:  1      4     1.00                  U     bfsub	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # STREAMING-NEXT:  1      11    1.20                  U     bfcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  1      7     1.00                  U     bfcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  1      5     1.00                  U     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
@@ -71,7 +72,10 @@
 # STREAMING-NEXT:  1      5     1.00                  U     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
 # STREAMING-NEXT:  1      5     1.00                  U     fclamp	{ z0.h, z1.h }, z0.h, z0.h
 # STREAMING-NEXT:  1      7     2.00                  U     fclamp	{ z0.d - z3.d }, z0.d, z0.d
+# STREAMING-NEXT:  1      4     1.00    *             U     fcvt	z0.b, { z0.s - z3.s }
 # STREAMING-NEXT:  1      4     1.20                  U     fcvt	z0.h, { z0.s, z1.s }
+# STREAMING-NEXT:  1      4     1.00    *             U     fcvtnb	z0.b, { z0.s, z1.s }
+# STREAMING-NEXT:  1      7     1.00    *             U     bfcvtn	z0.b, { z0.h, z1.h }
 # STREAMING-NEXT:  1      4     1.00                  U     fcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  1      4     1.00                  U     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
 # STREAMING-NEXT:  1      4     2.00                  U     fcvtzs	{ z0.s - z3.s }, { z0.s - z3.s }
@@ -108,6 +112,7 @@
 # STREAMING-NEXT:  1      4     2.00                  U     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # STREAMING-NEXT:  1      4     2.00                  U     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # STREAMING-NEXT:  1      4     0.50                  U     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# STREAMING-NEXT:  1      5     2.00                  U     fscale	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # STREAMING-NEXT:  1      5     2.00                  U     luti2	{ z0.h, z1.h }, zt0, z0[0]
 # STREAMING-NEXT:  1      7     4.00                  U     luti2	{ z0.h - z3.h }, zt0, z0[0]
 # STREAMING-NEXT:  1      5     2.00                  U     luti4	{ z0.h, z1.h }, zt0, z0[0]
@@ -166,6 +171,8 @@
 # STREAMING-NEXT:  1      8     1.00                  U     sqcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  1      8     1.00                  U     sqcvt	z0.b, { z0.s - z3.s }
 # STREAMING-NEXT:  1      8     1.00                  U     sqcvtun	z0.b, { z0.s - z3.s }
+# STREAMING-NEXT:  1      8     1.00                  U     sqcvtu	z0.h, { z0.s, z1.s }
+# STREAMING-NEXT:  1      8     1.00                  U     uqcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  1      5     1.00                  U     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
 # STREAMING-NEXT:  1      5     2.00                  U     sqdmulh	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # STREAMING-NEXT:  1      4     1.00                  U     sqrshr	z0.h, { z0.s, z1.s }, #16
@@ -274,7 +281,7 @@
 
 # STREAMING:      Resource pressure per iteration:
 # STREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:  -      -      -     7.20   7.20   7.20   7.20   7.20    -      -      -     12.00   -     145.00 4.00   41.50  19.50  3.00   0.33   0.33   0.33   12.00  105.50  -     0.50   98.50   -     0.50    -     1.50   4.50    -      -      -      -      -      -      -
+# STREAMING-NEXT:  -      -      -     7.20   7.20   7.20   7.20   7.20    -      -      -     12.00   -     146.00 4.00   45.50  21.50  3.00   0.33   0.33   0.33   12.00  111.00  -     0.50   104.00  -     0.50    -     1.50   4.50    -      -      -      -      -      -      -
 
 # STREAMING:      Resource pressure by instruction:
 # STREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -292,6 +299,7 @@
 # STREAMING-NEXT:  -      -      -     1.20   1.20   1.20   1.20   1.20    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bf2cvtlt	z0.h, z0.b
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfadd	za.h[w8, 0, vgx4], { z0.h - z3.h }
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfsub	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # STREAMING-NEXT:  -      -      -     1.20   1.20   1.20   1.20   1.20    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     bfcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
@@ -339,7 +347,10 @@
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fclamp	{ z0.h, z1.h }, z0.h, z0.h
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     fclamp	{ z0.d - z3.d }, z0.d, z0.d
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fcvt	z0.b, { z0.s - z3.s }
 # STREAMING-NEXT:  -      -      -     1.20   1.20   1.20   1.20   1.20    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvt	z0.h, { z0.s, z1.s }
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fcvtnb	z0.b, { z0.s, z1.s }
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     bfcvtn	z0.b, { z0.h, z1.h }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     fcvtzs	{ z0.s - z3.s }, { z0.s - z3.s }
@@ -376,6 +387,7 @@
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     fscale	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti2	{ z0.h, z1.h }, zt0, z0[0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti2	{ z0.h - z3.h }, zt0, z0[0]
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti4	{ z0.h, z1.h }, zt0, z0[0]
@@ -434,6 +446,8 @@
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcvt	z0.b, { z0.s - z3.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcvtun	z0.b, { z0.s - z3.s }
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcvtu	z0.h, { z0.s, z1.s }
+# STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqcvt	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -     sqdmulh	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # STREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     sqrshr	z0.h, { z0.s, z1.s }, #16

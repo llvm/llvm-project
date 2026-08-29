@@ -34,29 +34,29 @@ define i64 @vararg(...) #0 {
   ; CHECK-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD6]], [[C]](i64)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s128) = COPY $q0
-  ; CHECK-NEXT:   G_STORE [[COPY8]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into stack, align 1)
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(f128) = COPY $q0
+  ; CHECK-NEXT:   G_STORE [[COPY8]](f128), [[FRAME_INDEX1]](p0) :: (store (f128) into stack, align 1)
   ; CHECK-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(s128) = COPY $q1
-  ; CHECK-NEXT:   G_STORE [[COPY9]](s128), [[PTR_ADD8]](p0) :: (store (s128) into stack + 16, align 1)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(f128) = COPY $q1
+  ; CHECK-NEXT:   G_STORE [[COPY9]](f128), [[PTR_ADD8]](p0) :: (store (f128) into stack + 16, align 1)
   ; CHECK-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD8]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s128) = COPY $q2
-  ; CHECK-NEXT:   G_STORE [[COPY10]](s128), [[PTR_ADD9]](p0) :: (store (s128) into stack + 32, align 1)
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(f128) = COPY $q2
+  ; CHECK-NEXT:   G_STORE [[COPY10]](f128), [[PTR_ADD9]](p0) :: (store (f128) into stack + 32, align 1)
   ; CHECK-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD9]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s128) = COPY $q3
-  ; CHECK-NEXT:   G_STORE [[COPY11]](s128), [[PTR_ADD10]](p0) :: (store (s128) into stack + 48, align 1)
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(f128) = COPY $q3
+  ; CHECK-NEXT:   G_STORE [[COPY11]](f128), [[PTR_ADD10]](p0) :: (store (f128) into stack + 48, align 1)
   ; CHECK-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD10]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(s128) = COPY $q4
-  ; CHECK-NEXT:   G_STORE [[COPY12]](s128), [[PTR_ADD11]](p0) :: (store (s128) into stack + 64, align 1)
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:_(f128) = COPY $q4
+  ; CHECK-NEXT:   G_STORE [[COPY12]](f128), [[PTR_ADD11]](p0) :: (store (f128) into stack + 64, align 1)
   ; CHECK-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD11]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(s128) = COPY $q5
-  ; CHECK-NEXT:   G_STORE [[COPY13]](s128), [[PTR_ADD12]](p0) :: (store (s128) into stack + 80, align 1)
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:_(f128) = COPY $q5
+  ; CHECK-NEXT:   G_STORE [[COPY13]](f128), [[PTR_ADD12]](p0) :: (store (f128) into stack + 80, align 1)
   ; CHECK-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD12]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s128) = COPY $q6
-  ; CHECK-NEXT:   G_STORE [[COPY14]](s128), [[PTR_ADD13]](p0) :: (store (s128) into stack + 96, align 1)
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(f128) = COPY $q6
+  ; CHECK-NEXT:   G_STORE [[COPY14]](f128), [[PTR_ADD13]](p0) :: (store (f128) into stack + 96, align 1)
   ; CHECK-NEXT:   [[PTR_ADD14:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD13]], [[C1]](i64)
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s128) = COPY $q7
-  ; CHECK-NEXT:   G_STORE [[COPY15]](s128), [[PTR_ADD14]](p0) :: (store (s128) into stack + 112, align 1)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(f128) = COPY $q7
+  ; CHECK-NEXT:   G_STORE [[COPY15]](f128), [[PTR_ADD14]](p0) :: (store (f128) into stack + 112, align 1)
   ; CHECK-NEXT:   [[PTR_ADD15:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD14]], [[C1]](i64)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2.g

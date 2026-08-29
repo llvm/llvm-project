@@ -41,6 +41,10 @@ macro(append_string_if condition value)
   endif()
 endmacro()
 
+macro(remove_rtti_flags list)
+  list(REMOVE_ITEM ${list} -frtti -fno-rtti /GR /GR-)
+endmacro()
+
 macro(append_rtti_flag polarity list)
   if(${polarity})
     append_list_if(COMPILER_RT_HAS_FRTTI_FLAG -frtti ${list})

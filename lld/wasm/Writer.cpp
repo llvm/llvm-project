@@ -421,7 +421,7 @@ void Writer::layoutMemory() {
   }
 
   // In single-threaded builds we set __tls_base statically.
-  // Even in the absense of any actual TLS data, this symbol can still be
+  // Even in the absence of any actual TLS data, this symbol can still be
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
   if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {
@@ -1091,8 +1091,13 @@ void Writer::allocateCommonSymbols() {
   uint32_t alignLog2 = 0;
 
   for (CommonSymbol *c : commons) {
+    assert(c->getAlignment() <= 32);
     alignLog2 = std::max(alignLog2, c->getAlignment());
     size = alignTo(size, 1ULL << c->getAlignment());
+    if (size > UINT32_MAX || c->getSize() > UINT32_MAX - size) {
+      error("common symbols section size overflow");
+      return;
+    }
     size += c->getSize();
   }
 
