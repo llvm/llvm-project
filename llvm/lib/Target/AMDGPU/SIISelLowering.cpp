@@ -7955,69 +7955,6 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
       DL);
 }
 
-static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI, SDNode *N,
-                                  SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  unsigned CondCode = N->getConstantOperandVal(3);
-  if (!ICmpInst::isIntPredicate(static_cast<ICmpInst::Predicate>(CondCode)))
-    return DAG.getPOISON(VT);
-
-  ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
-
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-
-  SDLoc DL(N);
-
-  EVT CmpVT = LHS.getValueType();
-  if (CmpVT == MVT::i16 && !TLI.isTypeLegal(MVT::i16)) {
-    unsigned PromoteOp =
-        ICmpInst::isSigned(IcInput) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    LHS = DAG.getNode(PromoteOp, DL, MVT::i32, LHS);
-    RHS = DAG.getNode(PromoteOp, DL, MVT::i32, RHS);
-  }
-
-  ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
-
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
-
-  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, DL, CCVT, LHS, RHS,
-                              DAG.getCondCode(CCOpcode));
-  if (VT.bitsEq(CCVT))
-    return SetCC;
-  return DAG.getZExtOrTrunc(SetCC, DL, VT);
-}
-
-static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI, SDNode *N,
-                                  SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-
-  unsigned CondCode = N->getConstantOperandVal(3);
-  if (!FCmpInst::isFPPredicate(static_cast<FCmpInst::Predicate>(CondCode)))
-    return DAG.getPOISON(VT);
-
-  SDValue Src0 = N->getOperand(1);
-  SDValue Src1 = N->getOperand(2);
-  EVT CmpVT = Src0.getValueType();
-  SDLoc SL(N);
-
-  if (CmpVT == MVT::f16 && !TLI.isTypeLegal(CmpVT)) {
-    Src0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
-    Src1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
-  }
-
-  FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
-  ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
-  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, SL, CCVT, Src0, Src1,
-                              DAG.getCondCode(CCOpcode));
-  if (VT.bitsEq(CCVT))
-    return SetCC;
-  return DAG.getZExtOrTrunc(SetCC, SL, VT);
-}
-
 static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
                                     SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
@@ -8059,6 +7996,27 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   return DAG.getNode(
       AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+}
+
+static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG,
+                                 Intrinsic::ID IntrinsicID) {
+  bool Signed = IntrinsicID == Intrinsic::amdgcn_sbfe;
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(1);
+  SDValue Offset = Op.getOperand(2);
+  SDValue Width = Op.getOperand(3);
+
+  if (VT != MVT::i32) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        Twine(Intrinsic::getBaseName(IntrinsicID)) + " only supports i32",
+        DL.getDebugLoc()));
+    return DAG.getPOISON(VT);
+  }
+
+  return DAG.getNode(Signed ? AMDGPUISD::BFE_I32 : AMDGPUISD::BFE_U32, DL, VT,
+                     Src, Offset, Width);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
@@ -11475,17 +11433,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
   }
-  case Intrinsic::amdgcn_icmp: {
-    // There is a Pat that handles this variant, so return it as-is.
-    if (Op.getOperand(1).getValueType() == MVT::i1 &&
-        Op.getConstantOperandVal(2) == 0 &&
-        Op.getConstantOperandVal(3) == ICmpInst::Predicate::ICMP_NE)
-      return Op;
-    return lowerICMPIntrinsic(*this, Op.getNode(), DAG);
-  }
-  case Intrinsic::amdgcn_fcmp: {
-    return lowerFCMPIntrinsic(*this, Op.getNode(), DAG);
-  }
   case Intrinsic::amdgcn_ballot:
     return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
@@ -11498,11 +11445,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
   case Intrinsic::amdgcn_sbfe:
-    return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_ubfe:
-    return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+    return lowerBFEIntrinsic(Op, DAG, IntrinsicID);
   case Intrinsic::amdgcn_cvt_pkrtz:
   case Intrinsic::amdgcn_cvt_pknorm_i16:
   case Intrinsic::amdgcn_cvt_pknorm_u16:
@@ -17812,7 +17756,9 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return Folded;
   }
 
-  if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
+  // dot4 produces a 32-bit result, so a wider VT can't be folded.
+  if (!VT.isVector() && VT.getSizeInBits() <= 32 &&
+      (isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
     std::optional<bool> IsSigned;

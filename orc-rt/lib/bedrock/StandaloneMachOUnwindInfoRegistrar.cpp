@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
-#include "orc-rt/bedrock/Compiler.h"
+#include "orc-rt/support/Compiler.h"
 
 #include <mutex>
 
