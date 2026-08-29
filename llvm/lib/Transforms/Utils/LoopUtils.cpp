@@ -2164,6 +2164,7 @@ struct PointerBounds {
   TrackingVH<Value> Start;
   TrackingVH<Value> End;
   Value *StrideToCheck;
+  bool IsInvariant = false;
 };
 
 /// Expand code for the lower and upper bound of the pointer group \p CG
@@ -2222,6 +2223,18 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
     }
   }
 
+  bool IsInvariant = false;
+  if (HoistRuntimeChecks && TheLoop->getParentLoop()) {
+    const Loop *OuterLoop = TheLoop->getParentLoop();
+    ScalarEvolution &SE = *Exp.getSE();
+    // Stride, if set, is the step recurrence of an AddRec for OuterLoop,
+    // so it is always invariant in OuterLoop.
+    assert((!Stride || SE.isLoopInvariant(Stride, OuterLoop)) &&
+           "Stride must be outer-loop invariant");
+    IsInvariant = SE.isLoopInvariant(Low, OuterLoop) &&
+                  SE.isLoopInvariant(High, OuterLoop);
+  }
+
   Start = Exp.expandCodeFor(Low, PtrArithTy, Loc);
   End = Exp.expandCodeFor(High, PtrArithTy, Loc);
   if (CG->NeedsFreeze) {
@@ -2232,7 +2245,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
   Value *StrideVal =
       Stride ? Exp.expandCodeFor(Stride, Stride->getType(), Loc) : nullptr;
   LLVM_DEBUG(dbgs() << "Start: " << *Low << " End: " << *High << "\n");
-  return {Start, End, StrideVal};
+  return {Start, End, StrideVal, IsInvariant};
 }
 
 /// Turns a collection of checks into a collection of expanded upper and
@@ -2256,7 +2269,7 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
   return ChecksWithBounds;
 }
 
-Value *llvm::addRuntimeChecks(
+std::pair<Value *, bool> llvm::addRuntimeChecks(
     Instruction *Loc, Loop *TheLoop,
     const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
     SCEVExpander &Exp, bool HoistRuntimeChecks) {
@@ -2266,6 +2279,8 @@ Value *llvm::addRuntimeChecks(
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
   LLVMContext &Ctx = Loc->getContext();
+  bool AllChecksHoisted =
+      HoistRuntimeChecks && TheLoop->getParentLoop() != nullptr;
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
@@ -2304,6 +2319,10 @@ Value *llvm::addRuntimeChecks(
           "stride.check");
       IsConflict = ChkBuilder.CreateOr(IsConflict, IsNegativeStride);
     }
+
+    if (AllChecksHoisted)
+      AllChecksHoisted &= A.IsInvariant && B.IsInvariant;
+
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
@@ -2312,7 +2331,7 @@ Value *llvm::addRuntimeChecks(
   }
 
   Exp.eraseDeadInstructions(MemoryRuntimeCheck);
-  return MemoryRuntimeCheck;
+  return {MemoryRuntimeCheck, AllChecksHoisted};
 }
 
 Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
