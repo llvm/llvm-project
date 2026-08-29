@@ -94,6 +94,20 @@ constexpr bool test() {
     assert(v.size() == 6);
   }
 
+  // `views::cartesian_product(cartesian_product_view)` returns a nested `cartesian_product_view`.
+  {
+    int buffer[2] = {1, 2};
+    std::same_as<std::ranges::cartesian_product_view<SizedRandomAccessView, SizedRandomAccessView>> decltype(auto) v =
+        std::views::cartesian_product(SizedRandomAccessView{buffer}, SizedRandomAccessView{buffer});
+
+    std::same_as<std::ranges::cartesian_product_view<
+        std::ranges::cartesian_product_view<SizedRandomAccessView, SizedRandomAccessView>>> decltype(auto) v2 =
+        std::views::cartesian_product(v);
+
+    static_assert(std::is_same_v<std::ranges::range_reference_t<decltype(v2)>, std::tuple<std::tuple<int&, int&>>>);
+    assert(v2.size() == 4);
+  }
+
   return true;
 }
 
