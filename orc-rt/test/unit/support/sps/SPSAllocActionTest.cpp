@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/SPSAllocAction.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
 
 #include "orc-rt/support/ExecutorAddress.h"
 
