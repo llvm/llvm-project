@@ -13,8 +13,8 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounw
 define void @test1(ptr %a1, ptr %a2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A2:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A1:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load b32, ptr [[A2:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    store b32 [[TMP0]], ptr [[A1:%.*]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

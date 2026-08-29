@@ -14,8 +14,8 @@ define void @test1(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]]
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A]], align 4, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load b32, ptr [[B]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]]
+; CHECK-NEXT:    store b32 [[TMP0]], ptr [[A]], align 4, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -40,8 +40,8 @@ define void @test3_multiple_fields(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: define void @test3_multiple_fields(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4
-; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load b64, ptr [[B]], align 4
+; CHECK-NEXT:    store b64 [[TMP0]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -53,8 +53,8 @@ define void @test4_multiple_copy_first_field(ptr nocapture %a, ptr nocapture %b)
 ; CHECK-LABEL: define void @test4_multiple_copy_first_field(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B]], align 4, !tbaa [[FLOAT_TBAA0]]
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A]], align 4, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load b32, ptr [[B]], align 4, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    store b32 [[TMP0]], ptr [[A]], align 4, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -66,8 +66,8 @@ define void @test5_multiple_copy_more_than_first_field(ptr nocapture %a, ptr noc
 ; CHECK-LABEL: define void @test5_multiple_copy_more_than_first_field(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load b32, ptr [[B]], align 4
+; CHECK-NEXT:    store b32 [[TMP0]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

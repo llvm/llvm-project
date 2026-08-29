@@ -5,10 +5,10 @@
 
 define void @swap(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @swap(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P1:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[P2:%.*]], align 1
-; CHECK-NEXT:    store i64 [[TMP2]], ptr [[P1]], align 1
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[P2]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load b64, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load b64, ptr [[P2:%.*]], align 1
+; CHECK-NEXT:    store b64 [[TMP2]], ptr [[P1]], align 1
+; CHECK-NEXT:    store b64 [[TMP1]], ptr [[P2]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [2 x i32]
@@ -22,13 +22,18 @@ define i32 @test(i32 %n) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P1_SROA_5_0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ [[V2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P1_SROA_0_0:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[V1_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[V1_INC]] = add i32 [[P1_SROA_0_0]], 1
-; CHECK-NEXT:    [[V2_NEXT]] = shl i32 [[P1_SROA_5_0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4294967296, [[TMP0:%.*]] ], [ [[P1_SROA_0_4_INSERT_INSERT6:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P1_SROA_0_0:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[V1_INC:%.*]] = add i32 [[P1_SROA_0_0]], 1
+; CHECK-NEXT:    [[P1_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[V1_INC]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 1
+; CHECK-NEXT:    [[P1_SROA_0_4_INSERT_SHIFT:%.*]] = and i64 [[TMP2]], -8589934592
+; CHECK-NEXT:    [[P1_SROA_0_4_INSERT_INSERT6]] = or disjoint i64 [[P1_SROA_0_4_INSERT_SHIFT]], [[P1_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[V1_INC]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[P2_SROA_0_4_EXTRACT_SHIFT:%.*]] = lshr exact i64 [[P1_SROA_0_4_INSERT_SHIFT]], 32
+; CHECK-NEXT:    [[V2_NEXT:%.*]] = trunc nuw i64 [[P2_SROA_0_4_EXTRACT_SHIFT]] to i32
 ; CHECK-NEXT:    ret i32 [[V2_NEXT]]
 ;
   %p1 = alloca [2 x i32]

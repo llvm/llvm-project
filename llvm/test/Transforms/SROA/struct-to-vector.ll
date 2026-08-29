@@ -274,8 +274,8 @@ define dso_local void @foo_i1(ptr noundef %x, i64 %dummy0, i64 %dummy1,
 ; CHECK-NEXT:    store i32 0, ptr [[ZERO]], align 1
 ; CHECK-NEXT:    [[TOBOOL_I1_NOT:%.*]] = icmp eq i32 [[COND]], 0
 ; CHECK-NEXT:    [[ZERO_TEMP:%.*]] = select i1 [[TOBOOL_I1_NOT]], ptr [[ZERO]], ptr [[TEMP]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ZERO_TEMP]], align 1
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[X]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load b32, ptr [[ZERO_TEMP]], align 1
+; CHECK-NEXT:    store b32 [[TMP0]], ptr [[X]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ZERO]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    ret void

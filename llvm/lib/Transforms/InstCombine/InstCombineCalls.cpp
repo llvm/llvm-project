@@ -173,8 +173,9 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     if (*CopyDstAlign < Size || *CopySrcAlign < Size)
       return nullptr;
 
-  // Use an integer load+store unless we can find something better.
-  IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
+  // Use a byte load+store unless we can find something better.
+  // We don't use the integer type as it drops provenances.
+  ByteType *AccessType = ByteType::get(MI->getContext(), Size << 3);
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA, scope and noalias tags describing our copy.
@@ -182,7 +183,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   Value *Src = MI->getArgOperand(1);
   Value *Dest = MI->getArgOperand(0);
-  LoadInst *L = Builder.CreateLoad(IntType, Src);
+  LoadInst *L = Builder.CreateLoad(AccessType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
   L->setAAMetadata(AACopyMD);

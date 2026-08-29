@@ -5,8 +5,8 @@ declare void @bcopy(ptr nocapture readonly, ptr nocapture, i32)
 
 define void @bcopy_memmove(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: @bcopy_memmove(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load b64, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    store b64 [[TMP1]], ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   tail call void @bcopy(ptr %a, ptr %b, i32 8)

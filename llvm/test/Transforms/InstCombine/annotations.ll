@@ -45,8 +45,8 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounw
 
 define void @copy_1_byte(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @copy_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 1, i1 false), !annotation !0
@@ -57,8 +57,8 @@ declare ptr @memcpy(ptr noalias returned, ptr noalias nocapture readonly, i64) n
 
 define void @libcallcopy_1_byte(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @libcallcopy_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call ptr @memcpy(ptr %d, ptr %s, i64 1), !annotation !0
@@ -69,8 +69,8 @@ declare ptr @__memcpy_chk(ptr, ptr, i64, i64) nofree nounwind
 
 define void @libcallcopy_1_byte_chk(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @libcallcopy_1_byte_chk({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call ptr @__memcpy_chk(ptr %d, ptr %s, i64 1, i64 1), !annotation !0
@@ -81,8 +81,8 @@ declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32,
 
 define void @move_1_byte(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @move_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i32(ptr %d, ptr %s, i32 1, i1 false), !annotation !0
@@ -93,8 +93,8 @@ declare ptr @memmove(ptr returned, ptr nocapture readonly, i64) nofree nounwind
 
 define void @libcallmove_1_byte(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @libcallmove_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call ptr @memmove(ptr %d, ptr %s, i64 1), !annotation !0
@@ -105,8 +105,8 @@ declare ptr @__memmove_chk(ptr, ptr, i64, i64) nofree nounwind
 
 define void @libcallmove_1_byte_chk(ptr %d, ptr %s) {
 ; CHECK-LABEL: define {{.+}} @libcallmove_1_byte_chk({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
-; CHECK-NEXT:    store i8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b8, ptr [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store b8 [[TMP1]], ptr [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call ptr @__memmove_chk(ptr %d, ptr %s, i64 1, i64 1), !annotation !0

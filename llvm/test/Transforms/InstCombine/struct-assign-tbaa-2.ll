@@ -12,11 +12,11 @@ define void @test1(ptr %a1, ptr %a2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[A2:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load b16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    store b16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw i8, ptr [[A1]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA6:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b16, ptr [[B]], align 2, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    store b16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

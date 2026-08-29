@@ -54,8 +54,8 @@ define void @callee_memset(ptr %dst, i64 %size) {
 define void @caller_memcpy(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @caller_memcpy
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load b32, ptr [[SRC]], align 1
+; CHECK-NEXT:    store b32 [[TMP1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_memcpy(ptr %dst, ptr %src, i64 4)
@@ -65,8 +65,8 @@ define void @caller_memcpy(ptr %dst, ptr %src) {
 define void @caller_memmove(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @caller_memmove
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[SRC:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load b32, ptr [[SRC]], align 1
+; CHECK-NEXT:    store b32 [[TMP1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_memmove(ptr %dst, ptr %src, i64 4)
@@ -76,8 +76,8 @@ define void @caller_memmove(ptr %dst, ptr %src) {
 define void @caller_mempcpy(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @caller_mempcpy
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[SRC:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load b32, ptr [[SRC]], align 1
+; CHECK-NEXT:    store b32 [[TMP1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_mempcpy(ptr %dst, ptr %src, i64 4)

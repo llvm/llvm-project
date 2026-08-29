@@ -25,8 +25,8 @@ define void @_Z4testPcl(ptr %out, i64 %size) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT:%.*]], i64 [[I_0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[OUT]], i64 [[I_0]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[SIZE]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP1]], ptr [[ARRAYIDX]], align 1, !llvm.access.group [[ACC_GRP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load b16, ptr [[ARRAYIDX1]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
+; CHECK-NEXT:    store b16 [[TMP1]], ptr [[ARRAYIDX]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[ADD2]] = add nuw nsw i64 [[I_0]], 2
