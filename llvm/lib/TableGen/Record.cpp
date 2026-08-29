@@ -75,10 +75,10 @@ struct detail::RecordKeeperImpl {
   std::map<int64_t, IntInit *> TheIntInitPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitStringPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitCodePool;
-  FoldingSet<ListInit> TheListInitPool;
-  FoldingSet<UnOpInit> TheUnOpInitPool;
-  FoldingSet<BinOpInit> TheBinOpInitPool;
-  FoldingSet<TernOpInit> TheTernOpInitPool;
+  UniquingSet<ListInit> TheListInitPool;
+  UniquingSet<UnOpInit> TheUnOpInitPool;
+  UniquingSet<BinOpInit> TheBinOpInitPool;
+  UniquingSet<TernOpInit> TheTernOpInitPool;
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
@@ -694,16 +694,6 @@ const Init *StringInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-static void ProfileListInit(FoldingSetNodeID &ID,
-                            ArrayRef<const Init *> Elements,
-                            const RecTy *EltTy) {
-  ID.AddInteger(Elements.size());
-  ID.AddPointer(EltTy);
-
-  for (const Init *E : Elements)
-    ID.AddPointer(E);
-}
-
 ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
       NumElements(Elements.size()) {
@@ -712,12 +702,9 @@ ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
 
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
                               const RecTy *EltTy) {
-  FoldingSetNodeID ID;
-  ProfileListInit(ID, Elements, EltTy);
-
   detail::RecordKeeperImpl &RK = EltTy->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const ListInit *I = RK.TheListInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertPos IP;
+  if (const ListInit *I = RK.TheListInitPool.find({Elements, EltTy}, IP))
     return I;
 
   assert(Elements.empty() || !isa<TypedInit>(Elements[0]) ||
@@ -726,13 +713,8 @@ const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(Elements.size()), alignof(ListInit));
   ListInit *I = new (Mem) ListInit(Elements, EltTy);
-  RK.TheListInitPool.InsertNode(I, IP);
+  RK.TheListInitPool.insert(I, IP);
   return I;
-}
-
-void ListInit::Profile(FoldingSetNodeID &ID) const {
-  const RecTy *EltTy = cast<ListRecTy>(getType())->getElementType();
-  ProfileListInit(ID, getElements(), EltTy);
 }
 
 const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
@@ -814,29 +796,15 @@ const Init *OpInit::getBit(unsigned Bit) const {
   return VarBitInit::get(this, Bit);
 }
 
-static void ProfileUnOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                            const Init *Op, const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(Op);
-  ID.AddPointer(Type);
-}
-
 const UnOpInit *UnOpInit::get(UnaryOp Opc, const Init *LHS, const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileUnOpInit(ID, Opc, LHS, Type);
-
   detail::RecordKeeperImpl &RK = Type->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const UnOpInit *I = RK.TheUnOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertPos IP;
+  if (const UnOpInit *I = RK.TheUnOpInitPool.find({Opc, LHS, Type}, IP))
     return I;
 
   UnOpInit *I = new (RK.Allocator) UnOpInit(Opc, LHS, Type);
-  RK.TheUnOpInitPool.InsertNode(I, IP);
+  RK.TheUnOpInitPool.insert(I, IP);
   return I;
-}
-
-void UnOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileUnOpInit(ID, getOpcode(), getOperand(), getType());
 }
 
 const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
@@ -1083,32 +1051,16 @@ std::string UnOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ")";
 }
 
-static void ProfileBinOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                             const Init *LHS, const Init *RHS,
-                             const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(LHS);
-  ID.AddPointer(RHS);
-  ID.AddPointer(Type);
-}
-
 const BinOpInit *BinOpInit::get(BinaryOp Opc, const Init *LHS, const Init *RHS,
                                 const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileBinOpInit(ID, Opc, LHS, RHS, Type);
-
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const BinOpInit *I = RK.TheBinOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertPos IP;
+  if (const BinOpInit *I = RK.TheBinOpInitPool.find({Opc, LHS, RHS, Type}, IP))
     return I;
 
   BinOpInit *I = new (RK.Allocator) BinOpInit(Opc, LHS, RHS, Type);
-  RK.TheBinOpInitPool.InsertNode(I, IP);
+  RK.TheBinOpInitPool.insert(I, IP);
   return I;
-}
-
-void BinOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBinOpInit(ID, getOpcode(), getLHS(), getRHS(), getType());
 }
 
 static const StringInit *ConcatStringInits(const StringInit *I0,
@@ -1676,34 +1628,17 @@ std::string BinOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
 
-static void ProfileTernOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                              const Init *LHS, const Init *MHS, const Init *RHS,
-                              const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(LHS);
-  ID.AddPointer(MHS);
-  ID.AddPointer(RHS);
-  ID.AddPointer(Type);
-}
-
 const TernOpInit *TernOpInit::get(TernaryOp Opc, const Init *LHS,
                                   const Init *MHS, const Init *RHS,
                                   const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileTernOpInit(ID, Opc, LHS, MHS, RHS, Type);
-
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (TernOpInit *I = RK.TheTernOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertPos IP;
+  if (TernOpInit *I = RK.TheTernOpInitPool.find({Opc, LHS, MHS, RHS, Type}, IP))
     return I;
 
   TernOpInit *I = new (RK.Allocator) TernOpInit(Opc, LHS, MHS, RHS, Type);
-  RK.TheTernOpInitPool.InsertNode(I, IP);
+  RK.TheTernOpInitPool.insert(I, IP);
   return I;
-}
-
-void TernOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
 static const Init *ItemApply(const Init *LHS, const Init *MHSe, const Init *RHS,

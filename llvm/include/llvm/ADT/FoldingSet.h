@@ -16,6 +16,7 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -158,6 +159,19 @@ template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
 /// Like FoldingSetTrait, but for ContextualFoldingSets.
 template <typename T, typename Ctx>
 struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
+
+class FoldingSetInsertPos {
+  uint64_t Value = 0;
+
+  explicit FoldingSetInsertPos(uint32_t Hash) : Value(uint64_t(Hash) + 1) {}
+  uint32_t hash() const { return uint32_t(Value - 1); }
+
+  template <typename, typename> friend class UniquingSet;
+
+public:
+  FoldingSetInsertPos() = default;
+  explicit operator bool() const { return Value != 0; }
+};
 
 //===--------------------------------------------------------------------===//
 /// This class describes a reference to an interned FoldingSetNodeID, which can
@@ -389,6 +403,11 @@ protected:
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos for an ID that \p N profiles identically to.
   LLVM_ABI void InsertNode(Node *N, void *InsertPos);
+
+  /// Encode \p Hash, which must not be NotAHash, as the token InsertNode takes.
+  static void *encodeInsertPos(uint32_t Hash) {
+    return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash));
+  }
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -661,6 +680,95 @@ public:
 
   operator T &() { return data; }
   operator const T &() const { return data; }
+};
+
+//===----------------------------------------------------------------------===//
+/// The default UniquingSet Info: \p T supplies its own key.
+template <typename T> struct UniquingSetInfo {
+  using KeyTy = remove_cvref_t<decltype(std::declval<const T &>().getKey())>;
+  static KeyTy getKey(const T &N) { return N.getKey(); }
+  static unsigned getHashValue(const KeyTy &Key) {
+    return DenseMapInfo<KeyTy>::getHashValue(Key);
+  }
+};
+
+/// A uniquing set that compares nodes against a typed key rather than a
+/// serialized FoldingSetNodeID.
+///
+/// \p T must derive from FoldingSetNode and provide a getKey() whose result is
+/// comparable with == and for which DenseMapInfo<KeyTy>::getHashValue exists.
+/// \p Info overrides that:
+///
+/// \code
+///   using KeyTy = ...;
+///   static KeyTy getKey(const T &N);
+///   static unsigned getHashValue(const KeyTy &K);
+/// \endcode
+///
+/// Derive \p Info from UniquingSetInfo<T> to override only the hash.  The
+/// default Info needs \p T complete wherever UniquingSet<T> is instantiated;
+/// FoldingSet does not.  A key may alias storage owned by the node; it is only
+/// used within a single find().
+///
+/// Prefer FoldingSet when a key cannot be read cheaply out of a node: a
+/// FoldingSetNodeID cannot disagree with itself, whereas getKey and the code
+/// that builds a key to look up must be kept in step by hand.
+template <typename T, typename Info = UniquingSetInfo<T>>
+class UniquingSet : public FoldingSetBase {
+public:
+  using KeyTy = typename Info::KeyTy;
+
+  explicit UniquingSet(unsigned Log2InitSize = 6)
+      : FoldingSetBase(Log2InitSize) {}
+
+  using iterator = FoldingSetIterator<T>;
+  iterator begin() { return iterator(Buckets, Buckets + NumBuckets, this); }
+  iterator end() {
+    return iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
+
+  using const_iterator = FoldingSetIterator<const T>;
+  const_iterator begin() const {
+    return const_iterator(Buckets, Buckets + NumBuckets, this);
+  }
+  const_iterator end() const {
+    return const_iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
+
+  /// Look up \p Key.  On a hit \p InsertPos is cleared; on a miss it receives a
+  /// token for insert().
+  T *find(const KeyTy &Key, FoldingSetInsertPos &InsertPos) {
+    uint32_t Hash = hashKey(Key);
+    unsigned Mask = NumBuckets - 1;
+    for (unsigned I = Hash & Mask; Buckets[I]; I = (I + 1) & Mask) {
+      T *N = static_cast<T *>(static_cast<Node *>(Buckets[I]));
+      if (N->getFoldingSetHash() == Hash && Key == Info::getKey(*N)) {
+        InsertPos = {};
+        return N;
+      }
+    }
+    InsertPos = FoldingSetInsertPos(Hash);
+    return nullptr;
+  }
+
+  /// Insert \p N, which must key identically to the lookup that produced
+  /// \p InsertPos.
+  void insert(T *N, FoldingSetInsertPos InsertPos) {
+    assert(InsertPos && "Invalid InsertPos!");
+    assert(hashKey(Info::getKey(*N)) == InsertPos.hash() &&
+           "N does not key as the lookup that produced InsertPos did");
+    FoldingSetBase::InsertNode(N, encodeInsertPos(InsertPos.hash()));
+  }
+
+  /// Remove \p N, returning whether it was present.
+  bool erase(T *N) { return FoldingSetBase::RemoveNode(N); }
+
+private:
+  // Never NotAHash, for the reason FoldingSetNodeIDRef::ComputeHash gives.
+  static uint32_t hashKey(const KeyTy &Key) {
+    uint32_t Hash = Info::getHashValue(Key);
+    return Hash == FoldingSetNodeIDRef::NotAHash ? 1 : Hash;
+  }
 };
 
 //===----------------------------------------------------------------------===//
