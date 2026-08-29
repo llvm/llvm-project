@@ -720,6 +720,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
            P1->getIndex() == P2->getIndex();
   }
 
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *P1 = N1.getAsPackIndexingTemplate(),
+                                *P2 = N2.getAsPackIndexingTemplate();
+    return IsStructurallyEquivalent(Context, P1->getPattern(),
+                                    P2->getPattern()) &&
+           IsStructurallyEquivalent(Context, P1->getIndexExpr(),
+                                    P2->getIndexExpr());
+  }
+
    case TemplateName::Template:
    case TemplateName::QualifiedTemplate:
    case TemplateName::SubstTemplateTemplateParm:
@@ -1349,8 +1358,8 @@ bool ASTStructuralEquivalence::isEquivalent(
     if (Auto1->isConstrained() != Auto2->isConstrained())
       return false;
     if (Auto1->isConstrained()) {
-      if (Auto1->getTypeConstraintConcept() !=
-          Auto2->getTypeConstraintConcept())
+      if (Auto1->getTypeConstraintConcept().getAsTemplateDecl() !=
+          Auto2->getTypeConstraintConcept().getAsTemplateDecl())
         return false;
       if (!IsStructurallyEquivalent(Context,
                                     Auto1->getTypeConstraintArguments(),

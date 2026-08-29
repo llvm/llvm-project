@@ -1466,8 +1466,8 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-`[[clang::no_specializations]]` can be applied to function, class, or variable
-templates which should not be explicitly specialized by users. This is primarily
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
 }
@@ -7922,7 +7922,7 @@ def HIPManagedAttrDocs : Documentation {
   let Content = [{
 The `__managed__` attribute can be applied to a global variable declaration in HIP.
 A managed variable is emitted as an undefined global symbol in the device binary and is
-registered by `__hipRegisterManagedVariable` in init functions. The HIP runtime allocates
+registered by `__hipRegisterManagedVar` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
   }];

@@ -4518,6 +4518,10 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM TMA Shared to Global Ops
+//===----------------------------------------------------------------------===//
+
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
   NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
   [AttrSizedOperandSegments]>,
@@ -4578,6 +4582,101 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
+}
+
+def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.global.shared.cta.override",
+                       [AttrSizedOperandSegments]> {
+    let arguments = (ins
+      LLVM_PointerGeneric:$tmaDescriptor,
+      LLVM_PointerShared:$srcMem,
+      LLVM_PointerGlobal:$overrideAddr,
+      Variadic<I32>:$coordinates,
+      Variadic<I16>:$tensorSize,
+      Variadic<I32>:$lowerStride,
+      Optional<I16>:$upperStride,
+      Optional<I64>:$l2CacheHint,
+      DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode);
+
+    let summary = "Async bulk tensor copy from shared::cta to global memory with "
+                  "tensor-map field overrides";
+    let description = [{
+      Initiates an asynchronous copy of tensor data from shared::cta memory to global
+      memory while overriding specific fields of the opaque tensor-map object with
+      explicit operands. It corresponds to the `cp.async.bulk.tensor.[1-5]d.*` PTX
+      instructions qualified with `.override::*`.
+
+      The `mode` attribute selects the store mode. The override variant is selected by
+      which optional operands are provided:
+
+      - `override.addr` (`.override::global_address`): only `overrideAddr` is given; the
+        global base address from the tensor-map is replaced. Supported in `TILE` (1D–5D),
+        `IM2COL`/`IM2COL_W` (3D–5D), and `TILE_SCATTER4` (2D, requires 5 coordinates).
+      - `override.addr.dim` (1D, `TILE` only): `overrideAddr` plus `tensorSize` (one
+        element); also overrides the tensor global dimension.
+      - `override.addr.dim.stride` (2D–5D, `TILE` only): `overrideAddr` plus `tensorSize`,
+        `lowerStride`, and `upperStride`; also overrides the global dimensions and strides.
+        The effective global stride is
+        `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
+
+      `overrideAddr` must be 16B aligned (a runtime error is raised otherwise) and the
+      memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and
+      accessible during execution. When overriding dimensions/strides, the base-address
+      override is mandatory and the tensor start coordinates must be zero; otherwise the
+      behavior is undefined.
+
+      The optional `l2CacheHint` specifies a cache-eviction policy for the access.
+
+      Examples:
+
+      // override.addr (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%d0] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (IM2COL, 3D) with L2 cache hint
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%d0, %d1, %d2]
+        l2_cache_hint = %ch mode = im2col : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (TILE_SCATTER4, 2D) — 5 coordinates: x0, y0, y1, y2, y3
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%x0, %y0, %y1, %y2, %y3]
+        mode = tile_scatter4 : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr,
+        box[%d0] tensor_size[%ts0] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim.stride (TILE, 2D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr,
+        box[%d0, %d1] tensor_size[%ts0, %ts1] lower_stride[%lstrd0] upper_stride[%ustrd] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+    }];
+
+    let assemblyFormat = [{
+      $tmaDescriptor `,`
+      $srcMem `,`
+      $overrideAddr `,`
+      `box` `[`$coordinates `]`
+      oilist(
+        `tensor_size` `[` $tensorSize `]`
+        | `lower_stride` `[` $lowerStride `]`
+        | `upper_stride` `[` $upperStride `]`
+        | `l2_cache_hint` `=` $l2CacheHint
+        | `mode` `=` $mode
+      )
+      attr-dict `:` type($tmaDescriptor) `,` type($srcMem) `,` type($overrideAddr)
+    }];
+
+    let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4722,6 +4821,10 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Reduction Ops
+//===----------------------------------------------------------------------===//
+
 // List of Reduction Ops supported with TMA Store
 def TMAReduxKindAdd : I32EnumAttrCase<"ADD", 0, "add">;
 def TMAReduxKindMin : I32EnumAttrCase<"MIN", 1, "min">;
@@ -4790,6 +4893,82 @@ def NVVM_CpAsyncBulkTensorReduceOp :
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
+}
+
+def NVVM_CpAsyncBulkTensorReduceOverrideAddrOp :
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.reduce.override",
+                       [AttrSizedOperandSegments]> {
+    let arguments = (ins
+      LLVM_PointerGeneric:$tmaDescriptor,
+      LLVM_PointerShared:$srcMem,
+      LLVM_PointerGlobal:$overrideAddr,
+      Variadic<I32>:$coordinates,
+      Variadic<I16>:$tensorSize,
+      Variadic<I32>:$lowerStride,
+      Optional<I16>:$upperStride,
+      Optional<I64>:$l2CacheHint,
+      TMAReduxKindAttr:$redKind,
+      DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode
+      );
+
+    let summary = "Async bulk tensor reduction from shared::cta to global memory with "
+                  "tensor-map field overrides";
+    let description = [{
+      Initiates an asynchronous reduction of tensor data in global memory with the tensor
+      data in shared::cta memory, while overriding specific fields of the opaque tensor-map
+      object with explicit operands. It corresponds to the
+      `cp.reduce.async.bulk.tensor.[1-5]d.global.shared::cta.*` PTX instructions qualified
+      with `.override::*`.
+
+      The `mode` attribute selects the store mode and `redKind` selects the reduction
+      operation (`ADD`, `MIN`, `MAX`, `INC`, `DEC`, `AND`, `OR`, `XOR`) that combines the
+      source data in shared memory with the destination data in global memory. The override
+      variant is similar to the `cp.async.bulk.tensor.global.shared.cta.override` op described above.
+
+      The optional `l2CacheHint` specifies a cache-eviction policy for the access.
+
+      Examples:
+
+      // override.addr (TILE, 1D) with ADD reduction
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr, box[%d0], reduction = add : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (IM2COL, 3D) with L2 cache hint and MIN reduction
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr, box[%d0, %d1, %d2]
+        l2_cache_hint = %ch, reduction = min mode = im2col : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr,
+        box[%d0] tensor_size[%ts0], reduction = add : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim.stride (TILE, 2D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr,
+        box[%d0, %d1] tensor_size[%ts0, %ts1] lower_stride[%lstrd0] upper_stride[%ustrd], reduction = and : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor)
+    }];
+
+    let assemblyFormat = [{
+      $tmaDescriptor `,`
+      $srcMem `,`
+      $overrideAddr `,`
+      `box` `[`$coordinates `]`
+      (`tensor_size` `[`$tensorSize^ `]`)?
+      (`lower_stride` `[`$lowerStride^ `]`)?
+      (`upper_stride` `[`$upperStride^ `]`)?
+      (`l2_cache_hint` `=` $l2CacheHint^)?
+      `,` `reduction` `=` $redKind oilist(`mode` `=` $mode)
+      attr-dict  `:` type($tmaDescriptor) `,` type($srcMem) `,` type($overrideAddr)
+    }];
+
+    let hasVerifier = 1;
 }
 
 def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
@@ -6813,6 +6992,150 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
       auto [ID, args] = NVVM::Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
           *op, moduleTranslation, builder);
       createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMADecompressBOp :
+    NVVM_VoidIntrinsicOp<"tcgen05.mma.decompress_b",
+                         [NVVMRequiresSMf<[107]>]> {
+  let summary = "Performs MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.decompress_b` operation is an asynchronous tensor core
+    instruction that decompresses the B matrix and performs matrix
+    multiplication, accumulation in a single fused operation. It targets
+    5th-generation tensor cores, providing developers with fine-grained
+    control over execution and scheduling.
+
+    ```
+    D = A * B                            // if `enableInputD` is false
+    D = A * B + D                        // otherwise
+    ```
+
+    where:
+    - A is an `M x K` matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - `idesc` is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    - `decompressBMetadata` is a decompress metadata of B matrix
+
+    Optional Operands:
+    - `disableOutputLane` is a vector mask for selective output
+      * vector<4 x i32> when ctaGroup is CTA_1
+      * vector<8 x i32> when ctaGroup is CTA_2
+
+    Required Attributes:
+    - `ctaGroup` specifies CTA group configuration
+      * cta_1: MMA will be performed on the current thread's CTA
+      * cta_2: MMA will be performed on the current thread and it's peer CTA
+
+    Default Attributes:
+    - collectorOpA is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+
+  let arguments = (ins
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc,
+      I1:$enableInputD,
+      LLVM_PointerTensor:$decompressBMetadata,
+      Optional<FixedVectorOfLengthAndType<[4, 8], [I32]>>:$disableOutputLane,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpA,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD
+    `,` $decompressBMetadata (`,` `mask` `=` $disableOutputLane^)?
+    `cta_group` `=` $ctaGroup
+    oilist(`collector_a` `=` $collectorOpA | `collector_b` `=` $collectorOpB)
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+}
+
+defvar Tcgen05MMABlockScaleDecompressBScaleList = [
+    Tcgen05MMABlockScaleDefault,
+    Tcgen05MMABlockScaleBlock32
+  ];
+
+defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
+  ConfinedAttr<Tcgen05MMABlockScaleAttr,
+    [EnumAttrIsOneOf<Tcgen05MMABlockScaleAttr,
+                     Tcgen05MMABlockScaleDecompressBScaleList>]>;
+
+def NVVM_Tcgen05MMABlockScaleDecompressBOp :
+    NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
+                         [NVVMRequiresSMf<[107]>]> {
+  let summary = "Performs block scaled MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.block_scale.decompress_b` operation is similar to
+    `tcgen05.mma.decompress_b`, but with block scaling support for the A and B
+    matrices.
+
+    ```
+    D = (A * scale_a)  * (B * scale_b)`      // if `enableInputD` is false
+    D = (A * scale_a)  * (B * scale_b) + D`
+    ```
+
+    where:
+    - A is an M x (K / 2) matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+    - `scale_a` and `scale_b` are matrices in tensor memory used to scale `A` and `B` respectively
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - `idesc` is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    - `decompressBMetadata` is a decompress metadata of B matrix
+
+    Default Attributes:
+    - `blockScale` specifies the block scaling granularity
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+
+  let arguments = (ins
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc,
+      I1:$enableInputD,
+      LLVM_PointerTensor:$scaleA,
+      LLVM_PointerTensor:$scaleB,
+      LLVM_PointerTensor:$decompressBMetadata,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMABlockScaleDecompressBScaleAttr,
+                        "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpA,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD
+    `,` $scaleA `,` $scaleB `,` $decompressBMetadata
+    `cta_group` `=` $ctaGroup
+    oilist(
+      `block_scale` `=` $blockScale
+      | `collector_a` `=` $collectorOpA
+      | `collector_b` `=` $collectorOpB
+    ) attr-dict `:` `(` type(operands) `)`
   }];
 }
 

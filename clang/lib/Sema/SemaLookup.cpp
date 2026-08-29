@@ -3881,6 +3881,17 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                                      AssociatedNamespaces,
                                      AssociatedClasses);
 
+  // Load the friend classes in case there are unloaded decls.
+  //
+  // FIXME: Currently this is inefficient if there are a lot of friends
+  // in the classes. We just expect the number of friends are limited
+  // in real world. In case we meet the case that the loading friends
+  // became a threshold, we can change the structure of friends from
+  // a list to a name lookup table.
+  for (CXXRecordDecl *Class : AssociatedClasses)
+    if (Class->hasDefinition() && Class->hasLazyFriends())
+      Class->loadLazyFriends();
+
   // C++ [basic.lookup.argdep]p3:
   //   Let X be the lookup set produced by unqualified lookup (3.4.1)
   //   and let Y be the lookup set produced by argument dependent

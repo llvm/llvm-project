@@ -101,6 +101,7 @@ add_entrypoint_object(
   HDRS
     ../iscanonicalf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.iscanonicalf128
 )
 
@@ -604,6 +605,7 @@ add_entrypoint_object(
   HDRS
     ../truncf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.truncf128
 )
 
@@ -1595,6 +1597,19 @@ add_entrypoint_object(
     ../ilogbbf16.h
   DEPENDS
     libc.src.__support.math.ilogbbf16
+)
+
+add_entrypoint_object(
+  lgammaf
+  SRCS
+    lgammaf.cpp
+  HDRS
+    ../lgammaf.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.lgammaf
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -3044,6 +3059,7 @@ add_entrypoint_object(
   HDRS
     ../issignalingf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.issignalingf128
 )
 
@@ -3084,6 +3100,7 @@ add_entrypoint_object(
   HDRS
     ../isnanf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.isnanf128
 )
 

@@ -1748,10 +1748,14 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  Expected<TemplateDecl *> ToTypeConstraint =
-      import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraint)
-    return ToTypeConstraint.takeError();
+  TemplateName ToTypeConstraint;
+  if (TemplateName FromTypeConstraint = T->getTypeConstraintConcept();
+      !FromTypeConstraint.isNull()) {
+    Expected<TemplateName> ToTypeConstraintOrErr = import(FromTypeConstraint);
+    if (!ToTypeConstraintOrErr)
+      return ToTypeConstraintOrErr.takeError();
+    ToTypeConstraint = *ToTypeConstraintOrErr;
+  }
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1760,7 +1764,7 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
 
   return Importer.getToContext().getAutoType(
       T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
-      *ToTypeConstraint, ToTemplateArgs);
+      ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -10327,6 +10331,27 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
     return ToContext.getSubstTemplateTemplateParmPack(
         *ArgPackOrErr, *AssociatedDeclOrErr, SubstPack->getIndex(),
         SubstPack->getFinal());
+  }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = From.getAsPackIndexingTemplate();
+    auto PatternOrErr = Import(PI->getPattern());
+    if (!PatternOrErr)
+      return PatternOrErr.takeError();
+
+    auto IndexExprOrErr = Import(PI->getIndexExpr());
+    if (!IndexExprOrErr)
+      return IndexExprOrErr.takeError();
+
+    SmallVector<TemplateName, 4> Expansions;
+    for (TemplateName T : PI->getExpansions()) {
+      auto ExpansionOrErr = Import(T);
+      if (!ExpansionOrErr)
+        return ExpansionOrErr.takeError();
+      Expansions.push_back(*ExpansionOrErr);
+    }
+
+    return ToContext.getPackIndexingTemplateName(
+        *PatternOrErr, *IndexExprOrErr, PI->isFullySubstituted(), Expansions);
   }
   case TemplateName::UsingTemplate: {
     auto UsingOrError = Import(From.getAsUsingShadowDecl());
