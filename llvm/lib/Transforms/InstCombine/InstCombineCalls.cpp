@@ -5032,6 +5032,144 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   return Changed;
 }
 
+/// True if every use of \p CI is an equality or signed-ordering comparison
+/// against zero. Only the sign of a nonzero strcmp/strncmp/memcmp/bcmp
+/// result is specified, so these are the only predicates whose truth value
+/// survives a sign flip (via CmpInst::getSwappedPredicate()). Unsigned
+/// predicates are excluded: e.g. "x <u 0" is always false regardless of
+/// sign.
+static bool isOnlyUsedInSignAgnosticZeroComparisons(CallInst *CI) {
+  if (CI->use_empty())
+    return false;
+  return all_of(CI->users(), [CI](User *U) {
+    auto *Cmp = dyn_cast<ICmpInst>(U);
+    if (!Cmp || !(Cmp->isEquality() || Cmp->isSigned()))
+      return false;
+    Value *Other =
+        Cmp->getOperand(0) == CI ? Cmp->getOperand(1) : Cmp->getOperand(0);
+    return match(Other, PatternMatch::m_Zero());
+  });
+}
+
+/// True if no instruction between \p Dominator and \p Dominated may write
+/// to memory. Only handles the two shapes that matter in practice: same
+/// basic block, or \p Dominated's block reached directly and only from
+/// \p Dominator's block (short-circuiting `&&`/`||`).
+static bool isFreeOfIntermediateWrites(CallInst *Dominator,
+                                       CallInst *Dominated) {
+  BasicBlock *DominatorBB = Dominator->getParent();
+  BasicBlock *DominatedBB = Dominated->getParent();
+
+  if (DominatorBB == DominatedBB) {
+    for (Instruction &I : make_range(std::next(Dominator->getIterator()),
+                                     Dominated->getIterator()))
+      if (I.mayWriteToMemory())
+        return false;
+    return true;
+  }
+
+  if (DominatedBB->getUniquePredecessor() != DominatorBB)
+    return false;
+
+  for (Instruction &I :
+       make_range(std::next(Dominator->getIterator()), DominatorBB->end()))
+    if (I.mayWriteToMemory())
+      return false;
+  for (Instruction &I :
+       make_range(DominatedBB->begin(), Dominated->getIterator()))
+    if (I.mayWriteToMemory())
+      return false;
+  return true;
+}
+
+/// Swapping the pointer arguments of strcmp/strncmp/memcmp/bcmp negates the
+/// sign of a nonzero result and leaves a zero result unchanged. Given two
+/// such calls in the same function with swapped arguments, fold away
+/// whichever is dominated by the other (memory permitting), reusing the
+/// dominating call's result with its comparisons' predicates swapped to
+/// match. Ordinary CSE can't see this redundancy since the calls aren't
+/// literally identical instructions.
+Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
+  LibFunc Func;
+  if (!TLI.getLibFunc(CI, Func))
+    return nullptr;
+
+  switch (Func) {
+  case LibFunc_strcmp:
+  case LibFunc_strncmp:
+  case LibFunc_memcmp:
+  case LibFunc_bcmp:
+    break;
+  default:
+    return nullptr;
+  }
+
+  Function *Callee = CI.getCalledFunction();
+  Value *A = CI.getArgOperand(0);
+  Value *B = CI.getArgOperand(1);
+  if (A == B)
+    return nullptr;
+
+  // ConstantData (null, poison, ...) has no use list to search.
+  if (!A->hasUseList())
+    return nullptr;
+
+  for (User *U : A->users()) {
+    auto *Other = dyn_cast<CallInst>(U);
+    if (!Other || Other == &CI || Other->getCalledFunction() != Callee)
+      continue;
+    // A may be a global shared across functions, so Other may not be in CI's
+    // function; DominatorTree queries below require it to be.
+    if (Other->getFunction() != CI.getFunction())
+      continue;
+    if (Other->getArgOperand(0) != B || Other->getArgOperand(1) != A)
+      continue;
+    if (CI.arg_size() == 3 && Other->getArgOperand(2) != CI.getArgOperand(2))
+      continue;
+
+    // Only Dominated needs safely-reinterpretable uses; Dominator is left
+    // untouched, so its other uses don't matter.
+    CallInst *Dominator, *Dominated;
+    if (DT.dominates(&CI, Other)) {
+      Dominator = &CI;
+      Dominated = Other;
+    } else if (DT.dominates(Other, &CI)) {
+      Dominator = Other;
+      Dominated = &CI;
+    } else {
+      continue;
+    }
+
+    if (!isOnlyUsedInSignAgnosticZeroComparisons(Dominated))
+      continue;
+
+    if (!isFreeOfIntermediateWrites(Dominator, Dominated))
+      continue;
+
+    // Point each comparison at Dominator instead, swapping its predicate to
+    // compensate for the sign flip (a no-op for eq/ne).
+    for (Use &U2 : make_early_inc_range(Dominated->uses())) {
+      auto *Cmp = cast<ICmpInst>(U2.getUser());
+      Cmp->setPredicate(Cmp->getSwappedPredicate());
+      replaceUse(U2, Dominator);
+      Worklist.pushUsersToWorkList(*Cmp);
+      Worklist.push(Cmp);
+    }
+
+    // Dominated is now unused. Don't erase it here if it's CI:
+    // eraseInstFromFunction() returns nullptr, which the caller would read
+    // as "no change" and keep using the now-freed CI. Returning &CI lets
+    // the main loop's "modified in place" path erase it once dead instead.
+    if (Dominated == &CI)
+      return &CI;
+
+    eraseInstFromFunction(*Dominated);
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
 /// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   bool Changed = annotateAnyAllocSite(Call, &TLI);
@@ -5167,6 +5305,9 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   // this.  None of these calls are seen as possibly dead so go ahead and
   // delete the instruction now.
   if (CallInst *CI = dyn_cast<CallInst>(&Call)) {
+    if (Instruction *I = foldCommutativeCmpLibCall(*CI))
+      return I;
+
     Instruction *I = tryOptimizeCall(CI);
     // If we changed something return the result, etc. Otherwise let
     // the fallthrough check.
