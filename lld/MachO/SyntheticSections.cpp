@@ -889,17 +889,16 @@ ObjCStubsSection::ObjCStubsSection()
 }
 
 bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
-  return sym->getName().starts_with(symbolPrefix);
+  return sym->getName().starts_with(objcMsgSendStubPrefix);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
   auto name = sym->getName();
-  StringRef methname = name.drop_front(symbolPrefix.size());
-  return methname;
+  return name.drop_front(objcMsgSendStubPrefix.size());
 }
 
-size_t ObjCStubsSection::getStubSize() const {
+size_t ObjCStubsSection::getStubSize(Symbol *) const {
   return config->objcStubsMode == ObjCStubsMode::fast
              ? target->objcStubsFastSize
              : target->objcStubsSmallSize;
@@ -911,15 +910,16 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  size_t stubSize = getStubSize();
+  size_t stubSize = getStubSize(sym);
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * stubSize,
+      /*value=*/stubsSize,
       /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
   symbols.push_back(newSym);
+  stubsSize += stubSize;
 }
 
 void ObjCStubsSection::setUp() {
@@ -944,7 +944,7 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  return getStubSize() * symbols.size();
+  return stubsSize;
 }
 
 void ObjCStubsSection::sortSymbols(
@@ -957,9 +957,11 @@ void ObjCStubsSection::sortSymbols(
     };
     return priority(a) < priority(b);
   });
-  size_t stubSize = getStubSize();
-  for (auto [idx, sym] : llvm::enumerate(symbols))
-    sym->value = idx * stubSize;
+  size_t stubOffset = 0;
+  for (Defined *sym : symbols) {
+    sym->value = stubOffset;
+    stubOffset += getStubSize(sym);
+  }
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {

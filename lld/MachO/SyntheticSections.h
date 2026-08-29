@@ -342,7 +342,7 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
@@ -351,9 +351,10 @@ public:
   void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
 
 private:
-  size_t getStubSize() const;
+  size_t getStubSize(Symbol *) const;
 
   std::vector<Defined *> symbols;
+  size_t stubsSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 
