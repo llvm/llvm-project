@@ -18634,62 +18634,6 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
-// (and (i1) f, (setcc a, b, eq)) -> (czero.nez f, (xor a, b))
-// (and (i1) f, (setcc a, b, ne)) -> (czero.eqz f, (xor a, b))
-// (and (setcc a, b, eq), (i1) g) -> (czero.nez g, (xor a, b))
-// (and (setcc a, b, ne), (i1) g) -> (czero.eqz g, (xor a, b))
-//
-// (and (i1) f, (setcc c, 0, ne)) -> (czero.nez f, c)
-// (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
-// (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
-// (and (setcc c, 0, eq), (i1) g) -> (czero.eqz g, c)
-static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
-                                        const RISCVSubtarget &Subtarget) {
-  if (!Subtarget.hasCZEROLike())
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  auto IsSetCCEquality = [](SDValue &V) -> bool {
-    if (V.getOpcode() == ISD::SETCC) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(V.getOperand(2))->get();
-      if (ISD::isIntEqualitySetCC(CC))
-        return true;
-    }
-    return false;
-  };
-
-  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
-    std::swap(N0, N1);
-  if (!IsSetCCEquality(N0) || !N0.hasOneUse())
-    return SDValue();
-
-  KnownBits Known = DAG.computeKnownBits(N1);
-  if (Known.getMaxValue().ugt(1))
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  unsigned CzeroOpcode =
-      (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
-          ? RISCVISD::CZERO_EQZ
-          : RISCVISD::CZERO_NEZ;
-
-  // From here we have two cases:
-  // Either setcc is a comparision with zero, and we can lower directly to a
-  // czero instruction; Or it's not a constant zero, in which case we can still
-  // use a czero, but we first need to get a zero or one value comparing the two
-  // sides of setcc.
-  SDValue Rhs = N0.getOperand(0);
-  if (!isNullConstant(N0->getOperand(1))) {
-    Rhs = DAG.getNode(ISD::XOR, DL, N0.getValueType(), N0.getOperand(0),
-                      N0.getOperand(1));
-  }
-
-  return DAG.getNode(CzeroOpcode, DL, VT, N1, Rhs);
-}
-
 static SDValue reduceANDOfAtomicLoad(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -18797,9 +18741,6 @@ static SDValue performANDCombine(SDNode *N,
     return V;
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
-  if (DCI.isAfterLegalizeDAG())
-    if (SDValue V = combineANDOfSETCCToCZERO(N, DAG, Subtarget))
-      return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
