@@ -27,10 +27,10 @@ define { i64, i32 } @recurse(ptr %__break.coerce, ptr nofree noundef readonly ca
 ; CHECK-NEXT:    [[CALL29:%.*]] = tail call { i64, i32 } @recurse(ptr [[__BREAK_COERCE]], ptr noundef nonnull [[TMP1]], i32 [[INC_I_I]])
 ; CHECK-NEXT:    [[CALL29_FCA_0_EXTRACT:%.*]] = extractvalue { i64, i32 } [[CALL29]], 0
 ; CHECK-NEXT:    [[CALL29_FCA_1_EXTRACT:%.*]] = extractvalue { i64, i32 } [[CALL29]], 1
-; CHECK-NEXT:    br label [[RETURN]]
+; CHECK-NEXT:    ret { i64, i32 } [[CALL29]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_SROA_0_1:%.*]] = phi i64 [ 1, [[IF_THEN]] ], [ 1, [[IF_END14]] ], [ [[CALL29_FCA_0_EXTRACT]], [[IF_THEN22]] ], [ 0, [[IF_END18]] ]
-; CHECK-NEXT:    [[RETVAL_SROA_5_1:%.*]] = phi i32 [ [[CALL_FCA_1_EXTRACT]], [[IF_THEN]] ], [ [[__FUNC_SROA_0_0]], [[IF_END14]] ], [ [[CALL29_FCA_1_EXTRACT]], [[IF_THEN22]] ], [ [[INC_I_I]], [[IF_END18]] ]
+; CHECK-NEXT:    [[RETVAL_SROA_0_1:%.*]] = phi i64 [ 1, [[IF_THEN]] ], [ 1, [[IF_END14]] ], [ 0, [[IF_END18]] ]
+; CHECK-NEXT:    [[RETVAL_SROA_5_1:%.*]] = phi i32 [ [[CALL_FCA_1_EXTRACT]], [[IF_THEN]] ], [ [[__FUNC_SROA_0_0]], [[IF_END14]] ], [ [[INC_I_I]], [[IF_END18]] ]
 ; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i32 } poison, i64 [[RETVAL_SROA_0_1]], 0
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i32 } [[DOTFCA_0_INSERT]], i32 [[RETVAL_SROA_5_1]], 1
 ; CHECK-NEXT:    ret { i64, i32 } [[DOTFCA_1_INSERT]]
