@@ -46,6 +46,7 @@ endif()
 
 set(ORC_RT_POSIX_SOURCES
   posix/DynamicLibrary.cpp
+  posix/Errno.cpp
   posix/Memory.cpp
 )
 
