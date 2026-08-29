@@ -21,17 +21,17 @@ if (some_condition()){  // line #1
 ```{option} IfLineCountThreshold
 
 This option sets the number of lines of code beyond which an `if` (or `else`)
-block will be flagged as too long. The default value is 20.
+block will be flagged as too long. The default value is `20`.
 ```
 
 ```{option} ForLineCountThreshold
 
 This option sets the number of lines of code beyond which a `for` loop will be
-flagged as too long. The default value is 30.
+flagged as too long. The default value is `30`.
 ```
 
 ```{option} WhileLineCountThreshold
 
 This option sets the number of lines of code beyond which a `while` loop will
-be flagged as too long. The default value is 30.
+be flagged as too long. The default value is `30`.
 ```
