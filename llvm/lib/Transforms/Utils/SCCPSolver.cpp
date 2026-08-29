@@ -55,7 +55,8 @@ namespace llvm {
 
 bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
   return LV.isConstant() ||
-         (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
+         (LV.isConstantRange() && LV.getConstantRange().isSingleElement()) ||
+         (LV.isConstantFPRange() && LV.getConstantFPRange().isSingleElement());
 }
 
 bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
@@ -1188,6 +1189,12 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV,
     const auto &CR = LV.getConstantRange();
     if (CR.getSingleElement())
       return ConstantInt::get(Ty, *CR.getSingleElement());
+  }
+
+  if (LV.isConstantFPRange()) {
+    const auto &CR = LV.getConstantFPRange();
+    if (CR.getSingleElement())
+      return ConstantFP::get(Ty, *CR.getSingleElement());
   }
   return nullptr;
 }
