@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -163,14 +164,16 @@ void removeParDim(SmallVector<GPUParallelDimAttr> &parDims,
 }
 
 #define ACC_OP_WITH_PAR_DIMS_LIST                                              \
-  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp
+  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp,              \
+      ReductionCombineOp
 
 GPUParallelDimsAttr getParDimsAttr(Operation *op) {
   return llvm::TypeSwitch<Operation *, GPUParallelDimsAttr>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [](auto parOp) { return parOp.getParDimsAttr(); })
       .Default([](Operation *op) -> GPUParallelDimsAttr {
-        if (Attribute attr = op->getAttr(GPUParallelDimsAttr::name)) {
+        if (Attribute attr =
+                op->getDiscardableAttr(GPUParallelDimsAttr::name)) {
           GPUParallelDimsAttr parDimsAttr = dyn_cast<GPUParallelDimsAttr>(attr);
           assert(parDimsAttr && "acc.par_dims must be a GPUParallelDimsAttr");
           return parDimsAttr;
@@ -192,8 +195,9 @@ void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
@@ -202,25 +206,44 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 #undef ACC_OP_WITH_PAR_DIMS_LIST
 
 bool hasGPUBlockRedundantAttr(Operation *op) {
-  return op->hasAttrOfType<GPUBlockRedundantAttr>(GPUBlockRedundantAttr::name);
+  return op->hasDiscardableAttrOfType<GPUBlockRedundantAttr>(
+      GPUBlockRedundantAttr::name);
 }
 
 void setGPUBlockRedundantAttr(Operation *op) {
-  op->setAttr(GPUBlockRedundantAttr::name,
-              GPUBlockRedundantAttr::get(op->getContext()));
+  op->setDiscardableAttr(GPUBlockRedundantAttr::name,
+                         GPUBlockRedundantAttr::get(op->getContext()));
 }
 
 void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");
   setParDimsAttr(to, getParDimsAttr(from));
+}
+
+ActiveParDimsAttr getActiveParDimsAttr(Operation *op) {
+  return op->getDiscardableAttrOfType<ActiveParDimsAttr>(
+      ActiveParDimsAttr::name);
+}
+
+bool hasActiveParDimsAttr(Operation *op) {
+  return getActiveParDimsAttr(op) != nullptr;
+}
+
+void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr) {
+  op->setDiscardableAttr(ActiveParDimsAttr::name, attr);
+}
+
+void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims) {
+  setActiveParDimsAttr(op, ActiveParDimsAttr::get(op->getContext(), dims));
 }
 
 int64_t SharedMemoryBudget::alignOffset(int64_t offset, int64_t alignment) {
@@ -319,8 +342,8 @@ collectPrivateLocalParDims(PrivateLocalOp privateLocal,
 
 static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
     PrivateLocalOp privateLocal, ComputeRegionOp computeRegion,
-    bool isWorkerPrivate, bool isGangPrivate, OpenACCSupport *support) {
-  if (!isWorkerPrivate || isGangPrivate)
+    bool isWorkerPrivate, OpenACCSupport *support) {
+  if (!isWorkerPrivate)
     return std::optional<int64_t>(1);
 
   GPUParallelDimAttr threadY =
@@ -330,16 +353,22 @@ static FailureOr<std::optional<int64_t>> getWorkerPrivateSharedMemoryNumCopies(
     return std::optional<int64_t>();
 
   auto workerArgConst = workerArg->getDefiningOp<arith::ConstantIndexOp>();
-  if (!workerArgConst) {
-    if (support) {
-      (void)support->emitNYI(privateLocal.getLoc(),
-                             "worker-private variables in shared memory "
-                             "require compile-time constant num_workers");
-      return failure();
-    }
-    return std::optional<int64_t>();
+  if (workerArgConst)
+    return std::optional<int64_t>(workerArgConst.value());
+
+  FailureOr<int64_t> workerArgBound =
+      ValueBoundsConstraintSet::computeConstantBound(presburger::BoundType::EQ,
+                                                     *workerArg);
+  if (succeeded(workerArgBound))
+    return std::optional<int64_t>(*workerArgBound);
+
+  if (support) {
+    (void)support->emitNYI(privateLocal.getLoc(),
+                           "worker-private variables in shared memory "
+                           "require compile-time constant num_workers");
+    return failure();
   }
-  return std::optional<int64_t>(workerArgConst.value());
+  return std::optional<int64_t>();
 }
 
 static bool isInsideACCSpecializedRoutine(Operation *op) {
@@ -394,8 +423,8 @@ FailureOr<bool> isPrivateLocalSharedMemoryCandidate(
     return false;
 
   FailureOr<std::optional<int64_t>> numCopies =
-      getWorkerPrivateSharedMemoryNumCopies(
-          privateLocal, computeRegion, isWorkerPrivate, isGangPrivate, support);
+      getWorkerPrivateSharedMemoryNumCopies(privateLocal, computeRegion,
+                                            isWorkerPrivate, support);
   if (failed(numCopies))
     return failure();
   return numCopies->has_value();
@@ -411,15 +440,12 @@ std::optional<int64_t> getPrivateLocalSharedMemoryUpperBoundBytes(
 
   SmallVector<GPUParallelDimAttr> parDims =
       collectPrivateLocalParDims(privateLocal, computeRegion);
-  bool isGangPrivate =
-      llvm::any_of(parDims, [&](auto parDim) { return policy.isGang(parDim); });
   bool isWorkerPrivate = llvm::any_of(
       parDims, [&](auto parDim) { return policy.isWorker(parDim); });
 
   FailureOr<std::optional<int64_t>> numCopies =
-      getWorkerPrivateSharedMemoryNumCopies(privateLocal, computeRegion,
-                                            isWorkerPrivate, isGangPrivate,
-                                            /*support=*/nullptr);
+      getWorkerPrivateSharedMemoryNumCopies(
+          privateLocal, computeRegion, isWorkerPrivate, /*support=*/nullptr);
   if (failed(numCopies) || !numCopies->has_value())
     return std::nullopt;
 

@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck -check-prefix=DEFAULT %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-stress-vgpr=2 %s -o - | FileCheck -check-prefix=VGPR2 %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-stress-vgpr=4 -amdgpu-stress-agpr=0 %s -o - | FileCheck -check-prefix=VGPR4-AGPR0 %s
+
+# Test that -amdgpu-stress-vgpr and -amdgpu-stress-agpr limit register
+# availability during register allocation.
+#
+# No limits - all values stay in VGPRs, no spills.
+# With -amdgpu-stress-vgpr=2 - overflow to AGPRs.
+# With -amdgpu-stress-vgpr=4 -amdgpu-stress-agpr=0 - forced to spill to scratch.
+
+--- |
+  define amdgpu_kernel void @stress_regalloc(ptr addrspace(1) %p) #0 { ret void }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+# DEFAULT-LABEL: stress_regalloc:
+# DEFAULT:     global_load_dword v
+# DEFAULT-NOT: global_load_dword a
+# DEFAULT-NOT: scratch_store
+# DEFAULT:     s_endpgm
+
+# VGPR2-LABEL: stress_regalloc:
+# VGPR2:     global_load_dword a
+# VGPR2:     s_endpgm
+
+# VGPR4-AGPR0-LABEL: stress_regalloc:
+# VGPR4-AGPR0-NOT: global_load_dword a
+# VGPR4-AGPR0:     scratch_store
+# VGPR4-AGPR0:     s_endpgm
+
+name: stress_regalloc
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %0:sgpr_64 = COPY $sgpr4_sgpr5
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (load (s64), addrspace 4)
+    %addr:vreg_64_align2 = COPY %1
+
+    %v0:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 0, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+    %v1:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 4, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+    %v2:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 8, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+    %v3:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 12, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+    %v4:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 16, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+    %v5:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 20, 0, implicit $exec :: (volatile load (s32), addrspace 1)
+
+    GLOBAL_STORE_DWORD %addr, %v0, 40, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD %addr, %v1, 44, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD %addr, %v2, 48, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD %addr, %v3, 52, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD %addr, %v4, 56, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    GLOBAL_STORE_DWORD %addr, %v5, 60, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+
+    S_ENDPGM 0
+...

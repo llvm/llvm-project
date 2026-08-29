@@ -79,9 +79,13 @@ struct DeviceExprChecker
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
-      const auto *subp{
-          sym->GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+      const Symbol &ultimate{sym->GetUltimate()};
+      const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
       if (subp) {
+        if (const auto &stmtFunction{subp->stmtFunction()};
+            stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
+          return (*this)(*stmtFunction);
+        }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
@@ -98,9 +102,11 @@ struct DeviceExprChecker
                 "not yet implemented: CUDA dynamic parallelism"_err_en_US);
           }
         }
+        if (!subp->openACCRoutineInfos().empty()) {
+          return {};
+        }
       }
 
-      const Symbol &ultimate{sym->GetUltimate()};
       const Scope &scope{ultimate.owner()};
       const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
       // Allow ieee_arithmetic module functions to be called on the device.
@@ -839,7 +845,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
-      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+      (evaluate::HasCUDAImplicitTransfer(assign->rhs) &&
+          !evaluate::HasOnlyCUDAConstntImplicitTransfer(assign->rhs))) {
     if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
         GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
       return; // This is a special case handled on the host.

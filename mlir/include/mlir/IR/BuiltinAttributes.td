@@ -160,6 +160,9 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
           $_allocator.allocate($_self.size(), alignof(uint64_t)));
       llvm::uninitialized_copy($_self, alloc);
       $_dst = ArrayRef<char>(alloc, $_self.size());
+    } else {
+      // Align possibly unaligned empty range.
+      $_dst = {};
     }
   }];
 }

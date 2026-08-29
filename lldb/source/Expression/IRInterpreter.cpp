@@ -135,7 +135,7 @@ public:
   std::string SummarizeValue(const Value *value) {
     lldb_private::StreamString ss;
 
-    ss.Printf("%s", PrintValue(value).c_str());
+    ss.PutCString(PrintValue(value).c_str());
 
     ValueMap::iterator i = m_values.find(value);
 

@@ -987,6 +987,11 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   }
 
   for (MachineInstr &MI : llvm::make_range(std::next(DefIt), TfrIt)) {
+    // Debug instructions do not generate any code, so their operands should
+    // not be taken into account when checking whether the transformation is
+    // possible.
+    if (MI.isDebugInstr())
+      continue;
     // If this instruction is predicated on the same register, it could
     // potentially be ignored.
     // By default assume that the instruction executes on the same condition

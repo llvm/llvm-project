@@ -659,8 +659,7 @@ define void @masked_scatter_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
-; FIXME: Tests should not be dependant on bf16
-define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) "target-features"="+sve,+bf16" {
+define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
@@ -686,7 +685,7 @@ define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) "target-fea
   ret void
 }
 
-define void @masked_scatter_v4bf16(ptr %a, ptr %b) vscale_range(2,0) "target-features"="+sve,+bf16" {
+define void @masked_scatter_v4bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -709,7 +708,7 @@ define void @masked_scatter_v4bf16(ptr %a, ptr %b) vscale_range(2,0) "target-fea
   ret void
 }
 
-define void @masked_scatter_v8bf16(ptr %a, ptr %b) "target-features"="+sve,+bf16" {
+define void @masked_scatter_v8bf16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8bf16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
@@ -762,7 +761,7 @@ define void @masked_scatter_v8bf16(ptr %a, ptr %b) "target-features"="+sve,+bf16
   ret void
 }
 
-define void @masked_scatter_v16bf16(ptr %a, ptr %b) vscale_range(8,0) "target-features"="+sve,+bf16" {
+define void @masked_scatter_v16bf16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]

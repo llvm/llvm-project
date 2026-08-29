@@ -19,6 +19,10 @@
 // LINK: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -Wl,--no-demangle 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_NO_DEMANGLE %s
+// LINK_NO_DEMANGLE: wasm-ld{{.*}}"--no-demangle"
+
 // A basic C link command-line with optimization with unknown OS.
 
 // RUN: %clang -### -O2 --target=wasm32-unknown-unknown --sysroot=/foo %s 2>&1 \

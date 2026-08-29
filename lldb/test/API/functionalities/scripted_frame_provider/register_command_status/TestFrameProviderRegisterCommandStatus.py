@@ -37,3 +37,22 @@ class TestFrameProviderRegisterCommandStatus(TestBase):
             "target frame-provider register -C frame_provider.MinimalProvider",
             substrs=["successfully registered scripted frame provider"],
         )
+
+    def test_static_method_exception_does_not_escape(self):
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target.IsValid())
+
+        provider_path = os.path.join(self.getSourceDir(), "frame_provider.py")
+        self.runCmd("command script import " + provider_path)
+        self.runCmd(
+            "target frame-provider register "
+            "-C frame_provider.FailingDescriptionProvider"
+        )
+
+        result = lldb.SBCommandReturnObject()
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "target frame-provider list", result
+        )
+
+        self.assertTrue(result.Succeeded(), result.GetError())
+        self.assertIn("FailingDescriptionProvider", result.GetOutput())

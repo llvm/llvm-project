@@ -29,6 +29,10 @@ RegisterContextWasm::RegisterContextWasm(ThreadGDBRemote &thread,
 
 RegisterContextWasm::~RegisterContextWasm() = default;
 
+uint32_t RegisterContextWasm::GetModuleID() {
+  return GetWasmModuleID(GetPC(LLDB_INVALID_ADDRESS));
+}
+
 uint32_t RegisterContextWasm::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
   return num;
@@ -62,16 +66,44 @@ const RegisterSet *RegisterContextWasm::GetRegisterSet(size_t reg_set) {
   return nullptr;
 }
 
+/// A local and an operand stack value belong to the frame, while a global
+/// belongs to the module instance the frame is executing, which is named
+/// directly wherever the stub accepts one.
+static llvm::Expected<DataBufferSP>
+ReadWasmValue(ProcessWasm &process, const WasmVirtualRegisterInfo &reg_info,
+              uint32_t frame_index, uint32_t module_id) {
+  if (reg_info.kind != eWasmTagGlobal)
+    return process.GetWasmVariable(reg_info.kind, frame_index, reg_info.index);
+
+  if (process.CanNameInstance(module_id))
+    return process.GetWasmGlobalForModule(module_id, reg_info.index);
+
+  return process.GetWasmGlobalForFrame(frame_index, reg_info.index);
+}
+
 bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
                                        RegisterValue &value) {
-  // The only real registers is the PC.
-  if (reg_info->name)
+  ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
+
+  // The only real register is the PC.
+  if (reg_info->name) {
+    // A caller frame's PC is the unwound return address, which the base
+    // register context cannot provide because it only sees the innermost
+    // frame's live PC. Use the PC the unwinder recorded for this frame.
+    if (m_concrete_frame_idx > 0) {
+      lldb::addr_t pc = wasm_thread.GetConcreteFramePC(m_concrete_frame_idx);
+      if (pc != LLDB_INVALID_ADDRESS) {
+        value.SetUInt(pc, reg_info->byte_size);
+        return true;
+      }
+    }
     return GDBRemoteRegisterContext::ReadRegister(reg_info, value);
+  }
 
   // Read the virtual registers.
-  ThreadWasm *thread = static_cast<ThreadWasm *>(&GetThread());
-  ProcessWasm *process = static_cast<ProcessWasm *>(thread->GetProcess().get());
-  if (!thread)
+  ProcessWasm *process =
+      static_cast<ProcessWasm *>(wasm_thread.GetProcess().get());
+  if (!process)
     return false;
 
   uint32_t frame_index = m_concrete_frame_idx;
@@ -79,11 +111,11 @@ bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
       static_cast<WasmVirtualRegisterInfo *>(
           const_cast<RegisterInfo *>(reg_info));
 
-  llvm::Expected<DataBufferSP> maybe_buffer = process->GetWasmVariable(
-      wasm_reg_info->kind, frame_index, wasm_reg_info->index);
+  llvm::Expected<DataBufferSP> maybe_buffer =
+      ReadWasmValue(*process, *wasm_reg_info, frame_index, GetModuleID());
   if (!maybe_buffer) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Process), maybe_buffer.takeError(),
-                   "Failed to read Wasm local: {0}");
+                   "Failed to read Wasm value: {0}");
     return false;
   }
 

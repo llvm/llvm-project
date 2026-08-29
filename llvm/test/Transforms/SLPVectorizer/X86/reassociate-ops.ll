@@ -13,10 +13,8 @@ define void @test_reassoc_add(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -63,10 +61,8 @@ define void @test_reassoc_add_wrapflags(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -160,10 +156,8 @@ define void @test_reassoc_mul_wrapflags(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -207,10 +201,8 @@ define void @test_reassoc_mul_fast(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %S
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -252,12 +244,9 @@ define void @test_reassoc_add_deep(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %D
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -313,11 +302,9 @@ define void @test_reassoc_add_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %C
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP8]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -422,10 +409,8 @@ define void @test_reassoc_and_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %C
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[DARRAY]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP8]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
@@ -468,11 +453,7 @@ entry:
 ; lane 1 combines B with 0 first, then adds A. This is the same shape (a
 ; real value mixed with an unrelated identity placeholder in one column,
 ; e.g. add(B, 0)) as a real gather-buildvector regression that combined
-; several unrelated `or`-with-0 expressions; getReassocColumnsQuality()
-; should recognize a column that is one real value plus the opcode's own
-; identity constant as cheap (isReassocIdentityConstant()), not just "2
-; unique values", so this still finds the clean 2-column [A, B] split
-; instead of leaving 0 diluting whichever column it naturally landed in.
+; several unrelated `or`-with-0 expressions;
 ;
 ; S[0] = (A[0] + B[0]) + 0
 ; S[1] = (B[1] + 0) + A[1]
@@ -482,11 +463,8 @@ define void @test_reassoc_add_identity(ptr %Aarray, ptr %Barray, ptr %Sarray) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -509,4 +487,965 @@ entry:
   store i32 %add0, ptr %Sarray, align 4
   store i32 %add1, ptr %idxS1, align 4
   ret void
+}
+
+; The same 4 load families per lane, but each lane's chain consumes them in
+; a different order: lane 0 is ((B+D)+C)+A, lane 1 is ((A+B)+C)+D. Peeling
+; goes through transient mixed columns (a load leaf against a nested add),
+; after which the columns realign into consecutive-load pairs.
+define void @test_reassoc_add_permuted_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_permuted_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw <2 x i8> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw <2 x i8> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i8> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    store i8 [[TMP7]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    store i8 [[TMP8]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B0 = load i8, ptr %Barray, align 8
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %addB0D0 = add nuw nsw i8 %D0, %B0
+  %addA1B1 = add nuw nsw i8 %B1, %A1
+  %addB0C0D0 = add nuw nsw i8 %C0, %addB0D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addB0C0D0, %A0
+  %add1 = add nuw nsw i8 %D1, %addA1B1C1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Shift leaves sit at different chain positions per lane (lane 0 slots 0,3;
+; lane 1 slots 0,1). Same-key shift columns are paired by the family of the
+; shift's own operand, so shlA* pairs with shlA* (consecutive loads) instead
+; of pairing by encounter order.
+define void @test_reassoc_add_shl_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_shl_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds i8, ptr [[BARRAY]], i64 1
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i8> [[TMP0]], splat (i8 3)
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[B1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <2 x i8> [[TMP4]], splat (i8 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i8> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw <2 x i8> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw <2 x i8> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i8> [[TMP8]], i64 0
+; CHECK-NEXT:    store i8 [[TMP9]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i8> [[TMP8]], i64 1
+; CHECK-NEXT:    store i8 [[TMP10]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %shlA0 = shl nuw i8 %A0, 3
+  %shlA1 = shl nuw i8 %A1, 3
+  %shlB1 = shl nuw i8 %B1, 3
+  %shlC0 = shl nuw i8 %C0, 3
+
+  %addA0C0 = add nuw nsw i8 %shlA0, %C0
+  %addA1B1 = add nuw nsw i8 %shlB1, %shlA1
+  %addA0C0D0 = add nuw nsw i8 %addA0C0, %D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addA0C0D0, %shlC0
+  %add1 = add nuw nsw i8 %addA1B1C1, %D1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Mixed add/sub chain: lane 0 subtracts B and D, lane 1 subtracts D and B.
+; The flattened subtracted columns must be realigned among themselves only
+; (a subtracted leaf never lands in an added column), so the subtrahends
+; regroup into the consecutive B and D load columns.
+;
+; S[0] = (A[0] - B[0]) + (C[0] - D[0])
+; S[1] = (A[1] - D[1]) + (C[1] - B[1])
+define void @test_reassoc_add_sub(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_sub(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[DARRAY]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <2 x i32> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i32, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %D0 = load i32, ptr %Darray, align 4
+  %D1 = load i32, ptr %idxD1, align 4
+
+  %subA0B0 = sub i32 %A0, %B0
+  %subC0D0 = sub i32 %C0, %D0
+  %add0 = add i32 %subA0B0, %subC0D0
+
+  %subA1D1 = sub i32 %A1, %D1
+  %subC1B1 = sub i32 %C1, %B1
+  %add1 = add i32 %subA1D1, %subC1B1
+
+  store i32 %add0, ptr %Sarray, align 4
+  store i32 %add1, ptr %idxS1, align 4
+  ret void
+}
+
+; A pure subtract chain flattens as a single added leaf minus the summed
+; subtrahends. Every scalar below is "nsw nuw", but a regrouped partial sum
+; can exceed the original running total (the minuend is not part of the
+; negated group), so both wrap flags must be dropped on the vector ops.
+;
+; S[0] = (A[0] - B[0]) - C[0]
+; S[1] = (A[1] - C[1]) - B[1]
+define void @test_reassoc_sub_chain_wrapflags(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_chain_wrapflags(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %subA0B0 = sub nsw nuw i32 %A0, %B0
+  %sub0 = sub nsw nuw i32 %subA0B0, %C0
+
+  %subA1C1 = sub nsw nuw i32 %A1, %C1
+  %sub1 = sub nsw nuw i32 %subA1C1, %B1
+
+  store i32 %sub0, ptr %Sarray, align 4
+  store i32 %sub1, ptr %idxS1, align 4
+  ret void
+}
+
+; Both lanes pair the same added terms with the operands swapped, so each
+; vector combine exactly reproduces a real source instruction (the added
+; pair is keyed operand-order independently): the (A + B) add and the final
+; subtract keep their own flags instead of falling back to conservative
+; dropping.
+;
+; S[0] = (A[0] + B[0]) - C[0]
+; S[1] = (B[1] + A[1]) - C[1]
+define void @test_reassoc_sub_preserves_flags(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_preserves_flags(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nuw nsw <2 x i32> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %addA0B0 = add nuw nsw i32 %A0, %B0
+  %sub0 = sub nuw nsw i32 %addA0B0, %C0
+
+  %addB1A1 = add nuw nsw i32 %B1, %A1
+  %sub1 = sub nuw nsw i32 %addB1A1, %C1
+
+  store i32 %sub0, ptr %Sarray, align 4
+  store i32 %sub1, ptr %idxS1, align 4
+  ret void
+}
+
+; The fadd/fsub counterpart of test_reassoc_add_sub: "fast" carries reassoc,
+; so the float subtracts flatten too; nnan/ninf are dropped on the
+; regrouped vector ops, the rest of the fast-math set is kept.
+;
+; S[0] = (A[0] - B[0]) + (C[0] - D[0])
+; S[1] = (A[1] - D[1]) + (C[1] - B[1])
+define void @test_reassoc_fadd_fsub(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fadd_fsub(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %subA0B0 = fsub fast double %A0, %B0
+  %subC0D0 = fsub fast double %C0, %D0
+  %add0 = fadd fast double %subA0B0, %subC0D0
+
+  %subA1D1 = fsub fast double %A1, %D1
+  %subC1B1 = fsub fast double %C1, %B1
+  %add1 = fadd fast double %subA1D1, %subC1B1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Without reassoc a float subtract chain cannot be regrouped, so the
+; flattening must leave it alone entirely.
+;
+; S[0] = (A[0] - B[0]) - C[0]
+; S[1] = (A[1] - B[1]) - C[1]
+define void @test_reassoc_fsub_no_reassoc_flag(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fsub_no_reassoc_flag(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %subA0B0 = fsub double %A0, %B0
+  %sub0 = fsub double %subA0B0, %C0
+
+  %subA1B1 = fsub double %A1, %B1
+  %sub1 = fsub double %subA1B1, %C1
+
+  store double %sub0, ptr %Sarray, align 8
+  store double %sub1, ptr %idxS1, align 8
+  ret void
+}
+
+; A pure float subtract chain with reassoc flattens like the integer one:
+; the single added leaf minus the summed subtrahends.
+;
+; S[0] = (A[0] - B[0]) - C[0]
+; S[1] = (A[1] - C[1]) - B[1]
+define void @test_reassoc_fsub_chain(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_fsub_chain(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub reassoc <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %subA0B0 = fsub reassoc double %A0, %B0
+  %sub0 = fsub reassoc double %subA0B0, %C0
+
+  %subA1C1 = fsub reassoc double %A1, %C1
+  %sub1 = fsub reassoc double %subA1C1, %B1
+
+  store double %sub0, ptr %Sarray, align 8
+  store double %sub1, ptr %idxS1, align 8
+  ret void
+}
+
+; A subtract nested in the subtracted operand flips its own second operand
+; back to a positive leaf: lane 0 is (A + B) - (C - D) = A + B - C + D,
+; lane 1 is (A + D) - (C - B) = A + B - C + D too, so all four terms
+; realign into consecutive load columns, three of them added and C
+; subtracted.
+define void @test_reassoc_sub_nested_signs(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_nested_signs(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[DARRAY]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <2 x i32> [[TMP5]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i32, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %D0 = load i32, ptr %Darray, align 4
+  %D1 = load i32, ptr %idxD1, align 4
+
+  %addA0B0 = add i32 %A0, %B0
+  %subC0D0 = sub i32 %C0, %D0
+  %sub0 = sub i32 %addA0B0, %subC0D0
+
+  %addA1D1 = add i32 %A1, %D1
+  %subC1B1 = sub i32 %C1, %B1
+  %sub1 = sub i32 %addA1D1, %subC1B1
+
+  store i32 %sub0, ptr %Sarray, align 4
+  store i32 %sub1, ptr %idxS1, align 4
+  ret void
+}
+
+; The subtrahends come from a peeled add, so the negated-group combine
+; exactly reproduces that add lane by lane and reuses its flags, and the
+; final subtract exactly reproduces the root scalar and reuses its flags.
+; Only the exact matches permit this; the fallback would have dropped both
+; wrap flags because a negated leaf is present.
+;
+; S[0] = A[0] - (B[0] + C[0])
+; S[1] = A[1] - (C[1] + B[1])
+define void @test_reassoc_sub_neg_group_exact(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_neg_group_exact(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nuw nsw <2 x i32> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %addB0C0 = add nuw nsw i32 %B0, %C0
+  %sub0 = sub nuw nsw i32 %A0, %addB0C0
+
+  %addC1B1 = add nuw nsw i32 %C1, %B1
+  %sub1 = sub nuw nsw i32 %A1, %addC1B1
+
+  store i32 %sub0, ptr %Sarray, align 4
+  store i32 %sub1, ptr %idxS1, align 4
+  ret void
+}
+
+; Same shape as above, but the lanes disagree on flags: flag propagation
+; intersects across lanes, so even though every combine exactly reproduces
+; a source instruction, no wrap flags survive.
+;
+; S[0] = A[0] - (B[0] + C[0])
+; S[1] = A[1] - (C[1] + B[1])
+define void @test_reassoc_sub_mixed_lane_flags(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_mixed_lane_flags(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %addB0C0 = add nuw nsw i32 %B0, %C0
+  %sub0 = sub nuw nsw i32 %A0, %addB0C0
+
+  %addC1B1 = add i32 %C1, %B1
+  %sub1 = sub i32 %A1, %addC1B1
+
+  store i32 %sub0, ptr %Sarray, align 4
+  store i32 %sub1, ptr %idxS1, align 4
+  ret void
+}
+
+; Lane 2 of the peeled subtract column is not an instruction at all: it
+; stands in as a copyable identity leaf (sub(x, 0) == x). The peel happens,
+; but the identity zeros break the load-column structure, so the tie rule
+; keeps the natural two-operand form; the vectorized result must still be
+; correct (note the 0 lane in the subtrahend operand).
+;
+; S[0] = (A[0] - B[0]) + C[0]
+; S[1] = (A[1] - B[1]) + C[1]
+; S[2] = x + C[2]
+; S[3] = (A[3] - B[3]) + C[3]
+define void @test_reassoc_sub_copyable_lane(ptr %Aarray, ptr %Barray, ptr %Carray, i32 %x, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_copyable_lane(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], i32 [[X:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds i32, ptr [[AARRAY]], i64 2
+; CHECK-NEXT:    [[IDXA3:%.*]] = getelementptr inbounds i32, ptr [[AARRAY]], i64 3
+; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds i32, ptr [[BARRAY]], i64 2
+; CHECK-NEXT:    [[IDXB3:%.*]] = getelementptr inbounds i32, ptr [[BARRAY]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load i32, ptr [[IDXA3]], align 4
+; CHECK-NEXT:    [[B3:%.*]] = load i32, ptr [[IDXB3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A3]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, i32 [[B3]], i64 3
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i32> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[TMP10]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxA2 = getelementptr inbounds i32, ptr %Aarray, i64 2
+  %idxA3 = getelementptr inbounds i32, ptr %Aarray, i64 3
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxB2 = getelementptr inbounds i32, ptr %Barray, i64 2
+  %idxB3 = getelementptr inbounds i32, ptr %Barray, i64 3
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxC2 = getelementptr inbounds i32, ptr %Carray, i64 2
+  %idxC3 = getelementptr inbounds i32, ptr %Carray, i64 3
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+  %idxS2 = getelementptr inbounds i32, ptr %Sarray, i64 2
+  %idxS3 = getelementptr inbounds i32, ptr %Sarray, i64 3
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+  %A3 = load i32, ptr %idxA3, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+  %B3 = load i32, ptr %idxB3, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+  %C2 = load i32, ptr %idxC2, align 4
+  %C3 = load i32, ptr %idxC3, align 4
+
+  %subA0B0 = sub i32 %A0, %B0
+  %subA1B1 = sub i32 %A1, %B1
+  %subA3B3 = sub i32 %A3, %B3
+
+  %add0 = add i32 %subA0B0, %C0
+  %add1 = add i32 %subA1B1, %C1
+  %add2 = add i32 %x, %C2
+  %add3 = add i32 %subA3B3, %C3
+
+  store i32 %add0, ptr %Sarray, align 4
+  store i32 %add1, ptr %idxS1, align 4
+  store i32 %add2, ptr %idxS2, align 4
+  store i32 %add3, ptr %idxS3, align 4
+  ret void
+}
+
+; Scheduling stress: the flattened tree's leaves and its root scalar in
+; lane 0 have uses outside the tree (only the peeled links must be
+; single-use), so the peeled links' scheduling deps and the external-use
+; bookkeeping must survive flattening.
+define void @test_reassoc_sub_external_uses(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray, ptr %Tarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_external_uses(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]], ptr [[TARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[DARRAY]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[EXT:%.*]] = add i32 [[TMP7]], [[A0]]
+; CHECK-NEXT:    store i32 [[EXT]], ptr [[TARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxA2 = getelementptr inbounds i32, ptr %Aarray, i64 2
+  %idxA3 = getelementptr inbounds i32, ptr %Aarray, i64 3
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxB2 = getelementptr inbounds i32, ptr %Barray, i64 2
+  %idxB3 = getelementptr inbounds i32, ptr %Barray, i64 3
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxC2 = getelementptr inbounds i32, ptr %Carray, i64 2
+  %idxC3 = getelementptr inbounds i32, ptr %Carray, i64 3
+  %idxD1 = getelementptr inbounds i32, ptr %Darray, i64 1
+  %idxD2 = getelementptr inbounds i32, ptr %Darray, i64 2
+  %idxD3 = getelementptr inbounds i32, ptr %Darray, i64 3
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+  %idxS2 = getelementptr inbounds i32, ptr %Sarray, i64 2
+  %idxS3 = getelementptr inbounds i32, ptr %Sarray, i64 3
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+  %A2 = load i32, ptr %idxA2, align 4
+  %A3 = load i32, ptr %idxA3, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+  %B2 = load i32, ptr %idxB2, align 4
+  %B3 = load i32, ptr %idxB3, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+  %C2 = load i32, ptr %idxC2, align 4
+  %C3 = load i32, ptr %idxC3, align 4
+
+  %D0 = load i32, ptr %Darray, align 4
+  %D1 = load i32, ptr %idxD1, align 4
+  %D2 = load i32, ptr %idxD2, align 4
+  %D3 = load i32, ptr %idxD3, align 4
+
+  %subA0B0 = sub i32 %A0, %B0
+  %subC0D0 = sub i32 %C0, %D0
+  %add0 = add i32 %subA0B0, %subC0D0
+
+  %subA1D1 = sub i32 %A1, %D1
+  %subC1B1 = sub i32 %C1, %B1
+  %add1 = add i32 %subA1D1, %subC1B1
+
+  %subA2B2 = sub i32 %A2, %B2
+  %subC2D2 = sub i32 %C2, %D2
+  %add2 = add i32 %subA2B2, %subC2D2
+
+  %subA3D3 = sub i32 %A3, %D3
+  %subC3B3 = sub i32 %C3, %B3
+  %add3 = add i32 %subA3D3, %subC3B3
+
+  store i32 %add0, ptr %Sarray, align 4
+  store i32 %add1, ptr %idxS1, align 4
+  store i32 %add2, ptr %idxS2, align 4
+  store i32 %add3, ptr %idxS3, align 4
+
+  %ext = add i32 %add0, %A0
+  store i32 %ext, ptr %Tarray, align 4
+  ret void
+}
+
+; A copyable lane (A[3] used directly, not a chain link) stands in as a
+; subtract-with-zero leaf: it must stay exact while the chain leaves realign
+; into the consecutive A load column.
+;
+; S[0] = (A[0] + X[0]) - B[0]
+; S[1] = (X[1] + A[1]) - B[1]
+; S[2] = (A[2] + X[2]) - B[2]
+; S[3] = A[3]
+define void @test_reassoc_sub_copyable(ptr %Aarray, ptr %Barray, ptr %Xarray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_copyable(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[XARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds i32, ptr [[BARRAY]], i64 2
+; CHECK-NEXT:    [[IDXX2:%.*]] = getelementptr inbounds i32, ptr [[XARRAY]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load i32, ptr [[IDXB2]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[IDXX2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[XARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, i32 [[B2]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i32> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxA2 = getelementptr inbounds i32, ptr %Aarray, i64 2
+  %idxA3 = getelementptr inbounds i32, ptr %Aarray, i64 3
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxB2 = getelementptr inbounds i32, ptr %Barray, i64 2
+  %idxX1 = getelementptr inbounds i32, ptr %Xarray, i64 1
+  %idxX2 = getelementptr inbounds i32, ptr %Xarray, i64 2
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+  %idxS2 = getelementptr inbounds i32, ptr %Sarray, i64 2
+  %idxS3 = getelementptr inbounds i32, ptr %Sarray, i64 3
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+  %A2 = load i32, ptr %idxA2, align 4
+  %A3 = load i32, ptr %idxA3, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+  %B2 = load i32, ptr %idxB2, align 4
+
+  %X0 = load i32, ptr %Xarray, align 4
+  %X1 = load i32, ptr %idxX1, align 4
+  %X2 = load i32, ptr %idxX2, align 4
+
+  %ax0 = add i32 %A0, %X0
+  %xa1 = add i32 %X1, %A1
+  %ax2 = add i32 %A2, %X2
+
+  %s0 = sub i32 %ax0, %B0
+  %s1 = sub i32 %xa1, %B1
+  %s2 = sub i32 %ax2, %B2
+
+  store i32 %s0, ptr %Sarray, align 4
+  store i32 %s1, ptr %idxS1, align 4
+  store i32 %s2, ptr %idxS2, align 4
+  store i32 %A3, ptr %idxS3, align 4
+  ret void
+}
+
+define i32 @gathered_peeled_scalar(i32 %conv) {
+; CHECK-LABEL: define i32 @gathered_peeled_scalar(
+; CHECK-SAME: i32 [[CONV:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i32 [[CONV]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[INVARIANT_OP]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[CONV]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> <i32 1, i32 0>, [[TMP8]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ zeroinitializer, %[[BACKEDGE:.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    br label %[[BACKEDGE]]
+; CHECK:       [[BACKEDGE]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP7]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP]]
+;
+entry:
+  %invariant.op = add i32 %conv, 0
+  %invariant.op3 = or i32 %invariant.op, 0
+  %invariant.op5 = add i32 0, 0
+  %conv16 = add i32 1, 0
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %m.019 = phi i32 [ %invariant.op5, %entry ], [ 0, %backedge ]
+  %conv86.lcssa1418 = phi i32 [ %invariant.op3, %entry ], [ 0, %backedge ]
+  %add11.1190.reass = or i32 %m.019, 0
+  %.reass4.3231 = or i32 %invariant.op3, 0
+  %conv8171 = or i32 0, %conv86.lcssa1418
+  %conv8.2210 = or i32 0, %conv8171
+  %conv8.3232 = or i32 %.reass4.3231, %conv8.2210
+  %add11.2212.reass = or i32 %add11.1190.reass, 0
+  %add11.3234.reass = or i32 %add11.2212.reass, %conv16
+  br label %backedge
+
+backedge:                                         ; preds = %loop
+  %add11.6303 = phi i32 [ %add11.3234.reass, %loop ]
+  %conv8.6301 = phi i32 [ %conv8.3232, %loop ]
+  br label %loop
+}
+
+define i32 @gathered_peeled_scalar_late() {
+; CHECK-LABEL: define i32 @gathered_peeled_scalar_late(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[DOTPREHEADER_PEEL_BEGIN:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 0 to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> zeroinitializer, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    br [[DOTPREHEADER:label %.*]]
+; CHECK:       [[_PREHEADER:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP6]], [[DOTPREHEADER_PEEL_BEGIN1:%.*]] ], [ zeroinitializer, %[[K_EXIT_7:.*]] ]
+; CHECK-NEXT:    br i1 false, label %[[K_EXIT_THREAD:.*]], label %[[K_EXIT:.*]]
+; CHECK:       [[K_EXIT_THREAD]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    br label %[[K_EXIT_7]]
+; CHECK:       [[K_EXIT]]:
+; CHECK-NEXT:    br label %[[K_EXIT_7]]
+; CHECK:       [[K_EXIT_7]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP7]], %[[K_EXIT]] ], [ [[TMP10]], %[[K_EXIT_THREAD]] ]
+; CHECK-NEXT:    br [[DOTPREHEADER]]
+;
+.preheader.peel.begin:
+  %.reass5.7.peel = add i32 0, 0
+  %invariant.op = add i32 0, 1
+  %invariant.op4 = add i32 %invariant.op, 0
+  %.reass5.4 = or i32 %invariant.op4, 0
+  %0 = trunc i64 0 to i32
+  %1 = add i32 0, %0
+  %2 = add i32 %1, 0
+  %invariant.op233 = or i32 0, %2
+  br label %.preheader
+
+.preheader:                                       ; preds = %k.exit.7, %.preheader.peel.begin
+  %.0316 = phi i32 [ %2, %.preheader.peel.begin ], [ 0, %k.exit.7 ]
+  %.lcssa1215 = phi i32 [ %.reass5.7.peel, %.preheader.peel.begin ], [ 0, %k.exit.7 ]
+  br i1 false, label %k.exit.thread, label %k.exit
+
+k.exit.thread:                                    ; preds = %.preheader
+  %3 = or i32 0, %.lcssa1215
+  %4 = or i32 0, %3
+  %.reass244 = or i32 %.0316, 0
+  %.reass250 = or i32 %.reass244, 0
+  br label %k.exit.7
+
+k.exit:                                           ; preds = %.preheader
+  br label %k.exit.7
+
+k.exit.7:                                         ; preds = %k.exit, %k.exit.thread
+  %5 = phi i32 [ %invariant.op233, %k.exit ], [ %.reass250, %k.exit.thread ]
+  %6 = phi i32 [ %.reass5.4, %k.exit ], [ %4, %k.exit.thread ]
+  br label %.preheader
+}
+
+@a = global i32 0, align 4
+@b = global i64 0, align 8
+@c = global i32 0, align 4
+
+; The copyable element %add4 is peeled into the flattened node; its schedule
+; data must be released exactly once.
+define void @test_reassoc_copyable_chain_link() {
+; CHECK-LABEL: define void @test_reassoc_copyable_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @b, align 8
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i64 [[TMP2]], [[CONV2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[REASS_SUB]], 1
+; CHECK-NEXT:    [[ADD4:%.*]] = sub nsw i64 7, [[CONV1]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[CONV1]], [[ADD4]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], [[REM]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END:.*]], label %[[WHILE_BODY:.*]]
+; CHECK:       [[WHILE_BODY]]:
+; CHECK-NEXT:    br label %[[WHILE_BODY]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @c, align 4
+  %conv1 = sext i32 %1 to i64
+  %2 = load i64, ptr @b, align 8
+  %conv2 = zext i32 %0 to i64
+  %reass.sub = sub i64 %2, %conv2
+  %add = add i64 %reass.sub, 1
+  %add4 = sub nsw i64 7, %conv1
+  %rem = srem i64 %conv1, %add4
+  %and = and i64 %add, %rem
+  %tobool.not = icmp eq i64 %and, 0
+  br i1 %tobool.not, label %if.end, label %while.body
+
+while.body:
+  br label %while.body
+
+if.end:
+  ret void
+}
+
+; Same as above, but the copyable element is a sub in an add-family node.
+define i32 @test_reassoc_copyable_sub_chain_link() {
+; CHECK-LABEL: define i32 @test_reassoc_copyable_sub_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 2
+; CHECK-NEXT:    store i32 [[ADD]], ptr @c, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[ADD]], 30
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 1073741824, [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 2, [[ADD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i32 [[DIV]], [[TMP2]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[REASS_SUB]], -5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD1]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store i32 0, ptr @a, align 4
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = load i32, ptr @b, align 4
+  %add = add nsw i32 %0, 2
+  store i32 %add, ptr @c, align 4
+  %1 = shl i32 %add, 30
+  %add1 = sub i32 1073741824, %1
+  %div = sdiv i32 2, %add
+  %2 = shl i32 %0, 1
+  %reass.sub = sub i32 %div, %2
+  %sub = add i32 %reass.sub, -5
+  %cmp = icmp slt i32 %add1, %sub
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 0, ptr @a, align 4
+  br label %if.end
+
+if.end:
+  ret i32 0
 }

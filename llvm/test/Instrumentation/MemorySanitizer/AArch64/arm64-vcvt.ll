@@ -1314,14 +1314,15 @@ define void @autogen_SD28458(<8 x double> %val.f64, ptr %addr.f32) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i64> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i32>
 ; CHECK-NEXT:    [[TR53:%.*]] = fptrunc <8 x double> [[VAL_F64]] to <8 x float>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP9:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK:       6:
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[ADDR_F32]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
@@ -1351,14 +1352,15 @@ define void @autogen_SD19225(ptr %addr.f64, ptr %addr.f32) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i32>, ptr [[TMP7]], align 32
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i32> [[_MSLD]] to <8 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i32> [[_MSLD]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i1> [[TMP9]] to <8 x i64>
 ; CHECK-NEXT:    [[TR53:%.*]] = fpext <8 x float> [[A]] to <8 x double>
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
-; CHECK:       9:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP10:%.*]], label [[TMP14:%.*]], !prof [[PROF1]]
+; CHECK:       10:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       10:
+; CHECK:       11:
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[ADDR_F64]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = xor i64 [[TMP11]], 193514046488576
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
