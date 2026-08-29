@@ -48,6 +48,7 @@ public:
                                      QualType BaseObjectType,
                                      const PartialDiagnostic &PDiag) {
     DependentDiagnostic *DD = Create(Context, Parent, PDiag);
+    DD->IsActive = true;
     DD->AccessData.Loc = Loc;
     DD->AccessData.IsMember = IsMemberAccess;
     DD->AccessData.Access = AS;
@@ -65,6 +66,10 @@ public:
     assert(getKind() == Access);
     return AccessData.IsMember;
   }
+
+  bool isActive() const { return IsActive; }
+
+  void setActive(bool active) { IsActive = active; }
 
   AccessSpecifier getAccess() const {
     assert(getKind() == Access);
@@ -110,6 +115,9 @@ private:
   DependentDiagnostic *NextDiagnostic;
 
   PartialDiagnostic Diag;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsActive : 1;
 
   struct {
     SourceLocation Loc;
