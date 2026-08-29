@@ -3040,12 +3040,30 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       // Sema follows a sequence of complex rules to determine whether the
       // variable should be captured.
       if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-        Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
-        SVal CXXThisVal = state->getSVal(CXXThis);
-        return std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
+        if (MD->isImplicitObjectMemberFunction()) {
+          Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
+          SVal CXXThisVal = state->getSVal(CXXThis);
+          return std::make_pair(state->getLValue(FD, CXXThisVal),
+                                FD->getType());
+        }
+        const ParmVarDecl *PVD = MD->getParamDecl(0);
+        if (const Expr *CallSite = SF->getCallSite()) {
+          unsigned Idx = PVD->getFunctionScopeIndex();
+          const ParamVarRegion *PVR =
+              state->getStateManager().getRegionManager().getParamVarRegion(
+                  CallSite, Idx, SF);
+          const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
+          state =
+              state->bindLoc(loc::MemRegionVal(PVR),
+                             state->getSVal(SelfArgExpr, SF->getParent()), SF);
+          SVal ParamSVal = state->getSVal(loc::MemRegionVal(PVR));
+          if (!PVD->getType()->isReferenceType())
+            return std::make_pair(state->getLValue(FD, loc::MemRegionVal(PVR)),
+                                  FD->getType());
+          return std::make_pair(state->getLValue(FD, ParamSVal), FD->getType());
+        }
       }
     }
-
     return std::nullopt;
   };
 
