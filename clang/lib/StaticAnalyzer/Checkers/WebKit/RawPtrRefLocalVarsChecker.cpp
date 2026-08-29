@@ -89,6 +89,11 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       return false;
     if (isPtrConversion(Callee))
       return true;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
+      auto IsGetter = isGetterOfSafePtr(Method);
+      if (IsGetter && *IsGetter)
+        return true;
+    }
     unsigned ArgIndex = 0;
     unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
     for (auto *Arg : CE->arguments()) {
