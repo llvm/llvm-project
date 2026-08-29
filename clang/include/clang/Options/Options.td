@@ -1689,7 +1689,7 @@ def emit_pretty_sgf: Flag<["--"], "pretty-sgf">,
 def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for-testing">,
    Visibility<[CC1Option]>,
    MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
-def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
@@ -7057,7 +7057,8 @@ def _dyld_prefix_EQ : Joined<["--"], "dyld-prefix=">;
 def _dyld_prefix : Separate<["--"], "dyld-prefix">, Alias<_dyld_prefix_EQ>;
 def _encoding_EQ : Joined<["--"], "encoding=">, Alias<fencoding_EQ>;
 def _encoding : Separate<["--"], "encoding">, Alias<fencoding_EQ>;
-def _entry : Flag<["--"], "entry">, Alias<e>;
+def : Joined<["--"], "entry=">, Alias<e>;
+def : Separate<["--"], "entry">, Alias<e>;
 def _extdirs_EQ : Joined<["--"], "extdirs=">, Alias<fextdirs_EQ>;
 def _extdirs : Separate<["--"], "extdirs">, Alias<fextdirs_EQ>;
 def _extra_warnings : Flag<["--"], "extra-warnings">, Alias<W_Joined>;
