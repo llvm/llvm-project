@@ -7613,10 +7613,12 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
         // v1 ALIAS:     [alias type,   addrspace,   aliasee val#, linkage, ...]
+        // v1 IFUNC:     [ifunc type,   addrspace,   resolver val#,linkage, ...]
         // v2: [strtab offset, strtab size, v1]
         case bitc::MODULE_CODE_GLOBALVAR:
         case bitc::MODULE_CODE_FUNCTION:
-        case bitc::MODULE_CODE_ALIAS: {
+        case bitc::MODULE_CODE_ALIAS:
+        case bitc::MODULE_CODE_IFUNC: {
           StringRef Name;
           ArrayRef<uint64_t> GVRecord;
           std::tie(Name, GVRecord) = readNameFromStrtab(Record);
