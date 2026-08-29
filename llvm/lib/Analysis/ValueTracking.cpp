@@ -7968,6 +7968,51 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison, const Value *V,
   return false;
 }
 
+static bool flagConditionsImply(const Instruction *I, const Instruction *J) {
+  if (I->getOpcode() != J->getOpcode() ||
+      I->getNumOperands() != J->getNumOperands())
+    return false;
+
+  // Only handle FPMathOperator for now.
+  const auto *FPI = dyn_cast<FPMathOperator>(I);
+  if (!FPI)
+    return false;
+
+  const auto *FPJ = dyn_cast<FPMathOperator>(J);
+  if (!FPJ)
+    return false;
+  FastMathFlags FI = FPI->getFastMathFlags();
+  FastMathFlags FJ = FPJ->getFastMathFlags();
+
+  // J must have at least the same poison-generating conditions as I.
+  if (FI.noNaNs() && !FJ.noNaNs())
+    return false;
+  if (FI.noInfs() && !FJ.noInfs())
+    return false;
+
+  SimplifyQuery SQ(I->getModule()->getDataLayout());
+
+  for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
+    Value *OpI = I->getOperand(i);
+    Value *OpJ = J->getOperand(i);
+
+    if (OpI == OpJ)
+      continue;
+
+    // The differing operand of I cannot participate in ANY poison condition.
+    if (!isGuaranteedNotToBePoison(OpI))
+      return false;
+
+    // It cannot participate in flag-generated poison.
+    if (FI.noNaNs() && !isKnownNeverNaN(OpI, SQ))
+      return false;
+    if (FI.noInfs() && !isKnownNeverInfinity(OpI, SQ))
+      return false;
+  }
+
+  return true;
+}
+
 static bool impliesPoison(const Value *ValAssumedPoison, const Value *V,
                           unsigned Depth) {
   if (isGuaranteedNotToBePoison(ValAssumedPoison))
@@ -7981,11 +8026,21 @@ static bool impliesPoison(const Value *ValAssumedPoison, const Value *V,
     return false;
 
   const auto *I = dyn_cast<Instruction>(ValAssumedPoison);
-  if (I && !canCreatePoison(cast<Operator>(I))) {
+  const auto *OpI = dyn_cast<Operator>(ValAssumedPoison);
+
+  if (I && OpI && !canCreatePoison(OpI)) {
     return all_of(I->operands(), [=](const Value *Op) {
       return impliesPoison(Op, V, Depth + 1);
     });
   }
+
+  // If I can only create poison due to flags/metadata, check whether V
+  // has the same poison conditions.
+  if (I && OpI && !canCreatePoison(OpI, /*ConsiderFlagsAndMetadata=*/false)) {
+    if (const auto *J = dyn_cast<Instruction>(V))
+      return flagConditionsImply(I, J);
+  }
+
   return false;
 }
 
