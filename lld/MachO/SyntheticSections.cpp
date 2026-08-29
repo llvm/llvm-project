@@ -879,14 +879,13 @@ ObjCStubsSection::ObjCStubsSection()
 }
 
 bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
-  return sym->getName().starts_with(symbolPrefix);
+  return sym->getName().starts_with(objcMsgSendStubPrefix);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
   auto name = sym->getName();
-  StringRef methname = name.drop_front(symbolPrefix.size());
-  return methname;
+  return name.drop_front(objcMsgSendStubPrefix.size());
 }
 
 size_t ObjCStubsSection::getStubSize() const {
@@ -904,12 +903,13 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
   size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * stubSize,
+      /*value=*/stubsSize,
       /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
   symbols.push_back(newSym);
+  stubsSize += stubSize;
 }
 
 void ObjCStubsSection::setUp() {
@@ -933,9 +933,7 @@ void ObjCStubsSection::setUp() {
   }
 }
 
-uint64_t ObjCStubsSection::getSize() const {
-  return getStubSize() * symbols.size();
-}
+uint64_t ObjCStubsSection::getSize() const { return stubsSize; }
 
 void ObjCStubsSection::sortSymbols(
     const llvm::DenseMap<const Symbol *, int> &priorities) {
@@ -947,9 +945,11 @@ void ObjCStubsSection::sortSymbols(
     };
     return priority(a) < priority(b);
   });
-  size_t stubSize = getStubSize();
-  for (auto [idx, sym] : llvm::enumerate(symbols))
-    sym->value = idx * stubSize;
+  size_t stubOffset = 0;
+  for (Defined *sym : symbols) {
+    sym->value = stubOffset;
+    stubOffset += getStubSize();
+  }
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
