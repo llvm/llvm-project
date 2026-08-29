@@ -890,11 +890,17 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // IVDescriptor code.  The intent is to remove this check, but we
     // have to fix issues around code quality for such loops first.
     auto IsDisallowedStridedPointerInduction =
-        [](const InductionDescriptor &ID) {
+        [this](const InductionDescriptor &ID) {
           if (AllowStridedPointerIVs)
             return false;
-          return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-                 ID.getConstIntStepValue() == nullptr;
+          if (ID.getKind() != InductionDescriptor::IK_PtrInduction ||
+              ID.getConstIntStepValue())
+            return false;
+          // Allow it when the accesses off this induction form a gap-free run,
+          // so that speculating the stride to that run's width turns them into
+          // an interleaved group.
+          return !getSpeculatedInterleaveStride(*TheLoop, *PSE.getSE(),
+                                                ID.getStep());
         };
 
     InductionDescriptor ID;
