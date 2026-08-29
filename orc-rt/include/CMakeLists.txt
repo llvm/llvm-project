@@ -41,7 +41,6 @@ set(ORC_RT_HEADERS
     orc-rt/support/IntervalSet.h
     orc-rt/support/LockedAccess.h
     orc-rt/support/MacroUtils.h
-    orc-rt/support/Math.h
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
