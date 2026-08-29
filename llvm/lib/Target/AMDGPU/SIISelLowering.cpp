@@ -18967,7 +18967,8 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
       // otherwise the comparison could be true due to the other operand.
       // Special case: fcmp uno x, x (same operand) is a valid NaN test.
       SelectionDAG &DAG = DCI.DAG;
-      if (LHSMatchesFrexp && (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
         IsNonFiniteTest = CondSelectsZero;
       else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
         IsNonFiniteTest = CondSelectsZero;
@@ -18991,7 +18992,8 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
       // otherwise the comparison could be false due to the other operand.
       // Special case: fcmp ord x, x (same operand) is a valid not-NaN test.
       SelectionDAG &DAG = DCI.DAG;
-      if (LHSMatchesFrexp && (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
         IsNonFiniteTest = !CondSelectsZero;
       else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
         IsNonFiniteTest = !CondSelectsZero;
