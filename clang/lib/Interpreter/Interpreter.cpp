@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -30,6 +31,7 @@
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -38,6 +40,8 @@
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Lex/Pragma.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
@@ -49,6 +53,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -216,6 +221,80 @@ static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
   return llvm::Error::success();
 }
 
+// '#pragma clang repl optimize(<opt>)' sets the optimization level and size
+// used to emit modules for input parsed after the pragma. <opt> is an -O flag
+// spelled without the leading dash, e.g. O2 or Os.
+struct PragmaReplHandler : public PragmaHandler {
+  Interpreter &Interp;
+
+  PragmaReplHandler(Interpreter &Interp)
+      : PragmaHandler("repl"), Interp(Interp) {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override {
+    Token Tok;
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::identifier) ||
+        !Tok.getIdentifierInfo()->isStr("optimize")) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << "clang repl";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    // Route the flag through clang's own -O parsing so the pragma accepts
+    // exactly what the driver does.
+    PP.LexUnexpandedToken(Tok);
+    std::string Opt = PP.getSpelling(Tok);
+    std::string Flag = "-" + Opt;
+    const char *Argv[] = {Flag.c_str()};
+    unsigned MissingArgIndex, MissingArgCount;
+    llvm::opt::InputArgList Args = getDriverOptTable().ParseArgs(
+        Argv, MissingArgIndex, MissingArgCount,
+        llvm::opt::Visibility(options::CC1Option));
+    if (!Args.hasArg(options::OPT_O_Group)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+          << Opt << "clang repl optimize" << /*Expected=*/true
+          << "an optimization flag such as 'O2' or 'Os'";
+      return;
+    }
+
+    // -Ofast also enables fast-math, which this pragma cannot express; reject
+    // it instead of silently applying only its optimization level.
+    if (Args.hasArg(options::OPT_Ofast)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_unsupported_action)
+          << "clang repl optimize" << Opt;
+      return;
+    }
+
+    unsigned OptLevel =
+        getOptimizationLevel(Args, InputKind(), PP.getDiagnostics());
+    unsigned OptSize = getOptimizationLevelSize(Args);
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::eod)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << "clang repl optimize";
+      return;
+    }
+
+    Interp.setOptLevel(OptLevel, OptSize);
+  }
+};
+
 } // anonymous namespace
 
 namespace clang {
@@ -370,6 +449,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   if (ErrOut)
     return;
 
+  ReplPragma = std::make_unique<PragmaReplHandler>(*this);
+  CI->getPreprocessor().AddPragmaHandler("clang", ReplPragma.get());
+
   if (Act->getCodeGen()) {
     Act->CacheCodeGenModule();
     // The initial PTU is filled by `-include`/`-include-pch` or by CUDA
@@ -402,6 +484,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 }
 
 Interpreter::~Interpreter() {
+  if (ReplPragma)
+    CI->getPreprocessor().RemovePragmaHandler("clang", ReplPragma.get());
   IncrParser.reset();
   Act->FinalizeAction();
   if (DeviceParser)
@@ -531,6 +615,21 @@ llvm::Expected<IncrementalExecutor &> Interpreter::getExecutionEngine() {
   }
 
   return *IncrExecutor.get();
+}
+
+void Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
+  CodeGenerator *CG = Act->getCodeGen();
+  if (!CG)
+    return;
+
+  CodeGenOptions CGO = getCompilerInstance()->getCodeGenOpts();
+  CGO.OptimizationLevel = OptLevel;
+  CGO.OptimizeSize = OptSize;
+
+  // The next (empty) module was already staged with the old options; re-stage
+  // it so the new options apply to the next parsed input.
+  std::unique_ptr<llvm::Module> Empty(CG->ReleaseModule());
+  CG->StartModule("incr_module_opt", Empty->getContext(), CGO);
 }
 
 ASTContext &Interpreter::getASTContext() {

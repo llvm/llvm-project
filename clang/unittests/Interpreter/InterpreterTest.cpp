@@ -22,6 +22,8 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -549,6 +551,73 @@ TEST_F(InterpreterTest, ValueMoveSemantics) {
   Copy.clear();
   Other.clear();
   Interp.reset();
+}
+
+TEST_F(InterpreterTest, SetOptLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // -O0 emits functions with the 'optnone' attribute.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  llvm::Function *F0 = PTU0.TheModule->getFunction("f0");
+  ASSERT_NE(F0, nullptr);
+  EXPECT_TRUE(F0->hasFnAttribute(llvm::Attribute::OptimizeNone));
+
+  // A change only takes effect on the next parsed module.
+  Interp->setOptLevel(2);
+
+  auto &PTU1 = cantFail(Interp->Parse("extern \"C\" int f1() { return 1; }"));
+  llvm::Function *F1 = PTU1.TheModule->getFunction("f1");
+  ASSERT_NE(F1, nullptr);
+  EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::OptimizeNone));
+
+  // -Oz is level 2, size 2.
+  Interp->setOptLevel(2, 2);
+
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  llvm::Function *F2 = PTU2.TheModule->getFunction("f2");
+  ASSERT_NE(F2, nullptr);
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::OptimizeForSize));
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::MinSize));
+}
+
+TEST_F(InterpreterTest, PragmaOptimizeLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  auto HasAttr = [](PartialTranslationUnit &PTU, const char *Name,
+                    llvm::Attribute::AttrKind Kind) {
+    llvm::Function *F = PTU.TheModule->getFunction(Name);
+    EXPECT_NE(F, nullptr);
+    return F && F->hasFnAttribute(Kind);
+  };
+
+  // Default -O0: 'optnone' present.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  EXPECT_TRUE(HasAttr(PTU0, "f0", llvm::Attribute::OptimizeNone));
+
+  // The pragma governs the whole input it appears in; f1 is emitted at -O2.
+  auto &PTU1 = cantFail(Interp->Parse("#pragma clang repl optimize(O2)\n"
+                                      "extern \"C\" int f1() { return 1; }"));
+  EXPECT_FALSE(HasAttr(PTU1, "f1", llvm::Attribute::OptimizeNone));
+
+  // The level is sticky across inputs.
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  EXPECT_FALSE(HasAttr(PTU2, "f2", llvm::Attribute::OptimizeNone));
+
+  // -Os sets 'optsize' only; -Oz additionally sets 'minsize'.
+  auto &PTU3 = cantFail(Interp->Parse("#pragma clang repl optimize(Os)\n"
+                                      "extern \"C\" int f3() { return 3; }"));
+  EXPECT_TRUE(HasAttr(PTU3, "f3", llvm::Attribute::OptimizeForSize));
+  EXPECT_FALSE(HasAttr(PTU3, "f3", llvm::Attribute::MinSize));
+
+  auto &PTU4 = cantFail(Interp->Parse("#pragma clang repl optimize(Oz)\n"
+                                      "extern \"C\" int f4() { return 4; }"));
+  EXPECT_TRUE(HasAttr(PTU4, "f4", llvm::Attribute::MinSize));
+
+  // A lower level can be selected again, not just a higher one.
+  auto &PTU5 = cantFail(Interp->Parse("#pragma clang repl optimize(O0)\n"
+                                      "extern \"C\" int f5() { return 5; }"));
+  EXPECT_TRUE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeForSize));
 }
 
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
