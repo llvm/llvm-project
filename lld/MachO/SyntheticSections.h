@@ -24,6 +24,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
+
 namespace llvm {
 class DWARFUnit;
 } // namespace llvm
@@ -343,17 +345,34 @@ public:
   void setUp();
 
   static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringLiteral objcMsgSendClassStubPrefix =
+      "_objc_msgSendClass$";
+  static constexpr llvm::StringLiteral objcClassSymbolPrefix = "_OBJC_CLASS_$_";
+  // Plain selector stub: _objc_msgSend$<selector>.
+  static bool isObjCMsgSendStubSymbol(Symbol *sym);
+  // Class-message stub: _objc_msgSendClass$<selector>$_OBJC_CLASS_$_<class>.
+  static bool isObjCClassStubSymbol(Symbol *sym);
+  // Any symbol handled by ObjCStubsSection.
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
+  struct ObjCClassStubNames {
+    StringRef selectorName;
+    StringRef classSymbolName;
+  };
+  static std::optional<ObjCClassStubNames>
+  parseObjCClassStubSymbol(Symbol *sym);
+  void recordClassSymbol(Symbol *stubSym, Symbol *classSym);
+  Symbol *lookupClassSymbol(Symbol *stubSym) const;
 
   /// Stably sort the stubs by \p priorities and reassign their offsets. Must
   /// run before addresses are assigned.
   void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
 
 private:
-  size_t getStubSize() const;
+  size_t getStubSize(Symbol *sym) const;
 
   std::vector<Defined *> symbols;
+  llvm::DenseMap<Symbol *, Symbol *> classSymbols;
   // Total byte size of all stubs added so far.
   size_t stubsSize = 0;
   Symbol *objcMsgSend = nullptr;
