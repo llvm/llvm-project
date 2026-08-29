@@ -1145,6 +1145,20 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       Known.One.setBit(0);
       return;
     }
+    // assume(!(trunc V)) -> the low bit of V is zero.
+    Value *NotOp;
+    if (match(Arg, m_Not(m_Value(NotOp, m_Trunc(m_Specific(V))))) &&
+        (Q.AllowEphemerals ||
+         (Q.CxtI != Arg && Q.CxtI != NotOp && Q.CxtI != V)) &&
+        isValidAssumeForContext(I, Q.allowEphemerals(true))) {
+      auto *NotTrunc = cast<TruncInst>(NotOp);
+      if (NotTrunc->hasNoUnsignedWrap()) {
+        Known = KnownBits::makeConstant(APInt(BitWidth, 0));
+        return;
+      }
+      Known.Zero.setBit(0);
+      return;
+    }
 
     // The remaining tests are all recursive, so bail out if we hit the limit.
     if (Depth == MaxAnalysisRecursionDepth)

@@ -3545,8 +3545,7 @@ define i1 @icmp_eq_false_by_trunc(i8 %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %trunc = trunc i8 %x to i1
   %not = xor i1 %trunc, true
