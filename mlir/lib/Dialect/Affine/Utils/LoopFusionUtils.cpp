@@ -424,10 +424,12 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
 /// and source slice loop bounds specified in 'srcSlice'.
 void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                              const ComputationSliceState &srcSlice,
-                             bool isInnermostSiblingInsertion) {
+                             bool isInnermostSiblingInsertion,
+                             IRMapping *resultMapper) {
   // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
   OpBuilder b(srcSlice.insertPoint->getBlock(), srcSlice.insertPoint);
-  IRMapping mapper;
+  IRMapping localMapper;
+  IRMapping &mapper = resultMapper ? *resultMapper : localMapper;
   b.clone(*srcForOp, mapper);
 
   // Update 'sliceLoopNest' upper and lower bounds from computed 'srcSlice'.
@@ -455,16 +457,18 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
     return (buildSliceTripCountMap(srcSlice, &sliceTripCountMap) &&
             (getSliceIterationCount(sliceTripCountMap) == 1));
   };
-  // Fix up and if possible, eliminate single iteration loops.
-  for (AffineForOp forOp : sliceLoops) {
-    if (isLoopParallelAndContainsReduction(forOp) &&
-        isInnermostSiblingInsertion && srcIsUnitSlice())
-      // Patch reduction loop - only ones that are sibling-fused with the
-      // destination loop - into the parent loop.
-      (void)promoteSingleIterReductionLoop(forOp, true);
-    else
-      // Promote any single iteration slice loops.
-      (void)promoteIfSingleIteration(forOp);
+  if (!resultMapper) {
+    // Fix up and if possible, eliminate single iteration loops.
+    for (AffineForOp forOp : sliceLoops) {
+      if (isLoopParallelAndContainsReduction(forOp) &&
+          isInnermostSiblingInsertion && srcIsUnitSlice())
+        // Patch reduction loop - only ones that are sibling-fused with the
+        // destination loop - into the parent loop.
+        (void)promoteSingleIterReductionLoop(forOp, true);
+      else
+        // Promote any single iteration slice loops.
+        (void)promoteIfSingleIteration(forOp);
+    }
   }
 }
 

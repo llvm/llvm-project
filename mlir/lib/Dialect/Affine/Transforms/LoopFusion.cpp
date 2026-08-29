@@ -22,6 +22,8 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -122,6 +124,118 @@ static bool canRemoveSrcNodeAfterFusion(
   }
 
   return true;
+}
+
+static void replaceInits(RewriterBase &rewriter, AffineForOp forOp,
+                         ArrayRef<unsigned> initIndices, ValueRange newInits) {
+  assert(initIndices.size() == newInits.size() &&
+         "expected one replacement value per init operand index");
+
+  SmallVector<Value> inits(forOp.getInits());
+  assert(llvm::all_of(initIndices,
+                      [&](unsigned index) { return index < inits.size(); }) &&
+         "expected replacement indices to fit in affine.for init operands");
+
+  for (auto [initIndex, newInit] : llvm::zip(initIndices, newInits))
+    inits[initIndex] = newInit;
+  rewriter.modifyOpInPlace(forOp,
+                           [&]() { forOp.getInitsMutable().assign(inits); });
+}
+
+static AffineForOp
+getAffineForOpWithResults(ValueRange values,
+                          SmallVectorImpl<unsigned> &indices) {
+  assert(!values.empty() && "expected values to forward");
+  auto firstResult = dyn_cast<OpResult>(values.front());
+  assert(firstResult && "expected forwarded values to be operation results");
+
+  auto forOp = dyn_cast<AffineForOp>(firstResult.getOwner());
+  assert(forOp && "expected forwarded values to be affine.for results");
+  assert(forOp.getNumResults() == forOp.getInits().size() &&
+         "expected one init operand per affine.for result");
+
+  indices.clear();
+  for (Value value : values) {
+    auto result = dyn_cast<OpResult>(value);
+    assert(result && result.getOwner() == forOp &&
+           "expected forwarded values to be results of the same affine.for");
+    indices.push_back(result.getResultNumber());
+  }
+  return forOp;
+}
+
+static Operation *getAncestorInBlock(Operation *op, Block *block) {
+  while (op && op->getBlock() != block)
+    op = op->getParentOp();
+  return op;
+}
+
+// Check that all result users remain dominated after sibling fusion moves
+// `definingOp` before `insertPoint`.
+static bool resultUsersRemainDominated(Operation *opWithUsers,
+                                       Operation *definingOp,
+                                       Operation *insertPoint) {
+  Block *block = insertPoint->getBlock();
+  bool definingOpWillMove = definingOp != insertPoint;
+  for (Value result : opWithUsers->getResults()) {
+    if (result.use_empty())
+      continue;
+    for (OpOperand &use : result.getUses()) {
+      Operation *userAncestor = getAncestorInBlock(use.getOwner(), block);
+      if (!userAncestor)
+        return false;
+      if (definingOpWillMove && userAncestor->isBeforeInBlock(insertPoint))
+        return false;
+      if (!definingOpWillMove && !definingOp->isBeforeInBlock(userAncestor))
+        return false;
+    }
+  }
+  return true;
+}
+
+// Carry values from the cloned sibling loop through the destination loop nest.
+// Each newly added iter_arg is used as the corresponding init of the loop that
+// currently defines the forwarded values.
+static SmallVector<Value>
+forwardValuesThroughAffineForNest(ValueRange values, ValueRange inits,
+                                  AffineForOp &outerForOp) {
+  IRRewriter rewriter(outerForOp->getContext());
+  SmallVector<Value> forwardedValues(values.begin(), values.end());
+  assert(!forwardedValues.empty() && "expected values to forward");
+
+  while (true) {
+    Operation *parentOp =
+        forwardedValues.front().getParentBlock()->getParentOp();
+    AffineForOp parentForOp = dyn_cast<AffineForOp>(parentOp);
+    if (!parentForOp)
+      parentForOp = parentOp->getParentOfType<AffineForOp>();
+
+    assert(parentForOp && "expected value to be nested in an affine.for");
+
+    FailureOr<LoopLikeOpInterface> newLoopOrFailure =
+        parentForOp.replaceWithAdditionalYields(
+            rewriter, inits, /*replaceInitOperandUsesInLoop=*/false,
+            [&](OpBuilder &, Location, ValueRange newIterArgs) {
+              SmallVector<unsigned> initIndices;
+              AffineForOp producerForOp =
+                  getAffineForOpWithResults(forwardedValues, initIndices);
+              replaceInits(rewriter, producerForOp, initIndices, newIterArgs);
+              return forwardedValues;
+            });
+
+    assert(succeeded(newLoopOrFailure) && "failed to forward loop results");
+
+    AffineForOp newForOp = cast<AffineForOp>(newLoopOrFailure->getOperation());
+    auto newResults = newForOp->getResults().take_back(forwardedValues.size());
+    forwardedValues.assign(newResults.begin(), newResults.end());
+
+    if (parentForOp == outerForOp) {
+      outerForOp = newForOp;
+      break;
+    }
+  }
+
+  return forwardedValues;
 }
 
 /// Returns in 'srcIdCandidates' the producer fusion candidates for consumer
@@ -1331,14 +1445,64 @@ public:
       // destination loop. Based on this, the fused loop may be optimized
       // further inside `fuseLoops`.
       bool isInnermostInsertion = (bestDstLoopDepth == dstLoopDepthTest);
+
+      bool enableSiblingInsertionCleanup =
+          isInnermostInsertion && sibAffineForOp->use_empty();
+
       // Fuse computation slice of 'sibLoopNest' into 'dstLoopNest'.
+      bool hasUsedSiblingResults = !sibAffineForOp->use_empty();
+      if (!dstAffineForOp->use_empty() &&
+          !resultUsersRemainDominated(dstAffineForOp, dstAffineForOp,
+                                      insertPointInst)) {
+        LDBG() << "Destination results have users before the fused loop "
+                  "insertion point.";
+        continue;
+      }
+      if (hasUsedSiblingResults &&
+          !resultUsersRemainDominated(sibAffineForOp, dstAffineForOp,
+                                      insertPointInst)) {
+        LDBG() << "Sibling results have users before the fused loop insertion "
+                  "point.";
+        continue;
+      }
+
+      IRMapping mapper;
       affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
-                        isInnermostInsertion);
+                        enableSiblingInsertionCleanup,
+                        hasUsedSiblingResults ? &mapper : nullptr);
 
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
       if (insertPointInst != dstForInst)
         dstForInst->moveBefore(insertPointInst);
+
+      // The cloned sibling loop now lives inside the destination loop. Carry
+      // any used results out before replacing the original sibling loop.
+      if (hasUsedSiblingResults) {
+        SmallVector<Value> usedClonedSibResults;
+        SmallVector<Value> usedSibInits;
+        for (auto [oldResult, init] : llvm::zip(sibAffineForOp->getResults(),
+                                                sibAffineForOp.getInits())) {
+          if (oldResult.use_empty())
+            continue;
+          usedClonedSibResults.push_back(mapper.lookup(oldResult));
+          usedSibInits.push_back(init);
+        }
+
+        SmallVector<Value> replacementResults =
+            forwardValuesThroughAffineForNest(usedClonedSibResults,
+                                              usedSibInits, dstAffineForOp);
+
+        unsigned nextReplacement = 0;
+        for (Value oldResult : sibAffineForOp->getResults()) {
+          if (oldResult.use_empty())
+            continue;
+          Value newResult = replacementResults[nextReplacement++];
+          oldResult.replaceAllUsesWith(newResult);
+        }
+
+        dstNode->op = dstAffineForOp;
+      }
 
       LDBG() << "Fused sibling nest " << sibId << " into destination nest "
              << dstNode->id << " at depth " << bestDstLoopDepth << ":";
@@ -1368,11 +1532,6 @@ public:
       // Skip if 'outEdge' is not a read-after-write dependence.
       // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
-        return false;
-
-      // Sibling fusion removes the sibling node after cloning it into the
-      // destination. Do not fuse siblings whose results still have uses.
-      if (!sibNode->op->use_empty())
         return false;
 
       // Skip if there exists a path of dependent edges between
