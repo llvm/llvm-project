@@ -209,9 +209,18 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--dll-search-prefix=cyg");
   if (Args.hasArg(options::OPT_rdynamic))
     CmdArgs.push_back("--export-all-symbols");
+
+  // Cygwin-specific linker options for executables (matching GCC behavior).
+  // These flags must be set on the main executable header rather than DLLs.
   if (!Args.hasArg(options::OPT_shared) && !Args.hasArg(options::OPT_mdll)) {
+    // 32-bit Cygwin relies heavily on a predictable memory layout to emulate
+    // fork(). Enabling '--large-address-aware' expands the virtual address
+    // space, reducing 'unable to remap' fatal errors during fork().
     if (ToolChain.getTriple().isArch32Bit())
       CmdArgs.push_back("--large-address-aware");
+    // Mark as Terminal Server Aware to prevent legacy Windows loader from
+    // applying file/registry virtualization, which breaks POSIX path
+    // expectations.
     CmdArgs.push_back("--tsaware");
   }
 
@@ -261,7 +270,8 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  // Default. could be override by `last-wins`.
+  // Default. Can be overridden by the user by explicitly
+  // passing an option after this one.
   if (ToolChain.getTriple().isArch64Bit())
     CmdArgs.push_back("--disable-high-entropy-va");
   CmdArgs.push_back("--disable-nxcompat");
