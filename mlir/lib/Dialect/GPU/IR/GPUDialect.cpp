@@ -1640,8 +1640,8 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       ArrayRef<NamedAttribute> attrs) {
   OpBuilder::InsertionGuard g(builder);
 
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
-                      builder.getStringAttr(name));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
   result.addAttribute(getWorkgroupAttributionsAttrName(result.name),
@@ -1715,7 +1715,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the function name.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -2049,7 +2049,7 @@ void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                      Attribute offloadingHandler, ArrayAttr objects) {
   auto &properties = result.getOrAddProperties<Properties>();
   result.attributes.push_back(builder.getNamedAttr(
-      SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+      getSymNameAttrName(result.name), builder.getStringAttr(name)));
   properties.objects = objects;
   if (offloadingHandler)
     properties.offloadingHandler = offloadingHandler;

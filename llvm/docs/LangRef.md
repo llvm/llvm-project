@@ -7287,6 +7287,19 @@ be used for the structure type.
                      getter: "getFoo", attributes: 7, type: !2)
 ```
 
+##### DIProperty
+
+`DIProperty` nodes represent an entity that is syntactically accessed like a
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
+backing ivar).
+
+```text
+!3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
+                    line: 8, baseType: !4, size: 32)
+!5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
+```
+
 ##### DIImportedEntity
 
 `DIImportedEntity` nodes represent entities (such as modules) imported into a

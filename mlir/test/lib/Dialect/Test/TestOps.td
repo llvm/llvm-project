@@ -169,13 +169,15 @@ def TestTokenRegionWithoutTraitOp
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
-def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
+def SymbolOp
+    : TEST_Op<"symbol", [NoMemoryEffect, SymbolName, SymbolVisibility, Symbol]> {
   let summary =  "operation which defines a new symbol";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
-def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+def SymbolWithResultOp
+    : TEST_Op<"symbol_with_result", [SymbolName, SymbolVisibility, Symbol]> {
   let summary = "invalid symbol operation that produces an SSA result";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
@@ -183,6 +185,7 @@ def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
 }
 
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
+  SymbolName,
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
   let summary =  "operation overridden symbol visibility accessors";
@@ -729,7 +732,9 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
   }];
 }
 
-def ConversionFuncOp : TEST_Op<"conversion_func_op", [FunctionOpInterface]> {
+def ConversionFuncOp
+    : TEST_Op<"conversion_func_op",
+              [SymbolName, SymbolVisibility, FunctionOpInterface]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -2850,6 +2855,33 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
   }];
 }
 
+// An op that has a result and a block argument that are NOT successor inputs,
+// used to test the fix for issue #175168 in getControlFlowPredecessors.
+// - result #0 (extraResult): NOT a successor input to parent
+// - result #1 (iterResult): IS a successor input to parent
+// - body block arg #0: NOT a successor input to the body region
+// - body block arg #1: IS a successor input to the body region
+// This mirrors the scf.for induction variable / iter_arg structure.
+def LoopWithExtraResultYieldOp : TEST_Op<"loop_with_extra_result_yield",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
+  let arguments = (ins I32:$iterArg);
+  let assemblyFormat = "$iterArg `:` type($iterArg) attr-dict";
+}
+
+def LoopWithExtraResultOp : TEST_Op<"loop_with_extra_result",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
+  let results = (outs I32:$extraResult, I32:$iterResult);
+  let arguments = (ins I32:$init);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $init `:` type($init) `->` `(` type($extraResult) `,` type($iterResult) `)` $body attr-dict
+  }];
+}
+
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
     DeclareOpInterfaceMethods<RegionBranchOpInterface>
@@ -3645,7 +3677,8 @@ def TestOpWithCustomPropDict : TEST_Op<"with_custom_prop_dict"> {
     I64Prop:$prop,
     DefaultValuedProp<I64Prop, "42">:$defaulted,
     OptionalAttr<StrAttr>:$optional,
-    UnitProp:$unit
+    UnitProp:$unit,
+    UnitAttr:$unit_attr
   );
 }
 
