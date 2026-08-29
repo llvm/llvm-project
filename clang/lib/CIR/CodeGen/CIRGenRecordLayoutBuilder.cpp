@@ -152,7 +152,17 @@ struct CIRRecordLowering final {
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
-  CharUnits getAlignment(mlir::Type Ty) {
+
+  CharUnits getMemberAlignment(mlir::Type Ty) {
+    // Recurse on Arrays, they have the member alignment of their element type.
+    if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(Ty))
+      return getMemberAlignment(arrayTy.getElementType());
+    // Int types (_BitInt in particular) share the alignment of their storage
+    // type.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(Ty))
+      return CharUnits::fromQuantity(
+          intTy.getStorageTypeAlignment(dataLayout.layout));
+
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
   }
 
@@ -744,11 +754,11 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (!member.offset.isMultipleOf(getAlignment(member.data)))
+    if (!member.offset.isMultipleOf(getMemberAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
-      nvAlignment = std::max(nvAlignment, getAlignment(member.data));
-    alignment = std::max(alignment, getAlignment(member.data));
+      nvAlignment = std::max(nvAlignment, getMemberAlignment(member.data));
+    alignment = std::max(alignment, getMemberAlignment(member.data));
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
@@ -786,8 +796,8 @@ void CIRRecordLowering::insertPadding() {
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
-    if (offset !=
-        size.alignTo(packed ? CharUnits::One() : getAlignment(member.data)))
+    if (offset != size.alignTo(packed ? CharUnits::One()
+                                      : getMemberAlignment(member.data)))
       padding.push_back(std::make_pair(size, offset - size));
     size = offset + getSize(member.data);
   }
@@ -1055,7 +1065,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }
-  packed = !layoutSize.isMultipleOf(getAlignment(storageType));
+  packed = !layoutSize.isMultipleOf(getMemberAlignment(storageType));
 }
 
 bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,

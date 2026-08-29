@@ -12262,7 +12262,8 @@ SDVTList SelectionDAG::getVTList(EVT VT) {
   if (!VT.isExtended())
     return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
 
-  return makeVTList(&(*EVTs.insert(VT).first), 1);
+  EVT VTs[] = {VT};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
