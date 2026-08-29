@@ -106,8 +106,8 @@ constexpr bool test() {
 
 int main(int, char**) {
   tests();
-test();
-static_assert(test());
+  test();
+  static_assert(test());
 
   return 0;
 }
