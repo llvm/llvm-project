@@ -129,7 +129,6 @@ public:
                                    flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Saturate, saturate)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Sign, sign)
