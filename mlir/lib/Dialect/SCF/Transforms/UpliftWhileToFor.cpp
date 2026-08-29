@@ -241,11 +241,23 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
     one = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 1);
   }
 
+  // `scf.while` returns the value `scf.condition` forwards when the condition
+  // is false, i.e. the first induction value that fails the condition, which is
+  // `lb + tripCount * step`. Following the loop trip-count definition, the
+  // count is clamped at zero so that a loop whose condition is false on entry
+  // reports `lb` rather than a value it never produced.
+  Value zero;
+  if (isa<IndexType>(step.getType())) {
+    zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  } else {
+    zero = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 0);
+  }
+
   Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
   Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
   len = arith::AddIOp::create(rewriter, loc, len, stepDec);
   len = arith::DivSIOp::create(rewriter, loc, len, step);
-  len = arith::SubIOp::create(rewriter, loc, len, one);
+  len = arith::MaxSIOp::create(rewriter, loc, len, zero);
   Value res = arith::MulIOp::create(rewriter, loc, len, step);
   res = arith::AddIOp::create(rewriter, loc, lb, res);
 
