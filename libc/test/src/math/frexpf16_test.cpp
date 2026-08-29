@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains tests for frexpf16
+///
+//===----------------------------------------------------------------------===//
 
 #include "FrexpTest.h"
 
