@@ -262,14 +262,16 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
-  bool CanUse64BitLiterals = STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-                             !SIInstrFlags::isVOP3Like(Desc);
-  if (IsFP) {
-    return CanUse64BitLiterals && Lo_32(Val) ? 254 : 255;
-  }
+  auto Needs64BitLiteral = [&]() {
+    if (!STI.hasFeature(AMDGPU::Feature64BitLiterals) ||
+        SIInstrFlags::isVOP3Like(Desc))
+      return false;
+    if (IsFP)
+      return Lo_32(Val) != 0;
+    return !isInt<32>(Val) || !isUInt<32>(Val);
+  };
 
-  return CanUse64BitLiterals && (!isInt<32>(Val) || !isUInt<32>(Val)) ? 254
-                                                                      : 255;
+  return Needs64BitLiteral() ? 254 : 255;
 }
 
 std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
