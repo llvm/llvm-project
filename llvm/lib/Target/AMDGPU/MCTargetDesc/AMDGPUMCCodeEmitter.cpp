@@ -311,7 +311,8 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
-  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_I64:
+  case AMDGPU::OPERAND_REG_IMM_U64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_IMM_V2INT64:
     return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, false);

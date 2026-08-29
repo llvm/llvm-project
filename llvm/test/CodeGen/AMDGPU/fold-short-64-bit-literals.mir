@@ -102,8 +102,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_uint_32bit_literal_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-    ; GCN-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4294967295
-    ; GCN-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[DEF]], [[S_MOV_B64_]], implicit-def $scc
+    ; GCN-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[DEF]], 4294967295, implicit-def $scc
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[S_AND_B64_]]
     %0:sreg_64 = IMPLICIT_DEF
     %1:sreg_64 = S_MOV_B64 4294967295

@@ -4868,7 +4868,8 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     int32_t Trunc = static_cast<int32_t>(Imm);
     return AMDGPU::isInlinableLiteral32(Trunc, ST.hasInv2PiInlineImm());
   }
-  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_I64:
+  case AMDGPU::OPERAND_REG_IMM_U64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -5412,7 +5413,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     }
     case AMDGPU::OPERAND_REG_IMM_FP64:
-    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_I64:
+    case AMDGPU::OPERAND_REG_IMM_U64:
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
       if (ST.has64BitLiterals() && Desc.getSize() != 4 && MO.isImm() &&
@@ -6747,8 +6749,9 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     uint64_t Imm = MO->getImm();
     bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
                        OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64;
-    bool Is64BitOp = Is64BitFPOp ||
-                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
+    bool Is64BitSignedOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_I64;
+    bool Is64BitUnsignedOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_U64;
+    bool Is64BitOp = Is64BitFPOp || Is64BitSignedOp || Is64BitUnsignedOp ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT64;
@@ -6758,13 +6761,23 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
         return false;
 
+      // For signed 64-bit operands, the literal will be sign-extended.
+      // For unsigned 64-bit operands, the literal will be zero-extended.
+      // Check if the 32-bit encoding matches the expected 64-bit value.
+      if (Is64BitSignedOp && !isInt<32>(Imm) &&
+          (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
+        return false;
+      if (Is64BitUnsignedOp && !isUInt<32>(Imm) &&
+          (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
+        return false;
+
       // FIXME: We can use sign extended 64-bit literals, but only for signed
       //        operands. At the moment we do not know if an operand is signed.
       //        Such operand will be encoded as its low 32 bits and then either
       //        correctly sign extended or incorrectly zero extended by HW.
       //        If 64-bit literals are supported and the literal will be encoded
       //        as full 64 bit we still can use it.
-      if (!Is64BitFPOp && (int32_t)Imm < 0 &&
+      if (!Is64BitFPOp && !Is64BitSignedOp && !Is64BitUnsignedOp && (int32_t)Imm < 0 &&
           (!ST.has64BitLiterals() || AMDGPU::isValid32BitLiteral(Imm, false)))
         return false;
     }
@@ -10227,7 +10240,14 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
             if (!AMDGPU::isValid32BitLiteral(Op.getImm(), true))
               LiteralSize = 8;
             break;
-          case AMDGPU::OPERAND_REG_IMM_INT64:
+          case AMDGPU::OPERAND_REG_IMM_I64:
+            if (!Op.isImm() || !isInt<32>(Op.getImm()))
+              LiteralSize = 8;
+            break;
+          case AMDGPU::OPERAND_REG_IMM_U64:
+            if (!Op.isImm() || !isUInt<32>(Op.getImm()))
+              LiteralSize = 8;
+            break;
           case AMDGPU::OPERAND_REG_IMM_V2INT64:
             // A 32-bit literal is only valid when the value fits in BOTH signed
             // and unsigned 32-bit ranges [0, 2^31-1], matching the MC code

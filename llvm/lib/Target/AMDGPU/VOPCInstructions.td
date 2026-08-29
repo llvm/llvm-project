@@ -492,12 +492,24 @@ defm VOPC_I1_I16_I16 : VOPC_Profile_t16<[Write32Bit], i16>;
 def VOPC_I1_I32_I32 : VOPC_Profile<[Write32Bit], i32>;
 def VOPC_I1_I64_I64 : VOPC_Profile<[Write64Bit], i64>;
 
+// Signed 64-bit operand variants for signed integer comparisons
+def VOPC_I1_I64_I64_Signed : VOPC_Profile<[Write64Bit], i64> {
+  let Src0RC64 = VSrc_i64;
+  let Src1RC64 = VSrc_i64;
+}
+
 defm VOPC_F16_F16 : VOPC_NoSdst_Profile_t16<[Write32Bit], f16>;
 def VOPC_F32_F32 : VOPC_NoSdst_Profile<[Write32Bit], f32>;
 def VOPC_F64_F64 : VOPC_NoSdst_Profile<[Write64Bit], f64>;
 defm VOPC_I16_I16 : VOPC_NoSdst_Profile_t16<[Write32Bit], i16>;
 def VOPC_I32_I32 : VOPC_NoSdst_Profile<[Write32Bit], i32>;
 def VOPC_I64_I64 : VOPC_NoSdst_Profile<[Write64Bit], i64>;
+
+// Signed 64-bit operand variant for signed integer comparisons (NoSdst)
+def VOPC_I64_I64_Signed : VOPC_NoSdst_Profile<[Write64Bit], i64> {
+  let Src0RC64 = VSrc_i64;
+  let Src1RC64 = VSrc_i64;
+}
 
 multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
