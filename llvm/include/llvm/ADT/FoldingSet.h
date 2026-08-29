@@ -288,6 +288,21 @@ public:
   LLVM_ABI FoldingSetNodeIDRef Intern(BumpPtrAllocator &Allocator) const;
 };
 
+/// Insertion token: a failed lookup fills it in, the matching insert consumes
+/// it.
+class FoldingSetInsertToken {
+  uint64_t Value = 0; // hash + 1 while holding a token, 0 otherwise.
+
+  explicit FoldingSetInsertToken(uint32_t Hash) : Value(uint64_t(Hash) + 1) {}
+  uint32_t hash() const { return uint32_t(Value - 1); }
+
+  friend class FoldingSetBase;
+
+public:
+  FoldingSetInsertToken() = default;
+  explicit operator bool() const { return Value != 0; }
+};
+
 //===----------------------------------------------------------------------===//
 /// Non-templated base class for FoldingSet and ContextualFoldingSet, holding
 /// the memory management and probing that does not depend on the node type.
@@ -384,11 +399,16 @@ protected:
   LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
                                      void *&InsertPos,
                                      const FoldingSetInfo &Info);
+  LLVM_ABI Node *lookup(const FoldingSetNodeID &ID,
+                        FoldingSetInsertToken &Token,
+                        const FoldingSetInfo &Info);
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos for an ID that \p N profiles identically to.
+  /// FindNodeOrInsertPos (or lookup) for an ID that \p N profiles identically
+  /// to.
   LLVM_ABI void InsertNode(Node *N, void *InsertPos);
+  LLVM_ABI void insert(Node *N, FoldingSetInsertToken Token);
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -477,6 +497,7 @@ public:
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
   bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
+  bool erase(T *N) { return RemoveNode(N); }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -484,6 +505,7 @@ public:
     return static_cast<T *>(
         FoldingSetBase::GetOrInsertNode(N, getFoldingSetInfo()));
   }
+  T *getOrInsert(T *N) { return GetOrInsertNode(N); }
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
@@ -491,12 +513,19 @@ public:
     return static_cast<T *>(FoldingSetBase::FindNodeOrInsertPos(
         ID, InsertPos, getFoldingSetInfo()));
   }
+  T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
+    return static_cast<T *>(
+        FoldingSetBase::lookup(ID, Token, getFoldingSetInfo()));
+  }
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos.
+  /// FindNodeOrInsertPos (or lookup).
   void InsertNode(T *N, void *InsertPos) {
     FoldingSetBase::InsertNode(N, InsertPos);
+  }
+  void insert(T *N, FoldingSetInsertToken Token) {
+    FoldingSetBase::insert(N, Token);
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -565,6 +594,9 @@ public:
   T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
     return Set.FindNodeOrInsertPos(ID, InsertPos);
   }
+  T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
+    return Set.lookup(ID, Token);
+  }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -574,12 +606,17 @@ public:
       Vector.push_back(N);
     return Result;
   }
+  T *getOrInsert(T *N) { return GetOrInsertNode(N); }
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos.
+  /// FindNodeOrInsertPos (or lookup).
   void InsertNode(T *N, void *InsertPos) {
     Set.InsertNode(N, InsertPos);
+    Vector.push_back(N);
+  }
+  void insert(T *N, FoldingSetInsertToken Token) {
+    Set.insert(N, Token);
     Vector.push_back(N);
   }
 
