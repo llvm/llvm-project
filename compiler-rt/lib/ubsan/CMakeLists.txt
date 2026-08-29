@@ -1,5 +1,44 @@
 # Build for the undefined behavior sanitizer runtime support library.
 
+include_directories(.)
+include_directories(..)
+include_directories(../../include)
+
+# GPU targets only need the handler shims. The host interceptor archive is
+# built in the device/ project.
+if(COMPILER_RT_GPU_BUILD)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    add_compiler_rt_component(ubsan)
+    return()
+  endif()
+
+  set(UBSAN_SOURCES ubsan_device.cpp)
+
+  set(UBSAN_HEADERS
+    ubsan_device_packet.h
+    ubsan_device_checks.inc
+    )
+
+  set(UBSAN_DEVICE_CFLAGS
+    ${SANITIZER_COMMON_CFLAGS}
+    -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
+  append_rtti_flag(OFF UBSAN_DEVICE_CFLAGS)
+
+  add_compiler_rt_component(ubsan)
+
+  add_compiler_rt_runtime(clang_rt.ubsan_standalone
+    STATIC
+    ARCHS ${UBSAN_SUPPORTED_ARCH}
+    SOURCES ${UBSAN_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_DEVICE_CFLAGS}
+    LINK_LIBS llvm-libc-common-utilities
+    PARENT_TARGET ubsan)
+
+  return()
+endif()
+
 set(UBSAN_SOURCES
   ubsan_diag.cpp
   ubsan_init.cpp
@@ -33,6 +72,7 @@ set(UBSAN_HEADERS
   ubsan_flags.inc
   ubsan_handlers.h
   ubsan_handlers_cxx.h
+  ubsan_handlers_internal.h
   ubsan_init.h
   ubsan_interface.inc
   ubsan_monitor.h
@@ -41,9 +81,6 @@ set(UBSAN_HEADERS
   ubsan_type_hash.h
   ubsan_value.h
   )
-
-include_directories(..)
-include_directories(../../include)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_list_if(MSVC /Zl UBSAN_CFLAGS)
@@ -272,5 +309,10 @@ else()
         ARCHS ${ARCHS_FOR_SYMBOLS}
         PARENT_TARGET ubsan)
     endif()
+  endif()
+
+  # Thin host interceptors for offloading. Linked with -u to keep it separate.
+  if(OS_NAME MATCHES "Linux" AND NOT ANDROID)
+    add_subdirectory(device)
   endif()
 endif()

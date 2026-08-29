@@ -17,6 +17,7 @@
 #include "ubsan_init.h"
 #include "ubsan_monitor.h"
 
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
@@ -49,15 +50,26 @@ void ubsan_GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc,
   stack->Unwind(max_depth, pc, bp, context, top, bottom, fast);
 }
 
-static void MaybePrintStackTrace(uptr pc, uptr bp) {
+static void PrintSymbolizedFrames(SymbolizedStack *Frames);
+
+static void MaybePrintStackTrace(const ReportOptions &Opts) {
   // We assume that flags are already parsed, as UBSan runtime
   // will definitely be called when we print the first diagnostics message.
   if (!flags()->print_stacktrace)
     return;
 
+  // Reports to be symbolized from the device need to use a separate file.
+  if (Opts.FromDevice) {
+    if (!Opts.pc)
+      return;
+    SymbolizedStackHolder Frame(getReportLocation(Opts.pc, true));
+    PrintSymbolizedFrames(const_cast<SymbolizedStack *>(Frame.get()));
+    return;
+  }
+
   UNINITIALIZED BufferedStackTrace stack;
-  ubsan_GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
-                common_flags()->fast_unwind_on_fatal);
+  ubsan_GetStackTrace(&stack, kStackTraceMax, Opts.pc, Opts.bp, nullptr,
+                      common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }
 
@@ -111,15 +123,26 @@ static void MaybeReportErrorSummary(Location Loc, ErrorType Type) {
 
 namespace {
 class Decorator : public SanitizerCommonDecorator {
- public:
+public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *Highlight() const { return Green(); }
   const char *Note() const { return Black(); }
 };
+} // namespace
+
+// Symbolization hook for the remote device support. The hook returns a null
+// pointer if the given PC was not present in any of the known device images.
+static SymbolizedStack *(*DeviceSymbolize)(uptr PC);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__ubsan_set_device_symbolize(SymbolizedStack *(*Fn)(uptr PC)) {
+  DeviceSymbolize = Fn;
 }
 
 SymbolizedStack *__ubsan::getSymbolizedLocation(uptr PC) {
   InitAsStandaloneIfNecessary();
+  if (DeviceSymbolize)
+    if (SymbolizedStack *S = DeviceSymbolize(PC))
+      return S;
   return Symbolizer::GetOrInit()->SymbolizePC(PC);
 }
 
@@ -294,7 +317,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
   // Emit data.
   InternalScopedString Buffer;
   for (uptr P = Min; P != Max; ++P) {
-    unsigned char C = *reinterpret_cast<const unsigned char*>(P);
+    unsigned char C = *reinterpret_cast<const unsigned char *>(P);
     Buffer.AppendF("%s%02x", (P % 8 == 0) ? "  " : " ", C);
   }
   Buffer.AppendF("\n");
@@ -393,6 +416,22 @@ Diag::~Diag() {
     PrintMemorySnippet(Decor, Loc.getMemoryLocation(), Ranges, NumRanges, Args);
 }
 
+static void PrintSymbolizedFrames(SymbolizedStack *Frames) {
+  InternalScopedString Out;
+  uptr N = 0;
+  for (SymbolizedStack *F = Frames; F; F = F->next) {
+    uptr Was = Out.length();
+    StackTracePrinter::GetOrInit()->RenderFrame(
+        &Out, common_flags()->stack_trace_format, N++, F->info.address,
+        &F->info, common_flags()->symbolize_vs_style,
+        common_flags()->strip_path_prefix);
+    if (Out.length() != Was)
+      Out.Append("\n");
+  }
+  Out.Append("\n");
+  Printf("%s", Out.data());
+}
+
 ScopedReport::Initializer::Initializer() { InitAsStandaloneIfNecessary(); }
 
 ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
@@ -400,7 +439,7 @@ ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
     : Opts(Opts), SummaryLoc(SummaryLoc), Type(Type) {}
 
 ScopedReport::~ScopedReport() {
-  MaybePrintStackTrace(Opts.pc, Opts.bp);
+  MaybePrintStackTrace(Opts);
   MaybeReportErrorSummary(SummaryLoc, Type);
 
   if (common_flags()->print_module_map >= 2)
@@ -465,4 +504,4 @@ bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
          suppression_ctx->Match(AI.file, SuppType, &s);
 }
 
-#endif  // CAN_SANITIZE_UB
+#endif // CAN_SANITIZE_UB
