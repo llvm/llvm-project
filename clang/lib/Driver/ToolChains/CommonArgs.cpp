@@ -1673,8 +1673,33 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
+// Host interceptor library for UBSan on the device. Enabled if we are
+// offloading to a target that supports UBSan.
+static bool hostNeedsUbsanDeviceRt(Compilation &C, const ToolChain &HostTC) {
+  if (HostTC.getTriple().isGPU())
+    return false;
+
+  static constexpr Action::OffloadKind Kinds[] = {
+      Action::OFK_Cuda, Action::OFK_OpenMP, Action::OFK_HIP, Action::OFK_SYCL};
+  for (Action::OffloadKind Kind : Kinds) {
+    for (const auto &Entry : llvm::make_range(C.getOffloadToolChains(Kind))) {
+      const ToolChain *DevTC = Entry.second;
+      // FIXME: CUDA/HIPSPV copy the host mask and ignore device sanitizers.
+      if (DevTC->getTriple().isNVPTX() || DevTC->getTriple().isSPIROrSPIRV())
+        continue;
+
+      const ArgList &DevArgs = C.getArgsForToolChain(DevTC, {}, Kind);
+      SanitizerArgs DevSan = DevTC->getSanitizerArgs(DevArgs, {}, Kind);
+      if (DevSan.needsUbsanRt() && !DevSan.requiresMinimalRuntime())
+        return true;
+    }
+  }
+  return false;
+}
+
 static void
-collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
+collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
+                         const ArgList &Args,
                          SmallVectorImpl<StringRef> &SharedRuntimes,
                          SmallVectorImpl<StringRef> &StaticRuntimes,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
@@ -1816,17 +1841,21 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
   if (SanArgs.needsUbsanLoopDetectRt())
     NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
+  if (hostNeedsUbsanDeviceRt(C, TC)) {
+    NonWholeStaticRuntimes.push_back("ubsan_device");
+    RequiredSymbols.push_back("__ubsan_device_init");
+  }
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
-                                 ArgStringList &CmdArgs) {
+                                 ArgStringList &CmdArgs, Compilation &C) {
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
       NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
   if (SanArgs.linkRuntimes()) {
-    collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
+    collectSanitizerRuntimes(C, TC, Args, SharedRuntimes, StaticRuntimes,
                              NonWholeStaticRuntimes, HelperStaticRuntimes,
                              RequiredSymbols);
   }

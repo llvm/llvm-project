@@ -277,7 +277,7 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--disable-nxcompat");
 
   bool NeedsSanitizerDeps =
-      tools::addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+      tools::addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = tools::addXRayRuntime(ToolChain, Args, CmdArgs);
   tools::addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   tools::AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
