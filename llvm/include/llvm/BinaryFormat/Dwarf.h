@@ -825,6 +825,11 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Gleam:
     return false;
   }
+  // The switch above covers the DW_LANG_{lo,hi}_user boundaries, but every
+  // vendor-defined code in between is a valid SourceLanguage that no case
+  // enumerates. None of them is C.
+  if (S > DW_LANG_lo_user && S < DW_LANG_hi_user)
+    return false;
   llvm_unreachable("Unknown language kind.");
 }
 
