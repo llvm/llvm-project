@@ -106,6 +106,11 @@ void DependencyTracker::verifyKeepChain() {
 #endif
 }
 
+/// \returns true if \p Entry names a scope a DW_AT_import may refer to, whose
+/// contents that import then pulls in wholesale. Deliberately narrow: widening
+/// it to the other unit root tags makes a DW_TAG_imported_unit of a partial
+/// unit mark only the root and drop everything the imported unit holds. See
+/// dwarf5-partial-unit-imported-unit.test.
 static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   switch (Entry->getTag()) {
   case dwarf::DW_TAG_compile_unit:
@@ -116,6 +121,14 @@ static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   default:
     return false;
   }
+}
+
+/// \returns true if the DIE at \p Idx bounds the scope of the DIEs below it.
+/// The unit root bounds that scope whatever tag it carries, and
+/// DW_TAG_partial_unit - what dwz emits - is not namespace-like.
+static bool isUnitRootOrNamespaceLikeEntry(uint32_t Idx,
+                                           const DWARFDebugInfoEntry *Entry) {
+  return CompileUnit::isUnitRootDIE(Idx) || isNamespaceLikeEntry(Entry);
 }
 
 bool DependencyTracker::resolveDependenciesAndMarkLiveness(
@@ -482,7 +495,8 @@ void DependencyTracker::markParentsAsKeepingChildren(
         bool AddToWorklist = !isAlreadyMarked(
             ParentInfo, CompileUnit::DieOutputPlacement::TypeTable);
         ParentInfo.setKeepTypeChildren();
-        if (AddToWorklist && !isNamespaceLikeEntry(ParentEntry)) {
+        if (AddToWorklist &&
+            !isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry)) {
           addActionToRootEntriesWorkList(
               LiveRootWorklistActionTy::MarkTypeChildrenRec,
               UnitEntryPairTy{Entry.CU, ParentEntry}, std::nullopt);
@@ -497,7 +511,8 @@ void DependencyTracker::markParentsAsKeepingChildren(
         bool AddToWorklist = !isAlreadyMarked(
             ParentInfo, CompileUnit::DieOutputPlacement::PlainDwarf);
         ParentInfo.setKeepPlainChildren();
-        if (AddToWorklist && !isNamespaceLikeEntry(ParentEntry)) {
+        if (AddToWorklist &&
+            !isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry)) {
           addActionToRootEntriesWorkList(
               LiveRootWorklistActionTy::MarkLiveChildrenRec,
               UnitEntryPairTy{Entry.CU, ParentEntry}, std::nullopt);
@@ -952,7 +967,7 @@ DependencyTracker::getRootForSpecifiedEntry(UnitEntryPairTy Entry) {
 
     const DWARFDebugInfoEntry *ParentEntry =
         Result.CU->getDebugInfoEntry(*ParentIdx);
-    if (isNamespaceLikeEntry(ParentEntry))
+    if (isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry))
       break;
     Result.DieEntry = ParentEntry;
   } while (true);
