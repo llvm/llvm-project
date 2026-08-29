@@ -13756,17 +13756,7 @@ static InstructionCost
 canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
                 DominatorTree &DT, const DataLayout &DL,
                 TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const TTI::TargetCostKind CostKind, unsigned FMulOpIdx = 0);
-
-/// \returns the operand of \p I that is a one-use fmul, 0 if there is none.
-static unsigned getFMulOperandIdx(const Instruction *I) {
-  for (unsigned Idx : seq<unsigned>(0, I->getNumOperands())) {
-    auto *Op = dyn_cast<Instruction>(I->getOperand(Idx));
-    if (Op && Op->getOpcode() == Instruction::FMul && Op->hasOneUse())
-      return Idx;
-  }
-  return 0;
-}
+                const TTI::TargetCostKind CostKind, unsigned FMulOpIdx);
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -15461,7 +15451,7 @@ void BoUpSLP::transformNodes() {
            !IsOneUseVectorFMulOperand(RHS)))
         break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI,
-                           CostKind)
+                           CostKind, /*FMulOpIdx=*/0)
                .isValid())
         break;
       // This node is a fmuladd node.
@@ -17182,8 +17172,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return IntrinsicCost;
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
-                                         Instruction *VI,
-                                         unsigned FMulOpIdx = 0) {
+                                         Instruction *VI, unsigned FMulOpIdx) {
     InstructionCost Cost =
         canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, CostKind, FMulOpIdx);
     return Cost;
@@ -17649,8 +17638,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
-      return GetFMulAddCost(E->getOperations(),
-                            cast<Instruction>(UniqueValues[Idx]));
+      auto *VI = cast<Instruction>(UniqueValues[Idx]);
+      return GetFMulAddCost(E->getOperations(), VI, getFMulOperandIdx(VI));
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       FastMathFlags FMF;
@@ -32281,7 +32270,7 @@ private:
                 if (RdxKind == RecurKind::FAdd) {
                   InstructionCost FMACost =
                       canConvertToFMA(RdxOp, getSameOpcode(RdxOp, TLI), DT, DL,
-                                      *TTI, TLI, CostKind);
+                                      *TTI, TLI, CostKind, /*FMulOpIdx=*/0);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -32407,7 +32396,7 @@ private:
             }
             if (!Ops.empty()) {
               FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                        *TTI, TLI, CostKind);
+                                        *TTI, TLI, CostKind, /*FMulOpIdx=*/0);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
