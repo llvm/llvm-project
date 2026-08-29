@@ -246,9 +246,8 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
 // aliases below would resolve to nothing and the failure would surface at link
 // time or in the field. This makes it surface at the line that owns the
 // assumption.
-[[maybe_unused]] static CppTypeFor<TypeCategory::Real, 16> (
-    *const f128_prototype_canary)(CppTypeFor<TypeCategory::Real, 16>) =
-    &sqrtf128;
+[[maybe_unused]] static CppTypeFor<TypeCategory::Real, 16> (*const
+        f128_prototype_canary)(CppTypeFor<TypeCategory::Real, 16>) = &sqrtf128;
 
 DEFINE_SIMPLE_ALIAS(Abs, fabsf128)
 DEFINE_SIMPLE_ALIAS(Acos, acosf128)

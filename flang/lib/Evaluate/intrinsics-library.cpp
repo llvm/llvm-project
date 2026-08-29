@@ -640,9 +640,11 @@ host::HostComplex128 csqrtf128(host::HostComplex128);
 host::HostComplex128 ctanf128(host::HostComplex128);
 host::HostComplex128 ctanhf128(host::HostComplex128);
 }
-template <> struct HostRuntimeLibrary<host::HostComplex128, LibraryVersion::Libm> {
+template <>
+struct HostRuntimeLibrary<host::HostComplex128, LibraryVersion::Libm> {
   using F = FuncPointer<host::HostComplex128, host::HostComplex128>;
-  using F2 = FuncPointer<host::HostComplex128, host::HostComplex128, host::HostComplex128>;
+  using F2 = FuncPointer<host::HostComplex128, host::HostComplex128,
+      host::HostComplex128>;
   static constexpr HostRuntimeFunction table[]{
       FolderFactory<F, F{cacosf128}>::Create("acos"),
       FolderFactory<F, F{cacoshf128}>::Create("acosh"),
