@@ -3223,7 +3223,7 @@ SDValue IntegerCompareEliminator::addExtOrTrunc(SDValue NatWidthRes,
   SDLoc dl(NatWidthRes);
 
   // For reinterpreting 32-bit values as 64 bit values, we generate
-  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<1>
+  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<%subreg.sub_32>
   if (Conv == ExtOrTruncConversion::Ext) {
     SDValue ImDef(CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl, MVT::i64), 0);
     SDValue SubRegIdx =
@@ -5183,7 +5183,7 @@ bool PPCDAGToDAGISel::tryAsSingleRLDICL(SDNode *N) {
 
       Val = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl, ResultType,
                                            IDVal, Op0.getOperand(0),
-                                           getI32Imm(1, dl)),
+                                           getI32Imm(PPC::sub_32, dl)),
                     0);
       SH = 64 - Imm;
     }

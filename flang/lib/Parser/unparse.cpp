@@ -2807,7 +2807,7 @@ public:
   }
   void Unparse(const OpenMPInvalidDirective &x) {
     BeginOpenMP();
-    Word("!$OMP ");
+    Word(x.isExtensionSentinel ? "!$OMPX " : "!$OMP ");
     Put(parser::ToUpperCaseLetters(x.source.ToString()));
     Put("\n");
     EndOpenMP();
