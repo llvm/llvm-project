@@ -116,7 +116,7 @@ v_mfma_f32_32x32x1f32 v[0:31], v0, v1, v[33:64]
 // GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
 
 v_ceil_f64_dpp v[0:1], v[3:4] row_newbcast:1 row_mask:0xf bank_mask:0xf
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:24: error: invalid register class: vgpr tuples must be 64 bit aligned
 
 v_pk_mov_b32 v[0:1], v[3:4], v[4:5]
 // GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned

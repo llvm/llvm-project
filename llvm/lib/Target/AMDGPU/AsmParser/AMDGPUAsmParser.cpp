@@ -66,13 +66,24 @@ enum RegisterKind {
 // Operand
 //===----------------------------------------------------------------------===//
 
+// Why an operand predicate rejected an operand; higher values are more specific
+// and win the tiebreak in matchAndEmitInstruction. Keep None first.
+enum class OperandMatchError {
+  None,
+  VGPRAlignMismatch,
+};
+
 class AMDGPUOperand : public MCParsedAsmOperand {
   enum KindTy { Token, Immediate, Register, Expression } Kind;
 
   SMLoc StartLoc, EndLoc;
   const AMDGPUAsmParser *AsmParser;
 
+  mutable OperandMatchError MatchError = OperandMatchError::None;
+
 public:
+  OperandMatchError getMatchError() const { return MatchError; }
+
   AMDGPUOperand(KindTy Kind_, const AMDGPUAsmParser *AsmParser_)
       : Kind(Kind_), AsmParser(AsmParser_) {}
 
@@ -244,8 +255,16 @@ public:
     return isRegClass(RCID) || isInlinableImm(type);
   }
 
+  bool isRegOrInlineByHwMode(unsigned RCByHwModeIdx, MVT type) const {
+    return isRegClassByHwMode(RCByHwModeIdx) || isInlinableImm(type);
+  }
+
   bool isRegOrImmWithInputMods(unsigned RCID, MVT type) const {
     return isRegOrInline(RCID, type) || isLiteralImm(type);
+  }
+
+  bool isRegOrImmWithInputModsByHwMode(unsigned RCByHwModeIdx, MVT type) const {
+    return isRegOrInlineByHwMode(RCByHwModeIdx, type) || isLiteralImm(type);
   }
 
   bool isRegOrImmWithInt16InputMods() const {
@@ -275,7 +294,7 @@ public:
   }
 
   bool isRegOrImmWithInt64InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::i64);
+    return isRegOrImmWithInputModsByHwMode(AMDGPU::VS_64_AlignTarget, MVT::i64);
   }
 
   bool isRegOrImmWithFP16InputMods() const {
@@ -292,7 +311,7 @@ public:
   }
 
   bool isRegOrImmWithFP64InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::f64);
+    return isRegOrImmWithInputModsByHwMode(AMDGPU::VS_64_AlignTarget, MVT::f64);
   }
 
   template <bool IsFake16> bool isRegOrInlineImmWithFP16InputMods() const {
@@ -305,7 +324,7 @@ public:
   }
 
   bool isRegOrInlineImmWithFP64InputMods() const {
-    return isRegOrInline(AMDGPU::VS_64RegClassID, MVT::f64);
+    return isRegOrInlineByHwMode(AMDGPU::VS_64_AlignTarget, MVT::f64);
   }
 
   bool isVRegWithInputMods(unsigned RCID) const { return isRegClass(RCID); }
@@ -315,7 +334,7 @@ public:
   }
 
   bool isVRegWithFP64InputMods() const {
-    return isVRegWithInputMods(AMDGPU::VReg_64RegClassID);
+    return isRegClassByHwMode(AMDGPU::VReg_64_AlignTarget);
   }
 
   bool isPackedFP16InputMods() const {
@@ -416,6 +435,14 @@ public:
   bool isRegOrImm() const { return isReg() || isImm(); }
 
   bool isRegClass(unsigned RCID) const;
+
+  // Check the register against the HwMode-resolved operand class; on failure
+  // also record the alignment diagnostic via diagnoseRegAlign.
+  bool isRegClassByHwMode(unsigned RCByHwModeIdx) const;
+
+  // Record an alignment diagnostic if the register failed operand class RCID
+  // only for being odd-aligned; always returns false.
+  bool diagnoseRegAlign(int16_t RCID) const;
 
   bool isInlineValue() const;
 
@@ -1615,6 +1642,12 @@ public:
 
   const MCInstrInfo *getMII() const { return &MII; }
 
+  // Resolve a RegClassByHwModeUses index to a register class id for the active
+  // HwMode; -1 if the mode has no entry.
+  int16_t getRegClassByHwMode(unsigned RCByHwModeIdx) const {
+    return MII.getRegClassByHwModeTable(HwMode)[RCByHwModeIdx];
+  }
+
   // FIXME: This should not be used. Instead, should use queries derived from
   // getAvailableFeatures().
   const FeatureBitset &getFeatureBits() const {
@@ -2258,6 +2291,23 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
   return canLosslesslyConvertToFPType(FPLiteral, ExpectedType);
 }
 
+bool AMDGPUOperand::isRegClassByHwMode(unsigned RCByHwModeIdx) const {
+  if (!isRegKind())
+    return false;
+  int16_t RCID = AsmParser->getRegClassByHwMode(RCByHwModeIdx);
+  // On a class miss diagnoseRegAlign records a misalignment (a no-op on
+  // subtargets without aligned VGPRs); it always returns false.
+  return RCID >= 0 && (isRegClass(RCID) || diagnoseRegAlign(RCID));
+}
+
+bool AMDGPUOperand::diagnoseRegAlign(int16_t RCID) const {
+  const MCRegisterInfo *MRI = AsmParser->getMRI();
+  int UnalignedRCID = AMDGPU::getUnalignedEquivalentRC(RCID);
+  if (UnalignedRCID >= 0 && MRI->getRegClass(UnalignedRCID).contains(getReg()))
+    MatchError = OperandMatchError::VGPRAlignMismatch;
+  return false;
+}
+
 bool AMDGPUOperand::isRegClass(unsigned RCID) const {
   return isRegKind() &&
          AsmParser->getMRI()->getRegClass(RCID).contains(getReg());
@@ -2266,8 +2316,8 @@ bool AMDGPUOperand::isRegClass(unsigned RCID) const {
 bool AMDGPUOperand::isVRegWithInputMods() const {
   return isRegClass(AMDGPU::VGPR_32RegClassID) ||
          // GFX90A allows DPP on 64-bit operands.
-         (isRegClass(AMDGPU::VReg_64RegClassID) &&
-          AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
+         (AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP] &&
+          isRegClassByHwMode(AMDGPU::VReg_64_AlignTarget));
 }
 
 template <bool IsFake16>
@@ -5894,25 +5944,32 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
+  ErrorInfo = ~0ULL; // set by the loop; initialized so it can be read before.
 
-  // Order match statuses from least to most specific and keep the most
-  // specific one:
-  //   Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
-  auto atLeastAsSpecific = [](unsigned New, unsigned Cur) {
-    auto rank = [](unsigned M) {
-      return M == Match_MnemonicFail     ? 1
-             : M == Match_InvalidOperand ? 2
-             : M == Match_MissingFeature ? 3
-                                         : 0; // Match_Success sentinel
+  // Rank a match status as (MatchResultOrder, MatchError):
+  // MnemonicFail < InvalidOperand < MissingFeature (Success lowest), ties
+  // broken by the failing operand's recorded OperandMatchError.
+  auto atLeastAsSpecific = [&](unsigned New, uint64_t NewIdx, unsigned Cur,
+                               uint64_t CurIdx) {
+    auto rank = [&](unsigned M, uint64_t I) {
+      int MROrder = M == Match_MnemonicFail     ? 1
+                    : M == Match_InvalidOperand ? 2
+                    : M == Match_MissingFeature ? 3
+                                                : 0; // Match_Success sentinel
+      OperandMatchError MatchError =
+          M == Match_InvalidOperand && I < Operands.size()
+              ? static_cast<const AMDGPUOperand &>(*Operands[I]).getMatchError()
+              : OperandMatchError::None;
+      return (MROrder << 16) | static_cast<int>(MatchError);
     };
-    return rank(New) >= rank(Cur);
+    return rank(New, NewIdx) >= rank(Cur, CurIdx);
   };
 
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
     auto R =
         MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm, Variant);
-    if (R == Match_Success || atLeastAsSpecific(R, Result)) {
+    if (R == Match_Success || atLeastAsSpecific(R, EI, Result, ErrorInfo)) {
       Result = R;
       ErrorInfo = EI;
     }
@@ -5951,12 +6008,24 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       if (ErrorInfo >= Operands.size()) {
         return Error(IDLoc, "too few operands for instruction");
       }
-      ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
+      AMDGPUOperand &ErrorOp = (AMDGPUOperand &)*Operands[ErrorInfo];
+      ErrorLoc = ErrorOp.getStartLoc();
       if (ErrorLoc == SMLoc())
         ErrorLoc = IDLoc;
 
       if (isInvalidVOPDY(Operands, ErrorInfo))
         return Error(ErrorLoc, "invalid VOPDY instruction");
+
+      // A predicate may have recorded a more specific reason for rejecting the
+      // operand than the generic "invalid operand" below.
+      switch (ErrorOp.getMatchError()) {
+      case OperandMatchError::VGPRAlignMismatch:
+        return Error(
+            ErrorLoc,
+            "invalid register class: vgpr tuples must be 64 bit aligned");
+      case OperandMatchError::None:
+        break;
+      }
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
