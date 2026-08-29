@@ -1429,15 +1429,8 @@ bool ScalarEvolution::proveNoWrapByVaryingStart(const SCEV *Start,
 
   for (unsigned Delta : {-2, -1, 1, 2}) {
     const SCEV *PreStart = getConstant(StartAI - Delta);
-
-    FoldingSetNodeID ID;
-    ID.AddInteger(scAddRecExpr);
-    ID.AddPointer(PreStart);
-    ID.AddPointer(Step);
-    ID.AddPointer(L);
-    void *IP = nullptr;
-    const auto *PreAR =
-      static_cast<SCEVAddRecExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
+    const auto *PreAR = static_cast<SCEVAddRecExpr *>(
+        findExistingSCEVInCache(scAddRecExpr, {PreStart, Step}, L));
 
     // Give up if we don't already have the add recurrence we need because
     // actually constructing an add recurrence is relatively expensive.
@@ -3679,6 +3672,14 @@ const SCEV *ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
            "SCEVAddRecExpr operand is not available at loop entry!");
 #endif
 
+  if (auto *AR = static_cast<SCEVAddRecExpr *>(
+          findExistingSCEVInCache(scAddRecExpr, Operands, L))) {
+    if (AR->getNoWrapFlags(Flags) != Flags)
+      AR->setNoWrapFlags(
+          StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags));
+    return AR;
+  }
+
   if (Operands.back()->isZero()) {
     Operands.pop_back();
     return getAddRecExpr(Operands, L, SCEV::FlagAnyWrap); // {X,+,0}  -->  X
@@ -3824,11 +3825,16 @@ const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
 }
 
 SCEV *ScalarEvolution::findExistingSCEVInCache(SCEVTypes SCEVType,
-                                               ArrayRef<SCEVUse> Ops) {
+                                               ArrayRef<SCEVUse> Ops,
+                                               const Loop *L) {
+  assert((SCEVType != scAddRecExpr || L) &&
+         "L must be passed to find existing AddRecs");
   FoldingSetNodeID ID;
   ID.AddInteger(SCEVType);
   for (SCEVUse Op : Ops)
     ID.AddPointer(Op.getOpaqueValue());
+  if (L)
+    ID.AddPointer(L);
   void *IP = nullptr;
   return UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
 }
