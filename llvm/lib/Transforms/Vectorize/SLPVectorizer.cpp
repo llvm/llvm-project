@@ -22863,17 +22863,33 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // process to keep correct order.
         return *Delayed;
       }
+      const TreeEntry *FrontTE = Entries.front().front();
+      auto IsRepresentedByFrontTE = [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        for (auto [I, Scalar] : enumerate(FrontTE->Scalars)) {
+          if (V != Scalar)
+            continue;
+          unsigned Lane = FrontTE->ReorderIndices.empty()
+                              ? I
+                              : FrontTE->ReorderIndices[I];
+          if (FrontTE->ReuseShuffleIndices.empty() ||
+              is_contained(FrontTE->ReuseShuffleIndices, Lane))
+            return true;
+        }
+        return false;
+      };
       if (GatherShuffles.size() == 1 &&
           *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
           (Entries.front().front()->isSame(E->Scalars) ||
-           E->isSame(Entries.front().front()->Scalars))) {
+           E->isSame(Entries.front().front()->Scalars)) &&
+          all_of(E->Scalars, IsRepresentedByFrontTE)) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
         LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
                           << shortBundleName(E->Scalars, E->Idx) << ".\n");
         // Restore the mask for previous partially matched values.
         Mask.resize(E->Scalars.size());
-        const TreeEntry *FrontTE = Entries.front().front();
         if (FrontTE->ReorderIndices.empty() && E->ReorderIndices.empty() &&
             ((FrontTE->ReuseShuffleIndices.empty() &&
               E->Scalars.size() == FrontTE->Scalars.size()) ||
