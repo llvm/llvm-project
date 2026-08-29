@@ -497,11 +497,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   // Fold the following two scenarios:
   //   1) i1 mul -> i1 and.
-  //   2) X * Y --> X & Y, iff X, Y can be only {0,1}.
+  //   2) X * Y --> X & Y, iff X, Y are loads known to be in the range {0,1}.
   if (Ty->isIntOrIntVectorTy(1) ||
       (match(Op0, m_And(m_Value(), m_One())) &&
        match(Op1, m_And(m_Value(), m_One()))) ||
-      (computeKnownBits(Op0, &I).countMaxActiveBits() <= 1 &&
+      (isa<LoadInst>(Op0) && isa<LoadInst>(Op1) &&
+       computeKnownBits(Op0, &I).countMaxActiveBits() <= 1 &&
        computeKnownBits(Op1, &I).countMaxActiveBits() <= 1))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
