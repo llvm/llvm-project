@@ -454,6 +454,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsf128
+    libc.src.math.fabsf16
     libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
@@ -686,11 +687,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpx
     libc.src.math.ufromfpxf
     libc.src.math.ufromfpxl
-)
-
-list(APPEND TARGET_LIBM_ENTRYPOINTS
-  # float16 entrypoints
-  libc.src.math.fabsf16
 )
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS

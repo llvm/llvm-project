@@ -680,6 +680,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsf128
+    libc.src.math.fabsf16
     libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
@@ -969,7 +970,6 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16sub
     libc.src.math.f16subf
     # libc.src.math.f16subl
-    libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.fdiv
     libc.src.math.fdivl

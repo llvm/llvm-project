@@ -12,8 +12,7 @@
 #include "utils/MPFRWrapper/MPCommon.h"
 
 using Float16 = LIBC_NAMESPACE::fputil::Float16;
-using LlvmLibcFloat16ConversionTest =
-    LIBC_NAMESPACE::testing::FPTest<Float16>;
+using LlvmLibcFloat16ConversionTest = LIBC_NAMESPACE::testing::FPTest<Float16>;
 
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -69,9 +68,9 @@ TEST_F(LlvmLibcFloat16ConversionTest, FromInteger) {
 }
 
 TEST_F(LlvmLibcFloat16ConversionTest, CompoundAssignmentOperators) {
-  constexpr Float16 VAL[] = {zero,           neg_zero,        inf,
-                             neg_inf,        min_normal,      max_normal,
-                             Float16(1.0f),  Float16(-1.0f),  Float16(2.0f),
+  constexpr Float16 VAL[] = {zero,          neg_zero,       inf,
+                             neg_inf,       min_normal,     max_normal,
+                             Float16(1.0f), Float16(-1.0f), Float16(2.0f),
                              Float16(3.0f)};
   // *=
   for (const Float16 &x : VAL) {
