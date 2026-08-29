@@ -807,18 +807,23 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
+  libc.src.math.bf16addf80
   libc.src.math.bf16addl
   libc.src.math.bf16div
   libc.src.math.bf16divf
+  libc.src.math.bf16divf80
   libc.src.math.bf16divl
   libc.src.math.bf16fma
   libc.src.math.bf16fmaf
+  libc.src.math.bf16fmaf80
   libc.src.math.bf16fmal
   libc.src.math.bf16mul
   libc.src.math.bf16mulf
+  libc.src.math.bf16mulf80
   libc.src.math.bf16mull
   libc.src.math.bf16sub
   libc.src.math.bf16subf
+  libc.src.math.bf16subf80
   libc.src.math.bf16subl
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
