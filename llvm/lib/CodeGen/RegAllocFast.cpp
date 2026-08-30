@@ -196,13 +196,14 @@ private:
   /// Maps virtual regs to the frame index where these values are spilled.
   IndexedMap<int, VirtReg2IndexFunctor> StackSlotForVirtReg;
 
-  /// Everything we know about a live virtual register.
+  /// A virtual register live at the current point of the backward walk.
+  /// Created at its last reference, cleared only when the block is done.
   struct LiveReg {
     MachineInstr *LastUse = nullptr; ///< Last instr to use reg.
     Register VirtReg;                ///< Virtual register number.
-    MCRegister PhysReg;              ///< Currently held here.
-    bool LiveOut = false;            ///< Register is possibly live out.
-    bool Reloaded = false;           ///< Register was reloaded.
+    MCRegister PhysReg;              ///< Currently held here, 0 if none.
+    bool LiveOut = false;            ///< Live out of the block; the def spills.
+    bool Reloaded = false;           ///< Reloaded below; the def spills.
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
@@ -228,26 +229,26 @@ private:
   /// that it is alive across blocks.
   BitVector MayLiveAcrossBlocks;
 
-  /// State of a register unit.
+  /// What occupies a register unit. Registers interfere exactly when their
+  /// unit sets intersect, so overlap needs no alias walk.
   enum RegUnitState {
-    /// A free register is not currently in use and can be allocated
-    /// immediately without checking aliases.
+    /// Not in use; a register is allocatable iff all of its units are free.
     regFree,
 
-    /// A pre-assigned register has been assigned before register allocation
-    /// (e.g., setting up a call parameter).
+    /// In use by a register fixed before allocation: a physreg operand such as
+    /// a call argument, or a block live-out. Cannot be spilled.
     regPreAssigned,
 
-    /// Used temporarily in reloadAtBegin() to mark register units that are
-    /// live-in to the basic block.
+    /// A scratch marker, not an occupancy state: reloadAtBegin() stamps
+    /// MBB.liveins() over the finished map to skip the reload for a virtual
+    /// register left in a register the block already receives.
     regLiveIn,
 
-    /// A register state may also be a virtual register number, indication
-    /// that the physical register is currently allocated to a virtual
-    /// register. In that case, LiveVirtRegs contains the inverse mapping.
+    /// Any other value is a virtual register number (>= VirtualRegFlag);
+    /// LiveVirtRegs holds the inverse mapping.
   };
 
-  /// Maps each physical register to a RegUnitState enum or virtual register.
+  /// State of each register unit, indexed by MCRegUnit.
   std::vector<unsigned> RegUnitStates;
 
   SmallVector<MachineInstr *, 32> Coalesced;
@@ -506,6 +507,7 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
                       const MachineInstr &B) {
   uint64_t IndexA, IndexB;
   PosIndexes.getIndex(A, IndexA);
+  // getIndex() returns true when it renumbered the block, invalidating IndexA.
   if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
     PosIndexes.getIndex(A, IndexA);
   return IndexA < IndexB;
@@ -704,12 +706,10 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   if (LiveVirtRegs.empty())
     return;
 
-  for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-    MCRegister Reg = P.PhysReg;
-    // Set state to live-in. This possibly overrides mappings to virtual
-    // registers but we don't care anymore at this point.
-    setPhysRegState(Reg, regLiveIn);
-  }
+  // A live-in register's units can be in three states: regFree, regPreAssigned,
+  // or a virtual register; only overwriting the last has an effect.
+  for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins())
+    setPhysRegState(P.PhysReg, regLiveIn);
 
   SmallSet<Register, 2> PrologLiveIns;
 
@@ -1452,8 +1452,7 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
-// Returns true if MO is tied and the operand it's tied to is not Undef (not
-// Undef is not the same thing as Def).
+// Returns true if MO is tied to an operand that is not undef.
 static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
   if (!MO.isTied())
     return false;
@@ -1463,17 +1462,20 @@ static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
 }
 
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
-  // The basic algorithm here is:
-  // 1. Mark registers of def operands as free
-  // 2. Allocate registers to use operands and place reload instructions for
-  //    registers displaced by the allocation.
+  // Backwards, a def frees a register and a use occupies it; freeing the defs
+  // and allocating the uses are the heart of it, the rest ordered around them:
+  // * pre-assigned physreg defs
+  // * virtual register defs
+  // * free the def operands' registers
+  // * displace registers clobbered by regmasks
+  // * pre-assigned physreg uses
+  // * virtual register uses, inserting reloads
+  // * undef uses
+  // * free early-clobber defs
   //
-  // However we need to handle some corner cases:
-  // - pre-assigned defs and uses need to be handled before the other def/use
-  //   operands are processed to avoid the allocation heuristics clashing with
-  //   the pre-assignment.
-  // - The "free def operands" step has to come last instead of first for tied
-  //   operands and early-clobbers.
+  // Freeing follows the def allocation so a def is not handed a register this
+  // instruction also writes, and it skips tied and early-clobber defs, which
+  // the uses still need.
 
   InstrGen += 2;
   // In the event we ever get more than 2**31 instructions...
