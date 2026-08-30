@@ -3306,15 +3306,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
     Actions.ObjC().ActOnStartOfObjCMethodDef(getCurScope(), MCDecl);
   else
     Actions.ActOnStartOfFunctionDef(getCurScope(), MCDecl);
-  if (Tok.is(tok::kw_try))
-    ParseFunctionTryBlock(MCDecl, BodyScope);
-  else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(MCDecl);
-    else
-      Actions.ActOnDefaultCtorInitializers(MCDecl);
-    ParseFunctionStatementBody(MCDecl, BodyScope);
-  }
+  ParseFunctionBody(MCDecl, BodyScope);
 
   if (Tok.getLocation() != OrigLoc) {
     // Due to parsing error, we either went over the cached tokens or
