@@ -34,14 +34,20 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
-  SmallVector<MCPhysReg, 16> Hints;
-  bool HardHints =
-      TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix);
+
+  // HintsAndCustomOrder holds Hints first followed by the shuffled order if the
+  // anti-hints shuffle it.
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
+
+  // Get hints
+  bool HardHints = TRI->getRegAllocationHints(
+      VirtReg, Order, HintsAndCustomOrder, MF, &VRM, Matrix);
+  const int NumHints = static_cast<int>(HintsAndCustomOrder.size());
 
   LLVM_DEBUG({
-    if (!Hints.empty()) {
+    if (NumHints) {
       dbgs() << "hints:";
-      for (MCPhysReg Hint : Hints)
+      for (MCPhysReg Hint : HintsAndCustomOrder)
         dbgs() << ' ' << printReg(Hint, TRI);
       dbgs() << '\n';
     }
@@ -60,19 +66,18 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     }
   });
 
-  // Storage for shuffled order (used if anti-hints cause reordering)
-  SmallVector<MCPhysReg, 16> ShuffledOrder;
-
   if (!AntiHintedPhysRegs.empty()) {
-    TRI->applyRegAllocationAntiHints(VirtReg, Order, ShuffledOrder,
-                                     AntiHintedPhysRegs, MF, &VRM, Matrix);
+    HintsAndCustomOrder.reserve(NumHints + Order.size());
+    TRI->applyRegAllocationAntiHints(VirtReg, Order, HintsAndCustomOrder,
+                                     NumHints, AntiHintedPhysRegs, MF, &VRM,
+                                     Matrix);
   }
 
   // Create allocation order object
-  AllocationOrder AO(std::move(Hints), Order, HardHints,
-                     std::move(ShuffledOrder));
+  AllocationOrder AO(std::move(HintsAndCustomOrder), NumHints, Order,
+                     HardHints);
 
-  assert(all_of(AO.Hints,
+  assert(all_of(AO.hints(),
                 [&](MCPhysReg Hint) { return is_contained(AO.Order, Hint); }) &&
          "Target hint is outside allocation order.");
   return AO;

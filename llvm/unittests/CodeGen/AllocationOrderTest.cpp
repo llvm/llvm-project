@@ -117,26 +117,23 @@ TEST(AllocationOrderTest, IsHintTest) {
   EXPECT_EQ(V, 5U);
 }
 
-TEST(AllocationOrderTest, StorageOverridesOrder) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2};
+TEST(AllocationOrderTest, AntiHintShuffleOrderOverridesOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2, 5, 3, 4};
   SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
-  SmallVector<MCPhysReg, 16> Storage = {5, 3, 4};
-  AllocationOrder O(std::move(Hints), Order, false, std::move(Storage));
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 5, 3, 4}), loadOrder(O));
 }
 
-TEST(AllocationOrderTest, EmptyStorageFallsBackToOrder) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2};
+TEST(AllocationOrderTest, EmptyAntiHintedCustomOrderFallsBackToOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2};
   SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
-  SmallVector<MCPhysReg, 16> Storage;
-  AllocationOrder O(std::move(Hints), Order, false, std::move(Storage));
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5}), loadOrder(O));
 }
 
-TEST(AllocationOrderTest, StorageHardHints) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2};
+TEST(AllocationOrderTest, HardHintsIgnoreAntiHintShuffleOrder) {
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = {1, 2, 5, 3, 4};
   SmallVector<MCPhysReg, 16> Order = {3, 4, 5};
-  SmallVector<MCPhysReg, 16> Storage = {5, 3, 4};
-  AllocationOrder O(std::move(Hints), Order, true, std::move(Storage));
+  AllocationOrder O(std::move(HintsAndCustomOrder), 2, Order, true);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2}), loadOrder(O));
 }
