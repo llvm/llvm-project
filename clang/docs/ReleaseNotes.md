@@ -458,8 +458,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
 - Fixed an assertion failure when `__builtin_vectorelements` is applied to a
-  reference to a vector type; this is now diagnosed as an invalid argument type.
-  (#GH216997)
+  reference to a vector type. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
