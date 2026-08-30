@@ -541,131 +541,103 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
 diag::Severity
 DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                                      const DiagnosticsEngine &Diag) const {
-  return getDiagnosticListHighestSeverity({DiagID}, Loc, Diag);
-}
+  bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
+  assert(getDiagClass(DiagID) != CLASS_NOTE);
 
-diag::Severity DiagnosticIDs::getDiagnosticListHighestSeverity(
-    llvm::ArrayRef<diag::kind> DiagIDs, SourceLocation Loc,
-    const DiagnosticsEngine &Diag) const {
+  // Specific non-error diagnostics may be mapped to various levels from ignored
+  // to error.  Errors can only be mapped to fatal.
+  diag::Severity Result = diag::Severity::Fatal;
+
+  // Get the mapping information, or compute it lazily.
   DiagnosticsEngine::DiagState *State = Diag.GetDiagStateForLoc(Loc);
+  DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
-  auto checkSingleDiag = [&](diag::kind DiagID) -> diag::Severity {
-    bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
-    assert(getDiagClass(DiagID) != CLASS_NOTE);
+  // TODO: Can a null severity really get here?
+  if (Mapping.getSeverity() != diag::Severity())
+    Result = Mapping.getSeverity();
 
-    // Specific non-error diagnostics may be mapped to various levels from
-    // ignored to error.  Errors can only be mapped to fatal.
-    diag::Severity Result = diag::Severity::Fatal;
+  // Upgrade ignored diagnostics if -Weverything is enabled.
+  if (State->EnableAllWarnings && Result == diag::Severity::Ignored &&
+      !Mapping.isUser() &&
+      (IsCustomDiag || getDiagClass(DiagID) != CLASS_REMARK))
+    Result = diag::Severity::Warning;
 
-    // Get the mapping information, or compute it lazily.
-    DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
+  // Ignore -pedantic diagnostics inside __extension__ blocks.
+  // (The diagnostics controlled by -pedantic are the extension diagnostics
+  // that are not enabled by default.)
+  bool EnabledByDefault = false;
+  bool IsExtensionDiag = isExtensionDiag(DiagID, EnabledByDefault);
+  if (Diag.AllExtensionsSilenced && IsExtensionDiag && !EnabledByDefault)
+    return diag::Severity::Ignored;
 
-    // TODO: Can a null severity really get here?
-    if (Mapping.getSeverity() != diag::Severity())
-      Result = Mapping.getSeverity();
-
-    // Upgrade ignored diagnostics if -Weverything is enabled.
-    if (State->EnableAllWarnings && Result == diag::Severity::Ignored &&
-        !Mapping.isUser() &&
-        (IsCustomDiag || getDiagClass(DiagID) != CLASS_REMARK))
-      Result = diag::Severity::Warning;
-
-    // Ignore -pedantic diagnostics inside __extension__ blocks.
-    // (The diagnostics controlled by -pedantic are the extension diagnostics
-    // that are not enabled by default.)
-    bool EnabledByDefault = false;
-    bool IsExtensionDiag = isExtensionDiag(DiagID, EnabledByDefault);
-    if (Diag.AllExtensionsSilenced && IsExtensionDiag && !EnabledByDefault)
-      return diag::Severity::Ignored;
-
-    // For extension diagnostics that haven't been explicitly mapped, check if
-    // we should upgrade the diagnostic. Skip if the user explicitly
-    // suppressed it (e.g. -Wno-foo).
-    if (IsExtensionDiag &&
-        !(Mapping.isUser() && Result == diag::Severity::Ignored)) {
-      if (Mapping.hasNoWarningAsError())
-        Result = std::max(
-            Result, std::min(State->ExtBehavior, diag::Severity::Warning));
-      else
-        Result = std::max(Result, State->ExtBehavior);
-    }
-
-    // At this point, ignored errors can no longer be upgraded.
-    if (Result == diag::Severity::Ignored)
-      return Result;
-
-    // Honor -w: this disables all messages which are not Error/Fatal by
-    // default (disregarding attempts to upgrade severity from Warning to
-    // Error), as well as disabling all messages which are currently mapped to
-    // Warning (whether by default or downgraded from Error via e.g.
-    // -Wno-error or #pragma diagnostic.)
-    // FIXME: Should -w be ignored for custom warnings without a group?
-    if (State->IgnoreAllWarnings) {
-      if ((!IsCustomDiag ||
-           CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
-          (Result == diag::Severity::Warning ||
-           (Result >= diag::Severity::Error &&
-            !isDefaultMappingAsError((diag::kind)DiagID))))
-        return diag::Severity::Ignored;
-    }
-
-    // If -Werror is enabled, map warnings to errors unless explicitly
-    // disabled.
-    if (Result == diag::Severity::Warning) {
-      if (State->WarningsAsErrors && !Mapping.hasNoWarningAsError())
-        Result = diag::Severity::Error;
-    }
-
-    // If -Wfatal-errors is enabled, map errors to fatal unless explicitly
-    // disabled.
-    if (Result == diag::Severity::Error) {
-      if (State->ErrorsAsFatal && !Mapping.hasNoErrorAsFatal())
-        Result = diag::Severity::Fatal;
-    }
-
-    // If explicitly requested, map fatal errors to errors.
-    if (Result == diag::Severity::Fatal &&
-        DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
-      Result = diag::Severity::Error;
-
-    // Rest of the mappings are only applicable for diagnostics associated
-    // with a SourceLocation, bail out early for others.
-    if (!Diag.hasSourceManager())
-      return Result;
-
-    // We check both the location-specific state and the ForceSystemWarnings
-    // override. In some cases (like template instantiations from system
-    // modules), the location-specific state might have suppression enabled,
-    // but the engine might have an override (e.g.
-    // AllowWarningInSystemHeaders) to show the warning.
-    if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
-        shouldSuppressAsSystemWarning(DiagID, Loc, Diag)) {
-      return diag::Severity::Ignored;
-    }
-
-    // Clang-diagnostics pragmas always take precedence over suppression
-    // mapping.
-    if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
-      return diag::Severity::Ignored;
-
-    return Result;
-  };
-
-  diag::Severity CompositeResult = diag::Severity::Ignored;
-  for (diag::kind DiagID : DiagIDs) {
-    CompositeResult = std::max(CompositeResult, checkSingleDiag(DiagID));
-
-    // If we already hit 'fatal', we can't get any higher! So just return that.
-    // We could potentially short-cut this by taking a parameter for "return
-    // first greater than", but since our uses of this are fairly small, and
-    // that only optimizes for the "we are about to do something expensive
-    // anyway" variant (that is, when everything is NOT ignored), it doesn't
-    // seem particularly valuable.
-    if (CompositeResult == diag::Severity::Fatal)
-      break;
+  // For extension diagnostics that haven't been explicitly mapped, check if we
+  // should upgrade the diagnostic. Skip if the user explicitly suppressed it
+  // (e.g. -Wno-foo).
+  if (IsExtensionDiag &&
+      !(Mapping.isUser() && Result == diag::Severity::Ignored)) {
+    if (Mapping.hasNoWarningAsError())
+      Result = std::max(Result,
+                        std::min(State->ExtBehavior, diag::Severity::Warning));
+    else
+      Result = std::max(Result, State->ExtBehavior);
   }
 
-  return CompositeResult;
+  // At this point, ignored errors can no longer be upgraded.
+  if (Result == diag::Severity::Ignored)
+    return Result;
+
+  // Honor -w: this disables all messages which are not Error/Fatal by
+  // default (disregarding attempts to upgrade severity from Warning to Error),
+  // as well as disabling all messages which are currently mapped to Warning
+  // (whether by default or downgraded from Error via e.g. -Wno-error or #pragma
+  // diagnostic.)
+  // FIXME: Should -w be ignored for custom warnings without a group?
+  if (State->IgnoreAllWarnings) {
+    if ((!IsCustomDiag || CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
+        (Result == diag::Severity::Warning ||
+         (Result >= diag::Severity::Error &&
+          !isDefaultMappingAsError((diag::kind)DiagID))))
+      return diag::Severity::Ignored;
+  }
+
+  // If -Werror is enabled, map warnings to errors unless explicitly disabled.
+  if (Result == diag::Severity::Warning) {
+    if (State->WarningsAsErrors && !Mapping.hasNoWarningAsError())
+      Result = diag::Severity::Error;
+  }
+
+  // If -Wfatal-errors is enabled, map errors to fatal unless explicitly
+  // disabled.
+  if (Result == diag::Severity::Error) {
+    if (State->ErrorsAsFatal && !Mapping.hasNoErrorAsFatal())
+      Result = diag::Severity::Fatal;
+  }
+
+  // If explicitly requested, map fatal errors to errors.
+  if (Result == diag::Severity::Fatal &&
+      DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
+    Result = diag::Severity::Error;
+
+  // Rest of the mappings are only applicable for diagnostics associated with a
+  // SourceLocation, bail out early for others.
+  if (!Diag.hasSourceManager())
+    return Result;
+
+  // We check both the location-specific state and the ForceSystemWarnings
+  // override. In some cases (like template instantiations from system modules),
+  // the location-specific state might have suppression enabled, but the
+  // engine might have an override (e.g. AllowWarningInSystemHeaders) to show
+  // the warning.
+  if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
+      shouldSuppressAsSystemWarning(DiagID, Loc, Diag)) {
+    return diag::Severity::Ignored;
+  }
+
+  // Clang-diagnostics pragmas always take precedence over suppression mapping.
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
+    return diag::Severity::Ignored;
+
+  return Result;
 }
 
 bool DiagnosticIDs::shouldSuppressAsSystemWarning(

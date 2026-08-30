@@ -357,7 +357,7 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
 }
 
 void ASTContext::addComment(const RawComment &RC) {
-  assert(LangOpts.CommentOpts.RetainCommentsFromSystemHeaders ||
+  assert(LangOpts.RetainCommentsFromSystemHeaders ||
          !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }

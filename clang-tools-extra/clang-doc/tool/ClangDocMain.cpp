@@ -285,8 +285,7 @@ Example usage for a project using a compile commands database:
     llvm::outs() << "Emiting docs in " << Format << " format.\n";
     auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
-    ArgumentsAdjuster ArgAdjuster = getInsertArgumentAdjuster(
-        "-fretain-comments", tooling::ArgumentInsertPosition::END);
+    ArgumentsAdjuster ArgAdjuster;
     if (!DoxygenOnly)
       ArgAdjuster = combineAdjusters(
           getInsertArgumentAdjuster("-fparse-all-comments",
