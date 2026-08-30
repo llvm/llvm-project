@@ -868,6 +868,11 @@ private:
   llvm::StringMap<llvm::StringMap<std::string>> ModuleNameToMultipleSourceCache;
 };
 
+// Heuristic: identifies candidate module interface files by extension only.
+// Not authoritative. A module interface may use a non-module extension. A file
+// with a module extension may not declare a module or may be a non-importable
+// implementation unit. The later scan by the underlying ProjectModules confirms
+// the actual module declaration.
 bool isCXXModuleFile(PathRef File) {
   namespace types = clang::driver::types;
   auto Lang =
@@ -875,6 +880,9 @@ bool isCXXModuleFile(PathRef File) {
   return Lang == types::TY_CXXModule;
 }
 
+// Module files discovered by opening or file-watching, before they are known to
+// the compilation database. Used as a fallback when normal module resolution
+// cannot find the source for a module name.
 class ObservedModuleFiles {
 public:
   explicit ObservedModuleFiles(const GlobalCompilationDatabase &CDB)
