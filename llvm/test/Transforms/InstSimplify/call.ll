@@ -659,6 +659,142 @@ define i32 @fshl_not_identity_wrong_sum(i32 %x) {
   ret i32 %r
 }
 
+define { i64, i64 } @fshl_sign_bit_multi_use(i64 %x) {
+; CHECK-LABEL: @fshl_sign_bit_multi_use(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i64 [[X:%.*]], 63
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[SIGN]], i64 [[X]], i64 1)
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R]], 0
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } [[R0]], i64 [[SIGN]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[R1]]
+;
+  %sign = ashr i64 %x, 63
+  %r = call i64 @llvm.fshl.i64(i64 %sign, i64 %x, i64 1)
+  %r0 = insertvalue { i64, i64 } poison, i64 %r, 0
+  %r1 = insertvalue { i64, i64 } %r0, i64 %sign, 1
+  ret { i64, i64 } %r1
+}
+
+define i13 @fshl_sign_bit_modulo(i13 %x) {
+; CHECK-LABEL: @fshl_sign_bit_modulo(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i13 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = call i13 @llvm.fshl.i13(i13 [[SIGN]], i13 [[X]], i13 14)
+; CHECK-NEXT:    ret i13 [[R]]
+;
+  %sign = ashr i13 %x, 12
+  %r = call i13 @llvm.fshl.i13(i13 %sign, i13 %x, i13 14)
+  ret i13 %r
+}
+
+define i8 @fshl_sign_bit_exact(i8 %x) {
+; CHECK-LABEL: @fshl_sign_bit_exact(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr exact i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[SIGN]], i8 [[X]], i8 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr exact i8 %x, 7
+  %r = call i8 @llvm.fshl.i8(i8 %sign, i8 %x, i8 1)
+  ret i8 %r
+}
+
+define <2 x i7> @fshl_sign_bit_splat(<2 x i7> %x) {
+; CHECK-LABEL: @fshl_sign_bit_splat(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i7> [[X:%.*]], splat (i7 6)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> [[SIGN]], <2 x i7> [[X]], <2 x i7> splat (i7 1))
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %sign = ashr <2 x i7> %x, <i7 6, i7 6>
+  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> %sign, <2 x i7> %x, <2 x i7> <i7 1, i7 1>)
+  ret <2 x i7> %r
+}
+
+define <vscale x 2 x i7> @fshl_sign_bit_scalable_splat(<vscale x 2 x i7> %x) {
+; CHECK-LABEL: @fshl_sign_bit_scalable_splat(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <vscale x 2 x i7> [[X:%.*]], splat (i7 6)
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i7> @llvm.fshl.nxv2i7(<vscale x 2 x i7> [[SIGN]], <vscale x 2 x i7> [[X]], <vscale x 2 x i7> splat (i7 1))
+; CHECK-NEXT:    ret <vscale x 2 x i7> [[R]]
+;
+  %sign = ashr <vscale x 2 x i7> %x, splat (i7 6)
+  %r = call <vscale x 2 x i7> @llvm.fshl.nxv2i7(<vscale x 2 x i7> %sign, <vscale x 2 x i7> %x, <vscale x 2 x i7> splat (i7 1))
+  ret <vscale x 2 x i7> %r
+}
+
+define i8 @fshl_sign_bit_wrong_source(i8 %x, i8 %y) {
+; CHECK-LABEL: @fshl_sign_bit_wrong_source(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[SIGN]], i8 [[Y:%.*]], i8 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 7
+  %r = call i8 @llvm.fshl.i8(i8 %sign, i8 %y, i8 1)
+  ret i8 %r
+}
+
+define i8 @fshl_sign_bit_wrong_ashr_amount(i8 %x) {
+; CHECK-LABEL: @fshl_sign_bit_wrong_ashr_amount(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[SIGN]], i8 [[X]], i8 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 6
+  %r = call i8 @llvm.fshl.i8(i8 %sign, i8 %x, i8 1)
+  ret i8 %r
+}
+
+define i8 @fshl_sign_bit_wrong_fshl_amount(i8 %x) {
+; CHECK-LABEL: @fshl_sign_bit_wrong_fshl_amount(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[SIGN]], i8 [[X]], i8 2)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sign = ashr i8 %x, 7
+  %r = call i8 @llvm.fshl.i8(i8 %sign, i8 %x, i8 2)
+  ret i8 %r
+}
+
+define i8 @fshl_lshr_high_bit(i8 %x) {
+; CHECK-LABEL: @fshl_lshr_high_bit(
+; CHECK-NEXT:    [[HIGH:%.*]] = lshr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[HIGH]], i8 [[X]], i8 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %high = lshr i8 %x, 7
+  %r = call i8 @llvm.fshl.i8(i8 %high, i8 %x, i8 1)
+  ret i8 %r
+}
+
+define i9 @fshr_sign_bit(i9 %x) {
+; CHECK-LABEL: @fshr_sign_bit(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i9 [[X:%.*]], 8
+; CHECK-NEXT:    [[R:%.*]] = call i9 @llvm.fshr.i9(i9 [[SIGN]], i9 [[X]], i9 1)
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %sign = ashr i9 %x, 8
+  %r = call i9 @llvm.fshr.i9(i9 %sign, i9 %x, i9 1)
+  ret i9 %r
+}
+
+define <2 x i7> @fshl_sign_bit_non_splat_shift_amount(<2 x i7> %x) {
+; CHECK-LABEL: @fshl_sign_bit_non_splat_shift_amount(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i7> [[X:%.*]], splat (i7 6)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> [[SIGN]], <2 x i7> [[X]], <2 x i7> <i7 1, i7 2>)
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %sign = ashr <2 x i7> %x, <i7 6, i7 6>
+  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> %sign, <2 x i7> %x, <2 x i7> <i7 1, i7 2>)
+  ret <2 x i7> %r
+}
+
+define <2 x i7> @fshl_sign_bit_poison_shift_amount(<2 x i7> %x) {
+; CHECK-LABEL: @fshl_sign_bit_poison_shift_amount(
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i7> [[X:%.*]], splat (i7 6)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> [[SIGN]], <2 x i7> [[X]], <2 x i7> <i7 1, i7 poison>)
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %sign = ashr <2 x i7> %x, <i7 6, i7 6>
+  %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> %sign, <2 x i7> %x, <2 x i7> <i7 1, i7 poison>)
+  ret <2 x i7> %r
+}
+
 ; If y is poison, eliminating the guard is not safe.
 
 define i8 @fshl_zero_shift_guard(i8 %x, i8 %y, i8 %sh) {
