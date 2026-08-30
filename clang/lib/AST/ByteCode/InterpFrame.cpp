@@ -24,13 +24,14 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
-    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr) {}
+    : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
+      ArgSize(0), Depth(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
-    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
+      Depth(Caller ? Caller->Depth + 1 : 0) {
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
@@ -218,8 +219,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange({}); NullRange.isValid())
+    if (SourceRange NullRange = S.getSource({}).getRange(); NullRange.isValid())
       return NullRange;
+
     return S.EvalLocation;
   }
 
@@ -294,35 +296,6 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
     return Caller->getSource(getRetOpPC());
 
   return Result;
-}
-
-const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (!Func)
-    return S.getExpr(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(getRetOpPC());
-
-  return Func->getSource(PC).asExpr();
-}
-
-SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (!Func)
-    return S.getLocation(PC);
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(getRetOpPC());
-
-  return Func->getSource(PC).getLoc();
-}
-
-SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (!Func)
-    return S.getRange(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(getRetOpPC());
-
-  return Func->getSource(PC).getRange();
 }
 
 bool InterpFrame::isStdFunction() const {
