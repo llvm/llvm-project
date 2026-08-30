@@ -504,7 +504,7 @@ public:
             llvm::dyn_cast<FunctionProtoType>(D->getType().getTypePtr())) {
       if (!FPT->hasTrailingReturn()) {
         if (auto FTL = D->getFunctionTypeLoc())
-          addReturnTypeHint(D, FTL.getRParenLoc());
+          addReturnTypeHint(D, FTL.getLocalRangeEnd());
       }
     }
     if (Cfg.InlayHints.BlockEnd && D->isThisDeclarationADefinition()) {
@@ -601,10 +601,10 @@ public:
     FunctionDecl *D = E->getCallOperator();
     if (!E->hasExplicitResultType()) {
       SourceLocation TypeHintLoc;
-      if (!E->hasExplicitParameters())
+      if (auto FTL = D->getFunctionTypeLoc())
+        TypeHintLoc = FTL.getLocalRangeEnd();
+      else if (!E->hasExplicitParameters())
         TypeHintLoc = E->getIntroducerRange().getEnd();
-      else if (auto FTL = D->getFunctionTypeLoc())
-        TypeHintLoc = FTL.getRParenLoc();
       if (TypeHintLoc.isValid())
         addReturnTypeHint(D, TypeHintLoc);
     }
