@@ -1864,7 +1864,7 @@ define void @guarded_distance_plus_one(ptr %dst, i64 %n, i64 %start) {
 ; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @guarded_distance_plus_one
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
