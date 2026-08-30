@@ -1437,6 +1437,15 @@ void PDBLinker::addCommonLinkerModuleSymbols(
   ebs.Fields.push_back(cwd);
   ebs.Fields.push_back("exe");
   SmallString<64> exe = ctx.config.argv[0];
+  if (!ctx.config.pdbSourcePath.empty()) {
+    SmallString<64> currentPath;
+    if (!sys::fs::current_path(currentPath)) {
+      sys::path::native(exe);
+      sys::path::native(currentPath);
+      sys::path::remove_dots(exe, /*remove_dot_dot=*/true);
+      sys::path::replace_path_prefix(exe, currentPath, ".");
+    }
+  }
   pdbMakeAbsolute(exe);
   ebs.Fields.push_back(exe);
   ebs.Fields.push_back("pdb");
