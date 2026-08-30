@@ -36,10 +36,10 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    /// Descriptor of the local.
+    const Descriptor *Desc;
     /// Offset of the local in frame.
     unsigned Offset;
-    /// Descriptor of the local.
-    Descriptor *Desc;
     /// If the cleanup for this local should be emitted.
     bool EnabledByDefault = true;
   };

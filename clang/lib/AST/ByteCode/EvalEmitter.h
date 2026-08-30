@@ -100,7 +100,7 @@ protected:
   }
 
   /// Callback for registering a local.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
