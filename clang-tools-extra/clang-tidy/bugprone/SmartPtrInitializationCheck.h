@@ -13,14 +13,22 @@
 
 namespace clang::tidy::bugprone {
 
+class SmartPtrInitializationCheckImpl;
+class SmartPtrInitializationCheckPermissiveMode;
+class SmartPtrInitializationCheckStrictMode;
+
 /// Detects dangerous initialization of smart pointers with raw pointers
 /// that are already owned elsewhere, which can lead to double deletion.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/smart-ptr-initialization.html
 class SmartPtrInitializationCheck : public ClangTidyCheck {
+  friend class SmartPtrInitializationCheckPermissiveMode;
+  friend class SmartPtrInitializationCheckStrictMode;
+
 public:
   SmartPtrInitializationCheck(StringRef Name, ClangTidyContext *Context);
+  ~SmartPtrInitializationCheck();
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
@@ -33,6 +41,7 @@ private:
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
+  const std::unique_ptr<SmartPtrInitializationCheckImpl> Impl;
 };
 
 } // namespace clang::tidy::bugprone

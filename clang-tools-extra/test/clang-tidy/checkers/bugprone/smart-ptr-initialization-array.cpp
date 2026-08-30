@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t -- -config="{CheckOptions: {bugprone-smart-ptr-initialization.StrictMode: 'true'}}"
 
 #include <memory>
 #include <utility>

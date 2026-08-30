@@ -8,62 +8,21 @@ already owned elsewhere, which can lead to double deletion.
 This check implements CERT C++ rule "MEM56-CPP. Do not store an already-owned
 pointer value in an unrelated smart pointer".
 
-## Examples
+## Example
 
 The check flags cases where raw pointers that are already owned or managed
 elsewhere are passed to smart pointer constructors or `reset()` methods:
 
 ```cpp
-A& getA();
-void foo() {
-  // Warning: '&getA()' is already managed elsewhere
-  std::shared_ptr<A> a(&getA());
-}
+#include <memory>
 
-void bar() {
-  int x = 10;
-  // Warning: '&x' points to a local variable
-  std::unique_ptr<int> ptr(&x);
-}
-
-void baz() {
-  std::vector<int> vec{1, 2, 3};
-  std::shared_ptr<int> sp;
-  // Warning: '&vec[0]' is managed by the vector
-  sp.reset(&vec[0]);
+void f() {
+  int *i = new int;
+  std::shared_ptr<int> p1(i);
+  // Warning: 'i' is already managed by another smart pointer
+  std::shared_ptr<int> p2(i);
 }
 ```
-
-## Allowed cases
-
-The check ignores legitimate cases:
-
-1. **New expressions**: Pointers from `new` operators are safe:
-
-   ```cpp
-   std::unique_ptr<int> p(new int(5));  // OK
-   ```
-
-2. **Release calls**: Pointers from `release()` method are transferred:
-
-   ```cpp
-   auto p1 = std::make_unique<int>(5);
-   std::unique_ptr<int> p2(p1.release());  // OK
-   ```
-
-3. **Custom deleters**: Smart pointers with custom deleters are ignored:
-
-   ```cpp
-   void customDeleter(int* p) { delete p; }
-   std::unique_ptr<int, decltype(&customDeleter)> p(&getA(), customDeleter);
-   ```
-
-4. **Null pointers**: `nullptr` is always safe:
-
-   ```cpp
-   std::shared_ptr<int> p(nullptr);  // OK
-   p.reset(nullptr);  // OK
-   ```
 
 ## Options
 
@@ -84,6 +43,18 @@ The check ignores legitimate cases:
   Smart pointers with deleters matching these types are considered to use the
   default deleter and are checked. Smart pointers with custom deleters are
   ignored. Default value is `::std::default_delete`.
+
+- **StrictMode**
+  
+  When enabled, the check only allows raw pointers from `new` expressions or
+  `std::unique_ptr::release()` to be passed to smart pointer constructors or
+  `reset()` methods. Any other raw pointer source (function returns, pointers
+  from containers, etc.) will trigger a warning. Default value is `false`.  
+  **Note**: This mode produces a significant number of false positives, as it
+  cannot reliably distinguish between owning and non-owning raw pointers in
+  complex code. It is **not recommended** for legacy codebases. Consider
+  enabling this option only for new projects written with strict ownership
+  policies from the start.
 
 ## Limitations
 
