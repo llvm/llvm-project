@@ -649,9 +649,9 @@ define <2 x i32> @zext_false_val_must_be_zero_vec(<2 x i1> %x) {
 define i32 @sel_trunc_cond_zext_const(i8 %a, i8 %x) {
 ; CHECK-LABEL: @sel_trunc_cond_zext_const(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[A_EXT:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i32 [[A_EXT]], i32 127
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[COND]], i8 [[A1:%.*]], i8 127
+; CHECK-NEXT:    [[A_EXT:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    ret i32 [[A_EXT]]
 ;
   %cond = trunc i8 %x to i1
   %a.ext = zext i8 %a to i32
@@ -662,9 +662,9 @@ define i32 @sel_trunc_cond_zext_const(i8 %a, i8 %x) {
 define i32 @sel_trunc_cond_sext_const(i8 %a, i8 %x) {
 ; CHECK-LABEL: @sel_trunc_cond_sext_const(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i32 [[A_EXT]], i32 -4
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[COND]], i8 [[A1:%.*]], i8 -4
+; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A]] to i32
+; CHECK-NEXT:    ret i32 [[A_EXT]]
 ;
   %cond = trunc i8 %x to i1
   %a.ext = sext i8 %a to i32
