@@ -130,12 +130,6 @@ public:
 
   /// Returns source information for a given PC in a function.
   virtual SourceInfo getSource(CodePtr PC) const = 0;
-
-  /// Returns the expression if an opcode belongs to one, null otherwise.
-  const Expr *getExpr(CodePtr PC) const;
-  /// Returns the location from which an opcode originates.
-  SourceLocation getLocation(CodePtr PC) const;
-  SourceRange getRange(CodePtr PC) const;
 };
 
 } // namespace interp
