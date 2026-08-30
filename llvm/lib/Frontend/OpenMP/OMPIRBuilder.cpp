@@ -3172,6 +3172,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
           Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
 
+    // The insert point may refer to one of the instructions about to be
+    // deleted. It is not needed anymore so clear it instead of leaving it
+    // dangling.
+    Builder.ClearInsertionPoint();
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
   };
@@ -7583,6 +7587,8 @@ OpenMPIRBuilder::getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
     return 128;
   if (TargetTriple.isWasm())
     return 128;
+  if (TargetTriple.isSystemZ())
+    return 64;
   return 0;
 }
 
@@ -8561,8 +8567,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
-  if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
-    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
+  if (Attrs.MinTeams.front() > 1 || Attrs.MaxTeams.front() > 0)
+    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams.front(),
+                        Attrs.MaxTeams.front());
 
   // If MaxThreads is not set and needs adjustment, select the maximum between
   // the default workgroup size and the MinThreads value.
@@ -8571,18 +8578,20 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     if (hasGridValue(T)) {
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
-                   Attrs.MinThreads);
+                   Attrs.MinThreads.front());
     } else {
-      MaxThreadsVal = Attrs.MinThreads;
+      MaxThreadsVal = Attrs.MinThreads.front();
     }
   }
 
   if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
+    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
+                               MaxThreadsVal);
 
-  Constant *MinThreads = ConstantInt::getSigned(Int32, Attrs.MinThreads);
+  Constant *MinThreads =
+      ConstantInt::getSigned(Int32, Attrs.MinThreads.front());
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
-  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams.front());
   Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
   Constant *ReductionDataSize =
       ConstantInt::getSigned(Int32, Attrs.ReductionDataSize);
@@ -9482,8 +9491,7 @@ static Function *emitTargetTaskProxyFunction(
       FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
                         /* isVarArg */ false);
   auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
-                                  ".omp_target_task_proxy_func",
-                                  Builder.GetInsertBlock()->getModule());
+                                  ".omp_target_task_proxy_func", M);
   Value *ThreadId = ProxyFn->getArg(0);
   Value *TaskWithPrivates = ProxyFn->getArg(1);
   ThreadId->setName("thread.id");
@@ -9491,9 +9499,11 @@ static Function *emitTargetTaskProxyFunction(
 
   bool HasShareds = SharedArgsOperandNo > 0;
   bool HasOffloadingArrays = NumOffloadingArrays > 0;
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   BasicBlock *EntryBB =
       BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   SmallVector<Value *> KernelLaunchArgs;
   KernelLaunchArgs.reserve(StaleCI->arg_size());
@@ -9985,6 +9995,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       createRuntimeFunctionCall(TaskFn, {Ident, ThreadID, TaskData});
     }
 
+    Builder.ClearInsertionPoint();
     StaleCI->eraseFromParent();
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
@@ -10138,7 +10149,7 @@ static void emitTargetCall(
     SmallVector<Value *, 3> NumThreadsC;
     Value *MaxThreadsClause =
         RuntimeAttrs.TeamsThreadLimit.size() == 1
-            ? InitMaxThreadsClause(RuntimeAttrs.MaxThreads)
+            ? InitMaxThreadsClause(RuntimeAttrs.MaxThreads.front())
             : nullptr;
 
     for (auto [TeamsVal, TargetVal] : zip_equal(
@@ -12144,6 +12155,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
             omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
         Args);
 
+    Builder.ClearInsertionPoint();
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
   };

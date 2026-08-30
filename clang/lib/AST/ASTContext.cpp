@@ -357,7 +357,7 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
 }
 
 void ASTContext::addComment(const RawComment &RC) {
-  assert(LangOpts.RetainCommentsFromSystemHeaders ||
+  assert(LangOpts.CommentOpts.RetainCommentsFromSystemHeaders ||
          !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
@@ -938,9 +938,10 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
       AttributedTypes(this_()), DependentBitIntTypes(this_()),
+      HLSLAttributedResourceTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
-      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
-      SourceMgr(SM), LangOpts(LOpts),
+      PackIndexingTemplates(this_()), ArrayParameterTypes(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -5901,7 +5902,7 @@ QualType ASTContext::getHLSLAttributedResourceType(
     const HLSLAttributedResourceType::Attributes &Attrs) {
 
   llvm::FoldingSetNodeID ID;
-  HLSLAttributedResourceType::Profile(ID, Wrapped, Contained, Attrs);
+  HLSLAttributedResourceType::Profile(ID, *this, Wrapped, Contained, Attrs);
 
   void *InsertPos = nullptr;
   HLSLAttributedResourceType *Ty =
@@ -6912,10 +6913,10 @@ ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
 QualType
 ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
                         AutoTypeKeyword Keyword,
-                        TemplateDecl *TypeConstraintConcept,
+                        TemplateName TypeConstraintConcept,
                         ArrayRef<TemplateArgument> TypeConstraintArgs) const {
   if (DK == DeducedKind::Undeduced && Keyword == AutoTypeKeyword::Auto &&
-      !TypeConstraintConcept) {
+      TypeConstraintConcept.isNull()) {
     assert(DeducedAsType.isNull() && "");
     assert(TypeConstraintArgs.empty() && "");
     return getAutoDeductType();
@@ -6925,17 +6926,17 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   llvm::FoldingSetNodeID ID;
   AutoType::Profile(ID, *this, DK, DeducedAsType, Keyword,
                     TypeConstraintConcept, TypeConstraintArgs);
-  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+  if (auto const AT_iter = AutoTypes.find_as(ID); AT_iter != AutoTypes.end())
     return QualType(AT_iter->getSecond(), 0);
 
   if (DK == DeducedKind::Deduced) {
     assert(!DeducedAsType.isNull() && "deduced type must be provided");
   } else {
     assert(DeducedAsType.isNull() && "deduced type must not be provided");
-    if (TypeConstraintConcept) {
+    if (!TypeConstraintConcept.isNull()) {
       bool AnyNonCanonArgs = false;
-      auto *CanonicalConcept =
-          cast<TemplateDecl>(TypeConstraintConcept->getCanonicalDecl());
+      TemplateName CanonicalConcept =
+          getCanonicalTemplateName(TypeConstraintConcept);
       auto CanonicalConceptArgs = ::getCanonicalTemplateArguments(
           *this, TypeConstraintArgs, AnyNonCanonArgs);
       if (TypeConstraintConcept != CanonicalConcept || AnyNonCanonArgs)
@@ -6955,7 +6956,7 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   assert(InsertedID == ID && "ID does not match");
 #endif
   Types.push_back(AT);
-  AutoTypes.try_emplace(ID, AT);
+  AutoTypes.try_emplace(ID.Intern(BumpAlloc), AT);
   return QualType(AT, 0);
 }
 
@@ -7056,12 +7057,12 @@ QualType ASTContext::getAtomicType(QualType T) const {
 /// getAutoDeductType - Get type pattern for deducing against 'auto'.
 QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
-    AutoDeductTy = QualType(new (*this, alignof(AutoType))
-                                AutoType(DeducedKind::Undeduced, QualType(),
-                                         AutoTypeKeyword::Auto,
-                                         /*TypeConstraintConcept=*/nullptr,
-                                         /*TypeConstraintArgs=*/{}),
-                            0);
+    AutoDeductTy = QualType(
+        new (*this, alignof(AutoType))
+            AutoType(DeducedKind::Undeduced, QualType(), AutoTypeKeyword::Auto,
+                     /*TypeConstraintConcept=*/TemplateName(),
+                     /*TypeConstraintArgs=*/{}),
+        0);
   return AutoDeductTy;
 }
 
@@ -7404,6 +7405,10 @@ ASTContext::getNameForTemplate(TemplateName Name,
     DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
     return getNameForTemplate(DTS->getUnderlying(), NameLoc);
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    return getNameForTemplate(PI->getPattern(), NameLoc);
+  }
   }
 
   llvm_unreachable("bad template name kind!");
@@ -7470,6 +7475,16 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
         subst->getIndex(), subst->getFinal());
+  }
+
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    SmallVector<TemplateName, 4> CanonExpansions;
+    for (TemplateName T : PI->getExpansions())
+      CanonExpansions.push_back(getCanonicalTemplateName(T, IgnoreDeduced));
+    return getPackIndexingTemplateName(
+        getCanonicalTemplateName(PI->getPattern(), IgnoreDeduced),
+        PI->getIndexExpr(), PI->isFullySubstituted(), CanonExpansions);
   }
   case TemplateName::DeducedTemplate: {
     assert(IgnoreDeduced == false);
@@ -7555,8 +7570,8 @@ bool ASTContext::isSameTypeConstraint(const TypeConstraint *XTC,
   if (!XTC)
     return true;
 
-  auto *NCX = XTC->getNamedConcept();
-  auto *NCY = YTC->getNamedConcept();
+  TemplateDecl *NCX = XTC->getNamedConcept().getAsTemplateDecl();
+  TemplateDecl *NCY = YTC->getNamedConcept().getAsTemplateDecl();
   if (!NCX || !NCY || !isSameEntity(NCX, NCY))
     return false;
   if (XTC->getConceptReference()->hasExplicitTemplateArgs() !=
@@ -8231,20 +8246,18 @@ QualType ASTContext::getBaseElementType(QualType type) const {
   return getQualifiedType(type, qs);
 }
 
-/// getConstantArrayElementCount - Returns number of constant array elements.
-uint64_t
-ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
+uint64_t ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA) {
   uint64_t ElementCount = 1;
   do {
     ElementCount *= CA->getZExtSize();
-    CA = dyn_cast_or_null<ConstantArrayType>(
-      CA->getElementType()->getAsArrayTypeUnsafe());
+    CA = dyn_cast_if_present<ConstantArrayType>(
+        CA->getElementType()->getAsArrayTypeUnsafe());
   } while (CA);
   return ElementCount;
 }
 
-uint64_t ASTContext::getArrayInitLoopExprElementCount(
-    const ArrayInitLoopExpr *AILE) const {
+uint64_t
+ASTContext::getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) {
   if (!AILE)
     return 0;
 
@@ -10653,6 +10666,29 @@ ASTContext::getDeducedTemplateName(TemplateName Underlying,
   return TemplateName(DTS);
 }
 
+TemplateName ASTContext::getPackIndexingTemplateName(
+    TemplateName Pattern, Expr *IndexExpr, bool FullySubstituted,
+    ArrayRef<TemplateName> Expansions) const {
+  auto &Self = const_cast<ASTContext &>(*this);
+  llvm::FoldingSetNodeID ID;
+  PackIndexingTemplateStorage::Profile(ID, Self, Pattern, IndexExpr,
+                                       FullySubstituted, Expansions);
+
+  void *InsertPos = nullptr;
+  PackIndexingTemplateStorage *PI =
+      PackIndexingTemplates.FindNodeOrInsertPos(ID, InsertPos);
+  if (!PI) {
+    void *Mem =
+        Allocate(PackIndexingTemplateStorage::totalSizeToAlloc<TemplateName>(
+                     Expansions.size()),
+                 alignof(PackIndexingTemplateStorage));
+    PI = new (Mem) PackIndexingTemplateStorage(Pattern, IndexExpr,
+                                               FullySubstituted, Expansions);
+    PackIndexingTemplates.InsertNode(PI, InsertPos);
+  }
+  return TemplateName(PI);
+}
+
 /// getFromTargetType - Given one of the integer types provided by
 /// TargetInfo, produce the corresponding type. The unsigned @p Type
 /// is actually a value of type @c TargetInfo::IntType.
@@ -12416,12 +12452,13 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   // If the qualifiers are different, the types can still be merged.
   Qualifiers LQuals = LHSCan.getLocalQualifiers();
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
-  if (LQuals != RQuals) {
-    // If any of these qualifiers are different, we have a type mismatch.
-    if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
-        LQuals.getAddressSpace() != RQuals.getAddressSpace())
-      return {};
 
+  if (LQuals.withoutObjCGCAttr() != RQuals.withoutObjCGCAttr()) {
+    // Reject immediately, if anything but the GC qualifiers is different.
+    return {};
+  }
+
+  if (LQuals != RQuals) {
     // Exactly one GC qualifier difference is allowed: __strong is
     // okay if the other type has no GC qualifier but is an Objective
     // C object pointer (i.e. implicitly strong by default).  We fix
@@ -14442,8 +14479,9 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     assert(AX->getDeducedKind() == AY->getDeducedKind());
     assert(AX->getDeducedKind() != DeducedKind::Deduced);
     assert(AX->getKeyword() == AY->getKeyword());
-    TemplateDecl *CD = ::getCommonDecl(AX->getTypeConstraintConcept(),
-                                       AY->getTypeConstraintConcept());
+    TemplateDecl *CD =
+        ::getCommonDecl(AX->getTypeConstraintConcept().getAsTemplateDecl(),
+                        AY->getTypeConstraintConcept().getAsTemplateDecl());
     SmallVector<TemplateArgument, 8> As;
     if (CD &&
         getCommonTemplateArguments(Ctx, As, AX->getTypeConstraintArguments(),
@@ -14452,7 +14490,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
       As.clear();
     }
     return Ctx.getAutoType(AX->getDeducedKind(), QualType(), AX->getKeyword(),
-                           CD, As);
+                           TemplateName(CD), As);
   }
   case Type::IncompleteArray: {
     const auto *AX = cast<IncompleteArrayType>(X),
@@ -14833,8 +14871,9 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     if (KW != AY->getKeyword())
       return QualType();
 
-    TemplateDecl *CD = ::getCommonDecl(AX->getTypeConstraintConcept(),
-                                       AY->getTypeConstraintConcept());
+    TemplateDecl *CD =
+        ::getCommonDecl(AX->getTypeConstraintConcept().getAsTemplateDecl(),
+                        AY->getTypeConstraintConcept().getAsTemplateDecl());
     SmallVector<TemplateArgument, 8> As;
     if (CD &&
         getCommonTemplateArguments(Ctx, As, AX->getTypeConstraintArguments(),
@@ -14847,7 +14886,7 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     // sugar. This implies they can't contain unexpanded packs either.
     return Ctx.getAutoType(DeducedKind::Deduced,
                            Ctx.getQualifiedType(Underlying), AX->getKeyword(),
-                           CD, As);
+                           TemplateName(CD), As);
   }
   case Type::PackIndexing:
   case Type::Decltype:
@@ -15168,15 +15207,6 @@ LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
 
   return getLangASFromTargetAS(AS);
 }
-
-// Explicitly instantiate this in case a Redeclarable<T> is used from a TU that
-// doesn't include ASTContext.h
-template
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::ValueType
-clang::LazyGenerationalUpdatePtr<
-    const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::makeValue(
-        const clang::ASTContext &Ctx, Decl *Value);
 
 unsigned char ASTContext::getFixedPointScale(QualType Ty) const {
   assert(Ty->isFixedPointType());

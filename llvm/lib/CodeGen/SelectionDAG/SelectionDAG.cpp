@@ -515,6 +515,10 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     return ISD::FMINIMUM;
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return ISD::FMAXIMUMNUM;
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return ISD::FMINIMUMNUM;
   }
 }
 
@@ -1661,25 +1665,6 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
 }
 
-SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
-                                           SDValue EVL, const SDLoc &DL,
-                                           EVT VT) {
-  EVT OpVT = Op.getValueType();
-  assert(VT.isInteger() && OpVT.isInteger() &&
-         "Cannot getVPZeroExtendInReg FP types");
-  assert(VT.isVector() && OpVT.isVector() &&
-         "getVPZeroExtendInReg type and operand type should be vector!");
-  assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
-         "Vector element counts must match in getZeroExtendInReg");
-  assert(VT.getScalarType().bitsLE(OpVT.getScalarType()) && "Not extending!");
-  if (OpVT == VT)
-    return Op;
-  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
-                                   VT.getScalarSizeInBits());
-  return getNode(ISD::VP_AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT), Mask,
-                 EVL);
-}
-
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
   // Only unsigned pointer semantics are supported right now. In the future this
   // might delegate to TLI to check pointer signedness.
@@ -1704,26 +1689,6 @@ SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
 SDValue SelectionDAG::getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
   return getNode(ISD::XOR, DL, VT, Val, TrueValue);
-}
-
-SDValue SelectionDAG::getVPLogicalNOT(const SDLoc &DL, SDValue Val,
-                                      SDValue Mask, SDValue EVL, EVT VT) {
-  SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
-  return getNode(ISD::VP_XOR, DL, VT, Val, TrueValue, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                         SDValue Mask, SDValue EVL) {
-  return getVPZExtOrTrunc(DL, VT, Op, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                       SDValue Mask, SDValue EVL) {
-  if (VT.bitsGT(Op.getValueType()))
-    return getNode(ISD::VP_ZERO_EXTEND, DL, VT, Op, Mask, EVL);
-  if (VT.bitsLT(Op.getValueType()))
-    return getNode(ISD::VP_TRUNCATE, DL, VT, Op, Mask, EVL);
-  return Op;
 }
 
 SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
@@ -9194,13 +9159,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
-  case ISD::VP_TRUNCATE:
-  case ISD::VP_SIGN_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
-    // Don't create noop casts.
-    if (N1.getValueType() == VT)
-      return N1;
-    break;
   case ISD::VECTOR_COMPRESS: {
     [[maybe_unused]] EVT VecVT = N1.getValueType();
     [[maybe_unused]] EVT MaskVT = N2.getValueType();
@@ -12013,17 +11971,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Ops[2].getValueType() == Ops[3].getValueType() &&
            "LHS/RHS of comparison should match types!");
     break;
-  case ISD::VP_ADD:
-  case ISD::VP_SUB:
-    // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_XOR;
-    break;
-  case ISD::VP_MUL:
-    // If it is VP_MUL mask operation then turn it to VP_AND
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_AND;
-    break;
   case ISD::VP_REDUCE_MUL:
     // If it is VP_REDUCE_MUL mask operation then turn it to VP_REDUCE_AND
     if (VT == MVT::i1)
@@ -12315,88 +12262,34 @@ SDVTList SelectionDAG::getVTList(EVT VT) {
   if (!VT.isExtended())
     return makeVTList(SDNode::getValueTypeList(VT.getSimpleVT()), 1);
 
-  return makeVTList(&(*EVTs.insert(VT).first), 1);
+  EVT VTs[] = {VT};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(2U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(2);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 2);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2, EVT VT3) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(3U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-  ID.AddInteger(VT3.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(3);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Array[2] = VT3;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 3);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2, VT3};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(EVT VT1, EVT VT2, EVT VT3, EVT VT4) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(4U);
-  ID.AddInteger(VT1.getRawBits());
-  ID.AddInteger(VT2.getRawBits());
-  ID.AddInteger(VT3.getRawBits());
-  ID.AddInteger(VT4.getRawBits());
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(4);
-    Array[0] = VT1;
-    Array[1] = VT2;
-    Array[2] = VT3;
-    Array[3] = VT4;
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, 4);
-    VTListMap.InsertNode(Result, IP);
-  }
-  return Result->getSDVTList();
+  EVT VTs[] = {VT1, VT2, VT3, VT4};
+  return getVTList(VTs);
 }
 
 SDVTList SelectionDAG::getVTList(ArrayRef<EVT> VTs) {
-  unsigned NumVTs = VTs.size();
-  FoldingSetNodeID ID;
-  ID.AddInteger(NumVTs);
-  for (unsigned index = 0; index < NumVTs; index++) {
-    ID.AddInteger(VTs[index].getRawBits());
-  }
-
-  void *IP = nullptr;
-  SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
-  if (!Result) {
-    EVT *Array = Allocator.Allocate<EVT>(NumVTs);
+  auto It = VTLists.find(VTs);
+  if (It == VTLists.end()) {
+    EVT *Array = Allocator.Allocate<EVT>(VTs.size());
     llvm::copy(VTs, Array);
-    Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, NumVTs);
-    VTListMap.InsertNode(Result, IP);
+    It = VTLists.insert(ArrayRef(Array, VTs.size())).first;
   }
-  return Result->getSDVTList();
+  return makeVTList(It->data(), It->size());
 }
-
 
 /// UpdateNodeOperands - *Mutate* the specified node in-place to have the
 /// specified operands.  If the resultant node already exists in the DAG,
@@ -13946,14 +13839,17 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
     case ISD::FDIV:
       return OperandNo == 1 && ConstFP->isOne();
     case ISD::FMINNUM:
-    case ISD::FMAXNUM: {
-      // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+    case ISD::FMAXNUM:
+    case ISD::FMINIMUMNUM:
+    case ISD::FMAXIMUMNUM: {
+      // Neutral element for fminnum/fminimumnum is NaN, Inf or FLT_MAX,
+      // depending on fast-math flags (FMF).
       EVT VT = V.getValueType();
       const fltSemantics &Semantics = VT.getFltSemantics();
       APFloat NeutralAF = !Flags.hasNoNaNs()   ? APFloat::getQNaN(Semantics)
                           : !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
                                                : APFloat::getLargest(Semantics);
-      if (Opcode == ISD::FMAXNUM)
+      if (Opcode == ISD::FMAXNUM || Opcode == ISD::FMAXIMUMNUM)
         NeutralAF.changeSign();
 
       return ConstFP->isExactlyValue(NeutralAF);
@@ -15296,13 +15192,16 @@ SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMUL:
     return getConstantFP(1.0, DL, VT);
   case ISD::FMINNUM:
-  case ISD::FMAXNUM: {
-    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
+    // Neutral element for fminnum/fminimumnum is NaN, Inf or FLT_MAX,
+    // depending on fast-math flags (FMF).
     const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
                         !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
                         APFloat::getLargest(Semantics);
-    if (Opcode == ISD::FMAXNUM)
+    if (Opcode == ISD::FMAXNUM || Opcode == ISD::FMAXIMUMNUM)
       NeutralAF.changeSign();
 
     return getConstantFP(NeutralAF, DL, VT);

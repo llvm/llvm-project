@@ -23,9 +23,10 @@ namespace acc {
 /// Clone an ACC region into a destination block at the given insertion point.
 /// Requires a single-block source region. Maps block arguments and optional
 /// result replacement: values in resultsToReplace are replaced with the
-/// operands of the cloned region's acc.yield (1:1). Erases acc.yield/terminator
-/// and merges blocks. Returns (replacement values, insertion point after
-/// clone).
+/// leading operands of the cloned region's acc.yield (1:1). Erases
+/// acc.yield/terminator and merges blocks. Returns all yielded values,
+/// including any values not used as replacements, and the insertion point after
+/// the clone.
 std::pair<llvm::SmallVector<Value>, Block::iterator>
 cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
                    IRMapping &mapping, ValueRange resultsToReplace);
