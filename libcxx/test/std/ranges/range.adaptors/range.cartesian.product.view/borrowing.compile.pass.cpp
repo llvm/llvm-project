@@ -8,18 +8,25 @@
 
 // REQUIRES: std-at-least-c++23
 
-// cartesian_product_view does not opt in to enable_borrowed_range, even when its underlying
-// ranges are themselves borrowed ranges. The view stores its bases by value, so its iterators
-// would dangle once the view is destroyed.
+// [range.cartesian.view] specifies no enable_borrowed_range for cartesian_product_view: its iterator holds a
+// pointer to the parent view ([range.cartesian.iterator]), so iterators cannot outlive it.
 
 #include <ranges>
 #include <span>
 
-using BorrowedSpan = std::span<int>;
-static_assert(std::ranges::borrowed_range<BorrowedSpan>);
+using Borrowed = std::span<int>;
+static_assert(std::ranges::borrowed_range<Borrowed>);
 
-// cartesian_product_view itself is never borrowed, even when its bases are.
-static_assert(!std::ranges::borrowed_range<std::ranges::cartesian_product_view<BorrowedSpan>>);
-static_assert(!std::ranges::borrowed_range<std::ranges::cartesian_product_view<BorrowedSpan, BorrowedSpan>>);
-static_assert(
-    !std::ranges::borrowed_range<std::ranges::cartesian_product_view<BorrowedSpan, BorrowedSpan, BorrowedSpan>>);
+struct NonBorrowed : std::ranges::view_base {
+  int* begin() const;
+  int* end() const;
+};
+static_assert(!std::ranges::borrowed_range<NonBorrowed>);
+
+static_assert(!std::ranges::enable_borrowed_range<std::ranges::cartesian_product_view<Borrowed>>);
+static_assert(!std::ranges::enable_borrowed_range<std::ranges::cartesian_product_view<Borrowed, Borrowed>>);
+static_assert(!std::ranges::enable_borrowed_range<std::ranges::cartesian_product_view<Borrowed, Borrowed, Borrowed>>);
+static_assert(!std::ranges::enable_borrowed_range<std::ranges::cartesian_product_view<Borrowed, NonBorrowed>>);
+
+static_assert(std::ranges::range<std::ranges::cartesian_product_view<Borrowed>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::cartesian_product_view<Borrowed>>);
