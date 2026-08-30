@@ -175,6 +175,13 @@ function(llvm_ExternalProject_Add name source_dir)
   endif ()
 
   set(DEFAULT_PASSTHROUGH_VARIABLES
+    # Compiler launchers have to reach the sub-build. They are set on the
+    # top-level project, but each runtimes/builtins sub-build is a separate
+    # CMake project, so without forwarding them a compilation cache configured
+    # for the build silently does not cover the runtimes at all.
+    CMAKE_C_COMPILER_LAUNCHER
+    CMAKE_CXX_COMPILER_LAUNCHER
+    CMAKE_ASM_COMPILER_LAUNCHER
     LibEdit_INCLUDE_DIRS
     LibEdit_LIBRARIES
     ZLIB_INCLUDE_DIR
