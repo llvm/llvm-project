@@ -405,12 +405,6 @@ features cannot lower the translation-unit ABI level;
 
 - Improved how Unicode characters are displayed in diagnostic messages.
 
-- Clang no longer retains source comments in the AST when nothing will read them
-  back. Comments are now collected only when they may be consumed (e.g. with
-  ``-fparse-all-comments``, when ``-Wdocumentation`` is enabled, when emitting a
-  PCH/module, or during code completion), reducing memory overhead for typical
-  compilations.
-
 - `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
   diagnose a reference to a function (e.g. of type `void (&)()`) compared
   against or converted to a null pointer, the same as a bare function name.

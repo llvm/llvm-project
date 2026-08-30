@@ -121,8 +121,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // createInvocationFromCommandLine sets DisableFree.
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts().CommentOpts.ParseAllComments = true;
-  CI->getLangOpts().CommentOpts.RetainComments = true;
-  CI->getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders = true;
+  CI->getLangOpts().RetainCommentsFromSystemHeaders = true;
 
   disableUnsupportedOptions(*CI);
   return CI;
