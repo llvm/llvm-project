@@ -5,7 +5,7 @@ typedef long l;
 
 _Static_assert(_Generic(0L, enum E : long { A } : 1, int: 0), "");
 
-_Static_assert(_Generic(0L, enum E : 0, int: 1) == 0, "");
+_Static_assert(_Generic(0L, enum E : 1, int: 0), "");
 
 _Static_assert(_Generic(0L, enum A : l { B } : 1, int: 0), "");
 
