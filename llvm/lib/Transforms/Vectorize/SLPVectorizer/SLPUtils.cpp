@@ -772,11 +772,9 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
 }
 
 unsigned getFMulOperandIdx(const Instruction *I) {
-  assert((I->getOpcode() == Instruction::Add ||
-          I->getOpcode() == Instruction::Sub ||
-          I->getOpcode() == Instruction::FAdd ||
+  assert((I->getOpcode() == Instruction::FAdd ||
           I->getOpcode() == Instruction::FSub) &&
-         "Expected an add/sub-like instruction");
+         "Expected an fadd/fsub-like instruction");
   for (unsigned Idx : seq<unsigned>(I->getNumOperands()))
     if (match(I->getOperand(Idx), m_OneUse(m_FMul(m_Value(), m_Value()))))
       return Idx;

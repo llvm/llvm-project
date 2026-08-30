@@ -338,7 +338,7 @@ bool isOnceUsedSeed(const Instruction *I);
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
 
 /// \returns the operand index of \p I that holds a one-use fmul, 0 if there is
-/// none. \p I must be an add/sub-like instruction.
+/// none. \p I must be an fadd/fsub-like instruction.
 unsigned getFMulOperandIdx(const Instruction *I);
 
 /// Narrow reduction leaf: the value, the shift applied after widening and
