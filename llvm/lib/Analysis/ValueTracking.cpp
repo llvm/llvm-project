@@ -9932,7 +9932,7 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   // Example: L0 u< 13 => (L0 & 16) == 0
   const APInt *LC, *RC, *MaskC;
   if (match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)) &&
-      match(R0, m_c_And(m_Specific(L0), m_APInt(MaskC)))) {
+      match(R0, m_And(m_Specific(L0), m_APInt(MaskC)))) {
     ConstantRange LCRange = ConstantRange::makeExactICmpRegion(LPred, *LC);
     ConstantRange MaskedCRange = LCRange.binaryAnd(*MaskC);
     if (MaskedCRange.icmp(RPred, ConstantRange(*RC)))

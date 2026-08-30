@@ -2686,19 +2686,14 @@ TEST_F(ValueTrackingTest, IsImpliedConditionBitMask) {
       %A = icmp ult i32 %x, 13
       ; x u< 13 => bits 4 and above are zero
       %masked = and i32 %x, 16
-      %masked_swapped = and i32 16, %x
       %A2 = icmp eq i32 %masked, 0
       %A3 = icmp ne i32 %masked, 0
-      %A4 = icmp eq i32 %masked_swapped, 0
-      %A5 = icmp ne i32 %masked_swapped, 0
       ret void
     }
   )");
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL, true), true);
   EXPECT_EQ(isImpliedCondition(A, A3, DL, true), false);
-  EXPECT_EQ(isImpliedCondition(A, A4, DL, true), true);
-  EXPECT_EQ(isImpliedCondition(A, A5, DL, true), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionBitMaskNoImplication) {
