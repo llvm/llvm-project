@@ -92,8 +92,9 @@ class LoopVectorizeHints {
   /// a plain value because the enable/disable pair has no operand to validate.
   unsigned Scalable;
 
-  /// FP reordering hint from llvm.loop.vectorize.fp_reordering; one of
-  /// ForceKind, carried as a plain unsigned like Force and Predicate.
+  /// FP reordering hint from
+  /// llvm.loop.vectorize.fp_reordering.{enable,disable}; one of ForceKind,
+  /// carried as a plain unsigned like Force and Predicate.
   ///   FK_Undefined : not specified
   ///   FK_Disabled  : reordering explicitly suppressed
   ///   FK_Enabled   : reordering explicitly allowed
