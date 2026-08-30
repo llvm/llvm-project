@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
@@ -127,6 +128,25 @@ void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
+
+  // Only link device libraries when actually emitting device IR.
+  // Preprocessing (-E) and syntax-only (-fsyntax-only) actions do not produce
+  // IR so -mlink-builtin-bitcode would be unused, and requiring the builtins
+  // bitcode to exist would be a spurious fatal error on those code paths.
+  auto IsNonIRAction = [](const llvm::opt::ArgStringList &Args) {
+    for (const char *A : Args)
+      if (llvm::StringRef(A) == "-E" || llvm::StringRef(A) == "-fsyntax-only")
+        return true;
+    return false;
+  };
+  if (!IsNonIRAction(CC1Args)) {
+    for (const auto &BCFile :
+         getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
+      CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                                 : "-mlink-bitcode-file");
+      CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
+    }
+  }
 }
 
 llvm::opt::DerivedArgList *
@@ -204,4 +224,31 @@ void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
 VersionTuple SYCLToolChain::computeMSVCVersion(const Driver *D,
                                                const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
+}
+
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+SYCLToolChain::getDeviceLibs(
+    const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
+    const Action::OffloadKind /*DeviceOffloadingKind*/) const {
+  if (getTriple().getArch() != llvm::Triple::spirv64)
+    return {};
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
+    return {};
+  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: lib/<triple>/libclang_rt.builtins.bc
+  SmallString<128> BCPath(getDriver().ResourceDir);
+  llvm::sys::path::append(BCPath, "lib", getTriple().str(),
+                          "libclang_rt.builtins.bc");
+  if (!getDriver().getVFS().exists(BCPath)) {
+    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF:
+    // lib/<os>/libclang_rt.builtins-spirv64.bc
+    BCPath = getDriver().ResourceDir;
+    llvm::sys::path::append(BCPath, "lib", HostTC.getOSLibName(),
+                            "libclang_rt.builtins-spirv64.bc");
+  }
+  if (!getDriver().getVFS().exists(BCPath)) {
+    getDriver().Diag(clang::diag::err_drv_no_compiler_rt_builtins_bc) << BCPath;
+    return {};
+  }
+  return {{std::string(BCPath), /*ShouldInternalize=*/true}};
 }
