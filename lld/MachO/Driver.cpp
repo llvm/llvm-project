@@ -2453,7 +2453,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
-    addSynthenticMethnames();
 
     createAliases();
     // If we are in "explicit exports" mode, hide everything that isn't
@@ -2470,6 +2469,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // compileBitcodeFiles, so we are done if that's the case.
     if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
+
+    addSynthenticMethnames();
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
     // corresponding bitcode symbol is hidden. In particular, this happens for
