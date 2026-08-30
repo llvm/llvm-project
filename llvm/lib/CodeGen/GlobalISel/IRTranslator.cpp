@@ -1653,9 +1653,9 @@ bool IRTranslatorImpl::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
   const LLT PtrScalarTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
-  Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
+  auto Index = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
-  JT.Reg = Sub.getReg(0);
+  JT.Reg = Index.getReg(0);
 
   if (JTH.FallthroughUnreachable) {
     if (JT.MBB != HeaderBB->getNextNode())
@@ -1668,7 +1668,6 @@ bool IRTranslatorImpl::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // largest case in the switch.
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
-  Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
   auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::integer(1), Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);

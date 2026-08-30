@@ -4088,12 +4088,10 @@ inline bool IsBaseClass(InterpState &S) {
 //===----------------------------------------------------------------------===//
 
 template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
-  if constexpr (std::is_pointer<T>::value) {
-    uint32_t ID = OpPC.read<uint32_t>();
-    return reinterpret_cast<T>(S.P.getNativePointer(ID));
-  } else {
+  if constexpr (std::is_pointer<T>::value)
+    return reinterpret_cast<T>(OpPC.read<uintptr_t>());
+  else
     return OpPC.read<T>();
-  }
 }
 
 template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {

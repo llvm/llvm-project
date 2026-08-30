@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Core/ASTEntityMapping.h"
@@ -120,7 +121,8 @@ protected:
 
     RecordingEditEmitter Edits;
     RecordingReportEmitter Report;
-    CppBoundedBuffers(Suite, Edits, Report).HandleTranslationUnit(Ctx);
+    SSAFOptions Opts;
+    CppBoundedBuffers(Suite, Opts, Edits, Report).HandleTranslationUnit(Ctx);
 
     tooling::Replacements Replacements;
     for (const tooling::Replacement &R : Edits.Replacements)

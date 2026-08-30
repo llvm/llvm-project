@@ -674,6 +674,12 @@ m_URem(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SDiv, Op0_t, Op1_t>
+m_SDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SDiv, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::SRem, Op0_t, Op1_t>
 m_SRem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::SRem, Op0_t, Op1_t>(Op0, Op1);

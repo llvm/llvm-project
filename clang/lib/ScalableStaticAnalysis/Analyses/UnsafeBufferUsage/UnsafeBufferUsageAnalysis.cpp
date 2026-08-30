@@ -145,56 +145,16 @@ class UnsafeBufferReachableAnalysis
                              TypeConstrainedPointersAnalysisResult,
                              UnsafeBufferUsageAnalysisResult> {
 
-  /// BoundsPropagationGraph adds bounds propagation semantics to the
-  /// pointer-flow graph, which represents the set of static pointer assignment
-  /// sites collected from the source code. Consider the following example:
-  ///
-  /// void f(int ***p, int **q) {
-  ///   *p = q;
-  ///   (**p)[5] = 0;
-  /// }
-  ///
-  /// There is one static pointer assignment thus one pointer-flow edge: (p, 2)
-  /// -> (q, 1). In terms of bounds propagation, this assignment implies that if
-  /// 'p' at pointer level 2 requires bounds, 'q' at pointer level 1 must also
-  /// have them. Furthermore, this relationship propagates to deeper indirection
-  /// levels: if 'p' at level 3 requires bounds, so does 'q' at level 2.
-  ///
-  /// In the example above, `(**p)` requires bounds (due to the array index),
-  /// and therefore `*q` must require bounds as well.
-  ///
-  /// To generalize the idea, the BoundsPropagationGraph is defined as a super
-  /// graph of the input pointer-flow graph by:
-  ///
-  ///   For each edge (src, i) -> (dest, j) in the pointer-flow graph, the
-  ///   BoundsPropagationGraph has a finite set of edges
-  ///   {(src, i + d) -> (dest, j + d) | 0 <= d < UB}, where UB is an upper
-  ///   bound based on the maximum pointer level the pointer type can have.
   struct BoundsPropagationGraph {
-  private:
     EdgeSet PointerFlows;
-
-  public:
-    BoundsPropagationGraph(EdgeSet PointerFlows)
-        : PointerFlows(std::move(PointerFlows)) {}
 
     /// Returns the EntityPointerLevelSet that are reachable from \p Src by
     /// one edge in the BoundsPropagationGraph.
     EntityPointerLevelSet getDestNodes(const EntityPointerLevel &Src) const {
-      unsigned SrcPtrLv = Src.getPointerLevel();
-      EntityPointerLevelSet Result;
-
-      for (unsigned P = 1; P <= SrcPtrLv; ++P) {
-        auto I = PointerFlows.find(buildEntityPointerLevel(Src.getEntity(), P));
-
-        if (I != PointerFlows.end()) {
-          unsigned Delta = SrcPtrLv - P;
-          for (const auto &EPL : I->second)
-            Result.insert(buildEntityPointerLevel(
-                EPL.getEntity(), EPL.getPointerLevel() + Delta));
-        }
-      }
-      return Result;
+      auto I = PointerFlows.find(Src);
+      if (I == PointerFlows.end())
+        return {};
+      return I->second;
     }
   };
 
@@ -265,7 +225,8 @@ public:
                                        FilteredDstRange.end());
       }
       if (!FilteredSubGraph.empty())
-        BPG.try_emplace(Id, std::move(FilteredSubGraph));
+        BPG.try_emplace(Id,
+                        BoundsPropagationGraph{std::move(FilteredSubGraph)});
     }
 
     // Filter out type-constrained pointers from `UnsafePtrs`:

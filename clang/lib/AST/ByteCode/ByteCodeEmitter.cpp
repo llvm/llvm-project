@@ -89,11 +89,11 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   Func->setIsFullyCompiled(true);
 }
 
-Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
+Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
   NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
-  return {Location, D};
+  return {D, Location};
 }
 
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
@@ -130,7 +130,6 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 }
 
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
-/// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
 static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
                  const T &Val, bool &Success) {
@@ -138,7 +137,7 @@ static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
   size_t Size;
 
   if constexpr (std::is_pointer_v<T>)
-    Size = align(sizeof(uint32_t));
+    Size = align(sizeof(uintptr_t));
   else
     Size = align(sizeof(T));
 
@@ -152,12 +151,10 @@ static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
   assert(aligned(ValPos + Size));
   Code.resize_for_overwrite(ValPos + Size);
 
-  if constexpr (!std::is_pointer_v<T>) {
+  if constexpr (std::is_pointer_v<T>)
+    new (Code.data() + ValPos) uintptr_t(reinterpret_cast<uintptr_t>(Val));
+  else
     new (Code.data() + ValPos) T(Val);
-  } else {
-    uint32_t ID = P.getOrCreateNativePointer(Val);
-    new (Code.data() + ValPos) uint32_t(ID);
-  }
 }
 
 /// Emits a serializable value. These usually (potentially) contain

@@ -3645,6 +3645,59 @@ llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 
 
 // -----
 
+// CHECK: @associated_target = global i32 0
+// CHECK: @associated_global = global i32 0, !associated ![[ASSOC:[0-9]+]]
+// CHECK: ![[ASSOC]] = !{ptr @associated_target}
+llvm.mlir.global external @associated_target(0 : i32) {addr_space = 0 : i32} : i32
+llvm.mlir.global external @associated_global(0 : i32) {addr_space = 0 : i32, associated = @associated_target} : i32
+
+// -----
+
+// CHECK: @associated_fn_global = global i32 0, !associated ![[ASSOC_FN:[0-9]+]]
+// CHECK: declare void @associated_fn()
+// CHECK: ![[ASSOC_FN]] = !{ptr @associated_fn}
+llvm.mlir.global external @associated_fn_global(0 : i32) {associated = @associated_fn} : i32
+llvm.func @associated_fn()
+
+// -----
+
+// CHECK: @alias_target = global i32 1
+// CHECK: @associated_via_alias = global i32 2, !associated ![[ASSOC_ALIAS:[0-9]+]]
+// CHECK: @alias_of_target = alias i32, ptr @alias_target
+// CHECK: ![[ASSOC_ALIAS]] = !{ptr @alias_of_target}
+llvm.mlir.global @alias_target(1 : i32) : i32
+llvm.mlir.alias external @alias_of_target : i32 {
+  %0 = llvm.mlir.addressof @alias_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.mlir.global @associated_via_alias(2 : i32) {associated = @alias_of_target} : i32
+
+// -----
+
+// CHECK: @associated_ifunc_global = global i32 0, !associated ![[ASSOC_IFUNC:[0-9]+]]
+// CHECK: @associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+// CHECK: ![[ASSOC_IFUNC]] = !{ptr @associated_ifunc}
+llvm.mlir.global @associated_ifunc_global(0 : i32) {associated = @associated_ifunc} : i32
+llvm.mlir.ifunc @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.func @associated_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// CHECK: @absolute_symbol_global = external global i8, !absolute_symbol ![[ABS:[0-9]+]]
+// CHECK: ![[ABS]] = !{i64 0, i64 42}
+llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8
+
+// -----
+
+// CHECK: @absolute_symbol_full = external global i8, !absolute_symbol ![[ABS_FULL:[0-9]+]]
+// CHECK: ![[ABS_FULL]] = !{i64 -1, i64 -1}
+llvm.mlir.global external @absolute_symbol_full() {absolute_symbol = [-1 : i64, -1 : i64]} : i8
+
+// -----
+
 // CHECK-LABEL: define b8 @byte_type(b8 %0)
 llvm.func @byte_type(%arg0: !llvm.byte<8>) -> !llvm.byte<8> {
   llvm.return %arg0 : !llvm.byte<8>

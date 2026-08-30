@@ -109,6 +109,18 @@ func.func @sparse_assemble_reinterpret_map(%val : tensor<?xf64>, %pos:tensor<?xi
   return %0 : tensor<2x4xf64, #BSR>
 }
 
+// CHECK-LABEL:   func.func @sparse_alloc_copy_reinterpret_map(
+// CHECK-SAME:        %[[VAL_0:.*]]: tensor<?x?xf32, #[[$remap]]>) -> tensor<?x?xf32, #[[$remap]]> {
+// CHECK:           %[[VAL_1:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<?x?xf32, #[[$remap]]> to tensor<?x?x2x2xf32, #[[$demap]]>
+// CHECK:           %[[VAL_2:.*]] = bufferization.alloc_tensor() copy(%[[VAL_1]]) : tensor<?x?x2x2xf32, #[[$demap]]>
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.reinterpret_map %[[VAL_2]] : tensor<?x?x2x2xf32, #[[$demap]]> to tensor<?x?xf32, #[[$remap]]>
+// CHECK:           return %[[VAL_3]] : tensor<?x?xf32, #[[$remap]]>
+// CHECK:         }
+func.func @sparse_alloc_copy_reinterpret_map(%arg0: tensor<?x?xf32, #BSR>) -> tensor<?x?xf32, #BSR> {
+  %0 = bufferization.alloc_tensor() copy(%arg0) : tensor<?x?xf32, #BSR>
+  return %0 : tensor<?x?xf32, #BSR>
+}
+
 // CHECK-LABEL:   func.func @sparse_disassemble_reinterpret_map(
 // CHECK-SAME:         %[[VAL_0:.*]]: tensor<2x4xf64, #[[$remap]]>,
 // CHECK-SAME:         %[[VAL_1:.*]]: tensor<?xf64>,

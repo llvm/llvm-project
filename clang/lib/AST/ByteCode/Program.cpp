@@ -17,19 +17,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-unsigned Program::getOrCreateNativePointer(const void *Ptr) {
-  auto [It, Inserted] =
-      NativePointerIndices.try_emplace(Ptr, NativePointers.size());
-  if (Inserted)
-    NativePointers.push_back(Ptr);
-
-  return It->second;
-}
-
-const void *Program::getNativePointer(unsigned Idx) const {
-  return NativePointers[Idx];
-}
-
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
   return Pointer(Globals[Idx]->block());
