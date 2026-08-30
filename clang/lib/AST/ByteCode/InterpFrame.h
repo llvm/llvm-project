@@ -161,9 +161,11 @@ public:
 
   /// Map a location to a source.
   SourceInfo getSource(CodePtr PC) const;
-  const Expr *getExpr(CodePtr PC) const;
-  SourceLocation getLocation(CodePtr PC) const;
-  SourceRange getRange(CodePtr PC) const;
+  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
+  SourceLocation getLocation(CodePtr PC) const {
+    return getSource(PC).getLoc();
+  }
+  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   unsigned getDepth() const { return Depth; }
   unsigned getArgSize() const { return ArgSize; }

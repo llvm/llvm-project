@@ -218,8 +218,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange({}); NullRange.isValid())
+    if (SourceRange NullRange = S.getSource({}).getRange(); NullRange.isValid())
       return NullRange;
+
     return S.EvalLocation;
   }
 
@@ -294,35 +295,6 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
     return Caller->getSource(getRetOpPC());
 
   return Result;
-}
-
-const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (!Func)
-    return S.getExpr(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(getRetOpPC());
-
-  return Func->getSource(PC).asExpr();
-}
-
-SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (!Func)
-    return S.getLocation(PC);
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(getRetOpPC());
-
-  return Func->getSource(PC).getLoc();
-}
-
-SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (!Func)
-    return S.getRange(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(getRetOpPC());
-
-  return Func->getSource(PC).getRange();
 }
 
 bool InterpFrame::isStdFunction() const {
