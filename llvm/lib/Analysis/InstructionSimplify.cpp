@@ -7413,6 +7413,11 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       if (ShAmt.isZero())
         return Args[IID == Intrinsic::fshl ? 0 : 1];
 
+      // fshl(ashr(X, BW - 1), X, 1) -> ashr(X, BW - 1)
+      if (IID == Intrinsic::fshl && ShAmt.isOne() &&
+          match(Op0, m_AShr(m_Specific(Op1), m_SpecificInt(BitWidth - 1))))
+        return Op0;
+
       // fshl (lshr X, C1), (shl X, C2), C1 -> X when C1 + C2 == BW
       // fshr (lshr X, C1), (shl X, C2), C2 -> X when C1 + C2 == BW
       const APInt *C1, *C2;

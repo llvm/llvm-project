@@ -662,8 +662,7 @@ define i32 @fshl_not_identity_wrong_sum(i32 %x) {
 define { i64, i64 } @fshl_sign_bit_multi_use(i64 %x) {
 ; CHECK-LABEL: @fshl_sign_bit_multi_use(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr i64 [[X:%.*]], 63
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[SIGN]], i64 [[X]], i64 1)
-; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R]], 0
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i64, i64 } poison, i64 [[SIGN]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } [[R0]], i64 [[SIGN]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[R1]]
 ;
@@ -677,8 +676,7 @@ define { i64, i64 } @fshl_sign_bit_multi_use(i64 %x) {
 define i13 @fshl_sign_bit_modulo(i13 %x) {
 ; CHECK-LABEL: @fshl_sign_bit_modulo(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr i13 [[X:%.*]], 12
-; CHECK-NEXT:    [[R:%.*]] = call i13 @llvm.fshl.i13(i13 [[SIGN]], i13 [[X]], i13 14)
-; CHECK-NEXT:    ret i13 [[R]]
+; CHECK-NEXT:    ret i13 [[SIGN]]
 ;
   %sign = ashr i13 %x, 12
   %r = call i13 @llvm.fshl.i13(i13 %sign, i13 %x, i13 14)
@@ -688,8 +686,7 @@ define i13 @fshl_sign_bit_modulo(i13 %x) {
 define i8 @fshl_sign_bit_exact(i8 %x) {
 ; CHECK-LABEL: @fshl_sign_bit_exact(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr exact i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[SIGN]], i8 [[X]], i8 1)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[SIGN]]
 ;
   %sign = ashr exact i8 %x, 7
   %r = call i8 @llvm.fshl.i8(i8 %sign, i8 %x, i8 1)
@@ -699,8 +696,7 @@ define i8 @fshl_sign_bit_exact(i8 %x) {
 define <2 x i7> @fshl_sign_bit_splat(<2 x i7> %x) {
 ; CHECK-LABEL: @fshl_sign_bit_splat(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr <2 x i7> [[X:%.*]], splat (i7 6)
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> [[SIGN]], <2 x i7> [[X]], <2 x i7> splat (i7 1))
-; CHECK-NEXT:    ret <2 x i7> [[R]]
+; CHECK-NEXT:    ret <2 x i7> [[SIGN]]
 ;
   %sign = ashr <2 x i7> %x, <i7 6, i7 6>
   %r = call <2 x i7> @llvm.fshl.v2i7(<2 x i7> %sign, <2 x i7> %x, <2 x i7> <i7 1, i7 1>)
@@ -710,8 +706,7 @@ define <2 x i7> @fshl_sign_bit_splat(<2 x i7> %x) {
 define <vscale x 2 x i7> @fshl_sign_bit_scalable_splat(<vscale x 2 x i7> %x) {
 ; CHECK-LABEL: @fshl_sign_bit_scalable_splat(
 ; CHECK-NEXT:    [[SIGN:%.*]] = ashr <vscale x 2 x i7> [[X:%.*]], splat (i7 6)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i7> @llvm.fshl.nxv2i7(<vscale x 2 x i7> [[SIGN]], <vscale x 2 x i7> [[X]], <vscale x 2 x i7> splat (i7 1))
-; CHECK-NEXT:    ret <vscale x 2 x i7> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i7> [[SIGN]]
 ;
   %sign = ashr <vscale x 2 x i7> %x, splat (i7 6)
   %r = call <vscale x 2 x i7> @llvm.fshl.nxv2i7(<vscale x 2 x i7> %sign, <vscale x 2 x i7> %x, <vscale x 2 x i7> splat (i7 1))
