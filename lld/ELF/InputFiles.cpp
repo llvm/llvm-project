@@ -951,9 +951,18 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // dependentSections can only hold InputSections.
+    StringRef name = check(obj.getSectionName(sec, shstrtab));
+    auto *isec = dyn_cast_or_null<InputSection>(this->sections[i]);
+    if (!isec || (sec.sh_flags & SHF_MERGE) ||
+        (ctx.arg.relocatable && name == ".eh_frame")) {
+      ErrAlways(ctx) << this << ":(" << name
+                     << "): unsupported section for SHF_LINK_ORDER";
+      continue;
+    }
+
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
-    InputSection *isec = cast<InputSection>(this->sections[i]);
     linkSec->dependentSections.push_back(isec);
     if (!isa<InputSection>(linkSec))
       ErrAlways(ctx)
