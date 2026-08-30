@@ -155,9 +155,8 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   if (!S.diagnosing())
     return;
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
   if (!S.getLangOpts().CPlusPlus) {
-    S.FFDiag(Loc);
+    S.FFDiag(S.Current->getSource(OpPC));
     return;
   }
 
@@ -175,6 +174,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
+    SourceInfo Loc = S.Current->getSource(OpPC);
     if (isModification(AK)) {
       S.FFDiag(Loc, diag::note_constexpr_modify_global);
     } else {
@@ -184,7 +184,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
   }
 
-  S.FFDiag(Loc,
+  S.FFDiag(S.Current->getSource(OpPC),
            S.getLangOpts().CPlusPlus11 ? diag::note_constexpr_ltor_non_constexpr
                                        : diag::note_constexpr_ltor_non_integral,
            1)
