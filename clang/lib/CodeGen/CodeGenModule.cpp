@@ -1189,7 +1189,7 @@ void CodeGenModule::Release() {
       AddGlobalCtor(ObjCInitFunction);
   if (Context.getLangOpts().CUDA && CUDARuntime) {
     if (llvm::Function *CudaCtorFunction = CUDARuntime->finalizeModule())
-      AddGlobalCtor(CudaCtorFunction);
+      AddGlobalCtor(CudaCtorFunction, /*Priority=*/0);
   }
   if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
     if (llvm::Function *SYCLCtorFunction = embedSYCLDeviceBinary())
