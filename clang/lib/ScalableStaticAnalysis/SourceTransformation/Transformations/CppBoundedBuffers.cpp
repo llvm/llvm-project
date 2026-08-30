@@ -215,7 +215,8 @@ class ReachabilityMap {
   std::map<EntityName, EntityId> NameToId;
 
 public:
-  ReachabilityMap(const WPASuite &Suite, const EntityPointerLevelSet &Reachables)
+  ReachabilityMap(const WPASuite &Suite,
+                  const EntityPointerLevelSet &Reachables)
       : Reachables(Reachables) {
     Suite.getIdTable().forEach([this](const EntityName &Name, EntityId Id) {
       NameToId.emplace(Name, Id);
