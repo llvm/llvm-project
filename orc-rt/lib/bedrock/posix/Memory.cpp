@@ -14,15 +14,22 @@
 #include "orc-rt-internal/support/sys/Memory.h"
 
 #include "orc-rt-internal/support/sys/CacheControl.h"
+#include "orc-rt-internal/support/sys/Errno.h"
 
-#include <fcntl.h>
-#include <string.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <sys/mman.h>
 
 namespace orc_rt::sys {
 
 namespace {
+
+#if defined(MAP_ANON)
+constexpr int MapAnonFlag = MAP_ANON;
+#elif defined(MAP_ANONYMOUS)
+constexpr int MapAnonFlag = MAP_ANONYMOUS;
+#else
+#error "orc-rt requires anonymous mmap (MAP_ANON / MAP_ANONYMOUS)"
+#endif
 
 int toNativeProtFlags(MemProt MP) {
   int Prot = PROT_NONE;
@@ -41,29 +48,12 @@ Expected<void *> reserveMemory(size_t Size) {
   if (Size == 0)
     return nullptr;
 
-  int FD = 0;
-  int MapFlags = MAP_PRIVATE;
-
-#if defined(MAP_ANON)
-  // If MAP_ANON is available then use it.
-  FD = -1;
-  MapFlags |= MAP_ANON;
-#else // !defined(MAP_ANON)
-  // Fall back to /dev/zero for strict POSIX.
-  FD = open("/dev/zero", O_RDWR);
-  if (FD == -1) {
-    auto ErrNum = errno;
-    return make_error<StringError>(
-        std::string("Could not open /dev/zero for memory reserve: ") +
-        strerror(ErrNum));
-  }
-#endif
-
-  void *Addr = mmap(nullptr, Size, PROT_READ | PROT_WRITE, MapFlags, FD, 0);
+  void *Addr = mmap(nullptr, Size, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MapAnonFlag, -1, 0);
   if (Addr == MAP_FAILED) {
     auto ErrNum = errno;
     return make_error<StringError>(
-        std::string("mmap for memory reserve failed: ") + strerror(ErrNum));
+        std::string("mmap for memory reserve failed: ") + strError(ErrNum));
   }
 
   return Addr;
@@ -73,7 +63,7 @@ Error releaseMemory(void *Base, size_t Size) {
   if (munmap(Base, Size) != 0) {
     auto ErrNum = errno;
     return make_error<StringError>(
-        std::string("munmap for memory release failed: ") + strerror(ErrNum));
+        std::string("munmap for memory release failed: ") + strError(ErrNum));
   }
   return Error::success();
 }
@@ -83,7 +73,7 @@ Error protectMemory(void *Base, size_t Size, MemProt MP) {
     auto ErrNum = errno;
     return make_error<StringError>(
         std::string("mprotect for memory finalize failed: ") +
-        strerror(ErrNum));
+        strError(ErrNum));
   }
 
   if ((MP & MemProt::Exec) != MemProt::None)
