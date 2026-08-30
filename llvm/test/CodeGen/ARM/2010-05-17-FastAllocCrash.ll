@@ -1,4 +1,4 @@
-; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -verify-machineinstrs
+; RUN: llc < %s -regalloc=fast -verify-machineinstrs
 target triple = "arm-pc-linux-gnu"
 
 ; This test case would accidentally use the same physreg for two virtregs

@@ -244,6 +244,7 @@ void tools::gnutools::StaticLibTool::ConstructJob(
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {
@@ -510,6 +511,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         // FIXME: Does this really make sense for all GNU toolchains?
         WantPthread = true;
 
+      addLLVMOffloadingRuntime(C, CmdArgs, ToolChain, Args);
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so

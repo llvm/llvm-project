@@ -3,13 +3,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # Flang {{version}} {{in_progress}}Release Notes
 
-````{only} PreRelease
-```{warning}
+::::{only} PreRelease
+:::{warning}
 These are in-progress notes for the upcoming LLVM {{version}} release.
 Release notes for previous releases can be found on [the Download
 Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -32,6 +32,11 @@ page](https://llvm.org/releases/).
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
+
+- Added support for the OpenMP implementation-defined extension sentinels
+  (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
+  and `!$ompx` in free source form. These sentinels are recognized like their
+  `omp` counterparts when OpenMP is enabled.
 
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,

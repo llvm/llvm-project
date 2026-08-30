@@ -18,7 +18,7 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_pointer_use(pt
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -100,7 +100,7 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_pointer
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP18]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -178,7 +178,7 @@ define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_poi
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -273,7 +273,7 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP27]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -346,7 +346,7 @@ define void @replace_for_removes_predicate(ptr %y, ptr %x, i64 %n) {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -430,7 +430,7 @@ define void @for_iv_kept_predicate_needed(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 65535
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -500,7 +500,7 @@ define void @for_iv_dropped_predicate_removed(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -570,12 +570,11 @@ define void @induction_with_predicate_replaceable_by_for(ptr %dst, i32 %len) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[UMAX1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[LEN]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 255
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; CHECK:       [[VECTOR_PH1]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[UMAX1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[UMAX1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[UMAX1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

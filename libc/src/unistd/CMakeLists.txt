@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
-                 "Skip unistd targets.")
+    "Skip unistd targets.")
   return()
 endif()
 
@@ -45,6 +45,22 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.chown
+)
+
+add_entrypoint_object(
+  confstr
+  SRCS
+    confstr.cpp
+  HDRS
+    confstr.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.unistd_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -108,6 +124,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
+  execle
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execle
 )
 
 add_entrypoint_object(

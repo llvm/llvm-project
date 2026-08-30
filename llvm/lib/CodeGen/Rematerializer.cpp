@@ -240,6 +240,8 @@ bool Rematerializer::isRegIdenticalAtUses(Register Reg, LaneBitmask Mask,
     return true;
   const LiveInterval &LI = LIS.getInterval(Reg);
   const VNInfo *DefVN = LI.getVNInfoAt(RefSlot);
+  if (!DefVN)
+    return false;
   for (SlotIndex Use : Uses) {
     if (!isIdenticalAtUse(*DefVN, Mask, Use, LI))
       return false;
@@ -324,7 +326,7 @@ void Rematerializer::deleteReg(RegisterIdx RootIdx) {
         shrinkToUses(DepRegIdx);
       }
     }
-    for (const auto [Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
+    for (const auto &[Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
       if (ShrinkUnrematRegs.insert(Reg).second)
         shrinkToUsesUnremat(Reg);
     }
@@ -527,8 +529,7 @@ void Rematerializer::addRegIfRematerializable(
 
   // Check that the register's definitions can be rematerialized.
   SmallPtrSet<MachineInstr *, 1> DefSet;
-  for (MachineOperand &MO : MRI.def_operands(DefReg)) {
-    MachineInstr &DefMI = *MO.getParent();
+  for (MachineInstr &DefMI : MRI.def_instructions(DefReg)) {
     // If a single MI has multiple defs for the same register, we don't need to
     // redo MI-based checks.
     if (!DefSet.insert(&DefMI).second)
@@ -629,8 +630,7 @@ void Rematerializer::addRegIfRematerializable(
     // register under consideration makes the latter unrematerializable.
     SlotIndex FirstDefSlot = LIS.getInstructionIndex(*RematReg.getFirstDef());
     for (const auto &[UnrematDepReg, _] : UnrematDeps) {
-      for (MachineOperand &UnrematMODef : MRI.def_operands(UnrematDepReg)) {
-        MachineInstr &UnrematDefMI = *UnrematMODef.getParent();
+      for (MachineInstr &UnrematDefMI : MRI.def_instructions(UnrematDepReg)) {
         SlotIndex UnrematDefSlot = LIS.getInstructionIndex(UnrematDefMI);
         if (UnrematDefSlot > FirstDefSlot || UnrematDefSlot < LastDefSlot)
           return;
@@ -842,6 +842,8 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
       LI.refineSubRanges(
           LIS.getVNInfoAllocator(), RegMask, [](LiveInterval::SubRange &SR) {},
           *LIS.getSlotIndexes(), TRI);
+      // Refining may have introduced empty sub-ranges, which are illegal.
+      LI.removeEmptySubRanges();
     }
     extendInterval(LI, RegMask, UseIdx);
   }
