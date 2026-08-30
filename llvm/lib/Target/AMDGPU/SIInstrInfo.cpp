@@ -6777,7 +6777,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       //        correctly sign extended or incorrectly zero extended by HW.
       //        If 64-bit literals are supported and the literal will be encoded
       //        as full 64 bit we still can use it.
-      if (!Is64BitFPOp && !Is64BitSignedOp && !Is64BitUnsignedOp && (int32_t)Imm < 0 &&
+      if (!Is64BitFPOp && !Is64BitSignedOp && !Is64BitUnsignedOp &&
+          (int32_t)Imm < 0 &&
           (!ST.has64BitLiterals() || AMDGPU::isValid32BitLiteral(Imm, false)))
         return false;
     }
