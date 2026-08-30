@@ -139,7 +139,7 @@ struct KnownFPClass {
     return isKnownNever(fcNegative) && isKnownNeverLogicalPosZero(Mode);
   }
 
-  /// Return true if it's know this can never be a negative value or a logical
+  /// Return true if it's known this can never be a negative value or a logical
   /// 0.
   ///
   ///      NaN --> true
@@ -149,6 +149,18 @@ struct KnownFPClass {
   bool cannotBeOrderedGreaterEqZero(DenormalMode Mode) const {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
+
+  /// Return true if this cannot have a non-NaN positive value when interpreted
+  /// as an input under \p Mode.
+  bool cannotHavePositiveValue(DenormalMode Mode) const {
+    return isKnownNever(fcPositive) &&
+           (isKnownNever(fcNegSubnormal) || !Mode.inputsMayBePositiveZero());
+  }
+
+  /// Return true if this cannot have a non-NaN negative value.
+  ///
+  // TODO: Account for negative subnormals under positive-zero input mode.
+  bool cannotHaveNegativeValue() const { return isKnownNever(fcNegative); }
 
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
@@ -430,14 +442,19 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
+                        DenormalMode Mode) {
+    if ((LHS.cannotHaveNegativeValue() && RHS.cannotHaveNegativeValue()) ||
+        (LHS.cannotHavePositiveValue(Mode) &&
+         RHS.cannotHavePositiveValue(Mode)))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
-      knownNot(fcPositive);
+    if ((LHS.cannotHavePositiveValue(Mode) && RHS.cannotHaveNegativeValue()) ||
+        (LHS.cannotHaveNegativeValue() && RHS.cannotHavePositiveValue(Mode))) {
+      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
+      if (!Mode.outputsMayBePositiveZero())
+        knownNot(fcPosZero);
+    }
   }
 
   /// Propagate knowledge from a source value that could be a denormal or
