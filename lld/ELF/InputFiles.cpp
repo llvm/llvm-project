@@ -881,6 +881,33 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
   }
 
+  // Discard a SHF_LINK_ORDER section whose linked-to section is already
+  // discarded, by comdat group selection or SHF_EXCLUDE. Repeat until a fixed
+  // point, as a linked-to section may itself be SHF_LINK_ORDER; a section is
+  // only ever discarded, never restored, so this terminates. An sh_link that is
+  // out of range or does not designate an input section is diagnosed by the
+  // loop below.
+  //
+  // Do this before that loop, which would otherwise create a relocation section
+  // for a section discarded here, and push onto the dependentSections of the
+  // shared InputSection::discarded, a data race since
+  // initSectionsAndLocalSyms() runs under parallelForEach().
+  for (bool changed = true; changed;) {
+    changed = false;
+    for (size_t i = 0; i != size; ++i) {
+      if (!this->sections[i] || this->sections[i] == &InputSection::discarded)
+        continue;
+      const Elf_Shdr &sec = objSections[i];
+      if (!(sec.sh_flags & SHF_LINK_ORDER) || !sec.sh_link ||
+          sec.sh_link >= size)
+        continue;
+      if (this->sections[sec.sh_link] == &InputSection::discarded) {
+        this->sections[i] = &InputSection::discarded;
+        changed = true;
+      }
+    }
+  }
+
   // We have a second loop. It is used to:
   // 1) handle SHF_LINK_ORDER sections.
   // 2) create relocation sections. In some cases the section header index of a
@@ -951,8 +978,11 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
-    // A SHF_LINK_ORDER section is discarded if its linked-to section is
-    // discarded.
+    // Record the dependency so that the section is discarded along with its
+    // linked-to section if that is discarded later by /DISCARD/ or
+    // --gc-sections. A linked-to section that was already discarded was
+    // handled by the loop above.
+    assert(linkSec != &InputSection::discarded);
     InputSection *isec = cast<InputSection>(this->sections[i]);
     linkSec->dependentSections.push_back(isec);
     if (!isa<InputSection>(linkSec))
