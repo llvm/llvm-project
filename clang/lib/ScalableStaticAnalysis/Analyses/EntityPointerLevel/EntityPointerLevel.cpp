@@ -118,10 +118,6 @@ public:
     return buildEntityPointerLevel(Base->getEntity(), D.PointerLevel);
   }
 
-  static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
-    return EntityPointerLevel({E.getEntity(), E.getPointerLevel() + 1});
-  }
-
 private:
   Expected<DeclPointerLevelVec> VisitStmt(const Stmt *E) { return fallback(E); }
 
@@ -421,11 +417,6 @@ clang::ssaf::toEntityPointerLevel(const DeclPointerLevel &DPL, ASTContext &Ctx,
                                   TUSummaryExtractor &Extractor) {
   EntityPointerLevelTranslator Translator(Extractor, Ctx);
   return Translator.toEntityPointerLevel(DPL);
-}
-
-EntityPointerLevel
-clang::ssaf::incrementPointerLevel(const EntityPointerLevel &E) {
-  return EntityPointerLevelTranslator::incrementPointerLevel(E);
 }
 
 EntityPointerLevel clang::ssaf::buildEntityPointerLevel(EntityId Id,
