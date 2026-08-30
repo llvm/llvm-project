@@ -30,6 +30,14 @@ struct CommentOptions {
   /// Treat ordinary comments as documentation comments.
   bool ParseAllComments = false;
 
+  /// Force the front end to retain all documentation comments in the AST, even
+  /// when no comment consuming diagnostic or language option is enabled. Tools
+  /// that query comments after parsing set this.
+  bool RetainComments = false;
+
+  /// Retain documentation comments from system headers in the AST.
+  bool RetainCommentsFromSystemHeaders = false;
+
   CommentOptions() = default;
 };
 
