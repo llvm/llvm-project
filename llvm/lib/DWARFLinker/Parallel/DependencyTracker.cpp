@@ -226,11 +226,17 @@ void DependencyTracker::collectRootsToKeep(
           LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
           ReferencedBy);
     } break;
-    case dwarf::DW_TAG_imported_module:
-    case dwarf::DW_TAG_imported_declaration:
     case dwarf::DW_TAG_imported_unit: {
+      // Always keep DIEs having DW_AT_import attribute. A unit root never gets
+      // a type name, so an import of one stays in plain DWARF at any depth.
+      addActionToRootEntriesWorkList(
+          LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
+          ReferencedBy);
+    } break;
+    case dwarf::DW_TAG_imported_module:
+    case dwarf::DW_TAG_imported_declaration: {
       // Always keep DIEs having DW_AT_import attribute.
-      if (Entry.DieEntry->getTag() == dwarf::DW_TAG_compile_unit) {
+      if (CompileUnit::isUnitRootDIE(Entry.CU->getDIEIndex(Entry.DieEntry))) {
         addActionToRootEntriesWorkList(
             LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
             ReferencedBy);
