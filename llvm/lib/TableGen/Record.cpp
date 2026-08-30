@@ -254,8 +254,8 @@ const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
   FoldingSetNodeID ID;
   ProfileRecordRecTy(ID, Classes);
 
-  void *IP = nullptr;
-  if (RecordRecTy *Ty = ThePool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (RecordRecTy *Ty = ThePool.lookup(ID, Token))
     return Ty;
 
 #ifndef NDEBUG
@@ -271,7 +271,7 @@ const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
   void *Mem = RKImpl.Allocator.Allocate(
       totalSizeToAlloc<const Record *>(Classes.size()), alignof(RecordRecTy));
   RecordRecTy *Ty = new (Mem) RecordRecTy(RK, Classes);
-  ThePool.InsertNode(Ty, IP);
+  ThePool.insert(Ty, Token);
   return Ty;
 }
 
@@ -416,13 +416,12 @@ const ArgumentInit *ArgumentInit::get(const Init *Value, ArgAuxType Aux) {
 
   RecordKeeper &RK = Value->getRecordKeeper();
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
-  void *IP = nullptr;
-  if (const ArgumentInit *I =
-          RKImpl.TheArgumentInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const ArgumentInit *I = RKImpl.TheArgumentInitPool.lookup(ID, Token))
     return I;
 
   ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
-  RKImpl.TheArgumentInitPool.InsertNode(I, IP);
+  RKImpl.TheArgumentInitPool.insert(I, Token);
   return I;
 }
 
@@ -473,14 +472,14 @@ BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
   ProfileBitsInit(ID, Bits);
 
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
-  void *IP = nullptr;
-  if (BitsInit *I = RKImpl.TheBitsInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (BitsInit *I = RKImpl.TheBitsInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RKImpl.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(Bits.size()), alignof(BitsInit));
   BitsInit *I = new (Mem) BitsInit(RK, Bits);
-  RKImpl.TheBitsInitPool.InsertNode(I, IP);
+  RKImpl.TheBitsInitPool.insert(I, Token);
   return I;
 }
 
@@ -703,8 +702,8 @@ ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
                               const RecTy *EltTy) {
   detail::RecordKeeperImpl &RK = EltTy->getRecordKeeper().getImpl();
-  FoldingSetInsertPos IP;
-  if (const ListInit *I = RK.TheListInitPool.find({Elements, EltTy}, IP))
+  FoldingSetInsertToken Token;
+  if (const ListInit *I = RK.TheListInitPool.lookup({Elements, EltTy}, Token))
     return I;
 
   assert(Elements.empty() || !isa<TypedInit>(Elements[0]) ||
@@ -713,7 +712,7 @@ const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(Elements.size()), alignof(ListInit));
   ListInit *I = new (Mem) ListInit(Elements, EltTy);
-  RK.TheListInitPool.insert(I, IP);
+  RK.TheListInitPool.insert(I, Token);
   return I;
 }
 
@@ -798,12 +797,12 @@ const Init *OpInit::getBit(unsigned Bit) const {
 
 const UnOpInit *UnOpInit::get(UnaryOp Opc, const Init *LHS, const RecTy *Type) {
   detail::RecordKeeperImpl &RK = Type->getRecordKeeper().getImpl();
-  FoldingSetInsertPos IP;
-  if (const UnOpInit *I = RK.TheUnOpInitPool.find({Opc, LHS, Type}, IP))
+  FoldingSetInsertToken Token;
+  if (const UnOpInit *I = RK.TheUnOpInitPool.lookup({Opc, LHS, Type}, Token))
     return I;
 
   UnOpInit *I = new (RK.Allocator) UnOpInit(Opc, LHS, Type);
-  RK.TheUnOpInitPool.insert(I, IP);
+  RK.TheUnOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -1054,12 +1053,13 @@ std::string UnOpInit::getAsString() const {
 const BinOpInit *BinOpInit::get(BinaryOp Opc, const Init *LHS, const Init *RHS,
                                 const RecTy *Type) {
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  FoldingSetInsertPos IP;
-  if (const BinOpInit *I = RK.TheBinOpInitPool.find({Opc, LHS, RHS, Type}, IP))
+  FoldingSetInsertToken Token;
+  if (const BinOpInit *I =
+          RK.TheBinOpInitPool.lookup({Opc, LHS, RHS, Type}, Token))
     return I;
 
   BinOpInit *I = new (RK.Allocator) BinOpInit(Opc, LHS, RHS, Type);
-  RK.TheBinOpInitPool.insert(I, IP);
+  RK.TheBinOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -1632,12 +1632,13 @@ const TernOpInit *TernOpInit::get(TernaryOp Opc, const Init *LHS,
                                   const Init *MHS, const Init *RHS,
                                   const RecTy *Type) {
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  FoldingSetInsertPos IP;
-  if (TernOpInit *I = RK.TheTernOpInitPool.find({Opc, LHS, MHS, RHS, Type}, IP))
+  FoldingSetInsertToken Token;
+  if (TernOpInit *I =
+          RK.TheTernOpInitPool.lookup({Opc, LHS, MHS, RHS, Type}, Token))
     return I;
 
   TernOpInit *I = new (RK.Allocator) TernOpInit(Opc, LHS, MHS, RHS, Type);
-  RK.TheTernOpInitPool.insert(I, IP);
+  RK.TheTernOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2057,12 +2058,12 @@ const FoldOpInit *FoldOpInit::get(const Init *Start, const Init *List,
   ProfileFoldOpInit(ID, Start, List, A, B, Expr, Type);
 
   detail::RecordKeeperImpl &RK = Start->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const FoldOpInit *I = RK.TheFoldOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const FoldOpInit *I = RK.TheFoldOpInitPool.lookup(ID, Token))
     return I;
 
   FoldOpInit *I = new (RK.Allocator) FoldOpInit(Start, List, A, B, Expr, Type);
-  RK.TheFoldOpInitPool.InsertNode(I, IP);
+  RK.TheFoldOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2124,12 +2125,12 @@ const IsAOpInit *IsAOpInit::get(const RecTy *CheckType, const Init *Expr) {
   ProfileIsAOpInit(ID, CheckType, Expr);
 
   detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const IsAOpInit *I = RK.TheIsAOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const IsAOpInit *I = RK.TheIsAOpInitPool.lookup(ID, Token))
     return I;
 
   IsAOpInit *I = new (RK.Allocator) IsAOpInit(CheckType, Expr);
-  RK.TheIsAOpInitPool.InsertNode(I, IP);
+  RK.TheIsAOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2188,13 +2189,12 @@ const ExistsOpInit *ExistsOpInit::get(const RecTy *CheckType,
   ProfileExistsOpInit(ID, CheckType, Expr);
 
   detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const ExistsOpInit *I =
-          RK.TheExistsOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const ExistsOpInit *I = RK.TheExistsOpInitPool.lookup(ID, Token))
     return I;
 
   ExistsOpInit *I = new (RK.Allocator) ExistsOpInit(CheckType, Expr);
-  RK.TheExistsOpInitPool.InsertNode(I, IP);
+  RK.TheExistsOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2263,13 +2263,12 @@ const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
   ProfileInstancesOpInit(ID, Type, Regex);
 
   detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const InstancesOpInit *I =
-          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const InstancesOpInit *I = RK.TheInstancesOpInitPool.lookup(ID, Token))
     return I;
 
   InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
-  RK.TheInstancesOpInitPool.InsertNode(I, IP);
+  RK.TheInstancesOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2456,14 +2455,14 @@ const VarDefInit *VarDefInit::get(SMLoc Loc, const Record *Class,
   ProfileVarDefInit(ID, Class, Args);
 
   detail::RecordKeeperImpl &RK = Class->getRecords().getImpl();
-  void *IP = nullptr;
-  if (const VarDefInit *I = RK.TheVarDefInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const VarDefInit *I = RK.TheVarDefInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const ArgumentInit *>(Args.size()), alignof(VarDefInit));
   VarDefInit *I = new (Mem) VarDefInit(Loc, Class, Args);
-  RK.TheVarDefInitPool.InsertNode(I, IP);
+  RK.TheVarDefInitPool.insert(I, Token);
   return I;
 }
 
@@ -2649,14 +2648,14 @@ const CondOpInit *CondOpInit::get(ArrayRef<const Init *> Conds,
   ProfileCondOpInit(ID, Conds, Values, Ty);
 
   detail::RecordKeeperImpl &RK = Ty->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const CondOpInit *I = RK.TheCondOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const CondOpInit *I = RK.TheCondOpInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(2 * Conds.size()), alignof(CondOpInit));
   CondOpInit *I = new (Mem) CondOpInit(Conds, Values, Ty);
-  RK.TheCondOpInitPool.InsertNode(I, IP);
+  RK.TheCondOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2771,8 +2770,8 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
   ProfileDagInit(ID, V, VN, Args, ArgNames);
 
   detail::RecordKeeperImpl &RK = V->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const DagInit *I = RK.TheDagInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const DagInit *I = RK.TheDagInitPool.lookup(ID, Token))
     return I;
 
   void *Mem =
@@ -2780,7 +2779,7 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
                                 Args.size(), ArgNames.size()),
                             alignof(DagInit));
   DagInit *I = new (Mem) DagInit(V, VN, Args, ArgNames);
-  RK.TheDagInitPool.InsertNode(I, IP);
+  RK.TheDagInitPool.insert(I, Token);
   return I;
 }
 

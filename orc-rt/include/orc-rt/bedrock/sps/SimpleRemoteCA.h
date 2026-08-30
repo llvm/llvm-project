@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_BEDROCK_SIMPLEREMOTECA_H
-#define ORC_RT_BEDROCK_SIMPLEREMOTECA_H
+#ifndef ORC_RT_BEDROCK_SPS_SIMPLEREMOTECA_H
+#define ORC_RT_BEDROCK_SPS_SIMPLEREMOTECA_H
 
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Session.h"
@@ -111,4 +111,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_BEDROCK_SIMPLEREMOTECA_H
+#endif // ORC_RT_BEDROCK_SPS_SIMPLEREMOTECA_H

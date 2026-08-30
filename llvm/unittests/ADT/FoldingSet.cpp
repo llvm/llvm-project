@@ -131,6 +131,23 @@ TEST(FoldingSetTest, RemoveNodeThatIsAbsent) {
   EXPECT_EQ(0U, Trivial.size());
 }
 
+TEST(FoldingSetTest, TypedApi) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T(99, 42), TCopy(99, 42);
+  FoldingSetNodeID ID;
+  T.Profile(ID);
+
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Set.lookup(ID, Token));
+  ASSERT_TRUE(Token);
+  Set.insert(&T, Token);
+  EXPECT_EQ(&T, Set.lookup(ID, Token));
+  EXPECT_FALSE(Token);
+  EXPECT_EQ(&T, Set.getOrInsert(&TCopy));
+  EXPECT_TRUE(Set.erase(&T));
+  EXPECT_FALSE(Set.erase(&T));
+}
+
 TEST(FoldingSetTest, GetOrInsertInserting) {
   FoldingSet<TrivialPair> Trivial;
 
@@ -198,7 +215,7 @@ TEST(FoldingSetTest, Reserve) {
     std::vector<std::unique_ptr<TrivialPair>> Nodes;
     for (unsigned I = 0; I != Size; ++I) {
       Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-      Set.InsertNode(Nodes.back().get());
+      Set.insert(Nodes.back().get());
     }
     ASSERT_EQ(Size, Set.size());
 
@@ -300,20 +317,20 @@ TEST(FoldingSetTest, FoldingSetVectorBasic) {
   TrivialPair T2(20, 200);
   TrivialPair T3(30, 300);
 
-  EXPECT_EQ(&T1, Vec.GetOrInsertNode(&T1));
-  EXPECT_EQ(&T1, Vec.GetOrInsertNode(&T1Copy));
+  EXPECT_EQ(&T1, Vec.getOrInsert(&T1));
+  EXPECT_EQ(&T1, Vec.getOrInsert(&T1Copy));
   EXPECT_THAT(Vec, SizeIs(1));
 
   // Insert a new node using an insertion token.
   FoldingSetNodeID ID2;
   T2.Profile(ID2);
-  void *InsertPos = nullptr;
-  EXPECT_EQ(nullptr, Vec.FindNodeOrInsertPos(ID2, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
-  Vec.InsertNode(&T2, InsertPos);
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Vec.lookup(ID2, Token));
+  ASSERT_TRUE(Token);
+  Vec.insert(&T2, Token);
   EXPECT_THAT(Vec, SizeIs(2));
 
-  Vec.InsertNode(&T3);
+  EXPECT_EQ(&T3, Vec.getOrInsert(&T3));
   EXPECT_THAT(Vec, SizeIs(3));
   EXPECT_THAT(Vec, testing::Not(IsEmpty()));
 
@@ -355,26 +372,26 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   ContextualPair T1Copy(10, 100);
   ContextualPair T2(20, 200);
 
-  EXPECT_EQ(&T1, Set.GetOrInsertNode(&T1));
-  EXPECT_EQ(&T1, Set.GetOrInsertNode(&T1Copy));
+  EXPECT_EQ(&T1, Set.getOrInsert(&T1));
+  EXPECT_EQ(&T1, Set.getOrInsert(&T1Copy));
   EXPECT_THAT(Set, SizeIs(1));
 
   // Insert a new node using an insertion token.
-  void *InsertPos = nullptr;
+  FoldingSetInsertToken Token;
   FoldingSetNodeID ID2;
   T2.Profile(ID2, ContextVal);
-  EXPECT_EQ(nullptr, Set.FindNodeOrInsertPos(ID2, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
-  Set.InsertNode(&T2, InsertPos);
+  EXPECT_EQ(nullptr, Set.lookup(ID2, Token));
+  ASSERT_TRUE(Token);
+  Set.insert(&T2, Token);
   EXPECT_THAT(Set, SizeIs(2));
 
-  EXPECT_EQ(&T2, Set.FindNodeOrInsertPos(ID2, InsertPos));
+  EXPECT_EQ(&T2, Set.lookup(ID2, Token));
 
   EXPECT_THAT(Set, UnorderedElementsAre(T1, T2));
 
-  EXPECT_TRUE(Set.RemoveNode(&T1));
+  EXPECT_TRUE(Set.erase(&T1));
   EXPECT_THAT(Set, SizeIs(1));
-  EXPECT_FALSE(Set.RemoveNode(&T1));
+  EXPECT_FALSE(Set.erase(&T1));
 
   EXPECT_THAT(Set, UnorderedElementsAre(T2));
 
@@ -490,33 +507,52 @@ TEST(FoldingSetTest, MoveInvalidatesIterators) {
   FoldingSet<TrivialPair> Other(std::move(Set));
   EXPECT_DEATH((void)It->Value, "invalid iterator access");
 }
+
+TEST(FoldingSetTest, IteratorComparability) {
+  FoldingSet<TrivialPair> Set1, Set2;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set1.InsertNode(&T1);
+  Set2.InsertNode(&T2);
+  EXPECT_TRUE(Set1.begin() == Set1.begin());
+  EXPECT_FALSE(Set1.begin() == Set1.end());
+  EXPECT_DEATH((void)(Set1.begin() == Set2.begin()), "incomparable iterators");
+}
+
+TEST(FoldingSetTest, InsertInvalidatesIteratorComparison) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.InsertNode(&T2);
+  EXPECT_DEATH((void)(It == Set.end()), "incomparable iterators");
+}
 #endif
 
-// The InsertPos token is a hash, not a position, so a rehash cannot stale it.
-TEST(FoldingSetTest, InsertPosSurvivesGrowth) {
+// The insert token is a hash, not a position, so a rehash cannot stale it.
+TEST(FoldingSetTest, TokenSurvivesGrowth) {
   FoldingSet<TrivialPair> Set;
   TrivialPair Late(9999, 9999);
 
   FoldingSetNodeID ID;
   Late.Profile(ID);
-  void *InsertPos = nullptr;
-  ASSERT_EQ(nullptr, Set.FindNodeOrInsertPos(ID, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
+  FoldingSetInsertToken Token;
+  ASSERT_EQ(nullptr, Set.lookup(ID, Token));
+  ASSERT_TRUE(Token);
 
   // Force several rehashes while the token is held.
   std::vector<std::unique_ptr<TrivialPair>> Nodes;
   for (unsigned I = 0; I != 200; ++I) {
     Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-    Set.InsertNode(Nodes.back().get());
+    Set.insert(Nodes.back().get());
   }
 
-  Set.InsertNode(&Late, InsertPos);
-  void *Unused = nullptr;
-  EXPECT_EQ(&Late, Set.FindNodeOrInsertPos(ID, Unused));
+  Set.insert(&Late, Token);
+  EXPECT_EQ(&Late, Set.lookup(ID, Token));
+  EXPECT_FALSE(Token);
   EXPECT_EQ(201u, Set.size());
 }
 
-// FoldingSetNode is a non-first base, so find()'s two-step cast must adjust.
+// FoldingSetNode is a non-first base, so lookup()'s two-step cast must adjust.
 struct KeyedPair : NonEmptyBase, FoldingSetNode {
   unsigned A, B;
   KeyedPair(unsigned A, unsigned B) : A(A), B(B) {}
@@ -525,19 +561,18 @@ struct KeyedPair : NonEmptyBase, FoldingSetNode {
 
 TEST(UniquingSetTest, Basic) {
   UniquingSet<KeyedPair> Set;
-  FoldingSetInsertPos InsertPos;
-  EXPECT_EQ(nullptr, Set.find({1, 2}, InsertPos));
-  EXPECT_TRUE(bool(InsertPos));
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
+  EXPECT_TRUE(bool(Token));
 
   KeyedPair A(1, 2);
-  Set.insert(&A, InsertPos);
+  Set.insert(&A, Token);
   EXPECT_EQ(1u, Set.size());
 
-  // A hit clears the token; seed it with the one the miss produced.
-  FoldingSetInsertPos Token = InsertPos;
-  EXPECT_EQ(&A, Set.find({1, 2}, Token));
+  // insert leaves Token set; the hit must clear it.
+  EXPECT_EQ(&A, Set.lookup({1, 2}, Token));
   EXPECT_FALSE(bool(Token));
-  EXPECT_EQ(nullptr, Set.find({2, 1}, Token));
+  EXPECT_EQ(nullptr, Set.lookup({2, 1}, Token));
   EXPECT_TRUE(bool(Token));
 
   KeyedPair B(2, 1);
@@ -558,7 +593,7 @@ TEST(UniquingSetTest, Basic) {
   KeyedPair NeverInserted(3, 4);
   EXPECT_FALSE(Set.erase(&NeverInserted));
   EXPECT_EQ(1u, Set.size());
-  EXPECT_EQ(nullptr, Set.find({1, 2}, Token));
+  EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
 }
 
 // Every key hashes to NotAHash, which must be remapped so that erase() does not
@@ -579,23 +614,23 @@ TEST(UniquingSetTest, KeyHashingToNotAHash) {
   UniquingSet<ZeroHashNode, ZeroHashInfo> Set;
   ZeroHashNode A(1), B(2);
 
-  FoldingSetInsertPos P;
-  ASSERT_EQ(nullptr, Set.find(1, P));
+  FoldingSetInsertToken P;
+  ASSERT_EQ(nullptr, Set.lookup(1, P));
   ASSERT_TRUE(bool(P));
   Set.insert(&A, P);
   // Same bucket, different key: the probe must walk past A.
-  ASSERT_EQ(nullptr, Set.find(2, P));
+  ASSERT_EQ(nullptr, Set.lookup(2, P));
   ASSERT_TRUE(bool(P));
   Set.insert(&B, P);
 
-  FoldingSetInsertPos Unused;
-  EXPECT_EQ(&A, Set.find(1, Unused));
-  EXPECT_EQ(&B, Set.find(2, Unused));
+  FoldingSetInsertToken Unused;
+  EXPECT_EQ(&A, Set.lookup(1, Unused));
+  EXPECT_EQ(&B, Set.lookup(2, Unused));
   EXPECT_EQ(2u, Set.size());
 
   EXPECT_TRUE(Set.erase(&A));
   EXPECT_FALSE(Set.erase(&A));
-  EXPECT_EQ(&B, Set.find(2, Unused));
+  EXPECT_EQ(&B, Set.lookup(2, Unused));
   EXPECT_EQ(1u, Set.size());
 }
 
@@ -630,28 +665,28 @@ struct VectorNodeInfo {
 TEST(UniquingSetTest, StandaloneInfoAliasingKeyAcrossGrowth) {
   UniquingSet<VectorNode, VectorNodeInfo> Set;
   SmallVector<unsigned, 4> Lookup = {1, 2, 3};
-  FoldingSetInsertPos InsertPos;
-  ASSERT_EQ(nullptr, Set.find(Lookup, InsertPos));
-  ASSERT_TRUE(bool(InsertPos));
+  FoldingSetInsertToken Token;
+  ASSERT_EQ(nullptr, Set.lookup(Lookup, Token));
+  ASSERT_TRUE(bool(Token));
 
   std::vector<std::unique_ptr<VectorNode>> Nodes;
   for (unsigned I = 0; I != 200; ++I) {
     SmallVector<unsigned, 4> K = {I, I + 1};
-    FoldingSetInsertPos P;
-    ASSERT_EQ(nullptr, Set.find(K, P));
+    FoldingSetInsertToken P;
+    ASSERT_EQ(nullptr, Set.lookup(K, P));
     Nodes.push_back(std::make_unique<VectorNode>(K));
     Set.insert(Nodes.back().get(), P);
   }
 
   VectorNode Late(Lookup);
-  Set.insert(&Late, InsertPos);
+  Set.insert(&Late, Token);
   EXPECT_EQ(201u, Set.size());
 
   SmallVector<unsigned, 4> Again = {1, 2, 3};
-  FoldingSetInsertPos Unused;
-  EXPECT_EQ(&Late, Set.find(Again, Unused));
+  FoldingSetInsertToken Unused;
+  EXPECT_EQ(&Late, Set.lookup(Again, Unused));
   EXPECT_TRUE(Set.erase(&Late));
-  EXPECT_EQ(nullptr, Set.find(Again, Unused));
+  EXPECT_EQ(nullptr, Set.lookup(Again, Unused));
 }
 
 TEST(UniquingSetTest, InsertEraseStress) {
@@ -662,15 +697,15 @@ TEST(UniquingSetTest, InsertEraseStress) {
     unsigned Key = Rng() % 4096;
     auto It = Model.find(Key);
     if (Rng() & 1) {
-      FoldingSetInsertPos InsertPos;
-      KeyedPair *Found = Set.find({Key, Key}, InsertPos);
+      FoldingSetInsertToken Token;
+      KeyedPair *Found = Set.lookup({Key, Key}, Token);
       if (It != Model.end()) {
         ASSERT_EQ(It->second.get(), Found);
         continue;
       }
       ASSERT_EQ(nullptr, Found);
       auto N = std::make_unique<KeyedPair>(Key, Key);
-      Set.insert(N.get(), InsertPos);
+      Set.insert(N.get(), Token);
       Model.emplace(Key, std::move(N));
     } else if (It != Model.end()) {
       ASSERT_TRUE(Set.erase(It->second.get()));
@@ -680,9 +715,9 @@ TEST(UniquingSetTest, InsertEraseStress) {
     ASSERT_EQ(Model.size(), Set.size());
   }
 
-  FoldingSetInsertPos P;
+  FoldingSetInsertToken P;
   for (const auto &KV : Model)
-    EXPECT_EQ(KV.second.get(), Set.find({KV.first, KV.first}, P));
+    EXPECT_EQ(KV.second.get(), Set.lookup({KV.first, KV.first}, P));
   std::set<KeyedPair *> Visited;
   for (KeyedPair &N : Set)
     EXPECT_TRUE(Visited.insert(&N).second);

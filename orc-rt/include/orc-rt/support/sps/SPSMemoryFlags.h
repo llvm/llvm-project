@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SPSMEMORYFLAGS_H
-#define ORC_RT_SUPPORT_SPSMEMORYFLAGS_H
+#ifndef ORC_RT_SUPPORT_SPS_SPSMEMORYFLAGS_H
+#define ORC_RT_SUPPORT_SPS_SPSMEMORYFLAGS_H
 
 #include "orc-rt/support/MemoryFlags.h"
-#include "orc-rt/support/SimplePackedSerialization.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 namespace orc_rt {
 
@@ -46,4 +46,4 @@ public:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SPSMEMORYFLAGS_H
+#endif // ORC_RT_SUPPORT_SPS_SPSMEMORYFLAGS_H

@@ -2092,7 +2092,7 @@ See {ref}`UniquingSet <dss_uniquingset>` for a variant keyed on a typed key.
 `UniquingSet` is a {ref}`FoldingSet <dss_FoldingSet>` whose nodes are compared
 against a typed key instead of a serialized `FoldingSetNodeID`.  Each node
 supplies its key through `getKey()`; a lookup builds the same key from what it
-already holds and hashes it inline with `DenseMapInfo`, and `find` returns the
+already holds and hashes it inline with `DenseMapInfo`, and `lookup` returns the
 matching node or an insertion token for `insert`.  Growth and removal use the
 hash cached in each node and never call `getKey`.  An `Info` template argument
 can override the key type or the hash.
@@ -2103,10 +2103,10 @@ std::tuple<unsigned, const Value *, const Value *> FooNode::getKey() const {
 }
 
 UniquingSet<FooNode> Pool;
-FoldingSetInsertPos IP;
-if (FooNode *N = Pool.find({Opcode, LHS, RHS}, IP))
+FoldingSetInsertToken Token;
+if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
   return N;
-Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), IP);
+Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
 ```
 
 Prefer `UniquingSet` when a key can be read out of a node in O(1) and the lookup
