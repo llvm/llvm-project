@@ -63,6 +63,23 @@ constexpr bool test() {
       ++it;
       assert(it == std::default_sentinel);
     }
+
+    // When chunk size is 1
+    {
+      std::ranges::chunk_view<
+          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+          chunked =
+              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                  cpp17_input_iterator<int*>(vector.data()),
+                  sentinel_wrapper<cpp17_input_iterator<int*>>(
+                      cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+              std::views::chunk(1);
+
+      /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*chunked.begin()).begin();
+      assert(it != std::default_sentinel);
+      ++it;
+      assert(it == std::default_sentinel);
+    }
   }
 
   return true;
