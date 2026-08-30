@@ -457,6 +457,8 @@ features cannot lower the translation-unit ABI level;
   such as when the call is used as an `auto` non-type template argument.
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a crash when `__builtin_vectorelements` is applied to a reference to a
+  vector type; this is now diagnosed as an invalid argument type. (#GH216997)
 
 #### Bug Fixes to Attribute Support
 
