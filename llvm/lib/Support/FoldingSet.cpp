@@ -240,7 +240,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
   FoldingSetInsertToken Token;
   Node *N = lookup(ID, Token, Info);
-  InsertPos = Token ? encodeHash(Token.hash()) : nullptr;
+  InsertPos = Token ? encodeHash(Token.Hash) : nullptr;
   return N;
 }
 
@@ -250,13 +250,12 @@ void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
     grow(NumBuckets * 2);
-  uint32_t Hash = Token.hash();
+  uint32_t Hash = Token.Hash;
   placeNode(N, Hash);
   N->setFoldingSetHash(Hash);
 }
 
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
-  assert(InsertPos && "Invalid InsertPos!");
   insert(N, FoldingSetInsertToken(decodeHash(InsertPos)));
 }
 

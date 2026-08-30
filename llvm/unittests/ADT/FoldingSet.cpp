@@ -138,10 +138,10 @@ TEST(FoldingSetTest, TypedApi) {
 
   FoldingSetInsertToken Token;
   EXPECT_EQ(nullptr, Set.lookup(ID, Token));
-  ASSERT_TRUE(static_cast<bool>(Token));
+  ASSERT_TRUE(Token);
   Set.insert(&T, Token);
   EXPECT_EQ(&T, Set.lookup(ID, Token));
-  EXPECT_FALSE(static_cast<bool>(Token));
+  EXPECT_FALSE(Token);
   EXPECT_EQ(&T, Set.getOrInsert(&TCopy));
   EXPECT_TRUE(Set.erase(&T));
   EXPECT_FALSE(Set.erase(&T));
@@ -214,7 +214,7 @@ TEST(FoldingSetTest, Reserve) {
     std::vector<std::unique_ptr<TrivialPair>> Nodes;
     for (unsigned I = 0; I != Size; ++I) {
       Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-      Set.InsertNode(Nodes.back().get());
+      Set.insert(Nodes.back().get());
     }
     ASSERT_EQ(Size, Set.size());
 
@@ -325,7 +325,7 @@ TEST(FoldingSetTest, FoldingSetVectorBasic) {
   T2.Profile(ID2);
   FoldingSetInsertToken Token;
   EXPECT_EQ(nullptr, Vec.lookup(ID2, Token));
-  ASSERT_TRUE(static_cast<bool>(Token));
+  ASSERT_TRUE(Token);
   Vec.insert(&T2, Token);
   EXPECT_THAT(Vec, SizeIs(2));
 
@@ -380,7 +380,7 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   FoldingSetNodeID ID2;
   T2.Profile(ID2, ContextVal);
   EXPECT_EQ(nullptr, Set.lookup(ID2, Token));
-  ASSERT_TRUE(static_cast<bool>(Token));
+  ASSERT_TRUE(Token);
   Set.insert(&T2, Token);
   EXPECT_THAT(Set, SizeIs(2));
 
@@ -508,7 +508,7 @@ TEST(FoldingSetTest, MoveInvalidatesIterators) {
 }
 #endif
 
-// The InsertPos token is a hash, not a position, so a rehash cannot stale it.
+// The insert token is a hash, not a position, so a rehash cannot stale it.
 TEST(FoldingSetTest, TokenSurvivesGrowth) {
   FoldingSet<TrivialPair> Set;
   TrivialPair Late(9999, 9999);
@@ -517,18 +517,18 @@ TEST(FoldingSetTest, TokenSurvivesGrowth) {
   Late.Profile(ID);
   FoldingSetInsertToken Token;
   ASSERT_EQ(nullptr, Set.lookup(ID, Token));
-  ASSERT_TRUE(static_cast<bool>(Token));
+  ASSERT_TRUE(Token);
 
   // Force several rehashes while the token is held.
   std::vector<std::unique_ptr<TrivialPair>> Nodes;
   for (unsigned I = 0; I != 200; ++I) {
     Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-    Set.getOrInsert(Nodes.back().get());
+    Set.insert(Nodes.back().get());
   }
 
   Set.insert(&Late, Token);
   EXPECT_EQ(&Late, Set.lookup(ID, Token));
-  EXPECT_FALSE(static_cast<bool>(Token));
+  EXPECT_FALSE(Token);
   EXPECT_EQ(201u, Set.size());
 }
 

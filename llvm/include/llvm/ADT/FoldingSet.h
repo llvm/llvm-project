@@ -176,8 +176,8 @@ public:
 
   // Compute a strong hash value used to lookup the node in the FoldingSetBase.
   // The hash value is not guaranteed to be deterministic across processes.
-  // Never returns NotAHash: FoldingSetBase uses it to keep the InsertPos token
-  // non-null and to mark a node belonging to no set.
+  // Never returns NotAHash: FoldingSetBase reserves it for the empty insert
+  // token and for a node belonging to no set.
   unsigned ComputeHash() const {
     unsigned Hash =
         static_cast<unsigned>(hash_combine_range(Data, Data + Size));
@@ -293,11 +293,7 @@ class FoldingSetInsertToken {
   uint32_t Hash = FoldingSetNodeIDRef::NotAHash;
 
   explicit FoldingSetInsertToken(uint32_t Hash) : Hash(Hash) {
-    assert(Hash != FoldingSetNodeIDRef::NotAHash);
-  }
-  uint32_t hash() const {
-    assert(*this && "no token held");
-    return Hash;
+    assert(Hash != FoldingSetNodeIDRef::NotAHash && "Invalid insert token");
   }
 
   friend class FoldingSetBase;
@@ -306,6 +302,13 @@ public:
   FoldingSetInsertToken() = default;
   explicit operator bool() const {
     return Hash != FoldingSetNodeIDRef::NotAHash;
+  }
+
+  friend bool operator==(FoldingSetInsertToken A, FoldingSetInsertToken B) {
+    return A.Hash == B.Hash;
+  }
+  friend bool operator!=(FoldingSetInsertToken A, FoldingSetInsertToken B) {
+    return !(A == B);
   }
 };
 
@@ -400,8 +403,8 @@ protected:
   /// return it.  Otherwise, insert \p N and return it instead.
   LLVM_ABI Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
 
-  /// Look up the node specified by ID.  If it exists, return it.  If not,
-  /// return the insertion token that will make insertion faster.
+  /// Look up the node specified by ID. If it exists, return it and clear
+  /// \p Token; otherwise return null and set \p Token for a subsequent insert.
   LLVM_ABI Node *lookup(const FoldingSetNodeID &ID,
                         FoldingSetInsertToken &Token,
                         const FoldingSetInfo &Info);
@@ -512,8 +515,8 @@ public:
   }
   T *GetOrInsertNode(T *N) { return getOrInsert(N); }
 
-  /// Look up the node specified by ID.  If it exists, return it.  If not,
-  /// return the insertion token that will make insertion faster.
+  /// Look up the node specified by ID. If it exists, return it and clear
+  /// \p Token; otherwise return null and set \p Token for a subsequent insert.
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return static_cast<T *>(
         FoldingSetBase::lookup(ID, Token, getFoldingSetInfo()));
@@ -535,11 +538,12 @@ public:
 
   /// Insert the specified node into the folding set, knowing that it is not
   /// already in the folding set.
-  void InsertNode(T *N) {
+  void insert(T *N) {
     T *Inserted = getOrInsert(N);
     (void)Inserted;
     assert(Inserted == N && "Node already inserted!");
   }
+  void InsertNode(T *N) { insert(N); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -594,8 +598,8 @@ public:
     Vector.clear();
   }
 
-  /// Look up the node specified by ID.  If it exists, return it.  If not,
-  /// return the insertion token that will make insertion faster.
+  /// Look up the node specified by ID. If it exists, return it and clear
+  /// \p Token; otherwise return null and set \p Token for a subsequent insert.
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return Set.lookup(ID, Token);
   }
@@ -627,10 +631,11 @@ public:
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.
-  void InsertNode(T *N) {
-    Set.InsertNode(N);
+  void insert(T *N) {
+    Set.insert(N);
     Vector.push_back(N);
   }
+  void InsertNode(T *N) { insert(N); }
 
   /// Returns the number of nodes in the folding set.
   unsigned size() const { return Set.size(); }
