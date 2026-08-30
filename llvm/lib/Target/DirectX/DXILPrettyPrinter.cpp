@@ -243,6 +243,8 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
 
   // TODO: Do we want to sort these by binding or something like that?
   for (const dxil::ResourceInfo &RI : DRM) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
     dxil::ResourceClass RC = RTI.getResourceClass();
