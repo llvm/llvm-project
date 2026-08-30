@@ -24,6 +24,7 @@ std::shared_ptr<T>
 void f0() {
   int *i = new int;
   std::shared_ptr<int> p1(i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
   std::shared_ptr<int> p2(i);
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
 }

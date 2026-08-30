@@ -86,17 +86,12 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                                 ignoringParenCasts(ReleaseCallMatcher),
                                 ignoringParenCasts(conditionalOperator()));
 
-  auto RawPtrMatcher =
-      declRefExpr(to(varDecl(hasInitializer(ignoringParenCasts(cxxNewExpr())))
-                         .bind("raw-ptr")));
-
   auto SmartPtrConstructorMatcher = cxxConstructExpr(
       hasDeclaration(
           cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
-      unless(hasArgument(0, AllowedArguments)),
-      optionally(hasArgument(0, RawPtrMatcher)));
+      unless(hasArgument(0, AllowedArguments)));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -117,8 +112,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                            hasName("reset"))
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
-      unless(hasArgument(0, AllowedArguments)),
-      optionally(hasArgument(0, RawPtrMatcher)));
+      unless(hasArgument(0, AllowedArguments)));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
@@ -129,24 +123,11 @@ void SmartPtrInitializationCheck::check(
   const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
   const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method-decl");
   const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("method-parent");
-  const auto *RawPtrVar = Result.Nodes.getNodeAs<VarDecl>("raw-ptr");
 
   if (!MethodDecl)
     return;
 
   assert(PointerArg && Record);
-
-  if (RawPtrVar) {
-    // Store information about the raw pointer and its initializations
-    // Use the raw pointer as a key
-    const VarDecl *Key = RawPtrVar;
-    const unsigned InitsCount = ++SmartPtrInitMap[Key];
-
-    // Check if this raw pointer was used to initialize
-    // multiple smart pointers in one function
-    if (InitsCount <= 1)
-      return;
-  }
 
   const SourceLocation Loc = PointerArg->getBeginLoc();
   if (Loc.isInvalid())
