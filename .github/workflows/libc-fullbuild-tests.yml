@@ -38,7 +38,7 @@ jobs:
             include_scudo: ON
             testing: BUILD
           - name: linux-x86_64-Release
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
