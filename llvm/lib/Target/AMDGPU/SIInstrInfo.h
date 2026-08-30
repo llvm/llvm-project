@@ -325,8 +325,13 @@ public:
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
-  std::optional<int64_t> getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
-                                                 MachineOperand &Op) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI,
+                          const MachineOperand &Op,
+                          MachineInstr **DefMI = nullptr) const;
+  std::optional<int64_t>
+  getImmOrMaterializedImm(const MachineRegisterInfo &MRI, Register Reg,
+                          MachineInstr **DefMI = nullptr) const;
 
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
@@ -1874,9 +1879,6 @@ namespace AMDGPU {
   /// of a SADDR form.
   LLVM_READONLY
   int32_t getGlobalVaddrOp(uint32_t Opcode);
-
-  LLVM_READONLY
-  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
 
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.

@@ -136,6 +136,13 @@ features cannot lower the translation-unit ABI level;
   following new Unicode recommendations), applied as a DR to all C++ language
   modes.
 
+- Clang now supports [P3670R4](https://wg21.link/p3670r4) (Pack indexing for
+  template names), which allows a pack of templates to be indexed, as in
+  `TT...[0]<int>`. Like pack indexing of types and expressions, this is
+  available in all C++ language modes as an extension, controlled by
+  `-Wc++2d-extensions` and `-Wpre-c++2d-compat`, and `__cpp_pack_indexing` is
+  bumped to `202606L`.
+
 #### C++2c Feature Support
 
 - Added `__builtin_type_order` for compatibility with GCC as part of the
@@ -484,9 +491,9 @@ features cannot lower the translation-unit ABI level;
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
 
-- Fixed a crash when module directive export module foo not following a 
+- Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
-  
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
@@ -495,6 +502,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
+
+- Fixed an assertion failure when a parenthesized structured binding declarator
+  was followed by a function declarator and body (e.g. ``([a, b])() {}``).
+  (#GH218144, #GH193687)
 
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
@@ -536,11 +547,18 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Fixed an assertion when an ill-formed qualified member function definition
+  inside a union caused the union to be treated as a polymorphic class.
+  (#GH213854)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
   serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
   non-reproducible across runs. (#GH209639)
+
+- `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
+  location of a trailing return type. (#GH162649)
 
 #### Miscellaneous Bug Fixes
 
@@ -653,6 +671,9 @@ features cannot lower the translation-unit ABI level;
 
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
+- Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
+  body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
+  and `GNU` styles of `BreakBeforeBraces`.
 
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,

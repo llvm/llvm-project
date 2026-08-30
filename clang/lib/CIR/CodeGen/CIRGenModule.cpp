@@ -2338,7 +2338,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   mlir::Location loc = getLoc(e->getSourceRange());
 
-  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+  const ValueDecl *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
@@ -2357,13 +2357,13 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
-  const auto *fieldDecl = cast<FieldDecl>(decl);
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
   // Empty [[no_unique_address]] fields have no CIR field index; represent the
   // pointer-to-data-member by its concrete byte offset within the class.
-  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+  if (const auto *fieldDecl = dyn_cast<FieldDecl>(decl);
+      fieldDecl && isEmptyFieldForMemberPointer(fieldDecl)) {
     // This function should ONLY be accessed in reference to itself, I don't see
     // any cases/couldn't find any cases where anything else could get here, and
     // classic-codegen does the same.
@@ -2377,7 +2377,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   }
 
   std::optional<llvm::SmallVector<int32_t>> path =
-      buildMemberPath(destClass, fieldDecl);
+      buildMemberPath(destClass, decl);
   if (!path)
     return {};
   return cir::ConstantOp::create(builder, loc,
@@ -2386,9 +2386,24 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
-                              const FieldDecl *field) {
+                              const ValueDecl *decl) {
   llvm::SmallVector<int32_t> path;
-  if (!findFieldMemberPath(destClass, field, path))
+
+  // Members of an anonymous struct/union have an IndirectFieldDecl, which
+  // contains the whole chain of how to get to it, so to get the 'path', we dig
+  // through those rather than searching.
+  if (const auto *indirectField = dyn_cast<IndirectFieldDecl>(decl)) {
+    const CXXRecordDecl *currentClass = destClass;
+    for (const NamedDecl *nd : indirectField->chain()) {
+      const auto *field = cast<FieldDecl>(nd);
+      if (!findFieldMemberPath(currentClass, field, path))
+        return std::nullopt;
+      currentClass = field->getType()->getAsCXXRecordDecl();
+    }
+    return path;
+  }
+
+  if (!findFieldMemberPath(destClass, cast<FieldDecl>(decl), path))
     return std::nullopt;
   return path;
 }
@@ -2547,6 +2562,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // Indirect fields from global anonymous structs and unions can be
+  // ignored; only the actual variable requires IR gen support.
+  case Decl::IndirectField:
     break;
 
   // No code generation needed.
