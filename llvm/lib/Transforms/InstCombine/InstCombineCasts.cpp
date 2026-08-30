@@ -247,8 +247,9 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     // or the select is likely better done in a narrow type.
     // Creating a select with operands that are different sizes than its
     // condition may inhibit other folds and lead to worse codegen.
-    auto *Cmp = dyn_cast<CmpInst>(Sel->getCondition());
-    if (!Cmp || Cmp->getOperand(0)->getType() != Sel->getType() ||
+    Value *Cond = Sel->getCondition();
+    if (!isa<CmpInst, TruncInst>(Cond) ||
+        cast<Instruction>(Cond)->getOperand(0)->getType() != Sel->getType() ||
         (CI.getOpcode() == Instruction::Trunc &&
          shouldChangeType(CI.getSrcTy(), CI.getType()))) {
 
