@@ -130,8 +130,9 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
     for (auto [replacement, orig] :
          llvm::zip(yieldOp.getOperands(), resultsToReplace)) {
       replaceAllUsesInRegionWith(orig, replacement, *dest->getParent());
-      replacements.push_back(replacement);
     }
+    replacements.append(yieldOp.getOperands().begin(),
+                        yieldOp.getOperands().end());
     ip = std::prev(yieldOp->getIterator());
     yieldOp.erase();
   } else {
@@ -351,12 +352,14 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
 }
 
 void setCollapseCountAttr(Operation *op, uint64_t count) {
-  op->setAttr(getCollapseCountAttrName(),
-              IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
+  op->setDiscardableAttr(
+      getCollapseCountAttrName(),
+      IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
 }
 
 uint64_t getCollapseCount(Operation *op) {
-  if (auto attr = op->getAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
+  if (auto attr =
+          op->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
     return attr.getValue().getZExtValue();
   return 1;
 }

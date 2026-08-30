@@ -2209,7 +2209,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
 namespace {
 
 Constant *GetConstantFoldFPValue(double V, Type *Ty) {
-  if (Ty->isHalfTy() || Ty->isFloatTy()) {
+  if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isBFloatTy()) {
     APFloat APF(V);
     bool unused;
     APF.convert(Ty->getFltSemantics(), APFloat::rmNearestTiesToEven, &unused);
@@ -2217,7 +2217,7 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   }
   if (Ty->isDoubleTy())
     return ConstantFP::get(Ty->getContext(), APFloat(V));
-  llvm_unreachable("Can only constant fold half/float/double");
+  llvm_unreachable("Can only constant fold half/float/double/bfloat");
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
@@ -2652,7 +2652,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 #endif
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
-        !Ty->isIntegerTy())
+        !Ty->isIntegerTy() && !Ty->isBFloatTy())
       return nullptr;
 
     // Use internal versions of these intrinsics.

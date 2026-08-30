@@ -175,6 +175,10 @@ Makes programs 10x faster by doing Special New Thing.
   `numRecords` widths more accurately. If an integer of the incorrect width
   is used, it will be zero-extended or truncated as needed.
 
+* These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
+  * `llvm.amdgcn.icmp`
+  * `llvm.amdgcn.fcmp`
+
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers

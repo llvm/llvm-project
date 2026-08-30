@@ -16,49 +16,6 @@ body:             |
     S_ENDPGM 0
 ...
 ---
-name:            icmp
-body:             |
-  bb.1:
-    liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function:  @icmp
-    ; CHECK: ALL VALUES UNIFORM
-
-    %3:_(p4) = COPY $sgpr4_sgpr5
-    %13:_(s32) = G_CONSTANT i32 0
-    %7:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-    %8:_(s32) = G_LOAD %7(p4) :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-    %9:_(s64) = G_CONSTANT i64 8
-    %10:_(p4) = G_PTR_ADD %7, %9(s64)
-    %11:_(p1) = G_LOAD %10(p4) :: (dereferenceable invariant load (p1), addrspace 4)
-    %12:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.icmp), %8(s32), %13(s32), 33
-    G_STORE %12(s64), %11(p1) :: (volatile store (s64) , addrspace 1)
-    S_ENDPGM 0
-
-...
----
-name:            fcmp
-body:             |
-  bb.1:
-    liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function:  @fcmp
-    ; CHECK: ALL VALUES UNIFORM
-
-    %3:_(p4) = COPY $sgpr4_sgpr5
-    %10:_(s32) = G_CONSTANT i32 0
-    %12:_(s32) = G_CONSTANT i32 1
-    %16:_(p1) = G_IMPLICIT_DEF
-    %7:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-    %8:_(<2 x s32>) = G_LOAD %7(p4) :: (dereferenceable invariant load (<2 x s32>) , align 16, addrspace 4)
-    %9:_(s32) = G_EXTRACT_VECTOR_ELT %8(<2 x s32>), %10(s32)
-    %11:_(s32) = G_EXTRACT_VECTOR_ELT %8(<2 x s32>), %12(s32)
-    %13:_(s64) = G_CONSTANT i64 4
-    %14:_(p4) = G_PTR_ADD %7, %13(s64)
-    %15:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %9(s32), %11(s32), 33
-    G_STORE %15(s64), %16(p1) :: (volatile store (s64) into `ptr addrspace(1) undef`, addrspace 1)
-    S_ENDPGM 0
-
-...
----
 name:            ballot
 body:             |
   bb.1:
