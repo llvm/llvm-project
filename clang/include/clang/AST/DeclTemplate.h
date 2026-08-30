@@ -778,19 +778,19 @@ protected:
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         llvm::FoldingSetInsertToken &Token,
+                         llvm::FoldingSetInsertToken &InsertToken,
                          ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            llvm::FoldingSetInsertToken &Token,
+                            llvm::FoldingSetInsertToken &InsertToken,
                             ProfileArguments... ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
                              EntryType *Entry,
-                             llvm::FoldingSetInsertToken Token);
+                             llvm::FoldingSetInsertToken InsertToken);
 
   struct CommonBase {
     CommonBase() : InstantiatedFromMember(nullptr, false) {}
@@ -986,10 +986,11 @@ protected:
 
   /// Add a specialization of this function template.
   ///
-  /// \param Token Insert token, must have been retrieved by an earlier call
+  /// \param InsertToken Insert token, must have been retrieved by an earlier
+  /// call
   ///        to findSpecialization().
   void addSpecialization(FunctionTemplateSpecializationInfo *Info,
-                         llvm::FoldingSetInsertToken Token);
+                         llvm::FoldingSetInsertToken InsertToken);
 
 public:
   friend class ASTDeclReader;
@@ -1032,7 +1033,7 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   FunctionDecl *findSpecialization(ArrayRef<TemplateArgument> Args,
-                                   llvm::FoldingSetInsertToken &Token);
+                                   llvm::FoldingSetInsertToken &InsertToken);
 
   FunctionTemplateDecl *getCanonicalDecl() override {
     return cast<FunctionTemplateDecl>(
@@ -2342,12 +2343,12 @@ public:
   /// otherwise return the insertion point.
   ClassTemplateSpecializationDecl *
   findSpecialization(ArrayRef<TemplateArgument> Args,
-                     llvm::FoldingSetInsertToken &Token);
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. Token must be obtained from findSpecialization.
+  /// in. InsertToken must be obtained from findSpecialization.
   void AddSpecialization(ClassTemplateSpecializationDecl *D,
-                         llvm::FoldingSetInsertToken Token);
+                         llvm::FoldingSetInsertToken InsertToken);
 
   ClassTemplateDecl *getCanonicalDecl() override {
     return cast<ClassTemplateDecl>(
@@ -2388,12 +2389,12 @@ public:
   ClassTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
                             TemplateParameterList *TPL,
-                            llvm::FoldingSetInsertToken &Token);
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. Token must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(ClassTemplatePartialSpecializationDecl *D,
-                                llvm::FoldingSetInsertToken Token);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
@@ -3104,12 +3105,12 @@ public:
   /// otherwise return the insertion point.
   VarTemplateSpecializationDecl *
   findSpecialization(ArrayRef<TemplateArgument> Args,
-                     llvm::FoldingSetInsertToken &Token);
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. Token must be obtained from findSpecialization.
+  /// in. InsertToken must be obtained from findSpecialization.
   void AddSpecialization(VarTemplateSpecializationDecl *D,
-                         llvm::FoldingSetInsertToken Token);
+                         llvm::FoldingSetInsertToken InsertToken);
 
   VarTemplateDecl *getCanonicalDecl() override {
     return cast<VarTemplateDecl>(RedeclarableTemplateDecl::getCanonicalDecl());
@@ -3148,12 +3149,12 @@ public:
   VarTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
                             TemplateParameterList *TPL,
-                            llvm::FoldingSetInsertToken &Token);
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. Token must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(VarTemplatePartialSpecializationDecl *D,
-                                llvm::FoldingSetInsertToken Token);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(

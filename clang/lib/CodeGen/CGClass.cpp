@@ -3235,9 +3235,9 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD,
     const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
     FunctionTemplateDecl *CallOpTemplate =
         CallOp->getDescribedFunctionTemplate();
-    llvm::FoldingSetInsertToken Token;
+    llvm::FoldingSetInsertToken InsertToken;
     FunctionDecl *CorrespondingCallOpSpecialization =
-        CallOpTemplate->findSpecialization(TAL->asArray(), Token);
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
     assert(CorrespondingCallOpSpecialization);
     CallOp = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
   }

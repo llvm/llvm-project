@@ -2188,8 +2188,8 @@ void PathSensitiveBugReport::addVisitor(
   llvm::FoldingSetNodeID ID;
   visitor->Profile(ID);
 
-  llvm::FoldingSetInsertToken Token;
-  if (CallbacksSet.lookup(ID, Token)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (CallbacksSet.lookup(ID, InsertToken)) {
     return;
   }
 
@@ -2985,12 +2985,12 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  llvm::FoldingSetInsertToken Token;
-  BugReportEquivClass *EQ = EQClasses.lookup(ID, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  BugReportEquivClass *EQ = EQClasses.lookup(ID, InsertToken);
 
   if (!EQ) {
     EQ = new BugReportEquivClass(std::move(R));
-    EQClasses.insert(EQ, Token);
+    EQClasses.insert(EQ, InsertToken);
     EQClassesVector.push_back(EQ);
   } else
     EQ->AddReport(std::move(R));

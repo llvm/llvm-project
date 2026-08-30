@@ -199,9 +199,9 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
   // Profile the node to see if we already have something matching it
   llvm::FoldingSetNodeID profile;
   D->Profile(profile);
-  llvm::FoldingSetInsertToken Token;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  if (PathDiagnostic *orig = Diags.lookup(profile, Token)) {
+  if (PathDiagnostic *orig = Diags.lookup(profile, InsertToken)) {
     // Keep the PathDiagnostic with the shorter path.
     // Note, the enclosing routine is called in deterministic order, so the
     // results will be consistent between runs (no reason to break ties if the
@@ -437,12 +437,12 @@ void PathDiagnosticConsumer::FilesMade::addDiagnostic(const PathDiagnostic &PD,
                                                       StringRef FileName) {
   llvm::FoldingSetNodeID NodeID;
   NodeID.Add(PD);
-  llvm::FoldingSetInsertToken Token;
-  PDFileEntry *Entry = Set.lookup(NodeID, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  PDFileEntry *Entry = Set.lookup(NodeID, InsertToken);
   if (!Entry) {
     Entry = Alloc.Allocate<PDFileEntry>();
     Entry = new (Entry) PDFileEntry(NodeID);
-    Set.insert(Entry, Token);
+    Set.insert(Entry, InsertToken);
   }
 
   // Allocate persistent storage for the file name.
@@ -458,8 +458,8 @@ PathDiagnosticConsumer::PDFileEntry::ConsumerFiles *
 PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
   llvm::FoldingSetNodeID NodeID;
   NodeID.Add(PD);
-  llvm::FoldingSetInsertToken Token;
-  PDFileEntry *Entry = Set.lookup(NodeID, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  PDFileEntry *Entry = Set.lookup(NodeID, InsertToken);
   if (!Entry)
     return nullptr;
   return &Entry->files;

@@ -76,12 +76,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, superRegion);
-  llvm::FoldingSetInsertToken Token;
-  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, Token));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, superRegion);
-    Regions.insert(R, Token);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -93,12 +93,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, arg2, superRegion);
-  llvm::FoldingSetInsertToken Token;
-  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, Token));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, superRegion);
-    Regions.insert(R, Token);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -112,12 +112,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, arg2, arg3, superRegion);
-  llvm::FoldingSetInsertToken Token;
-  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, Token));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
-    Regions.insert(R, Token);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -1260,13 +1260,13 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
 
-  llvm::FoldingSetInsertToken Token;
-  MemRegion *data = Regions.lookup(ID, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  MemRegion *data = Regions.lookup(ID, InsertToken);
   auto *R = cast_or_null<ElementRegion>(data);
 
   if (!R) {
     R = new (A) ElementRegion(T, Idx, superRegion);
-    Regions.insert(R, Token);
+    Regions.insert(R, InsertToken);
   }
 
   return R;

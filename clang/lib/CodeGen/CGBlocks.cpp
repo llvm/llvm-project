@@ -2509,15 +2509,15 @@ static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
   llvm::FoldingSetNodeID id;
   generator.Profile(id);
 
-  llvm::FoldingSetInsertToken Token;
-  BlockByrefHelpers *node = CGM.ByrefHelpersCache.lookup(id, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  BlockByrefHelpers *node = CGM.ByrefHelpersCache.lookup(id, InsertToken);
   if (node) return static_cast<T*>(node);
 
   generator.CopyHelper = buildByrefCopyHelper(CGM, byrefInfo, generator);
   generator.DisposeHelper = buildByrefDisposeHelper(CGM, byrefInfo, generator);
 
   T *copy = new (CGM.getContext()) T(std::forward<T>(generator));
-  CGM.ByrefHelpersCache.insert(copy, Token);
+  CGM.ByrefHelpersCache.insert(copy, InsertToken);
   return copy;
 }
 

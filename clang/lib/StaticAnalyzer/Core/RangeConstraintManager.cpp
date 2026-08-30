@@ -323,17 +323,17 @@ RangeSet RangeSet::Factory::getRangeSet(Range From) {
 
 RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
   llvm::FoldingSetNodeID ID;
-  llvm::FoldingSetInsertToken Token;
+  llvm::FoldingSetInsertToken InsertToken;
 
   From.Profile(ID);
-  ContainerType *Result = Cache.lookup(ID, Token);
+  ContainerType *Result = Cache.lookup(ID, InsertToken);
 
   if (!Result) {
     // It is cheaper to fully construct the resulting range on stack
     // and move it to the freshly allocated buffer if we don't have
     // a set like this already.
     Result = construct(std::move(From));
-    Cache.insert(Result, Token);
+    Cache.insert(Result, InsertToken);
   }
 
   return Result;

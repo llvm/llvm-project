@@ -764,8 +764,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
                               argTypes);
 
-  llvm::FoldingSetInsertToken token;
-  CIRGenFunctionInfo *fi = functionInfos.lookup(id, token);
+  llvm::FoldingSetInsertToken insertToken;
+  CIRGenFunctionInfo *fi = functionInfos.lookup(id, insertToken);
   if (fi) {
     // We found a matching function info based on id. These asserts verify that
     // it really is a match.
@@ -781,7 +781,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // Construction the function info. We co-allocate the ArgInfos.
   fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
                                   required);
-  functionInfos.insert(fi, token);
+  functionInfos.insert(fi, insertToken);
 
   return *fi;
 }

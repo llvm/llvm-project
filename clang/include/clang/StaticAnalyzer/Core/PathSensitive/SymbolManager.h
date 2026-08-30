@@ -675,11 +675,11 @@ template <typename T, typename... Args>
 const T *SymbolManager::acquire(Args &&...args) {
   llvm::FoldingSetNodeID profile;
   T::Profile(profile, args...);
-  llvm::FoldingSetInsertToken Token;
-  SymExpr *SD = DataSet.lookup(profile, Token);
+  llvm::FoldingSetInsertToken InsertToken;
+  SymExpr *SD = DataSet.lookup(profile, InsertToken);
   if (!SD) {
     SD = Alloc.make<T>(std::forward<Args>(args)...);
-    DataSet.insert(SD, Token);
+    DataSet.insert(SD, InsertToken);
   }
   return cast<T>(SD);
 }

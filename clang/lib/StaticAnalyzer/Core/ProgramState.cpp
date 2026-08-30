@@ -403,9 +403,9 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
 
   llvm::FoldingSetNodeID ID;
   State.Profile(ID);
-  llvm::FoldingSetInsertToken Token;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  if (ProgramState *I = StateSet.lookup(ID, Token))
+  if (ProgramState *I = StateSet.lookup(ID, InsertToken))
     return I;
 
   ProgramState *newState = nullptr;
@@ -417,7 +417,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
     newState = Alloc.Allocate<ProgramState>();
   }
   new (newState) ProgramState(State);
-  StateSet.insert(newState, Token);
+  StateSet.insert(newState, InsertToken);
   return newState;
 }
 

@@ -100,9 +100,9 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                return TPL->getDepth() == Depth;
                              });
       if (L != TemplateParamLists.end()) {
-        llvm::FoldingSetInsertToken Token;
+        llvm::FoldingSetInsertToken InsertToken;
         PartialSpec = ClassTemplate->findPartialSpecialization(
-            SpecType->template_arguments(), *L, Token);
+            SpecType->template_arguments(), *L, InsertToken);
       }
     } else {
       // FIXME: The fallback on the search of partial

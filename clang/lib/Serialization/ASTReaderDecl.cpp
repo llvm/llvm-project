@@ -990,12 +990,12 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       // be initializing.
       llvm::FoldingSetNodeID ID;
       FunctionTemplateSpecializationInfo::Profile(ID, TemplArgs, C);
-      llvm::FoldingSetInsertToken Token;
+      llvm::FoldingSetInsertToken InsertToken;
       FunctionTemplateDecl::Common *CommonPtr = CanonTemplate->getCommonPtr();
       FunctionTemplateSpecializationInfo *ExistingInfo =
-          CommonPtr->Specializations.lookup(ID, Token);
-      if (Token)
-        CommonPtr->Specializations.insert(FTInfo, Token);
+          CommonPtr->Specializations.lookup(ID, InsertToken);
+      if (InsertToken)
+        CommonPtr->Specializations.insert(FTInfo, InsertToken);
       else {
         Existing = ExistingInfo->getFunction();
       }

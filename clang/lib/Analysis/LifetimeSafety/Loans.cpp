@@ -39,13 +39,13 @@ const PlaceholderBase *
 LoanManager::getOrCreatePlaceholderBase(const ParmVarDecl *PVD) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(PVD);
-  llvm::FoldingSetInsertToken Token;
-  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, Token))
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
     return Existing;
 
   void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
   PlaceholderBase *NewPB = new (Mem) PlaceholderBase(PVD);
-  PlaceholderBases.insert(NewPB, Token);
+  PlaceholderBases.insert(NewPB, InsertToken);
   return NewPB;
 }
 
@@ -53,13 +53,13 @@ const PlaceholderBase *
 LoanManager::getOrCreatePlaceholderBase(const CXXMethodDecl *MD) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(MD);
-  llvm::FoldingSetInsertToken Token;
-  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, Token))
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
     return Existing;
 
   void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
   PlaceholderBase *NewPB = new (Mem) PlaceholderBase(MD);
-  PlaceholderBases.insert(NewPB, Token);
+  PlaceholderBases.insert(NewPB, InsertToken);
   return NewPB;
 }
 } // namespace clang::lifetimes::internal
