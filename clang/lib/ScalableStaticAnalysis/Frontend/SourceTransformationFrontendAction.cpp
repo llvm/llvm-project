@@ -206,7 +206,7 @@ SourceTransformationRunner::SourceTransformationRunner(WPASuite Suite,
   // their lifetimes — those references are captured in its base ctor.
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(makeTransformation(Opts.SourceTransformation, this->Suite,
-                                         Edits, Report));
+                                         Opts, Edits, Report));
   assert(Consumers.front());
   MultiplexConsumer::Consumers = std::move(Consumers);
 }
