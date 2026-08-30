@@ -75,6 +75,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
+  case ISD::FLDEXP:
   case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOpWithExtraInput(N);
     break;
@@ -184,7 +185,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case ISD::FLDEXP:
   case ISD::ABDS:
   case ISD::ABDU:
   case ISD::SMIN:
@@ -543,8 +543,21 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_CONVERT_TO_ARBITRARY_FP(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op,
-                     N->getOperand(1));
+  SDValue Extra = N->getOperand(1);
+
+  // The result needs scalarizing, but it's not a given that the extra argument
+  // does. For instance, in AVX512 v1i1 is legal. See the similar logic in
+  // ScalarizeVecRes_UnaryOp.
+  EVT ExtraVT = Extra.getValueType();
+  if (ExtraVT.isVector()) {
+    if (getTypeAction(ExtraVT) == TargetLowering::TypeScalarizeVector)
+      Extra = GetScalarizedVector(Extra);
+    else
+      Extra = DAG.getExtractVectorElt(SDLoc(N), ExtraVT.getVectorElementType(),
+                                      Extra, 0);
+  }
+
+  return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op, Extra);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N) {
