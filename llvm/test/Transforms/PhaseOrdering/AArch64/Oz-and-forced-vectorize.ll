@@ -39,10 +39,11 @@ define void @foo(ptr noalias nocapture %ptrA, ptr noalias nocapture readonly %pt
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTRB]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTRB]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTRA]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[PTRA]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP15]], i64 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul float [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    store float [[TMP13]], ptr [[TMP11]], align 4

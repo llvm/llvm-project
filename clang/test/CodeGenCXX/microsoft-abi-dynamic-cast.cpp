@@ -31,7 +31,8 @@ T* test3(B* x) { return &dynamic_cast<T&>(*x); }
 // CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
-// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[DELTA]]
+// CHECK-NEXT:   [[BASE:%.*]] = getelementptr i8, ptr %x, i32 [[VBOFFS]]
+// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr i8, ptr [[BASE]], i32 4
 // CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTDynamicCast(ptr [[ADJ]], i32 [[DELTA]], ptr nonnull @"??_R0?AUB@@@8", ptr nonnull @"??_R0?AUT@@@8", i32 1)
 // CHECK-NEXT:   ret ptr [[CALL]]
 
@@ -62,8 +63,9 @@ T* test6(B* x) { return dynamic_cast<T*>(x); }
 // CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds nuw i8, ptr [[VBTBL]], i32 4
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
 // CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
-// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[DELTA]]
-// CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTDynamicCast(ptr nonnull [[ADJ]], i32 [[DELTA]], ptr {{.*}}@"??_R0?AUB@@@8", ptr {{.*}}@"??_R0?AUT@@@8", i32 0)
+// CHECK-NEXT:   [[BASE:%.*]] = getelementptr i8, ptr %x, i32 [[VBOFFS]]
+// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr i8, ptr [[BASE]], i32 4
+// CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTDynamicCast(ptr [[ADJ]], i32 [[DELTA]], ptr {{.*}}@"??_R0?AUB@@@8", ptr {{.*}}@"??_R0?AUT@@@8", i32 0)
 // CHECK-NEXT:   br label
 // CHECK:        [[RET:%.*]] = phi ptr
 // CHECK-NEXT:   ret ptr [[RET]]
