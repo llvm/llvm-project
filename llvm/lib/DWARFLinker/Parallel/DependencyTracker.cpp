@@ -141,10 +141,16 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
   InterCUProcessingWasStarted = InterCUProcessingStarted;
 
   // Search for live root DIEs.
-  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
+  UnitEntryPairTy UnitRootEntry{&CU, CU.getDebugInfoEntry(0)};
+  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(UnitRootEntry.DieEntry);
   CUInfo.setPlacement(CompileUnit::PlainDwarf);
-  collectRootsToKeep(UnitEntryPairTy{&CU, CU.getDebugInfoEntry(0)},
-                     std::nullopt, false);
+  collectRootsToKeep(UnitRootEntry, std::nullopt, false);
+
+  // With UpdateIndexTablesOnly nothing is garbage collected, so mark the whole
+  // unit live, as the classic linker's markEverythingAsKept() does.
+  if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    addActionToRootEntriesWorkList(LiveRootWorklistActionTy::MarkLiveEntryRec,
+                                   UnitRootEntry, std::nullopt);
 
   // Mark live DIEs as kept.
   return markCollectedLiveRootsAsKept(InterCUProcessingStarted,
