@@ -403,7 +403,8 @@ void NativeProcessLinux::Manager::SigchldHandler() {
     // vice-versa. This means that if the child event arrives first, it may not
     // be handled by any process (because it doesn't know the thread belongs to
     // it).
-    bool handled = llvm::any_of(m_processes, [&](NativeProcessLinux *process) {
+    auto processes = llvm::to_vector(m_processes);
+    bool handled = llvm::any_of(processes, [&](NativeProcessLinux *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
     if (!handled) {
