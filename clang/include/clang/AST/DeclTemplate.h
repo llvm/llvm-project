@@ -987,8 +987,7 @@ protected:
   /// Add a specialization of this function template.
   ///
   /// \param InsertToken Insert token, must have been retrieved by an earlier
-  /// call
-  ///        to findSpecialization().
+  /// call to findSpecialization().
   void addSpecialization(FunctionTemplateSpecializationInfo *Info,
                          llvm::FoldingSetInsertToken InsertToken);
 
