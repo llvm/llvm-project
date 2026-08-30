@@ -63,16 +63,21 @@ using LookupPrepareFn = unique_function<LookupApplyFn(
 /// Asynchronous version: OnApplied is called once every applicator has run, or
 /// with an error if the lookup failed (in which case none of them run).
 ///
+/// The ExecutionSession is taken from the first entry in SearchOrder (every
+/// entry must share the same session). If SearchOrder is empty then the lookup
+/// fails unconditionally. The only exception is an empty PrepareFns list, which
+/// trivially succeeds.
+///
 /// The prepare functions are only used during this call -- they are asked for
 /// their symbols up front, and only their applicators are retained -- so a
 /// braced list or other temporary is safe here.
 LLVM_ABI void lookupAndApply(unique_function<void(Error)> OnApplied,
-                             ExecutionSession &ES, LookupKind K,
+                             LookupKind K,
                              const JITDylibSearchOrder &SearchOrder,
                              ArrayRef<LookupPrepareFn> PrepareFns);
 
 /// Blocking version of lookupAndApply above.
-LLVM_ABI Error lookupAndApply(ExecutionSession &ES, LookupKind K,
+LLVM_ABI Error lookupAndApply(LookupKind K,
                               const JITDylibSearchOrder &SearchOrder,
                               ArrayRef<LookupPrepareFn> PrepareFns);
 
