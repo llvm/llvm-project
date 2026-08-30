@@ -11,7 +11,7 @@ on:
 jobs:
   native:
     if: github.repository_owner == 'llvm'
-    name: ${{ matrix.os }} - ${{ matrix.compiler.c_compiler }}
+    name: ${{ matrix.name }}
     timeout-minutes: 60
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
@@ -21,27 +21,32 @@ jobs:
       matrix:
         include:
           # TODO: add linux gcc when it is fixed
-          - os: ubuntu-24.04
+          - name: linux-x86_64
+            os: ubuntu-24.04
             container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
             linker: lld-23
-          - os: ubuntu-24.04-arm
+          - name: linux-aarch64
+            os: ubuntu-24.04-arm
             container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
             linker: lld-23
-          - os: windows-2022
+          - name: windows2022-x86_64
+            os: windows-2022
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: windows-2025
+          - name: windows2025-x86_64
+            os: windows-2025
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: macos-15
+          - name: macos-aarch64
+            os: macos-15
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
