@@ -489,6 +489,25 @@ TEST(FoldingSetTest, MoveInvalidatesIterators) {
   FoldingSet<TrivialPair> Other(std::move(Set));
   EXPECT_DEATH((void)It->Value, "invalid iterator access");
 }
+
+TEST(FoldingSetTest, IteratorComparability) {
+  FoldingSet<TrivialPair> Set1, Set2;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set1.InsertNode(&T1);
+  Set2.InsertNode(&T2);
+  EXPECT_TRUE(Set1.begin() == Set1.begin());
+  EXPECT_FALSE(Set1.begin() == Set1.end());
+  EXPECT_DEATH((void)(Set1.begin() == Set2.begin()), "incomparable iterators");
+}
+
+TEST(FoldingSetTest, InsertInvalidatesIteratorComparison) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.InsertNode(&T2);
+  EXPECT_DEATH((void)(It == Set.end()), "incomparable iterators");
+}
 #endif
 
 // The InsertPos token is a hash, not a position, so a rehash cannot stale it.

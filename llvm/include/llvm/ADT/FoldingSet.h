@@ -635,7 +635,7 @@ public:
   }
 
   bool operator==(const FoldingSetIterator &RHS) const {
-    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
+    assert(isComparableWith(RHS) && "incomparable iterators!");
     return Bucket == RHS.Bucket;
   }
   bool operator!=(const FoldingSetIterator &RHS) const {
