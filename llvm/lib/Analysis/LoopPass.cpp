@@ -33,10 +33,11 @@ namespace {
 
 bool shouldPrintLoop(const Loop &L) {
   Function *F = L.getHeader()->getParent();
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
   if (!isFunctionInPrintList(F->getName()))
     return false;
 
-  if (isSourceLocFilterEmpty())
+  if (SourceLocFilterEmpty)
     return true;
 
   for (const BasicBlock *BB : L.blocks())

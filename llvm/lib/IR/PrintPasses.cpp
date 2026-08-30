@@ -188,66 +188,63 @@ struct PrintLineRange {
   unsigned Last;
 };
 
-struct PrintSourceLocSpec {
+struct PrintSourceLocFilter {
   std::string File;
   SmallVector<PrintLineRange, 4> Lines;
 };
 
-[[noreturn]] void reportBadLocSpec(StringRef Spec) {
-  report_fatal_error(Twine("Invalid -filter-print-source-locs value '") + Spec +
-                     "'. Expected file:line[,line-line][,line].");
+[[noreturn]] void reportBadSourceLocFilter(StringRef Filter) {
+  report_fatal_error(Twine("Invalid -filter-print-source-locs value '") +
+                     Filter + "'. Expected file:line[,line-line][,line].");
 }
 
 std::string normalizeSlashes(StringRef Path) {
-  std::string Result = Path.str();
-  for (char &C : Result)
-    if (C == '\\')
-      C = '/';
-  return Result;
+  return sys::path::convert_to_slash(Path, sys::path::Style::windows_backslash);
 }
 
 bool parseLine(StringRef LineText, unsigned &Line) {
   return !LineText.empty() && !LineText.getAsInteger(10, Line);
 }
 
-PrintLineRange parseLineRange(StringRef RangeText, StringRef FullSpec) {
+PrintLineRange parseLineRange(StringRef RangeText, StringRef FullFilter) {
   auto [FirstText, LastText] = RangeText.split('-');
 
   unsigned First;
   if (!parseLine(FirstText, First))
-    reportBadLocSpec(FullSpec);
+    reportBadSourceLocFilter(FullFilter);
 
-  if (LastText.empty())
+  if (!RangeText.contains('-'))
     return {First, First};
 
   unsigned Last;
   if (!parseLine(LastText, Last) || Last < First)
-    reportBadLocSpec(FullSpec);
+    reportBadSourceLocFilter(FullFilter);
 
   return {First, Last};
 }
 
-std::vector<PrintSourceLocSpec> parseSourceLocSpecs() {
-  std::vector<PrintSourceLocSpec> Result;
-  for (const std::string &RawSpec : PrintSourceLocs) {
-    StringRef Spec(RawSpec);
-    auto [File, LineSpec] = Spec.rsplit(':');
-    if (File.empty() || LineSpec.empty())
-      reportBadLocSpec(Spec);
+std::vector<PrintSourceLocFilter> parseSourceLocFilters() {
+  std::vector<PrintSourceLocFilter> Result;
+  for (const std::string &RawFilter : PrintSourceLocs) {
+    StringRef Filter(RawFilter);
+    auto [File, LineList] = Filter.rsplit(':');
+    if (File.empty() || LineList.empty())
+      reportBadSourceLocFilter(Filter);
 
-    PrintSourceLocSpec Parsed;
+    PrintSourceLocFilter Parsed;
     Parsed.File = normalizeSlashes(File);
-    for (StringRef RangeText : llvm::split(LineSpec, ",")) {
-      Parsed.Lines.push_back(parseLineRange(RangeText, Spec));
+    for (StringRef RangeText : llvm::split(LineList, ",")) {
+      Parsed.Lines.push_back(parseLineRange(RangeText, Filter));
     }
     Result.push_back(std::move(Parsed));
   }
   return Result;
 }
 
-ArrayRef<PrintSourceLocSpec> getSourceLocSpecs() {
-  static const std::vector<PrintSourceLocSpec> Specs = parseSourceLocSpecs();
-  return Specs;
+ArrayRef<PrintSourceLocFilter> getSourceLocFilters() {
+  static const std::vector<PrintSourceLocFilter> Filters =
+      parseSourceLocFilters();
+  return Filters;
 }
 
 std::string makeDebugLocPath(StringRef Directory, StringRef Filename) {
@@ -263,19 +260,22 @@ std::string makeDebugLocPath(StringRef Directory, StringRef Filename) {
   return NormalizedDirectory + "/" + NormalizedFilename;
 }
 
-bool matchesFile(StringRef SpecFile, StringRef Directory, StringRef Filename) {
+bool matchesFile(StringRef FilterFile, StringRef Directory,
+                 StringRef Filename) {
   std::string LocFile = normalizeSlashes(Filename);
   std::string LocPath = makeDebugLocPath(Directory, Filename);
 
-  if (SpecFile == LocFile || SpecFile == LocPath)
+  // Accept an exact filename or path, a basename, or a path suffix so the
+  // filter may omit leading directories.
+  if (FilterFile == LocFile || FilterFile == LocPath)
     return true;
 
   StringRef LocFileRef(LocFile);
   StringRef LocPathRef(LocPath);
-  if (sys::path::filename(LocFileRef) == SpecFile)
+  if (sys::path::filename(LocFileRef) == FilterFile)
     return true;
 
-  std::string Suffix = (Twine("/") + SpecFile).str();
+  std::string Suffix = (Twine("/") + FilterFile).str();
   return LocFileRef.ends_with(Suffix) || LocPathRef.ends_with(Suffix);
 }
 
@@ -285,36 +285,39 @@ bool matchesLine(ArrayRef<PrintLineRange> Ranges, unsigned Line) {
   });
 }
 
-bool matchesSourceLocSpec(const DebugLoc &Loc, const PrintSourceLocSpec &Spec) {
+bool matchesSourceLocFilter(const DebugLoc &Loc,
+                            const PrintSourceLocFilter &Filter) {
   auto *Scope = dyn_cast_or_null<DIScope>(Loc.getScope());
   return Scope &&
-         matchesFile(Spec.File, Scope->getDirectory(), Scope->getFilename()) &&
-         matchesLine(Spec.Lines, Loc.getLine());
+         matchesFile(Filter.File, Scope->getDirectory(),
+                     Scope->getFilename()) &&
+         matchesLine(Filter.Lines, Loc.getLine());
 }
 
 } // namespace
 
 bool llvm::isSourceLocInPrintList(const DebugLoc &Loc) {
-  ArrayRef<PrintSourceLocSpec> Specs = getSourceLocSpecs();
-  if (Specs.empty())
+  ArrayRef<PrintSourceLocFilter> Filters = getSourceLocFilters();
+  if (Filters.empty())
     return true;
 
   for (DebugLoc CurLoc = Loc; CurLoc; CurLoc = CurLoc.getInlinedAt()) {
-    if (any_of(Specs, [&CurLoc](const PrintSourceLocSpec &Spec) {
-          return matchesSourceLocSpec(CurLoc, Spec);
+    if (any_of(Filters, [&CurLoc](const PrintSourceLocFilter &Filter) {
+          return matchesSourceLocFilter(CurLoc, Filter);
         }))
       return true;
   }
   return false;
 }
 
-bool llvm::isSourceLocFilterEmpty() { return PrintSourceLocs.empty(); }
+bool llvm::isSourceLocFilterEmpty() { return getSourceLocFilters().empty(); }
 
 bool llvm::shouldPrintFunction(const Function &F) {
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
   if (!isFunctionInPrintList(F.getName()))
     return false;
 
-  if (isSourceLocFilterEmpty())
+  if (SourceLocFilterEmpty)
     return true;
 
   for (const BasicBlock &BB : F)
@@ -422,6 +425,16 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
     return;
 
   if (IsInteresting && Before != After) {
+    if (After.empty() &&
+        llvm::is_contained({ChangePrinter::Quiet, ChangePrinter::Verbose,
+                            ChangePrinter::DotCfgQuiet,
+                            ChangePrinter::DotCfgVerbose},
+                           PrintChanged.getValue())) {
+      errs() << ("*** IR Deleted After " + PassName + " (" + PassID + ") on " +
+                 IRName + " ***\n");
+      return;
+    }
+
     errs() << ("*** IR Dump After " + PassName + " (" + PassID + ") on " +
                IRName + " ***\n");
     switch (PrintChanged) {

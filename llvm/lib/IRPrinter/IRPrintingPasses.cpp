@@ -39,7 +39,7 @@ PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (ShouldRenumberMetadata)
     M.renumberMetadataForAssembly();
 
-  if (llvm::isFunctionInPrintList("*") && isSourceLocFilterEmpty()) {
+  if (isSourceLocFilterEmpty() && llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
       OS << Banner << "\n";
     M.print(OS, nullptr, ShouldPreserveUseListOrder);

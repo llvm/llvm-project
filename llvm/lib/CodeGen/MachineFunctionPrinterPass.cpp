@@ -23,10 +23,11 @@ using namespace llvm;
 
 namespace {
 bool shouldPrintMachineFunction(const MachineFunction &MF) {
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
   if (!isFunctionInPrintList(MF.getName()))
     return false;
 
-  if (isSourceLocFilterEmpty())
+  if (SourceLocFilterEmpty)
     return true;
 
   for (const MachineBasicBlock &MBB : MF)

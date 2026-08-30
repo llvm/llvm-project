@@ -683,7 +683,7 @@ namespace {
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
-      if (isFunctionInPrintList("*") && isSourceLocFilterEmpty() &&
+      if (isSourceLocFilterEmpty() && isFunctionInPrintList("*") &&
           NeedModule) {
         PrintBannerOnce();
         OS << "\n";
@@ -700,7 +700,7 @@ namespace {
               F->print(OS);
             }
           }
-        } else if (isFunctionInPrintList("*") && isSourceLocFilterEmpty()) {
+        } else if (isSourceLocFilterEmpty() && isFunctionInPrintList("*")) {
           PrintBannerOnce();
           OS << "\nPrinting <null> Function\n";
         }

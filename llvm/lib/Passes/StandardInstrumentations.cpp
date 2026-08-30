@@ -142,6 +142,9 @@ static cl::opt<bool>
                     cl::desc("Dump dropped debug variables stats"),
                     cl::init(false));
 
+static bool shouldGenerateData(const Function &F);
+static bool shouldGenerateData(const MachineFunction &MF);
+
 namespace {
 
 // An option for specifying an executable that will be called with the IR
@@ -158,33 +161,16 @@ static cl::opt<std::string>
 
 bool loopContainsPrintSourceLoc(const Loop &L) {
   const Function *F = L.getHeader()->getParent();
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
   if (!isFunctionInPrintList(F->getName()))
     return false;
 
-  if (isSourceLocFilterEmpty())
+  if (SourceLocFilterEmpty)
     return true;
 
   for (const BasicBlock *BB : L.blocks())
     for (const Instruction &I : *BB)
       if (isSourceLocInPrintList(I.getDebugLoc()))
-        return true;
-  return false;
-}
-
-bool shouldGenerateData(const Function &F) {
-  return !F.isDeclaration() && shouldPrintFunction(F);
-}
-
-bool shouldGenerateData(const MachineFunction &MF) {
-  if (!isFunctionInPrintList(MF.getName()))
-    return false;
-
-  if (isSourceLocFilterEmpty())
-    return true;
-
-  for (const MachineBasicBlock &MBB : MF)
-    for (const MachineInstr &MI : MBB)
-      if (isSourceLocInPrintList(MI.getDebugLoc()))
         return true;
   return false;
 }
@@ -205,7 +191,7 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
-      if (Force || (!F.isDeclaration() && shouldGenerateData(F))) {
+      if (Force || shouldGenerateData(F)) {
         return F.getParent();
       }
     }
@@ -236,7 +222,7 @@ void printIR(raw_ostream &OS, const Function *F) {
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
-  if ((isFunctionInPrintList("*") && isSourceLocFilterEmpty()) ||
+  if ((isSourceLocFilterEmpty() && isFunctionInPrintList("*")) ||
       forcePrintModuleIR()) {
     M->print(OS, nullptr);
   } else {
@@ -249,7 +235,7 @@ void printIR(raw_ostream &OS, const Module *M) {
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
-    if (!F.isDeclaration() && shouldGenerateData(F)) {
+    if (shouldGenerateData(F)) {
       F.print(OS);
     }
   }
@@ -288,15 +274,17 @@ std::string getIRName(IRUnitRef IR) {
 }
 
 bool moduleContainsFilterPrintFunc(const Module &M) {
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (SourceLocFilterEmpty && isFunctionInPrintList("*"))
+    return true;
   return any_of(M.functions(),
-                [](const Function &F) { return shouldPrintFunction(F); }) ||
-         (isFunctionInPrintList("*") && isSourceLocFilterEmpty());
+                [](const Function &F) { return shouldPrintFunction(F); });
 }
 
 bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
   return any_of(C, [](const LazyCallGraph::Node &N) {
     const Function &F = N.getFunction();
-    return !F.isDeclaration() && shouldGenerateData(F);
+    return shouldGenerateData(F);
   });
 }
 
@@ -424,13 +412,13 @@ void ChangeReporter<T>::saveIRBeforePass(IRUnitRef IR, StringRef PassID,
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
   BeforeStack.emplace_back();
-
-  if (!isInteresting(IR, PassID, PassName))
+  auto &Before = BeforeStack.back();
+  Before.IsInteresting = isInteresting(IR, PassID, PassName);
+  if (!Before.IsInteresting)
     return;
 
   // Save the IR representation on the stack.
-  T &Data = BeforeStack.back();
-  generateIRRepresentation(IR, PassID, Data);
+  generateIRRepresentation(IR, PassID, Before.Data);
 }
 
 template <typename T>
@@ -443,22 +431,24 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
   if (isIgnored(PassID)) {
     if (VerboseMode)
       handleIgnored(PassID, Name);
-  } else if (!isInteresting(IR, PassID, PassName)) {
-    if (VerboseMode)
-      handleFiltered(PassID, Name);
   } else {
-    // Get the before rep from the stack
-    T &Before = BeforeStack.back();
-    // Create the after rep
-    T After;
-    generateIRRepresentation(IR, PassID, After);
-
-    // Was there a change in IR?
-    if (Before == After) {
+    auto &Before = BeforeStack.back();
+    bool AfterIsInteresting = isInteresting(IR, PassID, PassName);
+    if (!Before.IsInteresting && !AfterIsInteresting) {
       if (VerboseMode)
-        omitAfter(PassID, Name);
-    } else
-      handleAfter(PassID, Name, Before, After, IR);
+        handleFiltered(PassID, Name);
+    } else {
+      T After;
+      if (AfterIsInteresting)
+        generateIRRepresentation(IR, PassID, After);
+
+      // Was there a change in IR?
+      if (Before.Data == After) {
+        if (VerboseMode)
+          omitAfter(PassID, Name);
+      } else
+        handleAfter(PassID, Name, Before.Data, After, IR);
+    }
   }
   BeforeStack.pop_back();
 }
@@ -696,10 +686,16 @@ void IRComparer<T>::compare(
         CompareFunc) {
   if (!CompareModule) {
     // Just handle the single function.
-    assert(Before.getData().size() == 1 && After.getData().size() == 1 &&
-           "Expected only one function.");
-    CompareFunc(false, 0, Before.getData().begin()->getValue(),
-                After.getData().begin()->getValue());
+    assert(Before.getData().size() <= 1 && After.getData().size() <= 1 &&
+           (!Before.getData().empty() || !After.getData().empty()) &&
+           "Expected one function in at least one IR unit.");
+    FuncDataT<T> Missing("");
+    const FuncDataT<T> &BeforeFunction =
+        Before.getData().empty() ? Missing
+                                 : Before.getData().begin()->getValue();
+    const FuncDataT<T> &AfterFunction =
+        After.getData().empty() ? Missing : After.getData().begin()->getValue();
+    CompareFunc(false, 0, BeforeFunction, AfterFunction);
     return;
   }
 
@@ -742,6 +738,25 @@ void IRComparer<T>::analyzeIR(IRUnitRef IR, IRDataT<T> &Data) {
   }
 
   llvm_unreachable("Unknown IR unit");
+}
+
+static bool shouldGenerateData(const Function &F) {
+  return !F.isDeclaration() && shouldPrintFunction(F);
+}
+
+static bool shouldGenerateData(const MachineFunction &MF) {
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (!isFunctionInPrintList(MF.getName()))
+    return false;
+
+  if (SourceLocFilterEmpty)
+    return true;
+
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isSourceLocInPrintList(MI.getDebugLoc()))
+        return true;
+  return false;
 }
 
 template <typename T>

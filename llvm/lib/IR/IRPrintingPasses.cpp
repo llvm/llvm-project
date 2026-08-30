@@ -28,7 +28,7 @@ namespace {
 
 static void printModule(raw_ostream &OS, StringRef Banner,
                         bool ShouldPreserveUseListOrder, Module &M) {
-  if (llvm::isFunctionInPrintList("*") && isSourceLocFilterEmpty()) {
+  if (isSourceLocFilterEmpty() && llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
       OS << Banner << "\n";
     M.print(OS, nullptr, ShouldPreserveUseListOrder);

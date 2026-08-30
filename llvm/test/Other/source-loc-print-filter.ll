@@ -8,6 +8,12 @@
 ; RUN:   -filter-print-source-locs=dir/source.c:31 \
 ; RUN:   | FileCheck %s --check-prefix=SUFFIX
 
+; Check Windows-style directories in debug info. The filter uses forward
+; slashes so this also checks path separator normalization.
+; RUN: opt < %s 2>&1 -disable-output -passes=forceattrs -print-after-all \
+; RUN:   -filter-print-source-locs=C:/src/dir/windows.c:41 \
+; RUN:   | FileCheck %s --check-prefix=WINDOWS
+
 ; Check function pass filtering.
 ; RUN: opt < %s 2>&1 -disable-output -passes='function(no-op-function)' \
 ; RUN:   -print-after-all -filter-print-source-locs=source.c:10 \
@@ -29,6 +35,35 @@
 ; RUN:   -filter-print-funcs=* -filter-print-source-locs=source.c:10 \
 ; RUN:   | FileCheck %s --check-prefix=PRINT-PASS
 
+; Check that a change which removes the last matching location is reported.
+; RUN: opt < %s 2>&1 -disable-output -passes=instcombine \
+; RUN:   -print-changed=quiet -filter-print-funcs=foo \
+; RUN:   -filter-print-source-locs=source.c:10 \
+; RUN:   | FileCheck %s --check-prefix=CHANGED-REMOVED
+; RUN: opt < %s 2>&1 -disable-output -passes=instcombine \
+; RUN:   -print-changed=diff-quiet -filter-print-funcs=foo \
+; RUN:   -filter-print-source-locs=source.c:10 \
+; RUN:   | FileCheck %s --check-prefix=CHANGED-DIFF-REMOVED
+
+; Check malformed filters, including when the function-name filter matches
+; nothing.
+; RUN: not --crash opt < %s -disable-output -passes=forceattrs \
+; RUN:   -print-after-all -filter-print-funcs=missing \
+; RUN:   -filter-print-source-locs=source.c: 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=INVALID-EMPTY-LINE
+; RUN: not --crash opt < %s -disable-output -passes=forceattrs \
+; RUN:   -print-after-all -filter-print-source-locs=:10 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=INVALID-EMPTY-FILE
+; RUN: not --crash opt < %s -disable-output -passes=forceattrs \
+; RUN:   -print-after-all -filter-print-source-locs=source.c:abc 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=INVALID-LINE
+; RUN: not --crash opt < %s -disable-output -passes=forceattrs \
+; RUN:   -print-after-all -filter-print-source-locs=source.c:20-10 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=INVALID-RANGE
+; RUN: not --crash opt < %s -disable-output -passes=forceattrs \
+; RUN:   -print-after-all -filter-print-source-locs=source.c:10- 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=INVALID-TRAILING-HYPHEN
+
 ; RANGE:      IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
 ; RANGE:      define i32 @foo
 ; RANGE-NOT:  define i32 @bar
@@ -40,6 +75,13 @@
 ; SUFFIX-NOT:  define i32 @bar
 ; SUFFIX:      define i32 @baz
 ; SUFFIX-NOT:  IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
+
+; WINDOWS:      IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
+; WINDOWS-NOT:  define i32 @foo
+; WINDOWS-NOT:  define i32 @bar
+; WINDOWS-NOT:  define i32 @baz
+; WINDOWS:      define i32 @windows
+; WINDOWS-NOT:  IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
 
 ; FUNCTION:      IR Dump After NoOpFunctionPass on foo
 ; FUNCTION-NEXT: define i32 @foo
@@ -58,6 +100,17 @@
 ; PRINT-PASS-NOT:  define i32 @bar
 ; PRINT-PASS-NOT:  define i32 @baz
 
+; CHANGED-REMOVED: *** IR Deleted After InstCombinePass on foo ***
+
+; CHANGED-DIFF-REMOVED: *** IR Dump After InstCombinePass on foo ***
+; CHANGED-DIFF-REMOVED: -  %sum = add i32 1, 2, !dbg
+
+; INVALID-EMPTY-LINE: LLVM ERROR: Invalid -filter-print-source-locs value 'source.c:'
+; INVALID-EMPTY-FILE: LLVM ERROR: Invalid -filter-print-source-locs value ':10'
+; INVALID-LINE: LLVM ERROR: Invalid -filter-print-source-locs value 'source.c:abc'
+; INVALID-RANGE: LLVM ERROR: Invalid -filter-print-source-locs value 'source.c:20-10'
+; INVALID-TRAILING-HYPHEN: LLVM ERROR: Invalid -filter-print-source-locs value 'source.c:10-'
+
 define i32 @foo() !dbg !5 {
 entry:
   %sum = add i32 1, 2, !dbg !10
@@ -74,6 +127,12 @@ define i32 @baz() !dbg !15 {
 entry:
   %sum = add i32 5, 6, !dbg !16
   ret i32 %sum, !dbg !17
+}
+
+define i32 @windows() !dbg !21 {
+entry:
+  %sum = add i32 7, 8, !dbg !22
+  ret i32 %sum, !dbg !23
 }
 
 !llvm.dbg.cu = !{!0}
@@ -95,3 +154,7 @@ entry:
 !17 = !DILocation(line: 32, column: 3, scope: !15)
 !18 = !{!19}
 !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!20 = !DIFile(filename: "windows.c", directory: "C:\5Csrc\5Cdir")
+!21 = distinct !DISubprogram(name: "windows", scope: !20, file: !20, line: 39, type: !4, scopeLine: 39, spFlags: DISPFlagDefinition, unit: !0)
+!22 = !DILocation(line: 41, column: 7, scope: !21)
+!23 = !DILocation(line: 42, column: 3, scope: !21)

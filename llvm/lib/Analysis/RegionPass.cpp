@@ -173,10 +173,11 @@ void RGPassManager::dumpPassStructure(unsigned Offset) {
 
 namespace {
 bool shouldPrintRegion(const Region &R) {
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
   if (!isFunctionInPrintList(R.getEntry()->getParent()->getName()))
     return false;
 
-  if (isSourceLocFilterEmpty())
+  if (SourceLocFilterEmpty)
     return true;
 
   for (const BasicBlock *BB : R.blocks())
