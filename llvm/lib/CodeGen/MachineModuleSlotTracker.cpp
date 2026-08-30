@@ -58,6 +58,8 @@ void MachineModuleSlotTracker::collectMachineFunctionMetadata(
   for (const MachineFunction::VariableDbgInfo &DebugVar :
        MF.getVariableDbgInfo()) {
     Metadata.push_back(DebugVar.Var);
+    if (DebugLocations)
+      DebugLocations->push_back(DebugVar.Loc);
   }
 }
 
