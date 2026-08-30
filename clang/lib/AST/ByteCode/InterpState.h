@@ -124,7 +124,16 @@ public:
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
-  bool noteStep(CodePtr OpPC);
+  bool noteStep(CodePtr OpPC) {
+    if (InfiniteSteps)
+      return true;
+
+    --StepsLeft;
+    if (LLVM_LIKELY(StepsLeft != 0))
+      return true;
+
+    return diagnoseStepLimitExceeded(OpPC);
+  }
 
   bool initializingBlock(const Block *B) const {
     for (PtrView V : InitializingPtrs)
@@ -171,6 +180,8 @@ private:
   std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Diagnose that we've reached the constexpr step limit.
+  bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
 public:
   CodePtr PC;
