@@ -558,8 +558,8 @@ struct CaptureRefToView {
 CaptureRefToView test_ref_to_view() {
   MyObj obj;
   CaptureRefToView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}} \
-            // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
+  return x;                // expected-note {{returned here}} \
+                           // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
 }
 
 struct CaptureRefToPtr {
@@ -570,8 +570,8 @@ struct CaptureRefToPtr {
 CaptureRefToPtr test_ref_to_ptr() {
   MyObj obj;
   CaptureRefToPtr x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}} \
-            // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
+  return x;               // expected-note {{returned here}} \
+                          // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
 }
 
 struct CaptureViewToView {
@@ -581,7 +581,7 @@ struct CaptureViewToView {
 
 CaptureViewToView test_view_to_view() {
   MyObj obj;
-  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
+  View v(obj);            // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   CaptureViewToView x(v); // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return x; // expected-note {{returned here}}
 }
@@ -594,8 +594,8 @@ struct CapturePtrToPtr {
 CapturePtrToPtr test_ptr_to_ptr() {
   MyObj obj;
   CapturePtrToPtr x(&obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}} \
-            // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
+  return x;                // expected-note {{returned here}} \
+                           // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
 }
 
 struct CaptureRefToRef {
@@ -606,8 +606,8 @@ struct CaptureRefToRef {
 CaptureRefToRef test_ref_to_ref() {
   MyObj obj;
   CaptureRefToRef x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}} \
-            // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
+  return x;               // expected-note {{returned here}} \
+                          // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
 }
 
 struct BaseWithView {
@@ -622,8 +622,8 @@ struct CaptureRefToBaseView : BaseWithView {
 CaptureRefToBaseView test_ref_to_base_view() {
   MyObj obj;
   CaptureRefToBaseView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}} \
-            // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
+  return x;                    // expected-note {{returned here}} \
+                               // expected-note {{local variable 'x' aliases the storage of local variable 'obj'}}
 }
 } // namespace capturing_constructor
 
