@@ -13,8 +13,10 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <array>
 #include <cassert>
@@ -441,14 +443,6 @@ public:
 // Load Rewrite Helpers
 //===----------------------------------------------------------------------===//
 
-static bool hasStaticZeroOffset(memref::ReinterpretCastOp rc) {
-  ArrayRef<int64_t> offsets = rc.getStaticOffsets();
-  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
-  // only a single offset. That should be fixed at the op definition level.
-  assert(offsets.size() == 1 && "Expecting single offset");
-  return !ShapedType::isDynamic(offsets[0]) && offsets[0] == 0;
-}
-
 static std::optional<int64_t> getConstantIndex(Value v) {
   if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
     return cst.value();
@@ -485,10 +479,18 @@ getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
   auto inputTy = cast<MemRefType>(rc.getSource().getType());
   auto outputTy = cast<MemRefType>(rc.getResult().getType());
 
-  // Only zero, statically known offsets are accepted. Non-zero or dynamic
-  // offsets would require reasoning about storage shifts in the underlying
-  // reinterpret_cast, which this helper does not model.
-  if (!hasStaticZeroOffset(rc))
+  // The direct index mapping is valid only when the source and result both
+  // have a statically known zero offset. Other offsets would require reasoning
+  // about storage shifts, which this helper does not model.
+  ArrayRef<int64_t> offsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(offsets.size() == 1 && "Expecting single offset");
+  int64_t inputOffset;
+  SmallVector<int64_t> inputStrides;
+  if (ShapedType::isDynamic(offsets[0]) || offsets[0] != 0 ||
+      failed(inputTy.getStridesAndOffset(inputStrides, inputOffset)) ||
+      ShapedType::isDynamic(inputOffset) || inputOffset != 0)
     return std::nullopt;
 
   // Dynamic sizes/strides prevent precise reasoning about the underlying
@@ -624,6 +626,169 @@ public:
   }
 };
 
+/// Returns true when `rc` is a pure offset-shift reinterpret_cast: source and
+/// result have the same rank, the same element type, the same memory space,
+/// and identical per-rank strides; only the offset (and possibly sizes) differ.
+/// In that form, `load %rc[%idx]` is equivalent to a load on the source at an
+/// adjusted index that absorbs the offset difference.
+///
+/// Restricted to rank-1 sources for now to keep the index transformation
+/// straightforward (innermost stride must equal one). Multi-rank cases can be
+/// added later by linearizing the offset shift across dimensions.
+static bool isPureOffsetShiftRC(memref::ReinterpretCastOp rc) {
+  auto inputTy = dyn_cast<MemRefType>(rc.getSource().getType());
+  auto outputTy = dyn_cast<MemRefType>(rc.getType());
+  if (!inputTy || !outputTy)
+    return false;
+
+  if (inputTy.getRank() != 1 || outputTy.getRank() != 1)
+    return false;
+  if (inputTy.getElementType() != outputTy.getElementType())
+    return false;
+  if (inputTy.getMemorySpace() != outputTy.getMemorySpace())
+    return false;
+
+  int64_t inputOffset, outputOffset;
+  SmallVector<int64_t> inputStrides, outputStrides;
+  if (failed(inputTy.getStridesAndOffset(inputStrides, inputOffset)))
+    return false;
+  if (failed(outputTy.getStridesAndOffset(outputStrides, outputOffset)))
+    return false;
+  if (inputStrides != outputStrides)
+    return false;
+  // Only innermost stride == 1 is supported; otherwise the offset shift
+  // cannot be absorbed into a single index addition.
+  if (inputStrides.back() != 1)
+    return false;
+
+  return true;
+}
+
+/// Returns true if the result of an offset-shift reinterpret_cast is fully
+/// contained in the source memref's logical range. This is required because a
+/// reinterpret_cast is relative to the underlying allocation, while a load
+/// from the source must be in-bounds with respect to the source memref itself.
+///
+/// Dynamic source offsets are not directly available as SSA values, so reject
+/// them. Other dynamic values are accepted only when value-bounds analysis can
+/// prove both ends of the containment relation.
+static bool isOffsetShiftContainedInSource(memref::ReinterpretCastOp rc) {
+  auto inputTy = cast<MemRefType>(rc.getSource().getType());
+
+  int64_t srcOffset;
+  SmallVector<int64_t> srcStrides;
+  if (failed(inputTy.getStridesAndOffset(srcStrides, srcOffset)) ||
+      ShapedType::isDynamic(srcOffset))
+    return false;
+
+  using ComparisonOperator = ValueBoundsConstraintSet::ComparisonOperator;
+  using Variable = ValueBoundsConstraintSet::Variable;
+
+  Variable rcOffset(rc.getMixedOffsets().front());
+  Variable srcOffsetVar(getAsIndexOpFoldResult(rc.getContext(), srcOffset));
+  if (!ValueBoundsConstraintSet::compare(rcOffset, ComparisonOperator::GE,
+                                         srcOffsetVar))
+    return false;
+
+  AffineExpr s0, s1;
+  bindSymbols(rc.getContext(), s0, s1);
+  AffineMap sumMap = AffineMap::get(/*dimCount=*/0, /*symbolCount=*/2, s0 + s1);
+
+  SmallVector<Variable> rcEndOperands{rcOffset,
+                                      Variable(rc.getMixedSizes().front())};
+  Variable rcEnd(sumMap, rcEndOperands);
+  SmallVector<Variable> srcEndOperands{srcOffsetVar,
+                                       Variable(rc.getSource(), 0)};
+  Variable srcEnd(sumMap, srcEndOperands);
+  return ValueBoundsConstraintSet::compare(rcEnd, ComparisonOperator::LE,
+                                           srcEnd);
+}
+
+/// Rewrites `memref.load` through an offset-shift `reinterpret_cast` by
+/// folding the offset difference into the load index on the source memref.
+///
+/// Shape restriction gated by isPureOffsetShiftRC(): rank-1 source and result,
+/// matching element type / memory space / strides, innermost stride == 1. The
+/// result range must also be provably contained in the source memref's logical
+/// range.
+///
+/// BEFORE
+///   %view = memref.reinterpret_cast %src to offset: [%off], sizes: [N],
+///     strides: [1] : memref<?xi8> to memref<Nxi8, strided<[1], offset: ?>>
+///   %v = memref.load %view[%i] : memref<Nxi8, strided<[1], offset: ?>>
+///
+/// AFTER
+///   %adj0 = arith.addi %off, %i : index
+///   %adj = arith.subi %adj0, %srcOff : index
+///   %v = memref.load %src[%adj] : memref<?xi8>
+struct RewriteLoadFromOffsetShiftReinterpretCast
+    : public OpRewritePattern<memref::LoadOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::LoadOp op,
+                                PatternRewriter &rewriter) const override {
+    auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
+    if (!rc)
+      return rewriter.notifyMatchFailure(
+          op, "load source is not a memref.reinterpret_cast");
+    if (!isPureOffsetShiftRC(rc))
+      return rewriter.notifyMatchFailure(
+          op, "reinterpret_cast is not a pure offset shift");
+    if (!isOffsetShiftContainedInSource(rc))
+      return rewriter.notifyMatchFailure(
+          op, "reinterpret_cast is not provably contained in source");
+
+    Location loc = op.getLoc();
+    Value src = rc.getSource();
+    auto inputTy = cast<MemRefType>(src.getType());
+
+    // Dynamic source offsets were rejected by the containment check.
+    int64_t srcStaticOffset;
+    SmallVector<int64_t> srcStaticStrides;
+    [[maybe_unused]] LogicalResult status =
+        inputTy.getStridesAndOffset(srcStaticStrides, srcStaticOffset);
+    assert(succeeded(status) && "isPureOffsetShiftRC ensured a strided layout");
+    assert(!ShapedType::isDynamic(srcStaticOffset) &&
+           "containment check rejected dynamic source offset");
+
+    // shift = rcOffset - srcOffset; newIdx = oldIdx + shift. Fold known
+    // offsets directly and use arith operations for dynamic offsets, avoiding
+    // both dead metadata constants and an Affine dialect dependency.
+    Value oldIdx = op.getIndices().front();
+    Value newIdx = oldIdx;
+    if (std::optional<int64_t> rcStaticOffset =
+            getConstantIntValue(rc.getMixedOffsets().front())) {
+      int64_t shift = *rcStaticOffset - srcStaticOffset;
+      if (shift != 0) {
+        if (std::optional<int64_t> oldStaticIdx = getConstantIndex(oldIdx)) {
+          newIdx = arith::ConstantIndexOp::create(rewriter, loc,
+                                                  *oldStaticIdx + shift);
+        } else {
+          Value shiftValue =
+              arith::ConstantIndexOp::create(rewriter, loc, shift);
+          newIdx = arith::AddIOp::create(rewriter, loc, oldIdx, shiftValue);
+        }
+      }
+    } else {
+      Value rcOffset = getValueOrCreateConstantIndexOp(
+          rewriter, loc, rc.getMixedOffsets().front());
+      newIdx = arith::AddIOp::create(rewriter, loc, oldIdx, rcOffset);
+      if (srcStaticOffset != 0) {
+        Value srcOffset =
+            arith::ConstantIndexOp::create(rewriter, loc, srcStaticOffset);
+        newIdx = arith::SubIOp::create(rewriter, loc, newIdx, srcOffset);
+      }
+    }
+
+    // If the reinterpret_cast was only used by this load, drop it.
+    if (rc.getResult().hasOneUse())
+      rewriter.eraseOp(rc);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, src, ValueRange{newIdx});
+    return success();
+  }
+};
+
 struct ElideReinterpretCastPass
     : public memref::impl::ElideReinterpretCastPassBase<
           ElideReinterpretCastPass> {
@@ -647,7 +812,8 @@ struct ElideReinterpretCastPass
       auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
       if (!rc)
         return true;
-      return !getNonUnitDimMapping(rc);
+      return !getNonUnitDimMapping(rc) &&
+             !(isPureOffsetShiftRC(rc) && isOffsetShiftContainedInSource(rc));
     });
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect>();
@@ -661,6 +827,7 @@ struct ElideReinterpretCastPass
 
 void mlir::memref::populateElideReinterpretCastPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CopyToLoadAndStore, RewriteLoadFromReinterpretCast>(
+  patterns.add<CopyToLoadAndStore, RewriteLoadFromReinterpretCast,
+               RewriteLoadFromOffsetShiftReinterpretCast>(
       patterns.getContext());
 }
