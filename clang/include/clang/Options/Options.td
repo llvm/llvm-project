@@ -1021,6 +1021,15 @@ def _ssaf_global_scope_analysis_result :
     "consumed by the source transformation. The extension selects which file "
     "format to use.">,
   MarshallingInfoString<SSAFOpts<"GlobalScopeAnalysisResult">>;
+def _ssaf_link_unit_id :
+  Joined<["--"], "ssaf-link-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier of the link unit that this compilation unit was "
+    "linked into.">,
+  MarshallingInfoString<SSAFOpts<"LinkUnitId">>;
 def _ssaf_src_edit_file :
   Joined<["--"], "ssaf-src-edit-file=">,
   MetaVarName<"<path>">,
@@ -2212,6 +2221,12 @@ defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
+def fretain_comments : Flag<["-"], "fretain-comments">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Retain documentation comments in the AST even when no diagnostic or "
+           "language option would otherwise require them (e.g. for tools that "
+           "query comments after parsing)">,
+  MarshallingInfoFlag<LangOpts<"CommentOpts.RetainComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
   DocBrief<[{Generate a section named ".GCC.command.line" containing the
 driver command-line. After linking, the section may contain multiple command
@@ -3933,7 +3948,7 @@ defm implicit_modules : BoolFOption<"implicit-modules",
           [NoXarchOption], [ClangOption, CLOption]>>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
+  MarshallingInfoFlag<LangOpts<"CommentOpts.RetainCommentsFromSystemHeaders">>;
 def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Build a C++20 Header Unit from a header">;

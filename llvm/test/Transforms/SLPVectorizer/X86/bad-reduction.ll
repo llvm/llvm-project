@@ -529,12 +529,15 @@ define void @PR39538(ptr %t0, ptr %t1) {
 
 define void @load_combine_constant_expression(ptr %t1) {
 ; CHECK-LABEL: @load_combine_constant_expression(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> <i32 ptrtoint (ptr @g1 to i32), i32 ptrtoint (ptr @g2 to i32)> to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[TMP2]], splat (i64 32)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i64> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[T1:%.*]], align 4
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i32 ptrtoint (ptr @g1 to i32) to i64
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i32 ptrtoint (ptr @g2 to i32) to i64
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i64 [[EXT1]], 32
+; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[SHL1]], [[EXT2]]
+; CHECK-NEXT:    store i64 [[OR1]], ptr [[T1:%.*]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr i64, ptr [[T1]], i64 1
+; CHECK-NEXT:    [[SHL2:%.*]] = shl i64 [[EXT1]], 32
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[SHL2]], [[EXT2]]
+; CHECK-NEXT:    store i64 [[OR2]], ptr [[T3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ext1 = zext i32 ptrtoint (ptr @g1 to i32) to i64
