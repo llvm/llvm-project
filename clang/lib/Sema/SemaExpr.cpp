@@ -11950,8 +11950,8 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (!rpointee->isVoidType() && !rpointee->isFunctionType() &&
           isProvablyZeroSize(Context, rpointee))
         Diag(Loc, diag::warn_sub_ptr_zero_size_types)
-            << rpointee.getUnqualifiedType()
-            << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+            << rpointee.getUnqualifiedType() << LHS.get()->getSourceRange()
+            << RHS.get()->getSourceRange();
 
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
       return Context.getPointerDiffType();
