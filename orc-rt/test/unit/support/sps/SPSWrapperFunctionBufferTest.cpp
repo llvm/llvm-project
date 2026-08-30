@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/SPSWrapperFunctionBuffer.h"
+#include "orc-rt/support/sps/SPSWrapperFunctionBuffer.h"
 
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"

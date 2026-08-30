@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SPSWRAPPERFUNCTION_H
-#define ORC_RT_SUPPORT_SPSWRAPPERFUNCTION_H
+#ifndef ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTION_H
+#define ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTION_H
 
 #include "orc-rt/support/Compiler.h"
-#include "orc-rt/support/SimplePackedSerialization.h"
 #include "orc-rt/support/WrapperFunction.h"
+#include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #define ORC_RT_SPS_WRAPPER(Name, SPSSig, Handle)                               \
   static void Name(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes, \
@@ -150,4 +150,4 @@ template <typename SPSSig> struct SPSWrapperFunction {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SPSWRAPPERFUNCTION_H
+#endif // ORC_RT_SUPPORT_SPS_SPSWRAPPERFUNCTION_H

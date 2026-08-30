@@ -31,8 +31,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SUPPORT_SIMPLEPACKEDSERIALIZATION_H
-#define ORC_RT_SUPPORT_SIMPLEPACKEDSERIALIZATION_H
+#ifndef ORC_RT_SUPPORT_SPS_SIMPLEPACKEDSERIALIZATION_H
+#define ORC_RT_SUPPORT_SPS_SIMPLEPACKEDSERIALIZATION_H
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/ExecutorAddress.h"
@@ -823,4 +823,4 @@ public:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SUPPORT_SIMPLEPACKEDSERIALIZATION_H
+#endif // ORC_RT_SUPPORT_SPS_SIMPLEPACKEDSERIALIZATION_H
