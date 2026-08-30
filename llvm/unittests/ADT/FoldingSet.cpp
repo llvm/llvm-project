@@ -130,6 +130,23 @@ TEST(FoldingSetTest, RemoveNodeThatIsAbsent) {
   EXPECT_EQ(0U, Trivial.size());
 }
 
+TEST(FoldingSetTest, TypedApi) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T(99, 42), TCopy(99, 42);
+  FoldingSetNodeID ID;
+  T.Profile(ID);
+
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Set.lookup(ID, Token));
+  ASSERT_TRUE(Token);
+  Set.insert(&T, Token);
+  EXPECT_EQ(&T, Set.lookup(ID, Token));
+  EXPECT_FALSE(Token);
+  EXPECT_EQ(&T, Set.getOrInsert(&TCopy));
+  EXPECT_TRUE(Set.erase(&T));
+  EXPECT_FALSE(Set.erase(&T));
+}
+
 TEST(FoldingSetTest, GetOrInsertInserting) {
   FoldingSet<TrivialPair> Trivial;
 
@@ -197,7 +214,7 @@ TEST(FoldingSetTest, Reserve) {
     std::vector<std::unique_ptr<TrivialPair>> Nodes;
     for (unsigned I = 0; I != Size; ++I) {
       Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-      Set.InsertNode(Nodes.back().get());
+      Set.insert(Nodes.back().get());
     }
     ASSERT_EQ(Size, Set.size());
 
@@ -299,20 +316,20 @@ TEST(FoldingSetTest, FoldingSetVectorBasic) {
   TrivialPair T2(20, 200);
   TrivialPair T3(30, 300);
 
-  EXPECT_EQ(&T1, Vec.GetOrInsertNode(&T1));
-  EXPECT_EQ(&T1, Vec.GetOrInsertNode(&T1Copy));
+  EXPECT_EQ(&T1, Vec.getOrInsert(&T1));
+  EXPECT_EQ(&T1, Vec.getOrInsert(&T1Copy));
   EXPECT_THAT(Vec, SizeIs(1));
 
   // Insert a new node using an insertion token.
   FoldingSetNodeID ID2;
   T2.Profile(ID2);
-  void *InsertPos = nullptr;
-  EXPECT_EQ(nullptr, Vec.FindNodeOrInsertPos(ID2, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
-  Vec.InsertNode(&T2, InsertPos);
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Vec.lookup(ID2, Token));
+  ASSERT_TRUE(Token);
+  Vec.insert(&T2, Token);
   EXPECT_THAT(Vec, SizeIs(2));
 
-  Vec.InsertNode(&T3);
+  EXPECT_EQ(&T3, Vec.getOrInsert(&T3));
   EXPECT_THAT(Vec, SizeIs(3));
   EXPECT_THAT(Vec, testing::Not(IsEmpty()));
 
@@ -354,26 +371,26 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   ContextualPair T1Copy(10, 100);
   ContextualPair T2(20, 200);
 
-  EXPECT_EQ(&T1, Set.GetOrInsertNode(&T1));
-  EXPECT_EQ(&T1, Set.GetOrInsertNode(&T1Copy));
+  EXPECT_EQ(&T1, Set.getOrInsert(&T1));
+  EXPECT_EQ(&T1, Set.getOrInsert(&T1Copy));
   EXPECT_THAT(Set, SizeIs(1));
 
   // Insert a new node using an insertion token.
-  void *InsertPos = nullptr;
+  FoldingSetInsertToken Token;
   FoldingSetNodeID ID2;
   T2.Profile(ID2, ContextVal);
-  EXPECT_EQ(nullptr, Set.FindNodeOrInsertPos(ID2, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
-  Set.InsertNode(&T2, InsertPos);
+  EXPECT_EQ(nullptr, Set.lookup(ID2, Token));
+  ASSERT_TRUE(Token);
+  Set.insert(&T2, Token);
   EXPECT_THAT(Set, SizeIs(2));
 
-  EXPECT_EQ(&T2, Set.FindNodeOrInsertPos(ID2, InsertPos));
+  EXPECT_EQ(&T2, Set.lookup(ID2, Token));
 
   EXPECT_THAT(Set, UnorderedElementsAre(T1, T2));
 
-  EXPECT_TRUE(Set.RemoveNode(&T1));
+  EXPECT_TRUE(Set.erase(&T1));
   EXPECT_THAT(Set, SizeIs(1));
-  EXPECT_FALSE(Set.RemoveNode(&T1));
+  EXPECT_FALSE(Set.erase(&T1));
 
   EXPECT_THAT(Set, UnorderedElementsAre(T2));
 
@@ -510,27 +527,27 @@ TEST(FoldingSetTest, InsertInvalidatesIteratorComparison) {
 }
 #endif
 
-// The InsertPos token is a hash, not a position, so a rehash cannot stale it.
-TEST(FoldingSetTest, InsertPosSurvivesGrowth) {
+// The insert token is a hash, not a position, so a rehash cannot stale it.
+TEST(FoldingSetTest, TokenSurvivesGrowth) {
   FoldingSet<TrivialPair> Set;
   TrivialPair Late(9999, 9999);
 
   FoldingSetNodeID ID;
   Late.Profile(ID);
-  void *InsertPos = nullptr;
-  ASSERT_EQ(nullptr, Set.FindNodeOrInsertPos(ID, InsertPos));
-  ASSERT_NE(nullptr, InsertPos);
+  FoldingSetInsertToken Token;
+  ASSERT_EQ(nullptr, Set.lookup(ID, Token));
+  ASSERT_TRUE(Token);
 
   // Force several rehashes while the token is held.
   std::vector<std::unique_ptr<TrivialPair>> Nodes;
   for (unsigned I = 0; I != 200; ++I) {
     Nodes.push_back(std::make_unique<TrivialPair>(I, I));
-    Set.InsertNode(Nodes.back().get());
+    Set.insert(Nodes.back().get());
   }
 
-  Set.InsertNode(&Late, InsertPos);
-  void *Unused = nullptr;
-  EXPECT_EQ(&Late, Set.FindNodeOrInsertPos(ID, Unused));
+  Set.insert(&Late, Token);
+  EXPECT_EQ(&Late, Set.lookup(ID, Token));
+  EXPECT_FALSE(Token);
   EXPECT_EQ(201u, Set.size());
 }
 
