@@ -69,11 +69,6 @@ public:
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
-  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
-  SourceLocation getLocation(CodePtr PC) const {
-    return getSource(PC).getLoc();
-  }
-  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   Context &getContext() const { return Ctx; }
 
