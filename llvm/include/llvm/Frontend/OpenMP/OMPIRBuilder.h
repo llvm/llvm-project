@@ -3283,6 +3283,13 @@ public:
   /// \param HintInst Hint Instruction for hint clause associated with critical
   ///
   /// \returns The insertion position *after* the critical.
+  /// Emit a critical region once per thread of the block on a target device, so
+  /// only one lane of a wavefront is inside it at a time.
+  InsertPointOrErrorTy emitDeviceSerializedCritical(Instruction *EntryCall,
+                                                    Instruction *ExitCall,
+                                                    BodyGenCallbackTy BodyGenCB,
+                                                    FinalizeCallbackTy FiniCB);
+
   LLVM_ABI InsertPointOrErrorTy createCritical(const LocationDescription &Loc,
                                                BodyGenCallbackTy BodyGenCB,
                                                FinalizeCallbackTy FiniCB,

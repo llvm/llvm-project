@@ -8087,8 +8087,95 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createCritical(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_critical);
   Instruction *ExitCall = createRuntimeFunctionCall(ExitRTLFn, Args);
 
+  // On a GPU the runtime lock is acquired by a single lane of a wavefront, so
+  // every other lane would enter the region unsynchronized. Give each thread of
+  // the block its own turn, as clang does in
+  // CGOpenMPRuntimeGPU::emitCriticalRegion, and let the lock serialize the
+  // wavefronts against each other.
+  if (Config.IsGPU.value_or(false))
+    return emitDeviceSerializedCritical(EntryCall, ExitCall, BodyGenCB, FiniCB);
+
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
                               /*Conditional*/ false, /*hasFinalize*/ true);
+}
+
+/// Emit the critical region once per thread of the block, so only one lane of a
+/// wavefront is inside it at a time:
+///
+///   mask = __kmpc_warp_active_thread_mask();
+///   for (i = 0; i < __kmpc_get_hardware_num_threads_in_block(); ++i) {
+///     if (__kmpc_get_hardware_thread_id_in_block() == i)
+///       <critical region>
+///     __kmpc_syncwarp(mask);
+///   }
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::emitDeviceSerializedCritical(Instruction *EntryCall,
+                                              Instruction *ExitCall,
+                                              BodyGenCallbackTy BodyGenCB,
+                                              FinalizeCallbackTy FiniCB) {
+  Function *CurFn = Builder.GetInsertBlock()->getParent();
+  LLVMContext &Ctx = CurFn->getContext();
+  Type *I32 = Type::getInt32Ty(Ctx);
+
+  // The mask must describe the lanes that are active here; an all-ones mask
+  // makes the reconvergence wait on lanes that are not present.
+  Value *Mask = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_warp_active_thread_mask), {});
+  Value *TId = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(
+          OMPRTL___kmpc_get_hardware_thread_id_in_block),
+      {});
+  Value *NumThreads = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(
+          OMPRTL___kmpc_get_hardware_num_threads_in_block),
+      {});
+
+  // The insertion block has no terminator yet, so use the OMPIRBuilder
+  // splitter rather than BasicBlock::splitBasicBlock.
+  BasicBlock *ExitBB =
+      splitBB(Builder, /*CreateBranch=*/false, "omp.critical.serial.exit");
+  BasicBlock *EntryBB = Builder.GetInsertBlock();
+  BasicBlock *HeaderBB =
+      BasicBlock::Create(Ctx, "omp.critical.serial.header", CurFn, ExitBB);
+  BasicBlock *TurnBB =
+      BasicBlock::Create(Ctx, "omp.critical.serial.turn", CurFn, ExitBB);
+  BasicBlock *RegionBB =
+      BasicBlock::Create(Ctx, "omp.critical.serial.region", CurFn, ExitBB);
+  BasicBlock *SyncBB =
+      BasicBlock::Create(Ctx, "omp.critical.serial.sync", CurFn, ExitBB);
+
+  Builder.SetInsertPoint(EntryBB);
+  Builder.CreateBr(HeaderBB);
+
+  Builder.SetInsertPoint(HeaderBB);
+  PHINode *Turn = Builder.CreatePHI(I32, 2, "omp.critical.turn");
+  Turn->addIncoming(ConstantInt::get(I32, 0), EntryBB);
+  Builder.CreateCondBr(Builder.CreateICmpSLT(Turn, NumThreads), TurnBB, ExitBB);
+
+  Builder.SetInsertPoint(TurnBB);
+  Builder.CreateCondBr(Builder.CreateICmpEQ(TId, Turn), RegionBB, SyncBB);
+
+  Builder.SetInsertPoint(RegionBB);
+  Builder.CreateBr(SyncBB);
+  Builder.SetInsertPoint(RegionBB->getTerminator());
+  // EmitOMPInlinedRegion only relocates the exit call; the entry call stays
+  // where it was built, which is before the loop.
+  EntryCall->moveBefore(*RegionBB, RegionBB->getTerminator()->getIterator());
+  InsertPointOrErrorTy AfterIP = EmitOMPInlinedRegion(
+      Directive::OMPD_critical, EntryCall, ExitCall, BodyGenCB, FiniCB,
+      /*Conditional*/ false, /*hasFinalize*/ true);
+  if (!AfterIP)
+    return AfterIP.takeError();
+
+  Builder.SetInsertPoint(SyncBB);
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_syncwarp), {Mask});
+  Value *Next = Builder.CreateAdd(Turn, ConstantInt::get(I32, 1));
+  Turn->addIncoming(Next, SyncBB);
+  Builder.CreateBr(HeaderBB);
+
+  Builder.SetInsertPoint(ExitBB, ExitBB->getFirstInsertionPt());
+  return Builder.saveIP();
 }
 
 OpenMPIRBuilder::InsertPointTy
