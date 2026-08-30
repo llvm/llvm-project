@@ -996,6 +996,38 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
     return Known;
   }
 
+  // Given that exp is an integer, here are the
+  // ways that powi can return a negative value:
+  //
+  //   powi(x, exp)    --> negative if exp is odd and x is negative.
+  //   powi(-0, exp)   --> -inf if exp is negative odd.
+  //   powi(-0, exp)   --> -0 if exp is positive odd.
+  //   powi(-inf, exp) --> -0 if exp is negative odd.
+  //   powi(-inf, exp) --> -inf if exp is positive odd.
+  if (KnownSrc.isKnownNever(fcNegative) || ExponentKnownBits.isEven()) {
+    Known.knownNot(fcNegative);
+  } else if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal)) {
+    Known.knownNot(fcNegNormal | fcNegSubnormal);
+    // See if we can also rule out -0.0 or -inf.
+    // Here at least one of -0.0 or -inf is a possible base.
+
+    // We already know that ExponentKnownBits.isEven() is false here.
+    const bool IsKnownNeverOddPositive = ExponentKnownBits.isNegative();
+    const bool IsKnownNeverOddNegative = ExponentKnownBits.isNonNegative();
+
+    // powi(-0.0, odd-positive) = -0.0
+    // powi(-inf, odd-negative) = -0.0
+    if ((KnownSrc.isKnownNever(fcNegZero) || IsKnownNeverOddPositive) &&
+        (KnownSrc.isKnownNever(fcNegInf) || IsKnownNeverOddNegative))
+      Known.knownNot(fcNegZero);
+
+    // powi(-0.0, odd-negative) = -inf
+    // powi(-inf, odd-positive) = -inf
+    if ((KnownSrc.isKnownNever(fcNegZero) || IsKnownNeverOddNegative) &&
+        (KnownSrc.isKnownNever(fcNegInf) || IsKnownNeverOddPositive))
+      Known.knownNot(fcNegInf);
+  }
+
   // powi(x, exp) --> inf
   // when:
   //   * powi(inf, exp), exp > 0
@@ -1030,22 +1062,6 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
     if (!MayInfSrc && !MayDivByZero && !MayFiniteOverflow && !MaySubnormInv)
       Known.knownNot(fcInf);
   }
-
-  if (ExponentKnownBits.isEven()) {
-    Known.knownNot(fcNegative);
-    return Known;
-  }
-
-  // Given that exp is an integer, here are the
-  // ways that pow can return a negative value:
-  //
-  //   pow(-x, exp)   --> negative if exp is odd and x is negative.
-  //   pow(-0, exp)   --> -inf if exp is negative odd.
-  //   pow(-0, exp)   --> -0 if exp is positive odd.
-  //   pow(-inf, exp) --> -0 if exp is negative odd.
-  //   pow(-inf, exp) --> -inf if exp is positive odd.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
 
   return Known;
 }
