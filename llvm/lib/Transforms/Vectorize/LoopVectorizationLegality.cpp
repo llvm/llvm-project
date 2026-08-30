@@ -253,6 +253,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Force = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
         Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.fp_reordering.enable")
+        FPReordering = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.fp_reordering.disable")
+        FPReordering = FK_Disabled;
       else if (Name == "llvm.loop.vectorize.predicate.enable")
         Predicate = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.predicate.disable")
@@ -277,8 +281,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  // Force, Predicate, and Scalable are omitted: they are only spelled as
-  // single-operand enable/disable nodes, which never reach setHint().
+  // Force, Predicate, Scalable and FPReordering are omitted: they are only
+  // spelled as single-operand enable/disable nodes, which never reach
+  // setHint().
   Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
@@ -289,9 +294,6 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
       break;
     }
   }
-
-  if (Name == "vectorize.fp_reordering")
-    FPReordering = (Val != 0) ? FK_Enabled : FK_Disabled;
 }
 
 static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
