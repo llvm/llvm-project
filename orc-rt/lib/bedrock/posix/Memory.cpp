@@ -14,9 +14,9 @@
 #include "orc-rt-internal/support/sys/Memory.h"
 
 #include "orc-rt-internal/support/sys/CacheControl.h"
+#include "orc-rt-internal/support/sys/Errno.h"
 
 #include <errno.h>
-#include <string.h>
 #include <sys/mman.h>
 
 namespace orc_rt::sys {
@@ -53,7 +53,7 @@ Expected<void *> reserveMemory(size_t Size) {
   if (Addr == MAP_FAILED) {
     auto ErrNum = errno;
     return make_error<StringError>(
-        std::string("mmap for memory reserve failed: ") + strerror(ErrNum));
+        std::string("mmap for memory reserve failed: ") + strError(ErrNum));
   }
 
   return Addr;
@@ -63,7 +63,7 @@ Error releaseMemory(void *Base, size_t Size) {
   if (munmap(Base, Size) != 0) {
     auto ErrNum = errno;
     return make_error<StringError>(
-        std::string("munmap for memory release failed: ") + strerror(ErrNum));
+        std::string("munmap for memory release failed: ") + strError(ErrNum));
   }
   return Error::success();
 }
@@ -73,7 +73,7 @@ Error protectMemory(void *Base, size_t Size, MemProt MP) {
     auto ErrNum = errno;
     return make_error<StringError>(
         std::string("mprotect for memory finalize failed: ") +
-        strerror(ErrNum));
+        strError(ErrNum));
   }
 
   if ((MP & MemProt::Exec) != MemProt::None)
