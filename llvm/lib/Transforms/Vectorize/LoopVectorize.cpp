@@ -67,7 +67,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -151,7 +150,6 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>

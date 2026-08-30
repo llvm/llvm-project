@@ -26,7 +26,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include <iterator>
 #include <optional>
 
 using namespace llvm;

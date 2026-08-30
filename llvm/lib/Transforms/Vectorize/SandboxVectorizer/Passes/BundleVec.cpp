@@ -15,7 +15,6 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
