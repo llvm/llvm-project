@@ -42,8 +42,8 @@ public:
   /// Controlled by: --ssaf-global-scope-analysis-result
   std::string GlobalScopeAnalysisResult;
 
-  /// Stable identifier used as the name of the `LinkUnit` `BuildNamespace` of
-  /// every produced link unit. Controlled by: --ssaf-link-unit-id
+  /// Stable identifier of the link unit that this compilation unit was
+  /// linked into. Controlled by: --ssaf-link-unit-id
   std::string LinkUnitId;
 
   /// Path of the source-edit output file produced by the source

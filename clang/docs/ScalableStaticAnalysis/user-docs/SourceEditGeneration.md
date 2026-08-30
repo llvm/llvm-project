@@ -16,8 +16,8 @@ Five options control the pipeline; they are all both `--ssaf-…` driver
 options and `cc1` options. The compilation-unit identifier is shared
 with the summary extraction step. A given compilation unit needs to
 receive the same identifier for both summary extraction and source
-edit generation. The link-unit identifier must match the namespace
-name the compilation unit's `WPASuite` result was linked into.
+edit generation. The link-unit identifier must match the identifier
+of the link unit that this compilation unit was linked into.
 
 ```{eval-rst}
 .. list-table::

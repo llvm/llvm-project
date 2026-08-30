@@ -1027,8 +1027,8 @@ def _ssaf_link_unit_id :
   Group<SSAF_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<
-    "Stable identifier used as the LinkUnit namespace name of every "
-    "produced SSAF link unit.">,
+    "Stable identifier of the link unit that this compilation unit was "
+    "linked into.">,
   MarshallingInfoString<SSAFOpts<"LinkUnitId">>;
 def _ssaf_src_edit_file :
   Joined<["--"], "ssaf-src-edit-file=">,
