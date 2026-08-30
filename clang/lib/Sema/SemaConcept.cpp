@@ -1371,10 +1371,8 @@ bool Sema::CheckConstraintSatisfaction(
 
   // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
-  // We cannot use Token here because CheckConstraintSatisfaction might have
-  // invalidated it.
   // Note that entries of SatisfactionCache are deleted in Sema's destructor.
-  SatisfactionCache.InsertNode(Satisfaction.release());
+  SatisfactionCache.insert(Satisfaction.release());
   return false;
 }
 

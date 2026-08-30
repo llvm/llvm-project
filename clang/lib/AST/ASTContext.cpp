@@ -10634,9 +10634,8 @@ TemplateName ASTContext::getPackIndexingTemplateName(
   PackIndexingTemplateStorage::Profile(ID, Self, Pattern, IndexExpr,
                                        FullySubstituted, Expansions);
 
-  void *InsertPos = nullptr;
-  PackIndexingTemplateStorage *PI =
-      PackIndexingTemplates.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken Token;
+  PackIndexingTemplateStorage *PI = PackIndexingTemplates.lookup(ID, Token);
   if (!PI) {
     void *Mem =
         Allocate(PackIndexingTemplateStorage::totalSizeToAlloc<TemplateName>(
@@ -10644,7 +10643,7 @@ TemplateName ASTContext::getPackIndexingTemplateName(
                  alignof(PackIndexingTemplateStorage));
     PI = new (Mem) PackIndexingTemplateStorage(Pattern, IndexExpr,
                                                FullySubstituted, Expansions);
-    PackIndexingTemplates.InsertNode(PI, InsertPos);
+    PackIndexingTemplates.insert(PI, Token);
   }
   return TemplateName(PI);
 }
