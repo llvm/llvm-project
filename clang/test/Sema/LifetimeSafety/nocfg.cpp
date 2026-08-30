@@ -611,10 +611,10 @@ struct FooView {
 };
 FooView test3(int i, std::optional<Foo> a) {
   if (i)
-    return *a; // expected-warning {{address of stack memory}} \
-               // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
-               // cfg-note {{expression aliases the storage of parameter 'a'}} \
-               // cfg-note {{returned here}}
+    return *a;      // expected-warning {{address of stack memory}} \
+                    // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
+                    // cfg-note {{expression aliases the storage of parameter 'a'}} \
+                    // cfg-note {{returned here}}
   return a.value(); // expected-warning {{address of stack memory}} \
                     // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
                     // cfg-note {{result of call to 'value' aliases the storage of parameter 'a'}} \
@@ -830,9 +830,9 @@ std::vector<int*> test8(StatusOr<std::vector<int*>> aa) {
 
 // Pointer<Pointer> from Owner<Owner<Pointer>>
 Span<int*> test9(StatusOr<std::vector<int*>> aa) {
-  return aa.valueLB(); // expected-warning {{address of stack memory associated}} \
-                       // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}} \
-                       // cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa'}}
+  return aa.valueLB();   // expected-warning {{address of stack memory associated}} \
+                         // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}} \
+                         // cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa'}}
   return aa.valueNoLB(); // OK.
 }
 
@@ -840,9 +840,9 @@ Span<int*> test9(StatusOr<std::vector<int*>> aa) {
 
 // Pointer<Owner>> from Owner<Owner>
 Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
-  return aa.valueLB(); // expected-warning {{address of stack memory}} \
-                       // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}} \
-                       // cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa'}}
+  return aa.valueLB();   // expected-warning {{address of stack memory}} \
+                         // cfg-warning {{stack memory associated with parameter 'aa' is returned}} cfg-note {{returned here}} \
+                         // cfg-note {{result of call to 'valueLB' aliases the storage of parameter 'aa'}}
   return aa.valueNoLB(); // OK.
 }
 
@@ -895,13 +895,13 @@ std::string_view test1_1() {
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                             // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is lifetimebound}}
   use(t1);                                  // cfg-note {{later used here}}
-  t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                           // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                           // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is lifetimebound}}
-  use(t1);                 // cfg-note {{later used here}}
-  return Ref(std::string()); // expected-warning {{returning address}} \
-                             // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}} \
-                             // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
+  t1 = Ref(std::string());                  // expected-warning {{object backing}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is lifetimebound}}
+  use(t1);                                  // cfg-note {{later used here}}
+  return Ref(std::string());                // expected-warning {{returning address}} \
+                                            // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}} \
+                                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
 }
 
 std::string_view test1_2() {
@@ -950,13 +950,13 @@ std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
                                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
   use(t1);                                        // cfg-note {{later used here}}
-  t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                 // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                 // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
-  use(t1);                       // cfg-note {{later used here}}
-  return r1.get(); // expected-warning {{address of stack}} \
-                   // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}} \
-                   // cfg-note {{result of call to 'get' aliases the storage of parameter 'r1'}}
+  t1 = Foo<std::string>().get();                  // expected-warning {{object backing}} \
+                                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is lifetimebound}}
+  use(t1);                                        // cfg-note {{later used here}}
+  return r1.get();                                // expected-warning {{address of stack}} \
+                                                  // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}} \
+                                                  // cfg-note {{result of call to 'get' aliases the storage of parameter 'r1'}}
 }
 std::string_view test2_2(Foo<std::string> r1, Foo<std::string_view> r2) {
   std::string_view t2 = Foo<std::string_view>().get();
@@ -1025,8 +1025,8 @@ namespace range_based_for_loop_variables {
 std::string_view test_view_loop_var(std::vector<std::string> strings) {
   for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} \
                                         // cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
-    return s; // cfg-note {{returned here}} \
-              // cfg-note {{local variable 's' aliases the storage of parameter 'strings'}}
+    return s;                           // cfg-note {{returned here}} \
+                                        // cfg-note {{local variable 's' aliases the storage of parameter 'strings'}}
   }
   return "";
 }
@@ -1034,8 +1034,8 @@ std::string_view test_view_loop_var(std::vector<std::string> strings) {
 const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
   for (std::string_view s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} \
                                         // cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
-    return s.data(); // cfg-note {{returned here}} \
-                     // cfg-note {{local variable 's' aliases the storage of parameter 'strings'}}
+    return s.data();                    // cfg-note {{returned here}} \
+                                        // cfg-note {{local variable 's' aliases the storage of parameter 'strings'}}
   }
   return "";
 }
@@ -1050,8 +1050,8 @@ std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
 std::string_view test_string_ref_var(std::vector<std::string> strings) {
   for (const std::string& s : strings) {  // cfg-warning {{stack memory associated with parameter 'strings' is returned}} \
                                           // cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings'}}
-    return s; // cfg-note {{returned here}} \
-              // cfg-note {{expression aliases the storage of parameter 'strings'}}
+    return s;                             // cfg-note {{returned here}} \
+                                          // cfg-note {{expression aliases the storage of parameter 'strings'}}
   }
   return "";
 }
@@ -1060,8 +1060,8 @@ std::string_view test_opt_strings(std::optional<std::vector<std::string>> string
   for (const std::string& s : *strings_or) {  // cfg-warning {{stack memory associated with parameter 'strings_or' is returned}} \
                                               // cfg-note {{expression aliases the storage of parameter 'strings_or'}} \
                                               // cfg-note {{result of call to 'begin' aliases the storage of parameter 'strings_or'}}
-    return s; // cfg-note {{returned here}} \
-              // cfg-note {{expression aliases the storage of parameter 'strings_or'}}
+    return s;                                 // cfg-note {{returned here}} \
+                                              // cfg-note {{expression aliases the storage of parameter 'strings_or'}}
   }
   return "";
 }
