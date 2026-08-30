@@ -336,11 +336,10 @@ public:
   }
 
   bool operator==(const SmallPtrSetIterator &RHS) const {
-    assert(isComparableWith(RHS) && "incomparable iterators!");
     return Bucket == RHS.Bucket;
   }
   bool operator!=(const SmallPtrSetIterator &RHS) const {
-    return !(*this == RHS);
+    return Bucket != RHS.Bucket;
   }
 };
 
