@@ -46,8 +46,10 @@ constexpr bool test() {
         3);
 
     assert(chunked.begin() == chunked.begin());
+    assert(chunked.begin() != chunked.end());
     assert(chunked.begin() + 1 == chunked.end() - 3);
     assert(chunked.begin() + 4 == chunked.end());
+    assert(chunked.begin() != std::default_sentinel);
     assert(chunked.end() == std::default_sentinel);
   }
 
