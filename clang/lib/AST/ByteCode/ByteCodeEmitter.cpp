@@ -89,11 +89,11 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   Func->setIsFullyCompiled(true);
 }
 
-Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
+Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
   NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
-  return {Location, D};
+  return {D, Location};
 }
 
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
