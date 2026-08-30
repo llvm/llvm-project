@@ -75,7 +75,10 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     return LLT::scalar(SizeInBits);
   }
 
-  if (Ty.isTokenTy())
+  // Only unsized token-like target extension types have no machine
+  // representation. Sized target extension types must not lose layout
+  // information by being represented as `token`.
+  if (!Ty.isSized() && Ty.isTokenLikeTy())
     return LLT::token();
 
   return LLT();
