@@ -1105,6 +1105,51 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         break;
       }
 
+      case Intrinsic::pext: {
+        RHSKnown = computeKnownBits(I->getOperand(1), I, Depth + 1);
+        unsigned N = DemandedMask.getActiveBits();
+        APInt DemandedMaskRHS(BitWidth, 0);
+        // pext result bits depend on the mask prefix through their rank.
+        for (unsigned Bit = 0; Bit != BitWidth && N != 0; ++Bit) {
+          DemandedMaskRHS.setBit(Bit);
+          if (RHSKnown.One[Bit])
+            --N;
+        }
+        if (ShrinkDemandedConstant(I, 1, DemandedMaskRHS) ||
+            SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q, Depth + 1))
+          return I;
+
+        Value *X;
+        if (match(I->getOperand(0),
+                  m_c_And(m_Value(X), m_Specific(I->getOperand(1))))) {
+          replaceOperand(*I, 0, X);
+          return I;
+        }
+
+        APInt DemandedMaskLHS(BitWidth, 0);
+        unsigned M0 = 0, M1 = 0;
+        for (unsigned I = 0; I != BitWidth; ++I) {
+          if (!RHSKnown.Zero[I]) {
+            APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+            if (DemandedMask.intersects(Range))
+              DemandedMaskLHS.setBit(I);
+          }
+
+          if (RHSKnown.One[I])
+            ++M0, ++M1;
+          else if (!RHSKnown.Zero[I])
+            ++M1;
+        }
+
+        if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Q, Depth + 1))
+          return I;
+
+        Known = KnownBits::pext(LHSKnown, RHSKnown);
+        KnownBitsComputed = true;
+
+        break;
+      }
+
       case Intrinsic::fshr:
       case Intrinsic::fshl: {
         const APInt *SA;
