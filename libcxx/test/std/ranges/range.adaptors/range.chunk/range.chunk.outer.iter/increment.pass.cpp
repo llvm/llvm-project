@@ -23,19 +23,16 @@
 
 #include "test_iterators.h"
 
+template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
 
   // Test `constexpr outer_iterator& operator++();`
   {
-    std::ranges::chunk_view<
-        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-        chunked =
-            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                cpp17_input_iterator<int*>(vector.data()),
-                sentinel_wrapper<cpp17_input_iterator<int*>>(
-                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
-            std::views::chunk(2);
+    std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked =
+      std::ranges::subrange<Iterator, Sentinel>(
+        Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))) |
+        std::views::chunk(2);
 
     /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
     assert(std::ranges::equal(*++it, std::vector{3, 4}));
@@ -43,14 +40,10 @@ constexpr bool test() {
 
   // Test `constexpr void operator++(int);`
   {
-    std::ranges::chunk_view<
-        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-        chunked =
-            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                cpp17_input_iterator<int*>(vector.data()),
-                sentinel_wrapper<cpp17_input_iterator<int*>>(
-                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
-            std::views::chunk(2);
+    std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked =
+      std::ranges::subrange<Iterator, Sentinel>(
+        Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))) |
+        std::views::chunk(2);
 
     /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
     static_assert(std::same_as<decltype(it++), void>);
@@ -62,8 +55,13 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test();
-  static_assert(test());
+  test<cpp17_input_iterator<int*>>();
+  test<cpp20_input_iterator<int*>>();
+  test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>();
+
+  static_assert(test<cpp17_input_iterator<int*>>());
+  static_assert(test<cpp20_input_iterator<int*>>());
+  static_assert(test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>());
 
   return 0;
 }
