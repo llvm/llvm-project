@@ -9,7 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
 namespace llvm::orc::shared {
@@ -48,15 +49,13 @@ createEPCGenericDylibManager(JITDylib &JD) {
   auto &ES = JD.getExecutionSession();
   EPCGenericDylibManager::Bindings B;
   // Instance is the executor-side manager object -- a data symbol passed as the
-  // first argument to each call, not a wrapper to proxy.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(rt::sps_ci::NativeDylibManagerInstanceName),
-            &B.Instance}}))
-    return std::move(Err);
-  // The proxies resolve to the specs' default (NativeDylibManager) names.
-  if (auto Err = buildProxies(JD, proxyInit<DylibMgrOpenProxySpec>(&B.Open),
-                              proxyInit<DylibMgrResolveProxySpec>(&B.Resolve)))
+  // first argument to each call, not a wrapper to proxy. The proxies resolve to
+  // the specs' default (NativeDylibManager) names.
+  if (auto Err = lookupAndApply(
+          JD,
+          {recordAddr(rt::sps_ci::NativeDylibManagerInstanceName, &B.Instance),
+           recordProxy<DylibMgrOpenProxySpec>(&B.Open),
+           recordProxy<DylibMgrResolveProxySpec>(&B.Resolve)}))
     return std::move(Err);
   return std::make_unique<EPCGenericDylibManager>(ES, std::move(B));
 }

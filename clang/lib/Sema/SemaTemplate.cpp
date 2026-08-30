@@ -13,6 +13,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -1126,7 +1127,7 @@ bool Sema::CheckTypeConstraint(TemplateIdAnnotation *TypeConstr) {
   NamedDecl *CD = nullptr;
   bool IsTypeConcept = false;
   bool RequiresArguments = false;
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TN.getAsTemplateDecl())) {
+  if (auto *TTP = TN.getAsTemplateTemplateParmDecl()) {
     IsTypeConcept = TTP->isTypeConceptTemplateParam();
     RequiresArguments =
         TTP->getTemplateParameters()->getMinRequiredArguments() > 1;
@@ -1180,8 +1181,8 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
     return true;
 
   TemplateName TN = TypeConstr->Template.get();
-  TemplateDecl *CD = cast<TemplateDecl>(TN.getAsTemplateDecl());
   UsingShadowDecl *USD = TN.getAsUsingShadowDecl();
+  TemplateDecl *CD = TN.getAsTemplateDecl();
 
   DeclarationNameInfo ConceptName(DeclarationName(TypeConstr->Name),
                                   TypeConstr->TemplateNameLoc);
@@ -1200,7 +1201,8 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
   }
   return AttachTypeConstraint(
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
-      ConceptName, CD, /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
+      ConceptName, TN,
+      /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : cast_if_present<NamedDecl>(CD),
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
       ConstrainedParameter, EllipsisLoc);
 }
@@ -1208,7 +1210,7 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
 template <typename ArgumentLocAppender>
 static ExprResult formImmediatelyDeclaredConstraint(
     Sema &S, NestedNameSpecifierLoc NS, DeclarationNameInfo NameInfo,
-    NamedDecl *NamedConcept, NamedDecl *FoundDecl, SourceLocation LAngleLoc,
+    TemplateName NamedConcept, NamedDecl *FoundDecl, SourceLocation LAngleLoc,
     SourceLocation RAngleLoc, QualType ConstrainedType,
     SourceLocation ParamNameLoc, ArgumentLocAppender Appender,
     SourceLocation EllipsisLoc) {
@@ -1228,7 +1230,8 @@ static ExprResult formImmediatelyDeclaredConstraint(
   CXXScopeSpec SS;
   SS.Adopt(NS);
   ExprResult ImmediatelyDeclaredConstraint;
-  if (auto *CD = dyn_cast<ConceptDecl>(NamedConcept)) {
+  if (auto *CD =
+          dyn_cast_if_present<ConceptDecl>(NamedConcept.getAsTemplateDecl())) {
     ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
         SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
         /*FoundDecl=*/FoundDecl ? FoundDecl : CD, CD, &ConstraintArgs,
@@ -1237,9 +1240,9 @@ static ExprResult formImmediatelyDeclaredConstraint(
   }
   // We have a template template parameter
   else {
-    auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
+    assert(SS.isEmpty() && "template parameter with a scope specifier?");
     ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
-        SS, NameInfo, CDT, SourceLocation(), &ConstraintArgs);
+        NameInfo, NamedConcept, &ConstraintArgs);
   }
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
@@ -1266,8 +1269,7 @@ static ExprResult formImmediatelyDeclaredConstraint(
 
 bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 DeclarationNameInfo NameInfo,
-                                TemplateDecl *NamedConcept,
-                                NamedDecl *FoundDecl,
+                                TemplateName NamedConcept, NamedDecl *FoundDecl,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
                                 SourceLocation EllipsisLoc) {
@@ -1328,9 +1330,9 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
     return true;
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
-      TL.getNamedConcept(), /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(),
-      TL.getRAngleLoc(), BuildDecltypeType(Ref),
-      OrigConstrainedParm->getLocation(),
+      TL.getNamedConcept(),
+      /*FoundDecl=*/TL.getFoundDecl(), TL.getLAngleLoc(), TL.getRAngleLoc(),
+      BuildDecltypeType(Ref), OrigConstrainedParm->getLocation(),
       [&](TemplateArgumentListInfo &ConstraintArgs) {
         for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
           ConstraintArgs.addArgument(TL.getArgLoc(I));
@@ -2772,12 +2774,13 @@ struct DependencyChecker : DynamicRecursiveASTVisitor {
     return IgnoreNonTypeDependent || !Matches(T->getDepth());
   }
 
-  bool TraverseTemplateName(TemplateName N) override {
+  bool TraverseTemplateName(TemplateName N, bool TraverseQualifier) override {
     if (TemplateTemplateParmDecl *PD =
           dyn_cast_or_null<TemplateTemplateParmDecl>(N.getAsTemplateDecl()))
       if (Matches(PD->getDepth()))
         return false;
-    return DynamicRecursiveASTVisitor::TraverseTemplateName(N);
+    return DynamicRecursiveASTVisitor::TraverseTemplateName(N,
+                                                            TraverseQualifier);
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *E) override {
@@ -2788,16 +2791,10 @@ struct DependencyChecker : DynamicRecursiveASTVisitor {
     return DynamicRecursiveASTVisitor::VisitDeclRefExpr(E);
   }
 
-  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *ULE) override {
-    if (ULE->isConceptReference() || ULE->isVarDeclReference()) {
-      if (auto *TTP = ULE->getTemplateTemplateDecl()) {
-        if (Matches(TTP->getDepth(), ULE->getExprLoc()))
-          return false;
-      }
-      for (auto &TLoc : ULE->template_arguments())
-        DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(TLoc);
-    }
-    return DynamicRecursiveASTVisitor::VisitUnresolvedLookupExpr(ULE);
+  bool VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) override {
+    if (Matches(E->getParameter()->getDepth(), E->getExprLoc()))
+      return false;
+    return DynamicRecursiveASTVisitor::VisitDependentTemplateIdExpr(E);
   }
 
   bool VisitSubstTemplateTypeParmType(SubstTemplateTypeParmType *T) override {
@@ -3774,6 +3771,10 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
   if (!Template) {
     if (const auto *S = UnderlyingName.getAsSubstTemplateTemplateParmPack()) {
       Template = S->getParameterPack();
+    } else if (const auto *PI = UnderlyingName.getAsPackIndexingTemplate()) {
+      Template = PI->getParameterPack();
+      if (!Template)
+        Template = PI->getPattern().getAsTemplateDecl();
     } else if (const auto *DTN = UnderlyingName.getAsDependentTemplateName()) {
       if (DTN->getName().getIdentifier())
         // When building a template-id where the template-name is dependent,
@@ -4835,20 +4836,22 @@ ExprResult Sema::CheckVarTemplateId(
 }
 
 ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
-    const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-    TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
+    const DeclarationNameInfo &NameInfo, TemplateName Template,
     const TemplateArgumentListInfo *TemplateArgs) {
-  assert(Template && "A variable template id without template?");
+  TemplateTemplateParmDecl *Parameter =
+      Template.getAsTemplateTemplateParmDecl();
+  assert(Parameter && "A variable template id without template?");
 
-  if (Template->templateParameterKind() != TemplateNameKind::TNK_Var_template &&
-      Template->templateParameterKind() !=
+  if (Parameter->templateParameterKind() !=
+          TemplateNameKind::TNK_Var_template &&
+      Parameter->templateParameterKind() !=
           TemplateNameKind::TNK_Concept_template)
     return ExprResult();
 
   // Check that the template argument list is well-formed for this template.
   CheckTemplateArgumentInfo CTAI;
   if (CheckTemplateArgumentList(
-          Template, TemplateLoc,
+          Parameter, /*Template kw loc=*/{},
           // FIXME: TemplateArgs will not be modified because
           // UpdateArgsWithConversions is false, however, we should
           // CheckTemplateArgumentList to be const-correct.
@@ -4857,18 +4860,8 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
           /*UpdateArgsWithConversions=*/false))
     return true;
 
-  UnresolvedSet<1> R;
-  R.addDecl(Template);
-
-  // FIXME: We model references to variable template and concept parameters
-  // as an UnresolvedLookupExpr. This is because they encapsulate the same
-  // data, can generally be used in the same places and work the same way.
-  // However, it might be cleaner to use a dedicated AST node in the long run.
-  return UnresolvedLookupExpr::Create(
-      getASTContext(), nullptr, SS.getWithLocInContext(getASTContext()),
-      SourceLocation(), NameInfo, false, TemplateArgs, R.begin(), R.end(),
-      /*KnownDependent=*/false,
-      /*KnownInstantiationDependent=*/false);
+  return DependentTemplateIdExpr::Create(getASTContext(), NameInfo, Template,
+                                         *TemplateArgs);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
@@ -4928,7 +4921,7 @@ ExprResult Sema::CheckConceptTemplateId(
   auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
-      TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
+      TemplateKWLoc, ConceptNameInfo, FoundDecl, TemplateName(NamedConcept),
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
 
   bool Error = false;
@@ -4998,6 +4991,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
+    assert(TemplateKWLoc.isInvalid() &&
+           "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
@@ -5006,10 +5001,14 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   // Check variable template ids (C++17) and concept template parameters
   // (C++26).
   UnresolvedLookupExpr *ULE;
-  if (R.getAsSingle<TemplateTemplateParmDecl>())
+  if (R.getAsSingle<TemplateTemplateParmDecl>()) {
+    assert(SS.isEmpty() && "template parameter with a scope specifier?");
+    assert(TemplateKWLoc.isInvalid() &&
+           "template keyword in front of a template parameter?");
     return CheckVarOrConceptTemplateTemplateId(
-        SS, R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
-        TemplateKWLoc, TemplateArgs);
+        R.getLookupNameInfo(),
+        TemplateName(R.getAsSingle<TemplateTemplateParmDecl>()), TemplateArgs);
+  }
 
   // Function templates
   ULE = UnresolvedLookupExpr::Create(
@@ -8504,12 +8503,20 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass())
+
+      // Trace the outer context chain, bypassing nested records and OpenMP
+      // captured regions, to determine if the class in defined inside a
+      // function or method.
+      const DeclContext *OutCtx = RD->getDeclContext();
+      while (isa_and_nonnull<CapturedDecl, CXXRecordDecl>(OutCtx))
+        OutCtx = OutCtx->getParent();
+
+      if (OutCtx && OutCtx->isFunctionOrMethod())
         return Diag(TemplateParams->getTemplateLoc(),
                     diag::err_template_inside_local_class)
-          << TemplateParams->getSourceRange();
-      else
-        return false;
+               << TemplateParams->getSourceRange();
+
+      return false;
     }
   }
 
@@ -8695,10 +8702,8 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
       if (isa<NonTypeTemplateParmDecl>(DRE->getDecl()))
         continue;
 
-    if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(ArgExpr);
-        ULE && (ULE->isConceptReference() || ULE->isVarDeclReference())) {
+    if (isa<DependentTemplateIdExpr>(ArgExpr))
       continue;
-    }
 
     // C++ [temp.class.spec]p9:
     //   Within the argument list of a class template partial

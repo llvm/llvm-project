@@ -995,6 +995,10 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // GCC does for consistency's sake.
 
   const Expr *Idx = nullptr;
+  // FIXME: `ArrayElementTy` is misleadingly named. `findStructFieldAccess()`
+  // sets it to the type of the array-subscript base, i.e. the (possibly cast)
+  // *pointer* being indexed (not an element type) or a null QualType when there
+  // is no subscript.
   QualType ArrayElementTy;
   E = findStructFieldAccess(E, &Idx, &ArrayElementTy);
   if (!E)
@@ -1058,7 +1062,7 @@ GetCountFieldAndIndex(CodeGenFunction &CGF, const MemberExpr *ME,
     return std::make_pair<Value *>(nullptr, nullptr);
   Count = CGF.Builder.CreateIntCast(Count, ResType, IsSigned, "count");
 
-  //  index = ptr->index;
+  //  index = idx;
   Value *Index = nullptr;
   if (Idx) {
     bool IdxSigned = Idx->getType()->isSignedIntegerType();
@@ -1074,6 +1078,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
+  assert(EmittedE && "emitted must not be null");
 
   const MemberExpr *ME =
       dyn_cast<MemberExpr>(E->getSubExpr()->IgnoreParenNoopCasts(getContext()));
@@ -1097,16 +1102,24 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //      struct p;
   //      struct s {
   //          /* ... */
-  //          struct p **array __attribute__((counted_by(count)));
+  //          struct p **array __attribute__((ATTR(count)));
   //          int count;
   //      };
   //
   // 1) 'ptr->array':
   //
-  //    count = ptr->count;
+  //    #if ATTR is counted_by_or_null || ATTR is sized_by_or_null
+  //      count = ptr->array ? ptr->count : 0;
+  //    #else
+  //      count = ptr->count;
+  //    #endif
   //
-  //    array_element_size = sizeof (*ptr->array);
-  //    array_size = count * array_element_size;
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
   //
   //    result = array_size;
   //
@@ -1115,11 +1128,19 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //
   // 2) '&((cast) ptr->array)[idx]':
   //
-  //    count = ptr->count;
+  //    #if ATTR is counted_by_or_null || ATTR is sized_by_or_null
+  //      count = ptr->array ? ptr->count : 0;
+  //    #else
+  //      count = ptr->count;
+  //    #endif
   //    index = idx;
   //
-  //    array_element_size = sizeof (*ptr->array);
-  //    array_size = count * array_element_size;
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
   //
   //    casted_array_element_size = sizeof (*((cast) ptr->array));
   //
@@ -1131,63 +1152,97 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //        cmp  = (cmp && index > 0)
   //    return cmp ? result : 0;
 
-  auto GetElementBaseSize = [&](QualType ElementTy) {
-    CharUnits ElementSize =
-        getContext().getTypeSizeInChars(ElementTy->getPointeeType());
+  auto GetPointeeSize = [&](QualType PtrTy) -> CharUnits {
+    assert(!PtrTy.isNull());
+    QualType PointeeTy = PtrTy->getPointeeType();
+    assert(!PointeeTy.isNull() &&
+           (PointeeTy->isVoidType() || !PointeeTy->isIncompleteType()) &&
+           "pointee type must have a computable size");
 
-    if (ElementSize.isZero()) {
-      // This might be a __sized_by (or __counted_by) on a
-      // 'void *', which counts bytes, not elements.
-      [[maybe_unused]] auto *CAT = ElementTy->getAs<CountAttributedType>();
-      assert(CAT && "must have an CountAttributedType");
-
-      ElementSize = CharUnits::One();
+    CharUnits PointeeSize = getContext().getTypeSizeInChars(PointeeTy);
+    if (PointeeSize.isZero()) {
+      // Support GNU extension of treating `void` having size 1.
+      PointeeSize = CharUnits::One();
     }
 
-    return std::optional<CharUnits>(ElementSize);
+    return PointeeSize;
   };
 
-  // Get the sizes of the original array element and the casted array element,
-  // if different.
-  std::optional<CharUnits> ArrayElementBaseSize =
-      GetElementBaseSize(ArrayBaseFD->getType());
-  if (!ArrayElementBaseSize)
-    return nullptr;
-
-  std::optional<CharUnits> CastedArrayElementBaseSize = ArrayElementBaseSize;
-  if (!CastedArrayElementTy.isNull() && CastedArrayElementTy->isPointerType()) {
-    CastedArrayElementBaseSize = GetElementBaseSize(CastedArrayElementTy);
-    if (!CastedArrayElementBaseSize)
-      return nullptr;
-  }
-
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
+  const auto *CountAttributedTy =
+      ArrayBaseFD->getType()->getAs<CountAttributedType>();
+  assert(CountAttributedTy && "the field's type is not a CountAttributedType");
 
   //  count = ptr->count;
-  //  index = ptr->index;
+  //  index = idx;
   Value *Count, *Index;
   std::tie(Count, Index) = GetCountFieldAndIndex(
       *this, ME, ArrayBaseFD, CountFD, Idx, ResType, IsSigned);
   if (!Count)
     return nullptr;
 
-  //  array_element_size = sizeof (*ptr->array)
-  auto *ArrayElementSize = llvm::ConstantInt::get(
-      ResType, ArrayElementBaseSize->getQuantity(), IsSigned);
+  //  For the _or_null variants, a null pointer describes no accessible memory:
+  //    count = ptr->array ? count : 0;
+  if (CountAttributedTy->isOrNull()) {
+    Value *Ptr = nullptr;
+    if (!Idx) {
+      //  1) 'ptr->array'
+      // Reuse the already-emitted pointer value rather than re-loading `ME`.
+      // Re-loading would produce a second, observable access for a volatile
+      // pointer field
+      Ptr = EmittedE;
+    } else {
+      // 2) '&((cast) ptr->array)[idx]'
+      // FIXME: `EmittedE` is the element address, not `ptr->array`, so we fall
+      // back to re-emitting `ME` and the pointer field is loaded twice. This is
+      // normally harmless except when the pointer is `volatile`. Avoiding that
+      // would require restructuring how the base pointer is emitted (it is
+      // handled elsewhere in the callstack), so it is left as-is for now.
+      Ptr = EmitScalarExpr(ME);
+    }
+    Value *IsNull = Builder.CreateIsNull(Ptr);
+    Count = Builder.CreateSelect(IsNull, ConstantInt::get(ResType, 0, IsSigned),
+                                 Count, "count.or.null");
+  }
 
-  //  casted_array_element_size = sizeof (*((cast) ptr->array));
-  auto *CastedArrayElementSize = llvm::ConstantInt::get(
-      ResType, CastedArrayElementBaseSize->getQuantity(), IsSigned);
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
+  Value *ArraySize;
+  if (!CountAttributedTy->isCountInBytes()) {
+    // `__counted_by`/`__counted_by_or_null` require a complete pointee at use
+    // sites (enforced by Sema) so the element size is computable.
+    CharUnits ArrayElementBaseSize = GetPointeeSize(ArrayBaseFD->getType());
 
-  //  array_size = count * array_element_size;
-  Value *ArraySize = Builder.CreateMul(Count, ArrayElementSize, "array_size",
-                                       !IsSigned, IsSigned);
+    //  array_element_size = sizeof (*ptr->array)
+    auto *ArrayElementSize = llvm::ConstantInt::get(
+        ResType, ArrayElementBaseSize.getQuantity(), IsSigned);
+
+    //  array_size = count * array_element_size;
+    ArraySize = Builder.CreateMul(Count, ArrayElementSize, "array_size",
+                                  !IsSigned, IsSigned);
+  } else {
+    //  array_size = count;
+    ArraySize = Count;
+  }
 
   // Option (1) 'ptr->array'
   //  result = array_size
   Value *Result = ArraySize;
 
   if (Idx) { // Option (2) '&((cast) ptr->array)[idx]'
+    // FIXME: CastedArrayElementTy is confusingly named. It's actually the base
+    // expression of the ArraySubscriptExpr, not the element (pointee) type.
+    CharUnits CastedArrayElementSizeInChars =
+        GetPointeeSize(CastedArrayElementTy);
+
+    //  casted_array_element_size = sizeof (*((cast) ptr->array));
+    auto *CastedArrayElementSize = llvm::ConstantInt::get(
+        ResType, CastedArrayElementSizeInChars.getQuantity(), IsSigned);
+
     //  index_size = index * casted_array_element_size;
     Value *IndexSize = Builder.CreateMul(Index, CastedArrayElementSize,
                                          "index_size", !IsSigned, IsSigned);

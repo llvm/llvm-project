@@ -71,7 +71,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2700,6 +2699,18 @@ static void writeDIObjCProperty(raw_ostream &Out, const DIObjCProperty *N,
   Out << ")";
 }
 
+static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DIProperty(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadata("type", N->getRawType());
+  Printer.printMetadata("backing_storage", N->getRawBackingStorage());
+  Out << ")";
+}
+
 static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
                                   AsmWriterContext &WriterCtx) {
   Out << "!DIImportedEntity(";
@@ -4480,7 +4491,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
 
-  if (isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise())
+  // Print the elementwise marker for atomic loads and stores.
+  if ((isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise()) ||
+      (isa<StoreInst>(I) && cast<StoreInst>(I).isElementwise()))
     Out << " elementwise";
 
   // Print out optimization information.

@@ -80,7 +80,6 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -2303,9 +2302,12 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
+      auto CanReplaceOperand = [OI](const Instruction *I) {
+        return canReplaceOperandWithVariable(I, OI);
+      };
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
-          !canReplaceOperandWithVariable(I0, OI))
-        // We can't create a PHI from this GEP.
+          !all_of(Insts, CanReplaceOperand))
+        // We can't create a PHI from this operand.
         return false;
       auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)
@@ -3236,11 +3238,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   if (!Options.SpeculateBlocks)
     return false;
 
-  // Be conservative for now. FP select instruction can often be expensive.
-  Value *BrCond = BI->getCondition();
-  if (isa<FCmpInst>(BrCond))
-    return false;
-
   BasicBlock *BB = BI->getParent();
   BasicBlock *EndBB = ThenBB->getTerminator()->getSuccessor(0);
   InstructionCost Budget =
@@ -3358,6 +3355,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
   Instruction *Sel = nullptr;
+  Value *BrCond = BI->getCondition();
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
@@ -3456,7 +3454,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     Value *TrueV = ThenV, *FalseV = OrigV;
     if (Invert)
       std::swap(TrueV, FalseV);
-    Value *V = Builder.CreateSelect(BrCond, TrueV, FalseV, "spec.select", BI);
+    // Propagate fast-math flags from the phi node to the replacement select.
+    Value *V = Builder.CreateSelectFMF(
+        BrCond, TrueV, FalseV, PN.getFastMathFlagsOrNone(), "spec.select", BI);
     PN.setIncomingValue(OrigI, V);
     PN.setIncomingValue(ThenI, V);
   }
