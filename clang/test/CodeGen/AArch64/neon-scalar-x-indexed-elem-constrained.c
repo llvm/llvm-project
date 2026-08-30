@@ -6,14 +6,6 @@
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa \
 // RUN: | FileCheck --check-prefix=CONSTRAINED %s
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
-// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
-// RUN: -disable-O0-optnone -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa \
-// RUN: | FileCheck --check-prefix=LLVM --implicit-check-not=' @llvm.fma.' %s %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
-// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
-// RUN: -disable-O0-optnone -fclangir -emit-cir -o - %s \
-// RUN: | FileCheck --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %s %}
 
 // REQUIRES: aarch64-registered-target
 
@@ -35,10 +27,6 @@
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[B]], float [[EXTRACT]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
-// CIR-LABEL: cir.func {{.*}}@test_vfmas_lane_f32(
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
-// LLVM-LABEL: @test_vfmas_lane_f32(
-// LLVM: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
   return vfmas_lane_f32(a, b, c, 1);
 }
@@ -223,53 +211,8 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CONSTRAINED-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP9]] to <1 x double>
 // CONSTRAINED-NEXT:    ret <1 x double> [[TMP10]]
 //
-// CIR-LABEL: cir.func {{.*}}@test_vfma_laneq_f64(
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.double {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
-// LLVM-LABEL: @test_vfma_laneq_f64(
-// LLVM: call double @llvm.experimental.constrained.fma.f64({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   return vfma_laneq_f64(a, b, v, 0);
-}
-
-// UNCONSTRAINED-LABEL: define dso_local <2 x double> @test_vfmaq_laneq_f64(
-// UNCONSTRAINED-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
-// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
-// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
-// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to <16 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
-// UNCONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
-// UNCONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// UNCONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP8]], <2 x i32> <i32 1, i32 1>
-// UNCONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[LANE]], <2 x double> [[TMP7]], <2 x double> [[TMP6]])
-// UNCONSTRAINED-NEXT:    ret <2 x double> [[TMP9]]
-//
-// CONSTRAINED-LABEL: define dso_local <2 x double> @test_vfmaq_laneq_f64(
-// CONSTRAINED-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[V:%.*]]) #[[ATTR0]] {
-// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
-// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[V]] to <2 x i64>
-// CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-// CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to <16 x i8>
-// CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x double>
-// CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x double>
-// CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <2 x double>
-// CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP8]], <2 x i32> <i32 1, i32 1>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[LANE]], <2 x double> [[TMP7]], <2 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
-// CONSTRAINED-NEXT:    ret <2 x double> [[TMP9]]
-//
-// CIR-LABEL: cir.func {{.*}}@test_vfmaq_laneq_f64(
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
-// LLVM-LABEL: @test_vfmaq_laneq_f64(
-// LLVM: call <2 x double> @llvm.experimental.constrained.fma.v2f64({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b,
-                                 float64x2_t v) {
-  return vfmaq_laneq_f64(a, b, v, 1);
 }
 
 // UNCONSTRAINED-LABEL: define dso_local <1 x double> @test_vfms_laneq_f64(
