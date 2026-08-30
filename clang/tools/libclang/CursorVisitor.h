@@ -248,6 +248,7 @@ public:
   bool VisitUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D);
   bool VisitStaticAssertDecl(StaticAssertDecl *D);
   bool VisitFriendDecl(FriendDecl *D);
+  bool VisitFriendTemplateDecl(FriendTemplateDecl *D);
   bool VisitDecompositionDecl(DecompositionDecl *D);
   bool VisitConceptDecl(ConceptDecl *D);
   bool VisitTypeConstraint(const TypeConstraint &TC);

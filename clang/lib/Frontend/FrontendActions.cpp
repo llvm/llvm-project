@@ -15,6 +15,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
@@ -85,6 +86,8 @@ ASTPrintAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 std::unique_ptr<ASTConsumer>
 ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+  // Dumping the AST shows documentation comments.
+  CI.getLangOpts().CommentOpts.RetainComments = true;
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
                          Opts.ASTDumpDecls, Opts.ASTDumpAll,
@@ -249,6 +252,10 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
     CompilerInstance &CI) {
+  // Documentation comments must still be serialized into the BMI
+  // so importers can query them.
+  CI.getLangOpts().CommentOpts.RetainComments = true;
+
   for (const auto &FIF : CI.getFrontendOpts().Inputs) {
     if (const auto InputFormat = FIF.getKind().getFormat();
         InputFormat != InputKind::Format::Source) {

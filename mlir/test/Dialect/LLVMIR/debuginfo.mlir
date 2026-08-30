@@ -5,11 +5,12 @@
 
 // CHECK-DAG: #[[NS:.*]] = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
 // CHECK-DAG: #[[IE:.*]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[FILE]], entity = #[[NS]], file = #[[FILE]]>
-// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
+// CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #[[FILE]], producer = "MLIR", isOptimized = true, emissionKind = Full, isDebugInfoForProfiling = true, importedEntities = #[[IE]]>
 #cu_import_ns = #llvm.di_namespace<name = "cu_import_ns", exportSymbols = false>
 #cu_import_ie = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #file, entity = #cu_import_ns, file = #file>
 #cu = #llvm.di_compile_unit<
-  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+  language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
   isDebugInfoForProfiling = true, importedEntities = #cu_import_ie
 >

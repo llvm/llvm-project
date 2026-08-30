@@ -64,9 +64,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
   }
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
-                     invalidates, read_from, in_sets,
-                     llvm::dyn_cast_if_present<lldb_private::RegisterTypeFlags>(
-                         info.register_type),
+                     invalidates, read_from, in_sets, info.register_type,
                      terminal_width);
 }
 
@@ -92,7 +90,7 @@ void lldb_private::DoDumpRegisterInfo(
     Stream &strm, const char *name, const char *alt_name, uint32_t byte_size,
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
-    const std::vector<SetInfo> &in_sets, const RegisterTypeFlags *flags_type,
+    const std::vector<SetInfo> &in_sets, const RegisterType *register_type,
     uint32_t terminal_width) {
   strm << "       Name: " << name;
   if (alt_name)
@@ -115,7 +113,8 @@ void lldb_private::DoDumpRegisterInfo(
   };
   DumpList(strm, "    In sets: ", in_sets, emit_set);
 
-  if (flags_type) {
+  if (auto flags_type =
+          llvm::dyn_cast_if_present<RegisterTypeFlags>(register_type)) {
     strm.Printf("\n\n%s", flags_type->AsTable(terminal_width).c_str());
 
     std::string enumerators = flags_type->DumpEnums(terminal_width);

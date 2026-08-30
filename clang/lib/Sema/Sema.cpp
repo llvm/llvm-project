@@ -581,6 +581,14 @@ void Sema::Initialize() {
 #include "clang/Basic/AMDGPUTypes.def"
   }
 
+  if (Context.getTargetInfo().getTriple().isSPIRV() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
+  }
+
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())
@@ -616,10 +624,6 @@ Sema::~Sema() {
   if (ExternalSemaSource *ExternalSema
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
-  // FIXME: keep just a single ExternalSemaSource instead of 2 with a slightly
-  // different behavior.
-  if (ExternalSource)
-    ExternalSource->ForgetSema();
 
   // Delete cached satisfactions.
   std::vector<ConstraintSatisfaction *> Satisfactions;
@@ -1174,8 +1178,9 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
+    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
+    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1184,7 +1189,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
+              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.
@@ -1410,8 +1415,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
@@ -2734,10 +2749,39 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
+bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) const {
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
+      SourceMgr.isInSystemHeader(Loc))
+    return false;
+
+  if (LangOpts.CommentOpts.ParseAllComments)
+    return true;
+
+  if (LangOpts.CommentOpts.RetainComments)
+    return true;
+
+  // When building a PCH the comments are serialized into the AST file
+  // so downstream consumers like clangd) can retrieve documentation, and the
+  // incremental/REPL front end may query them interactively.
+  if (TUKind != TU_Complete)
+    return true;
+
+  if (PP.isCodeCompletionEnabled())
+    return true;
+
+  // Keep the comment if any of the -Wdocumentation warnings is enabled at
+  // its location (checking the location handles warnings turned on by
+  // `#pragma clang diagnostic`). -Wdocumentation-pedantic is checked
+  // separately because it is not a subgroup of -Wdocumentation.
+  if (!Diags.areAllIgnored("documentation", Loc) ||
+      !Diags.areAllIgnored("documentation-pedantic", Loc))
+    return true;
+
+  return false;
+}
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.RetainCommentsFromSystemHeaders &&
-      SourceMgr.isInSystemHeader(Comment.getBegin()))
+  if (!shouldRetainCommentsInAST(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
   if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {

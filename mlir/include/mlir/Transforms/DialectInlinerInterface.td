@@ -93,8 +93,8 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
     InterfaceMethod<[{
         Handle the given inlined terminator by replacing it with a new operation
         as necessary. This overload is called when the inlined region only
-        contains one block. 'valuesToReplace' contains the previously returned
-        values of the call site before inlining. These values must be replaced by
+        contains one block. 'valuesToReplace' contains the forwarded results
+        of the call site before inlining. These values must be replaced by
         this callback if they had any users (for example for traditional function
         calls, these are directly replaced with the operands of the `return`
         operation). The given 'op' will be removed by the caller, after this

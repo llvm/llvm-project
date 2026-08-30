@@ -17,7 +17,7 @@ subroutine test_cache_basic()
   end do
 
 ! CHECK: acc.loop
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b"
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_basicEb"}
 ! Loop body uses the cached reference
 ! CHECK: %[[ELEM:.*]] = hlfir.designate %[[DECL]]#0 (%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
@@ -41,7 +41,7 @@ subroutine test_cache_readonly()
   end do
 
 ! CHECK: acc.loop
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "b"
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("b") <modifiers = readonly> -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_readonlyEb"}
 ! Loop body uses the cached readonly reference
 ! CHECK: %[[ELEM:.*]] = hlfir.designate %[[DECL]]#0 (%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
@@ -74,7 +74,7 @@ subroutine test_cache_array_section()
 ! CHECK: %[[LB:.*]] = arith.constant 1 : index
 ! CHECK: %[[UB:.*]] = arith.constant 4 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_array_sectionEb"}
 ! Unstructured control flow: IF condition generates fir.if
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
@@ -107,9 +107,9 @@ subroutine test_cache_multiple()
   end do
 
 ! CHECK: acc.loop
-! CHECK: %[[CACHE_B:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b"
+! CHECK: %[[CACHE_B:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL_B:.*]]:2 = hlfir.declare %[[CACHE_B]](%{{.*}}) {uniq_name = "_QFtest_cache_multipleEb"}
-! CHECK: %[[CACHE_C:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "c"
+! CHECK: %[[CACHE_C:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("c") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL_C:.*]]:2 = hlfir.declare %[[CACHE_C]](%{{.*}}) {uniq_name = "_QFtest_cache_multipleEc"}
 ! Unstructured control flow: IF-ELSE generates fir.if with else region
 ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : i32
@@ -160,7 +160,7 @@ subroutine test_cache_2d_array()
 ! CHECK: %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK: %[[C4_2:.*]] = arith.constant 4 : index
 ! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[C0_2]] : index) upperbound(%[[C4_2]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_arrayEb"}
 ! Nested loop uses the cached 2D array
 ! CHECK: fir.do_loop
@@ -205,7 +205,7 @@ subroutine test_cache_loop_var()
 ! Compute upperbound = (i+2) - 1
 ! CHECK: %[[UB:.*]] = arith.subi %[[UB_IDX]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_loop_varEb"}
 ! Loop body uses the cached reference for b(i), b(i+1), b(i+2)
 ! CHECK: hlfir.designate %[[DECL]]#0
@@ -249,7 +249,7 @@ subroutine test_cache_2d_loop_vars()
 ! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 ! Dimension 2 bounds from i: lowerbound = i-1, upperbound = i
 ! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_loop_varsEb"}
 ! Loop body uses the cached 2D reference
 ! CHECK: hlfir.designate %[[DECL]]#0
@@ -280,7 +280,7 @@ subroutine test_cache_single_element()
     if (a(i) > 100.0) exit
   end do
 
-! Unstructured loop with EXIT: acc.loop becomes unstructured with cf.br/cf.cond_br
+! Unstructured loop with EXIT: acc.loop becomes unstructured  with cf.br/cf.cond_br
 ! CHECK: acc.loop private({{.*}}) {
 ! The privatized iterator is declared
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_cache_single_elementEi"}
@@ -297,7 +297,7 @@ subroutine test_cache_single_element()
 ! Compute lowerbound = i - 1 (single element: upperbound = lowerbound)
 ! CHECK: %[[LB:.*]] = arith.subi %[[I_IDX]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_single_elementEb"}
 ! Loop body uses the cached single element
 ! CHECK: hlfir.designate %[[DECL]]#0
@@ -315,7 +315,7 @@ subroutine test_cache_single_element()
 ! CHECK: ^[[YIELD]]:
 ! Scope termination: acc.yield marks end of cache scope
 ! CHECK: acc.yield
-! CHECK-NEXT: } attributes {{{.*}}unstructured}
+! CHECK-NEXT: } {{.*}}unstructured{{.*}}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_mixed_bounds()
@@ -347,7 +347,7 @@ subroutine test_cache_mixed_bounds()
 ! Compute upperbound = i - 1
 ! CHECK: %[[UB:.*]] = arith.subi %[[I_IDX]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C0]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) structured(false) name("b{{.*}}") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_mixed_boundsEb"}
 ! Unstructured control flow: CYCLE generates inverted fir.if (body executes when NOT cycling)
 ! CHECK: %[[MOD:.*]] = arith.remsi %{{.*}}, %{{.*}} : i32
@@ -398,9 +398,9 @@ subroutine test_cache_nonunit_lb()
 ! CHECK: %[[C15:.*]] = arith.constant 15 : index
 ! CHECK: %[[LB:.*]] = arith.subi %[[C15]], %{{.*}} : index
 ! Single element: upperbound equals lowerbound, startIdx = 10
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index) {strideInBytes = true}
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index) strideInBytes(true)
 ! For non-unit lower bound arrays, acc.cache uses the box type from hlfir.declare
-! CHECK: %[[CACHE:.*]] = acc.cache var(%{{.*}} : !fir.box<!fir.array<11xi32>>) bounds(%[[BOUND]]) -> !fir.box<!fir.array<11xi32>> {{{.*}}name = "arr
+! CHECK: %[[CACHE:.*]] = acc.cache var(%{{.*}} : !fir.box<!fir.array<11xi32>>) bounds(%[[BOUND]]) structured(false) name("arr{{.*}}") -> !fir.box<!fir.array<11xi32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_nonunit_lbEarr"}
 ! Unstructured control flow: SELECT CASE generates fir.select_case
 ! CHECK: %[[MOD:.*]] = arith.remsi %{{.*}}, %{{.*}} : i32
@@ -426,7 +426,7 @@ subroutine test_cache_nonunit_lb()
 ! CHECK: ^[[EXIT]]:
 ! Scope termination: acc.yield marks end of cache scope
 ! CHECK: acc.yield
-! CHECK-NEXT: } attributes {{{.*}}unstructured}
+! CHECK-NEXT: } {{.*}}unstructured{{.*}}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_use_after_region()
@@ -581,7 +581,7 @@ subroutine test_cache_derived_type()
 ! CHECK: acc.loop
 ! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_typeTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) structured(false) name("data%array(i-4_4:i+4_4)") -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.yield
 end subroutine
 
@@ -605,7 +605,7 @@ subroutine test_cache_derived_type_readonly()
 ! CHECK: acc.loop
 ! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_type_readonlyTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) structured(false) name("data%array(i-4_4:i+4_4)") <modifiers = readonly> -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.yield
 end subroutine
 
@@ -634,7 +634,7 @@ subroutine test_cache_nested_derived_type()
 ! CHECK: %[[IN_COORD:.*]] = hlfir.designate %{{.*}}{"in"} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTouter{in:!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>}>>) -> !fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>
 ! CHECK: %[[ARR_COORD:.*]] = hlfir.designate %[[IN_COORD]]{"arr"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARR_COORD]] : !fir.ref<!fir.array<50xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARR_COORD]] : !fir.ref<!fir.array<50xf32>>) bounds(%[[BOUND]]) structured(false) name("obj%in%arr(i)") -> !fir.ref<!fir.array<50xf32>>
 ! CHECK: acc.yield
 end subroutine
 
@@ -658,7 +658,7 @@ subroutine test_cache_combined_allocatable(data, C, M)
 
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: acc.loop
-! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i-4_4:i+4_4)", structured = false}
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) structured(false) name("data%a(i-4_4:i+4_4)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i-4_4:i+4_4)"}
 ! CHECK: acc.yield
 end subroutine
@@ -683,7 +683,7 @@ subroutine test_cache_parallel_copy_struct(data, M)
 
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: acc.loop
-! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i)", structured = false}
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) structured(false) name("data%a(i)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i)"}
 ! CHECK: acc.yield
 end subroutine
@@ -712,7 +712,7 @@ subroutine test_cache_nested_parallel(obj, N)
 
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: acc.loop
-! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) structured(false) name("obj%in%arr(i)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "obj%in%arr(i)"}
 ! CHECK: acc.yield
 end subroutine
@@ -737,7 +737,7 @@ subroutine test_cache_explicit_shape_comp(data, C, M)
 
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: acc.loop
-! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "data%a(i:i+4_4)", structured = false}
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) structured(false) name("data%a(i:i+4_4)") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "data%a(i:i+4_4)"}
 ! CHECK: acc.yield
 end subroutine
@@ -761,7 +761,7 @@ subroutine test_cache_temp_in_designator(data, a)
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental
 ! CHECK: %[[MAXLOC:.*]] = hlfir.maxloc %[[ELEMENTAL]]
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound({{.*}}) upperbound({{.*}})
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data(1:maxloc(a+a,dim=1_4))", structured = false}
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) structured(false) name("data(1:maxloc(a+a,dim=1_4))") <modifiers = readonly> -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]]
 ! CHECK: hlfir.destroy %[[ELEMENTAL]]
 ! CHECK: hlfir.designate %[[DECL]]#0
@@ -807,7 +807,7 @@ end subroutine
 ! CHECK: %[[EXT:.*]] = arith.constant 11 : index
 ! CHECK: %[[SHAPE:.*]] = fir.shape_shift %[[LB]], %[[EXT]] : (index, index) -> !fir.shapeshift<1>
 ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) {uniq_name = "_QFtest_cache_nonunit_lb_boxEarr"} : (!fir.ref<!fir.array<11xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.ref<!fir.array<11xi32>>)
-! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<11xi32>>) bounds(%{{.*}}) -> !fir.box<!fir.array<11xi32>> {name = "arr(12:18)"
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<11xi32>>) bounds(%{{.*}}) structured(false) name("arr(12:18)") -> !fir.box<!fir.array<11xi32>>
 ! The cached re-declaration reuses the SAME lower bound (10) with NO extent: a
 ! fir.shift on %[[LB]], never a fir.shape_shift.
 ! CHECK-NOT: fir.shape_shift
@@ -835,7 +835,7 @@ end subroutine
 ! CHECK: %[[C0B:.*]] = arith.constant 0 : i64
 ! CHECK: %[[LB1:.*]] = fir.convert %[[C0B]] : (i64) -> index
 ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %arg0(%{{.*}}) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_cache_assumed_shape_boxEarr"}
-! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<?x?xf64>>) bounds(%{{.*}}, %{{.*}}) -> !fir.box<!fir.array<?x?xf64>> {name = "arr(3:8,0:4)"
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<?x?xf64>>) bounds(%{{.*}}, %{{.*}}) structured(false) name("arr(3:8,0:4)") -> !fir.box<!fir.array<?x?xf64>>
 ! The cached re-declaration reuses the SAME two lower bounds (0, 0) with no
 ! extents: a fir.shift on %[[LB0]], %[[LB1]], never a fir.shape_shift.
 ! CHECK-NOT: fir.shape_shift

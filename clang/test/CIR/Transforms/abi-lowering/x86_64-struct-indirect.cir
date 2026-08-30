@@ -4,9 +4,9 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !s128i = !cir.int<s, 128>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
-!rec_NoRegs = !cir.struct<"NoRegs" {!s32i, !s32i}>
-!rec_Big128 = !cir.struct<"Big128" {!s128i, !s8i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+!rec_NoRegs = !cir.struct<"NoRegs" {data !s32i, data !s32i}>
+!rec_Big128 = !cir.struct<"Big128" {data !s128i, data !s8i}>
 
 module attributes {
   cir.record_layouts = {NoRegs = #cir.record_layout<

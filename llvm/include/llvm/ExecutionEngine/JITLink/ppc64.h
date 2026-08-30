@@ -155,6 +155,19 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
   return G.addAnonymousSymbol(B, 0, StubInfo.Content.size(), true, false);
 }
 
+// LongBranchSaveR2 is the default for external calls: saves the TOC
+// pointer (r2) before branching, as required when the callee sets its
+// own TOC. Callers needing a different stub kind (e.g. LongBranchNoTOC)
+// should call createAnonymousPointerJumpStub directly with the desired
+// PLTCallStubKind.
+template <llvm::endianness Endianness>
+inline Symbol &createDefaultAnonymousPointerJumpStub(LinkGraph &G,
+                                                     Section &StubSection,
+                                                     Symbol &PointerSymbol) {
+  return createAnonymousPointerJumpStub<Endianness>(
+      G, StubSection, PointerSymbol, LongBranchSaveR2);
+}
+
 template <llvm::endianness Endianness>
 class TOCTableManager : public TableManager<TOCTableManager<Endianness>> {
 public:
