@@ -423,6 +423,7 @@ public:
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+  int getNonStrictBranchCondition(int CC) const;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        Register, Register, Register, int &, int &,
                        int &) const override;
