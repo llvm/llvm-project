@@ -9506,6 +9506,13 @@
 #    endif
 #  endif
 
+#  ifndef __cpp_lib_generator
+#    error "__cpp_lib_generator should be defined in c++29"
+#  endif
+#  if __cpp_lib_generator != 202207L
+#    error "__cpp_lib_generator should have the value 202207L in c++29"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++29"
 #  endif
