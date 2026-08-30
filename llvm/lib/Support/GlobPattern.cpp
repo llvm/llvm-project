@@ -225,8 +225,7 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   return Pat;
 }
 
-std::optional<StringRef>
-GlobPattern::asLiteral(SmallVectorImpl<char> &Storage) const {
+std::optional<std::string> GlobPattern::asLiteral() const {
   // The prefix and suffix are metacharacter-free by construction, so whether
   // this pattern denotes a single string is decided by the sub-patterns, which
   // recorded it while parsing. No sub-pattern at all means there was no
@@ -234,22 +233,19 @@ GlobPattern::asLiteral(SmallVectorImpl<char> &Storage) const {
   if (SubGlobs.size() > 1 || (SubGlobs.size() == 1 && !SubGlobs[0].isLiteral()))
     return std::nullopt;
 
-  StringRef Literal = Pattern;
-  if (Pattern.contains('\\')) {
-    Storage.clear();
-    Storage.reserve(Pattern.size());
-    for (size_t I = 0, E = Pattern.size(); I != E; ++I) {
-      if (Pattern[I] == '\\' && I + 1 != E)
-        ++I;
-      Storage.push_back(Pattern[I]);
-    }
-    Literal = StringRef(Storage.data(), Storage.size());
+  std::string Literal;
+  Literal.reserve(Pattern.size());
+  for (size_t I = 0, E = Pattern.size(); I != E; ++I) {
+    if (Pattern[I] == '\\' && I + 1 != E)
+      ++I;
+    Literal.push_back(Pattern[I]);
   }
 
   // In slash-agnostic mode '/' and '\\' match each other, so a pattern holding
   // either matches more than one string. A pattern with no sub-pattern cannot
   // reach here holding one, as both are prefix metacharacters in that mode.
-  if (SlashAgnostic && Literal.find_first_of("/\\") != StringRef::npos)
+  if (SlashAgnostic &&
+      StringRef(Literal).find_first_of("/\\") != StringRef::npos)
     return std::nullopt;
 
   return Literal;

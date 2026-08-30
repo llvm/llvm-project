@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
+#include <string>
 
 namespace llvm {
 
@@ -65,12 +66,7 @@ public:
   /// no unescaped metacharacters; otherwise std::nullopt. Escapes are resolved,
   /// so `a\*b` yields `a*b`. Characters that are only special in context (`]`,
   /// `}`, `,`) do not make a pattern non-literal.
-  ///
-  /// \p Storage is used only when escapes have to be resolved; otherwise the
-  /// result aliases the text passed to create(). The result is valid for as
-  /// long as both remain alive.
-  LLVM_ABI std::optional<StringRef>
-  asLiteral(SmallVectorImpl<char> &Storage) const;
+  LLVM_ABI std::optional<std::string> asLiteral() const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().

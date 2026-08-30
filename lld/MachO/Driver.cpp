@@ -1369,8 +1369,7 @@ void SymbolPatterns::insert(StringRef symbolName) {
   // A pattern that denotes a single string is kept as a literal: literals are
   // matched by hash lookup, and only literals seed the force-load of lazy
   // archive members below.
-  SmallString<32> storage;
-  if (std::optional<StringRef> literal = pattern->asLiteral(storage)) {
+  if (std::optional<std::string> literal = pattern->asLiteral()) {
     literals.insert(CachedHashStringRef(saver().save(*literal)));
     return;
   }
