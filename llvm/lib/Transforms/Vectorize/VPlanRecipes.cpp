@@ -1595,9 +1595,10 @@ void VPInstruction::execute(VPTransformState &State) {
   bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
                                    (vputils::onlyFirstLaneUsed(this) ||
                                     isVectorToScalar() || isSingleScalar());
-  assert((((GeneratedValue->getType()->isVectorTy() ||
-            GeneratedValue->getType()->isStructTy()) ==
-           !GeneratesPerFirstLaneOnly) ||
+  // Extracting a lane from a vectorized struct yields a scalar struct, so
+  // check for a vectorized type rather than any struct.
+  assert((isVectorizedTy(GeneratedValue->getType()) ==
+              !GeneratesPerFirstLaneOnly ||
           State.VF.isScalar()) &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,

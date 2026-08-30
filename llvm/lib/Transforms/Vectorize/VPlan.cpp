@@ -301,6 +301,18 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
+  if (auto *StructTy = dyn_cast<StructType>(VecPart->getType());
+      StructTy && isVectorizedStructTy(StructTy)) {
+    // We must handle each element of a vectorized struct type.
+    Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
+    Value *Res = PoisonValue::get(toScalarizedTy(StructTy));
+    for (unsigned I : seq(StructTy->getNumElements())) {
+      Value *VectorValue = Builder.CreateExtractValue(VecPart, I);
+      Value *ScalarValue = Builder.CreateExtractElement(VectorValue, LaneV);
+      Res = Builder.CreateInsertValue(Res, ScalarValue, I);
+    }
+    return Res;
+  }
   if (!VecPart->getType()->isVectorTy()) {
     assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;

@@ -282,7 +282,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi { i64, i64 } [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_STORE_IF]] ]
@@ -290,7 +290,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_CALL_IF1:.*]], label %[[PRED_CALL_CONTINUE2:.*]]
 ; CHECK:       [[PRED_CALL_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR4]]
 ; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE2]]
 ; CHECK:       [[PRED_CALL_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi { i64, i64 } [ poison, %[[PRED_STORE_CONTINUE]] ], [ [[TMP24]], %[[PRED_CALL_IF1]] ]
@@ -370,7 +370,7 @@ define void @negative_struct_of_vectors(ptr noalias %in, ptr noalias writeonly %
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load <1 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { <1 x float>, <1 x float> } @foo(<1 x float> [[IN_VAL]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { <1 x float>, <1 x float> } @foo(<1 x float> [[IN_VAL]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { <1 x float>, <1 x float> } [[CALL]], 0
 ; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { <1 x float>, <1 x float> } [[CALL]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[IV]]
@@ -467,7 +467,7 @@ define void @negative_named_struct_return(ptr noalias readonly %in, ptr noalias 
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = tail call [[NAMED_STRUCT:%.*]] @[[BAR_NAMED:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](double [[IN_VAL]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call [[NAMED_STRUCT:%.*]] @[[BAR_NAMED:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](double [[IN_VAL]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue [[NAMED_STRUCT]] [[CALL]], 0
 ; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue [[NAMED_STRUCT]] [[CALL]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[OUT_A]], i64 [[IV]]
@@ -513,7 +513,7 @@ define void @negative_nested_struct(ptr noalias %in, ptr noalias writeonly %out_
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { { float, float } } @foo_nested_struct(float [[IN_VAL]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { { float, float } } @foo_nested_struct(float [[IN_VAL]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[EXTRACT_INNER:%.*]] = extractvalue { { float, float } } [[CALL]], 0
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[EXTRACT_INNER]], 0
 ; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[EXTRACT_INNER]], 1
@@ -561,7 +561,7 @@ define void @negative_non_widenable_element(ptr noalias %in, ptr noalias writeon
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, [1 x float] } @foo_one_non_widenable_element(float [[IN_VAL]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, [1 x float] } @foo_one_non_widenable_element(float [[IN_VAL]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue { float, [1 x float] } [[CALL]], 0
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[IV]]
 ; CHECK-NEXT:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2]], align 4
@@ -601,7 +601,7 @@ define void @negative_struct_array_elements(ptr noalias %in, ptr noalias writeon
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { [2 x float] } @foo_arrays(float [[IN_VAL]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { [2 x float] } @foo_arrays(float [[IN_VAL]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[EXTRACT_INNER:%.*]] = extractvalue { [2 x float] } [[CALL]], 0
 ; CHECK-NEXT:    [[EXTRACT_A:%.*]] = extractvalue [2 x float] [[EXTRACT_INNER]], 0
 ; CHECK-NEXT:    [[EXTRACT_B:%.*]] = extractvalue [2 x float] [[EXTRACT_INNER]], 1
@@ -693,7 +693,7 @@ define void @negative_struct_return_store_struct(ptr noalias %in, ptr noalias wr
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds { float, float }, ptr [[IN]], i64 [[IV]]
 ; CHECK-NEXT:    [[IN_VAL:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @foo(float [[IN_VAL]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call { float, float } @foo(float [[IN_VAL]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr inbounds { float, float }, ptr [[OUT]], i64 [[IV]]
 ; CHECK-NEXT:    store { float, float } [[CALL]], ptr [[OUT_PTR]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
@@ -720,6 +720,77 @@ exit:
   ret void
 }
 
+; The extractvalue of a widened struct-returning call is scalarized in a
+; predicated block, requiring per-lane extraction from the struct of vectors.
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
+define void @struct_return_predicated_extractvalue(i1 %c, ptr noalias %dst, ptr noalias %cos_dst) {
+; CHECK-LABEL: define void @struct_return_predicated_extractvalue(
+; CHECK-SAME: i1 [[C:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[COS_DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP16]], align 8
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { double, double } poison, double [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { double, double } [[TMP4]], double [[TMP6]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { double, double } [[TMP7]], 1
+; CHECK-NEXT:    store double [[TMP8]], ptr [[COS_DST]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { double, double } poison, double [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP12]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertvalue { double, double } [[TMP11]], double [[TMP13]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { double, double } [[TMP14]], 1
+; CHECK-NEXT:    store double [[TMP15]], ptr [[COS_DST]], align 8
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %sincos = tail call { double, double } @llvm.sincos.f64(double 0.000000e+00)
+  %gep = getelementptr double, ptr %dst, i64 %iv
+  store double 0.000000e+00, ptr %gep, align 8
+  br i1 %c, label %latch, label %if
+
+if:
+  %cos = extractvalue { double, double } %sincos, 1
+  store double %cos, ptr %cos_dst, align 8
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done = icmp eq i64 %iv, 1024
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare { float, float } @foo(float)
 declare { double, double } @bar(double)
 declare { float, i32 } @baz(float)
@@ -730,6 +801,7 @@ declare { float, [1 x float] } @foo_one_non_widenable_element(float)
 declare { <1 x float>, <1 x float> } @foo_vectors(<1 x float>)
 declare { i32, i32, i32 } @qux(i32)
 declare { i64, i64 } @bar_i64(i64)
+declare { double, double } @llvm.sincos.f64(double)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)
 declare { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double>)
