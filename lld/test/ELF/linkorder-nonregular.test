@@ -1,0 +1,46 @@
+# REQUIRES: x86
+## dependentSections holds plain InputSections. An SHT_STRTAB section has no
+## InputSectionBase at all, a mergeable one has a MergeInputSection and
+## .eh_frame has an EhInputSection, so none of the three can record the
+## SHF_LINK_ORDER dependency. All three used to assert in cast<InputSection>.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null -e 0 2>&1 | FileCheck %s -DFILE=%t.o
+
+# CHECK-DAG: error: [[FILE]]:(lo_strtab): a non-regular section should not have SHF_LINK_ORDER
+# CHECK-DAG: error: [[FILE]]:(lo_merge): a non-regular section should not have SHF_LINK_ORDER
+# CHECK-DAG: error: [[FILE]]:(.eh_frame): a non-regular section should not have SHF_LINK_ORDER
+
+## The diagnostic must not depend on whether this link happens to build a
+## MergeInputSection or an EhInputSection: -O0 does not merge, and -r keeps
+## .eh_frame a plain InputSection.
+# RUN: not ld.lld %t.o -o /dev/null -e 0 -O0 2>&1 | FileCheck %s -DFILE=%t.o
+# RUN: not ld.lld -r %t.o -o /dev/null 2>&1 | FileCheck %s -DFILE=%t.o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:    1
+  - Name:    lo_strtab
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC, SHF_LINK_ORDER ]
+    Link:    .text
+    Size:    8
+  - Name:    lo_merge
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_MERGE, SHF_LINK_ORDER ]
+    Link:    .text
+    EntSize: 4
+    Size:    8
+  - Name:    .eh_frame
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_LINK_ORDER ]
+    Link:    .text
+    Size:    0
