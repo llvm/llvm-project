@@ -1280,6 +1280,12 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
   VPValue *A, *Z;
+
+  // A bitcast to the same type is a no-op.
+  if (match(Def, m_BitCast(m_VPValue(A))) &&
+      Def->getScalarType() == A->getScalarType())
+    return A;
+
   if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
     Type *TruncTy = Def->getScalarType();
     Type *ATy = A->getScalarType();
