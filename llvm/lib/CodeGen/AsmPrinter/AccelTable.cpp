@@ -443,9 +443,8 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
           Abbrev.addAttribute({dwarf::DW_IDX_parent, *MaybeParentForm});
         FoldingSetNodeID ID;
         Abbrev.Profile(ID);
-        void *InsertPos;
-        if (DebugNamesAbbrev *Existing =
-                AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+        FoldingSetInsertToken Token;
+        if (DebugNamesAbbrev *Existing = AbbreviationsSet.lookup(ID, Token)) {
           Value->setAbbrevNumber(Existing->getNumber());
           continue;
         }
@@ -453,7 +452,7 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
             new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
         AbbreviationsVector.push_back(NewAbbrev);
         NewAbbrev->setNumber(AbbreviationsVector.size());
-        AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
+        AbbreviationsSet.insert(NewAbbrev, Token);
         Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
