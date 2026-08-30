@@ -20,6 +20,7 @@
 
 #include "test_iterators.h"
 
+template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
@@ -27,14 +28,10 @@ constexpr bool test() {
   {
     // When range is general
     {
-      std::ranges::chunk_view<
-          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-          chunked =
-              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                  cpp17_input_iterator<int*>(vector.data()),
-                  sentinel_wrapper<cpp17_input_iterator<int*>>(
-                      cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
-              std::views::chunk(3);
+        std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked =
+          std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))) |
+          std::views::chunk(3);
 
       /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
       assert(it != std::default_sentinel);
@@ -44,14 +41,10 @@ constexpr bool test() {
 
     // When chunk size is one
     {
-      std::ranges::chunk_view<
-          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-          chunked =
-              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                  cpp17_input_iterator<int*>(vector.data()),
-                  sentinel_wrapper<cpp17_input_iterator<int*>>(
-                      cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
-              std::views::chunk(1);
+        std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked =
+          std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))) |
+          std::views::chunk(1);
 
       /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
       assert(it != std::default_sentinel);
@@ -64,8 +57,13 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test();
-  static_assert(test());
+  test<cpp17_input_iterator<int*>>();
+  test<cpp20_input_iterator<int*>>();
+  test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>();
+
+  static_assert(test<cpp17_input_iterator<int*>>());
+  static_assert(test<cpp20_input_iterator<int*>>());
+  static_assert(test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>());
 
   return 0;
 }

@@ -27,62 +27,67 @@
 
 #include <cassert>
 #include <compare>
-#include <concepts>
 #include <iterator>
 #include <ranges>
 #include <vector>
 
 #include "test_iterators.h"
 
+template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
   // Test `friend constexpr bool operator==(const iterator&, const iterator&)`
   // Test `friend constexpr bool operator==(const iterator&, default_sentinel_t)`
   {
-    std::ranges::chunk_view<std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>> chunked(
-        std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>(
-            random_access_iterator<int*>(vector.data()), random_access_iterator<int*>(vector.data() + vector.size())),
-        3);
+    std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked(
+      std::ranges::subrange<Iterator, Sentinel>(
+        Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))),
+      3);
 
-    assert(chunked.begin() == chunked.begin());
-    assert(chunked.begin() != chunked.end());
-    assert(chunked.begin() + 1 == chunked.end() - 3);
-    assert(chunked.begin() + 4 == chunked.end());
-    assert(chunked.begin() != std::default_sentinel);
-    assert(chunked.end() == std::default_sentinel);
+    auto first  = chunked.begin();
+    auto second = first;
+    assert(first == second);
+    ++second;
+    assert(first != second);
+    assert(first != std::default_sentinel);
+    std::ranges::advance(second, 3);
+    assert(second == std::default_sentinel);
   }
 
   // Test `friend constexpr bool operator<(const iterator&, const iterator&)`
   // Test `friend constexpr bool operator>(const iterator&, const iterator&)`
   // Test `friend constexpr bool operator<=(const iterator&, const iterator&)`
   // Test `friend constexpr bool operator>=(const iterator&, const iterator&)`
-  {
-    std::ranges::chunk_view<std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>> chunked(
-        std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>(
-            random_access_iterator<int*>(vector.data()), random_access_iterator<int*>(vector.data() + vector.size())),
+  if constexpr (std::random_access_iterator<Iterator>) {
+    std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked(
+        std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))),
         3);
 
-    assert(chunked.begin() < chunked.end());
+    assert(!(chunked.begin() < chunked.begin()));
     assert(chunked.begin() < chunked.begin() + 1);
+    assert(!(chunked.begin() + 1 < chunked.begin()));
+    assert(!(chunked.begin() > chunked.begin()));
+    assert(!(chunked.begin() > chunked.begin() + 1));
     assert(chunked.begin() + 1 > chunked.begin());
-    assert(chunked.end() > chunked.begin());
     assert(chunked.begin() <= chunked.begin());
     assert(chunked.begin() <= chunked.begin() + 1);
+    assert(!(chunked.begin() + 1 <= chunked.begin()));
     assert(chunked.begin() + 1 >= chunked.begin());
     assert(chunked.begin() + 1 >= chunked.begin() + 1);
+    assert(!(chunked.begin() >= chunked.begin() + 1));
   }
 
   // Test `friend constexpr auto operator<=>(const iterator&, const iterator&)`
-  {
-    std::ranges::chunk_view<std::ranges::subrange<int*, int*>> chunked(
-        std::ranges::subrange<int*, int*>(vector.data(), vector.data() + vector.size()), 3);
+  if constexpr (std::random_access_iterator<Iterator> && std::three_way_comparable<Iterator>) {
+    std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked(
+        std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))),
+        3);
 
-    assert((chunked.begin() <=> chunked.end()) == std::strong_ordering::less);
     assert((chunked.begin() <=> chunked.begin() + 1) == std::strong_ordering::less);
     assert((chunked.begin() <=> chunked.begin()) == std::strong_ordering::equal);
-    assert((chunked.begin() + 1 <=> chunked.end() - 3) == std::strong_ordering::equal);
-    assert((chunked.end() <=> chunked.begin()) == std::strong_ordering::greater);
     assert((chunked.begin() + 1 <=> chunked.begin()) == std::strong_ordering::greater);
   }
 
@@ -90,8 +95,17 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test();
-  static_assert(test());
+  test<forward_iterator<int*>>();
+  test<bidirectional_iterator<int*>>();
+  test<random_access_iterator<int*>>();
+  test<contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>();
+  test<int*, int*>();
+
+  static_assert(test<forward_iterator<int*>>());
+  static_assert(test<bidirectional_iterator<int*>>());
+  static_assert(test<random_access_iterator<int*>>());
+  static_assert(test<contiguous_iterator<int*>, sized_sentinel<contiguous_iterator<int*>>>());
+  static_assert(test<int*, int*>());
 
   return 0;
 }

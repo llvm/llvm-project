@@ -20,24 +20,22 @@
 
 #include "test_iterators.h"
 
+template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr bool test() {
-  std::vector<int> vector = {1, 2, 3, 4};
+  std::vector<int> vector        = {1, 2, 3, 4};
   std::vector<int> single_vector = {1};
 
   // Test `constexpr const iterator_t<V> base() const&`
   {
     // When range is general
     {
-      std::ranges::chunk_view<
-          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-          chunked(
-              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                  cpp17_input_iterator<int*>(vector.data()),
-                  sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
-              2);
+        std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked(
+          std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(vector.data()), Sentinel(Iterator(vector.data() + vector.size()))),
+          2);
       auto outer = chunked.begin();
       auto inner = (*outer).begin();
-      static_assert(std::same_as<const cpp17_input_iterator<int*>, decltype(inner.base())>);
+      static_assert(std::same_as<const Iterator, decltype(inner.base())>);
       assert(*inner.base() == 1);
       ++inner;
       assert(*inner.base() == 2);
@@ -45,16 +43,13 @@ constexpr bool test() {
 
     // When range is single
     {
-      std::ranges::chunk_view<
-          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-          chunked(
-              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-                  cpp17_input_iterator<int*>(single_vector.data()),
-                  sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(single_vector.data() + single_vector.size()))),
-              2);
+        std::ranges::chunk_view<std::ranges::subrange<Iterator, Sentinel>> chunked(
+          std::ranges::subrange<Iterator, Sentinel>(
+            Iterator(single_vector.data()), Sentinel(Iterator(single_vector.data() + single_vector.size()))),
+          2);
       auto outer = chunked.begin();
       auto inner = (*outer).begin();
-      static_assert(std::same_as<const cpp17_input_iterator<int*>, decltype(inner.base())>);
+      static_assert(std::same_as<const Iterator, decltype(inner.base())>);
       assert(*inner.base() == 1);
     }
   }
@@ -63,8 +58,11 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test();
-  static_assert(test());
+  test<cpp17_input_iterator<int*>>();
+  test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>();
+
+  static_assert(test<cpp17_input_iterator<int*>>());
+  static_assert(test<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>());
 
   return 0;
 }
