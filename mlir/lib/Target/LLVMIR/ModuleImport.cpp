@@ -1708,10 +1708,9 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     if (symbolRef) {
       globalOp.setAssociatedAttr(symbolRef);
     } else {
-      emitWarning(globalOp.getLoc())
-          << "unhandled associated metadata: "
-          << diagMD(associatedMD, llvmModule.get()) << " on "
-          << diag(*globalVar);
+      emitWarning(globalOp.getLoc()) << "unhandled associated metadata: "
+                                     << diagMD(associatedMD, llvmModule.get())
+                                     << " on " << diag(*globalVar);
     }
   }
 
