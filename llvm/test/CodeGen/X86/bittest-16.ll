@@ -9,8 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local zeroext i1 @bt_test_16_16(i16 noundef zeroext %a, i16 noundef zeroext %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: bt_test_16_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    btl %esi, %edi
+; CHECK-NEXT:    btw %si, %di
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
 entry:
@@ -27,8 +26,7 @@ entry:
 define dso_local zeroext i1 @bt_test_16_32(i32 noundef %a, i32 noundef %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: bt_test_16_32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    btl %esi, %edi
+; CHECK-NEXT:    btw %si, %di
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
 entry:
@@ -43,8 +41,7 @@ entry:
 define dso_local zeroext i1 @bt_test_16_64(i64 noundef %a, i64 noundef %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: bt_test_16_64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    btl %esi, %edi
+; CHECK-NEXT:    btw %si, %di
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
 entry:
@@ -93,8 +90,7 @@ entry:
 define i1 @bt_16_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: bt_16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    btl %esi, %edi
+; CHECK-NEXT:    btw %si, %di
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
 entry:

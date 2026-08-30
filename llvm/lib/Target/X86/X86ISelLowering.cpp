@@ -57511,10 +57511,10 @@ static SDValue combineBTToBitOpFlag(SDNode *N, SelectionDAG &DAG) {
   EVT VT = Src.getValueType();
   SDLoc DL(N);
 
-  // X86ISD::BT is only emitted for i32/i64 (smaller widths are promoted in
+  // X86ISD::BT is only emitted for i16/i32/i64 (smaller widths are promoted in
   // getBT before the node is created).
-  assert((VT == MVT::i32 || VT == MVT::i64) &&
-         "X86ISD::BT is only emitted for i32/i64");
+  assert((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+         "X86ISD::BT is only emitted for i16/i32/i64");
 
   unsigned BW = VT.getScalarSizeInBits();
   SDValue PeeledBitNo = peekThroughBitPosExtTrunc(BitNo, BW);
@@ -57574,6 +57574,26 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
     if (N->getOpcode() != ISD::DELETED_NODE)
       DCI.AddToWorklist(N);
     return SDValue(N, 0);
+  }
+
+  // If the bit index is masked by 0xF, we can use a 16-bit BT instruction to
+  // eliminate the masking operation. The 16-bit instruction has a size penalty
+  // (0x66 prefix), but it's worth it if we can drop an explicit AND
+  // instruction.
+  if (BitWidth == 32 || BitWidth == 64) {
+    if (N1.getOpcode() == ISD::AND && N1.hasOneUse()) {
+      if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
+        uint64_t Mask = C->getZExtValue();
+        if ((Mask & (BitWidth - 1)) == 15) {
+          SDLoc DL(N);
+          SDValue Src =
+              DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, N->getOperand(0));
+          SDValue BitNo =
+              DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, N1.getOperand(0));
+          return DAG.getNode(X86ISD::BT, DL, MVT::i32, Src, BitNo);
+        }
+      }
+    }
   }
 
   if (SDValue V = combineBTToBitOpFlag(N, DAG))

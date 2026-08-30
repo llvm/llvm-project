@@ -2121,6 +2121,9 @@ defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 // since getBT promotes <32-bit Src to i32 before creating X86ISD::BT. Unlike
 // the OneBitPats above, the bit index here is already a same-width register
 // (combineBTToBitOpFlag emits it that way), so no GR8 sub-reg insertion.
+def : Pat<(X86btr GR16:$src1, GR16:$src2), (BTR16rr GR16:$src1, GR16:$src2)>;
+def : Pat<(X86bts GR16:$src1, GR16:$src2), (BTS16rr GR16:$src1, GR16:$src2)>;
+def : Pat<(X86btc GR16:$src1, GR16:$src2), (BTC16rr GR16:$src1, GR16:$src2)>;
 def : Pat<(X86btr GR32:$src1, GR32:$src2), (BTR32rr GR32:$src1, GR32:$src2)>;
 def : Pat<(X86bts GR32:$src1, GR32:$src2), (BTS32rr GR32:$src1, GR32:$src2)>;
 def : Pat<(X86btc GR32:$src1, GR32:$src2), (BTC32rr GR32:$src1, GR32:$src2)>;
