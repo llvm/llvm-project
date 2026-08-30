@@ -5554,29 +5554,38 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::experimental_constrained_log10:
     case Intrinsic::experimental_constrained_log2:
     case Intrinsic::amdgcn_log: {
-      Type *EltTy = II->getType()->getScalarType();
+      FPClassTest InterestedSrcs = fcNone;
 
-      // log(+inf) -> +inf
-      // log([+-]0.0) -> -inf
-      // log(-inf) -> nan
-      // log(-x) -> nan
-      if ((InterestedClasses & (fcNan | fcInf)) != fcNone) {
-        FPClassTest InterestedSrcs = InterestedClasses;
-        if ((InterestedClasses & fcNegInf) != fcNone)
-          InterestedSrcs |= fcZero | fcSubnormal;
-        if ((InterestedClasses & fcNan) != fcNone)
-          InterestedSrcs |= fcNan | fcNegative;
+      // log(negative) produces NaN.
+      if ((InterestedClasses & fcNan) != fcNone)
+        InterestedSrcs |= fcNan | fcNegative;
 
-        KnownFPClass KnownSrc;
+      // log(logical-zero) produces negative infinity.
+      if ((InterestedClasses & fcNegInf) != fcNone)
+        InterestedSrcs |= fcZero | fcSubnormal;
+
+      // log(x) < -0.0 if x < +1.0
+      if ((InterestedClasses & fcNegNormal) != fcNone)
+        InterestedSrcs |= fcPosSubnormal | fcPosNormal;
+
+      // log(x) >= +0.0 if x >= +1.0
+      if ((InterestedClasses & (fcPosZero | fcPosNormal)) != fcNone)
+        InterestedSrcs |= fcPosNormal;
+
+      // log(x) is positive infinity iff x is positive infinity.
+      if ((InterestedClasses & fcPosInf) != fcNone)
+        InterestedSrcs |= fcPosInf;
+
+      KnownFPClass KnownSrc;
+      if (InterestedSrcs != fcNone)
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                             KnownSrc, Q, Depth + 1);
-
-        const Function *F = II->getFunction();
-        DenormalMode Mode = F ? F->getDenormalMode(EltTy->getFltSemantics())
-                              : DenormalMode::getDynamic();
-        Known = KnownFPClass::log(KnownSrc, Mode);
-      }
-
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      Known = KnownFPClass::log(KnownSrc, Mode);
       break;
     }
     case Intrinsic::pow: {
