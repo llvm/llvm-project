@@ -21,11 +21,8 @@ class SqrtTest : public LIBC_NAMESPACE::testing::Test {
   using OutRep = LIBC_NAMESPACE::fixed_point::FXRep<ReturnType>;
 
   static constexpr ReturnType zero = OutRep::ZERO();
-  static constexpr ReturnType max = OutRep::MAX();
   static constexpr ReturnType half = OutRep::ONE_HALF();
   static constexpr ReturnType quarter = OutRep::ONE_FOURTH();
-  static constexpr ReturnType one =
-      (OutRep::INTEGRAL_LEN > 0) ? static_cast<ReturnType>(1) : OutRep::MAX();
   static constexpr ReturnType eps = OutRep::EPS();
   static constexpr FXType in_max = FXRep::MAX();
   static constexpr FXType in_eps = FXRep::EPS();
@@ -34,20 +31,24 @@ public:
   typedef ReturnType (*SqrtFunc)(FXType);
 
   void testSpecialNumbers(SqrtFunc func) {
+    constexpr double ERR = 3.0 * static_cast<double>(eps);
+    auto check_error = [&](FXType v) {
+      double v_d = static_cast<double>(v);
+      double errors = LIBC_NAMESPACE::fputil::abs(
+          static_cast<double>(func(v)) -
+          LIBC_NAMESPACE::fputil::sqrt<double>(v_d));
+      EXPECT_TRUE(errors <= ERR);
+    };
+
     EXPECT_EQ(zero, func(zero));
     EXPECT_EQ(half, func(quarter));
 
     if constexpr (OutRep::INTEGRAL_LEN > 0) {
-      EXPECT_EQ(one, func(one));
+      EXPECT_EQ(static_cast<ReturnType>(1), func(1));
       EXPECT_EQ(static_cast<ReturnType>(2), func(4));
     }
 
-    constexpr double ERR = 3.0 * static_cast<double>(eps);
-    double eps_v_d = static_cast<double>(in_eps);
-    double eps_error = LIBC_NAMESPACE::fputil::abs(
-        static_cast<double>(func(in_eps)) -
-        LIBC_NAMESPACE::fputil::sqrt<double>(eps_v_d));
-    ASSERT_TRUE(eps_error <= ERR);
+    check_error(in_eps);
 
     using InputStorageType = typename FXRep::StorageType;
 
@@ -64,22 +65,9 @@ public:
     InputStorageType x = 0;
     for (size_t i = 0; i < COUNT && x <= MAX_MAGNITUDE; ++i, x += STEP) {
       FXType v = LIBC_NAMESPACE::cpp::bit_cast<FXType>(x);
-      double v_d = static_cast<double>(v);
-      double errors = LIBC_NAMESPACE::fputil::abs(
-          static_cast<double>(func(v)) -
-          LIBC_NAMESPACE::fputil::sqrt<double>(v_d));
-      if (errors > ERR) {
-        // Print out the failure input and output.
-        EXPECT_EQ(v, static_cast<FXType>(zero));
-        EXPECT_EQ(func(v), zero);
-      }
-      ASSERT_TRUE(errors <= ERR);
+      check_error(v);
     }
-    double v_d = static_cast<double>(in_max);
-    double error =
-        LIBC_NAMESPACE::fputil::abs(static_cast<double>(func(in_max)) -
-                                    LIBC_NAMESPACE::fputil::sqrt<double>(v_d));
-    ASSERT_TRUE(error <= ERR);
+    check_error(in_max);
   }
 };
 
