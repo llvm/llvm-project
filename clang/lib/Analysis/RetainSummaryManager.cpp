@@ -120,13 +120,13 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
     ::llvm::FoldingSetNodeID ID;
     OldSumm.Profile(ID);
 
-    void *Pos;
-    CachedSummaryNode *N = SimpleSummaries.FindNodeOrInsertPos(ID, Pos);
+    llvm::FoldingSetInsertToken Token;
+    CachedSummaryNode *N = SimpleSummaries.lookup(ID, Token);
 
     if (!N) {
       N = (CachedSummaryNode *) BPAlloc.Allocate<CachedSummaryNode>();
       new (N) CachedSummaryNode(OldSumm);
-      SimpleSummaries.InsertNode(N, Pos);
+      SimpleSummaries.insert(N, Token);
     }
 
     return &N->getValue();

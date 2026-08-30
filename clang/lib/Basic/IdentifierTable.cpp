@@ -754,9 +754,8 @@ Selector SelectorTable::getSelector(unsigned nKeys,
   llvm::FoldingSetNodeID ID;
   MultiKeywordSelector::Profile(ID, IIV, nKeys);
 
-  void *InsertPos = nullptr;
-  if (MultiKeywordSelector *SI =
-        SelTabImpl.Table.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (MultiKeywordSelector *SI = SelTabImpl.Table.lookup(ID, Token))
     return Selector(SI);
 
   // MultiKeywordSelector objects are not allocated with new because they have a
@@ -766,7 +765,7 @@ Selector SelectorTable::getSelector(unsigned nKeys,
       (MultiKeywordSelector *)SelTabImpl.Allocator.Allocate(
           Size, alignof(MultiKeywordSelector));
   new (SI) MultiKeywordSelector(nKeys, IIV);
-  SelTabImpl.Table.InsertNode(SI, InsertPos);
+  SelTabImpl.Table.insert(SI, Token);
   return Selector(SI);
 }
 

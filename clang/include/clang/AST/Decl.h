@@ -37,6 +37,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -2228,7 +2229,7 @@ private:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param Token If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -2240,7 +2241,7 @@ private:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken Token,
       TemplateSpecializationKind TSK,
       const TemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation PointOfInstantiation);
@@ -3191,7 +3192,7 @@ public:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param Token If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -3203,12 +3204,12 @@ public:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
+      llvm::FoldingSetInsertToken Token,
       TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
       TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
       SourceLocation PointOfInstantiation = SourceLocation()) {
     setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      Token, TSK, TemplateArgsAsWritten,
                                       PointOfInstantiation);
   }
 
