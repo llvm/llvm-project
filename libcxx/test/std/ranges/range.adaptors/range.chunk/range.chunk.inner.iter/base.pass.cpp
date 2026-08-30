@@ -15,30 +15,49 @@
 
 #include <cassert>
 #include <concepts>
-#include <iterator>
 #include <ranges>
 #include <vector>
 
 #include "test_iterators.h"
 
 constexpr bool test() {
-  // Test `constexpr const iterator_t<V> base() const&`
   std::vector<int> vector = {1, 2, 3, 4};
-  std::ranges::chunk_view<
-      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
-      chunked(
-          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
-              cpp17_input_iterator<int*>(vector.data()),
-              sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
-          2);
-  auto outer = chunked.begin();
-  auto inner = (*outer).begin();
+  std::vector<int> single_vector = {1};
 
-  std::same_as<const cpp17_input_iterator<int*>> decltype(auto) base = inner.base();
-  assert(*base == 1);
+  // Test `constexpr const iterator_t<V> base() const&`
+  {
+    // When range is general
+    {
+      std::ranges::chunk_view<
+          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+          chunked(
+              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                  cpp17_input_iterator<int*>(vector.data()),
+                  sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+              2);
+      auto outer = chunked.begin();
+      auto inner = (*outer).begin();
+      static_assert(std::same_as<const cpp17_input_iterator<int*>, decltype(inner.base())>);
+      assert(*inner.base() == 1);
+      ++inner;
+      assert(*inner.base() == 2);
+    }
 
-  ++inner;
-  assert(*inner.base() == 2);
+    // When range is single
+    {
+      std::ranges::chunk_view<
+          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+          chunked(
+              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                  cpp17_input_iterator<int*>(single_vector.data()),
+                  sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(single_vector.data() + single_vector.size()))),
+              2);
+      auto outer = chunked.begin();
+      auto inner = (*outer).begin();
+      static_assert(std::same_as<const cpp17_input_iterator<int*>, decltype(inner.base())>);
+      assert(*inner.base() == 1);
+    }
+  }
 
   return true;
 }
