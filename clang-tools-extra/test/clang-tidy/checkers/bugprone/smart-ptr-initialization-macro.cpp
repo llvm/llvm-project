@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t -- -- -I %S/../Inputs/Headers/std
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t
 
 #include <memory>
 
