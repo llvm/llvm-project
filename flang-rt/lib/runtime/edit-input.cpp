@@ -566,7 +566,7 @@ static RT_API_ATTRS void RaiseFPExceptions(
   terminator.Crash( \
       "not implemented yet: raising FP exception in device code: %s", #e);
 #else // !defined(RT_DEVICE_COMPILATION)
-#ifdef feraisexcept // a macro in some environments; omit std::
+#ifdef feraiseexcept // a macro in some environments; omit std::
 #define RAISE feraiseexcept
 #else
 #define RAISE std::feraiseexcept
