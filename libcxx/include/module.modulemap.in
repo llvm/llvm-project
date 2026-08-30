@@ -2062,6 +2062,14 @@ module std {
 
   module regex {
     header "regex"
+
+    module basic_parser    { header "__regex/basic_parser.h" }
+    module ecma_parser     { header "__regex/ecma_parser.h" }
+    module extended_parser { header "__regex/extended_parser.h" }
+    module interpreter     { header "__regex/interpreter.h" }
+    module parser_common   { header "__regex/parser_common.h" }
+    module regex_error     { header "__regex/regex_error.h" }
+
     export *
     export std.iterator.reverse_iterator
   }

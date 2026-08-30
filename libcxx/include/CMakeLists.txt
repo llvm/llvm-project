@@ -795,6 +795,12 @@ set(files
   __ranges/views.h
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
+  __regex/basic_parser.h
+  __regex/ecma_parser.h
+  __regex/extended_parser.h
+  __regex/interpreter.h
+  __regex/parser_common.h
+  __regex/regex_error.h
   __split_buffer
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
