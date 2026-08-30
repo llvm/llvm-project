@@ -162,6 +162,9 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
+    
+  - Fixed a crash when a method's enclosing class inherits from a base
+    class that is only forward-declared and not yet defined.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring

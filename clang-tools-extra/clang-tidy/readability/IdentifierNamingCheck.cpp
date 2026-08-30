@@ -1259,7 +1259,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     // necessary even if it's not an override. e.g. CRTP.
     for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
       if (const auto *RD = Base.getType()->getAsCXXRecordDecl();
-          RD && RD->hasMemberName(Decl->getDeclName()))
+          RD && RD->hasDefinition() && RD->hasMemberName(Decl->getDeclName()))
         return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])

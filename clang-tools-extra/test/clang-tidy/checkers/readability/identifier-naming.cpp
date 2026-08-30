@@ -834,3 +834,15 @@ Some_struct g_s1{ .SomeMember = 1 };
 // CHECK-FIXES: Some_struct g_s1{ .some_member = 1 };
 Some_struct g_s2{.SomeMember=1};
 // CHECK-FIXES: Some_struct g_s2{.some_member=1};
+
+// Regression test for https://github.com/llvm/llvm-project/issues/213948:
+// a base class that is only forward-declared must not be dereferenced
+// as if it were complete.
+
+template<class t_t>
+struct Issue_213948_outer {
+  struct Issue_213948_base;
+  struct Issue_213948_derived : public Issue_213948_base {
+    virtual void v_Foo() { }
+  };
+};
