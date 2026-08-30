@@ -1307,9 +1307,10 @@ static bool canStrengthenFlags(Instruction *I) {
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
       return false;
-    // A constant second operand can be used to bound the first operand to
-    // refine no-wrap flags.
-    return isa<ConstantInt>(BO->getOperand(1));
+    // With a constant second operand, we can use bounds on the first operand to
+    // refine no-wrap flags. Independently, nuw can be added for nsw if the
+    // operands are non-negative.
+    return isa<ConstantInt>(BO->getOperand(1)) || BO->hasNoSignedWrap();
   default:
     return false;
   }
@@ -1367,24 +1368,32 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
     bool Changed = false;
     // For a constant Op1, the ranges of Op0 for which the operation does not
     // wrap are known exactly; check if the systems imply one of them.
-    auto *C = cast<ConstantInt>(Op1);
-    ConstantRange Other(C->getValue());
-    if (!I->hasNoUnsignedWrap() &&
-        doesHoldInRange(Info, Op0,
-                        ConstantRange::makeGuaranteedNoWrapRegion(
-                            Opcode, Other, OBO::NoUnsignedWrap),
-                        /*Signed=*/false)) {
+    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
+      ConstantRange Other(C->getValue());
+      if (!I->hasNoUnsignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoUnsignedWrap),
+                          /*Signed=*/false)) {
+        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+        I->setHasNoUnsignedWrap();
+        Changed = true;
+      }
+      if (!I->hasNoSignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoSignedWrap),
+                          /*Signed=*/true)) {
+        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+        I->setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+    if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
+        Info.isKnownNonNegative(Op0) &&
+        (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
       LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
       I->setHasNoUnsignedWrap();
-      Changed = true;
-    }
-    if (!I->hasNoSignedWrap() &&
-        doesHoldInRange(Info, Op0,
-                        ConstantRange::makeGuaranteedNoWrapRegion(
-                            Opcode, Other, OBO::NoSignedWrap),
-                        /*Signed=*/true)) {
-      LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-      I->setHasNoSignedWrap();
       Changed = true;
     }
     return Changed;
