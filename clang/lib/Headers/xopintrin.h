@@ -737,15 +737,17 @@ _mm_comtrue_epi64(__m128i __A, __m128i __B)
                                         (__v8si)(__m256i)(C), (I)))
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_frcz_ss(__m128 __A)
+_mm_frcz_ss(__m128 __A, __m128 __B)
 {
-  return (__m128)__builtin_ia32_vfrczss((__v4sf)__A);
+  __A[0] = ((__v4sf)__builtin_ia32_vfrczss((__v4sf)__B))[0];
+  return __A;
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
-_mm_frcz_sd(__m128d __A)
+_mm_frcz_sd(__m128d __A, __m128d __B)
 {
-  return (__m128d)__builtin_ia32_vfrczsd((__v2df)__A);
+  __A[0] = ((__v2df)__builtin_ia32_vfrczsd((__v2df)__B))[0];
+  return __A;
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
