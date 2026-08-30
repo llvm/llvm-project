@@ -40,6 +40,22 @@ if (FLANG_RUNTIME_F128_MATH_LIB STREQUAL "libquadmath")
     add_compile_definitions(HAS_QUADMATHLIB)
     set(QUADMATHLIB quadmath)
   else()
+    # BEHAVIOUR CHANGE, and a deliberate one. Previously this condition was
+    # silent: the folding table was simply not built, configuration carried on,
+    # and the resulting compiler evaluated REAL(16) constant expressions at run
+    # time instead of folding them - with no message at any point saying so.
+    #
+    # That silence is only harmless while nobody asked. Here the user has named
+    # libquadmath explicitly, so the absence of quadmath.h or of the library is
+    # a request that cannot be honoured, and continuing would hand back a
+    # compiler quietly missing the capability that was asked for. The same
+    # reasoning does not apply when the option is left empty: REAL(16) is then
+    # disabled outright and there is nothing to be quiet about.
+    #
+    # A configuration that relied on the old behaviour - naming libquadmath on
+    # a machine that does not have it - will now stop here. The fix is to leave
+    # FLANG_RUNTIME_F128_MATH_LIB empty, which is what such a build was
+    # effectively getting anyway.
     message(FATAL_ERROR
       "FLANG_RUNTIME_F128_MATH_LIB=libquadmath but quadmath.h or libquadmath "
       "was not found; the compiler could not fold REAL(16) constants")
