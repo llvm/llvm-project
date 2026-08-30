@@ -11,12 +11,14 @@ RUN: split-file %s %t
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -dump-input-context=2 -v %t/next.txt < %t/input.txt \
 RUN:               -dump-input-filter=error 2>&1 | \
-RUN:   FileCheck %s -match-full-lines -check-prefixes=DMP,DMP_NEXT
+RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t/next.txt \
+RUN:             -check-prefixes=DMP,DMP_NEXT
 
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -dump-input-context=2 -v %t/same.txt < %t/input.txt \
 RUN:               -dump-input-filter=error 2>&1 | \
-RUN:   FileCheck %s -match-full-lines -check-prefixes=DMP,DMP_SAME
+RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t/same.txt \
+RUN:             -check-prefixes=DMP,DMP_SAME
 
           DMP:<<<<<<
      DMP-NEXT:          1: start 
@@ -33,8 +35,12 @@ DMP_SAME-NEXT:same:2'0         {   search range start (exclusive)
      DMP-NEXT:         13: end 
 DMP_NEXT-NEXT:next:2'1     !~~   error: match on wrong line
 DMP_SAME-NEXT:same:2'1     !~~   error: match on wrong line
-DMP_NEXT-NEXT:next:2'2         } search range end (exclusive)
-DMP_SAME-NEXT:same:2'2         } search range end (exclusive)
+DMP_NEXT-NEXT:next:2'2           for: CHECK-NEXT: end
+DMP_SAME-NEXT:same:2'2           for: CHECK-SAME: end
+DMP_NEXT-NEXT:next:2'3           at: [[CHK_FILE]]:2
+DMP_SAME-NEXT:same:2'3           at: [[CHK_FILE]]:2
+DMP_NEXT-NEXT:next:2'4         } search range end (exclusive)
+DMP_SAME-NEXT:same:2'4         } search range end (exclusive)
      DMP-NEXT:>>>>>>
 
 ;--- next.txt
