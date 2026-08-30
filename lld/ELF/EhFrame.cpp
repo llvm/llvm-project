@@ -50,6 +50,7 @@ private:
   StringRef readString();
   void skipLeb128();
   void skipEncoded(uint8_t encoding);
+  template <typename T> std::optional<T> readLength();
   std::optional<uint64_t> readEncodedLength(uint8_t encoding);
   void skipAugP();
   StringRef getAugmentation();
@@ -139,51 +140,55 @@ void EhReader::skipAugP() {
   skipEncoded(enc);
 }
 
+// Read a non-negative number of given type in target endian,
+// advancing the cursor by the type's size.
+template <typename T> std::optional<T> EhReader::readLength() {
+  const size_t size = sizeof(T);
+  if (d.size() < size) {
+    errOn(d.data(), "unexpected end of CIE/FDE");
+    return {};
+  }
+
+  const auto endian = isec->getCtx().arg.endianness;
+  const auto result = support::endian::read<T>(d.data(), endian);
+
+  d = d.slice(size);
+  if (result < 0) {
+    errOn(d.data(), "invalid negative PC range in FDE");
+    return {};
+  }
+  return result;
+}
+
 std::optional<uint64_t> EhReader::readEncodedLength(uint8_t encoding) {
-  using support::endian::read;
-
-  const auto *value = d.data();
-  skipEncoded(encoding);
-
   auto &ctx = isec->getCtx();
-  const auto endian = ctx.arg.endianness;
-  int64_t signedValue = -1;
   switch (encoding & 0x0f) {
   case DW_EH_PE_absptr:
     if (ctx.arg.wordsize == 4)
-      return read<uint32_t>(value, endian);
+      return readLength<uint32_t>();
     else
-      return read<uint64_t>(value, endian);
+      return readLength<uint64_t>();
   case DW_EH_PE_signed:
     if (ctx.arg.wordsize == 4)
-      signedValue = read<int32_t>(value, endian);
+      return readLength<int32_t>();
     else
-      signedValue = read<int64_t>(value, endian);
-    break;
+      return readLength<int64_t>();
   case DW_EH_PE_udata2:
-    return read<uint16_t>(value, endian);
+    return readLength<uint16_t>();
   case DW_EH_PE_sdata2:
-    signedValue = read<int16_t>(value, endian);
-    break;
+    return readLength<int16_t>();
   case DW_EH_PE_udata4:
-    return read<uint32_t>(value, endian);
+    return readLength<uint32_t>();
   case DW_EH_PE_sdata4:
-    signedValue = read<int32_t>(value, endian);
-    break;
+    return readLength<int32_t>();
   case DW_EH_PE_udata8:
-    return read<uint64_t>(value, endian);
+    return readLength<uint64_t>();
   case DW_EH_PE_sdata8:
-    signedValue = read<int64_t>(value, endian);
-    break;
+    return readLength<int64_t>();
   default:
-    errOn(value, "unknown FDE encoding");
+    errOn(d.data(), "unknown FDE encoding");
     return {};
   }
-  if (signedValue < 0) {
-    errOn(value, "invalid negative PC range in FDE");
-    return {};
-  }
-  return (uint64_t)signedValue;
 }
 
 uint8_t elf::getFdeEncoding(EhSectionPiece *p) {
