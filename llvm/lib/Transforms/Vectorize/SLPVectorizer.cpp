@@ -13719,17 +13719,45 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI,
                                        const TTI::TargetCostKind CostKind);
 
-/// \returns true if contracting \p FMul into an fma with its user is worth more
-/// than a vector node over the multiplication. canConvertToFMA prices both
-/// sides of the contraction as scalars, so on targets that do not always want
-/// an fma the answer is left to the vector node whenever it has operand loads
-/// to widen.
-static bool preferFMAOverVectorNode(const Value *FMul,
-                                    const TargetTransformInfo &TTI) {
-  if (TTI.enableAggressiveFMAFusion(FMul->getType()))
+/// \returns true if contracting \p FMul into an fma with its user \p FAdd is
+/// worth more than the wide loads a vector node over the multiplication would
+/// fold its operands into. \p FMACost is what canConvertToFMA measured for the
+/// scalar pair, so the saving the veto buys is the unfused pair minus that.
+static bool preferFMAOverVectorNode(const Value *FMul, const Instruction *FAdd,
+                                    InstructionCost FMACost,
+                                    const TargetTransformInfo &TTI,
+                                    TTI::TargetCostKind CostKind) {
+  const auto *FMulI = dyn_cast<Instruction>(FMul);
+  if (!FMulI)
     return true;
-  const auto *I = dyn_cast<Instruction>(FMul);
-  return !I || none_of(I->operands(), IsaPred<LoadInst>);
+  Type *ScalarTy = FMulI->getType();
+  unsigned ScalarBits = ScalarTy->getPrimitiveSizeInBits();
+  unsigned RegBits =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+          .getFixedValue();
+  unsigned VF = ScalarBits ? RegBits / ScalarBits : 0;
+  if (VF < 2)
+    return true;
+  Type *VecTy = getWidenedType(ScalarTy, VF);
+  InstructionCost LoadSaving = 0;
+  for (const Value *Op : FMulI->operands()) {
+    const auto *LI = dyn_cast<LoadInst>(Op);
+    if (!LI || !LI->isSimple())
+      continue;
+    unsigned AS = LI->getPointerAddressSpace();
+    LoadSaving += VF * TTI.getMemoryOpCost(Instruction::Load, ScalarTy,
+                                           LI->getAlign(), AS, CostKind) -
+                  TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                                      AS, CostKind);
+  }
+  if (!LoadSaving.isValid() || LoadSaving <= 0)
+    return true;
+  InstructionCost Unfused =
+      TTI.getArithmeticInstrCost(Instruction::FMul, ScalarTy, CostKind) +
+      TTI.getArithmeticInstrCost(FAdd->getOpcode(), ScalarTy, CostKind);
+  if (!Unfused.isValid() || !FMACost.isValid())
+    return true;
+  return (Unfused - FMACost) * VF >= LoadSaving;
 }
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
@@ -33143,15 +33171,16 @@ bool SLPVectorizerPass::tryToVectorize(
     return false;
   // Skip potential FMA candidates and collect them for a retry after all other
   // instructions in the block have been processed.
-  if (!AllowFMACandidates &&
-      (I->getOpcode() == Instruction::FAdd ||
-       I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
-                      R.getCostKind())
-          .isValid() &&
-      preferFMAOverVectorNode(I->getOperand(0), *TTI)) {
-    FMACandidates.insert(I);
-    return false;
+  if (!AllowFMACandidates && (I->getOpcode() == Instruction::FAdd ||
+                              I->getOpcode() == Instruction::FSub)) {
+    InstructionCost FMACost = canConvertToFMA(I, getSameOpcode(I, *TLI), *DT,
+                                              *DL, *TTI, *TLI, R.getCostKind());
+    if (FMACost.isValid() &&
+        preferFMAOverVectorNode(I->getOperand(0), I, FMACost, *TTI,
+                                R.getCostKind())) {
+      FMACandidates.insert(I);
+      return false;
+    }
   }
 
   Value *P = I->getParent();
@@ -34420,14 +34449,16 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // The multiplication is contracted into the scalar FMA with its user, the
     // vector node breaks the contraction.
-    if (I.getOpcode() == Instruction::FMul &&
-        preferFMAOverVectorNode(&I, *TTI)) {
+    if (I.getOpcode() == Instruction::FMul) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
-          S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind())
-              .isValid())
-        continue;
+          S && S.isAddSubLikeOp()) {
+        InstructionCost FMACost =
+            canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind());
+        if (FMACost.isValid() &&
+            preferFMAOverVectorNode(&I, U, FMACost, *TTI, R.getCostKind()))
+          continue;
+      }
     }
     // The keys are hashes, so the groups are numbered by the first seed to
     // keep the order deterministic.

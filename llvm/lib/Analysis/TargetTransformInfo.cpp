@@ -563,10 +563,6 @@ bool TargetTransformInfo::enableOrderedReductions() const {
   return TTIImpl->enableOrderedReductions();
 }
 
-bool TargetTransformInfo::enableAggressiveFMAFusion(Type *Ty) const {
-  return TTIImpl->enableAggressiveFMAFusion(Ty);
-}
-
 bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return TTIImpl->hasDivRemOp(DataType, IsSigned);
 }
