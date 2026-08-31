@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMNVPTXDesc
+  NVPTXAsmStreamer.cpp
   NVPTXInstPrinter.cpp
   NVPTXMCAsmInfo.cpp
   NVPTXMCTargetDesc.cpp
