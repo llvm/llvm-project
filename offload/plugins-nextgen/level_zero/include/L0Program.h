@@ -74,6 +74,10 @@ class L0ProgramTy : public DeviceImageTy {
   /// Module that contains global data including device RTL.
   ze_module_handle_t GlobalModule = nullptr;
 
+  /// L0 context the modules were built against. Cached programs are only
+  /// reusable for lookups that share this context.
+  ze_context_handle_t ZeContext = nullptr;
+
   L0DeviceTy &getL0Device() const;
 
 public:
@@ -82,9 +86,11 @@ public:
   L0ProgramTy(int32_t ImageId, GenericDeviceTy &Device,
               std::unique_ptr<MemoryBuffer> Image,
               ze_module_handle_t GlobalModule,
-              llvm::SmallVector<ze_module_handle_t> &&Modules)
+              llvm::SmallVector<ze_module_handle_t> &&Modules,
+              ze_context_handle_t ZeContext)
       : DeviceImageTy(ImageId, Device, std::move(Image)),
-        Modules(std::move(Modules)), GlobalModule(GlobalModule) {}
+        Modules(std::move(Modules)), GlobalModule(GlobalModule),
+        ZeContext(ZeContext) {}
   ~L0ProgramTy() = default;
 
   L0ProgramTy(const L0ProgramTy &Other) = delete;
@@ -93,6 +99,8 @@ public:
   L0ProgramTy &operator=(const L0ProgramTy &&) = delete;
 
   Error deinit();
+
+  ze_context_handle_t getZeContext() const { return ZeContext; }
 
   static L0ProgramTy &makeL0Program(DeviceImageTy &Device) {
     return static_cast<L0ProgramTy &>(Device);

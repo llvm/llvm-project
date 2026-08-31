@@ -213,9 +213,10 @@ public:
   }
   ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
 
-  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image,
+                                   ze_context_handle_t ZeContext) {
     for (auto &PGM : Programs)
-      if (PGM.getMemoryBuffer() == Image)
+      if (PGM.getMemoryBuffer() == Image && PGM.getZeContext() == ZeContext)
         return &PGM;
     return nullptr;
   }
@@ -234,9 +235,9 @@ public:
     auto ImageOrErr = Builder.getELF();
     if (!ImageOrErr)
       return ImageOrErr.takeError();
-    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
-                          Builder.getGlobalModule(),
-                          std::move(Builder.getModules()));
+    Programs.emplace_back(
+        ImageId, *this, std::move(*ImageOrErr), Builder.getGlobalModule(),
+        std::move(Builder.getModules()), Builder.getZeContext());
     return Programs.back();
   }
 
