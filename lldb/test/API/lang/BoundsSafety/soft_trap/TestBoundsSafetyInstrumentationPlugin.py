@@ -76,10 +76,6 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
             expected_line_num=line_num,
         )
 
-    # Skip the tests on Windows because they fail due to the stop reason
-    # being `eStopReasonNon` instead of the expected
-    # `eStopReasonInstrumentation`.
-    @skipIfWindows
     @skipUnlessBoundsSafety
     def test_call_minimal(self):
         """
@@ -114,7 +110,6 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
-    @skipIfWindows
     @skipUnlessBoundsSafety
     def test_call_with_str(self):
         """
