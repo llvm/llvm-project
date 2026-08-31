@@ -2847,6 +2847,18 @@ static void genWsloopClauses(
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
 
+static bool
+allocateRequiresInitOrFinalization(const semantics::Symbol &ultimate) {
+  const semantics::DeclTypeSpec *declTypeSpec = ultimate.GetType();
+  if (!declTypeSpec)
+    return false;
+  const semantics::DerivedTypeSpec *derivedTypeSpec = declTypeSpec->AsDerived();
+  if (!derivedTypeSpec)
+    return false;
+  return derivedTypeSpec->HasDefaultInitialization(false, false) ||
+         semantics::MayRequireFinalization(*derivedTypeSpec);
+}
+
 static void genAllocateDirOp(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
                              lower::StatementContext &stmtCtx,
@@ -2866,6 +2878,14 @@ static void genAllocateDirOp(lower::AbstractConverter &converter,
           loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
                "COMMON blocks is not yet supported, ignoring the ALLOCATE "
                "directive for '" +
+                   sym->name().ToString() + "'");
+      continue;
+    }
+    if (allocateRequiresInitOrFinalization(ultimate)) {
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on derived-type "
+               "variables with initialization or finalization is not yet "
+               "supported, ignoring the ALLOCATE directive for '" +
                    sym->name().ToString() + "'");
       continue;
     }
