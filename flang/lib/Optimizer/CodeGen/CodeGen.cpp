@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
@@ -1293,8 +1294,7 @@ template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
                   mlir::ConversionPatternRewriter &rewriter,
-                  mlir::Type indexType) {
-  static constexpr char mallocName[] = "malloc";
+                  mlir::Type indexType, llvm::StringRef mallocName) {
   if (auto mallocFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
     return mlir::SymbolRefAttr::get(mallocFunc);
@@ -1311,22 +1311,43 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
   return mlir::SymbolRefAttr::get(mallocDecl);
 }
 
+/// Allocator entry point for an allocation marked by the allocation placement
+/// passes with a heap allocation mode: the libc name plus the mode suffix from
+/// the pass options, e.g. malloc -> malloc_unified. Only marked
+/// fir.allocmem/fir.freemem pairs are routed, since memory the Fortran runtime
+/// allocated must keep being released by libc free, and vice versa.
+static std::string getHeapAllocName(mlir::Operation *op, llvm::StringRef plain,
+                                    const fir::FIRToLLVMPassOptions &options) {
+  // Device modules keep libc names; the mode entry points are host-side.
+  if (op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return plain.str();
+  switch (fir::getCudaHeapAllocMode(op)) {
+  case fir::CudaHeapAllocMode::Unified:
+    return (plain + options.unifiedHeapAllocSuffix).str();
+  case fir::CudaHeapAllocMode::Managed:
+    return (plain + options.managedHeapAllocSuffix).str();
+  case fir::CudaHeapAllocMode::None:
+    return plain.str();
+  }
+  llvm_unreachable("unexpected CudaHeapAllocMode");
+}
+
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
 static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
                                      mlir::ConversionPatternRewriter &rewriter,
-                                     mlir::Type indexType) {
+                                     mlir::Type indexType,
+                                     const fir::FIRToLLVMPassOptions &options) {
+  std::string name = getHeapAllocName(op, "malloc", options);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getMallocInModule(mod, op, rewriter, indexType);
+    return getMallocInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getMallocInModule(mod, op, rewriter, indexType);
+  return getMallocInModule(mod, op, rewriter, indexType, name);
 }
 
 template <typename ModuleOp>
-static mlir::SymbolRefAttr
-getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
-                        mlir::ConversionPatternRewriter &rewriter,
-                        mlir::Type indexType) {
-  static constexpr char alignedAllocName[] = "aligned_alloc";
+static mlir::SymbolRefAttr getAlignedAllocInModule(
+    ModuleOp mod, fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type indexType, llvm::StringRef alignedAllocName) {
   if (auto func =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(alignedAllocName))
     return mlir::SymbolRefAttr::get(func);
@@ -1345,19 +1366,19 @@ getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
 
 static mlir::SymbolRefAttr
 getAlignedAlloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
-                mlir::Type indexType) {
+                mlir::Type indexType,
+                const fir::FIRToLLVMPassOptions &options) {
+  std::string name = getHeapAllocName(op, "aligned_alloc", options);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getAlignedAllocInModule(mod, op, rewriter, indexType);
+    return getAlignedAllocInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getAlignedAllocInModule(mod, op, rewriter, indexType);
+  return getAlignedAllocInModule(mod, op, rewriter, indexType, name);
 }
 
 template <typename ModuleOp>
-static mlir::SymbolRefAttr
-getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
-                         mlir::ConversionPatternRewriter &rewriter,
-                         mlir::Type indexType) {
-  static constexpr char posixMemalignName[] = "posix_memalign";
+static mlir::SymbolRefAttr getPosixMemalignInModule(
+    ModuleOp mod, fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type indexType, llvm::StringRef posixMemalignName) {
   if (auto func =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(posixMemalignName))
     return mlir::SymbolRefAttr::get(func);
@@ -1378,11 +1399,13 @@ getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
 
 static mlir::SymbolRefAttr
 getPosixMemalign(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
-                 mlir::Type indexType) {
+                 mlir::Type indexType,
+                 const fir::FIRToLLVMPassOptions &options) {
+  std::string name = getHeapAllocName(op, "posix_memalign", options);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getPosixMemalignInModule(mod, op, rewriter, indexType);
+    return getPosixMemalignInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getPosixMemalignInModule(mod, op, rewriter, indexType);
+  return getPosixMemalignInModule(mod, op, rewriter, indexType, name);
 }
 
 /// Return value of the stride in bytes between adjacent elements
@@ -1465,7 +1488,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
           mlir::Value nullPtr =
               mlir::LLVM::ZeroOp::create(rewriter, loc, ptrTy);
           mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
-          heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy));
+          heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy,
+                                                   this->options));
           mlir::LLVM::CallOp::create(
               rewriter, loc,
               mlir::TypeRange{
@@ -1487,7 +1511,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
                                   ~static_cast<std::int64_t>(*alignment - 1));
         mlir::Value roundedSize = mlir::LLVM::AndOp::create(
             rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
-        heap->setAttr("callee", getAlignedAlloc(heap, rewriter, mallocTy));
+        heap->setAttr("callee",
+                      getAlignedAlloc(heap, rewriter, mallocTy, this->options));
         rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
             heap, ::getLlvmPtrType(heap.getContext()),
             mlir::ValueRange{alignVal, roundedSize},
@@ -1496,7 +1521,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
       }
     }
 
-    heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy));
+    heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy, this->options));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size,
         addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 1));
@@ -1519,8 +1544,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
 template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
-                mlir::ConversionPatternRewriter &rewriter) {
-  static constexpr char freeName[] = "free";
+                mlir::ConversionPatternRewriter &rewriter,
+                llvm::StringRef freeName) {
   // Check if free already defined in the module.
   if (auto freeFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
@@ -1540,11 +1565,13 @@ getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
 }
 
 static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
-                                   mlir::ConversionPatternRewriter &rewriter) {
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   const fir::FIRToLLVMPassOptions &options) {
+  std::string name = getHeapAllocName(op, "free", options);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getFreeInModule(mod, op, rewriter);
+    return getFreeInModule(mod, op, rewriter, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getFreeInModule(mod, op, rewriter);
+  return getFreeInModule(mod, op, rewriter, name);
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
@@ -1566,7 +1593,7 @@ struct FreeMemOpConversion : public fir::FIROpConversion<fir::FreeMemOp> {
   matchAndRewrite(fir::FreeMemOp freemem, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = freemem.getLoc();
-    freemem->setAttr("callee", getFree(freemem, rewriter));
+    freemem->setAttr("callee", getFree(freemem, rewriter, this->options));
     mlir::LLVM::CallOp::create(
         rewriter, loc, mlir::TypeRange{},
         mlir::ValueRange{adaptor.getHeapref()},
@@ -1904,14 +1931,14 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       // destination box.
       if (hasAddendum) {
         auto maskAttr = mlir::IntegerAttr::get(
-            rewriter.getIntegerType(8, /*isSigned=*/false),
+            rewriter.getI8Type(),
             llvm::APInt(8, (uint64_t)_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
         mlir::LLVM::ConstantOp mask = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rewriter.getI8Type(), maskAttr);
         extraField = mlir::LLVM::OrOp::create(rewriter, loc, extraField, mask);
       } else {
         auto maskAttr = mlir::IntegerAttr::get(
-            rewriter.getIntegerType(8, /*isSigned=*/false),
+            rewriter.getI8Type(),
             llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/true));
         mlir::LLVM::ConstantOp mask = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rewriter.getI8Type(), maskAttr);
@@ -2954,12 +2981,23 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type.
+    // Extract the dimensions of the array being initialized. Only those are
+    // used to expand a fallback insert chain. Any remaining LLVM array
+    // dimension belongs to an aggregate element type: a CHARACTER element is
+    // itself an array of characters.
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    for (std::size_t i = 0, rank = range.getType().getShape().size(); i < rank;
+         ++i) {
+      auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
+    }
+    llvm::SmallVector<std::int64_t> elementDims;
+    mlir::Type scalarType = type;
+    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(scalarType)) {
+      elementDims.push_back(t.getNumElements());
+      scalarType = t.getElementType();
     }
 
     // Avoid generating long insert chain that are very slow to fold back
@@ -2970,16 +3008,45 @@ struct InsertOnRangeOpConversion
       llvm::FailureOr<mlir::Attribute> cst =
           fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
       if (llvm::succeeded(cst)) {
-        mlir::Attribute dimVal = *cst;
-        for (auto dim : llvm::reverse(dims)) {
-          // Use std::vector in case the number of elements is big.
-          std::vector<mlir::Attribute> elements(dim, dimVal);
-          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        if (elementDims.empty()) {
+          mlir::Attribute dimVal = *cst;
+          for (auto dim : llvm::reverse(dims)) {
+            // Use std::vector in case the number of elements is big.
+            std::vector<mlir::Attribute> elements(dim, dimVal);
+            dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+          }
+          // Replace insert chain with constant.
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                              dimVal);
+          return mlir::success();
         }
-        // Replace insert chain with constant.
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
-                                                            dimVal);
-        return mlir::success();
+        // An array with an aggregate element type cannot be described by a
+        // nested ArrayAttr. A CHARACTER array is a dense array of characters,
+        // so replicate the element data into a dense attribute.
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(*cst)) {
+          llvm::StringRef element = strAttr.getValue();
+          std::int64_t elementSize = 1;
+          for (std::int64_t dim : elementDims)
+            elementSize *= dim;
+          if (scalarType.isInteger(8) &&
+              element.size() == static_cast<std::size_t>(elementSize)) {
+            std::int64_t count = 1;
+            for (std::int64_t dim : dims)
+              count *= dim;
+            std::string data;
+            data.reserve(count * element.size());
+            for (std::int64_t i = 0; i < count; ++i)
+              data.append(element.data(), element.size());
+            llvm::SmallVector<std::int64_t> shape(dims);
+            shape.append(elementDims);
+            auto denseAttr = mlir::DenseElementsAttr::getFromRawBuffer(
+                mlir::RankedTensorType::get(shape, scalarType),
+                llvm::ArrayRef(data.data(), data.size()));
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType, denseAttr);
+            return mlir::success();
+          }
+        }
       }
     }
 
@@ -3728,25 +3795,41 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       // initialization is on the full range.
       auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
       for (auto insertOp : insertOnRangeOps) {
-        if (insertOp.isFullRange()) {
-          auto seqTyAttr = convertType(insertOp.getType());
-          auto *op = insertOp.getVal().getDefiningOp();
-          auto constant = mlir::dyn_cast<mlir::arith::ConstantOp>(op);
-          if (!constant) {
-            auto convertOp = mlir::dyn_cast<fir::ConvertOp>(op);
-            if (!convertOp)
-              continue;
-            constant = mlir::cast<mlir::arith::ConstantOp>(
-                convertOp.getValue().getDefiningOp());
-          }
-          mlir::Type vecType = mlir::VectorType::get(
-              insertOp.getType().getShape(), constant.getType());
-          auto denseAttr = mlir::DenseElementsAttr::get(
-              mlir::cast<mlir::ShapedType>(vecType), constant.getValue());
-          rewriter.setInsertionPointAfter(insertOp);
-          rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
-              insertOp, seqTyAttr, denseAttr);
+        if (!insertOp.isFullRange())
+          continue;
+        // The dense attribute must use the converted element type of the
+        // array, not the type of whatever constant feeds the insertion.
+        mlir::Type elementType = convertType(insertOp.getType().getEleTy());
+        mlir::Value val = insertOp.getVal();
+        // Logical constants reach the insertion through a `fir.convert`.
+        auto convertOp = val.getDefiningOp<fir::ConvertOp>();
+        if (convertOp)
+          val = convertOp.getValue();
+        auto constant = val.getDefiningOp<mlir::arith::ConstantOp>();
+        if (!constant)
+          continue;
+        mlir::TypedAttr valueAttr = constant.getValue();
+        if (valueAttr.getType() != elementType) {
+          // Looking through the `fir.convert` leaves the constant with the
+          // source type. Only an integer<->logical conversion is folded here:
+          // it normalizes any integer operand to a canonical 0/1, see
+          // ConvertOpConversion. Any other mismatching conversion is left to
+          // the regular lowering.
+          auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
+          auto intType = mlir::dyn_cast<mlir::IntegerType>(elementType);
+          if (!intAttr || !intType || !convertOp ||
+              (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
+               !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
+            continue;
+          valueAttr = mlir::IntegerAttr::get(
+              intType, intAttr.getValue().isZero() ? 0 : 1);
         }
+        auto vecType =
+            mlir::VectorType::get(insertOp.getType().getShape(), elementType);
+        auto denseAttr = mlir::DenseElementsAttr::get(vecType, valueAttr);
+        rewriter.setInsertionPointAfter(insertOp);
+        rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+            insertOp, convertType(insertOp.getType()), denseAttr);
       }
     }
 
@@ -3811,7 +3894,7 @@ private:
     rewriter.setInsertionPointToEnd(&comdatOp.getBody().back());
     auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
         rewriter, comdatOp.getLoc(), global.getSymName(),
-        mlir::LLVM::comdat::Comdat::Any);
+        mlir::LLVM::comdat::Comdat::Any, /*sym_visibility=*/nullptr);
     global.setComdatAttr(mlir::SymbolRefAttr::get(
         rewriter.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));
@@ -4746,6 +4829,11 @@ public:
 
     if (!cudaDescriptorAllocFunction.empty())
       options.cudaDescriptorAllocFunction = cudaDescriptorAllocFunction;
+
+    if (!unifiedHeapAllocSuffix.empty())
+      options.unifiedHeapAllocSuffix = unifiedHeapAllocSuffix;
+    if (!managedHeapAllocSuffix.empty())
+      options.managedHeapAllocSuffix = managedHeapAllocSuffix;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).

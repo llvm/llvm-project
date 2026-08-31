@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/TriggerCrashPass.h"
-#include <cstdlib>
 
 using namespace llvm;
 

@@ -21,7 +21,6 @@
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -6990,11 +6989,13 @@ void AMDGPUAsmParser::checkKernelPrologues() {
       if (!AMDHSAKernelSymbols.contains(Sym))
         continue;
       ArrayRef<unsigned> Prologue = ArrayRef(OpcodeStream).drop_front(Offset);
+      if (!Prologue.empty() && Prologue.front() == S_SETREG_IMM32_B32_gfx12)
+        Prologue = Prologue.drop_front();
       if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
         Warning(Loc, "kernel '" + Sym->getName() +
                          "' does not begin with the required prologue "
-                         "sequence: S_MOV_B64 followed by V_NOP and "
-                         "GLOBAL_PREFETCH_B8");
+                         "sequence: s_mov_b64 followed by v_nop and "
+                         "global_prefetch_b8");
       }
     }
   }

@@ -58,7 +58,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu --gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,ASMBUN %s
 
-// CHECK: {{".*clang.*"}} "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // BC-SAME: "-emit-llvm-bc"
 // LL-SAME: "-emit-llvm"
@@ -66,7 +66,6 @@
 // CHECK-SAME: "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: {{".*lib1.bc"}}
-// CHECK-SAME: "-target-cpu" "gfx900"
 // BC-SAME: "-o" "a.bc"
 // BCBUN-SAME: "-o" "{{.*}}.bc"
 // LL-SAME: "-o" "a.ll"
@@ -137,8 +136,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck -check-prefixes=NOLTO %s
 
-// NOLTO: {{".*clang.*"}} "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// NOLTO: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // NOLTO-SAME: "-S"
 // NOLTO-NOT: "-flto
-// NOLTO-SAME: "-target-cpu" "gfx900"
-// NOLTO-SAME: "-o" "a-hip-amdgcn-amd-amdhsa-gfx900.s"
+// NOLTO-SAME: "-o" "a-hip-amdgpu9.00-amd-amdhsa-gfx900.s"

@@ -425,7 +425,7 @@ TEST_F(OpenACCUtilsTest, getVariableNameDirect) {
 
   // Set the acc.var_name attribute
   auto varNameAttr = VarNameAttr::get(&context, "my_variable");
-  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+  allocOp.get()->setDiscardableAttr(getVarNameAttrName(), varNameAttr);
 
   Value varPtr = allocOp->getResult();
 
@@ -442,7 +442,7 @@ TEST_F(OpenACCUtilsTest, getVariableNameThroughCast) {
 
   // Set the acc.var_name attribute on the alloca
   auto varNameAttr = VarNameAttr::get(&context, "casted_variable");
-  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+  allocOp.get()->setDiscardableAttr(getVarNameAttrName(), varNameAttr);
 
   Value allocResult = allocOp->getResult();
 
@@ -734,7 +734,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseRecipe) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());
@@ -774,8 +775,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionWithRoutineInfo) {
   // Add routine_info attribute with a reference to a routine
   SmallVector<SymbolRefAttr> routineRefs = {
       SymbolRefAttr::get(&context, "acc_routine")};
-  funcOp.get()->setAttr(getRoutineInfoAttrName(),
-                        RoutineInfoAttr::get(&context, routineRefs));
+  funcOp.get()->setDiscardableAttr(getRoutineInfoAttrName(),
+                                   RoutineInfoAttr::get(&context, routineRefs));
 
   // Create a call operation that uses the function symbol
   SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
@@ -862,7 +863,7 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseWithDeclareAttr) {
       func::FuncOp::create(b, loc, funcName, funcType);
 
   // Add declare attribute
-  funcOp.get()->setAttr(
+  funcOp.get()->setDiscardableAttr(
       getDeclareAttrName(),
       DeclareAttr::get(&context,
                        DataClauseAttr::get(&context, DataClause::acc_copy)));
@@ -918,7 +919,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseNullDefiningOpPtr) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());
@@ -1418,8 +1420,9 @@ static Value memrefViewFromBlockArgWithDeclare(OpBuilder &builder, Location loc,
   Value c0 = arith::ConstantIndexOp::create(builder, loc, 0);
   memref::ViewOp viewOp =
       memref::ViewOp::create(builder, loc, viewTy, buf, c0, ValueRange{});
-  viewOp->setAttr(getDeclareAttrName(),
-                  DeclareAttr::get(ctx, DataClauseAttr::get(ctx, clause)));
+  viewOp->setDiscardableAttr(
+      getDeclareAttrName(),
+      DeclareAttr::get(ctx, DataClauseAttr::get(ctx, clause)));
   func::ReturnOp::create(builder, loc);
   return viewOp.getResult();
 }

@@ -820,7 +820,7 @@ void test_double_double(va_list *ap) {
 // SPARC64-NEXT:    [[BYVAL_TEMP_IMAGP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[BYVAL_TEMP]], i32 0, i32 1
 // SPARC64-NEXT:    store fp128 [[X_REAL]], ptr [[BYVAL_TEMP_REALP]], align 16
 // SPARC64-NEXT:    store fp128 [[X_IMAG]], ptr [[BYVAL_TEMP_IMAGP]], align 16
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, ptr nofree noundef align 16 dead_on_return dereferenceable(32) [[BYVAL_TEMP]])
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(32) [[BYVAL_TEMP]])
 // SPARC64-NEXT:    ret void
 //
 void test_complex_long_double(va_list *ap) {
@@ -854,7 +854,7 @@ void test_complex_long_double(va_list *ap) {
 // SPARC64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 8
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[X]], ptr align 16 [[TMP1]], i64 32, i1 false)
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[BYVAL_TEMP]], ptr align 16 [[X]], i64 32, i1 false)
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, ptr nofree noundef align 16 dead_on_return dereferenceable(32) [[BYVAL_TEMP]])
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(32) [[BYVAL_TEMP]])
 // SPARC64-NEXT:    ret void
 //
 void test_long_double_long_double(va_list *ap) {

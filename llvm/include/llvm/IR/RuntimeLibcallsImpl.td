@@ -113,6 +113,18 @@ class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
   LibcallCallingConv CallingConv = CC;
 }
 
+// A named runtime library whose Impls are made available as a unit. Impls use
+// the same dag vocabulary as SystemRuntimeLibrary.
+class LibcallLibrary<string name, dag impls,
+                     RuntimeLibcallAvailability pred = AlwaysAvailable> {
+  string LibraryName = name;
+  dag Impls = impls;
+
+  // Availability guard for the library. Libraries sharing a LibraryName merge
+  // into one function, each variant under its own Pred.
+  RuntimeLibcallAvailability Pred = pred;
+}
+
 /// Define a complete top level set of runtime libcalls for a target.
 class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
   /// Set the default calling convention assumed for RuntimeLibcallImpl members.

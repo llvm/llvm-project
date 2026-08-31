@@ -183,7 +183,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP36:%[0-9]+]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 12 for VF 2: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 7 for VF 2: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP37:%[0-9]+]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 4 for VF 2: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -242,7 +242,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 24 for VF 4: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 13 for VF 4: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -301,7 +301,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 16 for VF 8: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 10 for VF 8: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 8: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -360,7 +360,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 32 for VF 16: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 20 for VF 16: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 16: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 16: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -425,4 +425,164 @@ loop.latch:
 
 exit:
   ret i32 %c.next
+}
+
+; The predicate of a blend's fcmp mask is passed to the cost model. AArch64 can
+; lower a select fed by an fcmp olt using a FCMxx & BFI pair, while it cannot do
+; so for fcmp uno, which is more expensive.
+
+define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
+; CHECK-LABEL: 'blend_fcmp_olt_f32'
+; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c> = fcmp olt ir<%l>, ir<0.000000e+00>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 2: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%p>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR %l = load float, ptr %src.gep, align 4
+; CHECK:  Cost of 0 for VF 2: IR %c = fcmp olt float %l, 0.000000e+00
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c> = fcmp olt ir<%l>, ir<0.000000e+00>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 1 for VF 4: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%p>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR %l = load float, ptr %src.gep, align 4
+; CHECK:  Cost of 0 for VF 4: IR %c = fcmp olt float %l, 0.000000e+00
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  LV: Selecting VF: 4.
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+  %l = load float, ptr %src.gep, align 4
+  %c = fcmp olt float %l, 0.000000e+00
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %add = fadd float %l, 1.000000e+00
+  br label %loop.latch
+
+loop.latch:
+  %p = phi float [ %l, %loop.header ], [ %add, %then ]
+  %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+  store float %p, ptr %dst.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
+; CHECK-LABEL: 'blend_fcmp_uno_f32'
+; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 3 for VF 2: WIDEN ir<%c> = fcmp uno ir<%l>, ir<0.000000e+00>
+; CHECK:  Cost of 1 for VF 2: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 2 for VF 2: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP6]]>, ir<%p>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR %l = load float, ptr %src.gep, align 4
+; CHECK:  Cost of 0 for VF 2: IR %c = fcmp uno float %l, 0.000000e+00
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
+; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<[[VP5]]>
+; CHECK:  Cost of 3 for VF 4: WIDEN ir<%c> = fcmp uno ir<%l>, ir<0.000000e+00>
+; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add> = fadd ir<%l>, ir<1.000000e+00>
+; CHECK:  Cost of 2 for VF 4: BLEND ir<%p> = ir<%l> ir<%add>/ir<%c>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK:  Cost of 0 for VF 4: vp<[[VP6]]> = vector-pointer inbounds float, ir<%dst.gep>, ir<1>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP6]]>, ir<%p>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR %l = load float, ptr %src.gep, align 4
+; CHECK:  Cost of 0 for VF 4: IR %c = fcmp uno float %l, 0.000000e+00
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
+; CHECK:  LV: Selecting VF: 4.
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
+  %l = load float, ptr %src.gep, align 4
+  %c = fcmp uno float %l, 0.000000e+00
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %add = fadd float %l, 1.000000e+00
+  br label %loop.latch
+
+loop.latch:
+  %p = phi float [ %l, %loop.header ], [ %add, %then ]
+  %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
+  store float %p, ptr %dst.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
 }

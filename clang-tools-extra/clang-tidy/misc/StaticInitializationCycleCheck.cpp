@@ -199,21 +199,19 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
-    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!shouldIgnoreRef(DRE, Node->getDecl()) &&
-          (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
-        Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
-    }
+    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
+        VarD && (!shouldIgnoreRef(DRE, Node->getDecl()) &&
+                 (VarD->hasGlobalStorage() || VarD->isStaticLocal())))
+      Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     return true;
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
-    if (const FunctionDecl *F = CE->getDirectCallee()) {
-      if (F->isGlobal() || F->isStatic()) {
-        const FunctionDecl *Def = F->getDefinition();
-        if (Def)
-          Node->Uses.emplace_back(CE, G.addNode(Def));
-      }
+    if (const FunctionDecl *F = CE->getDirectCallee();
+        F && (F->isGlobal() || F->isStatic())) {
+      const FunctionDecl *Def = F->getDefinition();
+      if (Def)
+        Node->Uses.emplace_back(CE, G.addNode(Def));
     }
     return true;
   }

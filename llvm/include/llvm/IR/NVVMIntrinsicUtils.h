@@ -73,6 +73,22 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
+// Eviction priorities applicable for prefetch and applypriority intrinsics.
+enum class EvictPolicyType : uint8_t {
+  EVICT_NORMAL = 0, // default
+  EVICT_LAST = 1,
+};
+
+inline StringRef getEvictPolicyName(EvictPolicyType Policy) {
+  switch (Policy) {
+  case EvictPolicyType::EVICT_NORMAL:
+    return "L2::evict_normal";
+  case EvictPolicyType::EVICT_LAST:
+    return "L2::evict_last";
+  }
+  llvm_unreachable("invalid evict policy");
+}
+
 enum class Tcgen05MMAKind : uint8_t {
   F16 = 0,
   TF32 = 1,
@@ -141,6 +157,8 @@ enum class TensormapFillMode : uint8_t {
 };
 
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 

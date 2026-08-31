@@ -4247,6 +4247,201 @@ define i32 @trunc_trunc_xor_uses(i65 %x, i65 %y) {
   ret i32 %r
 }
 
+define i8 @trunc_nuw_trunc_nuw_xor(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_xor
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = xor i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nsw_trunc_nsw_xor(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_xor
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nsw i16 %y to i8
+  %r = xor i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nsw_trunc_nuw_xor(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nsw_trunc_nuw_xor
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = xor i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nuw_trunc_xor(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nuw_trunc_xor
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = xor i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nsw_trunc_xor(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nsw_trunc_xor
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = xor i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = xor i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nuw_trunc_nuw_or(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_or
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = or i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nsw_trunc_nsw_or(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_or
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nsw i16 %y to i8
+  %r = or i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nsw_trunc_nuw_or(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nsw_trunc_nuw_or
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = or i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nuw_trunc_or(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nuw_trunc_or
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = or i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nsw_trunc_or(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nsw_trunc_or
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = or i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = or i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nuw_trunc_nuw_and(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_nuw_and
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = and i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nsw_trunc_nsw_and(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nsw_and
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nsw i16 %y to i8
+  %r = and i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nsw_trunc_nuw_and(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nsw_trunc_nuw_and
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc nuw i16 %y to i8
+  %r = and i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @trunc_nuw_trunc_and(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@trunc_nuw_trunc_and
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nuw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = and i8 %sx, %sy
+  ret i8 %r
+}
+
+define i8 @neg_trunc_nsw_trunc_and(i16 %x, i16 %y) {
+; CHECK-LABEL: define {{[^@]+}}@neg_trunc_nsw_trunc_and
+; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R1:%.*]] = and i16 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[R1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = trunc nsw i16 %x to i8
+  %sy = trunc i16 %y to i8
+  %r = and i8 %sx, %sy
+  ret i8 %r
+}
+
 define i16 @and_zext_zext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@and_zext_zext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {

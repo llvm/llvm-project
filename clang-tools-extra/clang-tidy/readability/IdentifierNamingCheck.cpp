@@ -12,7 +12,7 @@
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -94,6 +94,7 @@ namespace readability {
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(LambdaCapture) \
     m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
@@ -1244,7 +1245,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+    if (const DecompositionDecl *Decomp = BD->getDecomposedDecl();
         Decomp && !BD->getType().isNull())
       return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
@@ -1521,6 +1522,9 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (Var->isInitCapture() && NamingStyles[SK_LambdaCapture])
+    return SK_LambdaCapture;
+
   if (Var->isConstexpr()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
       return SK_ClassConstexpr;

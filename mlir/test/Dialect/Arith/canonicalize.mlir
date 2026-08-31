@@ -3127,11 +3127,11 @@ func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_addf(
-func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
+func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.addf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]], %arg0
   %c0 = arith.constant 0.0 : f32
   %c-0 = arith.constant -0.0 : f32
   %c1 = arith.constant 1.0 : f32
@@ -3139,24 +3139,26 @@ func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
   %1 = arith.addf %arg0, %c-0 : f32
   %2 = arith.addf %c-0, %arg0 : f32
   %3 = arith.addf %c1, %c1 : f32
-  return %0, %1, %2, %3 : f32, f32, f32, f32
+  %4 = arith.addf %c0, %arg0 fastmath<nsz> : f32
+  return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_subf(
-func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
+func.func @test_subf(%arg0 : f16) -> (f16, f16, f16, f16) {
   // CHECK-DAG:   %[[C1:.+]] = arith.constant -1.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant -0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.subf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]]
+  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]], %arg0
   %c0 = arith.constant 0.0 : f16
   %c-0 = arith.constant -0.0 : f16
   %c1 = arith.constant 1.0 : f16
   %0 = arith.subf %arg0, %c0 : f16
   %1 = arith.subf %arg0, %c-0 : f16
   %2 = arith.subf %c0, %c1 : f16
-  return %0, %1, %2 : f16, f16, f16
+  %3 = arith.subf %arg0, %c-0 fastmath<nsz> : f16
+  return %0, %1, %2, %3 : f16, f16, f16, f16
 }
 
 // CHECK-LABEL: @test_subf_negzero(

@@ -1848,3 +1848,197 @@ loop:
 exit:
   ret void
 }
+
+; The backedge-taken count is (%n - %start - 1), whose guarded range wraps.
+; The bound has to be computed via (%n - %start), which the assume limits to 7.
+define void @guarded_distance_plus_one(ptr %dst, i64 %n, i64 %start) {
+; CHECK-LABEL: 'guarded_distance_plus_one'
+; CHECK-NEXT:  Classifying expressions for: @guarded_distance_plus_one
+; CHECK-NEXT:    %sub = sub i64 %n, %start
+; CHECK-NEXT:    --> ((-1 * %start) + %n) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %dst, i64 %iv
+; CHECK-NEXT:    --> {(%start + %dst),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n + %dst) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guarded_distance_plus_one
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %sub = sub i64 %n, %start
+  %a = icmp ult i64 %sub, 8
+  call void @llvm.assume(i1 %a)
+  %c = icmp ult i64 %start, %n
+  br i1 %c, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; (%start u< %n) and (%n u< %start + 8) bound the difference (%n - %start),
+; which cannot wrap, by 7.
+define void @two_sided_guard_bounds_difference(ptr %dst, i64 %n, i64 %start) {
+; CHECK-LABEL: 'two_sided_guard_bounds_difference'
+; CHECK-NEXT:  Classifying expressions for: @two_sided_guard_bounds_difference
+; CHECK-NEXT:    %add = add i64 %start, 8
+; CHECK-NEXT:    --> (8 + %start) U: full-set S: full-set
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> (%c.1 umin %c.0) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %dst, i64 %iv
+; CHECK-NEXT:    --> {(%start + %dst),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n + %dst) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @two_sided_guard_bounds_difference
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp ult i64 %start, %n
+  %add = add i64 %start, 8
+  %c.1 = icmp ult i64 %n, %add
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same, with a non-strict upper bound: (%n u<= %start + 8) bounds the
+; difference by 8.
+define void @two_sided_guard_bounds_difference_ule(ptr %dst, i64 %n, i64 %start) {
+; CHECK-LABEL: 'two_sided_guard_bounds_difference_ule'
+; CHECK-NEXT:  Classifying expressions for: @two_sided_guard_bounds_difference_ule
+; CHECK-NEXT:    %add = add i64 %start, 8
+; CHECK-NEXT:    --> (8 + %start) U: full-set S: full-set
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> (%c.1 umin %c.0) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %dst, i64 %iv
+; CHECK-NEXT:    --> {(%start + %dst),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n + %dst) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @two_sided_guard_bounds_difference_ule
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp ult i64 %start, %n
+  %add = add i64 %start, 8
+  %c.1 = icmp ule i64 %n, %add
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Without the (%start u< %n) guard, (%n - %start) may wrap and cannot be
+; bounded.
+define void @one_sided_guard_does_not_bound_difference(ptr %dst, i64 %n, i64 %start) {
+; CHECK-LABEL: 'one_sided_guard_does_not_bound_difference'
+; CHECK-NEXT:  Classifying expressions for: @one_sided_guard_does_not_bound_difference
+; CHECK-NEXT:    %add = add i64 %start, 8
+; CHECK-NEXT:    --> (8 + %start) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %dst, i64 %iv
+; CHECK-NEXT:    --> {(%start + %dst),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n + %dst) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @one_sided_guard_does_not_bound_difference
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %add = add i64 %start, 8
+  %c = icmp ult i64 %n, %add
+  br i1 %c, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The upper bound is not (%start + constant), so nothing can be derived about
+; (%n - %start).
+define void @two_sided_guard_non_constant_offset(ptr %dst, i64 %n, i64 %start, i64 %off) {
+; CHECK-LABEL: 'two_sided_guard_non_constant_offset'
+; CHECK-NEXT:  Classifying expressions for: @two_sided_guard_non_constant_offset
+; CHECK-NEXT:    %add = add i64 %start, %off
+; CHECK-NEXT:    --> (%start + %off) U: full-set S: full-set
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> (%c.1 umin %c.0) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep = getelementptr i8, ptr %dst, i64 %iv
+; CHECK-NEXT:    --> {(%start + %dst),+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n + %dst) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nuw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @two_sided_guard_non_constant_offset
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp ult i64 %start, %n
+  %add = add i64 %start, %off
+  %c.1 = icmp ult i64 %n, %add
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

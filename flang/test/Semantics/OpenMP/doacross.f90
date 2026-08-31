@@ -7,6 +7,13 @@ subroutine f00(x)
     do j = 1, 10
 !ERROR: Duplicate variable 'i' in the iteration vector
       !$omp ordered doacross(sink: i+1, i-2)
+!ERROR: Iteration vector must be specified with SINK dependence type
+      !$omp ordered doacross(sink)
+!ERROR: Iteration vector may not be specified with SOURCE dependence type
+      !$omp ordered doacross(source: i)
+!ERROR: The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause
+!ERROR: 'dependence-type' modifier cannot occur multiple times
+      !$omp ordered doacross(sink, sink: i)
       x(i, j) = 0
     enddo
   enddo

@@ -203,10 +203,14 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
 
+    Value src = op.getSource();
     SmallVector<Value> newCreateNdOps(count);
-    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() {
-      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
-                                           op.getSource(), op.getMixedSizes(),
+    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() -> Value {
+      if (isa<MemRefType>(src.getType()))
+        return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
+                                             cast<TypedValue<MemRefType>>(src));
+      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy, src,
+                                           op.getMixedSizes(),
                                            op.getMixedStrides());
     });
 

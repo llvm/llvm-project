@@ -4,6 +4,8 @@
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for bitmask_v32i8_split
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for example.safeAdd
 
 ; Basic tests from input vector to bitmask
 ; IR generated from clang for:
@@ -404,48 +406,31 @@ define i4 @convert_to_bitmask_with_unknown_type_in_long_chain(<4 x i32> %vec1, <
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w8, #1 ; =0x1
-; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    cmeq.4s v0, v0, #0
-; CHECK-GI-NEXT:    fmov s3, w8
 ; CHECK-GI-NEXT:    cmeq.4s v1, v1, #0
-; CHECK-GI-NEXT:    mov.16b v4, v3
-; CHECK-GI-NEXT:    mov.16b v5, v2
-; CHECK-GI-NEXT:    mov.h v2[1], w8
+; CHECK-GI-NEXT:    adrp x8, lCPI8_4@PAGE
+; CHECK-GI-NEXT:    adrp x9, lCPI8_0@PAGE
+; CHECK-GI-NEXT:    ldr d2, [x9, lCPI8_0@PAGEOFF]
+; CHECK-GI-NEXT:    adrp x9, lCPI8_1@PAGE
 ; CHECK-GI-NEXT:    bic.16b v0, v1, v0
-; CHECK-GI-NEXT:    mov.16b v1, v3
-; CHECK-GI-NEXT:    mov.h v3[1], w8
-; CHECK-GI-NEXT:    mov.h v4[1], w8
-; CHECK-GI-NEXT:    mov.h v5[1], w8
-; CHECK-GI-NEXT:    mov.h v1[1], w8
-; CHECK-GI-NEXT:    mov.h v2[2], w8
+; CHECK-GI-NEXT:    ldr d1, [x8, lCPI8_4@PAGEOFF]
+; CHECK-GI-NEXT:    adrp x8, lCPI8_3@PAGE
+; CHECK-GI-NEXT:    ldr d3, [x9, lCPI8_1@PAGEOFF]
 ; CHECK-GI-NEXT:    xtn.4h v0, v0
-; CHECK-GI-NEXT:    mov.h v3[2], w8
-; CHECK-GI-NEXT:    mov.h v4[2], wzr
-; CHECK-GI-NEXT:    mov.h v5[2], wzr
-; CHECK-GI-NEXT:    mov.h v1[2], wzr
-; CHECK-GI-NEXT:    mov.h v2[3], wzr
-; CHECK-GI-NEXT:    mov.h v3[3], wzr
-; CHECK-GI-NEXT:    mov.h v4[3], wzr
-; CHECK-GI-NEXT:    mov.h v5[3], w8
-; CHECK-GI-NEXT:    mov.h v1[3], w8
-; CHECK-GI-NEXT:    orr.8b v0, v0, v4
-; CHECK-GI-NEXT:    eor.8b v4, v0, v5
+; CHECK-GI-NEXT:    orr.8b v0, v0, v1
+; CHECK-GI-NEXT:    ldr d1, [x8, lCPI8_3@PAGEOFF]
+; CHECK-GI-NEXT:    adrp x8, lCPI8_2@PAGE
+; CHECK-GI-NEXT:    eor.8b v1, v0, v1
 ; CHECK-GI-NEXT:    eor.8b v0, v2, v0
-; CHECK-GI-NEXT:    and.8b v1, v4, v1
+; CHECK-GI-NEXT:    ldr d2, [x8, lCPI8_2@PAGEOFF]
+; CHECK-GI-NEXT:    and.8b v1, v1, v2
 ; CHECK-GI-NEXT:    orr.8b v0, v3, v0
 ; CHECK-GI-NEXT:    orr.8b v0, v1, v0
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
-; CHECK-GI-NEXT:    mov.s w8, v0[1]
-; CHECK-GI-NEXT:    mov.s w9, v0[2]
-; CHECK-GI-NEXT:    fmov w11, s0
-; CHECK-GI-NEXT:    mov.s w10, v0[3]
+; CHECK-GI-NEXT:    mov.s w8, v0[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
-; CHECK-GI-NEXT:    and w8, w9, #0x1
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    lsl w8, w8, #3
+; CHECK-GI-NEXT:    orr w8, w8, #0x7
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
 ; CHECK-GI-NEXT:    add sp, sp, #16
@@ -1223,4 +1208,58 @@ define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    ret
   %r = icmp eq <32 x i8> %a, %b
   ret <32 x i1> %r
+}
+
+declare void @overflow()
+define void @example.safeAdd(ptr %0, ptr %1, ptr %2) {
+; CHECK-LABEL: example.safeAdd:
+; CHECK:       ; %bb.0: ; %Entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    adrp x8, lCPI22_0@PAGE
+; CHECK-NEXT:    ldp q1, q0, [x2]
+; CHECK-NEXT:    ldr q4, [x8, lCPI22_0@PAGEOFF]
+; CHECK-NEXT:    add.16b v0, v3, v0
+; CHECK-NEXT:    add.16b v1, v2, v1
+; CHECK-NEXT:    cmhi.16b v3, v3, v0
+; CHECK-NEXT:    cmhi.16b v2, v2, v1
+; CHECK-NEXT:    and.16b v3, v3, v4
+; CHECK-NEXT:    and.16b v2, v2, v4
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    umov.h w8, v3[0]
+; CHECK-NEXT:    umov.h w9, v2[0]
+; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    tst w8, #0xffff
+; CHECK-NEXT:    b.ne LBB22_2
+; CHECK-NEXT:  ; %bb.1: ; %Else
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB22_2: ; %Then
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    bl _overflow
+; CHECK-NEXT:    brk #0x1
+Entry:
+  %3 = load <32 x i8>, ptr %1, align 16
+  %4 = load <32 x i8>, ptr %2, align 16
+  %5 = tail call { <32 x i8>, <32 x i1> } @llvm.uadd.with.overflow.v32i8(<32 x i8> %3, <32 x i8> %4)
+  %6 = extractvalue { <32 x i8>, <32 x i1> } %5, 1
+  %7 = bitcast <32 x i1> %6 to i32
+  %.not = icmp eq i32 %7, 0
+  br i1 %.not, label %Else, label %Then
+
+Then:
+  tail call void @overflow() #3
+  unreachable
+
+Else:
+  %8 = extractvalue { <32 x i8>, <32 x i1> } %5, 0
+  store <32 x i8> %8, ptr %0, align 16
+  ret void
 }

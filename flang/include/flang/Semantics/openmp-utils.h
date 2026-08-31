@@ -56,28 +56,12 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
-template <typename T> struct WithSource {
-  template < //
-      typename U = std::remove_reference_t<T>,
-      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
-  WithSource() : value(), source() {}
-  WithSource(const WithSource<T> &) = default;
-  WithSource(WithSource<T> &&) = default;
-  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
-  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
-  WithSource &operator=(const WithSource<T> &) = default;
-  WithSource &operator=(WithSource<T> &&) = default;
-
-  using value_type = T;
-  T value;
-  parser::CharBlock source;
-};
-
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
-  using WithSource<value_type>::WithSource;
+struct SourcedActionStmt
+    : public parser::omp::WithSource<const parser::ActionStmt *> {
+  using parser::omp::WithSource<value_type>::WithSource;
   value_type stmt() const { return value; }
   operator bool() const { return stmt() != nullptr; }
 };
@@ -326,10 +310,11 @@ struct LoopControl {
   LoopControl(const parser::ConcurrentControl &x);
 
   const parser::Name &iv;
-  WithSource<MaybeExpr> lbound, ubound, step;
+  parser::omp::WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
-  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+  static parser::omp::WithSource<MaybeExpr> fromParserExpr(
+      const parser::Expr &x);
 };
 
 std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);

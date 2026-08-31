@@ -121,6 +121,7 @@ static_library("AST") {
     "ExternalASTMerger.cpp",
     "ExternalASTSource.cpp",
     "FormatString.cpp",
+    "GlobalDecl.cpp",
     "HLSLResource.cpp",
     "InferAlloc.cpp",
     "InheritViz.cpp",

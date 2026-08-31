@@ -441,9 +441,11 @@ static RecipeOp genRecipeOp(
   RecipeOp recipe;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     recipe = mlir::acc::ReductionRecipeOp::create(modBuilder, loc, recipeName,
+                                                  /*sym_visibility=*/nullptr,
                                                   ty, op);
   } else {
-    recipe = RecipeOp::create(modBuilder, loc, recipeName, ty);
+    recipe = RecipeOp::create(modBuilder, loc, recipeName,
+                              /*sym_visibility=*/nullptr, ty);
   }
 
   assert(hlfir::isFortranVariableType(ty) && "expect Fortran variable type");
@@ -475,13 +477,16 @@ static RecipeOp genRecipeOp(
          "Expected that all variable types are considered mappable");
   auto initArg = mlir::cast<MappableValue>(initBlock->getArgument(0));
   bool needsDestroy = false;
+  llvm::SmallVector<mlir::Value> destroyValues;
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
                       initBlock->getArguments().drop_front(1));
   mlir::Value retVal = mappableTy.generatePrivateInit(
       builder, loc, initArg, initName, initBounds, initValue, varInfo,
-      needsDestroy);
-  mlir::acc::YieldOp::create(builder, loc, retVal);
+      needsDestroy, destroyValues);
+  llvm::SmallVector<mlir::Value> initResults{retVal};
+  initResults.append(destroyValues);
+  mlir::acc::YieldOp::create(builder, loc, initResults);
   // Create destroy region and generate destruction if requested.
   if (needsDestroy) {
     llvm::SmallVector<mlir::Type> destroyArgsTy;
@@ -491,6 +496,10 @@ static RecipeOp genRecipeOp(
     destroyArgsTy.push_back(ty);
     destroyArgsLoc.push_back(loc);
     destroyArgsLoc.push_back(loc);
+    for (mlir::Value destroyValue : destroyValues) {
+      destroyArgsTy.push_back(destroyValue.getType());
+      destroyArgsLoc.push_back(loc);
+    }
     // Append bounds arguments (if any) in the same order as init region
     if (argsTy.size() > 1) {
       destroyArgsTy.append(argsTy.begin() + 1, argsTy.end());
@@ -502,11 +511,14 @@ static RecipeOp genRecipeOp(
         destroyArgsTy, destroyArgsLoc);
     builder.setInsertionPointToEnd(destroyBlock);
 
-    llvm::SmallVector<mlir::Value> destroyBounds =
-        getRecipeBounds(builder, loc, dataOperationBounds,
-                        destroyBlock->getArguments().drop_front(2));
+    llvm::SmallVector<mlir::Value> destroyBounds = getRecipeBounds(
+        builder, loc, dataOperationBounds,
+        destroyBlock->getArguments().drop_front(2 + destroyValues.size()));
+    mlir::ValueRange destroyArgs =
+        destroyBlock->getArguments().slice(2, destroyValues.size());
     [[maybe_unused]] bool success = mappableTy.generatePrivateDestroy(
-        builder, loc, destroyBlock->getArgument(1), destroyBounds, varInfo);
+        builder, loc, destroyBlock->getArgument(1), destroyArgs, destroyBounds,
+        varInfo);
     assert(success && "failed to generate destroy region");
     mlir::acc::TerminatorOp::create(builder, loc);
   }

@@ -204,3 +204,111 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
   tail call swifttailcc void @callee_stack8([8 x i64] poison, i64 42)
   ret void
 }
+
+declare void @sink(ptr)
+
+define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "frame-pointer"="all" uwtable(async) {
+; CHECK-LABEL: crash_tc:
+; CHECK-NEXT:          .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+
+; COMPAT-NEXT:         hint    #39
+; COMPAT-NEXT: .Ltmp3:
+; COMPAT-NEXT:         hint    #25
+; COMPAT-NEXT:         .cfi_set_ra_state 2, .Ltmp3
+
+; V83A-NEXT:           hint    #39
+; V83A-NEXT:   .Ltmp3:
+; V83A-NEXT:           paciasp
+; V83A-NEXT:           .cfi_set_ra_state 2, .Ltmp3
+
+; V9A-NEXT:    .Ltmp3:
+; V9A-NEXT:            paciasppc
+; V9A-NEXT:            .cfi_set_ra_state 2, .Ltmp3
+
+; PAUTH-NEXT:          paciasp
+; PAUTH-NEXT:          .cfi_negate_ra_state
+
+; CHECK-NEXT:          stp     x29, x30, [sp, #-16]!
+; CHECK-NEXT:          .cfi_def_cfa_offset 16
+; CHECK-NEXT:          mov     x29, sp
+; CHECK-NEXT:          .cfi_def_cfa w29, 16
+; CHECK-NEXT:          .cfi_offset w30, -8
+; CHECK-NEXT:          .cfi_offset w29, -16
+; CHECK-NEXT:          .cfi_remember_state
+; CHECK-NEXT:          tbz     w0, #0, .LBB3_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:          sub     x0, sp, #16
+; CHECK-NEXT:          mov     sp, x0
+; CHECK-NEXT:          bl      sink
+; CHECK-NEXT:          mov     sp, x29
+; CHECK-NEXT:          .cfi_def_cfa wsp, 16
+; CHECK-NEXT:          ldp     x29, x30, [sp], #16
+; CHECK-NEXT:          .cfi_def_cfa_offset 0
+; CHECK-NEXT:          .cfi_def_cfa_offset -80
+; CHECK-NEXT:          .cfi_restore w30
+; CHECK-NEXT:          .cfi_restore w29
+
+; COMPAT-NEXT:         adrp    x16, .Ltmp3
+; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
+; COMPAT-NEXT:         hint    #39
+; COMPAT-NEXT:         hint    #29
+; COMPAT-NEXT:         .cfi_set_ra_state 0, 0
+
+; V83A-NEXT:           adrp    x16, .Ltmp3
+; V83A-NEXT:           add     x16, x16, :lo12:.Ltmp3
+; V83A-NEXT:           hint    #39
+; V83A-NEXT:           autiasp
+; V83A-NEXT:           .cfi_set_ra_state 0, 0
+
+; V9A-NEXT:            autiasppc .Ltmp3
+; V9A-NEXT:            .cfi_set_ra_state 0, 0
+
+; PAUTH-NEXT:          autiasp
+; PAUTH-NEXT:          .cfi_negate_ra_state
+
+; CHECK-NEXT:          add     sp, sp, #80
+; CHECK-NEXT:          ret
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:          .cfi_restore_state
+; CHECK-NEXT:          mov     sp, x29
+; CHECK-NEXT:          .cfi_def_cfa wsp, 16
+; CHECK-NEXT:          ldp     x29, x30, [sp], #16
+; CHECK-NEXT:          .cfi_def_cfa_offset 0
+; CHECK-NEXT:          .cfi_def_cfa_offset -80
+; CHECK-NEXT:          .cfi_restore w30
+; CHECK-NEXT:          .cfi_restore w29
+
+; COMPAT-NEXT:         adrp    x16, .Ltmp3
+; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
+; COMPAT-NEXT:         hint    #39
+; COMPAT-NEXT:         hint    #29
+; COMPAT-NEXT:         .cfi_set_ra_state 0, 0
+
+; V83A-NEXT:           adrp    x16, .Ltmp3
+; V83A-NEXT:           add     x16, x16, :lo12:.Ltmp3
+; V83A-NEXT:           hint    #39
+; V83A-NEXT:           autiasp
+; V83A-NEXT:           .cfi_set_ra_state 0, 0
+
+; V9A-NEXT:            autiasppc .Ltmp3
+; V9A-NEXT:            .cfi_set_ra_state 0, 0
+
+; PAUTH-NEXT:          autiasp
+; PAUTH-NEXT:          .cfi_negate_ra_state
+
+; CHECK-NEXT:          add     sp, sp, #80
+; CHECK-NEXT:          b       callee_stack0
+
+entry:
+  br i1 %c, label %work, label %exit
+
+work:
+  %p = alloca i64, align 8
+  call void @sink(ptr %p)
+  ret void
+
+exit:
+  tail call swifttailcc void @callee_stack0()
+  ret void
+}

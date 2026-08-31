@@ -23,6 +23,8 @@ tbl z0.b, { z0.b, z1.b }, z2.b
 fadd z0.s, p0/m, z0.s, z1.s
 fmul z0.s, p0/m, z0.s, z1.s
 fmin z0.s, p0/m, z0.s, z1.s
+facle p0.s, p0/z, z0.s, z1.s
+faclt p0.s, p0/z, z0.s, z1.s
 fcpy z0.s, p0/m, #1.0
 bfdot z0.s, z1.h, z2.h
 ld1w { z0.s }, p0/z, [x0]

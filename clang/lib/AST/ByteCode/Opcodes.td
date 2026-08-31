@@ -534,11 +534,6 @@ def GetFieldPop : AccessOpcode;
 // [] -> [Value]
 def GetThisField : AccessOpcode;
 
-// [Pointer, Value] -> [Pointer]
-def SetField : AccessOpcode;
-// [Value] -> []
-def SetThisField : AccessOpcode;
-
 // [Value] -> []
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;
@@ -1043,3 +1038,7 @@ def PushCC : SuccessOpcode {
 def PopCC : SuccessOpcode;
 def PushMSVCCE : SuccessOpcode;
 def PopMSVCCE : SuccessOpcode;
+
+def GetStringPtr : SuccessOpcode {
+  let Args = [ArgExpr];
+}

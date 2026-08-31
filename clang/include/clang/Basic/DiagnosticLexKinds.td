@@ -93,7 +93,8 @@ def err_conflict_marker : Error<"version control conflict marker in file">;
 def err_counter_overflow : Error<
   "'__COUNTER__' value cannot exceed 2'147'483'647">;
 def ext_counter : Extension<
-  "'__COUNTER__' is a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
+  "'__COUNTER__' is a C2y extension">,
+  InGroup<CounterExt>, SuppressInSystemMacro;
 def warn_counter : Warning<
   "'__COUNTER__' is incompatible with standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
@@ -1048,9 +1049,6 @@ def err_pp_module_name_is_macro : Error<
   "%select{module|partition}0 name component %1 cannot be a object-like macro">;
 def err_pp_module_expected_ident : Error<
   "expected %select{identifier after '.' in |}0module name">;
-def err_pp_unexpected_tok_after_module_name : Error<
-  "unexpected preprocessing token '%0' after module name, "
-  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
 def warn_pp_extra_tokens_at_module_directive_eol
     : Warning<"extra tokens after semicolon in '%0' directive">,
       InGroup<ExtraTokens>;

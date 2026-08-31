@@ -142,10 +142,14 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   if (TotalCycles == 0)
     return;
 
+  ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
 
-  TotalCycles -= BlockingCycles;
+  // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
+  // either case, each SU uses the HardwareUnit for BlockingCycles.
+  if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
+    TotalCycles -= std::min(TotalCycles, BlockingCycles);
 
   if (AllSUs.empty())
     return;
@@ -172,6 +176,32 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   }
 }
 
+void HardwareUnitInfo::finalizeCycles() {
+  if (BufferSize == 0 || AllSUs.empty())
+    return;
+
+  // We estimate the amount of cycles it takes to free up a slot in the buffer
+  // as the average cycles per SU.
+  BufferCycles = TotalCycles / AllSUs.size();
+  // A single-entry buffer does not reduce TotalCycles.
+  if (BufferSize == 1)
+    return;
+
+  // The TotalCycles is normalized against the BufferSize.
+  // This provides an estimate of the TotalCycles which is not always accurate
+  // -- particularly in cases where we have fewer instructions than the
+  // BufferSize. For example, if we have 2 instructions which each take 50
+  // cycles and a BufferSize of 16, then a TotalCycles of 51 cycles would be
+  // somewhat accurate. This normalization calculates TotalCycles as 6. However,
+  // if we have 64 of these instructions, our normalized estimate of 200 is more
+  // reasonable, given the more accurate measure is 264. Having a completely
+  // accurate measure is not very important, since this metric is mainly used to
+  // compare the relative demand per HardwareUnit across the region. The simpler
+  // estimate makes managing the metric incrementally during scheduling much
+  // simpler.
+  TotalCycles /= BufferSize;
+}
+
 HardwareUnitInfo *
 CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
   for (HardwareUnitInfo &HWUICand : HWUInfo) {
@@ -184,6 +214,10 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+  MachineInstr *MI = SU->getInstr();
+  if (SII->isDS(*MI))
+    return SchedModel->computeInstrLatency(MI);
+
   unsigned ReleaseAtCycle = 0;
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
@@ -221,6 +255,7 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
   HWUInfo[(int)InstructionFlavor::MultiCycleVALU].setProducesCoexecWindow(true);
   HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
+  HWUInfo[(int)InstructionFlavor::DS].setBufferSize(DefaultBufferSizes::DS);
 
   collectHWUIPressure();
 }
@@ -233,6 +268,9 @@ void CandidateHeuristics::collectHWUIPressure() {
     const InstructionFlavor Flavor = classifyFlavor(*SU.getInstr(), *SII);
     HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
   }
+
+  for (auto &HWUI : HWUInfo)
+    HWUI.finalizeCycles();
 
   LLVM_DEBUG(dumpRegionSummary());
 }
@@ -681,7 +719,26 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
 
 bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
-                                                  SchedBoundary &Zone) const {
+                                                  SchedBoundary &Zone) {
+  auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
+    InstructionFlavor Flavor = classifyFlavor(
+        *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
+    HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
+
+    // A BufferSize of 0 is unlimited, so it has no FIFO scheduling cost.
+    if (HWUI->getBufferSize() == 0)
+      return 0;
+
+    // getBufferAvailableCycle assumes top-down scheduling.
+    assert(Zone.isTop());
+    unsigned CurrCycle = Zone.getCurrCycle();
+    unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
+    if (BufferReadyCycle <= CurrCycle)
+      return 0;
+
+    return BufferReadyCycle - CurrCycle;
+  };
+
   // Treat structural and latency stalls as a single scheduling cost for the
   // current cycle.
   struct StallCosts {
@@ -689,6 +746,7 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
     unsigned Structural = 0;
     unsigned Latency = 0;
     unsigned Effective = 0;
+    unsigned Buffer = 0;
   };
 
   unsigned CurrCycle = Zone.getCurrCycle();
@@ -698,7 +756,9 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
     Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
     Costs.Structural = getStructuralStallCycles(Zone, SU);
     Costs.Latency = Zone.getLatencyStallCycles(SU);
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency});
+    Costs.Buffer = getBufferFullStalls(SU);
+    Costs.Effective =
+        std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Buffer});
     return Costs;
   };
 
@@ -708,10 +768,11 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
   LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
     dbgs() << "Effective stalls: try=" << TryCosts.Effective
            << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ") cand=" << CandCosts.Effective
-           << " (ready=" << CandCosts.Ready
+           << ", lat=" << TryCosts.Latency << ", buffer=" << TryCosts.Buffer
+           << ") cand=" << CandCosts.Effective << " (ready=" << CandCosts.Ready
            << ", struct=" << CandCosts.Structural
-           << ", lat=" << CandCosts.Latency << ")\n";
+           << ", lat=" << CandCosts.Latency << ", buffer=" << CandCosts.Buffer
+           << ")\n";
   });
 
   return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, Stall);

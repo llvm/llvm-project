@@ -1,5 +1,5 @@
 ; RUN: llvm-as -o %t.bc %s
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=emit-llvm \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=emit-llvm \
 ; RUN:    --no-map-whole-files -r -o %t2.bc %t.bc
 ; RUN: llvm-dis < %t2.bc -o - | FileCheck %s
 

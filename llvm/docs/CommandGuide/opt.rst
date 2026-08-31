@@ -53,6 +53,11 @@ OPTIONS
  `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
  pass pipeline syntax.
 
+.. option:: -mtriple=<target triple>
+
+ Override the target triple specified in the input file with the specified
+ string.
+
 .. option:: -mtune=<cpuname>
 
  Specify a specific chip microarchitecture in the current architecture

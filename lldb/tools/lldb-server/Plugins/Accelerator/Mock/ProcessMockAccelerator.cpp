@@ -66,8 +66,9 @@ Status ProcessMockAccelerator::ReadMemory(const ProcessAddress &process_addr,
   return Status::FromErrorString("unimplemented");
 }
 
-Status ProcessMockAccelerator::WriteMemory(lldb::addr_t addr, const void *buf,
-                                           size_t size, size_t &bytes_written) {
+Status ProcessMockAccelerator::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                             size_t size,
+                                             size_t &bytes_written) {
   bytes_written = 0;
   return Status::FromErrorString("unimplemented");
 }

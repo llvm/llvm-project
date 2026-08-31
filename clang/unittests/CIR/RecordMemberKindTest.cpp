@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -73,12 +74,121 @@ TEST_F(RecordMemberKindTest, EmptyForTheABIWhenNoMemberHoldsData) {
   EXPECT_FALSE(makeStruct("dp", {u8, u8},
                           {RecordMemberKind::Data, RecordMemberKind::Pad})
                    .isEmptyForABI());
+  // A unit with a named occupant holds data the same way a field does.
+  EXPECT_FALSE(
+      makeStruct("b1", {u8}, {RecordMemberKind::BitField}).isEmptyForABI());
+  EXPECT_FALSE(makeStruct("be", {u8, u8},
+                          {RecordMemberKind::BitField, RecordMemberKind::Empty})
+                   .isEmptyForABI());
+}
+
+TEST_F(RecordMemberKindTest, AZeroWidthBitFieldIsAZeroLengthArrayUnderTheMark) {
+  IntType u8 = getU8();
+  IntType s32 = IntType::get(&context, 32, true);
+  auto zeroLen = cir::ArrayType::get(s32, 0);
+  auto oneLen = cir::ArrayType::get(s32, 1);
+
+  EXPECT_TRUE(cir::isZeroWidthBitField(zeroLen, RecordMemberKind::BitField));
+  // The mark alone is a bit-field access unit, which holds storage.
+  EXPECT_FALSE(cir::isZeroWidthBitField(u8, RecordMemberKind::BitField));
+  EXPECT_FALSE(cir::isZeroWidthBitField(oneLen, RecordMemberKind::BitField));
+  // A zero-length array under `data` is a flexible array member.
+  EXPECT_FALSE(cir::isZeroWidthBitField(zeroLen, RecordMemberKind::Data));
+  EXPECT_FALSE(cir::isZeroWidthBitField(zeroLen, RecordMemberKind::Empty));
+  EXPECT_FALSE(cir::isZeroWidthBitField(zeroLen, RecordMemberKind::Pad));
+}
+
+TEST_F(RecordMemberKindTest, AZeroWidthBitFieldHoldsNoDataForTheABI) {
+  IntType u8 = getU8();
+  IntType s32 = IntType::get(&context, 32, true);
+  auto zeroLen = cir::ArrayType::get(s32, 0);
+
+  EXPECT_FALSE(cir::holdsDataForABI(zeroLen, RecordMemberKind::BitField));
+  EXPECT_TRUE(cir::holdsDataForABI(u8, RecordMemberKind::BitField));
+  // A zero-length array under `data` is a flexible array member, which does.
+  EXPECT_TRUE(cir::holdsDataForABI(zeroLen, RecordMemberKind::Data));
+  EXPECT_FALSE(cir::holdsDataForABI(u8, RecordMemberKind::Pad));
+  EXPECT_FALSE(cir::holdsDataForABI(u8, RecordMemberKind::Empty));
+
+  // A record of nothing but zero-width bit-fields declares no storage.
+  EXPECT_TRUE(makeStruct("zw", {zeroLen}, {RecordMemberKind::BitField})
+                  .isEmptyForABI());
+  EXPECT_TRUE(
+      makeStruct("zwzw", {zeroLen, zeroLen},
+                 {RecordMemberKind::BitField, RecordMemberKind::BitField})
+          .isEmptyForABI());
+  EXPECT_TRUE(makeStruct("zwpad", {zeroLen, u8},
+                         {RecordMemberKind::BitField, RecordMemberKind::Pad})
+                  .isEmptyForABI());
+  // A flexible array member holds data, so the same type under `data` does not.
+  EXPECT_FALSE(
+      makeStruct("fam", {zeroLen}, {RecordMemberKind::Data}).isEmptyForABI());
+  EXPECT_FALSE(makeStruct("zwdata", {zeroLen, u8},
+                          {RecordMemberKind::BitField, RecordMemberKind::Data})
+                   .isEmptyForABI());
+}
+
+TEST_F(RecordMemberKindTest, AZeroWidthBitFieldLendsNoSizeOrAlignment) {
+  IntType s8 = IntType::get(&context, 8, true);
+  IntType s64 = IntType::get(&context, 64, true);
+  IntType u8 = getU8();
+  auto zeroLen = cir::ArrayType::get(s64, 0);
+  auto pad7 = cir::ArrayType::get(u8, 7);
+
+  // Without the member the record is two bytes at alignment one.  The declared
+  // type would take it to sixteen bytes at alignment eight.
+  mlir::Type members[] = {s8, pad7, zeroLen, s8};
+  cir::RecordMemberKind kinds[] = {
+      RecordMemberKind::Data, RecordMemberKind::Pad, RecordMemberKind::BitField,
+      RecordMemberKind::Data};
+  auto ty = StructType::get(&context, getName("ZwLayout"), /*is_class=*/false);
+  ty.complete(members, /*packed=*/false, kinds);
+
+  OpBuilder builder(&context);
+  auto module = ModuleOp::create(builder.getUnknownLoc());
+  mlir::DataLayout dl(module);
+
+  EXPECT_EQ(dl.getTypeSizeInBits(ty).getFixedValue(), 72u);
+  EXPECT_EQ(dl.getTypeABIAlignment(ty), 1u);
+  // The member sits where the storage ahead of it ends, and the member after it
+  // is not pushed along by the declared type's alignment.
+  EXPECT_EQ(ty.getElementOffset(dl, 2), 8u);
+  EXPECT_EQ(ty.getElementOffset(dl, 3), 8u);
+
+  module->erase();
+}
+
+TEST_F(RecordMemberKindTest, ATrailingZeroWidthBitFieldLeavesTailPadding) {
+  IntType s8 = IntType::get(&context, 8, true);
+  IntType s32 = IntType::get(&context, 32, true);
+  IntType u8 = getU8();
+  auto zeroLen = cir::ArrayType::get(s32, 0);
+  auto pad3 = cir::ArrayType::get(u8, 3);
+
+  // The trailing run is the pad plus the zero-width bit-field, so a derived
+  // class may reuse every byte after the first.
+  mlir::Type members[] = {s8, pad3, zeroLen};
+  cir::RecordMemberKind kinds[] = {RecordMemberKind::Data,
+                                   RecordMemberKind::Pad,
+                                   RecordMemberKind::BitField};
+  auto ty = StructType::get(&context, getName("ZwTail"), /*is_class=*/false);
+  ty.complete(members, /*packed=*/false, kinds);
+
+  OpBuilder builder(&context);
+  auto module = ModuleOp::create(builder.getUnknownLoc());
+  mlir::DataLayout dl(module);
+
+  EXPECT_EQ(ty.computeStructDataSize(dl), 1u);
+
+  module->erase();
 }
 
 TEST_F(RecordMemberKindTest, PaddedFollowsThePadKinds) {
   IntType u8 = getU8();
   EXPECT_FALSE(makeStruct("d", {u8}, {RecordMemberKind::Data}).getPadded());
   EXPECT_FALSE(makeStruct("e", {u8}, {RecordMemberKind::Empty}).getPadded());
+  // Bit-field storage is declared, so an access unit is not padding.
+  EXPECT_FALSE(makeStruct("b", {u8}, {RecordMemberKind::BitField}).getPadded());
   EXPECT_TRUE(makeStruct("p", {u8}, {RecordMemberKind::Pad}).getPadded());
   // Interior padding counts too, not just a trailing run.
   EXPECT_TRUE(makeStruct("dpd", {u8, u8, u8},
@@ -156,6 +266,13 @@ TEST_F(RecordMemberKindTest, RejectsPadOnAUnionMember) {
                                     /*packed=*/false, /*padding=*/mlir::Type{},
                                     llvm::ArrayRef<RecordMemberKind>(empty)));
   EXPECT_EQ(diags.count, 1u);
+  // A union variant can be a bit-field access unit, which is not padding.
+  llvm::SmallVector<RecordMemberKind> bitField{RecordMemberKind::BitField};
+  EXPECT_TRUE(
+      UnionType::getChecked(getLoc(), &context, membersRef,
+                            /*packed=*/false, /*padding=*/mlir::Type{},
+                            llvm::ArrayRef<RecordMemberKind>(bitField)));
+  EXPECT_EQ(diags.count, 1u);
 }
 
 TEST_F(RecordMemberKindTest, AnIncompleteRecordIsNotEmptyForTheABI) {
@@ -191,6 +308,12 @@ TEST_F(RecordMemberKindTest, KindsTakePartInAnonymousTypeIdentity) {
 
   // Kinds are provenance rather than layout.
   EXPECT_TRUE(kindsPad.isLayoutIdentical(kindsEmpty));
+
+  auto kindsBitField =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::BitField, RecordMemberKind::Pad});
+  EXPECT_NE(kindsPad, kindsBitField);
+  EXPECT_TRUE(kindsPad.isLayoutIdentical(kindsBitField));
 
   llvm::SmallVector<mlir::Type> unionMembers{u8, u8};
   llvm::SmallVector<RecordMemberKind> unionEmpty{RecordMemberKind::Data,

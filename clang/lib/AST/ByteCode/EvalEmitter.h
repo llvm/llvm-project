@@ -100,12 +100,12 @@ protected:
   }
 
   /// Callback for registering a local.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Local descriptors.
-  llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  llvm::SmallVector<SmallVector<Local, 2>, 1> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:

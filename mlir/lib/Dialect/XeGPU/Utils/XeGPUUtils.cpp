@@ -773,13 +773,21 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
+std::optional<SmallVector<int64_t>>
+xegpu::getInner2DIfUnitLeadingDims(ArrayRef<int64_t> vals) {
+  if (vals.size() < 2)
+    return std::nullopt;
+  if (llvm::any_of(vals.drop_back(2), [](int64_t v) { return v != 1; }))
+    return std::nullopt;
+  return SmallVector<int64_t>(vals.take_back(2));
+}
+
 bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
+  auto laneData =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
+  return laneData && (*laneData)[0] != 1;
 }
 
 bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
@@ -790,10 +798,19 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
     return false;
   if (!layout)
     return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
+  auto laneLayout =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneLayoutAsInt());
+  return laneLayout && (*laneLayout)[0] == uArch->getSubgroupSize() &&
+         (*laneLayout)[1] == 1;
+}
+
+bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
+  if (!type.hasStaticShape())
     return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  return succeeded(type.getStridesAndOffset(strides, offset)) &&
+         llvm::none_of(strides, ShapedType::isDynamic);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

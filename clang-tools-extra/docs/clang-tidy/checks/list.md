@@ -245,6 +245,7 @@ readability/*
 | {doc}`llvm-formatv-string <llvm/formatv-string>` |  |
 | {doc}`llvm-header-guard <llvm/header-guard>` |  |
 | {doc}`llvm-include-order <llvm/include-order>` | Yes |
+| {doc}`llvm-invalid-regex-pattern <llvm/invalid-regex-pattern>` |  |
 | {doc}`llvm-namespace-comment <llvm/namespace-comment>` |  |
 | {doc}`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>` | Yes |
 | {doc}`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>` | Yes |
@@ -372,6 +373,7 @@ readability/*
 | {doc}`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>` | Yes |
 | {doc}`performance-unnecessary-value-param <performance/unnecessary-value-param>` | Yes |
 | {doc}`performance-use-std-move <performance/use-std-move>` | Yes |
+| {doc}`portability-avoid-pragma-comment <portability/avoid-pragma-comment>` |  |
 | {doc}`portability-avoid-pragma-once <portability/avoid-pragma-once>` |  |
 | {doc}`portability-no-assembler <portability/no-assembler>` |  |
 | {doc}`portability-restrict-system-includes <portability/restrict-system-includes>` | Yes |

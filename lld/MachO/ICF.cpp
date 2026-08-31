@@ -91,6 +91,42 @@ ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
 // FIXME(gkm): implement keep-unique attributes
 // FIXME(gkm): implement address-significance tables for MachO object files
 
+static bool isFoldableWithAddendsRemoved(const ConcatInputSection *isec) {
+  return isCfStringSection(isec) || isClassRefsSection(isec) ||
+         isSelRefsSection(isec) || isEhFrameSection(isec);
+}
+
+// Make a normalized copy of a section's bytes by zeroing out the embedded
+// relocs. Return it in the given &buf
+static void getNormalizedData(const ConcatInputSection *isec,
+                              SmallVectorImpl<uint8_t> &buf) {
+  buf.assign(isec->data.begin(), isec->data.end());
+  for (size_t i = 0; i < isec->relocs.size(); ++i) {
+    const Relocation &r = isec->relocs[i];
+    size_t size = 1ULL << r.length;
+    if (r.offset + size <= buf.size())
+      memset(buf.data() + r.offset, 0, size);
+    if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
+      ++i; // Skip the paired minuend relocation
+  }
+}
+
+static bool compareData(const ConcatInputSection *ia,
+                        const ConcatInputSection *ib) {
+  if (ia->data.size() != ib->data.size())
+    return false;
+  if (ia->data == ib->data)
+    return true;
+  if (!isFoldableWithAddendsRemoved(ia))
+    return false;
+  assert(isFoldableWithAddendsRemoved(ib));
+
+  SmallVector<uint8_t, 64> bufA, bufB;
+  getNormalizedData(ia, bufA);
+  getNormalizedData(ib, bufB);
+  return bufA == bufB;
+}
+
 // Compare "non-moving" parts of two ConcatInputSections, namely everything
 // except references to other ConcatInputSections.
 bool ICF::equalsConstant(const ConcatInputSection *ia,
@@ -100,7 +136,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
-  if (ia->data != ib->data)
+  if (!compareData(ia, ib))
     return false;
   auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
@@ -573,9 +609,9 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // Reset the thunk counter for each run of ICF.
   icfThunkCounter = 0;
   for (ConcatInputSection *isec : inputSections) {
-    bool isFoldableWithAddendsRemoved = isCfStringSection(isec) ||
-                                        isClassRefsSection(isec) ||
-                                        isSelRefsSection(isec);
+    bool isUnconditionallyCoalescedData = isCfStringSection(isec) ||
+                                          isClassRefsSection(isec) ||
+                                          isSelRefsSection(isec);
     // NOTE: __objc_selrefs is typically marked as no_dead_strip by MC, but we
     // can still fold it.
     bool hasFoldableFlags = (isSelRefsSection(isec) ||
@@ -596,7 +632,6 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     // Happens to match isFoldableWithAddendsRemoved today, but expresses a
     // different intent (ld64's coalescing semantics, not addend stripping),
     // so the two may diverge as either list grows.
-    bool isUnconditionallyCoalescedData = isFoldableWithAddendsRemoved;
     bool isSafeThunksCode =
         config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
     bool keepUniqueAllowsFolding =
@@ -604,7 +639,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
 
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
-                      (isCodeSec || isFoldableWithAddendsRemoved ||
+                      (isCodeSec || isFoldableWithAddendsRemoved(isec) ||
                        isGccExceptTabSection(isec)) &&
                       keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
@@ -613,32 +648,34 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
       for (Defined *d : isec->symbols)
         if (d->unwindEntry())
           foldable.push_back(d->unwindEntry());
-
-      // Some sections have embedded addends that foil ICF's hashing / equality
-      // checks. (We can ignore embedded addends when doing ICF because the same
-      // information gets recorded in our Reloc structs.) We therefore create a
-      // mutable copy of the section data and zero out the embedded addends
-      // before performing any hashing / equality checks.
-      if (isFoldableWithAddendsRemoved) {
-        // We have to do this copying serially as the BumpPtrAllocator is not
-        // thread-safe. FIXME: Make a thread-safe allocator.
-        MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
-        for (const Relocation &r : isec->relocs)
-          target->relocateOne(copy.data() + r.offset, r, /*va=*/0,
-                              /*relocVA=*/0);
-        isec->data = copy;
-      }
-    } else if (!isEhFrameSection(isec)) {
-      // EH frames are gathered as foldables from unwindEntry above; give a
-      // unique ID to everything else.
+    } else if (isEhFrameSection(isec)) {
+      // __eh_frame contains two types of records: FDEs and CIEs.
+      // Functions point to FDEs, which are already collected above via
+      // unwindEntry(). CIEs are shared headers and are not attached to
+      // individual functions. Collect only CIEs here so they can also be hashed
+      // and deduplicated.
+      auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
+      if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
+          !isec->shouldOmitFromOutput())
+        foldable.push_back(isec);
+    } else {
+      // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
   parallelForEach(foldable, [](ConcatInputSection *isec) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
+    uint64_t hash;
+    if (isFoldableWithAddendsRemoved(isec)) {
+      SmallVector<uint8_t, 64> stackBuf;
+      getNormalizedData(isec, stackBuf);
+      hash = xxh3_64bits(stackBuf);
+    } else {
+      hash = xxh3_64bits(isec->data);
+    }
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
-    isec->icfEqClass[0] = xxh3_64bits(isec->data) | (1ull << 31);
+    isec->icfEqClass[0] = hash | (1ull << 31);
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.

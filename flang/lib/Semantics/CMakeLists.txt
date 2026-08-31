@@ -36,7 +36,6 @@ add_flang_library(FortranSemantics
   expression.cpp
   mod-file.cpp
   openmp-dsa.cpp
-  openmp-modifiers.cpp
   openmp-utils.cpp
   pointer-assignment.cpp
   program-tree.cpp

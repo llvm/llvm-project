@@ -93,8 +93,8 @@ thread_local T tls_templ = {get_i()};
 // CIR:     %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:     %[[DTOR_FPTR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:     %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB:.*]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:     cir.call @__cxa_thread_atexit(%[[DTOR_FPTR]], %[[GLOB_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   }
 // CIR:   cir.return
 // CIR: }

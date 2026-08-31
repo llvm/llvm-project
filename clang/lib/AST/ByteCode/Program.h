@@ -57,16 +57,6 @@ public:
 
   const Context &getContext() const { return Ctx; }
 
-  /// Marshals a native pointer to an ID for embedding in bytecode.
-  unsigned getOrCreateNativePointer(const void *Ptr);
-
-  /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx) const;
-
-  /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S,
-                              const Expr *Base = nullptr);
-
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
 
@@ -102,13 +92,13 @@ public:
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
     Def = Def->getCanonicalDecl();
-    auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
+    auto *Func = new Function(Def, std::forward<Ts>(Args)...);
     Funcs.insert({Def, std::unique_ptr<Function>(Func)});
     return Func;
   }
   /// Creates an anonymous function.
   template <typename... Ts> Function *createFunction(Ts &&...Args) {
-    auto *Func = new Function(*this, std::forward<Ts>(Args)...);
+    auto *Func = new Function(std::forward<Ts>(Args)...);
     AnonFuncs.emplace_back(Func);
     return Func;
   }
@@ -122,17 +112,15 @@ public:
   /// Creates a descriptor for a primitive type.
   Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                bool IsVolatile = false) {
-    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
-                              IsMutable, IsVolatile);
+    return allocateDescriptor(D, SourceTy, T, IsConst, IsTemporary, IsMutable,
+                              IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
@@ -180,11 +168,6 @@ private:
   llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Native pointers referenced by bytecode.
-  std::vector<const void *> NativePointers;
-  /// Cached native pointer indices.
-  llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
   using PoolAllocTy = llvm::BumpPtrAllocator;

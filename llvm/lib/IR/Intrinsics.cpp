@@ -22,7 +22,6 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1477,6 +1476,9 @@ LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
   uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
   OS << static_cast<FPClassTest>(Val);
 }
+
+#define GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS
+#include "llvm/IR/IntrinsicImpl.inc"
 
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
 #include "llvm/IR/IntrinsicImpl.inc"

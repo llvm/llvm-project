@@ -24,6 +24,7 @@
 # CHECK-NEXT:  1      11    1.00    *                   bf2cvtlt	z0.h, z0.b
 # CHECK-NEXT:  1      4     1.00                  U     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # CHECK-NEXT:  1      4     2.00                  U     bfadd	za.h[w8, 0, vgx4], { z0.h - z3.h }
+# CHECK-NEXT:  1      4     1.00                  U     bfsub	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # CHECK-NEXT:  1      11    1.00                  U     bfcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  1      7     1.00                  U     bfcvtn	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  1      5     1.00                  U     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
@@ -71,7 +72,10 @@
 # CHECK-NEXT:  1      5     1.00                  U     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
 # CHECK-NEXT:  1      5     1.00                  U     fclamp	{ z0.h, z1.h }, z0.h, z0.h
 # CHECK-NEXT:  1      7     2.00                  U     fclamp	{ z0.d - z3.d }, z0.d, z0.d
+# CHECK-NEXT:  1      4     1.00    *             U     fcvt	z0.b, { z0.s - z3.s }
 # CHECK-NEXT:  1      4     1.00                  U     fcvt	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  1      4     1.00    *             U     fcvtnb	z0.b, { z0.s, z1.s }
+# CHECK-NEXT:  1      7     1.00    *             U     bfcvtn	z0.b, { z0.h, z1.h }
 # CHECK-NEXT:  1      4     1.00                  U     fcvtn	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  1      4     1.00                  U     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
 # CHECK-NEXT:  1      4     2.00                  U     fcvtzs	{ z0.s - z3.s }, { z0.s - z3.s }
@@ -108,6 +112,7 @@
 # CHECK-NEXT:  1      4     2.00                  U     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # CHECK-NEXT:  1      4     2.00                  U     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # CHECK-NEXT:  1      4     1.00                  U     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# CHECK-NEXT:  1      5     2.00                  U     fscale	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # CHECK-NEXT:  1      5     2.00                  U     luti2	{ z0.h, z1.h }, zt0, z0[0]
 # CHECK-NEXT:  1      7     4.00                  U     luti2	{ z0.h - z3.h }, zt0, z0[0]
 # CHECK-NEXT:  1      5     2.00                  U     luti4	{ z0.h, z1.h }, zt0, z0[0]
@@ -166,6 +171,8 @@
 # CHECK-NEXT:  1      8     1.00                  U     sqcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  1      8     1.00                  U     sqcvt	z0.b, { z0.s - z3.s }
 # CHECK-NEXT:  1      8     1.00                  U     sqcvtun	z0.b, { z0.s - z3.s }
+# CHECK-NEXT:  1      8     1.00                  U     sqcvtu	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  1      8     1.00                  U     uqcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  1      5     1.00                  U     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
 # CHECK-NEXT:  1      5     2.00                  U     sqdmulh	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # CHECK-NEXT:  1      4     1.00                  U     sqrshr	z0.h, { z0.s, z1.s }, #16
@@ -280,7 +287,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# CHECK-NEXT:  -      -      -     9.00    -     145.00 4.00   41.50  19.50  2.00   0.33   0.33   0.33   9.00   118.00  -      -     111.00  -      -      -      -      -      -      -      -     0.75   0.75   2.25   2.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     9.00    -     146.00 4.00   45.50  21.50  2.00   0.33   0.33   0.33   9.00   125.00  -      -     118.00  -      -      -      -      -      -      -      -     0.75   0.75   2.25   2.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
@@ -298,6 +305,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bf2cvtlt	z0.h, z0.b
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfadd	za.h[w8, 0, vgx4], { z0.h - z3.h }
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfsub	za.h[w8, 0, vgx2], { z0.h, z1.h }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfcvtn	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
@@ -345,7 +353,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fclamp	{ z0.h, z1.h }, z0.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fclamp	{ z0.d - z3.d }, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvt	z0.b, { z0.s - z3.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvt	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtnb	z0.b, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfcvtn	z0.b, { z0.h, z1.h }
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtn	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtzs	{ z0.s - z3.s }, { z0.s - z3.s }
@@ -382,6 +393,7 @@
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fscale	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti2	{ z0.h, z1.h }, zt0, z0[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti2	{ z0.h - z3.h }, zt0, z0[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     luti4	{ z0.h, z1.h }, zt0, z0[0]
@@ -440,6 +452,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvt	z0.b, { z0.s - z3.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvtun	z0.b, { z0.s - z3.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvtu	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqcvt	z0.h, { z0.s, z1.s }
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdmulh	{ z0.s - z3.s }, { z0.s - z3.s }, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqrshr	z0.h, { z0.s, z1.s }, #16

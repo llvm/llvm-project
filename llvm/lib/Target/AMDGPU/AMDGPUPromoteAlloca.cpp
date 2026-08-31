@@ -214,11 +214,6 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);
@@ -1736,21 +1731,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
-      SmallVector<Value *> Args;
-      if (Intr->getIntrinsicID() == Intrinsic::invariant_start) {
-        Args.emplace_back(Intr->getArgOperand(0));
-      } else if (Intr->getIntrinsicID() == Intrinsic::invariant_end) {
-        Args.emplace_back(Intr->getArgOperand(0));
-        Args.emplace_back(Intr->getArgOperand(1));
-      }
-      Args.emplace_back(Offset);
-      Function *F = Intrinsic::getOrInsertDeclaration(
-          Intr->getModule(), Intr->getIntrinsicID(), Offset->getType());
-      CallInst *NewIntr =
-          CallInst::Create(F, Args, Intr->getName(), Intr->getIterator());
-      Intr->mutateType(NewIntr->getType());
-      Intr->replaceAllUsesWith(NewIntr);
-      Intr->eraseFromParent();
+      assert(Intr->getArgOperand(Intr->arg_size() - 1)->getType() == NewPtrTy &&
+             "pointer operand should already have been promoted");
+      Function *NewF = Intrinsic::getOrInsertDeclaration(
+          Intr->getModule(), Intr->getIntrinsicID(), NewPtrTy);
+      Intr->mutateType(NewF->getReturnType());
+      Intr->setCalledFunction(NewF);
       continue;
     }
     case Intrinsic::objectsize: {

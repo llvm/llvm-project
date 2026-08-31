@@ -1,9 +1,7 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
 // RUN: FileCheck --input-file=%t-before-lp.cir %s -check-prefix=CIR-BEFORE-LPP
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -874,8 +872,7 @@ void Temp2InArray() {
 // CIR-NEXT:      %[[CURRENT:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
 // CIR-NEXT:      cir.call @_ZN5Temp2C1Ev(%[[TMP]])
 // CIR-NEXT:      cir.cleanup.scope {
-// CIR-NEXT:        %[[LOAD_TMP:.*]] = cir.load {{.*}}%[[TMP]] : !cir.ptr<!rec_Temp2>, !rec_Temp2
-// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[LOAD_TMP]])
+// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.byref = !rec_Temp2}) -> ()
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      } cleanup all {
 // CIR-NEXT:        cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
@@ -925,8 +922,7 @@ void Temp2InArray() {
 // LLVM: [[EMPTY2]]:
 // LLVM: br label %[[CONSTRUCT_CT:.*]]
 // LLVM: [[CONSTRUCT_CT]]:
-// LLVM: %[[LOAD:.*]] = load %struct.Temp2, ptr %[[TMP]]
-// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr noundef nonnull align 1 dereferenceable(1) %12, %struct.Temp2 %15)
+// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}} %{{.*}}, ptr byref(%struct.Temp2) align 1 %[[TMP]])
 // LLVM-NEXT:         to label %[[EMPTY3:.*]] unwind label %[[EXCEPT:.*]]
 // LLVM: [[EMPTY3]]:
 // LLVM: br label %[[DTOR_TEMP:.*]]
@@ -941,7 +937,7 @@ void Temp2InArray() {
 // LLVM: [[EXCEPT_TEMP]]:
 // LLVM: br label %[[CHECK_TEMP:.*]]
 // LLVM: [[CHECK_TEMP]]:
-// LLVM: br i1 %37, label %[[EMPTY4:.*]], 
+// LLVM: br i1 %{{.*}}, label %[[EMPTY4:.*]], 
 // LLVM: [[EMPTY4]]:
 // LLVM: br label %[[DTOR_TMP:.*]]
 //

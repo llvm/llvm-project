@@ -347,6 +347,8 @@ add_header_library(
   DEPENDS
     .libc_assert
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memset
 )
 
@@ -388,6 +390,15 @@ add_header_library(
   frac128
   HDRS
     frac128.h
+  DEPENDS
+    .big_int
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac64
+  HDRS
+    frac64.h
   DEPENDS
     .big_int
     libc.src.__support.macros.config
