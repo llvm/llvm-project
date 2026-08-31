@@ -1958,47 +1958,32 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
       ExplodedNodeSet Tmp;
 
-      bool HasRebuiltInit = false;
-      const Expr *ArgE = nullptr;
-      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S)) {
+      const Expr *ArgE;
+      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
         ArgE = DefE->getExpr();
-        HasRebuiltInit = DefE->hasRewrittenInit();
-      } else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S)) {
+      else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S))
         ArgE = DefE->getExpr();
-        HasRebuiltInit = DefE->hasRewrittenInit();
-      } else
+      else
         llvm_unreachable("unknown constant wrapper kind");
 
-      if (HasRebuiltInit) {
-        for (const auto N : PreVisit) {
-          const StackFrame *SF = N->getStackFrame();
-          ProgramStateRef State = N->getState();
-          State = State->BindExpr(cast<Expr>(S), SF, State->getSVal(ArgE, SF));
-          Tmp.insert(Engine.makePostStmtNode(S, State, N));
-        }
-      } else {
-        // If it's not rewritten, the contents of these expressions are not
-        // actually part of the current function, so we fall back to constant
-        // evaluation.
-        bool IsTemporary = false;
-        if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
-          ArgE = MTE->getSubExpr();
-          IsTemporary = true;
-        }
+      bool IsTemporary = false;
+      if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
+        ArgE = MTE->getSubExpr();
+        IsTemporary = true;
+      }
 
-        std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
-        if (!ConstantVal)
-          ConstantVal = UnknownVal();
+      std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
+      if (!ConstantVal)
+        ConstantVal = UnknownVal();
 
-        for (const auto I : PreVisit) {
-          const StackFrame *SF = I->getStackFrame();
-          ProgramStateRef State = I->getState();
-          State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
-          if (IsTemporary)
-            State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
-                                                  cast<Expr>(S));
-          Tmp.insert(Engine.makePostStmtNode(S, State, I));
-        }
+      const StackFrame *SF = Pred->getStackFrame();
+      for (const auto I : PreVisit) {
+        ProgramStateRef State = I->getState();
+        State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
+        if (IsTemporary)
+          State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
+                                                cast<Expr>(S));
+        Tmp.insert(Engine.makePostStmtNode(S, State, I));
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);

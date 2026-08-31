@@ -50,22 +50,6 @@ static bool isSideEffectFree(const Expr *E) {
   return false;
 }
 
-static bool containsDefaultInitExpr(const Expr *E) {
-  class Finder final : public ConstDynamicRecursiveASTVisitor {
-  public:
-    Finder() { ShouldVisitImplicitCode = true; }
-
-    bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *) override {
-      Found = true;
-      return true;
-    }
-
-    bool Found = false;
-  } F;
-  F.TraverseStmt(E);
-  return F.Found;
-}
-
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
@@ -281,9 +265,7 @@ template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
       : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
-    // An explicit initializer nested in a default member initializer still
-    // needs the surrounding default initializer's `this` reconstruction.
-    Ctx->InitStackActive = OldValue || Active;
+    Ctx->InitStackActive = Active;
     if (Active)
       Ctx->InitStack.push_back(InitLink::DIE());
   }
@@ -3493,9 +3475,6 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this, ScopeKind::FullExpression);
   const Expr *SubExpr = E->getSubExpr();
 
-  if (DiscardResult && this->discardNeedsResultObject(SubExpr))
-    return this->discardIntoResultObject(SubExpr) && ES.destroyLocals(E);
-
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
 
@@ -3562,11 +3541,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     // Non-primitive values.
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
-    if (!this->emitStartInit(E))
-      return false;
     if (!this->visitInitializer(Inner))
-      return false;
-    if (!this->emitEndInit(E))
       return false;
     if (IsStatic) {
       assert(TempDecl);
@@ -3610,11 +3585,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-    if (!this->emitStartInit(E))
-      return false;
-    if (!this->visitInitializer(Inner))
-      return false;
-    return this->emitEndInit(E);
+    return this->visitInitializer(Inner);
   }
   return false;
 }
@@ -4916,30 +4887,7 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   return BS.destroyLocals();
 }
 
-template <class Emitter>
-bool Compiler<Emitter>::discardNeedsResultObject(const Expr *E) const {
-  return !E->isGLValue() && !canClassify(E->getType()) &&
-         containsDefaultInitExpr(E);
-}
-
-template <class Emitter>
-bool Compiler<Emitter>::discardIntoResultObject(const Expr *E) {
-  UnsignedOrNone LocalIndex =
-      allocateLocal(E, QualType(), ScopeKind::FullExpression);
-  if (!LocalIndex)
-    return false;
-  InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
-  if (!this->emitGetPtrLocal(*LocalIndex, E))
-    return false;
-  return this->visitInitializerPop(E);
-}
-
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
-  // Let an ExprWithCleanups establish its full-expression scope first; it
-  // allocates the result object itself.
-  if (!isa<ExprWithCleanups>(E) && this->discardNeedsResultObject(E))
-    return this->discardIntoResultObject(E);
-
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false, /*ToLValue=*/false);
   return this->Visit(E);
@@ -5503,13 +5451,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
-    // A const-qualified result object is writable while it is being
-    // initialized, just like an object evaluated through visitVarDecl().
-    if (!this->emitStartInit(E))
-      return false;
     if (!visitInitializer(E))
-      return false;
-    if (!this->emitEndInit(E))
       return false;
     // We are destroying the locals AFTER the Ret op.
     // The Ret op needs to copy the (alive) values, but the

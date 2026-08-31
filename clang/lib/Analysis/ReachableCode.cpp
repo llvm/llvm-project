@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/BitVector.h"
-#include <cstddef>
 #include <optional>
 
 using namespace clang;
@@ -397,7 +396,6 @@ namespace {
     SmallVector<const CFGBlock *, 10> WorkList;
     Preprocessor &PP;
     ASTContext &C;
-    AnalysisDeclContext &AC;
 
     typedef SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>
     DeferredLocsTy;
@@ -405,10 +403,10 @@ namespace {
     DeferredLocsTy DeferredLocs;
 
   public:
-    DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP,
-                 AnalysisDeclContext &AC)
-        : Visited(reachable.size()), Reachable(reachable), PP(PP),
-          C(AC.getASTContext()), AC(AC) {}
+    DeadCodeScan(llvm::BitVector &reachable, Preprocessor &PP, ASTContext &C)
+    : Visited(reachable.size()),
+      Reachable(reachable),
+      PP(PP), C(C) {}
 
     void enqueue(const CFGBlock *block);
     unsigned scanBackwards(const CFGBlock *Start,
@@ -455,8 +453,47 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
   return isDeadRoot;
 }
 
-static bool isValidDeadStmt(ParentMap &PM, const Stmt *S,
-                            const clang::CFGBlock *) {
+// Check if the given `DeadStmt` is a coroutine statement and is a substmt of
+// the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
+static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
+  // The coroutine statement, co_return, co_await, or co_yield.
+  const Stmt *CoroStmt = nullptr;
+  // Find the first coroutine statement after the DeadStmt in the block.
+  bool AfterDeadStmt = false;
+  for (const CFGElement &Elem : *Block)
+    if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
+      const Stmt *S = CS->getStmt();
+      if (S == DeadStmt)
+        AfterDeadStmt = true;
+      if (AfterDeadStmt &&
+          // For simplicity, we only check simple coroutine statements.
+          (llvm::isa<CoreturnStmt>(S) || llvm::isa<CoroutineSuspendExpr>(S))) {
+        CoroStmt = S;
+        break;
+      }
+    }
+  if (!CoroStmt)
+    return false;
+  struct Checker : DynamicRecursiveASTVisitor {
+    const Stmt *DeadStmt;
+    bool CoroutineSubStmt = false;
+    Checker(const Stmt *S) : DeadStmt(S) {
+      // Statements captured in the CFG can be implicit.
+      ShouldVisitImplicitCode = true;
+    }
+
+    bool VisitStmt(Stmt *S) override {
+      if (S == DeadStmt)
+        CoroutineSubStmt = true;
+      return true;
+    }
+  };
+  Checker checker(DeadStmt);
+  checker.TraverseStmt(const_cast<Stmt *>(CoroStmt));
+  return checker.CoroutineSubStmt;
+}
+
+static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
   if (S->getBeginLoc().isInvalid())
     return false;
   if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(S))
@@ -464,27 +501,21 @@ static bool isValidDeadStmt(ParentMap &PM, const Stmt *S,
   // Coroutine statements are never considered dead statements, because removing
   // them may change the function semantic if it is the only coroutine statement
   // of the coroutine.
-  return !PM.getInnerMostAncestor<CoreturnStmt, CoroutineSuspendExpr>(S);
+  return !isInCoroutineStmt(S, Block);
 }
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
-  auto &PM = AC.getParentMap();
-
   for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I!=E; ++I)
     if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
-      auto *RewrittenParent =
-          PM.getOuterMostAncestor<CXXDefaultArgExpr, CXXDefaultInitExpr>(S);
-      if (RewrittenParent)
-        S = RewrittenParent;
-      if (isValidDeadStmt(AC.getParentMap(), S, Block))
+      if (isValidDeadStmt(S, Block))
         return S;
     }
 
   CFGTerminator T = Block->getTerminator();
   if (T.isStmtBranch()) {
     const Stmt *S = T.getStmt();
-    if (S && isValidDeadStmt(AC.getParentMap(), S, Block))
+    if (S && isValidDeadStmt(S, Block))
       return S;
   }
 
@@ -730,7 +761,7 @@ void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
     if (reachable[block->getBlockID()])
       continue;
 
-    DeadCodeScan DS(reachable, PP, AC);
+    DeadCodeScan DS(reachable, PP, AC.getASTContext());
     numReachable += DS.scanBackwards(block, CB);
 
     if (numReachable == cfg->getNumBlockIDs())

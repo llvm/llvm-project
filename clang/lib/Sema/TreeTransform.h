@@ -3519,9 +3519,10 @@ public:
   /// By default, builds a new default field initialization expression, which
   /// does not require any semantic analysis. Subclasses may override this
   /// routine to provide different behavior.
-  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
-                                       FieldDecl *Field) {
-    return getSema().BuildCXXCtorDefaultInitExpr(Loc, Field);
+  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       Expr *RewrittenInit) {
+    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field,
+                                      getSema().CurContext, RewrittenInit);
   }
 
   /// Build a new C++ zero-initialization expression.
@@ -15119,11 +15120,23 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!Field)
     return ExprError();
 
+  ExprResult InitRes;
+  if (E->hasRewrittenInit()) {
+    // The initializer can refer to `this` and to other members, so it has to
+    // be transformed in the scope of the field's class.
+    Sema::CXXThisScopeRAII ThisScope(SemaRef, Field->getParent(), Qualifiers());
+    InitRes = getDerived().TransformExpr(E->getRewrittenExpr());
+    if (InitRes.isInvalid())
+      return ExprError();
+  }
+
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
-      E->getUsedContext() == SemaRef.CurContext)
+      E->getUsedContext() == SemaRef.CurContext &&
+      InitRes.get() == E->getRewrittenExpr())
     return E;
 
-  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field);
+  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
+                                                InitRes.get());
 }
 
 template<typename Derived>
