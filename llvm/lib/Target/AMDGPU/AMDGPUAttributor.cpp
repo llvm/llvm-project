@@ -1435,27 +1435,27 @@ struct AAAMDGPUMinAGPRAlloc
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 /// The accum_offset a function has been committed to by its callers, that is,
 /// the ceiling on the number of architectural VGPRs it may allocate.
-struct AccumOffsetState {
-  unsigned Offset = 0;
+struct MinUnsignedState {
+  unsigned Value = 0;
   bool Unknown = true;
 
-  bool operator==(const AccumOffsetState &Other) const {
-    return Unknown == Other.Unknown && Offset == Other.Offset;
+  bool operator==(const MinUnsignedState &Other) const {
+    return Unknown == Other.Unknown && Value == Other.Value;
   }
-  bool operator!=(const AccumOffsetState &Other) const {
+  bool operator!=(const MinUnsignedState &Other) const {
     return !(*this == Other);
   }
 
   /// Combine with the boundary of one caller. AGPRs are addressed relative to
   /// accum_offset, so a function reachable from several callers has to fit
   /// under the lowest boundary any of them committed to.
-  void merge(const AccumOffsetState &Other) {
+  void merge(const MinUnsignedState &Other) {
     assert(!Other.Unknown && "cannot merge an unknown accum offset");
     if (Unknown) {
       *this = Other;
       return;
     }
-    Offset = std::min(Offset, Other.Offset);
+    Value = std::min(Value, Other.Value);
   }
 };
 
@@ -1500,7 +1500,7 @@ struct AAAMDGPUAccumOffset
 
   ChangeStatus updateImpl(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    AccumOffsetState OldState = AccumOffset;
+    MinUnsignedState OldState = AccumOffset;
 
     // The boundary is recomputed from scratch on every update rather than
     // accumulated, because the seed itself moves: a kernel's boundary drops as
@@ -1525,7 +1525,7 @@ struct AAAMDGPUAccumOffset
       LLVM_DEBUG(dbgs() << "Accum offset for " << F->getName() << ": " << Offset
                         << "\n");
     } else {
-      AccumOffsetState Merged;
+      MinUnsignedState Merged;
 
       auto CheckUse = [&](const Use &U, bool &Follow) {
         if (auto *CE = dyn_cast<ConstantExpr>(U.getUser())) {
@@ -1550,7 +1550,7 @@ struct AAAMDGPUAccumOffset
         if (!CallerAA || !CallerAA->isValidState())
           return true;
 
-        const AccumOffsetState &CallerOffset = CallerAA->getAccumOffset();
+        const MinUnsignedState &CallerOffset = CallerAA->getAccumOffset();
         if (!CallerOffset.Unknown)
           Merged.merge(CallerOffset);
         return true;
@@ -1579,7 +1579,7 @@ struct AAAMDGPUAccumOffset
       return ChangeStatus::UNCHANGED;
     SmallString<8> Buffer;
     raw_svector_ostream OS(Buffer);
-    OS << AccumOffset.Offset;
+    OS << AccumOffset.Value;
     return A.manifestAttrs(
         getIRPosition(),
         {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
@@ -1587,14 +1587,14 @@ struct AAAMDGPUAccumOffset
         /*ForceReplace=*/true);
   }
 
-  const AccumOffsetState &getAccumOffset() const { return AccumOffset; }
+  const MinUnsignedState &getAccumOffset() const { return AccumOffset; }
 
   const std::string getAsStr(Attributor *A) const override {
     if (!getAssumed() || AccumOffset.Unknown)
       return "unknown";
     std::string Str;
     raw_string_ostream OS(Str);
-    OS << AttrName << '=' << AccumOffset.Offset;
+    OS << AttrName << '=' << AccumOffset.Value;
     return Str;
   }
 
@@ -1612,7 +1612,7 @@ struct AAAMDGPUAccumOffset
   static const char ID;
 
 private:
-  AccumOffsetState AccumOffset;
+  MinUnsignedState AccumOffset;
 
   static constexpr char AttrName[] = "amdgpu-accum-offset";
 };
