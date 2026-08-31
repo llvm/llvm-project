@@ -34,8 +34,8 @@
 using namespace clang;
 using namespace ento;
 
-static StringRef getFloatSemanticsName(const llvm::fltSemantics &Sem) {
-  switch (llvm::APFloat::SemanticsToEnum(Sem)) {
+StringRef nonloc::ConcreteFloat::getSemanticsName() const {
+  switch (llvm::APFloat::SemanticsToEnum(getValue()->getSemantics())) {
   case llvm::APFloat::S_IEEEhalf:
     return "IEEEhalf";
   case llvm::APFloat::S_BFloat:
@@ -354,8 +354,8 @@ void SVal::dumpToStream(raw_ostream &os) const {
 void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
   case nonloc::ConcreteFloatKind: {
-    const llvm::APFloat &Value = *castAs<nonloc::ConcreteFloat>().getValue();
-    os << Value << ' ' << getFloatSemanticsName(Value.getSemantics());
+    nonloc::ConcreteFloat V = castAs<nonloc::ConcreteFloat>();
+    os << *V.getValue() << ' ' << V.getSemanticsName();
     break;
   }
   case nonloc::ConcreteIntKind: {
