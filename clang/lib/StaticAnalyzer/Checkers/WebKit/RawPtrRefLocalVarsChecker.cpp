@@ -90,8 +90,7 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
     if (isPtrConversion(Callee))
       return true;
     if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
-      auto IsGetter = isGetterOfSafePtr(Method);
-      if (IsGetter && *IsGetter)
+      if (isGetterOfSafePtr(Method).value_or(false))
         return true;
     }
     unsigned ArgIndex = 0;
