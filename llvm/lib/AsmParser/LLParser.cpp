@@ -72,6 +72,52 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
+/// Return whether skipped trivia contains a block comment that crosses the
+/// boundary between two metadata definitions.
+static bool blockCommentCrossesBoundary(SMLoc BeginLoc, SMLoc EndLoc,
+                                        SMLoc BoundaryLoc) {
+  const char *Begin = BeginLoc.getPointer();
+  const char *End = EndLoc.getPointer();
+  const char *Boundary = BoundaryLoc.getPointer();
+  const char *BlockCommentStart = nullptr;
+  bool InLineComment = false;
+
+  for (const char *Ptr = Begin; Ptr < End;) {
+    if (BlockCommentStart) {
+      if (Ptr + 1 < End && Ptr[0] == '*' && Ptr[1] == '/') {
+        Ptr += 2;
+        if (BlockCommentStart < Boundary && Ptr > Boundary)
+          return true;
+        BlockCommentStart = nullptr;
+        continue;
+      }
+      ++Ptr;
+      continue;
+    }
+
+    if (InLineComment) {
+      if (*Ptr == '\n' || *Ptr == '\r')
+        InLineComment = false;
+      ++Ptr;
+      continue;
+    }
+
+    if (*Ptr == ';') {
+      InLineComment = true;
+      ++Ptr;
+      continue;
+    }
+    if (Ptr + 1 < End && Ptr[0] == '/' && Ptr[1] == '*') {
+      BlockCommentStart = Ptr;
+      Ptr += 2;
+      continue;
+    }
+    ++Ptr;
+  }
+
+  return BlockCommentStart && BlockCommentStart < Boundary && End > Boundary;
+}
+
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -134,6 +180,43 @@ bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
   Read = End.getPointer() - Start.getPointer();
 
   return Status;
+}
+
+bool LLParser::parseMetadataDefinitions(SlotMapping &Slots,
+                                        ArrayRef<SMLoc> DefinitionEnds) {
+  restoreParsingState(&Slots);
+  Lex.Lex();
+
+  for (SMLoc End : DefinitionEnds) {
+    if (Lex.getLoc().getPointer() >= End.getPointer())
+      return error(End, "expected end of metadata definition");
+    if (Lex.getKind() != lltok::exclaim)
+      return tokError("expected a metadata definition");
+    if (parseStandaloneMetadata())
+      return true;
+    if (Lex.getPrevTokEndLoc().getPointer() > End.getPointer() ||
+        (Lex.getKind() != lltok::Eof &&
+         Lex.getLoc().getPointer() < End.getPointer()) ||
+        blockCommentCrossesBoundary(Lex.getPrevTokEndLoc(), Lex.getLoc(), End))
+      return error(End, "expected end of metadata definition");
+  }
+
+  if (Lex.getKind() != lltok::Eof)
+    return tokError("expected end of metadata definitions");
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[_, MD] : NumberedMetadata)
+    if (MD && !MD->isResolved())
+      MD->resolveCycles();
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
+  Slots.MetadataNodes = std::move(NumberedMetadata);
+  return false;
 }
 
 void LLParser::restoreParsingState(const SlotMapping *Slots) {

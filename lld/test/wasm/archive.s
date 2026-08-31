@@ -26,7 +26,7 @@ _start:
   call missing_func
   end_function
 
-# Verify that mutually dependant object files in an archive is handled
+# Verify that mutually dependent object files in an archive is handled
 # correctly.  Since we're using llvm-nm, we must link with --relocatable.
 #
 # TODO(ncw): Update LLD so that the symbol table is written out for
@@ -44,7 +44,7 @@ _start:
 # Specifying the same archive twice is allowed.
 # RUN: wasm-ld %t.a %t.a %t.o -o %t.wasm
 
-# Verfiy errors include library name
+# Verify errors include library name
 # RUN: not wasm-ld -u archive2_symbol -u archive3_symbol %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s
 # And that this also works with --whole-archive
 # RUN: not wasm-ld -u archive2_symbol -u archive3_symbol --whole-archive %t.a %t.o -o %t.wasm 2>&1 | FileCheck -check-prefix=CHECK-DUP %s

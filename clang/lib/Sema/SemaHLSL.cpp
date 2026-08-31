@@ -4163,8 +4163,9 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     NextIdx += 2;
   }
 
-  // Check the offset operand.
-  if (TheCall->getNumArgs() > NextIdx) {
+  // Check the offset operand (if applicable).
+  if (hasResourceOffset(ResourceTy->getAttrs().ResourceDimension) &&
+      TheCall->getNumArgs() > NextIdx) {
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
                                 S.Context.IntTy, ExpectedDim,
                                 TheCall->getArg(NextIdx)->getBeginLoc()))
@@ -4284,6 +4285,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         getLangASFromResourceClass(ResourceTy->getAttrs().ResourceClass));
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
     TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().IntTy))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
 
     break;
   }
@@ -4571,18 +4582,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     TheCall->setType(RetTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    // return type is the same as the input type
-    TheCall->setType(ArgTyA);
     break;
   }
   case Builtin::BI__builtin_elementwise_fma: {
