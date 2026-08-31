@@ -132,6 +132,11 @@ public:
     return false;
   }
 
+  virtual bool isMemmoveProfitable(Value *DestPtr, Value *SourcePtr,
+                                   ScalarEvolution *SE) const {
+    return true;
+  }
+
   virtual ValueUniformity getValueUniformity(const Value *V) const {
     return ValueUniformity::Default;
   }
