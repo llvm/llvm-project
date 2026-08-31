@@ -230,6 +230,37 @@ static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
+static unsigned getAtomicOpElementSize(LoadInst *LI) {
+  if (!LI->isElementwise())
+    return getAtomicOpSize(LI);
+  return LI->getDataLayout().getTypeStoreSize(LI->getType()->getScalarType());
+}
+
+static unsigned getAtomicOpElementSize(StoreInst *SI) {
+  if (!SI->isElementwise())
+    return getAtomicOpSize(SI);
+  return SI->getDataLayout().getTypeStoreSize(
+      SI->getValueOperand()->getType()->getScalarType());
+}
+
+template <typename Inst> static unsigned getAtomicOpElementSize(Inst *I) {
+  return getAtomicOpSize(I);
+}
+
+/// Return the size \p I has to be aligned to. The element size is smaller than
+/// the whole access only for elementwise atomics, and only counts if the target
+/// can issue them at element alignment.
+template <typename Inst>
+static unsigned getRequiredAtomicSize(const TargetLowering *TLI, Inst *I) {
+  unsigned Size = getAtomicOpSize(I);
+  unsigned ElementSize = getAtomicOpElementSize(I);
+  if (ElementSize != Size &&
+      TLI->isAtomicAlignmentSupported(I->getAlign(), Size, ElementSize,
+                                      I->getPointerAddressSpace()))
+    return ElementSize;
+  return Size;
+}
+
 /// Copy metadata that's safe to preserve when widening atomics.
 static void copyMetadataForAtomic(Instruction &Dest,
                                   const Instruction &Source) {
@@ -265,22 +296,22 @@ static void copyMetadataForAtomic(Instruction &Dest,
 
 template <typename Inst>
 static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
-  unsigned Size = getAtomicOpSize(I);
-  Align Alignment = I->getAlign();
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return Alignment >= Size && Size <= MaxSize;
+  return I->getAlign() >= getRequiredAtomicSize(TLI, I) &&
+         getAtomicOpSize(I) <= MaxSize;
 }
 
 template <typename Inst>
 static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
                                              raw_ostream &OS) {
+  unsigned RequiredSize = getRequiredAtomicSize(TLI, I);
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < Size) {
+  if (Alignment < RequiredSize) {
     OS << "instruction alignment " << Alignment.value()
-       << " is smaller than the required " << Size
+       << " is smaller than the required " << RequiredSize
        << "-byte alignment for this atomic operation";
     NeedSeparator = true;
   }

@@ -391,6 +391,10 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
 
+  bool isAtomicAlignmentSupported(Align Alignment, uint64_t SizeInBytes,
+                                  uint64_t ElementSizeInBytes,
+                                  unsigned AddrSpace) const override;
+
   EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
