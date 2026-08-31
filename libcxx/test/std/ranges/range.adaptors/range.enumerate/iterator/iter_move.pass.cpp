@@ -77,14 +77,12 @@ constexpr void test() {
     assert(r1.iter_move_called_times == 0);
     std::ranges::enumerate_view v(r1);
     auto it = v.begin();
-    {
-      [[maybe_unused]] auto&& i = std::ranges::iter_move(it);
-      assert(r1.iter_move_called_times == 1);
-    }
-    {
-      [[maybe_unused]] auto&& i = std::ranges::iter_move(it);
-      assert(r1.iter_move_called_times == 2);
-    }
+
+    (void)std::ranges::iter_move(it);
+    assert(r1.iter_move_called_times == 1);
+
+    (void)std::ranges::iter_move(it);
+    assert(r1.iter_move_called_times == 2);
   }
 }
 
