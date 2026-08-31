@@ -369,47 +369,19 @@ define i8 @test_s_unsigned_i8_f32(float inreg %f) nounwind {
 ; GFX11-NEXT:    v_min_u32_e32 v0, 0xff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-FAKE16-LABEL: test_s_unsigned_i8_f32:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    s_cvt_u32_f32 s0, s0
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-FAKE16-NEXT:    s_min_u32 s0, s0, 0xff
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-TRUE16-LABEL: test_s_unsigned_i8_f32:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_cvt_u32_f32 s0, s0
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-TRUE16-NEXT:    s_min_u32 s0, s0, 0xff
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GI-LABEL: test_s_unsigned_i8_f32:
-; GFX12-GI:       ; %bb.0:
-; GFX12-GI-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GI-NEXT:    s_wait_expcnt 0x0
-; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    s_cvt_u32_f32 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_min_u32 s0, s0, 0xff
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: test_s_unsigned_i8_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_cvt_u32_f32 s0, s0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_min_u32 s0, s0, 0xff
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
     %x = call i8 @llvm.fptoui.sat.i8.f32(float %f)
     ret i8 %x
 }
