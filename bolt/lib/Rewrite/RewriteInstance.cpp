@@ -531,6 +531,27 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
   return !BF.isIgnored();
 }
 
+static void createRISCVIFuncResolverFunctions(BinaryContext &BC) {
+  assert(BC.isRISCV() && "expected RISC-V target");
+
+  for (const BinarySection &Section : BC.allocatableSections()) {
+    for (const Relocation &Rel : Section.dynamicRelocations()) {
+      if (!Rel.isIRelative() || !Rel.Addend ||
+          BC.getBinaryFunctionAtAddress(Rel.Addend))
+        continue;
+
+      ErrorOr<BinarySection &> ResolverSection =
+          BC.getSectionForAddress(Rel.Addend);
+      assert(ResolverSection &&
+             "cannot get section for address from IFUNC resolver");
+
+      const std::string FunctionName =
+          "__BOLT_IFUNC_RESOLVERat" + Twine::utohexstr(Rel.Addend).str();
+      BC.createBinaryFunction(FunctionName, *ResolverSection, Rel.Addend, 0);
+    }
+  }
+}
+
 // Return if a section stored in the image falls into a segment address space.
 // If not, Set \p Overlap to true if there's a partial overlap.
 template <class ELFT>
@@ -1358,7 +1379,7 @@ void RewriteInstance::discoverFileObjects() {
   // Register every such resolver before PLT disassembly so .iplt can use the
   // normal PLT processing path.
   if (BC->isRISCV())
-    createRISCVIFuncResolverFunctions();
+    createRISCVIFuncResolverFunctions(*BC);
 
   // Process PLT section.
   disassemblePLT();
@@ -1864,27 +1885,6 @@ registerParent:
     }
     BC->errs() << "BOLT-ERROR: parent function not found for " << *BF << '\n';
     exit(1);
-  }
-}
-
-void RewriteInstance::createRISCVIFuncResolverFunctions() {
-  assert(BC->isRISCV() && "expected RISC-V target");
-
-  for (const BinarySection &Section : BC->allocatableSections()) {
-    for (const Relocation &Rel : Section.dynamicRelocations()) {
-      if (!Rel.isIRelative() || !Rel.Addend ||
-          BC->getBinaryFunctionAtAddress(Rel.Addend))
-        continue;
-
-      ErrorOr<BinarySection &> ResolverSection =
-          BC->getSectionForAddress(Rel.Addend);
-      assert(ResolverSection &&
-             "cannot get section for address from IFUNC resolver");
-
-      const std::string FunctionName =
-          "__BOLT_IFUNC_RESOLVERat" + Twine::utohexstr(Rel.Addend).str();
-      BC->createBinaryFunction(FunctionName, *ResolverSection, Rel.Addend, 0);
-    }
   }
 }
 

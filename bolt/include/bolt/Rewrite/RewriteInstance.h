@@ -309,10 +309,6 @@ private:
   /// Write .eh_frame_hdr.
   void writeEHFrameHeader();
 
-  /// Create BinaryFunctions for RISC-V IFUNC resolvers named only by
-  /// R_RISCV_IRELATIVE relocation addends.
-  void createRISCVIFuncResolverFunctions();
-
   /// Disassemble and create function entries for PLT.
   void disassemblePLT();
 
