@@ -1021,6 +1021,15 @@ def _ssaf_global_scope_analysis_result :
     "consumed by the source transformation. The extension selects which file "
     "format to use.">,
   MarshallingInfoString<SSAFOpts<"GlobalScopeAnalysisResult">>;
+def _ssaf_link_unit_id :
+  Joined<["--"], "ssaf-link-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier of the link unit that this compilation unit was "
+    "linked into.">,
+  MarshallingInfoString<SSAFOpts<"LinkUnitId">>;
 def _ssaf_src_edit_file :
   Joined<["--"], "ssaf-src-edit-file=">,
   MetaVarName<"<path>">,
@@ -1689,7 +1698,7 @@ def emit_pretty_sgf: Flag<["--"], "pretty-sgf">,
 def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for-testing">,
    Visibility<[CC1Option]>,
    MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
-def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
