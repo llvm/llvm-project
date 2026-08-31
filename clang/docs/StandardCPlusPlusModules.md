@@ -498,6 +498,13 @@ fragment is disabled by default. These checks can be enabled by specifying
 and you encounter incorrect or missing diagnostics, please report them via the
 [community issue tracker](https://github.com/llvm/llvm-project/issues/).
 
+When global module fragment ODR checking is skipped, Clang also keeps
+internal-linkage functions from different named module units distinct and
+includes the module-unit owner in their mangled names. This is a practical,
+non-conforming strategy for C-style `static inline` functions in real-world
+headers. `-Xclang -fno-skip-odr-check-in-gmf` restores the ordinary
+internal-linkage identity and mangling.
+
 ### Privacy Issue
 
 BMIs are not and should not be treated as an information hiding mechanism.

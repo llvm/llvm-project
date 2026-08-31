@@ -1116,6 +1116,13 @@ void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
     return;
   }
 
+  // FIXME: Giving a TU-local entity a module-qualified name is not
+  // standard-conforming. This is Clang's practical strategy for real-world
+  // headers when GMF ODR checking is skipped; users can restore the ordinary
+  // internal-linkage mangling with -fno-skip-odr-check-in-gmf.
+  if (!getASTContext().getLangOpts().SkipODRCheckInGMF)
+    return;
+
   // A function with internal linkage in a global module fragment denotes a
   // different entity in every module unit. When definitions from multiple
   // imported units are emitted into one translation unit, their ordinary

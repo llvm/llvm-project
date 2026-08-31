@@ -3,19 +3,42 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fskip-odr-check-in-gmf \
 // RUN:   -emit-module-interface %t/part1.cppm -o %t/A-Part1.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fskip-odr-check-in-gmf \
 // RUN:   -emit-module-interface %t/part2.cppm -o %t/A-Part2.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fskip-odr-check-in-gmf \
 // RUN:   -emit-module-interface %t/A.cppm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
 // RUN:   -o %t/A.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
+// RUN:   -fskip-odr-check-in-gmf \
 // RUN:   %t/use.cpp -fmodule-file=%t/A.pcm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
 // RUN:   | FileCheck %s
+//
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -emit-module-interface %t/part1.cppm -o %t/no-A-Part1.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -emit-module-interface %t/part2.cppm -o %t/no-A-Part2.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -emit-module-interface %t/A.cppm \
+// RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
+// RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \
+// RUN:   -o %t/no-A.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   %t/use.cpp -fmodule-file=%t/no-A.pcm \
+// RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
+// RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \
+// RUN:   | FileCheck %s --check-prefix=NO-DISAMBIGUATION
 //
 // Identical internal functions from the same textual header must remain
 // distinct when separate global module fragments are imported together.
@@ -25,6 +48,9 @@
 // CHECK-DAG: call {{.*}} @_ZW1AWP5Part2L6helperv()
 // CHECK-DAG: ret i32 1
 // CHECK-DAG: ret i32 1
+
+// NO-DISAMBIGUATION: define internal {{.*}} @_ZL6helperv()
+// NO-DISAMBIGUATION-NOT: @_ZW1AWP5Part
 
 //--- part1.cppm
 module;

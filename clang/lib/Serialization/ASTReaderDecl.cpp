@@ -3588,6 +3588,9 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     if (!C.isSameEntity(Existing, D))
       return false;
 
+    if (!C.getLangOpts().SkipODRCheckInGMF)
+      return true;
+
     auto *FD = dyn_cast<FunctionDecl>(D);
     auto *ExistingFD = dyn_cast<FunctionDecl>(Existing);
     if (!FD || !ExistingFD ||
