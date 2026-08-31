@@ -17375,8 +17375,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
-             (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
+  if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA || LangOpts.OpenMP)) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
         ES == Sema::FunctionEmissionStatus::Unknown)

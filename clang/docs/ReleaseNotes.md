@@ -129,6 +129,10 @@ features cannot lower the translation-unit ABI level;
   target triples (except 32b arm targets). Can be disabled via
   `-fno-stack-clash-protection`.
 
+- A host `-fopenmp` or `-fopenmp-simd` compilation now emits diagnostics it previously
+  deferred and then dropped when no offload target was configured. Code that used to
+  compile may be rejected, matching a compilation without those flags.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -1126,6 +1130,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modifications to the bindings will not be reflected in the original variable.
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
+
+- Fixed a host OpenMP compilation never flushing its deferred diagnostics unless an
+  offload target was configured, which accepted `try`/`throw` with exceptions disabled
+  and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Fixed `-fopenmp-simd` deferring diagnostics as if it were a device compilation. It has
+  no device compilation and ignores `declare target`, so its diagnostics are now emitted
+  directly.
 
 ### SYCL Support
 
