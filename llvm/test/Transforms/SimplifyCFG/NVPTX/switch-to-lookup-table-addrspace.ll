@@ -3,15 +3,15 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-@buf0 = addrspace(3) global [16 x i8] undef, align 16
-@buf1 = addrspace(3) global [16 x i8] undef, align 16
-@buf2 = addrspace(3) global [16 x i8] undef, align 16
-@buf3 = addrspace(3) global [16 x i8] undef, align 16
+@buf0 = addrspace(3) global [16 x i8] poison, align 16
+@buf1 = addrspace(3) global [16 x i8] poison, align 16
+@buf2 = addrspace(3) global [16 x i8] poison, align 16
+@buf3 = addrspace(3) global [16 x i8] poison, align 16
 
-@loc0 = addrspace(5) global i32 undef
-@loc1 = addrspace(5) global i32 undef
-@loc2 = addrspace(5) global i32 undef
-@loc3 = addrspace(5) global i32 undef
+@loc0 = addrspace(5) global i32 poison
+@loc1 = addrspace(5) global i32 poison
+@loc2 = addrspace(5) global i32 poison
+@loc3 = addrspace(5) global i32 poison
 
 @gg0 = addrspace(1) global i32 0
 @gg1 = addrspace(1) global i32 0
@@ -32,14 +32,14 @@ target triple = "nvptx64-nvidia-cuda"
 
 ; The reported case: a phi of .shared globals.
 ;.
-; CHECK: @buf0 = addrspace(3) global [16 x i8] undef, align 16
-; CHECK: @buf1 = addrspace(3) global [16 x i8] undef, align 16
-; CHECK: @buf2 = addrspace(3) global [16 x i8] undef, align 16
-; CHECK: @buf3 = addrspace(3) global [16 x i8] undef, align 16
-; CHECK: @loc0 = addrspace(5) global i32 undef
-; CHECK: @loc1 = addrspace(5) global i32 undef
-; CHECK: @loc2 = addrspace(5) global i32 undef
-; CHECK: @loc3 = addrspace(5) global i32 undef
+; CHECK: @buf0 = addrspace(3) global [16 x i8] poison, align 16
+; CHECK: @buf1 = addrspace(3) global [16 x i8] poison, align 16
+; CHECK: @buf2 = addrspace(3) global [16 x i8] poison, align 16
+; CHECK: @buf3 = addrspace(3) global [16 x i8] poison, align 16
+; CHECK: @loc0 = addrspace(5) global i32 poison
+; CHECK: @loc1 = addrspace(5) global i32 poison
+; CHECK: @loc2 = addrspace(5) global i32 poison
+; CHECK: @loc3 = addrspace(5) global i32 poison
 ; CHECK: @gg0 = addrspace(1) global i32 0
 ; CHECK: @gg1 = addrspace(1) global i32 0
 ; CHECK: @gg2 = addrspace(1) global i32 0
