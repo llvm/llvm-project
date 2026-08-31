@@ -14,6 +14,15 @@ contains
     allocate(r(n))
     r = 7
   end function
+  function frchar(n) result(r)
+    integer, value :: n
+    character(len=:), allocatable, managed :: r
+    allocate(character(len=n) :: r)
+  end function
+  function frcharfix() result(r)
+    character(len=4), allocatable, managed :: r
+    allocate(r)
+  end function
 end module
 
 ! Assignments that are data transfers.
@@ -161,6 +170,24 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
 
+! Pinned data is host memory, so a whole managed array and device data on the
+! other side are copied.
+subroutine pinned_transfer(n)
+  integer :: n
+  integer(4), allocatable, pinned :: pa(:)
+  integer(4), managed :: mb(16)
+  integer(4), device :: dc(16)
+  allocate(pa(n))
+  mb = pa
+  pa = dc
+  dc = pa
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpinned_transfer
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+
 ! Assignments done on the host.
 
 ! An expression involving managed data is evaluated on the host, which avoids a
@@ -291,4 +318,16 @@ subroutine managed_component_attr_section_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_section_assign()
+! CHECK-NOT: cuf.data_transfer
+
+! A scalar character result carries its length outside of a descriptor, so a
+! transfer would copy raw bytes instead of padding or truncating the destination.
+subroutine managed_char_func_result()
+  use mfr
+  character(len=16) :: h
+  h = frchar(4)
+  h = frcharfix()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_char_func_result()
 ! CHECK-NOT: cuf.data_transfer

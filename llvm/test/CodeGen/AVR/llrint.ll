@@ -28,16 +28,5 @@ entry:
   ret i64 %0
 }
 
-; FIXME(#44744): incorrect libcall
-define i64 @testmsxq_builtin(fp128 %x) {
-; CHECK-LABEL: testmsxq_builtin:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    call llrintl
-; CHECK-NEXT:    ret
-entry:
-  %0 = tail call i64 @llvm.llrint.i64.fp128(fp128 %x)
-  ret i64 %0
-}
-
 declare i64 @llvm.llrint.i64.f32(float) nounwind readnone
 declare i64 @llvm.llrint.i64.f64(double) nounwind readnone

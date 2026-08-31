@@ -13,8 +13,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
     %3 = llvm.mlir.constant(1 : i64) : i64
-    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "d"}
+    %4 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
+    %5 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("d") -> !llvm.ptr
     omp.target kernel_type(spmd) map_entries(%4 -> %arg1, %5 -> %arg2 : !llvm.ptr, !llvm.ptr) {
       %6 = llvm.mlir.constant(1 : i32) : i32
       omp.teams {

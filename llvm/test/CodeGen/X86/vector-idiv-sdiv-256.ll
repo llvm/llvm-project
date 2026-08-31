@@ -764,3 +764,95 @@ define <32 x i8> @test_remconstant_32i8(<32 x i8> %a) nounwind {
   %res = srem <32 x i8> %a, <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7>
   ret <32 x i8> %res
 }
+
+define <8 x i32> @test_divv_8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
+; AVX1-LABEL: test_divv_8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvtdq2pd %xmm1, %ymm2
+; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm3
+; AVX1-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
+; AVX1-NEXT:    vcvttpd2dq %ymm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX1-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2NOBW-LABEL: test_divv_8i32:
+; AVX2NOBW:       # %bb.0:
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm1, %ymm2
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm0, %ymm3
+; AVX2NOBW-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm2, %xmm2
+; AVX2NOBW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX2NOBW-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX2NOBW-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2NOBW-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX2NOBW-NEXT:    retq
+;
+; AVX512BW-LABEL: test_divv_8i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; AVX512BW-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; AVX512BW-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; AVX512BW-NEXT:    retq
+  %res = sdiv <8 x i32> %a, %b
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_remv_8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
+; AVX1-LABEL: test_remv_8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vcvtdq2pd %xmm2, %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vcvtdq2pd %xmm4, %ymm5
+; AVX1-NEXT:    vdivpd %ymm3, %ymm5, %ymm3
+; AVX1-NEXT:    vcvttpd2dq %ymm3, %xmm3
+; AVX1-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsubd %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vcvtdq2pd %xmm1, %ymm3
+; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm4
+; AVX1-NEXT:    vdivpd %ymm3, %ymm4, %ymm3
+; AVX1-NEXT:    vcvttpd2dq %ymm3, %xmm3
+; AVX1-NEXT:    vpmulld %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2NOBW-LABEL: test_remv_8i32:
+; AVX2NOBW:       # %bb.0:
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm1, %ymm2
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm0, %ymm3
+; AVX2NOBW-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm2, %xmm2
+; AVX2NOBW-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm3, %ymm3
+; AVX2NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX2NOBW-NEXT:    vcvtdq2pd %xmm4, %ymm4
+; AVX2NOBW-NEXT:    vdivpd %ymm3, %ymm4, %ymm3
+; AVX2NOBW-NEXT:    vcvttpd2dq %ymm3, %xmm3
+; AVX2NOBW-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX2NOBW-NEXT:    vpmulld %ymm1, %ymm2, %ymm1
+; AVX2NOBW-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    retq
+;
+; AVX512BW-LABEL: test_remv_8i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vcvtdq2pd %ymm1, %zmm2
+; AVX512BW-NEXT:    vcvtdq2pd %ymm0, %zmm3
+; AVX512BW-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX512BW-NEXT:    vcvttpd2dq %zmm2, %ymm2
+; AVX512BW-NEXT:    vpmulld %ymm1, %ymm2, %ymm1
+; AVX512BW-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    retq
+  %res = srem <8 x i32> %a, %b
+  ret <8 x i32> %res
+}

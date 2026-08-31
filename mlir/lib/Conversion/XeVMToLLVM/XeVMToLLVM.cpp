@@ -99,6 +99,22 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
+// Returns the mangling of `ty` used to name an overloaded `llvm.genx.GenISA.*`
+// intrinsic: `i32`, `v8i16`, ... Note that this is IGC's own scheme for its
+// intrinsics, not the Itanium mangling used for the SPIR-V friendly and OCL
+// builtins that `mangle` above produces.
+std::string getGenISATypeMangling(Type ty) {
+  return TypeSwitch<Type, std::string>(ty)
+      .Case([](VectorType ty) -> std::string {
+        return "v" + std::to_string(ty.getNumElements()) +
+               getGenISATypeMangling(ty.getElementType());
+      })
+      .Case([](IntegerType ty) -> std::string {
+        return "i" + std::to_string(ty.getWidth());
+      })
+      .DefaultUnreachable("unhandled type for GenISA mangling");
+}
+
 std::string builtinElemType(ElemType elemType) {
   switch (elemType) {
   case ElemType::BF8:
@@ -1520,6 +1536,37 @@ class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
   }
 };
 
+// Lowers `xevm.bitcast_shuffle` to a call to the IGC intrinsic
+// `llvm.genx.GenISA.SubgroupBitcastShuffle`, which is overloaded on both the
+// result and the operand type. E.g. a `vector<4xi8>` -> `vector<2xi16>` shuffle
+// becomes a call to
+// `llvm.genx.GenISA.SubgroupBitcastShuffle.v2i16.v4i8`.
+//
+// Only integer types reach here: the op accepts nothing else, so a producer
+// holding floating point data bitcasts it to a same-width integer beforehand.
+class BitcastShuffleToGenISAPattern
+    : public OpConversionPattern<BitcastShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(BitcastShuffleOp op, BitcastShuffleOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcTy = op.getSrc().getType();
+    Type resTy = op.getRes().getType();
+
+    std::string fnName = "llvm.genx.GenISA.SubgroupBitcastShuffle." +
+                         getGenISATypeMangling(resTy) + "." +
+                         getGenISATypeMangling(srcTy);
+
+    Value result = createDeviceFunctionCall(
+                       rewriter, fnName, resTy, {srcTy}, {adaptor.getSrc()}, {},
+                       convergentNoUnwindWillReturnAttrs, op.getOperation())
+                       ->getResult(0);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -1787,30 +1834,30 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
     return !op->hasAttr("cache_control");
   });
   target.addIllegalDialect<XeVMDialect>();
-  patterns
-      .add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
-           LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
-           LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>, MMAToOCLPattern,
-           MemfenceToOCLPattern, PrefetchToOCLPattern,
-           LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
-           LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
-           BlockLoadStore1DToOCLPattern<BlockLoadOp>,
-           BlockLoadStore1DToOCLPattern<BlockStoreOp>,
-           LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
-           LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
-           LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
-           LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
-           LaunchConfigOpToOCLPattern<GridDimXOp>,
-           LaunchConfigOpToOCLPattern<GridDimYOp>,
-           LaunchConfigOpToOCLPattern<GridDimZOp>,
-           SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
-           SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
-           SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>, TruncfToOCLPattern,
-           ExtfToOCLPattern, MMAMxToOCLPattern, AllocaToGlobalPattern>(
-          patterns.getContext());
+  patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
+               LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
+               LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
+               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
+               LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
+               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
+               BlockLoadStore1DToOCLPattern<BlockLoadOp>,
+               BlockLoadStore1DToOCLPattern<BlockStoreOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
+               LaunchConfigOpToOCLPattern<GridDimXOp>,
+               LaunchConfigOpToOCLPattern<GridDimYOp>,
+               LaunchConfigOpToOCLPattern<GridDimZOp>,
+               SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
+               TruncfToOCLPattern, ExtfToOCLPattern, MMAMxToOCLPattern,
+               BitcastShuffleToGenISAPattern, AllocaToGlobalPattern>(
+      patterns.getContext());
 }

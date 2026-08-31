@@ -194,6 +194,7 @@ def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
+def HasADX       : Predicate<"Subtarget->hasADX()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,

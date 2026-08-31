@@ -654,7 +654,8 @@ else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
 endif()
 
-find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")
+find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold DOC "The gold linker")
+find_program(LD_BFD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The bfd linker")
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
     "PATH to binutils/include containing plugin-api.h for gold plugin.")
 
@@ -682,6 +683,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(CMAKE_XCRUN)
       execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
+        ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
       find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")

@@ -504,8 +504,8 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
-  !WARNING: SOURCE dependence type is deprecated in OpenMP v5.2
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
+  !WARNING: 'dependence-type' modifier is no longer supported in OpenMP v5.2 on DEPEND clause
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)

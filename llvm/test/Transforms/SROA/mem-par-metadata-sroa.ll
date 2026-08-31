@@ -113,7 +113,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture reado
 
 !0 = !{!"clang version 4.0.0 (cfe/trunk 277751)"}
 !1 = distinct !{!1, !2, !{!"llvm.loop.parallel_accesses", !11}}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
 !3 = !{!4}
 !4 = distinct !{!4, !5, !"_ZNK7ComplexplERKS_: %agg.result"}
 !5 = distinct !{!5, !"_ZNK7ComplexplERKS_"}
