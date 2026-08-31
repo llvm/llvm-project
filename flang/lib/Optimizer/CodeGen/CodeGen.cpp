@@ -2981,12 +2981,23 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type.
+    // Extract the dimensions of the array being initialized. Only those are
+    // used to expand a fallback insert chain. Any remaining LLVM array
+    // dimension belongs to an aggregate element type: a CHARACTER element is
+    // itself an array of characters.
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    for (std::size_t i = 0, rank = range.getType().getShape().size(); i < rank;
+         ++i) {
+      auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
+    }
+    llvm::SmallVector<std::int64_t> elementDims;
+    mlir::Type scalarType = type;
+    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(scalarType)) {
+      elementDims.push_back(t.getNumElements());
+      scalarType = t.getElementType();
     }
 
     // Avoid generating long insert chain that are very slow to fold back
@@ -2997,16 +3008,45 @@ struct InsertOnRangeOpConversion
       llvm::FailureOr<mlir::Attribute> cst =
           fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
       if (llvm::succeeded(cst)) {
-        mlir::Attribute dimVal = *cst;
-        for (auto dim : llvm::reverse(dims)) {
-          // Use std::vector in case the number of elements is big.
-          std::vector<mlir::Attribute> elements(dim, dimVal);
-          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        if (elementDims.empty()) {
+          mlir::Attribute dimVal = *cst;
+          for (auto dim : llvm::reverse(dims)) {
+            // Use std::vector in case the number of elements is big.
+            std::vector<mlir::Attribute> elements(dim, dimVal);
+            dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+          }
+          // Replace insert chain with constant.
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                              dimVal);
+          return mlir::success();
         }
-        // Replace insert chain with constant.
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
-                                                            dimVal);
-        return mlir::success();
+        // An array with an aggregate element type cannot be described by a
+        // nested ArrayAttr. A CHARACTER array is a dense array of characters,
+        // so replicate the element data into a dense attribute.
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(*cst)) {
+          llvm::StringRef element = strAttr.getValue();
+          std::int64_t elementSize = 1;
+          for (std::int64_t dim : elementDims)
+            elementSize *= dim;
+          if (scalarType.isInteger(8) &&
+              element.size() == static_cast<std::size_t>(elementSize)) {
+            std::int64_t count = 1;
+            for (std::int64_t dim : dims)
+              count *= dim;
+            std::string data;
+            data.reserve(count * element.size());
+            for (std::int64_t i = 0; i < count; ++i)
+              data.append(element.data(), element.size());
+            llvm::SmallVector<std::int64_t> shape(dims);
+            shape.append(elementDims);
+            auto denseAttr = mlir::DenseElementsAttr::getFromRawBuffer(
+                mlir::RankedTensorType::get(shape, scalarType),
+                llvm::ArrayRef(data.data(), data.size()));
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType, denseAttr);
+            return mlir::success();
+          }
+        }
       }
     }
 

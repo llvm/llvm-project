@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/Error.h and
-// orc-rt-c/Error.h headers.
+// Contains the implementation of APIs in the orc-rt/support/Error.h and
+// orc-rt-c/support/Error.h headers.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt-c/Error.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt-c/support/Error.h"
 
 #include <cstring>
 #include <system_error>

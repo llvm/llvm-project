@@ -136,7 +136,7 @@ size_t test_bdos_of_pointer_through_cast(struct annotated_ptr *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[TMP4]], null
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[COUNT]], 3
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY_SIZE:%.*]] = select i1 [[TMP5]], i64 0, i64 [[TMP6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[INDEX_SIZE:%.*]] = shl nsw i64 [[IDXPROM]], 3
+// SANITIZE-WITH-ATTR-NEXT:    [[INDEX_SIZE:%.*]] = shl nuw nsw i64 [[IDXPROM]], 3
 // SANITIZE-WITH-ATTR-NEXT:    [[RESULT:%.*]] = sub nsw i64 [[ARRAY_SIZE]], [[INDEX_SIZE]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = tail call i64 @llvm.smax.i64(i64 [[RESULT]], i64 0)
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP7]]
@@ -391,7 +391,6 @@ void test_pass_dynamic_object_size_of_pointer(struct annotated_volatile_ptr *p) 
 // The '&((cast) ptr->array)[idx]' form via pass_dynamic_object_size.
 // FIXME: for the _or_null variants the object-size null-check re-emits the
 // `ptr->array` load. Instead it should reuse the value.
-//
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test_pass_dynamic_object_size_of_element_address(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]

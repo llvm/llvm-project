@@ -25,7 +25,6 @@
 
 namespace clang {
 namespace interp {
-class Program;
 class ByteCodeEmitter;
 class Pointer;
 enum PrimType : uint8_t;
@@ -37,10 +36,10 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    /// Descriptor of the local.
+    const Descriptor *Desc;
     /// Offset of the local in frame.
     unsigned Offset;
-    /// Descriptor of the local.
-    Descriptor *Desc;
     /// If the cleanup for this local should be emitted.
     bool EnabledByDefault = true;
   };
@@ -254,7 +253,7 @@ public:
 
 private:
   /// Construct a function representing an actual function.
-  Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+  Function(FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
            bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
@@ -280,8 +279,6 @@ private:
   friend class ByteCodeEmitter;
   friend class Context;
 
-  /// Program reference.
-  Program &P;
   /// Function Kind.
   FunctionKind Kind;
   /// Declaration this function was compiled from.
