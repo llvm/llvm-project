@@ -1,11 +1,11 @@
 add_custom_target(libc_sys_resource_unittests)
 
 add_libc_test(
-  getpriority_test
+  getpriority_setpriority_test
   SUITE
     libc_sys_resource_unittests
   SRCS
-    getpriority_test.cpp
+    getpriority_setpriority_test.cpp
   DEPENDS
     libc.hdr.sys_resource_macros
     libc.hdr.types.id_t
@@ -49,19 +49,3 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-
-add_libc_test(
-  setpriority_test
-  SUITE
-    libc_sys_resource_unittests
-  SRCS
-    setpriority_test.cpp
-  DEPENDS
-    libc.hdr.sys_resource_macros
-    libc.hdr.types.id_t
-    libc.src.sys.resource.getpriority
-    libc.src.sys.resource.setpriority
-    libc.test.UnitTest.ErrnoCheckingTest
-    libc.test.UnitTest.ErrnoSetterMatcher
-)
-

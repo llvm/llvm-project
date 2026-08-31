@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unittests for getpriority.
+/// Unittests for getpriority and setpriority.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -20,29 +20,38 @@
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcGetpriorityTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcGetprioritySetpriorityTest =
+    LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST_F(LlvmLibcGetpriorityTest, BasicTest) {
+TEST_F(LlvmLibcGetprioritySetpriorityTest, BesicTest) {
   int current_nice = LIBC_NAMESPACE::getpriority(PRIO_PROCESS, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GE(current_nice, -20);
   ASSERT_LE(current_nice, 19);
 
-  // Increase to the max on Linux (i.e. minimal priority, which doesn't require
-  // special privileges), so that we can confirm we get it back correctly.
+  // 19 is the highest possible nice on Linux (i.e. minimal priority), which
+  // doesn't require special privileges. Current nice is likely less than or at
+  // worst equal to 19. This allouws us to round-trip this value and confirm
+  // that we get back the correct nice.
   int nice = 19;
-  // Make sure we're not setting it to the same priority by chance. If the below
-  // assertion ever fails, we'll need to re-think this test.
-  ASSERT_GT(nice, current_nice);
 
   ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, 0, nice), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::getpriority(PRIO_PROCESS, 0), Succeeds(nice));
 }
 
-TEST_F(LlvmLibcGetpriorityTest, TestBadPid) {
+TEST_F(LlvmLibcGetprioritySetpriorityTest, TestBadPidGetpriority) {
   ASSERT_THAT(LIBC_NAMESPACE::getpriority(PRIO_PROCESS, -1), Fails(ESRCH, -1));
 }
 
-TEST_F(LlvmLibcGetpriorityTest, TestBadWho) {
+TEST_F(LlvmLibcGetprioritySetpriorityTest, TestBadWhichGetpriority) {
   ASSERT_THAT(LIBC_NAMESPACE::getpriority(99, 0), Fails(EINVAL, -1));
+}
+
+TEST_F(LlvmLibcGetprioritySetpriorityTest, TestBadPidSetpriority) {
+  ASSERT_THAT(LIBC_NAMESPACE::setpriority(PRIO_PROCESS, -1, 19),
+              Fails(ESRCH, -1));
+}
+
+TEST_F(LlvmLibcGetprioritySetpriorityTest, TestBadWhichSetpriority) {
+  ASSERT_THAT(LIBC_NAMESPACE::setpriority(99, 0, 19), Fails(EINVAL, -1));
 }
