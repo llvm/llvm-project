@@ -424,6 +424,30 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
   }
 }
 
+// Must run post-selection: only then are false operands guaranteed to be
+// OpConstantFalse/OpConstantNull.
+static bool foldLogicalOrWithFalse(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   SPIRVGlobalRegistry &GR) {
+  auto IsFalseConst = [&MRI](Register Reg) {
+    MachineInstr *Def = getVRegDef(MRI, Reg);
+    return Def && (Def->getOpcode() == SPIRV::OpConstantFalse ||
+                   Def->getOpcode() == SPIRV::OpConstantNull);
+  };
+  Register Src0 = MI.getOperand(2).getReg();
+  Register Src1 = MI.getOperand(3).getReg();
+  Register Keep;
+  if (IsFalseConst(Src0))
+    Keep = Src1;
+  else if (IsFalseConst(Src1))
+    Keep = Src0;
+  else
+    return false;
+  MRI.replaceRegWith(MI.getOperand(0).getReg(), Keep);
+  GR.invalidateMachineInstr(&MI);
+  MI.eraseFromParent();
+  return true;
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
@@ -525,8 +549,10 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       case SPIRV::OpBitwiseOrS:
       case SPIRV::OpBitwiseOrV:
         if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
-                                      SPIRV::OpTypeBool))
+                                      SPIRV::OpTypeBool)) {
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalOr));
+          foldLogicalOrWithFalse(MI, *MRI, GR);
+        }
         break;
       case SPIRV::OpBitwiseAndS:
       case SPIRV::OpBitwiseAndV:
