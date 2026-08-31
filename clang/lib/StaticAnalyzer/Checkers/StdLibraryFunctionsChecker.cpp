@@ -2950,7 +2950,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
-    // FIXME: Improve for errno modeling
+    // FIXME: Improve for errno modeling.
     auto MmapSignature = Signature(
         ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
         RetType{VoidPtrTy});
