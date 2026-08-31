@@ -13,6 +13,7 @@ void clang_analyzer_explain_voidp(void *);
 void clang_analyzer_explain_S(struct S);
 void clang_analyzer_explain_float(float);
 void clang_analyzer_explain_double(double);
+void clang_analyzer_explain_longdouble(long double);
 
 int glob;
 
@@ -35,8 +36,9 @@ void test_3(int param) {
 }
 
 void test_float(void) {
-  clang_analyzer_explain_float(1.5f); // expected-warning-re{{{{^concrete floating-point value '1.5'$}}}}
-  clang_analyzer_explain_double(2.5); // expected-warning-re{{{{^concrete floating-point value '2.5'$}}}}
+  clang_analyzer_explain_float(1.5f);       // expected-warning-re{{{{^concrete IEEEsingle floating-point value '1.5'$}}}}
+  clang_analyzer_explain_double(2.5);       // expected-warning-re{{{{^concrete IEEEdouble floating-point value '2.5'$}}}}
+  clang_analyzer_explain_longdouble(3.5L);  // expected-warning-re{{{{^concrete x87DoubleExtended floating-point value '3.5'$}}}}
 }
 
 void test_non_top_level(int param) {
