@@ -175,14 +175,14 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
                     T);
 
-/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVals,
 ///                         T FalseVal)
 /// \brief ternary operator for vectors. All vectors must be the same size.
 /// \param Conds The Condition input values.
 /// \param TrueVal The scalar value to splat from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename U, typename T, int N>
+template <typename T, typename U, int N>
 __detail::enable_if_t<(N > 1 && __detail::is_arithmetic<T>::Value),
                       vector<T, N>>
 select(vector<U, N> Conds, T TrueVal, T FalseVal) {
