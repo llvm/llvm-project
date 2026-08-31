@@ -53780,6 +53780,11 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 		return SDValue();
 
 	EVT VT = N->getValueType(0);
+
+	// SHRD does not suppport 8-bit operands
+	if (VT == MVT::i8)
+		return SDValue();
+
 	APInt Mask;
 	uint64_t ShiftAmount;
 	SDValue X, Y;
