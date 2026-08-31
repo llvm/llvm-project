@@ -1088,12 +1088,12 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
   auto operandRank = operandType.getRank();
   if (splitAxis < 0 || splitAxis >= operandRank) {
     return emitError(result.getLoc())
-           << "Split axis " << splitAxis << " is out of bounds [0, "
+           << "split_axis " << splitAxis << " is out of bounds [0, "
            << operandRank << ").";
   }
   if (concatAxis < 0 || concatAxis >= operandRank) {
     return emitError(result.getLoc())
-           << "Concat axis " << concatAxis << " is out of bounds [0, "
+           << "concat_axis " << concatAxis << " is out of bounds [0, "
            << operandRank << ").";
   }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
@@ -1138,14 +1138,15 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
 
 static LogicalResult verifyScatterOrSliceOperandAndResultShape(
     Value operand, Value result, int64_t tensorAxis,
-    ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
+    StringRef tensorAxisAttrName, ArrayRef<GridAxis> gridAxes,
+    ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
   auto operandRank = operandType.getRank();
   if (tensorAxis < 0 || tensorAxis >= operandRank) {
     return emitError(result.getLoc())
-           << "Tensor axis " << tensorAxis << " is out of bounds [0, "
-           << operandRank << ").";
+           << tensorAxisAttrName << " " << tensorAxis
+           << " is out of bounds [0, " << operandRank << ").";
   }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if (axis != tensorAxis) {
@@ -1258,8 +1259,8 @@ LogicalResult AllSliceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getSliceAxis().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getSliceAxis().getSExtValue(), "slice_axis",
+      getGridAxes(), grid.value().getShape());
 }
 
 void AllSliceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1439,8 +1440,8 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterDim().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getScatterDim().getSExtValue(), "scatter_dim",
+      getGridAxes(), grid.value().getShape());
 }
 
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1469,9 +1470,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   auto scatterDim = getScatterDim().getSExtValue();
-  return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterDim, getGridAxes(),
-                                                   grid.value().getShape());
+  return verifyScatterOrSliceOperandAndResultShape(
+      getInput(), getResult(), scatterDim, "scatter_dim", getGridAxes(),
+      grid.value().getShape());
 }
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
