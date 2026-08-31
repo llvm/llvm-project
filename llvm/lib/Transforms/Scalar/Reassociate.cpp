@@ -2674,6 +2674,79 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   }
 }
 
+// Convert some left shifts by constants to multiplications so they can be used
+// for reassociation.
+void ReassociatePass::convertShiftsUsedByMulsToMuls(Function &F) {
+  using ShiftMapKeyT = std::pair<Value *, ConstantInt *>;
+
+  DenseMap<ShiftMapKeyT, Instruction *> ShiftMap;
+  SmallVector<Instruction *> ShiftsToBeConvertedToMuls;
+
+  for (BasicBlock &BI : F) {
+    for (Instruction &I : BI) {
+      Value *LHS = nullptr;
+      ConstantInt *ConstVal = nullptr;
+
+      if (match(&I, m_Shl(m_Value(LHS), m_ConstantInt(ConstVal)))) {
+        ShiftMapKeyT ShiftKey{LHS, ConstVal};
+        auto OtherShiftIte = ShiftMap.try_emplace(ShiftKey, &I).first;
+        Instruction *OtherShift = OtherShiftIte->second;
+        // We should use the most popular such shift instruction for
+        // reassociation.
+        if (I.getNumUses() > OtherShift->getNumUses())
+          OtherShiftIte->second = &I;
+        continue;
+      }
+
+      Value *OtherOp = nullptr;
+      if (!match(&I, m_Mul(m_Value(LHS), m_Value(OtherOp))))
+        continue;
+
+      bool LHSisSHL = false;
+      // Both operands of the mul are shl:
+      //   %4 = shl i8 %1, 1
+      //   %5 = shl i8 %0, 1
+      //   %6 = mul i8 %5, %1
+      if (match(LHS, m_Shl(m_Value(), m_ConstantInt(ConstVal))))
+        LHSisSHL = true;
+      // One operand of the mul is shl, the other is a mul with a constant:
+      //   %4 = shl i8 %1, 1
+      //   %5 = mul i8 %0, 2
+      //   %6 = mul i8 %5, %1
+      else if (match(LHS, m_c_Mul(m_Value(), m_ConstantInt(ConstVal)))) {
+        // Since we search by the constant used for shl but we have a mul now,
+        // we must get the log2 of the constant.
+        APInt Const = ConstVal->getValue();
+        if (!Const.isPowerOf2())
+          continue;
+        APInt ShiftAmount(Const.getBitWidth(), Const.logBase2());
+        ConstVal = ConstantInt::get(ConstVal->getContext(), ShiftAmount);
+      } else
+        continue;
+
+      // Check if there was a shift, that has the other parameter of the
+      // multiplication with shifed by the same constant.
+      ShiftMapKeyT ShiftKey{OtherOp, ConstVal};
+      auto Ite = ShiftMap.find(ShiftKey);
+      if (Ite != ShiftMap.end()) {
+        ShiftsToBeConvertedToMuls.push_back(Ite->second);
+        // If both parameters of the multiplication are left shift we should
+        // convert both.
+        if (LHSisSHL) {
+          assert(match(LHS, m_Shl(m_Value(), m_Value())) &&
+                 "Only shl instructions can be converted to mul!");
+          ShiftsToBeConvertedToMuls.push_back(cast<Instruction>(LHS));
+        }
+      }
+    }
+  }
+
+  for (Instruction *I : ShiftsToBeConvertedToMuls) {
+    MadeChange = true;
+    ConvertShiftToMul(I);
+  }
+}
+
 PreservedAnalyses ReassociatePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   // UniformityInfo is empty (and cheap) on targets without branch divergence,
@@ -2684,6 +2757,22 @@ PreservedAnalyses ReassociatePass::run(Function &F,
 
 PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
   UA = &UI;
+
+  // Serach for shifts that could be worth converting to multiplications,
+  // so they can be used in later for reassociation.
+  // For example, in the following case:
+  //   %4 = shl i8 %1, 1
+  //   %5 = shl i8 %0, 1
+  //   %6 = mul i8 %5, %1
+  //   use %6
+  //   use %4
+  //
+  // If both shifts were treated as multiplications, we could have:
+  //   %4 = shl i8 %1, 1
+  //   %5 = mul i8 %0, %4
+  //   use %5
+  //   use %4
+  convertShiftsUsedByMulsToMuls(F);
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic

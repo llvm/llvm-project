@@ -5,17 +5,16 @@
 define i8 @shlShlMul(i8 %0, i8 %1, ptr %2) {
 ; REASSOC-LABEL: define i8 @shlShlMul(
 ; REASSOC-SAME: i8 [[TMP0:%.*]], i8 [[TMP1:%.*]], ptr [[TMP2:%.*]]) {
-; REASSOC-NEXT:    [[TMP4:%.*]] = shl i8 [[TMP1]], 1
-; REASSOC-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP0]], 2
-; REASSOC-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP1]]
+; REASSOC-NEXT:    [[TMP4:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP0]]
 ; REASSOC-NEXT:    store i8 [[TMP6]], ptr [[TMP2]], align 8
 ; REASSOC-NEXT:    ret i8 [[TMP4]]
 ;
 ; REASSOC-CSE-LABEL: define i8 @shlShlMul(
 ; REASSOC-CSE-SAME: i8 [[TMP0:%.*]], i8 [[TMP1:%.*]], ptr [[TMP2:%.*]]) {
-; REASSOC-CSE-NEXT:    [[TMP4:%.*]] = shl i8 [[TMP1]], 1
-; REASSOC-CSE-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP0]], 2
-; REASSOC-CSE-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP1]]
+; REASSOC-CSE-NEXT:    [[TMP4:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-CSE-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP4]], [[TMP0]]
 ; REASSOC-CSE-NEXT:    store i8 [[TMP6]], ptr [[TMP2]], align 8
 ; REASSOC-CSE-NEXT:    ret i8 [[TMP4]]
 ;
@@ -29,17 +28,16 @@ define i8 @shlShlMul(i8 %0, i8 %1, ptr %2) {
 define i8 @shlMulMul(i8 %0, i8 %1, ptr %2) {
 ; REASSOC-LABEL: define i8 @shlMulMul(
 ; REASSOC-SAME: i8 [[TMP0:%.*]], i8 [[TMP1:%.*]], ptr [[TMP2:%.*]]) {
-; REASSOC-NEXT:    [[TMP4:%.*]] = shl i8 [[TMP1]], 1
-; REASSOC-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP0]], 2
-; REASSOC-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP1]]
+; REASSOC-NEXT:    [[TMP4:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP0]]
 ; REASSOC-NEXT:    store i8 [[TMP6]], ptr [[TMP2]], align 8
 ; REASSOC-NEXT:    ret i8 [[TMP4]]
 ;
 ; REASSOC-CSE-LABEL: define i8 @shlMulMul(
 ; REASSOC-CSE-SAME: i8 [[TMP0:%.*]], i8 [[TMP1:%.*]], ptr [[TMP2:%.*]]) {
-; REASSOC-CSE-NEXT:    [[TMP4:%.*]] = shl i8 [[TMP1]], 1
-; REASSOC-CSE-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP0]], 2
-; REASSOC-CSE-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP5]], [[TMP1]]
+; REASSOC-CSE-NEXT:    [[TMP4:%.*]] = mul i8 [[TMP1]], 2
+; REASSOC-CSE-NEXT:    [[TMP6:%.*]] = mul i8 [[TMP4]], [[TMP0]]
 ; REASSOC-CSE-NEXT:    store i8 [[TMP6]], ptr [[TMP2]], align 8
 ; REASSOC-CSE-NEXT:    ret i8 [[TMP4]]
 ;
