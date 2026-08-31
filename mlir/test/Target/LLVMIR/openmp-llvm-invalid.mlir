@@ -187,3 +187,53 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     llvm.return
   }
 }
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @target_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+    %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    // expected-error @below {{op not allowed in a target device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.target_data}}
+    omp.target_data map_entries(%0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @target_update_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+    %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+    // expected-error @below {{op not allowed in a target device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.target_update}}
+    omp.target_update map_entries(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @target_enter_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+    %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+    // expected-error @below {{op not allowed in a target device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.target_enter_data}}
+    omp.target_enter_data map_entries(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @target_exit_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+    %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
+    // expected-error @below {{op not allowed in a target device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.target_exit_data}}
+    omp.target_exit_data map_entries(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
