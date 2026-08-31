@@ -397,3 +397,77 @@ cir.func @offsets_from_pointer_argument(%s: !cir.ptr<!rec_S>)
         : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   cir.return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "bitint_struct_elements"
+// CHECK-DAG: px#0 <-> py#0: MayAlias
+// CHECK-DAG: px#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: px#0 <-> px_plus_one#0: MayAlias
+// CHECK-DAG: px#0 <-> pxb#0: MustAlias
+// CHECK-DAG: px#0 <-> pxb_plus_four#0: MayAlias
+// CHECK-DAG: py#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: py#0 <-> px_plus_one#0: MustAlias
+// CHECK-DAG: py#0 <-> pxb#0: MayAlias
+// CHECK-DAG: py#0 <-> pxb_plus_four#0: MustAlias
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !cir.int<s, 19, bitint>, data !cir.int<s, 19, bitint>}>
+cir.func @bitint_struct_elements(%s: !cir.ptr<!rec_S>)
+    attributes {test.ptr = "func"} {
+  %px = cir.get_member %s[0] {name = "x", test.ptr = "px"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!cir.int<s, 19, bitint>>
+  %py = cir.get_member %s[1] {name = "y", test.ptr = "py"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!cir.int<s, 19, bitint>>
+  %one  = cir.const #cir.int<1> : !s32i
+  %px_plus_one = cir.ptr_stride %px, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i) 
+                                          -> !cir.ptr<!cir.int<s, 19, bitint>>
+             {test.ptr = "px_plus_one"}
+  %pxb = cir.cast bitcast %px : !cir.ptr<!cir.int<s, 19, bitint>> -> !cir.ptr<!u8i> {test.ptr = "pxb"}
+  %four  = cir.const #cir.int<4> : !s32i
+  %pxb_plus_four = cir.ptr_stride %pxb, %four : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+             {test.ptr = "pxb_plus_four"}
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "bitint_array_elements"
+// CHECK-DAG: decay#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: decay#0 <-> elem0#0: MustAlias
+// CHECK-DAG: decay#0 <-> elem1#0: MayAlias
+// CHECK-DAG: decay#0 <-> decay_plus_one#0: MayAlias
+// CHECK-DAG: decay#0 <-> db#0: MustAlias
+// CHECK-DAG: decay#0 <-> db_plus_four#0: MayAlias
+// CHECK-DAG: elem0#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: elem0#0 <-> elem1#0: MayAlias
+// CHECK-DAG: elem0#0 <-> decay_plus_one#0: MayAlias
+// CHECK-DAG: elem0#0 <-> db#0: MustAlias
+// CHECK-DAG: elem0#0 <-> db_plus_four#0: MayAlias
+// CHECK-DAG: elem1#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: elem1#0 <-> decay_plus_one#0: MustAlias
+// CHECK-DAG: elem1#0 <-> db#0: MayAlias
+// CHECK-DAG: elem1#0 <-> db_plus_four#0: MustAlias
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+cir.func @bitint_array_elements(%arr: !cir.ptr<!cir.array<!cir.int<s, 19, bitint> x 4>>)
+    attributes {test.ptr = "func"} {
+  %decay = cir.cast array_to_ptrdecay %arr : !cir.ptr<!cir.array<!cir.int<s, 19, bitint> x 4>>
+                                           -> !cir.ptr<!cir.int<s, 19, bitint>> {test.ptr = "decay"}
+  %zero = cir.const #cir.int<0> : !s32i
+  %elem0 = cir.get_element %arr[%zero : !s32i] {test.ptr = "elem0"}
+        : !cir.ptr<!cir.array<!cir.int<s, 19, bitint> x 4>> -> !cir.ptr<!cir.int<s, 19, bitint>>
+  %one  = cir.const #cir.int<1> : !s32i
+  %elem1 = cir.get_element %arr[%one : !s32i] {test.ptr = "elem1"}
+        : !cir.ptr<!cir.array<!cir.int<s, 19, bitint> x 4>> -> !cir.ptr<!cir.int<s, 19, bitint>>
+  %decay_plus_one = cir.ptr_stride %decay, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i) 
+                                          -> !cir.ptr<!cir.int<s, 19, bitint>>
+             {test.ptr = "decay_plus_one"}
+  %db = cir.cast bitcast %decay : !cir.ptr<!cir.int<s, 19, bitint>> -> !cir.ptr<!u8i> {test.ptr = "db"}
+  %four  = cir.const #cir.int<4> : !s32i
+  %db_plus_four = cir.ptr_stride %db, %four : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+             {test.ptr = "db_plus_four"}
+  cir.return
+}
