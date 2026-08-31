@@ -24,6 +24,7 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -70,6 +71,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -5274,6 +5276,19 @@ void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
   Stream.EmitRecord(DECLS_WITH_EFFECTS_TO_VERIFY, Record);
 }
 
+/// Write the OpenMP 'requires' directives seen in this translation unit.
+void ASTWriter::WriteOpenMPRequiresDecls(Sema &SemaRef) {
+  if (!SemaRef.getLangOpts().OpenMP)
+    return;
+  ArrayRef<const OMPRequiresDecl *> Decls = SemaRef.OpenMP().getRequiresDecls();
+  if (Decls.empty())
+    return;
+  RecordData Record;
+  for (const auto *D : Decls)
+    AddDeclRef(D, Record);
+  Stream.EmitRecord(OMP_REQUIRES_DECLS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -6349,6 +6364,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WritePackPragmaOptions(*SemaPtr);
     WriteFloatControlPragmaOptions(*SemaPtr);
     WriteDeclsWithEffectsToVerify(*SemaPtr);
+    WriteOpenMPRequiresDecls(*SemaPtr);
   }
 
   // Some simple statistics
