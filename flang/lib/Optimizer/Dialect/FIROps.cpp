@@ -28,6 +28,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -2165,22 +2166,30 @@ static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
   return eleTy;
 }
 
-/// The value a cast or declare aliases, or null if `value` is not one of those.
+/// Returns the source that 'value' is a view of at offset zero, or null. A
+/// displaced view, such as an array element, addresses a different location and
+/// so is a different slot.
 static mlir::Value getAliasedSlotPointer(mlir::Value value) {
-  mlir::Operation *def = value.getDefiningOp();
-  if (auto convert = mlir::dyn_cast_or_null<fir::ConvertOp>(def))
-    return convert.getValue();
-  if (auto declare = mlir::dyn_cast_or_null<fir::DeclareOp>(def))
-    return declare.getMemref();
-  return {};
+  auto result = mlir::dyn_cast<mlir::OpResult>(value);
+  if (!result)
+    return {};
+  auto view =
+      mlir::dyn_cast<fir::FortranObjectViewOpInterface>(result.getOwner());
+  if (!view)
+    return {};
+  std::optional<std::int64_t> offset = view.getViewOffset(result);
+  if (!offset || *offset != 0)
+    return {};
+  return view.getViewSource(result);
 }
 
-/// Checks whether every read of the slot reached through `pointer` has a write
-/// to it earlier in the same block. Otherwise promotion replaces the read with
-/// the allocation's default value, which is fir.undefined for fir.alloca but
-/// poison for a memref allocation, so promoting through a cast would change
-/// what reading an uninitialized variable does.
-static bool everyReadFollowsAWrite(mlir::Value pointer, mlir::Type pointee) {
+/// Checks whether a write to the slot reached through `pointer` dominates every
+/// read of it. Otherwise promotion replaces a read with the allocation's
+/// default value, which is fir.undefined for fir.alloca but poison for a memref
+/// allocation, so promoting through a view would change what reading an
+/// uninitialized variable does.
+static bool everyReadIsDominatedByAWrite(mlir::Value pointer,
+                                         mlir::Type pointee) {
   // Start at the root of the chain, to see writes through a sibling alias.
   while (mlir::Value aliased = getAliasedSlotPointer(pointer)) {
     if (getScalarSlotPointeeType(aliased.getType()) != pointee)
@@ -2189,37 +2198,39 @@ static bool everyReadFollowsAWrite(mlir::Value pointer, mlir::Type pointee) {
   }
 
   llvm::SmallVector<mlir::Operation *> reads;
-  llvm::DenseMap<mlir::Block *, mlir::Operation *> firstWrite;
+  llvm::SmallVector<mlir::Operation *> writes;
   llvm::SmallVector<mlir::Value> worklist{pointer};
   llvm::SmallPtrSet<mlir::Value, 8> visited{pointer};
   while (!worklist.empty()) {
-    for (mlir::OpOperand &use : worklist.pop_back_val().getUses()) {
+    mlir::Value slotPointer = worklist.pop_back_val();
+    for (mlir::OpOperand &use : slotPointer.getUses()) {
       mlir::Operation *user = use.getOwner();
-      if (mlir::isa<fir::ConvertOp, fir::DeclareOp>(user)) {
-        mlir::Value alias = user->getResult(0);
+      // A view of the pointer is another handle on the same storage, so its
+      // own uses have to be walked as well.
+      for (mlir::OpResult result : user->getOpResults()) {
+        if (getAliasedSlotPointer(result) != slotPointer)
+          continue;
         // A different pointee is another slot, which blocks promotion itself.
-        if (getScalarSlotPointeeType(alias.getType()) == pointee &&
-            visited.insert(alias).second)
-          worklist.push_back(alias);
-        continue;
+        if (getScalarSlotPointeeType(result.getType()) == pointee &&
+            visited.insert(result).second)
+          worklist.push_back(result);
       }
       // A user that is not a promotable access blocks promotion itself.
       if (auto memOp = mlir::dyn_cast<mlir::PromotableMemOpInterface>(user)) {
         mlir::MemorySlot slot{use.get(), pointee};
-        if (memOp.storesTo(slot)) {
-          mlir::Operation *&earliest = firstWrite[user->getBlock()];
-          if (!earliest || user->isBeforeInBlock(earliest))
-            earliest = user;
-        } else if (memOp.loadsFrom(slot)) {
+        if (memOp.storesTo(slot))
+          writes.push_back(user);
+        else if (memOp.loadsFrom(slot))
           reads.push_back(user);
-        }
       }
     }
   }
 
-  return llvm::all_of(reads, [&firstWrite](mlir::Operation *read) {
-    auto write = firstWrite.find(read->getBlock());
-    return write != firstWrite.end() && write->second->isBeforeInBlock(read);
+  mlir::DominanceInfo dominance;
+  return llvm::all_of(reads, [&](mlir::Operation *read) {
+    return llvm::any_of(writes, [&](mlir::Operation *write) {
+      return dominance.properlyDominates(write, read);
+    });
   });
 }
 
@@ -2237,8 +2248,8 @@ static mlir::Type getPointeePreservedByCast(fir::ConvertOp op) {
   mlir::Type to = getScalarSlotPointeeType(toTy);
   if (!from || from != to)
     return {};
-  // A read that no write reaches must keep its access.
-  if (!everyReadFollowsAWrite(op.getValue(), to))
+  // A read that no write dominates must keep its access.
+  if (!everyReadIsDominatedByAWrite(op.getValue(), to))
     return {};
   return to;
 }

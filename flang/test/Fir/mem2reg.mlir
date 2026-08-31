@@ -352,7 +352,7 @@ func.func @read_only_slot_not_promoted() {
 
 // -----
 
-// Written on one path only, so no write reaches the read in the entry block.
+// Written inside a conditional region, so no write dominates the read.
 
 // CHECK-LABEL: func.func @partially_written_slot_not_promoted(
 // CHECK-NOT: ub.poison
@@ -497,5 +497,59 @@ func.func @volatile_convert_not_promoted(%arg: i32) {
   fir.store %arg to %c : !fir.ref<i32, volatile>
   %l = fir.load %c : !fir.ref<i32, volatile>
   "test.use"(%l) : (i32) -> ()
+  return
+}
+
+// -----
+
+// The write dominates the read from another block, so the read cannot observe
+// the uninitialized slot and no poison is needed.
+
+// CHECK-LABEL: func.func @write_dominating_read_in_another_block(
+// CHECK-SAME: %[[ARG:.*]]: i32
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: ub.poison
+// CHECK: "test.use"(%[[ARG]])
+func.func @write_dominating_read_in_another_block(%arg: i32) {
+  %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
+  %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
+  memref.store %arg, %m[] : memref<i32>
+  cf.br ^bb1
+^bb1:
+  %l = memref.load %m[] : memref<i32>
+  "test.use"(%l) : (i32) -> ()
+  return
+}
+
+// -----
+
+// Initialized before a loop and updated inside it. The initializing write
+// dominates the in-loop read, so the slot becomes a block argument.
+
+// CHECK-LABEL: func.func @write_before_loop_updated_in_loop(
+// CHECK-SAME: %[[ARG:[^:]*]]: i32, %[[N:[^:]*]]: i32
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: ub.poison
+// CHECK: cf.br ^bb1(%[[ARG]] : i32)
+// CHECK: ^bb1(%[[PHI:.*]]: i32)
+// CHECK: arith.addi %[[PHI]], %[[ARG]]
+func.func @write_before_loop_updated_in_loop(%arg: i32, %n: i32) {
+  %alloca = memref.alloca() {bindc_name = "x"} : memref<i32>
+  %r = fir.convert %alloca : (memref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %r {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %m = fir.convert %d : (!fir.ref<i32>) -> memref<i32>
+  memref.store %arg, %m[] : memref<i32>
+  cf.br ^bb1
+^bb1:
+  %l = memref.load %m[] : memref<i32>
+  %next = arith.addi %l, %arg : i32
+  memref.store %next, %m[] : memref<i32>
+  %c = arith.cmpi slt, %next, %n : i32
+  cf.cond_br %c, ^bb1, ^bb2
+^bb2:
+  %f = memref.load %m[] : memref<i32>
+  "test.use"(%f) : (i32) -> ()
   return
 }
