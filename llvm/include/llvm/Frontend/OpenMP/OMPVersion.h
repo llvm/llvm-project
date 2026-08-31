@@ -19,8 +19,8 @@ namespace llvm {
 namespace omp {
 struct Version {
   using value_type = unsigned;
-  constexpr Version(value_type Ver = 0) : V(Ver) {}
-  constexpr operator value_type() const { return V; }
+  constexpr /*TODO explicit*/ Version(value_type Ver = 0) : V(Ver) {}
+  constexpr /*TODO explicit*/ operator value_type() const { return V; }
   constexpr explicit operator bool() const { return V != 0; }
 
   friend constexpr bool operator<(Version A, Version B);
