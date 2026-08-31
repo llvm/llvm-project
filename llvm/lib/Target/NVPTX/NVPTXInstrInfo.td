@@ -1885,11 +1885,17 @@ def to_tjumptable : SDNodeXForm<jumptable, [{
   return CurDAG->getTargetJumpTable(N->getIndex(), N->getValueType(0));
 }]>;
 
+def SDTSymbol : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
+def symbol : SDNode<"NVPTXISD::Symbol", SDTSymbol, []>;
+
 def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
 def : Pat<(i64 globaladdr:$dst), (MOV_B64_sym (to_tglobaladdr $dst))>;
 
 def : Pat<(i32 externalsym:$dst), (MOV_B32_sym (to_texternsym $dst))>;
 def : Pat<(i64 externalsym:$dst), (MOV_B64_sym (to_texternsym $dst))>;
+
+def : Pat<(i32 (symbol mcsym:$dst)), (MOV_B32_sym mcsym:$dst)>;
+def : Pat<(i64 (symbol mcsym:$dst)), (MOV_B64_sym mcsym:$dst)>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs B32:$dst), (ins ADDR:$addr),
@@ -1932,8 +1938,8 @@ def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 //   .param .align 16 .b8 param0[1024];
 //   .param .b32 retval0;
 //
-// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
-// DeclareScalarParam(Chain, Externalsym, Size, Glue)
+// DeclareArrayParam(Chain, Symbol, Align, Size, Glue)
+// DeclareScalarParam(Chain, Symbol, Size, Glue)
 def declare_array_param :
   SDNode<"NVPTXISD::DeclareArrayParam", SDTDeclareArrayParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
@@ -1992,16 +1998,16 @@ def DECLARE_PARAM_scalar :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$size),
             ".param .b$size \t$a;">;
 
-def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
-          (DECLARE_PARAM_array (to_texternsym $a), imm:$align, imm:$size)>;
-def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
-          (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
+def : Pat<(declare_array_param (symbol mcsym:$a), imm:$align, imm:$size),
+          (DECLARE_PARAM_array mcsym:$a, imm:$align, imm:$size)>;
+def : Pat<(declare_scalar_param (symbol mcsym:$a), imm:$size),
+          (DECLARE_PARAM_scalar mcsym:$a, imm:$size)>;
 
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
-  def : Pat<(MoveParam (t.Ty externalsym:$src)),
-            (!cast<NVPTXInst>(inst_name) (t.Ty (to_texternsym $src)))>;
+  def : Pat<(MoveParam (t.Ty (symbol mcsym:$src))),
+            (!cast<NVPTXInst>(inst_name) (t.Ty mcsym:$src))>;
 }
 
 multiclass ProxyRegInst<string SzStr, NVPTXRegClass rc> {
