@@ -49,11 +49,13 @@ define i32 @alias_with_parametric_expr(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
 ; CHECK-NEXT:    da analyze - output []!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
+; CHECK-NEXT:    Equal predicate: (2 * (zext i1 (trunc i64 %n to i1) to i64))<nuw><nsw> == 0
+; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %m to i2) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
 ; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
+; CHECK-NEXT:    Equal predicate: (2 * (zext i1 (trunc i64 %n to i1) to i64))<nuw><nsw> == 0
+; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %m to i2) to i64) == 0
 ; CHECK-NEXT:    Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
 ; CHECK-NEXT:    da analyze - input []!
@@ -211,7 +213,9 @@ end:
 define void @multidim_accesses2(ptr %A) {
 ; CHECK-LABEL: 'multidim_accesses2'
 ; CHECK-NEXT:  Src: store i64 1, ptr %idx, align 4 --> Dst: store i64 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i3 {0,+,-4}<%for.k> to i64) == 0
 ;
 entry:
   br label %for.i

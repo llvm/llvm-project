@@ -11219,20 +11219,11 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (M == 1)
     return true;
 
-  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
-  // starts with a multiple of M and at every iteration step S only adds
-  // multiples of M.
-  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    return isKnownMultipleOf(AddRec->getStart(), M, Predicates) &&
-           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Predicates);
-
   // For a constant, check that "S % M == 0".
   if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
     APInt C = Cst->getAPInt();
     return C.urem(M) == 0;
   }
-
-  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
 
   // Basic tests have failed.
   // Check "S % M == 0" at compile time and record runtime Assumptions.
@@ -11251,6 +11242,22 @@ bool ScalarEvolution::isKnownMultipleOf(
 
   if (!Predicates)
     return false;
+
+  // Look through AddRec expressions to improve the precision of added
+  // predicates. An AddRecExpr S is a multiple of M if S starts with a multiple
+  // of M and at every iteration step S only adds multiples of M.
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+    if (isKnownMultipleOf(AR->getStart(), M, Predicates) &&
+        isKnownMultipleOf(AR->getStepRecurrence(*this), M, Predicates))
+      return true;
+
+  // Similarly, look through commutative expressions to improve the precision of
+  // added predicates.
+  if (isa<SCEVCommutativeExpr>(S))
+    if (all_of(S->operands(), [&](SCEVUse Op) {
+          return isKnownMultipleOf(Op, M, Predicates);
+        }))
+      return true;
 
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
 
