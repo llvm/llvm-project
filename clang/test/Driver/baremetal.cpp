@@ -1,8 +1,17 @@
 // UNSUPPORTED: system-windows
 
-// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib 2>&1 \
+// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib  \
+// RUN:     -Xstatic-lib-tool -U -Xstatic-lib-tool --format=gnu -o %t.out 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
-// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD" "-U" "--format=gnu" "{{.*}}.out"
+
+// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib \
+// RUN:     --static-lib-target-arch-only 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHECK-LIBTOOL-ARG %s
+// CHECK-LIBTOOL-ARG: warning: argument unused during compilation: '--static-lib-target-arch-only'
+// CHECK-LIBTOOL-ARG: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-LIBTOOL-ARG-NOT: "--static-lib-target-arch-only"
+// CHECK-LIBTOOL-ARG-NOT: "-arch_only"
 
 // RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
 // RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
