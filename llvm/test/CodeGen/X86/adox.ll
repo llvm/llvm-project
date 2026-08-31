@@ -269,12 +269,18 @@ define i32 @adox_test_sub_i32(i32 %a, i32 %b, i8 %c, i8 %d) {
   ret i32 %res
 }
 
+; Negative test: ADOX modifies OF but does not modify ZF.
+; When the result of the addition is checked for equality with zero (using ZF),
+; we cannot optimize the addition into an ADOX instruction because the branch
+; would read an incorrect/stale ZF value. The compiler must fall back to a
+; standard ADD which sets ZF correctly.
 define i32 @adox_test_zf(i32 %a, i32 %b, i32 %s) {
 ; NDD-LABEL: adox_test_zf:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    addl %edi, %esi
-; NDD-NEXT:    adoxl %eax, %edx
+; NDD-NEXT:    seto %al
+; NDD-NEXT:    addl %edx, %eax
 ; NDD-NEXT:    je .LBB8_1
 ; NDD-NEXT:  # %bb.2: # %nonzero
 ; NDD-NEXT:    movl $222, %eax
@@ -287,7 +293,8 @@ define i32 @adox_test_zf(i32 %a, i32 %b, i32 %s) {
 ; ADX:       # %bb.0:
 ; ADX-NEXT:    xorl %eax, %eax
 ; ADX-NEXT:    addl %esi, %edi
-; ADX-NEXT:    adoxl %eax, %edx
+; ADX-NEXT:    seto %al
+; ADX-NEXT:    addl %edx, %eax
 ; ADX-NEXT:    je .LBB8_1
 ; ADX-NEXT:  # %bb.2: # %nonzero
 ; ADX-NEXT:    movl $222, %eax
