@@ -2303,6 +2303,32 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
+static bool HaveSameAccDataSharingEntity(
+    const DesignatorPath &x, const DesignatorPath &y) {
+  if (x.Base().has_value() != y.Base().has_value() ||
+      (x.Base() && !(*x.Base() == *y.Base()))) {
+    return false;
+  }
+  auto xIter{x.Parts().begin()};
+  auto yIter{y.Parts().begin()};
+  while (true) {
+    while (xIter != x.Parts().end() && !xIter->symbol) {
+      ++xIter;
+    }
+    while (yIter != y.Parts().end() && !yIter->symbol) {
+      ++yIter;
+    }
+    if (xIter == x.Parts().end() || yIter == y.Parts().end()) {
+      return xIter == x.Parts().end() && yIter == y.Parts().end();
+    }
+    if (xIter->symbol != yIter->symbol) {
+      return false;
+    }
+    ++xIter;
+    ++yIter;
+  }
+}
+
 bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
     const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator,
     const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
@@ -2316,7 +2342,8 @@ bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
   for (auto iter{objectsWithDSA.begin()}; iter != objectsWithDSA.end();) {
     AccDataSharingEntry &entry{iter->value};
     DesignatorRelation relation{iter->path.Compare(designator)};
-    if (relation == DesignatorRelation::Disjoint) {
+    if (relation == DesignatorRelation::Disjoint &&
+        !HaveSameAccDataSharingEntity(iter->path, designator)) {
       ++iter;
       continue;
     }
@@ -2364,8 +2391,16 @@ bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
       }
       return false;
     }
-    case DesignatorRelation::Disjoint:
-      llvm_unreachable("disjoint relation handled above");
+    case DesignatorRelation::Disjoint: {
+      auto &message{context_.Say(source,
+          "'%s' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US,
+          displayName)};
+      if (entry.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.occurrence),
+            "previous data-sharing object appears here"_en_US);
+      }
+      return false;
+    }
     }
   }
   objectsWithDSA.push_back(std::move(designator), {accFlag, occurrence});

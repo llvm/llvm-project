@@ -123,6 +123,13 @@ subroutine test_same_object_incompatible_different_components()
     p%y = p%x
   end do
   !$acc end parallel loop
+
+  !$acc parallel loop firstprivate(p%y) private(p%x)
+  do i = 1, 10
+    p%x = real(i)
+    p%y = p%x
+  end do
+  !$acc end parallel loop
 end subroutine
 
 subroutine test_contained_component_same_dsa()
@@ -196,11 +203,19 @@ subroutine test_distinct_objects_same_type_same_component()
   !$acc end parallel loop
 end subroutine
 
-subroutine test_indexed_component_refs_are_not_conflicts()
+subroutine test_indexed_component_refs_conflict()
   use component_ref_types, only: vec_t
   type(vec_t) :: v
   integer :: i
+  !ERROR: 'v%arr(6:10)' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(v%arr(1:5)) firstprivate(v%arr(6:10))
+  do i = 1, 10
+    v%arr(i) = real(i)
+  end do
+  !$acc end parallel loop
+
+  !ERROR: 'v%arr(1:5)' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel loop firstprivate(v%arr(6:10)) private(v%arr(1:5))
   do i = 1, 10
     v%arr(i) = real(i)
   end do
