@@ -1673,9 +1673,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
-// Host interceptor library for UBSan on the device. Enabled if we are
+// Host interceptor library for offload UBSan. Enabled if we are
 // offloading to a target that supports UBSan.
-static bool hostNeedsUbsanDeviceRt(Compilation &C, const ToolChain &HostTC) {
+static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
   if (HostTC.getTriple().isGPU())
     return false;
 
@@ -1841,9 +1841,9 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   }
   if (SanArgs.needsUbsanLoopDetectRt())
     NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
-  if (hostNeedsUbsanDeviceRt(C, TC)) {
-    NonWholeStaticRuntimes.push_back("ubsan_device");
-    RequiredSymbols.push_back("__ubsan_device_init");
+  if (hostNeedsUbsanOffloadRt(C, TC)) {
+    NonWholeStaticRuntimes.push_back("ubsan_offload");
+    RequiredSymbols.push_back("__ubsan_offload_init");
   }
 }
 
