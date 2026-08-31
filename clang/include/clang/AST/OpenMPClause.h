@@ -10131,15 +10131,13 @@ public:
 
   /// Check if this trait info contains any user conditions.
   bool hasUserCondition() const {
-    for (const OMPTraitSet &Set : Sets) {
-      if (Set.Kind != llvm::omp::TraitSet::user)
-        continue;
-      for (const OMPTraitSelector &Selector : Set.Selectors) {
-        if (Selector.Kind == llvm::omp::TraitSelector::user_condition)
-          return true;
-      }
-    }
-    return false;
+    return llvm::any_of(Sets, [](const OMPTraitSet &Set) {
+      return Set.Kind == llvm::omp::TraitSet::user &&
+             llvm::any_of(Set.Selectors, [](const OMPTraitSelector &Selector) {
+               return Selector.Kind ==
+                      llvm::omp::TraitSelector::user_condition;
+             });
+    });
   }
 
   /// Print a human readable representation into \p OS.

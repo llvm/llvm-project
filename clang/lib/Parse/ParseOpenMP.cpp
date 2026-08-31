@@ -2716,13 +2716,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // Check if we have user conditions with non-constant expressions that
     // require runtime selection.
-    bool HasUserCondition = false;
-    for (const VariantMatchInfo &VMI : VMIs) {
-      if (VMI.HasNonConstantUserCondition) {
-        HasUserCondition = true;
-        break;
-      }
-    }
+    bool HasUserCondition = llvm::any_of(VMIs, [](const VariantMatchInfo &VMI) {
+      return VMI.HasNonConstantUserCondition;
+    });
 
     // Different directives have different data-sharing attributes, so each
     // variant needs its own CapturedStmt with proper DSA context.
@@ -2735,9 +2731,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       BalancedDelimiterTracker T(*this, tok::l_paren,
                                  tok::annot_pragma_openmp_end);
       while (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        OpenMPClauseKind CKind =
-            Tok.isAnnotation() ? OMPC_unknown
-                               : getOpenMPClauseKind(PP.getSpelling(Tok));
+        OpenMPClauseKind CKind = Tok.isAnnotation()
+                                     ? OMPC_unknown
+                                     : getOpenMPClauseKind(PP.getSpelling(Tok));
         SourceLocation ClauseLoc = ConsumeToken();
 
         // Parse '('.
@@ -2772,9 +2768,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                  Tok.isNot(tok::annot_pragma_openmp_end)) {
             // Check if current token is a clause keyword.
             OpenMPClauseKind ClauseKind =
-                Tok.isAnnotation()
-                    ? OMPC_unknown
-                    : getOpenMPClauseKind(PP.getSpelling(Tok));
+                Tok.isAnnotation() ? OMPC_unknown
+                                   : getOpenMPClauseKind(PP.getSpelling(Tok));
 
             // If not a clause keyword, we've parsed all clauses.
             if (ClauseKind == OMPC_unknown)
@@ -2818,11 +2813,23 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // Cache the current token before enabling backtracking.
       BodyTokens.push_back(Tok);
 
-      // Parse the statement once and cache remaining tokens.
+      // Parse the statement once to cache tokens.
+      // Suppress diagnostics since this is only for token boundary detection.
+      // Actual parsing with DSA happens in the variant loop.
       PP.EnableBacktrackAtThisPos();
       {
         ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+
+        // Suppress diagnostics during token caching parse.
+        DiagnosticsEngine &Diags = PP.getDiagnostics();
+        bool OldSuppressAllDiagnostics = Diags.getSuppressAllDiagnostics();
+        Diags.setSuppressAllDiagnostics(true);
+
         StmtResult BodyStmt = ParseStatement();
+
+        // Restore diagnostic state.
+        Diags.setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
+
         if (BodyStmt.isInvalid()) {
           PP.Backtrack();
           return StmtError();
@@ -2833,10 +2840,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       ArrayRef<Token> CachedRange = PP.GetAndCommitBacktrackedTokens();
       BodyTokens.append(CachedRange.begin(), CachedRange.end());
 
-      if (BodyTokens.empty()) {
-        Diag(Tok, diag::err_expected_statement);
-        return StmtError();
-      }
+      assert(!BodyTokens.empty() && "Body tokens should not be empty");
 
       // Add an EOF token with marker to end the injected stream.
       Token EofToken;
@@ -2848,8 +2852,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
       // Parse the body separately for each variant to get correct DSA.
       SmallVector<Stmt *, 4> VariantBodies;
-      for (unsigned i = 0; i < DirectiveKinds.size(); ++i) {
-        if (DirectiveKinds[i] == OMPD_unknown) {
+      for (unsigned I : llvm::seq<unsigned>(DirectiveKinds.size())) {
+        if (DirectiveKinds[I] == OMPD_unknown) {
           VariantBodies.push_back(nullptr);
           continue;
         }
@@ -2857,18 +2861,17 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         auto TokensCopy = std::make_unique<Token[]>(BodyTokens.size());
         std::copy(BodyTokens.begin(), BodyTokens.end(), TokensCopy.get());
         PP.EnterTokenStream(std::move(TokensCopy), BodyTokens.size(),
-                      /*DisableMacroExpansion=*/false,
-                      /*IsReinject=*/false);
+                            /*DisableMacroExpansion=*/false,
+                            /*IsReinject=*/false);
         // Consume first token from the injected stream to update Tok.
         ConsumeAnyToken();
 
         // Start DSA block for this directive.
-        Actions.OpenMP().StartOpenMPDSABlock(DirectiveKinds[i],
-                                             DeclarationNameInfo(),
-                                             getCurScope(), Loc);
+        Actions.OpenMP().StartOpenMPDSABlock(
+            DirectiveKinds[I], DeclarationNameInfo(), getCurScope(), Loc);
 
         // Start captured region for this directive.
-        Actions.OpenMP().ActOnOpenMPRegionStart(DirectiveKinds[i],
+        Actions.OpenMP().ActOnOpenMPRegionStart(DirectiveKinds[I],
                                                 getCurScope());
 
         // Parse the body.
@@ -2883,8 +2886,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           return StmtError();
 
         // End captured region - wraps body in CapturedStmt.
-        Body = Actions.OpenMP().ActOnOpenMPRegionEnd(Body,
-                                                     DirectiveClauses[i]);
+        Body = Actions.OpenMP().ActOnOpenMPRegionEnd(Body, DirectiveClauses[I]);
         if (Body.isInvalid())
           return StmtError();
 
@@ -2895,7 +2897,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
         // Clean up this variant's injected token stream.
         // Skip cleanup for the last variant to avoid stream corruption.
-        if (i < DirectiveKinds.size() - 1) {
+        if (I < DirectiveKinds.size() - 1) {
           while (Tok.isNot(tok::eof))
             ConsumeAnyToken();
 
