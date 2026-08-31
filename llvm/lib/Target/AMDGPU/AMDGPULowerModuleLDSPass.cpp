@@ -184,10 +184,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1434,20 +1432,20 @@ private:
     auto LDSVarsToTransform = sortByName(std::vector<GlobalVariable *>(
         LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end()));
 
-    // Create alias.scope and their lists. Each field in the new structure
-    // does not alias with all other fields.
+    // Create an alias scope per field of the new structure. Each field does
+    // not alias with all other fields, which is what the domain having
+    // disjoint scopes records.
     SmallVector<MDNode *> AliasScopes;
-    SmallVector<Metadata *> NoAliasList;
     const size_t NumberVars = LDSVarsToTransform.size();
     if (NumberVars > 1) {
       MDBuilder MDB(Ctx);
       AliasScopes.reserve(NumberVars);
-      MDNode *Domain = MDB.createAnonymousAliasScopeDomain();
+      MDNode *Domain =
+          MDB.createAnonymousAliasScopeDomain("", /*DisjointScopes=*/true);
       for (size_t I = 0; I < NumberVars; I++) {
         MDNode *Scope = MDB.createAnonymousAliasScope(Domain);
         AliasScopes.push_back(Scope);
       }
-      NoAliasList.append(&AliasScopes[1], AliasScopes.end());
     }
 
     // Replace uses of ith variable with a constantexpr to the corresponding
@@ -1465,63 +1463,29 @@ private:
       Align A =
           commonAlignment(Replacement.SGV->getAlign().valueOrOne(), Offset);
 
-      if (I)
-        NoAliasList[I - 1] = AliasScopes[I - 1];
-      MDNode *NoAlias =
-          NoAliasList.empty() ? nullptr : MDNode::get(Ctx, NoAliasList);
       MDNode *AliasScope =
           AliasScopes.empty() ? nullptr : MDNode::get(Ctx, {AliasScopes[I]});
 
-      refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
+      refineUsesAlignmentAndAA(GEP, A, DL, AliasScope);
     }
   }
 
   static void refineUsesAlignmentAndAA(Value *Ptr, Align A,
                                        const DataLayout &DL, MDNode *AliasScope,
-                                       MDNode *NoAlias, unsigned MaxDepth = 5) {
+                                       unsigned MaxDepth = 5) {
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
-
-    ScopedNoAliasAAResult ScopedNoAlias;
 
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
-          MDNode *AS = I->getMetadata(LLVMContext::MD_alias_scope);
-          AS = (AS ? MDNode::getMostGenericAliasScope(AS, AliasScope)
-                   : AliasScope);
+          // An instruction that touches several of these variables, lake a
+          // mpmcpy, lands in the scopes of all
+          // of them and so stays noalias with the fields it doesn't touch.
+          // Concatenating also keeps the scopes from other domains.
+          MDNode *AS = MDNode::concatenate(
+              I->getMetadata(LLVMContext::MD_alias_scope), AliasScope);
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
-
-          MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
-
-          // Scoped aliases can originate from two different domains.
-          // First domain would be from LDS domain (created by this pass).
-          // All entries (LDS vars) into LDS struct will have same domain.
-
-          // Second domain could be existing scoped aliases that are the
-          // results of noalias params and subsequent optimizations that
-          // may alter thesse sets.
-
-          // We need to be careful how we create new alias sets, and
-          // have right scopes and domains for loads/stores of these new
-          // LDS variables. We intersect NoAlias set if alias sets belong
-          // to the same domain. This is the case if we have memcpy using
-          // LDS variables. Both src and dst of memcpy would belong to
-          // LDS struct, they donot alias.
-          // On the other hand, if one of the domains is LDS and other is
-          // existing domain prior to LDS, we need to have a union of all
-          // these aliases set to preserve existing aliasing information.
-
-          SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
-          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
-          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
-          auto Intersection = set_intersection(ExistingDomains, LDSDomains);
-          if (Intersection.empty()) {
-            NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;
-          } else {
-            NA = NA ? MDNode::intersect(NA, NoAlias) : NoAlias;
-          }
-          I->setMetadata(LLVMContext::MD_noalias, NA);
         }
       }
 
@@ -1553,15 +1517,14 @@ private:
           Align GA;
           if (GEP->accumulateConstantOffset(DL, Off))
             GA = commonAlignment(A, Off.getLimitedValue());
-          refineUsesAlignmentAndAA(GEP, GA, DL, AliasScope, NoAlias,
-                                   MaxDepth - 1);
+          refineUsesAlignmentAndAA(GEP, GA, DL, AliasScope, MaxDepth - 1);
         }
         continue;
       }
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (I->getOpcode() == Instruction::BitCast ||
             I->getOpcode() == Instruction::AddrSpaceCast)
-          refineUsesAlignmentAndAA(I, A, DL, AliasScope, NoAlias, MaxDepth - 1);
+          refineUsesAlignmentAndAA(I, A, DL, AliasScope, MaxDepth - 1);
       }
     }
   }
