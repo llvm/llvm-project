@@ -77,6 +77,9 @@ defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
+// C++29 compatibility with C++26 and earlier.
+defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
   defm cxx#std#_constexpr_body_invalid_stmt : CompatWarning<
@@ -12845,8 +12848,7 @@ def err_omp_modifier_requires_version : Error<
   "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 def err_omp_unexpected_num_exprs
     : Error<"unexpected number of expressions in '%0' clause (expected %1, have %2)">;
-def err_omp_incompatible_modifiers
-    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
+def err_omp_malformed_complex_modifier : Error<"malformed '%0' complex modifier in '%1' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

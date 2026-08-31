@@ -983,19 +983,19 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       // The template that contains the specializations set. It's not safe to
       // use getCanonicalDecl on Template since it may still be initializing.
       auto *CanonTemplate = readDeclAs<FunctionTemplateDecl>();
-      // Get the InsertPos by FindNodeOrInsertPos() instead of calling
-      // InsertNode(FTInfo) directly to avoid the getASTContext() call in
+      // Get the insert token by lookup() instead of calling insert(FTInfo)
+      // directly to avoid the getASTContext() call in
       // FunctionTemplateSpecializationInfo's Profile().
       // We avoid getASTContext because a decl in the parent hierarchy may
       // be initializing.
       llvm::FoldingSetNodeID ID;
       FunctionTemplateSpecializationInfo::Profile(ID, TemplArgs, C);
-      void *InsertPos = nullptr;
+      llvm::FoldingSetInsertToken InsertToken;
       FunctionTemplateDecl::Common *CommonPtr = CanonTemplate->getCommonPtr();
       FunctionTemplateSpecializationInfo *ExistingInfo =
-          CommonPtr->Specializations.FindNodeOrInsertPos(ID, InsertPos);
-      if (InsertPos)
-        CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
+          CommonPtr->Specializations.lookup(ID, InsertToken);
+      if (InsertToken)
+        CommonPtr->Specializations.insert(FTInfo, InsertToken);
       else {
         Existing = ExistingInfo->getFunction();
       }
@@ -1573,7 +1573,7 @@ void ASTDeclReader::VisitMSGuidDecl(MSGuidDecl *D) {
     C = Record.readInt();
 
   // Add this GUID to the AST context's lookup structure, and merge if needed.
-  if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.GetOrInsertNode(D))
+  if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -1584,7 +1584,7 @@ void ASTDeclReader::VisitUnnamedGlobalConstantDecl(
 
   // Add this to the AST context's lookup structure, and merge if needed.
   if (UnnamedGlobalConstantDecl *Existing =
-          Reader.getContext().UnnamedGlobalConstantDecls.GetOrInsertNode(D))
+          Reader.getContext().UnnamedGlobalConstantDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -1595,7 +1595,7 @@ void ASTDeclReader::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
   // Add this template parameter object to the AST context's lookup structure,
   // and merge if needed.
   if (TemplateParamObjectDecl *Existing =
-          Reader.getContext().TemplateParamObjectDecls.GetOrInsertNode(D))
+          Reader.getContext().TemplateParamObjectDecls.getOrInsert(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -2598,11 +2598,12 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
       // Set this as, or find, the canonical declaration for this specialization
       ClassTemplateSpecializationDecl *CanonSpec;
       if (auto *Partial = dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
-        CanonSpec = CanonPattern->getCommonPtr()->PartialSpecializations
-            .GetOrInsertNode(Partial);
+        CanonSpec =
+            CanonPattern->getCommonPtr()->PartialSpecializations.getOrInsert(
+                Partial);
       } else {
         CanonSpec =
-            CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+            CanonPattern->getCommonPtr()->Specializations.getOrInsert(D);
       }
       // If there was already a canonical specialization, merge into it.
       if (CanonSpec != D) {
@@ -2713,11 +2714,12 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     if (D->isCanonicalDecl()) { // It's kept in the folding set.
       VarTemplateSpecializationDecl *CanonSpec;
       if (auto *Partial = dyn_cast<VarTemplatePartialSpecializationDecl>(D)) {
-        CanonSpec = CanonPattern->getCommonPtr()
-                        ->PartialSpecializations.GetOrInsertNode(Partial);
+        CanonSpec =
+            CanonPattern->getCommonPtr()->PartialSpecializations.getOrInsert(
+                Partial);
       } else {
         CanonSpec =
-            CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+            CanonPattern->getCommonPtr()->Specializations.getOrInsert(D);
       }
       // If we already have a matching specialization, merge it.
       if (CanonSpec != D)

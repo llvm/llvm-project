@@ -2405,8 +2405,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool dsoLocal, ThreadLocalMode threadModel,
                      SymbolRefAttr comdat, ArrayRef<NamedAttribute> attrs,
                      ArrayRef<Attribute> dbgExprs) {
-  result.addAttribute(getSymNameAttrName(result.name),
-                      builder.getStringAttr(name));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
   result.addAttribute(
       getTlsModeAttrName(result.name),
@@ -2480,12 +2480,11 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getGlobalTypeAttrName(), getConstantAttrName(),
-                           getValueAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName(), getComdatAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
+       getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
+       getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -2536,6 +2535,7 @@ template <typename OpType>
 static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                                              OperationState &result) {
   MLIRContext *ctx = parser.getContext();
+
   // Parse optional linkage, default to External.
   result.addAttribute(
       OpType::getLinkageAttrName(result.name),
@@ -2724,6 +2724,27 @@ LogicalResult GlobalOp::verify() {
       return emitError() << "alignment attribute is not a power of 2";
   }
 
+  if (FlatSymbolRefAttr associated = getAssociatedAttr()) {
+    if (associated.getValue() == getSymName())
+      return emitOpError("associated cannot refer to the global itself");
+  }
+
+  if (ArrayAttr absSym = getAbsoluteSymbolAttr()) {
+    if (absSym.empty() || absSym.size() % 2 != 0)
+      return emitOpError(
+          "absolute_symbol must contain one or more integer range pairs");
+    Type pairType;
+    for (Attribute attr : absSym) {
+      auto intAttr = dyn_cast<IntegerAttr>(attr);
+      if (!intAttr)
+        return emitOpError("absolute_symbol operands must be integers");
+      if (!pairType)
+        pairType = intAttr.getType();
+      else if (intAttr.getType() != pairType)
+        return emitOpError("absolute_symbol range pair types must match");
+    }
+  }
+
   return success();
 }
 
@@ -2842,10 +2863,9 @@ void AliasOp::print(OpAsmPrinter &p) {
 
   p.printSymbolName(getSymName());
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName()});
+                          {getSymNameAttrName(), getAliasTypeAttrName(),
+                           getLinkageAttrName(), getUnnamedAddrAttrName(),
+                           getTlsModeAttrName(), getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -2950,7 +2970,7 @@ void IFuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                     Linkage linkage, LLVM::Visibility visibility) {
   return build(builder, result, name, iFuncType, resolverName, resolverType,
                linkage, /*dso_local=*/false, /*address_space=*/0,
-               UnnamedAddr::None, visibility);
+               UnnamedAddr::None, visibility, /*sym_visibility=*/nullptr);
 }
 
 LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -3085,7 +3105,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        ArrayRef<DictionaryAttr> argAttrs,
                        std::optional<uint64_t> functionEntryCount) {
   result.addRegion();
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
@@ -3200,7 +3220,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes) ||
       function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
@@ -3326,6 +3346,10 @@ LogicalResult LLVMFuncOp::verify() {
     return failure();
 
   if (isExternal()) {
+    if (getFunctionEntryCountAttr())
+      return emitOpError() << "external functions cannot have "
+                           << getFunctionEntryCountAttrName() << " attribute";
+
     if (getLinkage() != LLVM::Linkage::External &&
         getLinkage() != LLVM::Linkage::ExternWeak)
       return emitOpError() << "external functions must have '"
@@ -3479,7 +3503,7 @@ static int64_t getNumElements(Type t) {
 
 /// Determine the element type of `type`. Supported types are `VectorType`,
 /// `TensorType`, and `LLVMArrayType`. Everything else is treated as a scalar.
-static Type getElementType(Type type) {
+Type LLVM::getConstantElementType(Type type) {
   while (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
     type = arrayType.getElementType();
   if (auto vecType = dyn_cast<VectorType>(type))
@@ -3678,8 +3702,8 @@ LogicalResult LLVM::ConstantOp::verify() {
              << getNumElements(getType()) << " vs. " << attrNumElements;
     }
 
-    Type attrElmType = getElementType(elementsAttr.getType());
-    Type resultElmType = getElementType(getType());
+    Type attrElmType = LLVM::getConstantElementType(elementsAttr.getType());
+    Type resultElmType = LLVM::getConstantElementType(getType());
     if (auto floatType = dyn_cast<FloatType>(attrElmType))
       return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
 

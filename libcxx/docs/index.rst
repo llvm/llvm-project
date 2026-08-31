@@ -44,8 +44,6 @@ Getting Started with libc++
    ImplementationDefinedBehavior
    Modules
    Hardening
-   ReleaseProcedure
-   PostMeetingProcedure
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
@@ -59,6 +57,9 @@ Getting Started with libc++
     :hidden:
 
     AddingNewCIJobs
+    Contributing/ReleaseProcedure
+    Contributing/PostMeetingProcedure
+    Contributing/NewStandardProcedure
     FeatureTestMacroTable
 
 

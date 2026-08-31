@@ -1047,6 +1047,28 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      if (Name.consume_front("convert.from.svbool")) {
+        // 'aarch64.sve.convert.from.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->getReturnType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_to_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
+      if (Name.consume_front("convert.to.svbool")) {
+        // 'aarch64.sve.convert.to.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->arg_begin()->getType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_from_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1592,6 +1614,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -5149,6 +5176,21 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->takeName(CI);
     return NewCall;
   }
+  }
+
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
   }
 
   AtomicRMWInst::BinOp RMWOp =
