@@ -900,6 +900,10 @@ bool llvm::isReadOnlyLoop(
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
+      // Debug values and pseudo-probes are placeholders with side effects but
+      // no real memory access, and do not affect dereferenceability.
+      if (I.isDebugOrPseudoInst())
+        continue;
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           NonDereferenceableAndAlignedLoads.push_back(LI);
