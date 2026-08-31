@@ -1450,7 +1450,6 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
                                                    bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
 
   uint32_t VecSize = 1;
@@ -1587,7 +1586,6 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
 
@@ -1604,7 +1602,6 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
                                               bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
@@ -1825,8 +1822,8 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures have no offset overloads, but do have a clamp overload.
-  if (Dim == ResourceDimension::Cube) {
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
     // T Sample(SamplerState s, float3 location, float clamp)
     BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
         .addParam("Sampler", SamplerStateType)
@@ -1896,8 +1893,8 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures have no offset overloads, but do have a clamp overload.
-  if (Dim == ResourceDimension::Cube) {
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
     // T SampleBias(SamplerState s, float3 location, float bias, float clamp)
     BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
         .addParam("Sampler", SamplerStateType)
@@ -1973,8 +1970,8 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures have no offset overloads, but do have a clamp overload.
-  if (Dim == ResourceDimension::Cube) {
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
     // T SampleGrad(SamplerState s, float3 location, float3 ddx, float3 ddy,
     // float clamp)
     BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
@@ -2051,8 +2048,8 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures do not support offsets.
-  if (Dim == ResourceDimension::Cube)
+  // Resources without offsets have no offset overloads.
+  if (!hasResourceOffset(Dim))
     return *this;
 
   // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
@@ -2097,8 +2094,8 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures have no offset overloads, but do have a clamp overload.
-  if (Dim == ResourceDimension::Cube) {
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
     // T SampleCmp(SamplerComparisonState s, float3 location, float
     // compare_value, float clamp)
     BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
@@ -2175,8 +2172,8 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // Cube textures do not support offsets.
-  if (Dim == ResourceDimension::Cube)
+  // Resources without offsets have no offset overloads.
+  if (!hasResourceOffset(Dim))
     return *this;
 
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
@@ -2329,8 +2326,8 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
                      getConstantUnsignedIntExpr(V.Component))
         .finalize();
 
-    // Cube textures do not support offsets.
-    if (Dim == ResourceDimension::Cube)
+    // Resources without offsets have no offset overloads.
+    if (!hasResourceOffset(Dim))
       continue;
 
     // ret GatherVariant(SamplerState s, float2 location, int2 offset)
@@ -2390,8 +2387,8 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
                      getConstantUnsignedIntExpr(V.Component))
         .finalize();
 
-    // Cube textures do not support offsets.
-    if (Dim == ResourceDimension::Cube)
+    // Resources without offsets have no offset overloads.
+    if (!hasResourceOffset(Dim))
       continue;
 
     // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float

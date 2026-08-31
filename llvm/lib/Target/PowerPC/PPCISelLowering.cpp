@@ -14922,9 +14922,9 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // IMPLICIT_DEF register.
     BuildMI(*BB, MI, dl, TII->get(TargetOpcode::IMPLICIT_DEF), ImDefReg);
     BuildMI(*BB, MI, dl, TII->get(PPC::INSERT_SUBREG), ExtSrcReg)
-      .addReg(ImDefReg)
-      .add(SrcOp)
-      .addImm(1);
+        .addReg(ImDefReg)
+        .add(SrcOp)
+        .addImm(PPC::sub_32);
 
     Register NewFPSCRTmpReg = RegInfo.createVirtualRegister(&PPC::G8RCRegClass);
     BuildMI(*BB, MI, dl, TII->get(PPC::RLDIMI), NewFPSCRTmpReg)

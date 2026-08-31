@@ -302,7 +302,7 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
 /// gather methods also have no offset overloads.
 static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl, Sema &S,
                                                    bool IsArray) {
-  const ResourceDimension Dim = ResourceDimension::Cube;
+  constexpr ResourceDimension Dim = ResourceDimension::Cube;
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
       .addDefaultHandleConstructor()
@@ -407,7 +407,7 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
 
   // Add the partial specialization to the namespace and the class template.
   HLSLNamespace->addDecl(PartialSpec);
-  TextureTemplate->AddPartialSpecialization(PartialSpec, nullptr);
+  TextureTemplate->AddPartialSpecialization(PartialSpec, {});
 
   return PartialSpec;
 }
