@@ -542,6 +542,10 @@ features cannot lower the translation-unit ABI level;
   using ``__is_constructible`` on a nested class template inside the definition
   of the containing class. (#GH215166)
 
+- Fixed a bug where Clang incorrectly required `promise.return_value()` for a
+  dependent `co_return` operand that inits to `void`, instead of using
+  `promise.return_void()`. (#GH218368)
+
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
