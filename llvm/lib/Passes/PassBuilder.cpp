@@ -200,6 +200,7 @@
 #include "llvm/CodeGen/StaticDataSplitter.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TriggerCrashMachineFunction.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"

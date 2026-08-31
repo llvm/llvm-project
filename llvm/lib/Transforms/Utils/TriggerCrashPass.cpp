@@ -22,6 +22,21 @@ PreservedAnalyses TriggerCrashFunctionPass::run(Function &,
   return PreservedAnalyses::all();
 }
 
+PreservedAnalyses TriggerCrashCGSCCPass::run(LazyCallGraph::SCC &,
+                                             CGSCCAnalysisManager &,
+                                             LazyCallGraph &,
+                                             CGSCCUpdateResult &) {
+  abort();
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses TriggerCrashLoopPass::run(Loop &, LoopAnalysisManager &,
+                                            LoopStandardAnalysisResults &,
+                                            LPMUpdater &) {
+  abort();
+  return PreservedAnalyses::all();
+}
+
 namespace {
 class TriggerCrashFunctionLegacyPass : public FunctionPass {
 public:
