@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1200 | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.00-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: @dot_fp8_fp8
 func.func @dot_fp8_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f32) -> f32 {

@@ -1,5 +1,7 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx950 | FileCheck %s
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1200 | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu12.00-amd-amdhsa | FileCheck %s
+// gfx11.7 has the OCP fp8 conversions too.
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu11.70-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func @ext_scalar
 // CHECK: [[V:%.+]] = builtin.unrealized_conversion_cast %{{.+}} : f8E5M2 to i8

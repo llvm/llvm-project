@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx908 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX908
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx90a | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX90A
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx942 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX942
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1030 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX10,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX11,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX12,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s --check-prefixes=CHECK,RECORDS45,GFX1250
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.08-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX908
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.0a-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX90A
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX942
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu10.30-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX10,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu11.00-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX11,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu12.01-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX12,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS45,GFX1250
 
 // CHECK: #[[$MMRA_TAG:.+]] = #llvm.mmra_tag<"amdgpu-synchronize-as":"local">
 

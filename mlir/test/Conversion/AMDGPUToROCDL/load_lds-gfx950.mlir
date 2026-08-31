@@ -1,5 +1,5 @@
-// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx942 2>&1 | FileCheck %s --check-prefix=GFX942
-// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx950 | FileCheck %s --check-prefix=GFX950
+// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa 2>&1 | FileCheck %s --check-prefix=GFX942
+// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa | FileCheck %s --check-prefix=GFX950
 
 // GFX950-LABEL: func @fat_buffer_load_to_rocdl_f96
 // GFX950-SAME: (%[[ARG0:.*]]: memref<128x72xf32, #amdgpu.address_space<fat_raw_buffer>>)

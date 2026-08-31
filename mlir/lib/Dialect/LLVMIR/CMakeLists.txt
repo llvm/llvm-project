@@ -73,6 +73,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
 
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
+  IR/ROCDLTargetInfo.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -86,6 +87,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   LINK_COMPONENTS
   AsmParser
   Core
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR

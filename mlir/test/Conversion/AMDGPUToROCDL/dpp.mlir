@@ -1,6 +1,6 @@
-// RUN: mlir-opt -convert-amdgpu-to-rocdl=chipset=gfx908 %s | FileCheck %s
-// RUN: mlir-opt -convert-amdgpu-to-rocdl=chipset=gfx90a %s | FileCheck %s
-// RUN: mlir-opt -convert-amdgpu-to-rocdl=chipset=gfx942 %s | FileCheck %s
+// RUN: mlir-opt -convert-amdgpu-to-rocdl=triple=amdgpu9.08-amd-amdhsa %s | FileCheck %s
+// RUN: mlir-opt -convert-amdgpu-to-rocdl=triple=amdgpu9.0a-amd-amdhsa %s | FileCheck %s
+// RUN: mlir-opt -convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa %s | FileCheck %s
 
 func.func @test_dpp(%arg0: i32, %arg1: i32) -> i32 {
   // CHECK-LABEL: func @test_dpp

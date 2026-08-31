@@ -11,10 +11,10 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -84,7 +84,7 @@ struct ClampFOpConversion final
 
 void mlir::populateMathToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    std::optional<amdgpu::Chipset> chipset) {
+    std::optional<ROCDL::TargetInfo> target) {
   // Handled by mathToLLVM: math::AbsIOp
   // Handled by mathToLLVM: math::AbsFOp
   // Handled by mathToLLVM: math::CopySignOp
@@ -160,10 +160,10 @@ void mlir::populateMathToROCDLConversionPatterns(
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__ocml_fmod_f32",
                                     "__ocml_fmod_f64", "__ocml_fmod_f16");
 
-  if (chipset.has_value() && chipset->majorVersion >= 9) {
+  if (target && target->has(llvm::AMDGPU::FEAT_GFX9_INSTS)) {
     patterns.add<ClampFOpConversion>(converter);
   } else {
-    LDBG() << "Chipset dependent patterns were not added";
+    LDBG() << "Target dependent patterns were not added";
   }
 }
 
@@ -183,15 +183,26 @@ void ConvertMathToROCDLPass::runOnOperation() {
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
 
-  FailureOr<amdgpu::Chipset> maybeChipset;
-  if (!chipset.empty()) {
-    maybeChipset = amdgpu::Chipset::parse(chipset);
-    if (failed(maybeChipset))
+  // An empty triple means "no target", in which case the target-dependent
+  // patterns are simply not added. A chip or feature list without a triple is
+  // a mistake, though.
+  std::optional<ROCDL::TargetInfo> resolved;
+  if (triple.empty()) {
+    if (!chip.empty() || !features.empty()) {
+      emitError(UnknownLoc::get(&getContext()))
+          << "'chip' and 'features' need a 'triple' to apply to";
       return signalPassFailure();
+    }
+  } else {
+    FailureOr<ROCDL::TargetInfo> targetInfo =
+        ROCDL::TargetInfo::get(triple, chip, features, [&] {
+          return emitError(UnknownLoc::get(&getContext()));
+        });
+    if (failed(targetInfo))
+      return signalPassFailure();
+    resolved = *targetInfo;
   }
-  populateMathToROCDLConversionPatterns(
-      converter, patterns,
-      succeeded(maybeChipset) ? std::optional(*maybeChipset) : std::nullopt);
+  populateMathToROCDLConversionPatterns(converter, patterns, resolved);
 
   ConversionTarget target(getContext());
   target

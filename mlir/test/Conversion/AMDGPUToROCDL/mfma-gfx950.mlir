@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx950 -cse | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa -cse | FileCheck %s
 func.func @mfma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<16xf32>,
                     %arg2 : vector<4xf32>, %arg3 : vector<8xbf16>,
                     %arg4 : vector<16xi8>, %arg5 : vector<16xi32>,
@@ -94,19 +94,5 @@ func.func @scaled_mfma_to_rocdl(%arg0 : vector<16xf32>,
   // CHECK: rocdl.mfma.scale.f32.16x16x128.f8f6f4 {{.*}}, {{.*}}, {{.*}}, fp4_e2m1, fp4_e2m1, 0, %[[b0]], 1, %[[z0]] : (vector<4xi32>, vector<4xi32>, vector<4xf32>, i32, i32) -> vector<4xf32>
   amdgpu.scaled_mfma 16x16x128 (%arg7[0] * %arg6) * (%arg8[1] * %arg6) + %arg1 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, f8E8M0FNU, vector<32xf4E2M1FN>, vector<4xf32>
 
-  func.return
-}
-
-// gfx950 does not have the xf32 MFMAs -- FeatureXF32Insts is set on gfx942
-// only -- but it compares greater than gfx942 by ISA version, so the
-// reduced-precision f32 MFMAs are currently selected for it.
-// CHECK-LABEL: func @mfma_reduce_precision_to_rocdl
-func.func @mfma_reduce_precision_to_rocdl(%arg0 : vector<2xf32>,
-                                          %arg1 : vector<16xf32>,
-                                          %arg2 : vector<4xf32>) {
-  // CHECK: rocdl.mfma.f32.32x32x4.xf32
-  amdgpu.mfma 32x32x4 %arg0 * %arg0 + %arg1 reducePrecision : vector<2xf32>, vector<2xf32>, vector<16xf32>
-  // CHECK: rocdl.mfma.f32.16x16x8.xf32
-  amdgpu.mfma 16x16x8 %arg0 * %arg0 + %arg2 reducePrecision : vector<2xf32>, vector<2xf32>, vector<4xf32>
   func.return
 }

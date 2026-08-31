@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx942 | FileCheck %s --check-prefixes=CHECK,GFX9
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1030 | FileCheck %s --check-prefixes=CHECK,GFX10
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s --check-prefixes=CHECK,GFX11
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,GFX12
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,GFX9
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu10.30-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,GFX10
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu11.00-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,GFX11
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.01-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,GFX12
 
 // CHECK-LABEL: func @memory_counter_wait
 func.func @memory_counter_wait() {

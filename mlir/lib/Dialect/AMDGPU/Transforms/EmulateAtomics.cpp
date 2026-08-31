@@ -9,9 +9,9 @@
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -164,42 +164,48 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   return success();
 }
 
+/// Returns whether \p op can be lowered to a native buffer atomic fadd on
+/// \p target.
+static bool isFaddNativelySupported(const ROCDL::TargetInfo &target,
+                                    RawBufferAtomicFaddOp op) {
+  namespace AMDGPU = ::llvm::AMDGPU;
+
+  // A target with only the no-return form can still perform the atomic, it
+  // just cannot report the old value, so it suffices when the result is dead.
+  bool hasFadd = target.has(AMDGPU::FEAT_ATOMIC_FADD_RTN_INSTS) ||
+                 (target.has(AMDGPU::FEAT_ATOMIC_FADD_NO_RTN_INSTS) &&
+                  op.getOldValue().use_empty());
+  if (!hasFadd)
+    return false;
+
+  // The packed 16-bit forms are separate instructions with their own features.
+  Type elemType = getElementTypeOrSelf(op.getValue().getType());
+  if (isa<Float16Type>(elemType))
+    return target.has(AMDGPU::FEAT_ATOMIC_BUFFER_GLOBAL_PK_ADD_F16_INSTS);
+  if (isa<BFloat16Type>(elemType))
+    return target.has(AMDGPU::FEAT_ATOMIC_BUFFER_PK_ADD_BF16_INST);
+  return true;
+}
+
 void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
-    ConversionTarget &target, RewritePatternSet &patterns, Chipset chipset,
-    PatternBenefit benefit) {
-  // gfx10 has no atomic adds.
-  if (chipset.majorVersion == 10 || chipset < Chipset(9, 0, 8)) {
-    target.addIllegalOp<RawBufferAtomicFaddOp>();
-  }
-  // gfx11 has no fp16 atomics
-  if (chipset.majorVersion == 11) {
-    target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
-        [](RawBufferAtomicFaddOp op) -> bool {
-          Type elemType = getElementTypeOrSelf(op.getValue().getType());
-          return !isa<Float16Type, BFloat16Type>(elemType);
+    ConversionTarget &target, RewritePatternSet &patterns,
+    const ROCDL::TargetInfo &targetInfo, PatternBenefit benefit) {
+  namespace AMDGPU = ::llvm::AMDGPU;
+
+  target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
+      [targetInfo](RawBufferAtomicFaddOp op) -> bool {
+        return isFaddNativelySupported(targetInfo, op);
+      });
+
+  // Floating-point min and max are only emulated on gfx9; later generations
+  // have them for every type this op accepts. f64 is the one gfx9 case that
+  // may be native.
+  if (targetInfo.isGeneration(9)) {
+    target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
+        [targetInfo](RawBufferAtomicFmaxOp op) -> bool {
+          return op.getValue().getType().isF64() &&
+                 targetInfo.has(AMDGPU::FEAT_ATOMIC_FMIN_FMAX_GLOBAL_F64);
         });
-  }
-  // gfx9 has no to a very limited support for floating-point min and max.
-  if (chipset.majorVersion == 9) {
-    if (chipset >= Chipset(9, 0, 0xa)) {
-      // gfx90a supports f64 max (and min, but we don't have a min wrapper right
-      // now) but all other types need to be emulated.
-      target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
-          [](RawBufferAtomicFmaxOp op) -> bool {
-            return op.getValue().getType().isF64();
-          });
-    } else {
-      target.addIllegalOp<RawBufferAtomicFmaxOp>();
-    }
-    // TODO(https://github.com/llvm/llvm-project/issues/129206): Refactor
-    // this to avoid hardcoding ISA version: gfx950 has bf16 atomics.
-    if (chipset < Chipset(9, 5, 0)) {
-      target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
-          [](RawBufferAtomicFaddOp op) -> bool {
-            Type elemType = getElementTypeOrSelf(op.getValue().getType());
-            return !isa<BFloat16Type>(elemType);
-          });
-    }
   }
   patterns.add<
       RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
@@ -211,11 +217,10 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {
   Operation *op = getOperation();
-  FailureOr<Chipset> maybeChipset = Chipset::parse(chipset);
-  if (failed(maybeChipset)) {
-    emitError(op->getLoc(), "Invalid chipset name: " + chipset);
+  FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+      triple, chip, features, [&] { return op->emitError(); });
+  if (failed(targetInfo))
     return signalPassFailure();
-  }
 
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
@@ -223,7 +228,7 @@ void AmdgpuEmulateAtomicsPass::runOnOperation() {
   target.markUnknownOpDynamicallyLegal(
       [](Operation *op) -> bool { return true; });
 
-  populateAmdgpuEmulateAtomicsPatterns(target, patterns, *maybeChipset);
+  populateAmdgpuEmulateAtomicsPatterns(target, patterns, *targetInfo);
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     return signalPassFailure();
 }

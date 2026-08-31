@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx906 --split-input-file -verify-diagnostics
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx942 --split-input-file -verify-diagnostics
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.06-amd-amdhsa --split-input-file -verify-diagnostics
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa --split-input-file -verify-diagnostics
 
 // fp8 dot4 is only available on gfx12+.
 func.func @dot_fp8_requires_gfx12(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>, %c: f32) -> f32 {

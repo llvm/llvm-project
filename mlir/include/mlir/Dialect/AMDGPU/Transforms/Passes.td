@@ -16,19 +16,25 @@
 include "mlir/Pass/PassBase.td"
 
 def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
-  let summary = "Emulate atomic operations on chipsets that do not support them";
+  let summary = "Emulate atomic operations the target does not support";
   let description = [{
-    This pass rewrites any AMDGPU-specific atomic operation that is not supported
-    on the given `chipset` into a compare-and-swap loop.
+    This pass rewrites any AMDGPU-specific atomic operation that the target does
+    not support into a compare-and-swap loop.
   }];
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "arith::ArithDialect",
     "vector::VectorDialect"
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"triple", "triple", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
+    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
+           "Target GPU, if not given by the triple (e.g. gfx942)">,
+    Option<"features", "features", "std::string", /*default=*/"\"\"",
+           "Target features (e.g. +wavefrontsize64)">,
+  ];
 }
 
 def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {

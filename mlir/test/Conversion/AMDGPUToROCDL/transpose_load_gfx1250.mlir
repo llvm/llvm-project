@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func @transpose_load_to_rocdl_8xf16
 func.func @transpose_load_to_rocdl_8xf16(%idx1 : index, %idx2 : index, %wgmem : memref<128x72xf16, 3>) -> vector<8xf16> {

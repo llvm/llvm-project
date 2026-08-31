@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-amdgpu-to-rocdl --canonicalize %s | FileCheck %s
+// RUN: mlir-opt -convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa --canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @test_swizzle_i32
 // CHECK-SAME: (%[[ARG0:.*]]: i32)

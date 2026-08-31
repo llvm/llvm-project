@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-arith-to-amdgpu=chipset=gfx950 | FileCheck %s
+// RUN: mlir-opt %s -convert-arith-to-amdgpu=triple=amdgpu9.50-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func.func @m0
 // CHECK: arith.scaling_truncf
