@@ -9761,6 +9761,9 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
     // will follow.
     if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger) {
       // We only know how to handle situations where the legal type is wider.
+      DAG.getContext()->emitError(
+          "CONVERT_FROM_ARBITRARY_FP: the requested integer value type for its "
+          "legalization is not supported");
       return SDValue();
     }
     IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
