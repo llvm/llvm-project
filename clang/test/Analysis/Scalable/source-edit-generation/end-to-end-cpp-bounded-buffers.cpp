@@ -227,10 +227,10 @@ void use() {
 // RUN: FileCheck --check-prefix=ARRAY_PLAIN_REWRITTEN --input-file=%{apply_cpp} %s
 // ARRAY_PLAIN_REWRITTEN: bounded_array<int, 3> arr;
 
+//--- array_of_pointers.cpp
 // An array of pointers: the element type is itself a pointer, but the
 // element is not dereferenced by the array rewrite, so it is reproduced
 // verbatim inside the angle brackets.
-//--- array_of_pointers.cpp
 void use() {
   int *arr[3];
   arr[5] = nullptr;
@@ -324,8 +324,8 @@ void use(int *p) {
 // POINTER_LOCAL_ALIAS_REWRITTEN: void use(bounded_ptr<int> p) {
 // POINTER_LOCAL_ALIAS_REWRITTEN-NEXT: bounded_ptr<int> q = p;
 
-// A reachable function return value.
 //--- pointer_return_value.cpp
+// A reachable function return value.
 int *get(int *p) {
   p[5] = 0;
   return p;
@@ -436,8 +436,8 @@ void use(S *w) {
 // RUN: FileCheck --check-prefix=FIELD_POINTER_REWRITTEN --input-file=%{apply_cpp} %s
 // FIELD_POINTER_REWRITTEN: struct S{bounded_ptr<int> p;};
 
-// An array-typed struct field.
 //--- field_array.cpp
+// An array-typed struct field.
 struct S{int arr[3];};
 void use(S *w) {
   w->arr[5] = 0;
@@ -457,8 +457,8 @@ void use(S *w) {
 // Macros
 // ============================================================================
 
-// Skip MacroExpansion: the declarator's type is spelled through a macro.
 //--- macro_expansion.cpp
+// Skip MacroExpansion: the declarator's type is spelled through a macro.
 #define PTR int *
 void use(PTR p) {
   p[5] = 0;
@@ -481,10 +481,10 @@ void use(PTR p) {
 // Typedefs
 // ============================================================================
 
+//--- typedef_array_of_function_pointers.cpp
 // A typedef used as an array element type does not block the array rewrite:
 // the typedef keeps the declarator a clean prefix + [N] suffix, so only the
 // (unexpanded) element spelling changes.
-//--- typedef_array_of_function_pointers.cpp
 typedef void (*FP)();
 void use() {
   FP arr[4];
