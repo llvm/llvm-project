@@ -4,7 +4,7 @@
 define i32 @fn_add_nuw_nsw(i32 %a) {
 ; CHECK-LABEL: define i32 @fn_add_nuw_nsw(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %add = add nuw nsw i32 %a, 1
@@ -12,11 +12,6 @@ define i32 @fn_add_nuw_nsw(i32 %a) {
 }
 
 define internal i32 @fn_add_nuw(i32 %a) {
-; CHECK-LABEL: define internal i32 @fn_add_nuw(
-; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], 1
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
   %add = add nuw i32 %a, 1
   ret i32 %add
 }
@@ -24,7 +19,7 @@ define internal i32 @fn_add_nuw(i32 %a) {
 define ptr @fn_gep_inbounds(ptr %a) {
 ; CHECK-LABEL: define ptr @fn_gep_inbounds(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw i8, ptr [[A]], i64 1
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr inbounds i8, ptr %a, i64 1
@@ -39,7 +34,7 @@ define internal ptr @fn_gep_nusw(ptr %a) {
 define ptr @fn_gep_inbounds2(ptr %a) {
 ; CHECK-LABEL: define ptr @fn_gep_inbounds2(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr inbounds i8, ptr %a, i64 2
@@ -54,7 +49,7 @@ define internal ptr @fn_gep_nuw(ptr %a) {
 define float @fn_fadd_ninf_nnan(float %a) {
 ; CHECK-LABEL: define float @fn_fadd_ninf_nnan(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan ninf float [[A]], 1.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = fadd ninf float [[A]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %add = fadd ninf nnan float %a, 1.0
@@ -70,7 +65,7 @@ define void @calls(i32 %x, ptr %p, float %f) {
 ; CHECK-LABEL: define void @calls(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]], float [[F:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @fn_add_nuw_nsw(i32 [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @fn_add_nuw(i32 [[X]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @fn_add_nuw_nsw(i32 [[X]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @fn_gep_inbounds(ptr [[P]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @fn_gep_inbounds(ptr [[P]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @fn_gep_inbounds2(ptr [[P]])
