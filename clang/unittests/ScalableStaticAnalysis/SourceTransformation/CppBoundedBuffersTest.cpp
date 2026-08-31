@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Core/ASTEntityMapping.h"
@@ -99,10 +100,8 @@ protected:
     if (!Name || Levels.empty())
       return;
     EntityId Id = getIdTable(Suite).getId(*Name);
-    EntityPointerLevelSet Set;
     for (unsigned Level : Levels)
-      Set.insert(buildEntityPointerLevel(Id, Level));
-    Result.Reachables[Id] = std::move(Set);
+      Result.Reachables.insert(buildEntityPointerLevel(Id, Level));
   }
 
   // Parses \p Code, lets \p Mark populate the reachable result, runs the
@@ -120,7 +119,8 @@ protected:
 
     RecordingEditEmitter Edits;
     RecordingReportEmitter Report;
-    CppBoundedBuffers(Suite, Edits, Report).HandleTranslationUnit(Ctx);
+    SSAFOptions Opts;
+    CppBoundedBuffers(Suite, Opts, Edits, Report).HandleTranslationUnit(Ctx);
 
     tooling::Replacements Replacements;
     for (const tooling::Replacement &R : Edits.Replacements)

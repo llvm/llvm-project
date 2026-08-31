@@ -58,7 +58,7 @@ Type ConvertToLLVMPattern::getVoidPtrType() const { return getPtrType(); }
 Value mlir::LLVM::createIndexAttrConstant(OpBuilder &builder, Location loc,
                                           Type resultType, int64_t value) {
   return LLVM::ConstantOp::create(builder, loc, resultType,
-                                  builder.getIndexAttr(value));
+                                  builder.getIntegerAttr(resultType, value));
 }
 
 Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,

@@ -149,7 +149,7 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
                                          Block::InlineDescMD);
@@ -170,7 +170,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Register the local.
   unsigned Off = Locals.size();
   Locals.push_back(std::move(Memory));
-  return {Off, D};
+  return {D, Off};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
