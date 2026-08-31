@@ -273,6 +273,22 @@ LogicalResult xegpu::propagateYieldOperandsToRegionResults(
       // Assign the yield operand's layout to the region op result it feeds.
       if (auto result = dyn_cast<OpResult>(successorInput))
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+      // A block argument has no attribute of its own, and scf.while's "after"
+      // arguments are tied to no init operand to borrow one from. Their layout
+      // is only recoverable when the terminator forwards a region argument
+      // unchanged, so that getDistributeLayoutAttr can read it from there. If a
+      // layout is required and the forwarded value is anything else, say so
+      // rather than lowering the region with an unknown layout.
+      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
+        auto loop =
+            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
+        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
+        if (!tiedToInit && getLayoutOfValue(arg) &&
+            !isa<BlockArgument>(successorOperand->get()))
+          return terminator->emitError(
+              "region argument requires a layout, but the forwarded value is "
+              "not a region argument");
+      }
     }
   }
   return success();
@@ -2912,9 +2928,10 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return xegpu::getDistributeLayoutAttr(operand);
   // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
   // the required operand layout as the layout_operand_N that
-  // propagateRegionArgsToInits back-propagated from the region argument.
-  // TODO: derive that layout from the region argument here instead, so this
-  // function is the only place an operand's required layout comes from.
+  // propagateRegionArgsToInits back-propagated from the region argument. Do not
+  // re-derive it from that argument here: conflict resolution inserts
+  // convert_layout ops as it walks, rewriting the argument's uses, so what
+  // those uses require depends on how far the walk has progressed.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
   // A region terminator requires the layout of the successor input its operand
