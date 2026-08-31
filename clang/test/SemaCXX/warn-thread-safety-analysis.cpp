@@ -2201,9 +2201,9 @@ struct TestTryLock {
       mu.Unlock();            // expected-warning{{releasing mutex 'mu' that was not held}}
   }                           // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
 
-  // A void conditional operator has no result to branch on later, so unlike
-  // foo13-foo15 the branch itself is honored. This is how glibc before 2.32
-  // spells assert().
+  // A void conditional operator has no result to branch on later, so its
+  // branch behaves like an `if`. This is how glibc before 2.32 spells
+  // assert().
   void foo16() {
     mu.TryLock() ? static_cast<void>(0) : fail();
     a = 3;
@@ -2221,6 +2221,161 @@ struct TestTryLock {
     mu.TryLock() ? static_cast<void>(0) : static_cast<void>(0);
     mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
   }
+
+  // A `?:` merging the result with one constant still identifies the
+  // non-constant arm by the value's truthiness: a truthy value can only be
+  // the true arm's, proving the try-lock succeeded, so the body is known
+  // held. The falsy edge determines nothing (the arm may have produced it
+  // with the lock held), which is reported as a possible leak.
+  void foo19() {
+    if (mu.TryLock() ? cond : false) { // expected-note{{mutex acquired here}}
+      a = 3;
+      mu.Unlock();
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // With the constant in the true arm, a falsy value proves the false arm
+  // ran and the try-lock failed: falling off the end is clean, and only
+  // the undetermined truthy edge warns.
+  void foo20() {
+    if (mu.TryLock() ? true : cond)
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+  }
+
+  // GNU `?:` with a falsy constant is the result itself: both edges
+  // resolve, like a plain branch on the call.
+  void foo21() {
+    if (mu.TryLock() ?: 0) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
+  void foo22() {
+    int v = mu.TryLock() ?: 0;
+    if (v) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
+  // The one-constant-arm merge resolves through a stored variable too.
+  void foo23() {
+    bool b = mu.TryLock() ? cond : false; // expected-note{{mutex acquired here}}
+    if (b) {
+      a = 3;
+      mu.Unlock();
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // The "crossed" shapes put the constant in the arm the branch
+  // truthiness does NOT select, inverting the condition's truthiness
+  // relative to the branch's: a truthy `X ? false : c` proves the false
+  // arm ran, i.e. the try-lock FAILED.
+  void foo24() {
+    if (mu.TryLock() ? false : cond) { // expected-note{{mutex acquired here}}
+      a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+
+  // Mirror: a falsy `X ? c : true` proves the true arm ran and the
+  // try-lock succeeded.
+  void foo25() {
+    if (mu.TryLock() ? cond : true) { // expected-note{{mutex acquired here}}
+    } else {
+      mu.Unlock();
+      return;
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // When the condition and the non-constant arm each hold their own
+  // try-acquire, the condition's call is the one the `?:` terminator
+  // resolved, so the join's re-branch resolves the same call: mu's facts
+  // resolve exactly (a truthy value proves mu held, no warnings on its
+  // uses), while the arm call's fact is lost at the arms' join and its
+  // uses diagnose conservatively.
+  void foo26() {
+    if (mu.TryLock() ? mu2.TryLock() : false) { // expected-note 2{{mutex acquired here}} expected-warning{{unchecked result of try-acquire; mutex 'mu2' may still be held past this point}}
+      a = 3;
+      mu2.Unlock(); // expected-warning{{releasing mutex 'mu2' that was not held}}
+      mu.Unlock();
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // The `&&`/`||` short-circuit shortcut must not fire from the arms'
+  // join: a truthy `(c || mu.TryLock()) ? cond : false` may come from `c`
+  // alone with the try-lock never called, so the body is not proven held.
+  void foo27() {
+    if ((cond2 || mu.TryLock()) ? cond : false) { // expected-warning{{mutex 'mu' is not held on every path through here}} expected-note{{mutex acquired here}}
+      a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+    }
+  }
+
+  // A phi merge (the stored-over-constant initializer) composes with a
+  // `?:` merge in the same condition: a truthy value proves both that the
+  // store executed and that the `?:` selected its non-constant arm, so
+  // the try-lock succeeded.
+  void foo28() {
+    bool ok = false;
+    if (cond)
+      ok = mu.TryLock() ? cond2 : false; // expected-note{{mutex acquired here}}
+    if (ok) {
+      a = 3;
+      mu.Unlock();
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // GNU `?:` with a non-constant right operand and the call on the left:
+  // a falsy value proves the try-lock failed, while a truthy value may be
+  // the right operand's, with the result undetermined.
+  void foo29() {
+    if (mu.TryLock() ?: cond)
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+  }
+
+  // With the call in the right operand, a truthy value may be the left
+  // operand's with the call never executed: nothing is proven held.
+  void foo30() {
+    if (cond ?: mu.TryLock()) {
+      a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+    }
+  }
+
+  // A merge whose value determines nothing about the result must not
+  // split the arms into held/not-held: the try-held state flows through
+  // whole and every use stays conservatively diagnosed.
+  void foo31() {
+    int r = mu.TryLock() ? 1 : 2; // expected-note{{mutex acquired here}}
+    if (r == 1) {
+      a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  void foo32() {
+    bool st = mu.TryLock() ? cond : cond2; // expected-note{{mutex acquired here}}
+    if (st) {
+      a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+
+  // An unrelated branch between the `?:` merge and the branch on its
+  // value: the arms' join reconstitutes try-held, and the falsy edge of
+  // the one-constant merge proves nothing, so the possible success on
+  // that path leaks (beta).
+  void foo33() {
+    bool b = mu.TryLock() ? cond : false; // expected-note{{mutex acquired here}}
+    if (cond2) {
+    }
+    if (b) {
+      a = 3;
+      mu.Unlock();
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
 
   // An unconditional acquire upgrades a try-held capability to held.
   void tryheld_upgrade() {
@@ -4216,6 +4371,37 @@ struct TestTrylockValueCodes {
       mu2.Unlock();
     }
   } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // The magnitude of a `?:`-merged value belongs to the arm constant, not
+  // the result: a comparison against it is refused rather than resolved
+  // against the codes (a merged value of 2 only proves the result was
+  // truthy -- possibly 1 -- not that mu2's code came back).
+  void valuecodes_merged_cmp() {
+    if ((TryLockCodes() ? 2 : 0) == 2) { // expected-note 2{{mutex acquired here}}
+      data2 = 1;    // expected-warning{{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu2.Unlock(); // expected-warning{{releasing mutex 'mu2' that may not be held}}
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu2' may still be held past this point}} \
+    // expected-warning{{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // Case labels on a merged value likewise pin the arm constant, not the
+  // result: the case-1 edge resolves by truthiness only (both codes are
+  // nonzero, so it proves both acquisitions the way `if (x)` does, and
+  // the case body is clean), never by matching the label against the
+  // codes -- previously mu2's release diagnosed a definite (and wrong)
+  // was-not-held there. The fall-out edge excludes only the merged
+  // constant, which says nothing about the result: both facts stay
+  // conditionally held and are reported as possible leaks.
+  void valuecodes_merged_switch() {
+    switch (TryLockCodes() ? 1 : 0) { // expected-note 2{{mutex acquired here}}
+    case 1:
+      data1 = 1;
+      mu1.Unlock();
+      mu2.Unlock();
+      break;
+    }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu1' may still be held past this point}} \
+    // expected-warning{{unchecked result of try-acquire; mutex 'mu2' may still be held past this point}}
 
   // The codes and the compared constants go through the constant
   // evaluator: enumerators and constexpr values key acquisitions and

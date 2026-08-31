@@ -23,3 +23,13 @@ void same_origin_branch_join_warns_without_beta() {
                // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
   mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
 }
+
+// A `?:` arm split reconstitutes silently even without beta: the branch
+// was never honored before, so its join never warned.
+void cond_split_join_stays_silent_without_beta() {
+  int r = mu.TryLock() ? 1 : 2;
+  if (r == 1) {
+    a = 3;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  }
+}

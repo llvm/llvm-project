@@ -409,6 +409,35 @@ void test_trylock_void_conditional_via_var(void) {
   mutex_unlock(&mu1);
 }
 
+// A non-void conditional whose arms carry the result as constants resolves
+// where the value is branched on; with one non-constant arm, a truthy value
+// still proves the true arm ran and the try-lock succeeded, while the falsy
+// edge determines nothing and is reported as a possible leak.
+int get_data(void);
+void test_trylock_conditional_arm(void) {
+  if (mutex_exclusive_trylock(&mu1) ? get_data() : 0) { // expected-note{{mutex acquired here}}
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+} // expected-warning{{unchecked result of try-acquire; mutex 'mu1' may still be held past this point}}
+
+// GNU `?:` with a falsy constant is the result itself: both edges resolve,
+// like a plain branch on the call.
+void test_trylock_gnu_conditional(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: 0) {
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+}
+
+// GNU `?:` with a non-constant right operand: a falsy value proves both
+// operands falsy -- the try-lock failed -- while a truthy value may be the
+// right operand's, so the result stays undetermined there.
+void test_trylock_gnu_conditional_nonconst(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: get_data())
+    mutex_unlock(&mu1); // expected-warning{{releasing mutex 'mu1' that may not be held}}
+}
+
 // A switch on an int-typed but provably boolean condition (a comparison in
 // C) derives the default edge the same way as a _Bool condition: case 1 is
 // the success edge, so default implies the try-lock failed.
