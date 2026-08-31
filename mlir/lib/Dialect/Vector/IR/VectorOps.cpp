@@ -5397,7 +5397,10 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
   // Largest index at which a full vector still fits. Computed as a subtraction
-  // rather than adding to the index, which could overflow.
+  // rather than adding to the index, which could overflow. The subtraction is
+  // safe only because of the `isDynamicDim` early return above: `sourceSize`
+  // is a real static extent here, never `ShapedType::kDynamic`, which is
+  // `INT64_MIN` and would make this signed overflow.
   int64_t maxStart = sourceSize - vectorSize;
 
   // `in_bounds` guarantees that the transfer stays within the source *including
