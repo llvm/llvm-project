@@ -686,6 +686,12 @@ public:
     return nullptr;
   }
 
+  virtual const MCExpr *
+  emitMachOIfuncLazyPointerInit(const GlobalIFunc &GI,
+                                const MCSymbolRefExpr *Init) {
+    return Init;
+  }
+
   virtual void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                       MCSymbol *LazyPointer) {
     llvm_unreachable(

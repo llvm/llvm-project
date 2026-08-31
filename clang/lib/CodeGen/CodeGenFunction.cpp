@@ -3057,7 +3057,15 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
                                              llvm::Function *FuncToReturn,
                                              bool SupportsIFunc) {
   if (SupportsIFunc) {
-    Builder.CreateRet(FuncToReturn);
+    llvm::Constant *Fn = FuncToReturn;
+    // Can't check Resolver->hasFnAttribute("ptrauth-calls") here.
+    // setMultiVersionResolverAttributes() sets that attribute, but it runs
+    // after the resolver's body is emitted. Query the module-level setting
+    // it derives from instead.
+    if (CGM.getCodeGenOpts().PointerAuth.FunctionPointers)
+      Fn = CGM.getConstantSignedPointer(Fn, 0, /*StorageAddress=*/nullptr,
+                                        /*OtherDiscriminator=*/nullptr);
+    Builder.CreateRet(Fn);
     return;
   }
 
