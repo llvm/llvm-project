@@ -31,7 +31,7 @@ TEST_F(LlvmLibcGetprioritySetpriorityTest, BesicTest) {
 
   // 19 is the highest possible nice on Linux (i.e. minimal priority), which
   // doesn't require special privileges. Current nice is likely less than or at
-  // worst equal to 19. This allouws us to round-trip this value and confirm
+  // worst equal to 19. This allows us to round-trip this value and confirm
   // that we get back the correct nice.
   int nice = 19;
 
