@@ -3360,7 +3360,7 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
     Dst.insert(Engine.makePostStmtNode(A, state, Pred));
   } else {
     llvm_unreachable("Array subscript should be an lValue when not \
-a ctor and not a forbidden lvalue type");
+a vector and not a forbidden lvalue type");
   }
 }
 
