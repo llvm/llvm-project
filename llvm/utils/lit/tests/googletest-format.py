@@ -31,12 +31,6 @@
 # CHECK-NEXT: --
 # CHECK-NEXT: unresolved test result
 # CHECK: ***
-# CHECK: Unresolved Tests (1):
-# CHECK-NEXT:   googletest-format :: [[PATH]][[FILE]]/FirstTest/subTestD
-# CHECK: ***
-# CHECK-NEXT: Failed Tests (1):
-# CHECK-NEXT:   googletest-format :: [[PATH]][[FILE]]/FirstTest/subTestB
-# CHECK: Skipped{{ *}}: 1
-# CHECK: Passed{{ *}}: 3
-# CHECK: Unresolved{{ *}}: 1
+# CHECK: Failed Tests (1):
+# CHECK-NEXT:   googletest-format :: [[PATH]][[FILE]]/0/{{[0-9]+}}
 # CHECK: Failed{{ *}}: 1

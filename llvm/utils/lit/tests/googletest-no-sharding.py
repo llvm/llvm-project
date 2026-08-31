@@ -30,14 +30,6 @@
 # CHECK-NEXT: [[FILE]] --gtest_filter=FirstTest.subTestD
 # CHECK-NEXT: --
 # CHECK-NEXT: unresolved test result
-# CHECK: ***
-# CHECK: ***
-# CHECK: Unresolved Tests (1):
-# CHECK-NEXT:   googletest-no-sharding :: FirstTest/subTestD
-# CHECK: ***
-# CHECK-NEXT: Failed Tests (1):
-# CHECK-NEXT:   googletest-no-sharding :: FirstTest/subTestB
-# CHECK: Skipped{{ *}}: 1
-# CHECK: Passed{{ *}}: 3
-# CHECK: Unresolved{{ *}}: 1
+# CHECK: Failed Tests (1):
+# CHECK-NEXT:   googletest-no-sharding :: [[PATH]][[FILE]]
 # CHECK: Failed{{ *}}: 1

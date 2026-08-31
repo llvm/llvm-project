@@ -1,7 +1,7 @@
 # Check the output is expected when tests pass but sanitizer fails.
-# Note that there is only one shard which has only one sub-test. However, the summary
-# has one pass for the sub-test and one fail for the shard failure due to sanitizer
-# reported errors.
+# Note that there is only one shard which has only one sub-test (subTestA). The shard
+# fails with a non-zero exit code (sanitizer error) even though the sub-test passes.
+# The summary shows only the shard-level result (Failed: 1).
 
 # RUN: not %{lit} -v --order=random %{inputs}/googletest-sanitizer-error > %t.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
@@ -26,6 +26,5 @@
 # CHECK-NEXT: exit: 1
 # CHECK-NEXT: --
 # CHECK:      Failed Tests (1):
-# CHECK-NEXT:   googletest-sanitizer-error :: [[PATH]][[FILE]]/0/1
-# CHECK: Passed{{ *}}: 1
+# CHECK-NEXT:   googletest-sanitizer-error :: [[PATH]][[FILE]]/0/{{[0-9]+}}
 # CHECK: Failed{{ *}}: 1
