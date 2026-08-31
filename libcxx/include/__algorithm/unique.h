@@ -29,9 +29,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // unique
 
+// For this unchecked algorithm, __pred does not need to be an equivalence relation.
 template <class _AlgPolicy, class _Iter, class _Sent, class _BinaryPredicate>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 std::pair<_Iter, _Iter>
-__unique(_Iter __first, _Sent __last, _BinaryPredicate&& __pred) {
+__unique_sorted_range(_Iter __first, _Sent __last, _BinaryPredicate&& __pred) {
   __identity __proj;
   __first = std::__adjacent_find(__first, __last, __pred, __proj);
   if (__first != __last) {
@@ -50,7 +51,7 @@ __unique(_Iter __first, _Sent __last, _BinaryPredicate&& __pred) {
 template <class _ForwardIterator, class _BinaryPredicate>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 unique(_ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred) {
-  return std::__unique<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __pred).first;
+  return std::__unique_sorted_range<_ClassicAlgPolicy>(std::move(__first), std::move(__last), __pred).first;
 }
 
 template <class _ForwardIterator>
