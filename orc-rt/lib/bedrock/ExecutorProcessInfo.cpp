@@ -13,7 +13,8 @@
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include "orc-rt-internal/support/StringExtras.h"
-#include "orc-rt/support/Math.h"
+#include "orc-rt-internal/support/sys/Errno.h"
+#include "orc-rt/support/bit.h"
 
 #include <cassert>
 #include <cstring>
@@ -26,7 +27,7 @@ ExecutorProcessInfo::ExecutorProcessInfo(std::string Triple, size_t PageSize,
     : Triple(std::move(Triple)), PageSize(PageSize),
       CPUFeatures(std::move(CPUFeatures)) {
   assert(!this->Triple.empty() && "triple cannot be empty");
-  assert(isPowerOf2(this->PageSize) && "page-size is not a power of two");
+  assert(has_single_bit(this->PageSize) && "page-size is not a power of two");
 }
 
 /// Create an ExecutorProcessInfo, auto-detecting property values.
@@ -74,8 +75,11 @@ std::string ExecutorProcessInfo::makeTargetTriple(
 Expected<size_t> ExecutorProcessInfo::detectPageSize() noexcept {
   long PageSize = sysconf(_SC_PAGESIZE);
   if (PageSize == -1)
-    return make_error<StringError>(strerror(errno));
-  if (!isPowerOf2(PageSize))
+    return make_error<StringError>((StringOutputStream()
+                                    << "sysconf did not return a page size: "
+                                    << sys::strError(errno))
+                                       .str());
+  if (PageSize <= 0 || !has_single_bit(static_cast<size_t>(PageSize)))
     return make_error<StringError>((StringOutputStream()
                                     << "reported page size " << PageSize
                                     << " is not a power of two")

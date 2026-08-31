@@ -78,10 +78,6 @@ public:
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
 
-  bool
-  matchRcpSqrtToRsq(MachineInstr &MI,
-                    std::function<void(MachineIRBuilder &)> &MatchInfo) const;
-
   bool matchFDivSqrtToRsqF16(MachineInstr &MI) const;
   void applyFDivSqrtToRsqF16(MachineInstr &MI, const Register &X) const;
 
@@ -97,7 +93,7 @@ public:
   void applyCvtF32UByteN(MachineInstr &MI,
                          const CvtF32UByteMatchInfo &MatchInfo) const;
 
-  bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
+  bool matchRemoveFcanonicalize(MachineInstr &MI) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
   // signed buffer load instructions.
@@ -247,57 +243,6 @@ void AMDGPUPostLegalizerCombinerImpl::applyUCharToFloat(
   MI.eraseFromParent();
 }
 
-bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
-    MachineInstr &MI,
-    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
-  auto getRcpSrc = [=](const MachineInstr &MI) -> MachineInstr * {
-    if (!MI.getFlag(MachineInstr::FmContract))
-      return nullptr;
-
-    if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
-      if (GI->is(Intrinsic::amdgcn_rcp))
-        return MRI.getVRegDef(MI.getOperand(2).getReg());
-    }
-    return nullptr;
-  };
-
-  auto getSqrtSrc = [=](const MachineInstr &MI) -> MachineInstr * {
-    if (!MI.getFlag(MachineInstr::FmContract))
-      return nullptr;
-    if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
-      if (GI->is(Intrinsic::amdgcn_sqrt))
-        return MRI.getVRegDef(MI.getOperand(2).getReg());
-    }
-    MachineInstr *SqrtSrcMI = nullptr;
-    auto Match =
-        mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));
-    (void)Match;
-    return SqrtSrcMI;
-  };
-
-  MachineInstr *RcpSrcMI = nullptr, *SqrtSrcMI = nullptr;
-  // rcp(sqrt(x))
-  if ((RcpSrcMI = getRcpSrc(MI)) && (SqrtSrcMI = getSqrtSrc(*RcpSrcMI))) {
-    MatchInfo = [SqrtSrcMI, &MI](MachineIRBuilder &B) {
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)})
-          .addUse(SqrtSrcMI->getOperand(0).getReg())
-          .setMIFlags(MI.getFlags());
-    };
-    return true;
-  }
-
-  // sqrt(rcp(x))
-  if ((SqrtSrcMI = getSqrtSrc(MI)) && (RcpSrcMI = getRcpSrc(*SqrtSrcMI))) {
-    MatchInfo = [RcpSrcMI, &MI](MachineIRBuilder &B) {
-      B.buildIntrinsic(Intrinsic::amdgcn_rsq, {MI.getOperand(0)})
-          .addUse(RcpSrcMI->getOperand(0).getReg())
-          .setMIFlags(MI.getFlags());
-    };
-    return true;
-  }
-  return false;
-}
-
 bool AMDGPUPostLegalizerCombinerImpl::matchFDivSqrtToRsqF16(
     MachineInstr &MI) const {
   Register Sqrt = MI.getOperand(2).getReg();
@@ -364,11 +309,10 @@ void AMDGPUPostLegalizerCombinerImpl::applyCvtF32UByteN(
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
-    MachineInstr &MI, Register &Reg) const {
+    MachineInstr &MI) const {
   const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
-  Reg = MI.getOperand(1).getReg();
-  return TLI->isCanonicalized(Reg, MF);
+  return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF);
 }
 
 // The buffer_load_{i8, i16} intrinsics are initially lowered as
