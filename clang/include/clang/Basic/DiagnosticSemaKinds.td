@@ -12231,7 +12231,8 @@ def warn_omp_flatten_omitted_depth : Warning<
   "loops are perfectly nested">,
   InGroup<OpenMPClauses>;
 def note_omp_flatten_insert_depth : Note<
-  "insert 'depth(2)' to flatten only the outermost 2 loops">;
+  "add 'depth(2)' to silence this warning and make it explicit that only the "
+  "two outermost loops are flattened">;
 def err_omp_clause_not_supported_yet : Error<
   "'%0' clause is not yet supported on '#pragma omp %1' directive">;
 def err_omp_not_for : Error<

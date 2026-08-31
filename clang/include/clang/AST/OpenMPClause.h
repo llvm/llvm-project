@@ -1529,11 +1529,6 @@ public:
       : OMPClause(llvm::omp::OMPC_depth, StartLoc, EndLoc),
         LParenLoc(LParenLoc), Depth(Depth) {}
 
-  /// Build an empty 'depth' AST node for deserialization.
-  ///
-  /// \param C     Context of the AST.
-  static OMPDepthClause *CreateEmpty(const ASTContext &C);
-
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 

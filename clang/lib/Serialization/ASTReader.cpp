@@ -11509,7 +11509,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPPartialClause::CreateEmpty(Context);
     break;
   case llvm::omp::OMPC_depth:
-    C = OMPDepthClause::CreateEmpty(Context);
+    C = new (Context) OMPDepthClause();
     break;
   case llvm::omp::OMPC_looprange:
     C = OMPLoopRangeClause::CreateEmpty(Context);

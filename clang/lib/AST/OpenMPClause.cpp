@@ -1047,10 +1047,6 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
-OMPDepthClause *OMPDepthClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPDepthClause();
-}
-
 OMPLoopRangeClause *
 OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation FirstLoc,

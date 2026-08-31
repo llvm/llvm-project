@@ -16588,8 +16588,9 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     }
     if (!DepthClause && Found >= 3) {
       Diag(StartLoc, diag::warn_omp_flatten_omitted_depth);
-      Diag(StartLoc, diag::note_omp_flatten_insert_depth)
-          << FixItHint::CreateInsertion(EndLoc, " depth(2)");
+      if (SemaRef.getLangOpts().OpenMP >= 61)
+        Diag(StartLoc, diag::note_omp_flatten_insert_depth)
+            << FixItHint::CreateInsertion(EndLoc, " depth(2)");
     }
   }
 
@@ -16706,18 +16707,16 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     ExprResult TripCount64 = BuildTripCount(/*Bits=*/64);
     if (!TripCount64.isUsable())
       return StmtError();
-    if (fitsInto(
-            /*Bits=*/32,
-            TripCount64.get()->getType()->hasSignedIntegerRepresentation(),
-            TripCount64.get(), SemaRef)) {
+    TripCount = TripCount64;
+    if (TripCount64.get()->isIntegerConstantExpr(Context)) {
       ExprResult TripCount32 = BuildTripCount(/*Bits=*/32);
       if (TripCount32.isUsable() &&
-          Context.getTypeSize(TripCount32.get()->getType()) == 32)
+          Context.getTypeSize(TripCount32.get()->getType()) == 32 &&
+          fitsInto(
+              /*Bits=*/32,
+              TripCount32.get()->getType()->hasSignedIntegerRepresentation(),
+              TripCount64.get(), SemaRef))
         TripCount = TripCount32;
-      else
-        TripCount = TripCount64;
-    } else {
-      TripCount = TripCount64;
     }
   }
   if (!TripCount.isUsable())
