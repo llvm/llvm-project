@@ -2749,14 +2749,28 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
   // FIXME: This should probably be illegal and split earlier.
   if (I.getOpcode() == AMDGPU::G_ANYEXT) {
-    if (DstSize <= 32)
-      return selectCOPY(I);
-
     const TargetRegisterClass *SrcRC =
         TRI.getRegClassForTypeOnBank(SrcTy, *SrcBank);
     const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
     const TargetRegisterClass *DstRC =
         TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
+
+    if (DstSize <= 32) {
+      if (STI.useRealTrue16Insts() && DstSize == 32 &&
+          SrcBank->getID() == AMDGPU::VGPRRegBankID) {
+        Register UndefReg = MRI->createVirtualRegister(SrcRC);
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+            .addReg(SrcReg)
+            .addImm(AMDGPU::lo16)
+            .addReg(UndefReg)
+            .addImm(AMDGPU::hi16);
+        I.eraseFromParent();
+        return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) &&
+               RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI);
+      } else
+        return selectCOPY(I);
+    }
 
     Register UndefReg = MRI->createVirtualRegister(SrcRC);
     BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);

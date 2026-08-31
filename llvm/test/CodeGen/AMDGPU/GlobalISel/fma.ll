@@ -152,7 +152,8 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX11-TRUE16-LABEL: v_fma_f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, v2.l
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_fma_f16:
@@ -168,7 +169,8 @@ define half @v_fma_f16(half %x, half %y, half %z) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    v_fmac_f16_e32 v2.l, v0.l, v1.l
+; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
   ret half %fma
@@ -1527,7 +1529,7 @@ define amdgpu_ps half @fma_s16_uniform(half inreg %a, half inreg %b, half inreg 
 ; GFX11-TRUE16-LABEL: fma_s16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, s1, s0, v0.l
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e64 v0.l, s0, s1
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: fma_s16_uniform:

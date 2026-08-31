@@ -47,8 +47,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_16 = COPY [[COPY4]].lo16
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY8]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY5]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -95,8 +96,9 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_409
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_16 = COPY [[COPY4]].lo16
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFSET_exact [[COPY7]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY5]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFSET_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 4095, i32 %soffset, i32 0)
   ret void
