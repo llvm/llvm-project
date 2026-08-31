@@ -128,6 +128,7 @@ set(LLVM_TEST_DEPENDS
   llvm-objdump
   llvm-opt-fuzzer
   llvm-opt-report
+  llvm-ordergen
   llvm-offload-binary
   llvm-offload-wrapper
   llvm-otool
