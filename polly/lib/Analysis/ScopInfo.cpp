@@ -1696,6 +1696,13 @@ void Scop::removeStmtNotInDomainMap() {
     // merge PHIs and repair use sites after versioning has pruned the defining
     // statement from optimized copy (due to its null/empty domain). Without
     // this, Polly may generate invalid IR with broken dominance.
+    // ----------- TODO ----------
+    // If domain information is available before memory accesses are
+    // determined for a ScopStmt, then we can remove this SAI registration
+    // for escaping scalars whose containing ScopStmt's domain is actually
+    // invalid/null, and instead do this in
+    // ScopBuilder::buildEscapingDependences. A related TODO is also mentioned
+    // there.
     for (MemoryAccess *MA : Stmt) {
       if (!MA->isMustWrite() || !MA->isOriginalValueKind())
         continue;
