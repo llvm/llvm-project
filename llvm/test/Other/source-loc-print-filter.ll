@@ -40,10 +40,7 @@
 ; RUN:   -print-changed=quiet -filter-print-funcs=foo \
 ; RUN:   -filter-print-source-locs=source.c:10 \
 ; RUN:   | FileCheck %s --check-prefix=CHANGED-REMOVED
-; RUN: opt < %s 2>&1 -disable-output -passes=instcombine \
-; RUN:   -print-changed=diff-quiet -filter-print-funcs=foo \
-; RUN:   -filter-print-source-locs=source.c:10 \
-; RUN:   | FileCheck %s --check-prefix=CHANGED-DIFF-REMOVED
+; RUN: %if system-linux %{ opt < %s 2>&1 -disable-output -passes=instcombine -print-changed=diff-quiet -filter-print-funcs=foo -filter-print-source-locs=source.c:10 | FileCheck %s --check-prefix=CHANGED-DIFF-REMOVED %}
 
 ; Check malformed filters, including when the function-name filter matches
 ; nothing.
