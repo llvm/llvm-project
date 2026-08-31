@@ -10,18 +10,17 @@ module m
   integer, parameter :: x3 = 1
   bind(c) :: x3
 
-  !ERROR: 'x4' may not have both the ALLOCATABLE and PARAMETER attributes
-  !ERROR: 'x4' may not have both the ASYNCHRONOUS and PARAMETER attributes
-  !ERROR: 'x4' may not have both the SAVE and PARAMETER attributes
   !ERROR: 'x4' may not have both the TARGET and PARAMETER attributes
-  !ERROR: 'x4' may not have both the VOLATILE and PARAMETER attributes
-  !ERROR: The entity 'x4' with an explicit SAVE attribute must be a variable, procedure pointer, or COMMON block
-  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
   integer, parameter :: x4 = 1
+  !ERROR: 'x4' may not have both the ALLOCATABLE and PARAMETER attributes
   allocatable x4
+  !ERROR: 'x4' may not have both the ASYNCHRONOUS and PARAMETER attributes
   asynchronous x4
+  !ERROR: 'x4' may not have both the SAVE and PARAMETER attributes
   save x4
+  !ERROR: 'x4' may not have both the TARGET and PARAMETER attributes
   target x4
+  !ERROR: 'x4' may not have both the VOLATILE and PARAMETER attributes
   volatile x4
 
   type :: my_type1

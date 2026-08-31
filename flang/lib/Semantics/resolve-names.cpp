@@ -679,6 +679,7 @@ public:
           } else if (derivedType->CanReplaceDetails(details)) {
             // was forward-referenced
             CheckDuplicatedAttrs(name, *symbol, attrs);
+            CheckConflictingAttrs(name, *symbol, attrs);
             SetExplicitAttrs(*derivedType, attrs);
             derivedType->set_details(std::move(details));
           } else {
@@ -715,11 +716,13 @@ public:
         }
       }
       CheckDuplicatedAttrs(name, *symbol, attrs);
+      CheckConflictingAttrs(name, *symbol, attrs);
       SetExplicitAttrs(*symbol, attrs);
       symbol->set_details(std::move(details));
       return *symbol;
     } else if constexpr (std::is_same_v<UnknownDetails, D>) {
       CheckDuplicatedAttrs(name, *symbol, attrs);
+      CheckConflictingAttrs(name, *symbol, attrs);
       SetExplicitAttrs(*symbol, attrs);
       return *symbol;
     } else {
@@ -751,6 +754,7 @@ public:
   // C815 duplicated attribute checking; returns false on error
   bool CheckDuplicatedAttr(SourceName, Symbol &, Attr);
   bool CheckDuplicatedAttrs(SourceName, Symbol &, Attrs);
+  void CheckConflictingAttrs(SourceName, Symbol &, Attrs newAttrs);
 
   void SetExplicitAttr(Symbol &symbol, Attr attr) const {
     symbol.attrs().set(attr);
@@ -3389,6 +3393,7 @@ Symbol &ScopeHandler::MakeSymbol(
     Scope &scope, const SourceName &name, Attrs attrs) {
   if (Symbol * symbol{FindInScope(scope, name)}) {
     CheckDuplicatedAttrs(name, *symbol, attrs);
+    CheckConflictingAttrs(name, *symbol, attrs);
     SetExplicitAttrs(*symbol, attrs);
     return *symbol;
   } else {
@@ -3816,6 +3821,31 @@ bool ScopeHandler::CheckDuplicatedAttrs(
   return ok;
 }
 
+void ScopeHandler::CheckConflictingAttrs(
+    SourceName source, Symbol &symbol, Attrs newAttrs) {
+  static const std::pair<Attr, Attr> conflicts[] = {
+      {Attr::POINTER, Attr::ALLOCATABLE},
+      {Attr::POINTER, Attr::TARGET},
+      {Attr::POINTER, Attr::INTRINSIC},
+      {Attr::POINTER, Attr::PARAMETER},
+      {Attr::ALLOCATABLE, Attr::PARAMETER},
+      {Attr::ASYNCHRONOUS, Attr::PARAMETER},
+      {Attr::SAVE, Attr::PARAMETER},
+      {Attr::TARGET, Attr::PARAMETER},
+      {Attr::VOLATILE, Attr::PARAMETER},
+  };
+  bool hasConflicts = false;
+  for (auto [a1, a2] : conflicts) {
+    if ((newAttrs.test(a1) && symbol.attrs().test(a2)) ||
+        (newAttrs.test(a2) && symbol.attrs().test(a1))) {
+      Say(source, "'%s' may not have both the %s and %s attributes"_err_en_US,
+          symbol.name(), AttrToString(a1), AttrToString(a2));
+      hasConflicts = true;
+    }
+  }
+  if (hasConflicts)
+    context().SetError(symbol);
+}
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
     std::optional<common::CUDADataAttr> attr) {
   if (attr) {
@@ -5627,6 +5657,7 @@ void SubprogramVisitor::CreateEntry(
           // Forward reference to ENTRY from a generic interface
           entrySymbol = specific;
           CheckDuplicatedAttrs(entryName.source, *entrySymbol, attrs);
+          CheckConflictingAttrs(entryName.source, *entrySymbol, attrs);
           SetExplicitAttrs(*entrySymbol, attrs);
         }
       }
@@ -6676,6 +6707,7 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     HandleSaveName(name.source, Attrs{attr});
     SetExplicitAttr(*symbol, attr);
   }
+  CheckConflictingAttrs(name.source, *symbol, Attrs{attr});
   return *symbol;
 }
 // C1107

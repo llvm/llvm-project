@@ -15,8 +15,8 @@ program main
   !ERROR: 'inner' cannot have the POINTER attribute
   pointer inner
   real obj
-  !ERROR: 'ip' may not have both the POINTER and PARAMETER attributes
   integer, parameter :: ip = 123
+  !ERROR: 'ip' may not have both the POINTER and PARAMETER attributes
   pointer ip
   type dt; end type
   !ERROR: 'dt' cannot have the POINTER attribute
