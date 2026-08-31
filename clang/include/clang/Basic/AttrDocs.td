@@ -1033,6 +1033,15 @@ the opposite of inlining. It can help to reduce code size.
   }];
 }
 
+def NoIPADocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute prevents interprocedural optimizations that require
+analyzing the annotated function's body. It also prevents inlining unless
+``always_inline`` is specified.
+  }];
+}
+
 def MustTailDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

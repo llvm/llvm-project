@@ -3263,6 +3263,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
+  if (D->hasAttr<NoIPAAttr>())
+    B.addAttribute(llvm::Attribute::NoIPA);
+
   F->addFnAttrs(B);
 
   llvm::MaybeAlign ExplicitAlignment;

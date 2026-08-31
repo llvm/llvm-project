@@ -2429,6 +2429,13 @@ def NoOutline : DeclOrStmtAttr {
   let SimpleHandler = true;
 }
 
+def NoIPA : InheritableAttr {
+  let Spellings = [GCC<"noipa">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [NoIPADocs];
+  let SimpleHandler = 1;
+}
+
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
