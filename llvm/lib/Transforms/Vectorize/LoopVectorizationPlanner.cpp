@@ -13,11 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPlanHelpers.h"
 #include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -235,6 +237,112 @@ ElementCount VFSelectionContext::clampVFByMaxTripCount(
   return VF;
 }
 
+unsigned
+VFSelectionContext::getMaxPartialReductionScaleFactor(bool Scalable) const {
+  using namespace llvm::PatternMatch;
+
+  // Match the "product" operand of a reduction against the shapes that the
+  // target can lower as a (dot-product style) partial reduction, filling in the
+  // extended source types and extend kinds. This mirrors the VPlan-level
+  // matching in matchExtendedReductionOperand (VPlanTransforms.cpp); keeping it
+  // a subset ensures we only widen the VF for loops that will actually form a
+  // partial reduction.
+  auto MatchProduct =
+      [](Value *P, Type *&SrcTyA, Type *&SrcTyB,
+         TargetTransformInfo::PartialReductionExtendKind &ExtA,
+         TargetTransformInfo::PartialReductionExtendKind &ExtB) -> bool {
+    // Look through an outer extend, i.e. ext(mul(...)). The inner source types
+    // drive the packing ratio; the outer extend is folded into the inner
+    // extends when the partial reduction is formed, so the inner extend kinds
+    // must match the outer one.
+    std::optional<TargetTransformInfo::PartialReductionExtendKind> OuterExt;
+    Instruction *OuterI;
+    Value *Inner;
+    if (match(P, m_CombineAnd(m_Instruction(OuterI),
+                              m_ZExtOrSExt(m_Value(Inner))))) {
+      OuterExt = TargetTransformInfo::getPartialReductionExtendKind(OuterI);
+      P = Inner;
+    }
+
+    Value *A, *B;
+    Instruction *ExtAI, *ExtBI;
+    const APInt *C;
+    if (match(P, m_Mul(m_CombineAnd(m_Instruction(ExtAI),
+                                    m_ZExtOrSExt(m_Value(A))),
+                       m_CombineAnd(m_Instruction(ExtBI),
+                                    m_ZExtOrSExt(m_Value(B)))))) {
+      // mul(ext(A), ext(B)).
+      SrcTyA = A->getType();
+      SrcTyB = B->getType();
+      ExtA = TargetTransformInfo::getPartialReductionExtendKind(ExtAI);
+      ExtB = TargetTransformInfo::getPartialReductionExtendKind(ExtBI);
+    } else if (match(P, m_Mul(m_CombineAnd(m_Instruction(ExtAI),
+                                           m_ZExtOrSExt(m_Value(A))),
+                              m_APInt(C)))) {
+      // mul(ext(A), Constant), where the constant can be treated as if it had
+      // been narrowed to the source type and extended the same way as A.
+      SrcTyA = A->getType();
+      ExtA = TargetTransformInfo::getPartialReductionExtendKind(ExtAI);
+      if (!canConstantBeExtended(C, SrcTyA, ExtA))
+        return false;
+      SrcTyB = SrcTyA;
+      ExtB = ExtA;
+    } else {
+      return false;
+    }
+
+    // For folding to be valid, the inner extends must match the outer one.
+    if (OuterExt && (ExtA != *OuterExt || ExtB != *OuterExt))
+      return false;
+    return true;
+  };
+
+  unsigned MaxScale = 0;
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    // Only integer add/sub reductions can be lowered as partial reductions. A
+    // subtracting chain accumulates the negated products but is otherwise
+    // lowered (and costed) like an add.
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    if (RK != RecurKind::Add && RK != RecurKind::Sub)
+      continue;
+
+    Instruction *ExitInst = RdxDesc.getLoopExitInstr();
+    if (!ExitInst)
+      continue;
+
+    Type *AccumTy = RdxDesc.getRecurrenceType();
+    Type *SrcTyA, *SrcTyB;
+    TargetTransformInfo::PartialReductionExtendKind ExtA, ExtB;
+    // The product is the non-accumulator operand: for an add it can be either
+    // operand, for a sub it is the (negated) subtrahend.
+    if (RK == RecurKind::Add ? !(MatchProduct(ExitInst->getOperand(0), SrcTyA,
+                                              SrcTyB, ExtA, ExtB) ||
+                                 MatchProduct(ExitInst->getOperand(1), SrcTyA,
+                                              SrcTyB, ExtA, ExtB))
+                             : !MatchProduct(ExitInst->getOperand(1), SrcTyA,
+                                             SrcTyB, ExtA, ExtB))
+      continue;
+
+    unsigned SrcBits = SrcTyA->getScalarSizeInBits();
+    unsigned AccumBits = AccumTy->getScalarSizeInBits();
+    if (SrcBits == 0 || AccumBits <= SrcBits || AccumBits % SrcBits != 0)
+      continue;
+
+    // A partial reduction packs Ratio input elements into each accumulator
+    // element, so a valid VF must be a multiple of Ratio. Query the target with
+    // such a VF to check that it can lower this reduction. A sub reduction is
+    // costed as an add (its products are negated before accumulating).
+    unsigned Ratio = AccumBits / SrcBits;
+    ElementCount VF = ElementCount::get(Ratio, Scalable);
+    InstructionCost Cost = TTI.getPartialReductionCost(
+        Instruction::Add, SrcTyA, SrcTyB, AccumTy, VF, ExtA, ExtB,
+        Instruction::Mul, CostKind, std::nullopt);
+    if (Cost.isValid())
+      MaxScale = std::max(MaxScale, Ratio);
+  }
+  return MaxScale;
+}
+
 ElementCount VFSelectionContext::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
     ElementCount MaxSafeVF, unsigned UserIC, bool FoldTailByMasking,
@@ -256,6 +364,18 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   auto MaxVectorElementCount = ElementCount::get(
       llvm::bit_floor(WidestRegister.getKnownMinValue() / WidestType),
       ComputeScalableMaxVF);
+
+  // The widest type is normally the reduction/accumulator type. For a
+  // dot-product style reduction the target can lower as a partial reduction,
+  // the accumulator only holds VF/Ratio elements, so the widest-type bound
+  // above can be too small to even form the partial reduction (which requires
+  // VF to be a multiple of Ratio). Widen the bound to the ratio in that case
+  // so the partial reduction becomes legal.
+  if (unsigned Ratio = getMaxPartialReductionScaleFactor(ComputeScalableMaxVF))
+    MaxVectorElementCount = ElementCount::get(
+        std::max<unsigned>(MaxVectorElementCount.getKnownMinValue(), Ratio),
+        ComputeScalableMaxVF);
+
   MaxVectorElementCount = MinVF(MaxVectorElementCount, MaxSafeVF);
   LLVM_DEBUG(dbgs() << "LV: The Widest register safe to use is: "
                     << (MaxVectorElementCount * WidestType) << " bits.\n");
