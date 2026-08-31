@@ -68,8 +68,8 @@ func.func @log1p(%arg0 : f32) {
 // CHECK-SAME: f32
 func.func @log1p_fmf(%arg0 : f32) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %arg0 {fastmathFlags = #llvm.fastmath<fast>} : f32
-  // CHECK: %[[LOG:.*]] = llvm.intr.log(%[[ADD]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %arg0 fastmath<fast> : f32
+  // CHECK: %[[LOG:.*]] = llvm.intr.log(%[[ADD]]) fastmath<fast> : (f32) -> f32
   %0 = math.log1p %arg0 fastmath<fast> : f32
   func.return
 }
@@ -93,8 +93,8 @@ func.func @log1p_2dvector(%arg0 : vector<4x3xf32>) {
 func.func @log1p_2dvector_fmf(%arg0 : vector<4x3xf32>) {
   // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
-  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[EXTRACT]] {fastmathFlags = #llvm.fastmath<fast>} : vector<3xf32>
-  // CHECK: %[[LOG:.*]] = llvm.intr.log(%[[ADD]]) {fastmathFlags = #llvm.fastmath<fast>} : (vector<3xf32>) -> vector<3xf32>
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[EXTRACT]] fastmath<fast> : vector<3xf32>
+  // CHECK: %[[LOG:.*]] = llvm.intr.log(%[[ADD]]) fastmath<fast> : (vector<3xf32>) -> vector<3xf32>
   // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[LOG]], %{{.*}}[0] : !llvm.array<4 x vector<3xf32>>
   %0 = math.log1p %arg0 fastmath<fast> : vector<4x3xf32>
   func.return
@@ -143,8 +143,8 @@ func.func @expm1(%arg0 : f32) {
 // CHECK-SAME: f32
 func.func @expm1_fmf(%arg0 : f32) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
-  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] {fastmathFlags = #llvm.fastmath<fast>} : f32
+  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%arg0) fastmath<fast> : (f32) -> f32
+  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] fastmath<fast> : f32
   %0 = math.expm1 %arg0 fastmath<fast> : f32
   func.return
 }
@@ -179,8 +179,8 @@ func.func @expm1_scalable_vector(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
 // CHECK-SAME: vector<4xf32>
 func.func @expm1_vector_fmf(%arg0 : vector<4xf32>) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
-  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (vector<4xf32>) -> vector<4xf32>
-  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] {fastmathFlags = #llvm.fastmath<fast>} : vector<4xf32>
+  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%arg0) fastmath<fast> : (vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] fastmath<fast> : vector<4xf32>
   %0 = math.expm1 %arg0 fastmath<fast> : vector<4xf32>
   func.return
 }
@@ -306,13 +306,13 @@ func.func @atan2_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) {
 // CHECK-LABEL: func @inverse_trigonometrics_fmf
 // CHECK-SAME: [[ARG0:%.+]]: f32
 func.func @inverse_trigonometrics_fmf(%arg0: f32) {
-  // CHECK: llvm.intr.asin([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  // CHECK: llvm.intr.asin([[ARG0]]) fastmath<fast> : (f32) -> f32
   %0 = math.asin %arg0 fastmath<fast> : f32
 
-  // CHECK: llvm.intr.acos([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  // CHECK: llvm.intr.acos([[ARG0]]) fastmath<fast> : (f32) -> f32
   %1 = math.acos %arg0 fastmath<fast> : f32
 
-  // CHECK: llvm.intr.atan([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  // CHECK: llvm.intr.atan([[ARG0]]) fastmath<fast> : (f32) -> f32
   %2 = math.atan %arg0 fastmath<fast> : f32
   func.return
 }
@@ -322,7 +322,7 @@ func.func @inverse_trigonometrics_fmf(%arg0: f32) {
 // CHECK-LABEL: func @atan2_fmf
 // CHECK-SAME: [[ARG0:%.+]]: f32, [[ARG1:%.+]]: f32
 func.func @atan2_fmf(%arg0: f32, %arg1: f32) {
-  // CHECK: llvm.intr.atan2([[ARG0]], [[ARG1]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  // CHECK: llvm.intr.atan2([[ARG0]], [[ARG1]]) fastmath<fast> : (f32, f32) -> f32
   %0 = math.atan2 %arg0, %arg1 fastmath<fast> : f32
   func.return
 }
@@ -493,8 +493,8 @@ func.func @rsqrt_double(%arg0 : f64) {
 // CHECK-SAME: f64
 func.func @rsqrt_double_fmf(%arg0 : f64) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
-  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f64) -> f64
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] {fastmathFlags = #llvm.fastmath<fast>} : f64
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%arg0) fastmath<fast> : (f64) -> f64
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] fastmath<fast> : f64
   %0 = math.rsqrt %arg0 fastmath<fast> : f64
   func.return
 }
@@ -529,8 +529,8 @@ func.func @rsqrt_scalable_vector(%arg0 : vector<[4]xf32>) ->  vector<[4]xf32>{
 // CHECK-SAME: vector<4xf32>
 func.func @rsqrt_vector_fmf(%arg0 : vector<4xf32>) {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
-  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (vector<4xf32>) -> vector<4xf32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] {fastmathFlags = #llvm.fastmath<fast>} : vector<4xf32>
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%arg0) fastmath<fast> : (vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] fastmath<fast> : vector<4xf32>
   %0 = math.rsqrt %arg0 fastmath<fast> : vector<4xf32>
   func.return
 }
@@ -541,8 +541,8 @@ func.func @rsqrt_vector_fmf(%arg0 : vector<4xf32>) {
 // CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
 func.func @rsqrt_scalable_vector_fmf(%arg0 : vector<[4]xf32>) -> vector<[4]xf32> {
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
-  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[VEC]]) {fastmathFlags = #llvm.fastmath<fast>} : (vector<[4]xf32>) -> vector<[4]xf32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] {fastmathFlags = #llvm.fastmath<fast>} : vector<[4]xf32>
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[VEC]]) fastmath<fast> : (vector<[4]xf32>) -> vector<[4]xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] fastmath<fast> : vector<[4]xf32>
   %0 = math.rsqrt %arg0 fastmath<fast> : vector<[4]xf32>
   func.return %0 : vector<[4]xf32>
 }
@@ -629,13 +629,13 @@ func.func @trunc(%arg0 : f32) {
 // CHECK-LABEL: func @fastmath(
 // CHECK-SAME: f32
 func.func @fastmath(%arg0 : f32, %arg1 : vector<4xf32>) {
-  // CHECK: llvm.intr.trunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  // CHECK: llvm.intr.trunc(%arg0) fastmath<fast> : (f32) -> f32
   %0 = math.trunc %arg0 fastmath<fast> : f32
-  // CHECK: llvm.intr.pow(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+  // CHECK: llvm.intr.pow(%arg0, %arg0) fastmath<afn> : (f32, f32) -> f32
   %1 = math.powf %arg0, %arg0 fastmath<afn> : f32
   // CHECK: llvm.intr.sqrt(%arg0) : (f32) -> f32
   %2 = math.sqrt %arg0 fastmath<none> : f32
-  // CHECK: llvm.intr.fma(%arg0, %arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32, f32) -> f32
+  // CHECK: llvm.intr.fma(%arg0, %arg0, %arg0) fastmath<fast> : (f32, f32, f32) -> f32
   %3 = math.fma %arg0, %arg0, %arg0 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
   func.return
 }

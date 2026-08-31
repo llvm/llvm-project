@@ -17,10 +17,10 @@
 // CHECK:    omp.simd nontemporal(%[[VAL5]], %[[VAL3]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:      omp.loop_nest (%{{.*}}) : i32 = (%[[CONST_VAL5]]) to (%[[VAL6]]) inclusive step (%[[CONST_VAL5]]) {
 // CHECK:        llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
-// CHECK:        %[[VAL8:.*]] = llvm.load %[[VAL5]] {nontemporal} : !llvm.ptr -> i32
+// CHECK:        %[[VAL8:.*]] = llvm.load %[[VAL5]] <nontemporal> : !llvm.ptr -> i32
 // CHECK:        %[[VAL9:.*]] = llvm.load %[[VAL4]] : !llvm.ptr -> i32
 // CHECK:        %[[VAL10:.*]] = llvm.add %[[VAL8]], %[[VAL9]] : i32
-// CHECK:        llvm.store %[[VAL10]], %[[VAL3]] {nontemporal} : i32, !llvm.ptr
+// CHECK:        llvm.store %[[VAL10]], %[[VAL3]] <nontemporal> : i32, !llvm.ptr
 // CHECK:        omp.yield
 // CHECK:      }
 // CHECK:    }
@@ -73,10 +73,10 @@
 // CHECK:        %[[VAL15:.*]] = llvm.add %[[VAL14]], %[[VAL11]] overflow<nsw, nuw> : i64
 // CHECK:        %[[VAL16:.*]] = llvm.mul %[[VAL10]], %[[VAL8]] overflow<nsw, nuw> : i64
 // CHECK:        %[[VAL17:.*]] = llvm.getelementptr nusw|nuw %[[VAL4]][%[[VAL15]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
-// CHECK:        %[[VAL18:.*]] = llvm.load %[[VAL17]] {nontemporal} : !llvm.ptr -> i32
+// CHECK:        %[[VAL18:.*]] = llvm.load %[[VAL17]] <nontemporal> : !llvm.ptr -> i32
 // CHECK:        %[[VAL19:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL20:.*]] = llvm.add %[[VAL18]], %[[VAL19]] : i32
-// CHECK:        llvm.store %[[VAL20]], %[[VAL17]] {nontemporal} : i32, !llvm.ptr
+// CHECK:        llvm.store %[[VAL20]], %[[VAL17]] <nontemporal> : i32, !llvm.ptr
 // CHECK:        omp.yield
 // CHECK:      }
 // CHECK:    }

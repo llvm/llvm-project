@@ -49,7 +49,7 @@ llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 // -----
 
 func.func @icmp_non_string(%arg0 : i32, %arg1 : i16) {
-  // expected-error@+1 {{invalid kind of attribute specified}}
+  // expected-error@+1 {{expected string}}
   llvm.icmp 42 %arg0, %arg0 : i32
   return
 }
@@ -129,7 +129,7 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
 
 func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
   // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
-  %1 = "llvm.getelementptr"(%base) {elem_type = f32, rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr) -> !llvm.ptr
+  %1 = "llvm.getelementptr"(%base) <{elem_type = f32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr) -> !llvm.ptr
 }
 
 // -----
@@ -143,35 +143,35 @@ func.func @load_non_llvm_type(%foo : memref<f32>) {
 
 func.func @load_syncscope(%ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
-  %1 = "llvm.load"(%ptr) {syncscope = "singlethread"} : (!llvm.ptr) -> (f32)
+  %1 = "llvm.load"(%ptr) <{syncscope = "singlethread"}> : (!llvm.ptr) -> (f32)
 }
 
 // -----
 
 func.func @load_unsupported_ordering(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported ordering 'release'}}
-  %1 = llvm.load %ptr atomic release {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic release <alignment = 4> : !llvm.ptr -> f32
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'f80' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> f80
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> f80
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i1
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> i1
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i33' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i33
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> i33
 }
 
 // -----
@@ -185,35 +185,35 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
-  "llvm.store"(%val, %ptr) {syncscope = "singlethread"} : (f32, !llvm.ptr) -> ()
+  "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
 }
 
 // -----
 
 func.func @store_unsupported_ordering(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported ordering 'acquire'}}
-  llvm.store %val, %ptr atomic acquire {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic acquire <alignment = 4> : f32, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : f80, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'f80' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : f80, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : f80, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : i1, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i1, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : i1, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : i48, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i48' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i48, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : i48, !llvm.ptr
 }
 
 // -----
@@ -227,7 +227,7 @@ func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
 
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
-  "llvm.call"() {op_bundle_sizes = array<i32>} : () -> ()
+  "llvm.call"() <{op_bundle_sizes = array<i32>}> : () -> ()
   llvm.return
 }
 
@@ -311,7 +311,7 @@ func.func @call_non_llvm() {
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
-  "llvm.call"(%arg0) {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (tensor<*xi32>) -> ()
+  "llvm.call"(%arg0) <{operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>}> : (tensor<*xi32>) -> ()
   llvm.return
 }
 
@@ -590,7 +590,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = array<i64: 0>} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) <{position = array<i64: 0>}> : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -598,7 +598,7 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = array<i64: 1>}
+  %b = "llvm.extractvalue"(%a) <{position = array<i64: 1>}>
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }
@@ -785,7 +785,7 @@ llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
+  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) <{bin_op=11, ordering=1}> : (!llvm.ptr, f32) -> i32
   llvm.return
 }
 
@@ -833,7 +833,7 @@ func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
 
 func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that operand #1 and operand #2 have the same type}}
-  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
+  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) <{success_ordering=2,failure_ordering=2}> : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
   llvm.return
 }
 
@@ -841,7 +841,7 @@ func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 
 
 func.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that result #0 has an LLVM struct type consisting of the type of operand #2 and a bool}}
-  %0 = "llvm.cmpxchg"(%ptr, %i64, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i64, i64) -> !llvm.struct<(i64, i64)>
+  %0 = "llvm.cmpxchg"(%ptr, %i64, %i64) <{success_ordering=2,failure_ordering=2}> : (!llvm.ptr, i64, i64) -> !llvm.struct<(i64, i64)>
   llvm.return
 }
 
@@ -1025,7 +1025,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2(%arg0, %arg0 : i32, i32)
-  ] {branch_weights = array<i32: 13, 17, 19>}
+  ] weights([13, 17, 19])
 
 ^bb1: // pred: ^bb0
   llvm.return
@@ -1065,7 +1065,7 @@ llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr) {
       // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
-      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr -> i32
+      %0 = llvm.load %arg0 <access_groups = [@func1]> : !llvm.ptr -> i32
       llvm.return
   }
   llvm.func @func1() {
@@ -1078,11 +1078,8 @@ module {
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
-      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "access_groups" = [@metadata::@scope] } : !llvm.ptr, i32
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic <access_groups = ["test"]> : !llvm.ptr, i32
       llvm.return
-  }
-  llvm.metadata @metadata {
-    llvm.func @scope()
   }
 }
 
@@ -1091,7 +1088,7 @@ module {
 module {
   llvm.func @aliasScope(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{attribute 'alias_scopes' failed to satisfy constraint: LLVM dialect alias scope array}}
-      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "alias_scopes" = "test" } : !llvm.ptr, i32
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic <alias_scopes = ["test"]> : !llvm.ptr, i32
       llvm.return
   }
 }
@@ -1101,7 +1098,7 @@ module {
 module {
   llvm.func @noAliasScopes(%arg0 : !llvm.ptr) {
       // expected-error@below {{attribute 'noalias_scopes' failed to satisfy constraint: LLVM dialect alias scope array}}
-      %0 = llvm.load %arg0 { "noalias_scopes" = "test" } : !llvm.ptr -> i32
+      %0 = llvm.load %arg0 <noalias_scopes = ["test"]> : !llvm.ptr -> i32
       llvm.return
   }
 }
@@ -1489,14 +1486,14 @@ func.func @invalid_target_ext_alloca() {
 
 func.func @invalid_target_ext_load(%arg0 : !llvm.ptr) {
   // expected-error@+1 {{result #0 must be LLVM type with size, but got '!llvm.target<"no_load">'}}
-  %0 = llvm.load %arg0 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"no_load">
+  %0 = llvm.load %arg0 <alignment = 8> : !llvm.ptr -> !llvm.target<"no_load">
 }
 
 // -----
 
 func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
   // expected-error@+1 {{unsupported type '!llvm.target<"spirv.Event">' for atomic access}}
-  %0 = llvm.load %arg0 atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
+  %0 = llvm.load %arg0 atomic monotonic <alignment = 8> : !llvm.ptr -> !llvm.target<"spirv.Event">
 }
 
 // -----
@@ -2177,19 +2174,19 @@ llvm.func @invalid_xevm_mma_mx(%loaded_c_casted: vector<4xf32>, %loaded_a: vecto
 
 llvm.func external @resolve_foo() -> !llvm.ptr attributes {dso_local}
 // expected-error@+1 {{'llvm.mlir.ifunc' op resolver must be a definition}}
-llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
 
 // -----
 
 llvm.mlir.global external @resolve_foo() : !llvm.ptr
 // expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
-llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
 
 // -----
 
 llvm.func external @resolve_foo() -> !llvm.ptr
 // expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
-llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
 
 // -----
 
@@ -2199,7 +2196,7 @@ llvm.mlir.alias external @alias_resolver : !llvm.ptr {
   llvm.return %0 : !llvm.ptr
 }
 // expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
-llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver {dso_local}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver dso_local
 
 // -----
 

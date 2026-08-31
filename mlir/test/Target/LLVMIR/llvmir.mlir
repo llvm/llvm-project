@@ -1662,7 +1662,7 @@ llvm.func @atomicrmw(
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1678,7 +1678,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %val: i32) {
   // CHECK:  cmpxchg weak volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2089,9 +2089,9 @@ llvm.func @nontemporal_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: !nontemporal ![[NODE:[0-9]+]]
-  llvm.store %val, %0 {nontemporal} : i32, !llvm.ptr
+  llvm.store %val, %0 <nontemporal> : i32, !llvm.ptr
   // CHECK: !nontemporal ![[NODE]]
-  %1 = llvm.load %0 {nontemporal} : !llvm.ptr -> i32
+  %1 = llvm.load %0 <nontemporal> : !llvm.ptr -> i32
   llvm.return
 }
 
@@ -2127,17 +2127,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
-  %1 = llvm.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic acquire <alignment = 4> : !llvm.ptr -> f32
   // CHECK: load atomic
   // CHECK-SAME:  syncscope("singlethread") acquire, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire <alignment = 4> : !llvm.ptr -> f32
 
   // CHECK: store atomic
   // CHECK-SAME:  release, align 4
-  llvm.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %ptr atomic release <alignment = 4> : f32, !llvm.ptr
   // CHECK: store atomic
   // CHECK-SAME:  syncscope("singlethread") release, align 4
-  llvm.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %2, %ptr atomic syncscope("singlethread") release <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 
@@ -2242,17 +2242,17 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 // CHECK: {{.*}} = fmul nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fdiv nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = frem nnan ninf float {{.*}}, {{.*}}
-  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %0 = llvm.fadd %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %1 = llvm.fsub %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %2 = llvm.fmul %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %3 = llvm.fdiv %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %4 = llvm.frem %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fcmp nnan ninf oeq {{.*}}, {{.*}}
-  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %5 = llvm.fcmp "oeq" %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fneg nnan ninf float {{.*}}
-  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %6 = llvm.fneg %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = call float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call nnan float @fastmathFlagsFunc({{.*}})
@@ -2274,29 +2274,29 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
 
 // CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, f32) -> f32
 // CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, f32) -> f32
 
 // CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
   %exp = llvm.mlir.constant(1 : i32) : i32
-  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+  %19 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, i32) -> f32
 // CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
-  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
+  %20 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, i32) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> {{.*}})
-  %21 = llvm.intr.vector.reduce.fmax(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %22 = llvm.intr.vector.reduce.fmin(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %21 = llvm.intr.vector.reduce.fmax(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %22 = llvm.intr.vector.reduce.fmin(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> {{.*}})
-  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %24 = llvm.intr.vector.reduce.fminimum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %24 = llvm.intr.vector.reduce.fminimum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
-  %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+  %26 = llvm.select %25, %arg0, %20 fastmath<contract> : i1, f32
 
 // CHECK: {{.*}} = fpext nnan float {{.*}} to double
 // CHECK: {{.*}} = fptrunc fast float {{.*}} to half
@@ -2364,7 +2364,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
-  ] {branch_weights = array<i32 : 13, 17, 19>}
+  ] weights([13, 17, 19])
 
 ^bb1(%3: i32):  // pred: ^bb0
   llvm.return %3 : i32

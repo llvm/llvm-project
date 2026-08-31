@@ -537,19 +537,19 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
 llvm.func @matrix_intrinsics(%A: vector<64 x f32>, %B: vector<48 x f32>,
                              %ptr: !llvm.ptr, %stride: i64) {
   // CHECK: call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %0, <48 x float> %1, i32 4, i32 16, i32 3)
-  %C = llvm.intr.matrix.multiply %A, %B
-    { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} :
+  %C = llvm.intr.matrix.multiply %A, %B,
+    lhs_rows = 4, lhs_columns = 16, rhs_columns = 3 :
     (vector<64 x f32>, vector<48 x f32>) -> vector<12 x f32>
   // CHECK: call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %1, i32 3, i32 16)
-  %D = llvm.intr.matrix.transpose %B { rows = 3: i32, columns = 16: i32} :
+  %D = llvm.intr.matrix.transpose %B, rows = 3, columns = 16 :
     vector<48 x f32> into vector<48 x f32>
   // CHECK: call <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr align 4 %2, i64 %3, i1 false, i32 3, i32 16)
-  %E = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+  %E = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 :
     vector<48 x f32> from !llvm.ptr stride i64
   // CHECK: call void @llvm.matrix.column.major.store.v48f32.i64(<48 x float> %7, ptr align 4 %2, i64 %3, i1 false, i32 3, i32 16)
-  llvm.intr.matrix.column.major.store %E, %ptr, <stride=%stride>
-    { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} :
+  llvm.intr.matrix.column.major.store %E, %ptr, <stride=%stride>,
+    is_volatile = false, rows = 3, columns = 16 :
     vector<48 x f32> to !llvm.ptr stride i64
   llvm.return
 }
@@ -564,19 +564,19 @@ llvm.func @get_active_lane_mask(%base: i64, %n: i64) -> (vector<7xi1>) {
 // CHECK-LABEL: @masked_load_store_intrinsics
 llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
-  %a = llvm.intr.masked.load %A, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.load(%A, %mask), alignment(1) :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison), !nontemporal !1
-  %b = llvm.intr.masked.load %A, %mask { alignment = 1: i32, nontemporal} :
+  %b = llvm.intr.masked.load(%A, %mask), alignment(1), nontemporal :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %c = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i32} :
+  %c = llvm.intr.masked.load(%A, %mask, %a), alignment(1) :
     (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}})
-  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
+  llvm.intr.masked.store(%b, %A, %mask), alignment(1) :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}}), !nontemporal !{{.*}}
-  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32, nontemporal} :
+  llvm.intr.masked.store(%b, %A, %mask), alignment(1), nontemporal :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
@@ -584,13 +584,13 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
 // CHECK-LABEL: @masked_gather_scatter_intrinsics
 llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
-  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
+  %a = llvm.intr.masked.gather(%M, %mask), alignment(1) :
       (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
+  %b = llvm.intr.masked.gather(%M, %mask, %a), alignment(1) :
       (vector<7 x !llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}})
-  llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
+  llvm.intr.masked.scatter(%b, %M, %mask), alignment(1) :
       vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
   llvm.return
 }
@@ -609,10 +609,10 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1
 // CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
 llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthrough: vector<7xf32>) {
   // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough) <{arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}>
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
   // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
-  "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}
+  "llvm.intr.masked.compressstore"(%0, %ptr, %mask) <{arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}>
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
 }
@@ -635,14 +635,14 @@ llvm.func @trap_intrinsics() {
   // CHECK: call void @llvm.debugtrap()
   "llvm.intr.debugtrap"() : () -> ()
   // CHECK: call void @llvm.ubsantrap(i8 1)
-  "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+  "llvm.intr.ubsantrap"() <{failureKind = 1 : i8}> : () -> ()
 
   // CHECK: call void @llvm.trap()
   llvm.intr.trap
   // CHECK: call void @llvm.debugtrap()
   llvm.intr.debugtrap
   // CHECK: call void @llvm.ubsantrap(i8 1)
-  llvm.intr.ubsantrap <{failureKind = 1 : i8}>
+  llvm.intr.ubsantrap failureKind = 1
   llvm.return
 }
 
@@ -1206,7 +1206,7 @@ llvm.func @experimental_constrained_fadd(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nnan nsz float @llvm.experimental.constrained.fadd.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.fadd %s, %s tonearest strict {fastmathFlags = #llvm.fastmath<nnan, nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.fadd %s, %s tonearest strict fastmath<nnan, nsz> : f32
   llvm.return
 }
 
@@ -1405,7 +1405,7 @@ llvm.func @experimental_constrained_sqrt(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.sqrt.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.sqrt %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.sqrt %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1422,7 +1422,7 @@ llvm.func @experimental_constrained_sin(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.sin.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.sin %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.sin %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1439,7 +1439,7 @@ llvm.func @experimental_constrained_cos(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.cos.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.cos %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.cos %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1456,7 +1456,7 @@ llvm.func @experimental_constrained_tan(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.tan.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.tan %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.tan %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1473,7 +1473,7 @@ llvm.func @experimental_constrained_asin(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.asin.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.asin %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.asin %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1490,7 +1490,7 @@ llvm.func @experimental_constrained_acos(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.acos.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.acos %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.acos %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1507,7 +1507,7 @@ llvm.func @experimental_constrained_atan(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.atan.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.atan %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.atan %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1524,7 +1524,7 @@ llvm.func @experimental_constrained_sinh(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.sinh.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.sinh %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.sinh %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1541,7 +1541,7 @@ llvm.func @experimental_constrained_cosh(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.cosh.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.cosh %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.cosh %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1558,7 +1558,7 @@ llvm.func @experimental_constrained_tanh(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.tanh.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.tanh %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.tanh %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1575,7 +1575,7 @@ llvm.func @experimental_constrained_exp(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.exp.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.exp %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.exp %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1592,7 +1592,7 @@ llvm.func @experimental_constrained_exp2(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.exp2.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.exp2 %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.exp2 %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1609,7 +1609,7 @@ llvm.func @experimental_constrained_log(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.log.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.log %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.log %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1626,7 +1626,7 @@ llvm.func @experimental_constrained_log10(%s: f32, %v: vector<4 x f32>) attribut
   // CHECK: call nsz float @llvm.experimental.constrained.log10.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.log10 %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.log10 %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1643,7 +1643,7 @@ llvm.func @experimental_constrained_log2(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.log2.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.log2 %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.log2 %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1660,7 +1660,7 @@ llvm.func @experimental_constrained_rint(%s: f32, %v: vector<4 x f32>) attribute
   // CHECK: call nsz float @llvm.experimental.constrained.rint.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.rint %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.rint %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1677,7 +1677,7 @@ llvm.func @experimental_constrained_nearbyint(%s: f32, %v: vector<4 x f32>) attr
   // CHECK: call nsz float @llvm.experimental.constrained.nearbyint.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.nearbyint %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.nearbyint %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1749,7 +1749,7 @@ llvm.func @experimental_constrained_pow(%s: f32, %v: vector<4 x f32>) attributes
   // CHECK: call nsz float @llvm.experimental.constrained.pow.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.pow %s, %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.pow %s, %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1766,7 +1766,7 @@ llvm.func @experimental_constrained_atan2(%s: f32, %v: vector<4 x f32>) attribut
   // CHECK: call nsz float @llvm.experimental.constrained.atan2.f32(
   // CHECK: metadata !"round.tonearest"
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.atan2 %s, %s tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.atan2 %s, %s tonearest strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1780,7 +1780,7 @@ llvm.func @experimental_constrained_maxnum(%s: f32, %v: vector<4 x f32>) attribu
   %1 = llvm.intr.experimental.constrained.maxnum %v, %v ignore : vector<4 x f32>
   // CHECK: call nsz float @llvm.experimental.constrained.maxnum.f32(
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.maxnum %s, %s strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.maxnum %s, %s strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1794,7 +1794,7 @@ llvm.func @experimental_constrained_minnum(%s: f32, %v: vector<4 x f32>) attribu
   %1 = llvm.intr.experimental.constrained.minnum %v, %v ignore : vector<4 x f32>
   // CHECK: call nsz float @llvm.experimental.constrained.minnum.f32(
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.minnum %s, %s strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.minnum %s, %s strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1808,7 +1808,7 @@ llvm.func @experimental_constrained_maximum(%s: f32, %v: vector<4 x f32>) attrib
   %1 = llvm.intr.experimental.constrained.maximum %v, %v ignore : vector<4 x f32>
   // CHECK: call nsz float @llvm.experimental.constrained.maximum.f32(
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.maximum %s, %s strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.maximum %s, %s strict fastmath<nsz> : f32
   llvm.return
 }
 
@@ -1822,7 +1822,7 @@ llvm.func @experimental_constrained_minimum(%s: f32, %v: vector<4 x f32>) attrib
   %1 = llvm.intr.experimental.constrained.minimum %v, %v ignore : vector<4 x f32>
   // CHECK: call nsz float @llvm.experimental.constrained.minimum.f32(
   // CHECK: metadata !"fpexcept.strict"
-  %2 = llvm.intr.experimental.constrained.minimum %s, %s strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  %2 = llvm.intr.experimental.constrained.minimum %s, %s strict fastmath<nsz> : f32
   llvm.return
 }
 

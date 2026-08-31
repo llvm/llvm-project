@@ -121,6 +121,8 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
   dag fmfArg = (
     ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
+  let assemblyFormat = "$lhs `,` $rhs (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($res)";
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder, $_location, $lhs, $rhs);
     moduleImport.setFastmathFlagsAttr(inst, op);
@@ -139,7 +141,8 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$operand attr-dict `:` type($res)";
+  let assemblyFormat = "$operand (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder, $_location, $operand);
@@ -188,7 +191,8 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
                    AnyTypeOf<[LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "custom<CmpPredicate>($predicate) $lhs `,` $rhs attr-dict `:` type($lhs)";
   string llvmInstName = "ICmp";
   string llvmBuilder = [{
     $res = builder.CreateICmp(
@@ -213,7 +217,9 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
                    DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                      "{}">:$fastmathFlags);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "custom<CmpPredicate>($predicate) $lhs `,` $rhs "
+      "(`fastmath` `` $fastmathFlags^)? attr-dict `:` type($lhs)";
   string llvmInstName = "FCmp";
   string llvmBuilder = [{
     $res = builder.CreateFCmp(convertFCmpPredicateToLLVM($predicate), $lhs, $rhs);
@@ -406,10 +412,10 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     %0 = llvm.load volatile %ptr : !llvm.ptr -> f32
 
     // A nontemporal load of a float variable.
-    %0 = llvm.load %ptr {nontemporal} : !llvm.ptr -> f32
+    %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
     // An atomic load of an integer variable.
-    %0 = llvm.load %ptr atomic monotonic {alignment = 8 : i64}
+    %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
     ```
 
@@ -422,6 +428,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
     (`dereferenceable` `` $dereferenceable^)?
+    prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
@@ -493,10 +500,10 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     llvm.store volatile %val, %ptr : f32, !llvm.ptr
 
     // A nontemporal store of a float variable.
-    llvm.store %val, %ptr {nontemporal} : f32, !llvm.ptr
+    llvm.store %val, %ptr <nontemporal> : f32, !llvm.ptr
 
     // An atomic store of an integer variable.
-    llvm.store %val, %ptr atomic monotonic {alignment = 8 : i64}
+    llvm.store %val, %ptr atomic monotonic <alignment = 8>
         : i64, !llvm.ptr
     ```
 
@@ -507,6 +514,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     (`invariant_group` $invariantGroup^)?
+    prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
   string llvmBuilder = [{
@@ -1087,7 +1095,8 @@ def LLVM_SelectOp
                    DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                      "{}">:$fastmathFlags);
   let results = (outs LLVM_Type:$res);
-  let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
+  let assemblyFormat = "operands (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($condition) `,` type($res)";
   string llvmInstName = "Select";
   string mlirBuilder = [{
     auto op = LLVM::SelectOp::create($_builder,
@@ -1117,7 +1126,8 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
   );
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
-    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)?
+    (`loop_annotation` `=` $loop_annotation^)? attr-dict
   }];
   let builders = [
     OpBuilder<(ins "Block *":$dest), [{
@@ -1151,6 +1161,7 @@ def LLVM_CondBrOp
     $condition ( `weights` `(` $branch_weights^ `)` )? `,`
     $trueDest (`(` $trueDestOperands^ `:` type($trueDestOperands) `)`)? `,`
     $falseDest (`(` $falseDestOperands^ `:` type($falseDestOperands) `)`)?
+    (`loop_annotation` `=` $loop_annotation^)?
     attr-dict
   }];
 
@@ -1255,6 +1266,7 @@ def LLVM_SwitchOp
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
     custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
                                    $caseOperands, type($caseOperands))
+    (`weights` `(` $branch_weights^ `)`)?
     attr-dict
   }];
   let hasVerifier = 1;
@@ -1808,7 +1820,9 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   let assemblyFormat = [{
     ($sym_visibility^)? custom<LLVMLinkage>($linkage)
     ($visibility_^)? ($unnamed_addr^)?
-    $sym_name `:` $i_func_type `,` $resolver_type $resolver attr-dict
+    $sym_name `:` $i_func_type `,` $resolver_type $resolver
+    oilist<`,`>(`dso_local` $dso_local | `addr_space` `=` $address_space)
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -2410,7 +2424,9 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $bin_op $ptr `,` $val
-    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict `:`
+    (`syncscope` `(` $syncscope^ `)`)? $ordering
+    prop-dict
+    attr-dict `:`
     qualified(type($ptr)) `,` type($val)
   }];
   string llvmInstName = "AtomicRMW";
@@ -2465,7 +2481,9 @@ def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
   let assemblyFormat = [{
     (`weak` $weak^)? (`volatile` $volatile_^)? $ptr `,` $cmp `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $success_ordering $failure_ordering
-    attr-dict `:` qualified(type($ptr)) `,` type($val)
+    prop-dict
+    attr-dict `:`
+    qualified(type($ptr)) `,` type($val)
   }];
   string llvmInstName = "AtomicCmpXchg";
   string llvmBuilder = [{

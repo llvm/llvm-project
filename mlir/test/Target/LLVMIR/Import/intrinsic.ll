@@ -465,13 +465,13 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %12 = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.umin"(%{{.*}}) : (vector<8xi32>) -> i32
   %13 = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> %2)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fadd(%{{.*}}, %{{.*}}) : (f32, vector<8xf32>) -> f32
   %14 = call float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fmul(%{{.*}}, %{{.*}}) : (f32, vector<8xf32>) -> f32
   %15 = call float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fadd"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fadd(%{{.*}}, %{{.*}}) fastmath<reassoc> : (f32, vector<8xf32>) -> f32
   %16 = call reassoc float @llvm.vector.reduce.fadd.v8f32(float %0, <8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.fmul"(%{{.*}}, %{{.*}}) <{fastmathFlags = #llvm.fastmath<reassoc>}> : (f32, vector<8xf32>) -> f32
+  ; CHECK: llvm.intr.vector.reduce.fmul(%{{.*}}, %{{.*}}) fastmath<reassoc> : (f32, vector<8xf32>) -> f32
   %17 = call reassoc float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
   ; CHECK:  "llvm.intr.vector.reduce.xor"(%{{.*}}) : (vector<8xi32>) -> i32
   %18 = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %2)
@@ -489,16 +489,16 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
 ; CHECK-SAME:  %[[STRIDE:[a-zA-Z0-9]+]]
 define void @matrix_intrinsics(<64 x float> %vec1, <48 x float> %vec2, ptr %ptr, i64 %stride) {
   ; CHECK:  llvm.intr.matrix.multiply %[[VEC1]], %[[VEC2]]
-  ; CHECK-SAME:  {lhs_columns = 16 : i32, lhs_rows = 4 : i32, rhs_columns = 3 : i32}
+  ; CHECK-SAME:  , lhs_rows = 4, lhs_columns = 16, rhs_columns = 3
   %1 = call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %vec1, <48 x float> %vec2, i32 4, i32 16, i32 3)
   ; CHECK:  llvm.intr.matrix.transpose %[[VEC2]]
-  ; CHECK-SAME:  {columns = 16 : i32, rows = 3 : i32}
+  ; CHECK-SAME:  , rows = 3, columns = 16
   %2 = call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %vec2, i32 3, i32 16)
   ; CHECK:  %[[VAL1:.+]] = llvm.intr.matrix.column.major.load %[[PTR]], <stride = %[[STRIDE]]>
-  ; CHECK-SAME:  {columns = 16 : i32, isVolatile = false, rows = 3 : i32}
+  ; CHECK-SAME:  , is_volatile = false, rows = 3, columns = 16
   %3 = call <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr align 4 %ptr, i64 %stride, i1 false, i32 3, i32 16)
   ; CHECK:  llvm.intr.matrix.column.major.store %[[VAL1]], %[[PTR]], <stride = %[[STRIDE]]>
-  ; CHECK-SAME:  {columns = 16 : i32, isVolatile = true, rows = 3 : i32}
+  ; CHECK-SAME:  , is_volatile = true, rows = 3, columns = 16
   call void @llvm.matrix.column.major.store.v48f32.i64(<48 x float> %3, ptr align 4 %ptr, i64 %stride, i1 true, i32 3, i32 16)
   ret void
 }
@@ -515,17 +515,17 @@ define <7 x i1> @get_active_lane_mask(i64 %0, i64 %1) {
 ; CHECK-SAME:  %[[MASK:[a-zA-Z0-9]+]]
 define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
   ; CHECK:  %[[UNDEF:.+]] = llvm.mlir.undef
-  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[UNDEF]] {alignment = 1 : i32}
+  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.load(%[[VEC]], %[[MASK]], %[[UNDEF]]), alignment(1)
   ; CHECK-SAME:  (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   %1 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 1, <7 x i1> %mask, <7 x float> undef)
-  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32}
+  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.load(%[[VEC]], %[[MASK]], %[[VAL1]]), alignment(4)
   %2 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 4, <7 x i1> %mask, <7 x float> %1)
-  ; CHECK:  %[[VAL3:.+]] = llvm.intr.masked.load %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32, nontemporal}
+  ; CHECK:  %[[VAL3:.+]] = llvm.intr.masked.load(%[[VEC]], %[[MASK]], %[[VAL1]]), alignment(4), nontemporal
   %3 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr %vec, i32 4, <7 x i1> %mask, <7 x float> %1), !nontemporal !{i32 1}
-  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
+  ; CHECK:  llvm.intr.masked.store(%[[VAL2]], %[[VEC]], %[[MASK]]), alignment(8)
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr
   call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask)
-  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32, nontemporal}
+  ; CHECK:  llvm.intr.masked.store(%[[VAL2]], %[[VEC]], %[[MASK]]), alignment(8), nontemporal
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr 
   call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask), !nontemporal !{i32 1}
   ret void
@@ -536,12 +536,12 @@ define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
 ; CHECK-SAME:  %[[MASK:[a-zA-Z0-9]+]]
 define void @masked_gather_scatter_intrinsics(<7 x ptr> %vec, <7 x i1> %mask) {
   ; CHECK:  %[[UNDEF:.+]] = llvm.mlir.undef
-  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[UNDEF]] {alignment = 1 : i32}
+  ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.gather(%[[VEC]], %[[MASK]], %[[UNDEF]]), alignment(1)
   ; CHECK-SAME:  (vector<7x!llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   %1 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 1, <7 x i1> %mask, <7 x float> undef)
-  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32}
+  ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.gather(%[[VEC]], %[[MASK]], %[[VAL1]]), alignment(4)
   %2 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 4, <7 x i1> %mask, <7 x float> %1)
-  ; CHECK:  llvm.intr.masked.scatter %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
+  ; CHECK:  llvm.intr.masked.scatter(%[[VAL2]], %[[VEC]], %[[MASK]]), alignment(8)
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into vector<7x!llvm.ptr>
   call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %2, <7 x ptr> %vec, i32 8, <7 x i1> %mask)
   ret void
@@ -582,7 +582,7 @@ define void @trap_intrinsics() {
   call void @llvm.trap()
   ; CHECK: llvm.intr.debugtrap
   call void @llvm.debugtrap()
-  ; CHECK: llvm.intr.ubsantrap <failureKind = 1>
+  ; CHECK: llvm.intr.ubsantrap failureKind = 1
   call void @llvm.ubsantrap(i8 1)
   ret void
 }
@@ -1176,7 +1176,7 @@ define void @experimental_constrained_fadd(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.fadd.f32(float %s, float %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
   ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nnan, nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} tonearest strict fastmath<nnan, nsz> : f32
   %3 = call nnan nsz float @llvm.experimental.constrained.fadd.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1305,7 +1305,7 @@ define void @experimental_constrained_sqrt(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.sqrt.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.sqrt %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.sqrt %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.sqrt %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.sqrt.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1316,7 +1316,7 @@ define void @experimental_constrained_sin(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.sin.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.sin %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.sin.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.sin %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.sin %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.sin.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1327,7 +1327,7 @@ define void @experimental_constrained_cos(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.cos.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.cos %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.cos.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.cos %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.cos %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.cos.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1338,7 +1338,7 @@ define void @experimental_constrained_tan(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.tan.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.tan %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.tan.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.tan %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.tan %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.tan.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1349,7 +1349,7 @@ define void @experimental_constrained_asin(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.asin.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.asin %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.asin.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.asin %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.asin %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.asin.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1360,7 +1360,7 @@ define void @experimental_constrained_acos(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.acos.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.acos %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.acos.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.acos %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.acos %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.acos.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1371,7 +1371,7 @@ define void @experimental_constrained_atan(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.atan.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.atan %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.atan.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.atan %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.atan %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.atan.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1382,7 +1382,7 @@ define void @experimental_constrained_sinh(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.sinh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.sinh %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.sinh.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.sinh %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.sinh %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.sinh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1393,7 +1393,7 @@ define void @experimental_constrained_cosh(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.cosh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.cosh %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.cosh.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.cosh %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.cosh %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.cosh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1404,7 +1404,7 @@ define void @experimental_constrained_tanh(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.tanh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.tanh %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.tanh.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.tanh %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.tanh %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.tanh.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1415,7 +1415,7 @@ define void @experimental_constrained_exp(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.exp.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.exp %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.exp.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.exp %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.exp %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.exp.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1426,7 +1426,7 @@ define void @experimental_constrained_exp2(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.exp2.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.exp2 %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.exp2.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.exp2 %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.exp2 %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.exp2.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1437,7 +1437,7 @@ define void @experimental_constrained_log(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.log.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.log %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.log.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.log %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.log %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.log.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1448,7 +1448,7 @@ define void @experimental_constrained_log10(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.log10.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.log10 %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.log10.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.log10 %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.log10 %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.log10.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1459,7 +1459,7 @@ define void @experimental_constrained_log2(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.log2.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.log2 %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.log2.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.log2 %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.log2 %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.log2.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1470,7 +1470,7 @@ define void @experimental_constrained_rint(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.rint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.rint %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.rint %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.rint %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.rint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1481,7 +1481,7 @@ define void @experimental_constrained_nearbyint(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.nearbyint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.nearbyint %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.nearbyint.f32(float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1537,7 +1537,7 @@ define void @experimental_constrained_pow(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.pow.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.pow %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.pow.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.pow %{{.*}}, %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.pow %{{.*}}, %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.pow.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1548,7 +1548,7 @@ define void @experimental_constrained_atan2(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.atan2.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.atan2 %{{.*}}, %{{.*}} towardzero ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.atan2.v4f32(<4 x float> %v, <4 x float> %v, metadata !"round.towardzero", metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.atan2 %{{.*}}, %{{.*}} tonearest strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.atan2 %{{.*}}, %{{.*}} tonearest strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.atan2.f32(float %s, float %s, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
@@ -1559,7 +1559,7 @@ define void @experimental_constrained_maxnum(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.maxnum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.maxnum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.maxnum %{{.*}}, %{{.*}} strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.maxnum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ret void
 }
@@ -1570,7 +1570,7 @@ define void @experimental_constrained_minnum(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.minnum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.minnum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.minnum %{{.*}}, %{{.*}} strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.minnum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ret void
 }
@@ -1581,7 +1581,7 @@ define void @experimental_constrained_maximum(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.maximum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.maximum %{{.*}}, %{{.*}} ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.maximum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.maximum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.maximum %{{.*}}, %{{.*}} strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.maximum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ret void
 }
@@ -1592,7 +1592,7 @@ define void @experimental_constrained_minimum(float %s, <4 x float> %v) {
   %1 = call float @llvm.experimental.constrained.minimum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ; CHECK: llvm.intr.experimental.constrained.minimum %{{.*}}, %{{.*}} ignore : vector<4xf32>
   %2 = call <4 x float> @llvm.experimental.constrained.minimum.v4f32(<4 x float> %v, <4 x float> %v, metadata !"fpexcept.ignore")
-  ; CHECK: llvm.intr.experimental.constrained.minimum %{{.*}}, %{{.*}} strict {fastmathFlags = #llvm.fastmath<nsz>} : f32
+  ; CHECK: llvm.intr.experimental.constrained.minimum %{{.*}}, %{{.*}} strict fastmath<nsz> : f32
   %3 = call nsz float @llvm.experimental.constrained.minimum.f32(float %s, float %s, metadata !"fpexcept.strict")
   ret void
 }
