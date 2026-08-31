@@ -246,6 +246,12 @@ constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
 /// \returns Minimum number of waves per execution unit.
 constexpr unsigned getMinWavesPerEU() { return 1; }
 
+/// \returns Number of bits in the num_records field is a buffer resource,
+/// or nullopt if the target is too generic to have a fixed value for that.
+LLVM_ABI std::optional<unsigned> getBufferResourceNumRecordsWidth(GPUKind AK);
+LLVM_ABI std::optional<unsigned>
+getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch);
+
 /// \returns Maximum number of waves per execution unit without any kind of
 /// limitation.
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);

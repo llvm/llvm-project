@@ -45,6 +45,7 @@ struct GPUInfo {
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
+  uint8_t BufferResourceNumRecordsWidth;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -505,6 +506,18 @@ unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
 
 unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
   return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
+std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  if (!Info)
+    return std::nullopt;
+  return Info->BufferResourceNumRecordsWidth;
+}
+
+std::optional<unsigned>
+AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
+  return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
