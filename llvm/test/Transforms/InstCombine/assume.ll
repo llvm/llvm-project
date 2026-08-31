@@ -597,11 +597,9 @@ define i1 @nonnullNotEq(ptr %a) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LOAD]], null
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOT]])
-; CHECK-NEXT:    tail call void @escape(ptr [[LOAD]])
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq ptr [[LOAD]], null
-; CHECK-NEXT:    ret i1 [[RVAL]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load ptr, ptr %a
   %cmp = icmp eq ptr %load, null
