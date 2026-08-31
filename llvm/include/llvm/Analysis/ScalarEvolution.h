@@ -765,20 +765,23 @@ public:
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
-  const SCEV *getMulExpr(SCEVUse LHS, SCEVUse RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  LLVM_ABI SCEVUse getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                              unsigned Depth = 0,
+                              SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
+  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS,
+                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                     unsigned Depth = 0,
+                     SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
-    return getMulExpr(Ops, Flags, Depth);
+    return getMulExpr(Ops, Flags, Depth, UseFlags);
   }
-  const SCEV *getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  SCEVUse getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
+                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                     unsigned Depth = 0,
+                     SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
-    return getMulExpr(Ops, Flags, Depth);
+    return getMulExpr(Ops, Flags, Depth, UseFlags);
   }
   LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
