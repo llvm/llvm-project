@@ -1,5 +1,7 @@
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mattr=+avx2 -S %s | FileCheck %s
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512bw -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v2 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v3 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v4 -S %s | FileCheck %s
 
 ; Test case for https://github.com/llvm/llvm-project/issues/217019.
 
