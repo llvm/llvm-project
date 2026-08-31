@@ -223,15 +223,12 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
 
 void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
   Register ResultReg = MI.getOperand(0).getReg();
-  Register NonConstReg;
-  std::optional<FPValueAndVReg> ConstVal;
 
-  if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GFMul(m_Reg(NonConstReg), m_GFCstOrSplat(ConstVal))) &&
-      !mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GFMul(m_GFCstOrSplat(ConstVal), m_Reg(NonConstReg)))) {
-    return;
-  }
+  Register Operand1 = MI.getOperand(1).getReg();
+  Register Operand2 = MI.getOperand(2).getReg();
+  bool Operand2IsConst = getFConstantSplat(Operand2, MRI) ||
+                         getFConstantVRegValWithLookThrough(Operand2, MRI);
+  Register NonConstReg = Operand2IsConst ? Operand1 : Operand2;
 
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg).addUse(NonConstReg);
