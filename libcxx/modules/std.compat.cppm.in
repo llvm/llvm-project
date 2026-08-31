@@ -69,9 +69,6 @@ module;
 #  if __has_include(<spanstream>)
 #    error "please update the header information for <spanstream> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<spanstream>)
-#  if __has_include(<stacktrace>)
-#    error "please update the header information for <stacktrace> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<stacktrace>)
 #  if __has_include(<stdfloat>)
 #    error "please update the header information for <stdfloat> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<stdfloat>)

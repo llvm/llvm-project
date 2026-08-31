@@ -617,6 +617,10 @@ function(cxx_add_exception_flags target)
   else()
     target_add_compile_flags_if_supported(${target} PUBLIC -EHs- -EHa-)
     target_add_compile_flags_if_supported(${target} PUBLIC -fno-exceptions)
+    # On 32-bit ARM, -fno-exceptions drops the EHABI unwind tables that
+    # std::stacktrace's default impl (stacktrace/trace.cpp) needs to walk the stack.
+    # Mirrors libunwind's and libc++abi's own -funwind-tables for their sources.
+    target_add_compile_flags_if_supported(${target} PUBLIC -funwind-tables)
   endif()
 endfunction()
 

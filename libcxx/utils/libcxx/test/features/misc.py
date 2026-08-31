@@ -7,7 +7,8 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
-from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
+from libcxx.test.dsl import Feature, AddCompileFlag, AddFlagIfSupported, AddLinkFlag
+from lit.BooleanExpression import BooleanExpression
 import platform
 import sys
 
@@ -298,6 +299,16 @@ features = [
     Feature(
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+    ),
+    # On 32-bit ARM (EHABI unwinding via `.ARM.exidx` / `.ARM.extab`), unwind table emission
+    # for a given function isn't reliably implied by `-fexceptions`, breaking `<stacktrace>`.
+    Feature(
+        name="arm-needs-funwind-tables",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "target={{arm.*-(linux-gnueabi|none-eabi).*}}",
+            cfg.available_features,
+        ),
+        actions=[AddFlagIfSupported("-funwind-tables")],
     ),
     Feature(
         name="has-splitfile",
