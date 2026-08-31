@@ -205,6 +205,10 @@ features cannot lower the translation-unit ABI level;
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
+- On musl targets, the driver now links ``libssp_nonshared.a`` when stack
+  protection is enabled and the library is present in the toolchain library
+  paths, matching what musl distributions configure GCC to do.
+
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
