@@ -5710,7 +5710,8 @@ private:
     LateParsedObjCMethodContainer LateParsedObjCMethods;
 
     ObjCImplParsingDataRAII(Parser &parser, Decl *D)
-        : P(parser), Dcl(D), HasCFunction(false) {
+        : P(parser), Dcl(D), HasCFunction(false),
+          PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
       P.CurParsedObjCImpl = this;
       Finished = false;
     }
@@ -5720,6 +5721,7 @@ private:
     bool isFinished() const { return Finished; }
 
   private:
+    ObjCImplParsingDataRAII *PrevParsedObjCImpl;
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;

@@ -709,6 +709,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
   evaluated to a value not representable by a signed integer, such as an
   unsigned wrap around. (#GH221418)
+- Fixed an assertion failure when a method or function definition follows an
+  Objective-C `@implementation` that was ended by a nested `@interface`,
+  `@protocol` or `@implementation` before its `@end`. (#GH209503)
 
 ### OpenACC Specific Changes
 
