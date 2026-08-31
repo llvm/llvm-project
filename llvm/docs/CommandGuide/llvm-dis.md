@@ -1,54 +1,50 @@
-llvm-dis - LLVM disassembler
-============================
+# llvm-dis - LLVM disassembler
 
-.. program:: llvm-dis
+```{program} llvm-dis
+```
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-**llvm-dis** [*options*] [*filename*]
+**llvm-dis** \[*options*\] \[*filename*\]
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-The **llvm-dis** command is the LLVM disassembler.  It takes an LLVM
+The **llvm-dis** command is the LLVM disassembler. It takes an LLVM
 bitcode file and converts it into human-readable LLVM assembly language.
 
-If filename is omitted or specified as ``-``, **llvm-dis** reads its
+If filename is omitted or specified as `-`, **llvm-dis** reads its
 input from standard input.
 
 If the input is being read from standard input, then **llvm-dis**
-will send its output to standard output by default.  Otherwise, the
+will send its output to standard output by default. Otherwise, the
 output will be written to a file named after the input file, with
-a ``.ll`` suffix added (any existing ``.bc`` suffix will first be
-removed).  You can override the choice of output file using the
+a `.ll` suffix added (any existing `.bc` suffix will first be
+removed). You can override the choice of output file using the
 **-o** option.
 
-OPTIONS
--------
+## OPTIONS
 
-**-f**
+:::{option} -f
+Enable binary output on terminals. Normally, **llvm-dis** will refuse to
+write raw bitcode output if the output stream is a terminal. With this option,
+**llvm-dis** will write raw bitcode regardless of the output device.
+:::
 
- Enable binary output on terminals.  Normally, **llvm-dis** will refuse to
- write raw bitcode output if the output stream is a terminal. With this option,
- **llvm-dis** will write raw bitcode regardless of the output device.
+:::{option} -help
+Print a summary of command line options.
+:::
 
-**-help**
+:::{option} -o <filename>
+Specify the output file name. If *filename* is -, then the output is sent
+to standard output.
+:::
 
- Print a summary of command line options.
+## EXIT STATUS
 
-**-o** *filename*
-
- Specify the output file name.  If *filename* is -, then the output is sent
- to standard output.
-
-EXIT STATUS
------------
-
-If **llvm-dis** succeeds, it will exit with 0.  Otherwise, if an error
+If **llvm-dis** succeeds, it will exit with 0. Otherwise, if an error
 occurs, it will exit with a non-zero value.
 
-SEE ALSO
---------
+## SEE ALSO
 
-:manpage:`llvm-as(1)`
+{manpage}`llvm-as(1)`
+
