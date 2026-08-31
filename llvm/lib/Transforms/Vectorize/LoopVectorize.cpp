@@ -5424,6 +5424,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!VPlan1)
     return;
 
+  if (Legal->hasUncountableExitWithSideEffects())
+    RUN_VPLAN_PASS(VPlanTransforms::convertMaskedEarlyExitToBailToScalar,
+                   *VPlan1, TTI);
+
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
     // plan for that VF only.

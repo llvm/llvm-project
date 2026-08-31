@@ -569,6 +569,16 @@ struct VPlanTransforms {
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
 
+  /// Convert the masked (partial-commit) form of an uncountable early-exit loop
+  /// with side effects to the bail-to-scalar form: branch around the loop body
+  /// if any lane takes the exit, leaving the memory operations unmasked, and
+  /// re-execute the iteration in the scalar loop. Must run after
+  /// introduceMasksAndLinearize. Does nothing if \p Plan is not in the expected
+  /// masked form, or if masking would not be scalarized on \p TTI.
+  static void
+  convertMaskedEarlyExitToBailToScalar(VPlan &Plan,
+                                       const TargetTransformInfo &TTI);
+
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.

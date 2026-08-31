@@ -399,10 +399,12 @@ public:
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class LLVM_ABI_FOR_TEST VPUser {
-  /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
+  /// Grant access to removeOperand for VPPhiAccessors.
   friend class VPPhiAccessors;
   /// Grant access to addOperand for VPWidenMemoryRecipe.
   friend class VPWidenMemoryRecipe;
+  /// Grant access to removeOperand for VPInstruction::dropMask.
+  friend class VPInstruction;
 
   SmallVector<VPValue *, 2> Operands;
 

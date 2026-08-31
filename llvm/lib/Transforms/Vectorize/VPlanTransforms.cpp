@@ -43,6 +43,8 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+extern cl::opt<bool> ForceTargetSupportsMaskedMemoryOps;
+
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
 /// \p AccessTy. Otherwise return std::nullopt.
@@ -256,6 +258,13 @@ static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
+  // The alias check below scans the single-successor chain from FirstBB to
+  // LastBB. If LastBB is not reachable from FirstBB through single successors
+  // (e.g. there is conditional control flow in between), we cannot prove the
+  // absence of aliasing, so conservatively disallow hoisting/sinking.
+  if (!VPBlockUtils::isReachableViaSingleSuccessors(FirstBB, LastBB))
+    return false;
+
   bool CheckReads = SinkInfo.has_value();
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
@@ -3427,6 +3436,142 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   return true;
 }
 
+/// Returns true if masking any of the loads or stores \p MaskedMemOps would be
+/// scalarized on \p TTI. Unlike VFSelectionContext::isLegalMaskedLoadOrStore,
+/// this ignores -force-target-supports-masked-memory-ops: that flag forces the
+/// masked form to be built, but the bail decision must reflect the real target.
+static bool maskingWouldScalarize(ArrayRef<VPInstruction *> MaskedMemOps,
+                                  const TargetTransformInfo &TTI) {
+  if (ForceTargetSupportsMaskedMemoryOps)
+    return false;
+  return !all_of(MaskedMemOps, [&TTI](VPInstruction *VPI) {
+    bool IsLoad = VPI->getOpcode() == Instruction::Load;
+    Type *Ty = (IsLoad ? VPI : VPI->getOperand(0))->getScalarType();
+    unsigned AS = cast<PointerType>(VPI->getOperand(!IsLoad)->getScalarType())
+                      ->getAddressSpace();
+    // TODO: Model the alignment on the Load/Store VPInstruction, so it does not
+    // have to be retrieved from the underlying instruction.
+    Align Alignment = getLoadStoreAlignment(VPI->getUnderlyingInstr());
+    return IsLoad ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
+                  : TTI.isLegalMaskedStore(Ty, Alignment, AS);
+  });
+}
+
+void VPlanTransforms::convertMaskedEarlyExitToBailToScalar(
+    VPlan &Plan, const TargetTransformInfo &TTI) {
+  // Convert the masked (partial-commit) form built by
+  // handleUncountableExitsWithSideEffects, which masks the memory operations
+  // with active-lane-mask(0, first-active-lane(vp<%cond>), 1) and resumes the
+  // scalar loop at IV + first-active-lane, to
+  //
+  //   vector.body:                        (header)
+  //     <IV + condition recipes>
+  //     EMIT vp<%any> = any-of vp<%cond>
+  //     EMIT branch-on-cond vp<%any>      -> latch (skip) / body
+  //   vector.body.nonbailing:             (body)
+  //     <unmasked memory ops>
+  //   latch:
+  //     EMIT branch-on-two-conds vp<%any>, <counted-exit-cond>
+  //
+  // resuming the scalar loop at IV + select(vp<%any>, 0, VF).
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  // The masked form has a separate header and latch, chained header -> latch.
+  if (HeaderVPBB->getSingleSuccessor() != LatchVPBB)
+    return;
+
+  // Match the any-of of the uncountable exit condition in the latch.
+  VPInstruction *AnyOfR;
+  VPValue *Cond;
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnTwoConds(m_CombineAnd(m_VPInstruction(AnyOfR),
+                                             m_AnyOf(m_VPValue(Cond))),
+                                m_VPValue())) ||
+      AnyOfR->getParent() != LatchVPBB)
+    return;
+
+  // Match the mask on the memory operations to skip on a bail; the
+  // first-active-lane may be cast to the IV's type.
+  auto *MaskR = find_singleton<VPInstruction>(
+      *HeaderVPBB, [Cond](VPRecipeBase &R, bool) -> VPInstruction * {
+        if (match(&R, m_VPInstruction<VPInstruction::ActiveLaneMask>(
+                          m_ZeroInt(), m_ZExtOrTruncOrSelf(m_FirstActiveLane(
+                                           m_Specific(Cond))))))
+          return cast<VPInstruction>(&R);
+        return nullptr;
+      });
+  if (!MaskR)
+    return;
+
+  // The recipes after the mask become the non-bailing body.
+  auto Body = make_range(std::next(MaskR->getIterator()), HeaderVPBB->end());
+  SmallPtrSet<VPRecipeBase *, 16> BodyRecipes;
+  for (VPRecipeBase &R : Body)
+    BodyRecipes.insert(&R);
+
+  // All users of the mask must be loads or stores in the body. The producer
+  // masks every side-effecting memory operation with this single mask, so this
+  // also guarantees none is left on the bail path.
+  SmallVector<VPInstruction *> MaskedMemOps;
+  for (VPUser *U : MaskR->users()) {
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    if (!VPI ||
+        !is_contained({Instruction::Load, Instruction::Store},
+                      VPI->getOpcode()) ||
+        VPI->getMask() != MaskR || !BodyRecipes.contains(VPI))
+      return;
+    MaskedMemOps.push_back(VPI);
+  }
+
+  // The body is skipped on a bail, so must not define values used outside it.
+  // TODO: Support body live-outs by recomputing them in the scalar loop.
+  for (VPRecipeBase &R : Body)
+    for (VPValue *Def : R.definedValues())
+      if (any_of(Def->users(), [&BodyRecipes](VPUser *U) {
+            return !BodyRecipes.contains(cast<VPRecipeBase>(U));
+          }))
+        return;
+
+  // Bailing trades extra control flow and re-executed iterations for unmasked
+  // memory operations; only worthwhile if masking them would be scalarized.
+  if (!maskingWouldScalarize(MaskedMemOps, TTI))
+    return;
+
+  // Split the header after the mask and unmask the memory operations, which
+  // leaves the mask itself dead.
+  VPBasicBlock *BodyVPBB = HeaderVPBB->splitAt(std::next(MaskR->getIterator()));
+  BodyVPBB->setName("vector.body.nonbailing");
+  for (VPInstruction *VPI : MaskedMemOps)
+    VPI->dropMask();
+  VPValue *FirstActive = MaskR->getOperand(1);
+  MaskR->eraseFromParent();
+
+  // Move the any-of to the header to feed the skip branch; the latch's
+  // BranchOnTwoConds keeps using it.
+  AnyOfR->moveBefore(*HeaderVPBB, HeaderVPBB->end());
+
+  // Add the skip edge header -> latch and make it the true successor, so the
+  // branch skips the body.
+  VPBlockUtils::connectBlocks(HeaderVPBB, LatchVPBB);
+  HeaderVPBB->swapSuccessors();
+  VPBuilder(HeaderVPBB).createNaryOp(VPInstruction::BranchOnCond, AnyOfR);
+
+  // Resume the scalar loop at IV + select(AnyOf, 0, VF).
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  Type *IVScalarTy = FirstActive->getScalarType();
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPValue *VFAsIVTy = MiddleBuilder.createScalarZExtOrTrunc(
+      &Plan.getVF(), IVScalarTy, DebugLoc());
+  VPValue *CommittedLanes =
+      MiddleBuilder.createSelect(AnyOfR, Plan.getZero(IVScalarTy), VFAsIVTy);
+  FirstActive->replaceAllUsesWith(CommittedLanes);
+  vputils::recursivelyDeleteDeadRecipes(FirstActive);
+  Plan.setUF(1);
+}
+
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial and
 /// valid. The created recipe must be decomposed to its constituent
@@ -5460,7 +5605,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         // A predicated access can only be widened (rather than scalarized) if
         // the target supports a masked load/store for it.
         // TODO: Determine if a load/store needs predication directly in VPlan.
-        bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
+        bool IsPredicated =
+            RecipeBuilder.isPredicatedInst(I) && VPI->isMasked();
         if (IsPredicated && !CostCtx.Config.isLegalMaskedLoadOrStore(
                                 IsLoad, ScalarTy, getLoadStoreAlignment(I),
                                 getLoadStoreAddressSpace(I)))

@@ -1502,6 +1502,12 @@ public:
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
+  /// Remove the mask from a masked VPInstruction, so it is unconditional.
+  void dropMask() {
+    assert(isMasked() && "recipe is not masked");
+    VPUser::removeOperand(getNumOperands() - 1);
+  }
+
   /// Returns an iterator range over the operands excluding the mask operand
   /// if present.
   iterator_range<operand_iterator> operandsWithoutMask() {
