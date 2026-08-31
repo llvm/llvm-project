@@ -415,6 +415,10 @@ private:
   Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
                                      bool IsAnd);
 
+  /// Fold a tree of `and`/`or` of equality range-check icmps over a common
+  /// operand into a single comparison when their combined range is contiguous.
+  Value *foldAndOrOfICmpChain(BinaryOperator &I, bool IsAnd);
+
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
   /// already be inserted into the function.

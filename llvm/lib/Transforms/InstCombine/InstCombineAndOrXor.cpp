@@ -1407,6 +1407,132 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
 }
 
+/// Append to \p Pieces the ranges of a common operand \p V where one chain leaf
+/// is false (for `and`) or true (for `or`) - i.e. the set {X == C}. Handles
+/// `x != C`/`x == C`, looking through `(Y & M)` and `(Y + C1)`. Returns false
+/// if the leaf isn't a supported equality range check.
+static bool matchICmpChainLeaf(ICmpInst *Cmp, bool IsAnd, Value *&V,
+                               SmallVectorImpl<ConstantRange> &Pieces) {
+  // The opposite equality would select everything but a point, not a small set.
+  CmpInst::Predicate Want = IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+  if (Cmp->getPredicate() != Want)
+    return false;
+
+  const APInt *C;
+  if (!match(Cmp->getOperand(1), m_APInt(C)))
+    return false;
+  Value *X = Cmp->getOperand(0);
+
+  // (Y & M) == C: Y matches C on M's kept bits and is free on the cleared bits.
+  const APInt *M;
+  Value *Y;
+  if (match(X, m_And(m_Value(Y), m_APInt(M)))) {
+    if (!(*C & ~*M).isZero())
+      return false; // no solution: C has bits outside the mask
+    APInt Free = ~*M;
+    if (Free.popcount() > 4)
+      return false; // bound the subset enumeration
+    V = Y;
+    for (APInt Sub = Free;; Sub = (Sub - 1) & Free) {
+      Pieces.push_back(ConstantRange(*C | Sub));
+      if (Sub.isZero())
+        break;
+    }
+    return true;
+  }
+
+  // (Y + C1) == C  <=>  Y == C - C1.
+  const APInt *C1;
+  if (match(X, m_AddLike(m_Value(Y), m_APInt(C1)))) {
+    V = Y;
+    Pieces.push_back(ConstantRange(*C - *C1));
+    return true;
+  }
+
+  V = X;
+  Pieces.push_back(ConstantRange(*C));
+  return true;
+}
+
+/// Fold a tree of `and`/`or` of equality range-check icmps over a common
+/// operand into a single comparison when their combined range is contiguous.
+/// The pairwise fold misses this when scrambled constants get paired
+/// non-adjacently and locked into a bit-mask form (e.g. `(x & -3) != 1`);
+/// decomposing that form back into points (in matchICmpChainLeaf) makes this
+/// order-independent.
+Value *InstCombinerImpl::foldAndOrOfICmpChain(BinaryOperator &I, bool IsAnd) {
+  Instruction::BinaryOps Opc = IsAnd ? Instruction::And : Instruction::Or;
+  assert(I.getOpcode() == Opc && "Wrong opcode for chain fold");
+
+  // Collect the icmp leaves. Internal nodes must be one-use so replacing the
+  // root removes the whole tree (guaranteed net win).
+  SmallVector<Value *, 8> Worklist = {I.getOperand(0), I.getOperand(1)};
+  SmallVector<ICmpInst *, 8> Leaves;
+  while (!Worklist.empty()) {
+    Value *Op = Worklist.pop_back_val();
+    if (auto *BO = dyn_cast<BinaryOperator>(Op))
+      if (BO->getOpcode() == Opc && BO->hasOneUse()) {
+        Worklist.push_back(BO->getOperand(0));
+        Worklist.push_back(BO->getOperand(1));
+        continue;
+      }
+    auto *Cmp = dyn_cast<ICmpInst>(Op);
+    if (!Cmp)
+      return nullptr;
+    Leaves.push_back(Cmp);
+    if (Leaves.size() > 32)
+      return nullptr; // bound pathological trees
+  }
+  // Runs only after the pairwise fold failed, and fires only on a contiguous
+  // collapse, so two leaves is fine: it just decomposes a locked-in bit-mask.
+  if (Leaves.size() < 2)
+    return nullptr;
+
+  Value *V = nullptr;
+  SmallVector<ConstantRange, 16> Pieces;
+  for (ICmpInst *Cmp : Leaves) {
+    Value *LeafV = nullptr;
+    if (!matchICmpChainLeaf(Cmp, IsAnd, LeafV, Pieces))
+      return nullptr;
+    if (!V)
+      V = LeafV;
+    else if (V != LeafV)
+      return nullptr;
+  }
+
+  for (const ConstantRange &R : Pieces)
+    if (R.isWrappedSet() || R.isEmptySet() || R.isFullSet())
+      return nullptr;
+
+  // Sort and merge the pieces; bail unless they form a single contiguous range.
+  llvm::sort(Pieces, [](const ConstantRange &A, const ConstantRange &B) {
+    return A.getLower().ult(B.getLower());
+  });
+  APInt Lo = Pieces.front().getLower(), Hi = Pieces.front().getUpper();
+  for (const ConstantRange &R : ArrayRef(Pieces).drop_front()) {
+    if (R.getLower().ugt(Hi))
+      return nullptr; // gap between pieces
+    if (R.getUpper().ugt(Hi))
+      Hi = R.getUpper();
+  }
+
+  ConstantRange CR(Lo, Hi);
+  if (CR.isFullSet() || CR.isEmptySet())
+    return nullptr;
+  // CR is the false set for `and` (De Morgan); invert to the true set.
+  if (IsAnd)
+    CR = CR.inverse();
+
+  Type *Ty = V->getType();
+  CmpInst::Predicate NewPred;
+  APInt NewC, Offset;
+  CR.getEquivalentICmp(NewPred, NewC, Offset);
+  Value *NewV = V;
+  if (Offset != 0)
+    NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
+  return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
+}
+
 /// Matches canonical form of isnan, fcmp ord x, 0
 static bool matchIsNotNaN(FCmpInst::Predicate P, Value *LHS, Value *RHS) {
   return P == FCmpInst::FCMP_ORD && match(RHS, m_AnyZeroFP());
@@ -2839,6 +2965,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Value *Res =
           foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/true, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
+  if (Value *Res = foldAndOrOfICmpChain(I, /*IsAnd=*/true))
     return replaceInstUsesWith(I, Res);
 
   if (match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
@@ -4453,6 +4582,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Value *Res =
           foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/false, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
+  if (Value *Res = foldAndOrOfICmpChain(I, /*IsAnd=*/false))
     return replaceInstUsesWith(I, Res);
 
   if (match(Op1, m_OneUse(m_LogicalOr(m_Value(X), m_Value(Y))))) {
