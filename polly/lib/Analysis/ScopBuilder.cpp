@@ -1328,6 +1328,16 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   // Check for uses of this instruction outside the scop. Because we do not
   // iterate over such instructions and therefore did not "ensure" the existence
   // of a write, we must determine such use here.
+  // ------------------- TODO -------------------------
+  // If domain information for an instruction (via its containing ScopStmt)
+  // is available at this point, then we can perform SAI registration for
+  // escaping scalars that are also doomed (i.e., belong to a ScopStmt with
+  // an invalid domain) and have a must-write access.
+  // However, for this necessary domain information to be available, we need
+  // to reshuffle the ScopBuilder pipeline such that buildDomains() and the
+  // functions that depend only on it are moved before/above
+  // buildAccessFunctions(), since domain calculation and determining the
+  // MAs of an instruction are logically unrelated.
   if (scop->isEscaping(Inst))
     ensureValueWrite(Inst);
 }
