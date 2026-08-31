@@ -2908,6 +2908,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("save-reg-params"),
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
+    StringLiteral("sample-profile-suffix-elision-policy"),
     StringLiteral("tune-cpu"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
@@ -3071,6 +3072,12 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("use-sample-profile"))
     funcOp.setUseSampleProfile(true);
+
+  if (llvm::Attribute attr =
+          func->getFnAttribute("sample-profile-suffix-elision-policy");
+      attr.isStringAttribute())
+    funcOp.setSampleProfileSuffixElisionPolicy(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())

@@ -144,6 +144,13 @@ void FunctionAttrPass::runOnOperation() {
             context, mlir::LLVM::LLVMFuncOp::getUseSampleProfileAttrName(
                          llvmFuncOpName)),
         mlir::BoolAttr::get(context, true));
+  if (UniqueInternalLinkageNames && fir::isInternalProcedure(func))
+    func->setAttr(
+        getLlvmFuncPropertyAttrName(
+            context,
+            mlir::LLVM::LLVMFuncOp::getSampleProfileSuffixElisionPolicyAttrName(
+                llvmFuncOpName)),
+        mlir::StringAttr::get(context, "selected"));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
