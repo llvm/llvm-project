@@ -7204,8 +7204,7 @@ markMetadirectiveLoopIVs(semantics::SemanticsContext &semaCtx,
   Symbol::Flag ivDSA;
   if (!isSimdVariant)
     ivDSA = Symbol::Flag::OmpPrivate;
-  else if (affectedDepth == 1 &&
-           semaCtx.langOptions().getOpenMPVersion() < 60)
+  else if (affectedDepth == 1 && semaCtx.langOptions().getOpenMPVersion() < 60)
     ivDSA = Symbol::Flag::OmpLinear;
   else
     ivDSA = Symbol::Flag::OmpLastPrivate;

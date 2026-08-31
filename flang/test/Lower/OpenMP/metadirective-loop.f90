@@ -1172,6 +1172,7 @@ end subroutine
 ! loop-index attributes before lowering the next arm.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_collapse(
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK: %[[DC_N:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEn
 ! CHECK: %[[DC_I:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEi
 ! CHECK: %[[DC_J:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEj
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1208,13 +1209,59 @@ end subroutine
 ! CHECK:               hlfir.assign %[[DC_SUM]] to %[[DC_ELEMENT]]
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
-! CHECK:               fir.if
+! CHECK:               %[[DC_I_BOUND:.*]] = fir.load %[[DC_N]]#0
+! CHECK-NEXT:          %[[DC_I_STEP:.*]] = arith.constant 1 : i32
+! CHECK-NEXT:          %[[DC_J_BOUND:.*]] = fir.load %[[DC_N]]#0
+! CHECK-NEXT:          %[[DC_J_STEP:.*]] = arith.constant 1 : i32
+! CHECK-NEXT:          %[[DC_I_NEXT:.*]] = arith.addi
+! CHECK-SAME:            %[[DC_I_IV]], %[[DC_I_STEP]]
+! CHECK-NEXT:          %[[DC_I_ZERO:.*]] = arith.constant 0 : i32
+! CHECK-NEXT:          %[[DC_I_NEG:.*]] = arith.cmpi slt,
+! CHECK-SAME:            %[[DC_I_STEP]], %[[DC_I_ZERO]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_I_LT:.*]] = arith.cmpi slt,
+! CHECK-SAME:            %[[DC_I_NEXT]], %[[DC_I_BOUND]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_I_GT:.*]] = arith.cmpi sgt,
+! CHECK-SAME:            %[[DC_I_NEXT]], %[[DC_I_BOUND]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_I_LAST:.*]] = arith.select
+! CHECK-SAME:            %[[DC_I_NEG]], %[[DC_I_LT]], %[[DC_I_GT]]
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_J_NEXT:.*]] = arith.addi
+! CHECK-SAME:            %[[DC_J_IV]], %[[DC_J_STEP]]
+! CHECK-NEXT:          %[[DC_J_ZERO:.*]] = arith.constant 0 : i32
+! CHECK-NEXT:          %[[DC_J_NEG:.*]] = arith.cmpi slt,
+! CHECK-SAME:            %[[DC_J_STEP]], %[[DC_J_ZERO]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_J_LT:.*]] = arith.cmpi slt,
+! CHECK-SAME:            %[[DC_J_NEXT]], %[[DC_J_BOUND]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_J_GT:.*]] = arith.cmpi sgt,
+! CHECK-SAME:            %[[DC_J_NEXT]], %[[DC_J_BOUND]] : i32
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_J_LAST:.*]] = arith.select
+! CHECK-SAME:            %[[DC_J_NEG]], %[[DC_J_LT]], %[[DC_J_GT]]
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               %[[DC_LAST:.*]] = arith.andi
+! CHECK-SAME:            %[[DC_I_LAST]], %[[DC_J_LAST]]
+! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:           {{^ *}}}
+! CHECK:               fir.if %[[DC_LAST]]
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
-! CHECK:                 hlfir.assign {{.*}} to %[[DC_I_DECL]]#0
+! CHECK:                 hlfir.assign %[[DC_I_NEXT]] to %[[DC_I_DECL]]#0
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
-! CHECK:                 hlfir.assign {{.*}} to %[[DC_J_DECL]]#0
+! CHECK:                 hlfir.assign %[[DC_J_NEXT]] to %[[DC_J_DECL]]#0
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:             {{^ *}}}
 ! CHECK:                 %[[DC_I_COPY:.*]] = fir.load %[[DC_I_DECL]]#0
@@ -1236,6 +1283,8 @@ end subroutine
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK:           omp.simd linear(
 ! CHECK-SAME:        val(%[[DC_I]]#0 : !fir.ref<i32> =
+! CHECK-SAME:        %[[DC_FB_STEP:[^ ]+]] : i32))
+! CHECK-SAME:        linear_var_types([i32]) {
 ! CHECK-NOT:         Ei_private
 ! CHECK-NOT:         Ej_private
 ! CHECK-NOT:       {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1310,12 +1359,17 @@ end subroutine
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
 ! CHECK:               fir.store %[[OD_J_IV]] to %[[OD_J_DECL]]#0
-! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK-NOT:           {{^ *}}}
-! CHECK:               %[[OD_ELEMENT:.*]] = hlfir.designate
-! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
-! CHECK-NOT:           {{^ *}}}
-! CHECK:               hlfir.assign {{.*}} to %[[OD_ELEMENT]]
+! CHECK-NEXT:          %[[OD_I_VALUE:.*]] = fir.load %[[OD_I_DECL]]#0
+! CHECK-NEXT:          %[[OD_J_VALUE:.*]] = fir.load %[[OD_J_DECL]]#0
+! CHECK-NEXT:          %[[OD_SUM:.*]] = arith.addi
+! CHECK-SAME:            %[[OD_I_VALUE]], %[[OD_J_VALUE]]
+! CHECK-NEXT:          %[[OD_J_INDEX:.*]] = fir.load %[[OD_J_DECL]]#0
+! CHECK-NEXT:          %[[OD_J_I64:.*]] = fir.convert %[[OD_J_INDEX]]
+! CHECK-NEXT:          %[[OD_I_INDEX:.*]] = fir.load %[[OD_I_DECL]]#0
+! CHECK-NEXT:          %[[OD_I_I64:.*]] = fir.convert %[[OD_I_INDEX]]
+! CHECK-NEXT:          %[[OD_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:            (%[[OD_J_I64]], %[[OD_I_I64]])
+! CHECK-NEXT:          hlfir.assign %[[OD_SUM]] to %[[OD_ELEMENT]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
 ! CHECK:             }
@@ -1390,6 +1444,7 @@ end subroutine
 ! that lowering copies both private values back to their source bindings.
 ! CHECK-LABEL: func.func @_QPtest_simd_collapse_lastprivate(
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK: %[[SC_N:.*]]:2 = hlfir.declare {{.*}}lastprivateEn
 ! CHECK: %[[SC_I:.*]]:2 = hlfir.declare {{.*}}lastprivateEi
 ! CHECK: %[[SC_J:.*]]:2 = hlfir.declare {{.*}}lastprivateEj
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1405,21 +1460,72 @@ end subroutine
 ! CHECK:             %[[SC_J_DECL:.*]]:2 = hlfir.declare %[[SC_J_PRIV]]
 ! CHECK:             hlfir.assign %[[SC_I_IV]] to %[[SC_I_DECL]]#0
 ! CHECK:             hlfir.assign %[[SC_J_IV]] to %[[SC_J_DECL]]#0
+! CHECK-NEXT:        %[[SC_I_VALUE:.*]] = fir.load %[[SC_I_DECL]]#0
+! CHECK-NEXT:        %[[SC_J_VALUE:.*]] = fir.load %[[SC_J_DECL]]#0
+! CHECK-NEXT:        %[[SC_SUM:.*]] = arith.addi
+! CHECK-SAME:          %[[SC_I_VALUE]], %[[SC_J_VALUE]]
+! CHECK-NEXT:        %[[SC_J_INDEX:.*]] = fir.load %[[SC_J_DECL]]#0
+! CHECK-NEXT:        %[[SC_J_I64:.*]] = fir.convert %[[SC_J_INDEX]]
+! CHECK-NEXT:        %[[SC_I_INDEX:.*]] = fir.load %[[SC_I_DECL]]#0
+! CHECK-NEXT:        %[[SC_I_I64:.*]] = fir.convert %[[SC_I_INDEX]]
+! CHECK-NEXT:        %[[SC_ELEMENT:.*]] = hlfir.designate
+! CHECK-SAME:          (%[[SC_J_I64]], %[[SC_I_I64]])
+! CHECK-NEXT:        hlfir.assign %[[SC_SUM]] to %[[SC_ELEMENT]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
-! CHECK:             %[[SC_ELEMENT:.*]] = hlfir.designate
+! CHECK:             %[[SC_I_BOUND:.*]] = fir.load %[[SC_N]]#0
+! CHECK-NEXT:        %[[SC_I_STEP:.*]] = arith.constant 1 : i32
+! CHECK-NEXT:        %[[SC_J_BOUND:.*]] = fir.load %[[SC_N]]#0
+! CHECK-NEXT:        %[[SC_J_STEP:.*]] = arith.constant 1 : i32
+! CHECK-NEXT:        %[[SC_I_NEXT:.*]] = arith.addi
+! CHECK-SAME:          %[[SC_I_IV]], %[[SC_I_STEP]]
+! CHECK-NEXT:        %[[SC_I_ZERO:.*]] = arith.constant 0 : i32
+! CHECK-NEXT:        %[[SC_I_NEG:.*]] = arith.cmpi slt,
+! CHECK-SAME:          %[[SC_I_STEP]], %[[SC_I_ZERO]] : i32
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
-! CHECK:             hlfir.assign {{.*}} to %[[SC_ELEMENT]]
+! CHECK:             %[[SC_I_LT:.*]] = arith.cmpi slt,
+! CHECK-SAME:          %[[SC_I_NEXT]], %[[SC_I_BOUND]] : i32
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:         {{^ *}}}
-! CHECK:             fir.if
+! CHECK:             %[[SC_I_GT:.*]] = arith.cmpi sgt,
+! CHECK-SAME:          %[[SC_I_NEXT]], %[[SC_I_BOUND]] : i32
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_I_LAST:.*]] = arith.select
+! CHECK-SAME:          %[[SC_I_NEG]], %[[SC_I_LT]], %[[SC_I_GT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_J_NEXT:.*]] = arith.addi
+! CHECK-SAME:          %[[SC_J_IV]], %[[SC_J_STEP]]
+! CHECK-NEXT:        %[[SC_J_ZERO:.*]] = arith.constant 0 : i32
+! CHECK-NEXT:        %[[SC_J_NEG:.*]] = arith.cmpi slt,
+! CHECK-SAME:          %[[SC_J_STEP]], %[[SC_J_ZERO]] : i32
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_J_LT:.*]] = arith.cmpi slt,
+! CHECK-SAME:          %[[SC_J_NEXT]], %[[SC_J_BOUND]] : i32
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_J_GT:.*]] = arith.cmpi sgt,
+! CHECK-SAME:          %[[SC_J_NEXT]], %[[SC_J_BOUND]] : i32
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_J_LAST:.*]] = arith.select
+! CHECK-SAME:          %[[SC_J_NEG]], %[[SC_J_LT]], %[[SC_J_GT]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             %[[SC_LAST:.*]] = arith.andi
+! CHECK-SAME:          %[[SC_I_LAST]], %[[SC_J_LAST]]
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
+! CHECK-NOT:         {{^ *}}}
+! CHECK:             fir.if %[[SC_LAST]]
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
-! CHECK:               hlfir.assign {{.*}} to %[[SC_I_DECL]]#0
+! CHECK:               hlfir.assign %[[SC_I_NEXT]] to %[[SC_I_DECL]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
-! CHECK:               hlfir.assign {{.*}} to %[[SC_J_DECL]]#0
+! CHECK:               hlfir.assign %[[SC_J_NEXT]] to %[[SC_J_DECL]]#0
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK-NOT:           {{^ *}}}
 ! CHECK:               %[[SC_I_COPY:.*]] = fir.load %[[SC_I_DECL]]#0
