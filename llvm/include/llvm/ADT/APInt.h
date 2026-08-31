@@ -1141,7 +1141,7 @@ public:
   ///
   /// \returns true if *this < RHS when considered signed.
   bool slt(int64_t RHS) const {
-    return (!isSingleWord() && getSignificantBits() > 64)
+    return LLVM_UNLIKELY(!isSingleWord() && getSignificantBits() > 64)
                ? isNegative()
                : getSExtValue() < RHS;
   }
@@ -1212,7 +1212,7 @@ public:
   ///
   /// \returns true if *this > RHS when considered signed.
   bool sgt(int64_t RHS) const {
-    return (!isSingleWord() && getSignificantBits() > 64)
+    return LLVM_UNLIKELY(!isSingleWord() && getSignificantBits() > 64)
                ? !isNegative()
                : getSExtValue() > RHS;
   }
@@ -2020,7 +2020,7 @@ private:
   /// Get the word corresponding to a bit position
   /// \returns the corresponding word for the specified bit position.
   uint64_t getWord(unsigned bitPosition) const {
-    return isSingleWord() ? U.VAL : U.pVal[whichWord(bitPosition)];
+    return LLVM_LIKELY(isSingleWord()) ? U.VAL : U.pVal[whichWord(bitPosition)];
   }
 
   /// Utility method to change the bit width of this APInt to new bit width,
