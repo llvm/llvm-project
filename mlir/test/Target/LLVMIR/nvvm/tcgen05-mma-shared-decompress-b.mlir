@@ -1,4 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
+// RUN: %if llc && host-supports-nvptx %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -march=nvptx64 -mcpu=sm_107f -mattr=+ptx94 %}
 
 // CHECK-LABEL: @nvvm_tcgen05_mma_shared_decompress_b_cta_1
 llvm.func @nvvm_tcgen05_mma_shared_decompress_b_cta_1(
