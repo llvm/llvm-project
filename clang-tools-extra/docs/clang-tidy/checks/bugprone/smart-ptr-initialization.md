@@ -55,6 +55,9 @@ void f() {
   complex code. It is **not recommended** for legacy codebases. Consider
   enabling this option only for new projects written with strict ownership
   policies from the start.
+  **Note**: Smart pointers with custom deleters (i.e., deleters not listed in
+  the `DefaultDeleters` option) are always ignored in this mode and will never
+  produce any diagnostics, regardless of the initialization pattern.
 
 ## Limitations
 
