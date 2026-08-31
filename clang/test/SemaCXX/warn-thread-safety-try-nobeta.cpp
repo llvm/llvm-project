@@ -214,3 +214,72 @@ void release_after_reacquire() {
     }
   }
 }
+
+// A `?:` arm split reconstitutes silently even without beta: the branch
+// was never honored before, so its join never warned. The merge below
+// determines nothing (both arms are truthy), so the split is all there is
+// to see -- without the mark the arms' join would report the hold the
+// success arm proved as lost on the other path, which is the eager
+// diagnosis this mode otherwise keeps.
+void cond_split_join_stays_silent_without_beta() {
+  int r = mu.TryLock() ? 1 : 2;
+  if (r) {
+    a = 3;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  }
+}
+
+// The `?:` shapes in the mode where the eager join diagnosis is the only
+// coverage: what the honored terminator and the merged value resolve is
+// the same in both modes, so these read exactly like their `if`
+// spellings.
+bool use();
+Mutex mu2;
+int a2 __attribute__((guarded_by(mu2)));
+
+// The terminator is a branch: the arms run under the resolved state.
+void cond_terminator_resolves_without_beta() {
+  if (mu.TryLock() ? use() : false) {
+    a = 3;
+    mu.Unlock();
+  }
+}
+
+// The arm's own call is what a later branch on the value resolves.
+void cond_arm_resolves_without_beta() {
+  if (mu.TryLock() ? mu2.TryLock() : false) {
+    a2 = 3;
+    mu2.Unlock();
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  }
+}
+
+// A comparison against an arm's own constant is a branch on the condition.
+void cond_merged_constant_without_beta() {
+  int r = mu.TryLock() ? 1 : 2;
+  if (r == 1) {
+    a = 3;
+    mu.Unlock();
+  } else {
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+}
+
+// The GNU spelling keeps the result itself.
+void gnu_cond_without_beta() {
+  bool ok = mu.TryLock();
+  if (ok ?: 0) {
+    a = 3;
+    mu.Unlock();
+  }
+}
+
+// A stored `||` is not a branch on the call: the value is true whenever
+// the left operand is, with the call never made.
+void stored_logical_without_beta(bool other) {
+  bool b = other || mu.TryLock();
+  if (b) {
+    a = 3;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+}

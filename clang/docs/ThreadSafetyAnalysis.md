@@ -565,6 +565,27 @@ that constant can account for proves nothing about any code, since the value
 there may be the constant rather than a result the call did produce; the other
 edge carries the result alone and still resolves exactly.
 
+A conditional operator is both a branch and a merge. Its own condition is a
+recognized branch, so the arms run under the state that condition resolves --
+a void `?:`, the pre-2.32 glibc spelling of `assert()`, is exactly an `if` --
+and the value it produces is a merge of the kind above. With both arms
+constant, the value's truthiness is the condition's while its magnitude is the
+arm's: a later branch on it reads as a branch on the condition, a comparison
+against an arm's own constant resolves the same way (`(ok ? 1 : 2) == 1` is
+`ok`), and a value neither arm carries determines nothing. With one arm
+constant, the other arm's own try-acquire is what a later branch resolves, on
+the edge whose truthiness the constant cannot account for; the constant's own
+edge determines nothing, since the value there may be the constant with the
+arm never evaluated. The GNU form `r ?: x` keeps `r` itself, magnitude
+included, when `x` is a falsy constant.
+
+A branch on the result must test it where the operator that produced it was
+evaluated. `if (a || mu.TryLock())` is a branch on the try-acquire, since the
+right-hand side is evaluated only on the edge the branch tests; `bool b = a ||
+mu.TryLock(); if (b)` is not, because `b` is true whenever `a` is, with the
+call never made. The same applies to a comparison, an assignment,
+`__builtin_expect`, a statement expression, or a `?:` arm around the operator.
+
 ```c++
 Mutex mu;
 int a GUARDED_BY(mu);

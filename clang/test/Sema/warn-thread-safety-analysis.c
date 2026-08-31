@@ -789,6 +789,35 @@ void test_trylock_literal_one_is_not_a_code_either(void) {
   }
 }
 
+// A non-void conditional whose arms carry the result as constants resolves
+// where the value is branched on; with one non-constant arm, a truthy value
+// still proves the true arm ran and the try-lock succeeded, while the falsy
+// edge determines nothing and is reported as a possible leak.
+int get_data(void);
+void test_trylock_conditional_arm(void) {
+  if (mutex_exclusive_trylock(&mu1) ? get_data() : 0) { // expected-note{{mutex acquired here}}
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+} // expected-warning{{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+// GNU `?:` with a falsy constant is the result itself: both edges resolve,
+// like a plain branch on the call.
+void test_trylock_gnu_conditional(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: 0) {
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+}
+
+// GNU `?:` with a non-constant right operand: a falsy value proves both
+// operands falsy -- the try-lock failed -- while a truthy value may be the
+// right operand's, so the result stays undetermined there.
+void test_trylock_gnu_conditional_nonconst(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: get_data())
+    mutex_unlock(&mu1); // expected-warning{{releasing mutex 'mu1' that may not be held}}
+}
+
 // A switch on an int-typed but provably boolean condition (a comparison in
 // C) derives the default edge the same way as a _Bool condition: case 1 is
 // the success edge, so default implies the try-lock failed.
@@ -845,19 +874,21 @@ void test_trylock_negation_compared_impossible(void) {
 // boolean, an int in C spelled exactly like a success code: `(c && r) == 1`
 // asks whether `c && r` is true, not whether the call returned 1. Reading
 // it as the code would call a result of 2 a match. Its case labels name
-// the same boolean, so a switch over it pins nothing either; both fall
-// back to the truthiness of the operand, which for a code-keyed call
-// resolves nothing at all.
+// the same boolean, so a switch over it pins nothing either. A comparison
+// is also a value join the short-circuit edge reaches, so the descent into
+// the operator is refused outright here (TrylockDecode::CrossedBlocks) and
+// the branch identifies no call at all -- either way nothing is resolved.
 int mutex_trylock_codes(struct Mutex *mu, struct Mutex *mu2)
     EXCLUSIVE_TRYLOCK_FUNCTION(1, mu) EXCLUSIVE_TRYLOCK_FUNCTION(2, mu2);
 
 void test_trylock_logical_compared(int c) {
-  int r = mutex_trylock_codes(&mu1, &mu2); // expected-note {{mutex acquired here}}
+  int r = mutex_trylock_codes(&mu1, &mu2); // expected-note 2 {{mutex acquired here}}
   if ((c && r) == 1) {
     work_data = 1;      // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
     mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
   }
-} // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}} \
+  // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.

@@ -565,6 +565,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   result was read as acquiring every capability the call names, and every
   other value as acquiring none of them.
 
+- Thread safety analysis now follows a try-acquire result through a
+  conditional operator. The operator's own condition is a branch like any
+  other, so `if (mu.TryLock() ? use() : false)` no longer diagnoses uses in
+  the body, and the value it produces is read as the merge it is: what a
+  later branch on that value proves depends on which arm can account for the
+  edge it tests. The GNU form `ok ?: 0` is decoded too. Conversely, a branch
+  on a stored `&&` or `||` is no longer read as proof that its right-hand
+  side was evaluated -- `bool b = a || mu.TryLock(); if (b)` says nothing
+  about the call, while `if (a || mu.TryLock())` still does.
+
 - Thread safety analysis has a new `-Wthread-safety-beta` diagnostic for a
   try-acquire whose result the analysis never sees checked: the capability may
   be leaked, and the warning is reported where the analysis loses track of the
