@@ -28,15 +28,16 @@ namespace llvm::slpvectorizer {
 /// meaningful vectorization path such as x86_fp80 and ppc_f128. This just
 /// avoids spending time checking the cost model and realizing that they will
 /// be inevitably scalarized.
-bool isValidElementType(Type *Ty);
+bool isValidElementType(Type *Ty, bool ReVec);
 
 /// Returns the "element type" of the given value/instruction \p V.
-/// For stores, returns the stored value type; for insertelement (when ReVec is
-/// off), the inserted operand type. For compares, the default is to return the
-/// result type (i1); when \p LookThroughCmp is true, returns the type of the
-/// compared operands instead, which is needed for vector width calculations
-/// (the width is determined by the operand type, not the i1 result).
-Type *getValueType(Value *V, bool LookThroughCmp = false);
+/// For stores, returns the stored value type; for insertelement (when \p ReVec
+/// is off), the inserted operand type. For compares, the default is to return
+/// the result type (i1); when \p LookThroughCmp is true, returns the type of
+/// the compared operands instead, which is needed for vector width
+/// calculations (the width is determined by the operand type, not the i1
+/// result).
+Type *getValueType(Value *V, bool ReVec, bool LookThroughCmp = false);
 
 /// \returns the vector type of ScalarTy based on vectorization factor.
 Type *getWidenedType(Type *ScalarTy, unsigned VF);

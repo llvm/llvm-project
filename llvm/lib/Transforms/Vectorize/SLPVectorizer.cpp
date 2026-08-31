@@ -131,9 +131,7 @@ static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
                         cl::desc("Run the SLP vectorization passes"));
 
-// Non-static so SLPVectorizer/ helper modules can reference it via an extern
-// declaration; see SLPTypeUtils.cpp.
-cl::opt<bool>
+static cl::opt<bool>
     SLPReVec("slp-revec", cl::init(false), cl::Hidden,
              cl::desc("Enable vectorization for wider vector utilization"));
 
@@ -358,7 +356,7 @@ static const unsigned MaxPHINumOperands = 128;
 /// legalization.
 static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
                                               Type *Ty, unsigned Sz) {
-  if (!isValidElementType(Ty) || isa<StructType>(Ty))
+  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
     return bit_ceil(Sz);
   // Find the number of elements, which forms full vectors.
   const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
@@ -373,7 +371,7 @@ static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
 static unsigned
 getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
                                    unsigned Sz) {
-  if (!isValidElementType(Ty) || isa<StructType>(Ty))
+  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
     return bit_floor(Sz);
   // Find the number of elements, which forms full vectors.
   unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
@@ -549,7 +547,7 @@ static bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
                                      unsigned Sz) {
   if (Sz <= 1)
     return false;
-  if (!isValidElementType(Ty) && !isa<FixedVectorType>(Ty))
+  if (!isValidElementType(Ty, SLPReVec) && !isa<FixedVectorType>(Ty))
     return false;
   if (has_single_bit(Sz))
     return true;
@@ -1286,8 +1284,8 @@ public:
     /// MainAltOps.
     int getShallowScore(Value *V1, Value *V2, Instruction *U1, Instruction *U2,
                         ArrayRef<Value *> MainAltOps) const {
-      if (!isValidElementType(V1->getType()) ||
-          !isValidElementType(V2->getType()))
+      if (!isValidElementType(V1->getType(), SLPReVec) ||
+          !isValidElementType(V2->getType(), SLPReVec))
         return LookAheadHeuristics::ScoreFail;
 
       if (V1 == V2) {
@@ -5784,7 +5782,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   SmallVector<Value *> GatheredScalars(TE.Scalars.begin(), TE.Scalars.end());
   Type *ScalarTy = GatheredScalars.front()->getType();
   size_t NumScalars = GatheredScalars.size();
-  if (!isValidElementType(ScalarTy))
+  if (!isValidElementType(ScalarTy, SLPReVec))
     return std::nullopt;
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
   unsigned NumParts = getNumberOfParts(VecTy, ScalarTy, NumScalars);
@@ -7390,10 +7388,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       }
     }
     if (Sz == 2 && TE.getVectorFactor() == 4 &&
-        ::getNumberOfParts(*TTI,
-                           getWidenedType(getValueType(TE.Scalars.front()),
-                                          2 * TE.getVectorFactor()),
-                           getValueType(TE.Scalars.front())) == 1)
+        ::getNumberOfParts(
+            *TTI,
+            getWidenedType(getValueType(TE.Scalars.front(), SLPReVec),
+                           2 * TE.getVectorFactor()),
+            getValueType(TE.Scalars.front(), SLPReVec)) == 1)
       return std::nullopt;
     if (TE.ReuseShuffleIndices.size() % Sz != 0)
       return std::nullopt;
@@ -7938,7 +7937,7 @@ void BoUpSLP::reorderTopToBottom() {
   // TODO: Reordering of struct types is not supported.
   if (any_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
         return TE->State == TreeEntry::Vectorize &&
-               isa<StructType>(getValueType(TE->Scalars.front()));
+               isa<StructType>(getValueType(TE->Scalars.front(), SLPReVec));
       }))
     return;
   // Compute IgnoreReorder once - it depends only on UserIgnoreList and
@@ -8365,7 +8364,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       auto &Data = Users;
       // TODO: Reordering of struct types is not supported.
       if (Data.first->State == TreeEntry::Vectorize &&
-          isa<StructType>(getValueType(Data.first->Scalars.front())))
+          isa<StructType>(getValueType(Data.first->Scalars.front(), SLPReVec)))
         continue;
       if (Data.first->State == TreeEntry::SplitVectorize) {
         assert(
@@ -8659,7 +8658,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           continue;
         // TODO: Reordering of struct types is not supported.
         if (TE->State == TreeEntry::Vectorize &&
-            isa<StructType>(getValueType(TE->Scalars.front())))
+            isa<StructType>(getValueType(TE->Scalars.front(), SLPReVec)))
           continue;
         if (TE->ReuseShuffleIndices.size() == BestOrder.size()) {
           reorderNodeWithReuses(*TE, Mask);
@@ -8966,7 +8965,7 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
       // Test whether we can handle the store. V might be a global, which could
       // be used in a different function.
       if (SI == nullptr || !SI->isSimple() || SI->getFunction() != F ||
-          !isValidElementType(SI->getValueOperand()->getType()))
+          !isValidElementType(SI->getValueOperand()->getType(), SLPReVec))
         continue;
       // Skip entry if already
       if (isVectorized(U))
@@ -9120,8 +9119,8 @@ static void gatherPossiblyVectorizableLoads(
     bool AddNew = true) {
   if (VL.empty())
     return;
-  Type *ScalarTy = getValueType(VL.front());
-  if (!isValidElementType(ScalarTy))
+  Type *ScalarTy = getValueType(VL.front(), SLPReVec);
+  if (!isValidElementType(ScalarTy, SLPReVec))
     return;
   SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>> ClusteredLoads;
   SmallVector<DenseMap<int64_t, LoadInst *>> ClusteredDistToLoad;
@@ -9971,7 +9970,7 @@ static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
     return false;
   Type *Ty = I->getType();
   if ((Ty->isVectorTy() && !SLPReVec) || Ty->isAggregateType() ||
-      !isValidElementType(Ty))
+      !isValidElementType(Ty, SLPReVec))
     return false;
   auto Analyze = [&]() {
     InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
@@ -9990,7 +9989,7 @@ static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
   };
   if (auto *CI = dyn_cast<CallInst>(I)) {
     if (any_of(CI->args(), [](const Value *Arg) {
-          return !isValidElementType(Arg->getType());
+          return !isValidElementType(Arg->getType(), SLPReVec);
         }))
       return false;
     if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
@@ -10190,10 +10189,10 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     if (any_of(VL,
                [](Value *V) {
                  auto *IV = dyn_cast<InsertValueInst>(V);
-                 return IV &&
-                        (IV->getNumIndices() != 1 ||
-                         !::isValidElementType(IV->getOperand(1)->getType()) ||
-                         IV->getOperand(1)->getType()->isVectorTy());
+                 return IV && (IV->getNumIndices() != 1 ||
+                               !::isValidElementType(
+                                   IV->getOperand(1)->getType(), SLPReVec) ||
+                               IV->getOperand(1)->getType()->isVectorTy());
                }) ||
         none_of(VL, [](Value *V) {
           auto *IV = dyn_cast<InsertValueInst>(V);
@@ -10331,7 +10330,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (isa<PoisonValue>(V))
         continue;
       Type *Ty = cast<Instruction>(V)->getOperand(0)->getType();
-      if (Ty != SrcTy || !isValidElementType(Ty)) {
+      if (Ty != SrcTy || !isValidElementType(Ty, SLPReVec)) {
         LLVM_DEBUG(
             dbgs() << "SLP: Gathering casts with different src types.\n");
         return TreeEntry::NeedToGather;
@@ -10761,7 +10760,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                 const BoUpSLP::EdgeInfo &UserTreeIdx,
                                 const BoUpSLP &R, bool BuildGatherOnly = true) {
   // TODO: Reordering of struct types is not supported.
-  if (isa<StructType>(getValueType(VL.front()))) {
+  if (isa<StructType>(getValueType(VL.front(), SLPReVec))) {
     LLVM_DEBUG(dbgs() << "SLP: struct type in bundle.\n");
     ReuseShuffleIndices.clear();
     return true;
@@ -10877,7 +10876,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     for (auto [Idx, Val] : enumerate(ReuseShuffleIndices))
       if (Val != PoisonMaskElem && UniquePositions.contains(UniqueValues[Val]))
         DemandedElts.setBit(Idx);
-    Type *ScalarTy = ::getValueType(UniqueValues.front());
+    Type *ScalarTy = ::getValueType(UniqueValues.front(), SLPReVec);
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
     auto *UniquesVecTy =
         cast<VectorType>(getWidenedType(ScalarTy, NumUniqueScalarValues));
@@ -11085,7 +11084,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
     }
     Op2.push_back(V);
   }
-  Type *ScalarTy = getValueType(VL.front());
+  Type *ScalarTy = getValueType(VL.front(), SLPReVec);
   auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
   unsigned Opcode0 = LocalState.getOpcode();
   unsigned Opcode1 = LocalState.getAltOpcode();
@@ -12253,7 +12252,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Don't handle vectors.
-  if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
+  if (!SLPReVec && getValueType(VL.front(), SLPReVec)->isVectorTy()) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     // Do not try to pack to avoid extra instructions here.
     return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
@@ -13546,7 +13545,7 @@ unsigned BoUpSLP::canMapToVector(Type *T) const {
     }
   }
 
-  if (!isValidElementType(EltTy))
+  if (!isValidElementType(EltTy, SLPReVec))
     return 0;
   size_t VTSize = DL->getTypeStoreSizeInBits(getWidenedType(EltTy, N));
   if (VTSize < MinVecRegSize || VTSize > MaxVecRegSize ||
@@ -13600,7 +13599,8 @@ FixedVectorType *BoUpSLP::getInsertBuildVectorSrcTy(const TreeEntry *E) const {
       continue;
     MaxIdx = std::max(MaxIdx, I->getIndices().front());
   }
-  return cast<FixedVectorType>(getWidenedType(getValueType(VL0), MaxIdx + 1));
+  return cast<FixedVectorType>(
+      getWidenedType(getValueType(VL0, SLPReVec), MaxIdx + 1));
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
@@ -15076,8 +15076,9 @@ void BoUpSLP::transformNodes() {
           bool IsTwoRegisterSplat = true;
           if (IsSplat && VF == 2) {
             unsigned NumRegs2VF = ::getNumberOfParts(
-                *TTI, getWidenedType(getValueType(Slice.front()), 2 * VF),
-                getValueType(Slice.front()));
+                *TTI,
+                getWidenedType(getValueType(Slice.front(), SLPReVec), 2 * VF),
+                getValueType(Slice.front(), SLPReVec));
             IsTwoRegisterSplat = NumRegs2VF == 2;
           }
           if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
@@ -16715,7 +16716,7 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
   };
 
   auto GetEntryVecTy = [&](const TreeEntry *TE) -> std::pair<Type *, Type *> {
-    Type *ScalarTy = getValueType(TE->Scalars.front());
+    Type *ScalarTy = getValueType(TE->Scalars.front(), SLPReVec);
     auto BWIt = MinBWs.find(TE);
     if (BWIt != MinBWs.end()) {
       auto *VTy = dyn_cast<FixedVectorType>(ScalarTy);
@@ -16848,12 +16849,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
   ArrayRef<Value *> VL = E->Scalars;
 
-  Type *ScalarTy = getValueType(VL[0]);
+  Type *ScalarTy = getValueType(VL[0], SLPReVec);
   if (SLPReVec && E->State == TreeEntry::Vectorize &&
       E->getOpcode() == Instruction::InsertElement &&
       !E->getOperand(1).back()->getType()->isVectorTy())
     ScalarTy = ScalarTy->getScalarType();
-  if (!isValidElementType(ScalarTy))
+  if (!isValidElementType(ScalarTy, SLPReVec))
     return InstructionCost::getInvalid();
 
   // If we have computed a smaller type for the expression, update VecTy so
@@ -17430,7 +17431,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // Override ScalarTy/VecTy with the compared operand type (not i1). The
     // cost of a compare instruction is determined by the operand width, and
     // getCmpSelInstrCost expects the compared type as its first type arg.
-    OrigScalarTy = ScalarTy = getValueType(VL0, /*LookThroughCmp=*/true);
+    OrigScalarTy = ScalarTy =
+        getValueType(VL0, SLPReVec, /*LookThroughCmp=*/true);
     VecTy = getWidenedType(ScalarTy, VL.size());
     [[fallthrough]];
   case Instruction::Select: {
@@ -19426,7 +19428,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         !(TE.Idx == 0 && (TE.getOpcode() == Instruction::InsertElement ||
                           TE.getOpcode() == Instruction::InsertValue ||
                           TE.getOpcode() == Instruction::Store)) &&
-        !isa<StructType>(getValueType(TE.Scalars.front()))) {
+        !isa<StructType>(getValueType(TE.Scalars.front(), SLPReVec))) {
       // Calculate costs of external uses.
       APInt DemandedElts = APInt::getZero(TE.getVectorFactor());
       for (Value *V : TE.Scalars) {
@@ -19468,7 +19470,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     Sz = std::max<unsigned>(
         getVectorElementSize(RootTE->Scalars.front()),
         DL->getTypeSizeInBits(
-            getValueType(RootTE->Scalars.front())->getScalarType()));
+            getValueType(RootTE->Scalars.front(), SLPReVec)->getScalarType()));
   }
   const unsigned MinVF = getMinVF(Sz);
   if (Cost >= -SLPCostThreshold &&
@@ -19557,7 +19559,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
     if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
-        isa<StructType>(getValueType(TE->Scalars.front())) ||
+        isa<StructType>(getValueType(TE->Scalars.front(), SLPReVec)) ||
         // Exit early if the parent node is split node and any of scalars is
         // used in other split nodes.
         (TE->UserTreeIndex &&
@@ -19613,7 +19615,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         DemandedElts.setBit(Idx);
     }
 
-    Type *ScalarTy = getValueType(TE->Scalars.front());
+    Type *ScalarTy = getValueType(TE->Scalars.front(), SLPReVec);
     auto It = MinBWs.find(TE);
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
@@ -19986,7 +19988,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     Type *AccessTy = nullptr;
     if (User && User->hasOneUse() &&
         isa<LoadInst, StoreInst>(User->user_back()))
-      AccessTy = getValueType(User->user_back());
+      AccessTy = getValueType(User->user_back(), SLPReVec);
     if (AccessTy && !isa<ScalableVectorType>(AccessTy) &&
         (!UserScalarTy || UserScalarTy == AccessTy)) {
       UserScalarTy = AccessTy;
@@ -23280,7 +23282,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilderBase::InsertPointGuard Guard(Builder);
 
   Value *V = E->Scalars.front();
-  Type *ScalarTy = getValueType(V);
+  Type *ScalarTy = getValueType(V, SLPReVec);
   auto It = MinBWs.find(E);
   if (It != MinBWs.end()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy);
@@ -25031,7 +25033,7 @@ static bool blockBodyHasVectorInstructions(BasicBlock *BB) {
       continue;
     // A vector-producing instruction (vector load, binop, shuffle, etc.) has a
     // vector result type.
-    if (getValueType(&I)->isVectorTy())
+    if (getValueType(&I, SLPReVec)->isVectorTy())
       return true;
   }
   return false;
@@ -29828,7 +29830,7 @@ bool SLPVectorizerPass::vectorizeStores(
   if (Remaining.size() < 2)
     return Changed;
 
-  Type *ValTy = getValueType(Remaining.front());
+  Type *ValTy = getValueType(Remaining.front(), SLPReVec);
   if (any_of(Remaining, [&](Value *V) {
         return cast<StoreInst>(V)->getValueOperand()->getType() != ValTy;
       }))
@@ -29881,7 +29883,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType()))
+      if (!isValidElementType(SI->getValueOperand()->getType(), SLPReVec))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
@@ -29895,7 +29897,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
       Value *Idx = GEP->idx_begin()->get();
       if (isa<Constant>(Idx))
         continue;
-      if (!isValidElementType(Idx->getType()))
+      if (!isValidElementType(Idx->getType(), SLPReVec))
         continue;
       if (GEP->getType()->isVectorTy())
         continue;
@@ -29925,7 +29927,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   for (Value *V : VL) {
     Type *Ty = V->getType();
     if (!isa<InsertElementInst, InsertValueInst>(V) &&
-        !isValidElementType(Ty)) {
+        !isValidElementType(Ty, SLPReVec)) {
       // NOTE: the following will give user internal llvm type name, which may
       // not be useful.
       R.getORE()->emit([&]() {
@@ -29940,7 +29942,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
-  Type *ScalarTy = getValueType(VL[0], /*LookThroughCmp=*/true);
+  Type *ScalarTy = getValueType(VL[0], SLPReVec, /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
@@ -30576,7 +30578,7 @@ public:
       return false;
 
     Type *Ty = Root->getType();
-    if (!isValidElementType(Ty) || Ty->isPointerTy())
+    if (!isValidElementType(Ty, SLPReVec) || Ty->isPointerTy())
       return false;
 
     // This is an ordered (linearized) reduction regardless of whether the
@@ -30672,7 +30674,7 @@ public:
     // Analyze "regular" integer/FP types for reductions - no target-specific
     // types or pointers.
     Type *Ty = Root->getType();
-    if (!isValidElementType(Ty) || Ty->isPointerTy())
+    if (!isValidElementType(Ty, SLPReVec) || Ty->isPointerTy())
       return false;
 
     // Though the ultimate reduction may have multiple uses, its condition must
@@ -33204,7 +33206,7 @@ bool SLPVectorizerPass::tryToVectorize(
     if (!isReductionCandidate(Inst))
       return false;
     Type *Ty = Inst->getType();
-    if (!isValidElementType(Ty) || Ty->isPointerTy())
+    if (!isValidElementType(Ty, SLPReVec) || Ty->isPointerTy())
       return false;
     HorizontalReduction HorRdx(Inst, Ops);
     if (!HorRdx.matchReductionForOperands())
@@ -33307,7 +33309,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   Type *BVType = BuildVectorInsts.front()->getType();
   ArrayRef<Type *> ContainedTypes = getContainedTypes(BVType);
   if (ContainedTypes.size() == BuildVectorInsts.size() &&
-      isValidElementType(ContainedTypes.front()) &&
+      isValidElementType(ContainedTypes.front(), SLPReVec) &&
       all_of(ContainedTypes,
              [&](Type *Ty) { return Ty == ContainedTypes.front(); }))
     if (tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly))
@@ -33356,7 +33358,8 @@ static bool tryToVectorizeSequence(
     // Look for the next elements with the same type, parent and operand
     // kinds.
     auto *I = dyn_cast<Instruction>(*IncIt);
-    if (!I || R.isDeleted(I) || !isValidElementType(getValueType(I))) {
+    if (!I || R.isDeleted(I) ||
+        !isValidElementType(getValueType(I, SLPReVec), SLPReVec)) {
       ++IncIt;
       continue;
     }
@@ -33460,8 +33463,8 @@ static bool tryToVectorizeSequence(
 template <bool IsCompatibility>
 static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
                        const DominatorTree &DT) {
-  assert(isValidElementType(V->getType()) &&
-         isValidElementType(V2->getType()) &&
+  assert(isValidElementType(V->getType(), SLPReVec) &&
+         isValidElementType(V2->getType(), SLPReVec) &&
          "Expected valid element types only.");
   if (V == V2)
     return IsCompatibility;
@@ -33572,7 +33575,8 @@ bool SLPVectorizerPass::vectorizeCmpInsts(
   SmallVector<Value *> Vals;
   for (Instruction *V : CmpInsts)
     if (!R.isDeleted(V) &&
-        isValidElementType(getValueType(V, /*LookThroughCmp=*/true)))
+        isValidElementType(getValueType(V, SLPReVec, /*LookThroughCmp=*/true),
+                           SLPReVec))
       Vals.push_back(V);
   if (Vals.size() <= 1)
     return Changed;
@@ -33713,7 +33717,7 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
           auto *RootOp = dyn_cast<Instruction>(Op);
           if (!RootOp || RootOp->getParent() != BB || R.isDeleted(RootOp) ||
               isa<ShuffleVectorInst>(RootOp) ||
-              !isValidElementType(RootOp->getType()))
+              !isValidElementType(RootOp->getType(), SLPReVec))
             return;
           if (!RootSeen.insert(RootOp).second)
             return;
@@ -33831,7 +33835,8 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
           auto *OpI = dyn_cast<Instruction>(Op);
           if (!OpI || OpI->getParent() != BB || R.isDeleted(OpI) ||
               isa<ShuffleVectorInst>(OpI) ||
-              (!isValidElementType(OpI->getType()) && !isa<IntrinsicInst>(OpI)))
+              (!isValidElementType(OpI->getType(), SLPReVec) &&
+               !isa<IntrinsicInst>(OpI)))
             return;
           if (!Seen.insert(OpI).second)
             return;
@@ -33900,8 +33905,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   // better way.
   DenseMap<Value *, SmallVector<Value *, 4>> PHIToOpcodes;
   auto PHICompare = [this, &PHIToOpcodes](Value *V1, Value *V2) {
-    assert(isValidElementType(V1->getType()) &&
-           isValidElementType(V2->getType()) &&
+    assert(isValidElementType(V1->getType(), SLPReVec) &&
+           isValidElementType(V2->getType(), SLPReVec) &&
            "Expected vectorizable types only.");
     if (V1 == V2)
       return false;
@@ -34075,7 +34080,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // No need to analyze deleted, vectorized and non-vectorizable
       // instructions.
       if (!VisitedInstrs.count(P) && !R.isDeleted(P) &&
-          isValidElementType(P->getType()))
+          isValidElementType(P->getType(), SLPReVec))
         Incoming.push_back(P);
     }
 
@@ -34300,8 +34305,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     if (!ForcePostProcessStoresOperands && SLPCostThreshold >= 0) {
       // Use pessimistic cost estimation to avoid long compile time when there
       // are many stores in the list.
-      Type *ScalarTy = getValueType(PostProcessStores.front());
-      if (!::isValidElementType(ScalarTy)) {
+      Type *ScalarTy = getValueType(PostProcessStores.front(), SLPReVec);
+      if (!::isValidElementType(ScalarTy, SLPReVec)) {
         TryVectorize = false;
       } else {
         auto *IF =
@@ -34346,7 +34351,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     SmallVector<Value *> Seeds;
     SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
     for (Instruction *I : PoorThroughputSeeds) {
-      if (R.isDeleted(I) || !isValidElementType(getValueType(I)) ||
+      if (R.isDeleted(I) ||
+          !isValidElementType(getValueType(I, SLPReVec), SLPReVec) ||
           R.hasResolvedUser(I))
         continue;
       SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
@@ -34420,8 +34426,9 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
   for (Instruction &I : *BB) {
     if (R.isDeleted(&I) || !I.hasOneUse() || R.isEphemeralValue(&I) ||
         R.isVectorized(&I) || R.isAnalyzedScalar(&I) ||
-        !isValidElementType(getValueType(&I)) || !isOnceUsedSeed(&I) ||
-        isNonVectorizableInst(&I, TLI) || R.hasResolvedUser(&I))
+        !isValidElementType(getValueType(&I, SLPReVec), SLPReVec) ||
+        !isOnceUsedSeed(&I) || isNonVectorizableInst(&I, TLI) ||
+        R.hasResolvedUser(&I))
       continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
@@ -34683,7 +34690,8 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
-    if (!isValidElementType(Pair.second.front()->getValueOperand()->getType()))
+    if (!isValidElementType(Pair.second.front()->getValueOperand()->getType(),
+                            SLPReVec))
       continue;
 
     // Masked stores are only attempted when no consecutive pair exists in the

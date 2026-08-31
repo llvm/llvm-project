@@ -17,32 +17,28 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 
 #include <cassert>
 
 using namespace llvm;
 
-// Defined in SLPVectorizer.cpp.
-extern cl::opt<bool> SLPReVec;
-
 namespace llvm::slpvectorizer {
 
-bool isValidElementType(Type *Ty) {
+bool isValidElementType(Type *Ty, bool ReVec) {
   // TODO: Support ScalableVectorType.
-  if (SLPReVec && isVectorizedTy(Ty) && !getVectorizedTypeVF(Ty).isScalable())
+  if (ReVec && isVectorizedTy(Ty) && !getVectorizedTypeVF(Ty).isScalable())
     Ty = toScalarizedTy(Ty);
   return canVectorizeTy(Ty) && !Ty->isX86_FP80Ty() && !Ty->isPPC_FP128Ty() &&
          !Ty->isVoidTy();
 }
 
-Type *getValueType(Value *V, bool LookThroughCmp) {
+Type *getValueType(Value *V, bool ReVec, bool LookThroughCmp) {
   if (auto *SI = dyn_cast<StoreInst>(V))
     return SI->getValueOperand()->getType();
   if (LookThroughCmp)
     if (auto *CI = dyn_cast<CmpInst>(V))
       return CI->getOperand(0)->getType();
-  if (!SLPReVec)
+  if (!ReVec)
     if (auto *IE = dyn_cast<InsertElementInst>(V))
       return IE->getOperand(1)->getType();
   if (auto *IV = dyn_cast<InsertValueInst>(V))
