@@ -332,11 +332,14 @@ public:
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
               IsCapturedByLambda, ExpiryLoc);
-        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
+          bool IsMain = false;
+          if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
+            IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc);
-        else
+                                           MovedExpr, ExpiryLoc, IsMain);
+        } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");

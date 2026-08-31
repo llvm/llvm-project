@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
 #include "Inputs/lifetime-analysis.h"
 
-int *global; // expected-note 10 {{this global dangles}}
+int *global; // expected-note 11 {{this global dangles}}
 int *global_backup; // expected-note {{this global dangles}}
 
-std::string_view global_view; // expected-note {{this global dangles}}
+std::string_view global_view; // expected-note 2 {{this global dangles}}
 void takeString(std::string&& s);
 
 struct ObjWithStaticField {
@@ -125,4 +125,14 @@ void ok_global_storage() {
 void store_local_in_global_but_moved(std::string s){
   global_view = s; // expected-warning-re {{stack memory associated with parameter 's' may escape to the global variable 'global_view' which will dangle{{.*}} may have been moved}}
   takeString(std::move(s)); //expected-note {{potentially moved here}}
+}
+
+int main() {
+  int local = 0;
+  global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle after main returns}}
+  
+  std::string s;
+  global_view = s; // expected-warning-re {{stack memory associated with local variable 's' may escape to the global variable 'global_view' which will dangle{{.*}} may have been moved}}
+  takeString(std::move(s)); //expected-note {{potentially moved here}}
+  return 0;
 }
