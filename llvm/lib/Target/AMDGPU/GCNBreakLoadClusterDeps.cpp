@@ -64,7 +64,7 @@ class GCNBreakLoadClusterDepsImpl {
   MachineRegisterInfo *MRI = nullptr;
   unsigned OccupancyBudget;
 
-  std::bitset<NumVGPR32> getVGPR32Lanes(Register Reg) const;
+  std::bitset<NumVGPR32> getVGPR32Components(Register Reg) const;
   std::pair<std::bitset<NumVGPR32>,
             std::bitset<NumVGPR32>>
   getUsesAndDefsFor(MachineInstr &MI) const;
@@ -109,7 +109,7 @@ public:
 
 // Append the 32-bit VGPR lanes of physical VGPR `Reg` (any width) to `Lanes`.
 std::bitset<NumVGPR32>
-GCNBreakLoadClusterDepsImpl::getVGPR32Lanes(Register Reg) const {
+GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
   std::bitset<NumVGPR32> ToReturn;
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
@@ -135,7 +135,7 @@ GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   for (unsigned I = 0; I < MI.getNumExplicitOperands(); I++)
     if (MI.getOperand(I).isReg())
       (*(MI.getOperand(I).isDef() ? &ToReturn.first : &ToReturn.second)) |=
-          getVGPR32Lanes(MI.getOperand(I).getReg());
+          getVGPR32Components(MI.getOperand(I).getReg());
   return ToReturn;
 }
 
@@ -170,7 +170,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   MachineBasicBlock &MBB = *MI.getParent();
   MachineInstr *DefToRename = nullptr, *KillerIns = nullptr;
   Register OldReg = MI.getOperand(OpNum).getReg();
-  std::bitset<NumVGPR32> OldRegClobbers = getVGPR32Lanes(OldReg);
+  std::bitset<NumVGPR32> OldRegClobbers = getVGPR32Components(OldReg);
   if (MI.getOperand(OpNum).isDef())
     DefToRename = &MI;
   else
@@ -201,7 +201,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         if (NewOldReg != OldReg) {
           Changed = true;
           OldReg = NewOldReg;
-          OldRegClobbers = getVGPR32Lanes(OldReg);
+          OldRegClobbers = getVGPR32Components(OldReg);
         }
       }
 
@@ -286,7 +286,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         OccupancyBudget)
       continue;
     if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
-        (getVGPR32Lanes(DefinedRegClass.getRegisters()[I]) & BannedRegs).none())
+        (getVGPR32Components(DefinedRegClass.getRegisters()[I]) & BannedRegs).none())
       break;
   }
 
@@ -308,7 +308,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           DefToRename->getOperand(Op).setReg(NewDef);
         else if (!DefToRename->getOperand(Op).isRenamable())
           return false;
-        RedefinedRegs |= getVGPR32Lanes(NewDef);
+        RedefinedRegs |= getVGPR32Components(NewDef);
       }
     for (MachineBasicBlock::iterator RenameIt =
              std::next(DefToRename->getIterator());
@@ -317,7 +317,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         if (RenameIt->getOperand(Op).isReg() &&
             TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
             (RenameIt->getOperand(Op).isDef() ||
-             (RedefinedRegs & getVGPR32Lanes(renameRegister(
+             (RedefinedRegs & getVGPR32Components(renameRegister(
                                   OldReg, DefinedRegClass.getRegisters()[I],
                                   RenameIt->getOperand(Op).getReg())))
                  .any())) {
@@ -330,7 +330,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
             return false;
 
           if (RenameIt->getOperand(Op).isDef())
-            RedefinedRegs |= getVGPR32Lanes(NewReg);
+            RedefinedRegs |= getVGPR32Components(NewReg);
         }
     for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
       if (KillerIns->getOperand(Op).isReg() &&
@@ -390,18 +390,18 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
           for (MachineOperand &Operand : ForwardIt->uses())
             if (Operand.isReg() && Operand.isUse() &&
                 TRI->isVGPR(*MRI, Operand.getReg()))
-              UsedVGPRs |= getVGPR32Lanes(Operand.getReg());
+              UsedVGPRs |= getVGPR32Components(Operand.getReg());
 
           if ((ClusterRAWHazards & UsedVGPRs).any())
             break;
 
           ClusterLoads.insert(&*ForwardIt);
           ClusterRAWHazards |=
-              getVGPR32Lanes(ForwardIt->getOperand(0).getReg());
+              getVGPR32Components(ForwardIt->getOperand(0).getReg());
         } else
           for (MachineOperand &Operand : ForwardIt->defs())
             if (TRI->isVGPR(*MRI, Operand.getReg()))
-              ClusterRAWHazards &= getVGPR32Lanes(Operand.getReg());
+              ClusterRAWHazards &= getVGPR32Components(Operand.getReg());
       }
     } else
       ClusterLoads.erase(&VecLoadIns);
