@@ -3,6 +3,10 @@
 // RUN:   - %s \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
+// RUN:   -o - %s \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -o - %s \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray

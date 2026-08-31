@@ -4,12 +4,24 @@
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
 // RUN:   --check-prefixes=CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
+// RUN:   -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
+// RUN:   -DRW=0 --check-prefixes=CHECK
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DARRAYED=0 \
 // RUN:   --check-prefixes=SPIRV -DSPV_DIM=1
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
+// RUN:   -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DARRAYED=0 \
+// RUN:   --check-prefixes=SPIRV -DSPV_DIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
@@ -38,8 +50,10 @@
 TEXTURE<> default_template : register(t1, space2);
 TEXTURE implicit_template : register(t0, space1);
 
-// CHECK: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
-// SPIRV: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) }
+// SPIRV-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// SPIRV-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0) }
 
 // CHECK: @{{.*}}default_template = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}
 // CHECK: @{{.*}}implicit_template = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}

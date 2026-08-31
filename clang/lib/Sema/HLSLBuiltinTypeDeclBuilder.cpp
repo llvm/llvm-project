@@ -1799,6 +1799,23 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
       .returnValue(PH::LastStmt)
       .finalize();
 
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
+    // T Sample(SamplerState s, float3 location, float clamp)
+    BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
+                     PH::LastStmt, PH::_1, PH::_2)
+        .returnValue(PH::LastStmt)
+        .finalize();
+
+    // Sample uses implicit derivatives to calculate the mip level.
+    return addDerivativeAvailability("Sample");
+  }
+
   // T Sample(SamplerState s, float2 location, int2 offset)
   BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
@@ -1852,6 +1869,24 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
+    // T SampleBias(SamplerState s, float3 location, float bias, float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("Bias", FloatTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
+
+    // SampleBias uses implicit derivatives to calculate the mip level.
+    return addDerivativeAvailability("SampleBias");
+  }
 
   // T SampleBias(SamplerState s, float2 location, float bias, int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
@@ -1912,6 +1947,24 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
+    // T SampleGrad(SamplerState s, float3 location, float3 ddx, float3 ddy,
+    // float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+        .addParam("Sampler", SamplerStateType)
+        .addParam("Location", CoordTy)
+        .addParam("DDX", OffsetFloatTy)
+        .addParam("DDY", OffsetFloatTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
+        .returnValue(PH::LastStmt)
+        .finalize();
+    return *this;
+  }
+
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
   // int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
@@ -1928,7 +1981,7 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
 
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy,
   // int2 offset, float clamp)
-  return BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", CoordTy)
       .addParam("DDX", OffsetFloatTy)
@@ -1941,6 +1994,8 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
                    PH::_5)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -1970,8 +2025,12 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
+  // Resources without offsets have no offset overloads.
+  if (!hasResourceOffset(Dim))
+    return *this;
+
   // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", CoordTy)
       .addParam("LOD", FloatTy)
@@ -1981,6 +2040,8 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -2010,8 +2071,27 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
-  // int2 offset)
+  // Resources without offsets have a clamp overload that takes no offset.
+  if (!hasResourceOffset(Dim)) {
+    // T SampleCmp(SamplerComparisonState s, float3 location, float
+    // compare_value, float clamp)
+    BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+        .addParam("Sampler", SamplerComparisonStateType)
+        .addParam("Location", CoordTy)
+        .addParam("CompareValue", FloatTy)
+        .addParam("Clamp", FloatTy)
+        .accessHandleFieldOnResource(PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType,
+                     PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
+        .returnValue(PH::LastStmt)
+        .finalize();
+
+    // SampleCmp uses implicit derivatives to calculate the mip level.
+    return addDerivativeAvailability("SampleCmp");
+  }
+
+  // T SampleCmp(SamplerComparisonState s, float2 location, float
+  // compare_value, int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
       .addParam("Location", CoordTy)
@@ -2023,8 +2103,8 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
-  // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
-  // int2 offset, float clamp)
+  // T SampleCmp(SamplerComparisonState s, float2 location, float
+  // compare_value, int2 offset, float clamp)
   BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
       .addParam("Location", CoordTy)
@@ -2069,9 +2149,13 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
       .returnValue(PH::LastStmt)
       .finalize();
 
+  // Resources without offsets have no offset overloads.
+  if (!hasResourceOffset(Dim))
+    return *this;
+
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
   // compare_value, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
       .addParam("Location", CoordTy)
       .addParam("CompareValue", FloatTy)
@@ -2081,6 +2165,8 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -2217,6 +2303,10 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
                      getConstantUnsignedIntExpr(V.Component))
         .finalize();
 
+    // Resources without offsets have no offset overloads.
+    if (!hasResourceOffset(Dim))
+      continue;
+
     // ret GatherVariant(SamplerState s, float2 location, int2 offset)
     BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
         .addParam("Sampler", SamplerStateType)
@@ -2273,6 +2363,10 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
                      PH::Handle, PH::LastStmt, PH::_1, PH::_2,
                      getConstantUnsignedIntExpr(V.Component))
         .finalize();
+
+    // Resources without offsets have no offset overloads.
+    if (!hasResourceOffset(Dim))
+      continue;
 
     // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float
     // compare_value, int2 offset)

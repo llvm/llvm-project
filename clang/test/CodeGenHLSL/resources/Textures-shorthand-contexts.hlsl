@@ -2,13 +2,20 @@
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -o - %s \
 // RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 \
-// RUN:   -DRW=0
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-TEXEL
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -19,8 +26,15 @@
 //   COORD_DIM          sample location components (DIM plus the array slice)
 //   DXIL_TY            dx.Texture resource-kind operand
 //   RW                 dx.Texture UAV operand
+//
+// Check prefixes:
+//   TEXEL              the type has integer texel addressing (Load,
+//                      operator[], mips), and therefore a `mips` field in its
+//                      layout
+//   NOTEXEL            the type has no integer texel addressing
 
-// CHECK: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) }
 
 SamplerState g_s : register(s0);
 
