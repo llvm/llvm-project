@@ -3379,11 +3379,23 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     A->claim();
   }
 
+  // -cl-fast-relaxed-math implies -ffast-math at the cc1 level (so that
+  // callers talking to cc1 directly, e.g. via CompilerInvocation, get the
+  // full fast-math cascade from a bare -cl-fast-relaxed-math). When the
+  // Driver determines NaNs/Infs should still be honored (because
+  // -fhonor-nans/-fhonor-infinities overrode -cl-fast-relaxed-math), it must
+  // explicitly cancel that cc1-level implication.
+  bool NeedsHonorOverride = Args.hasArg(options::OPT_cl_fast_relaxed_math);
+
   if (!HonorINFs)
     CmdArgs.push_back("-menable-no-infs");
+  else if (NeedsHonorOverride)
+    CmdArgs.push_back("-mno-enable-no-infs");
 
   if (!HonorNaNs)
     CmdArgs.push_back("-menable-no-nans");
+  else if (NeedsHonorOverride)
+    CmdArgs.push_back("-mno-enable-no-nans");
 
   if (ApproxFunc)
     CmdArgs.push_back("-fapprox-func");

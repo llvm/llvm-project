@@ -2555,7 +2555,8 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
 defm fast_math : BoolFOption<"fast-math",
   LangOpts<"FastMath">, Default<hlsl.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
-          "Allow aggressive, lossy floating-point optimizations">,
+          "Allow aggressive, lossy floating-point optimizations",
+          [cl_fast_relaxed_math.KeyPath]>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
 defm math_errno : BoolFOption<"math-errno",
   LangOpts<"MathErrno">, DefaultFalse,
@@ -8875,12 +8876,18 @@ let Visibility = [CC1Option, FC1Option] in {
 def mreassociate : Flag<["-"], "mreassociate">,
   HelpText<"Allow reassociation transformations for floating-point instructions">,
   MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[funsafe_math_optimizations.KeyPath]>;
-def menable_no_nans : Flag<["-"], "menable-no-nans">,
-  HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
-def menable_no_infs : Flag<["-"], "menable-no-infs">,
-  HelpText<"Allow optimization to assume there are no infinities.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
+defm enable_no_nans : BoolMOption<"enable-no-nans",
+  LangOpts<"NoHonorNaNs">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option, FC1Option],
+          "Allow optimization to assume there are no NaNs.",
+          [ffast_math.KeyPath]>,
+  NegFlag<SetFalse, [], [CC1Option, FC1Option]>>;
+defm enable_no_infs : BoolMOption<"enable-no-infs",
+  LangOpts<"NoHonorInfs">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option, FC1Option],
+          "Allow optimization to assume there are no infinities.",
+          [ffast_math.KeyPath]>,
+  NegFlag<SetFalse, [], [CC1Option, FC1Option]>>;
 
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">,
