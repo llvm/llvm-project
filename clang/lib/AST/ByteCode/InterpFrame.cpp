@@ -230,8 +230,7 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        C->Caller->Func->getSource(C->getRetOpPC() - sizeof(uintptr_t))
-            .getRange();
+        C->Caller->Func->getSource(C->getRetOpPC()).getRange();
     if (CallRange.isValid())
       return CallRange;
   }

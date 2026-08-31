@@ -213,8 +213,12 @@ Error L0DeviceTy::deinitImpl() {
 
 Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                           int32_t ImageId) {
-  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
+                           int32_t ImageId, PluginContextTy *UserCtx) {
+  auto &Ctx = UserCtx ? static_cast<LevelZeroPluginContextTy &>(*UserCtx)
+                      : L0Context.getDefaultUserCtx();
+  auto ZeContext = Ctx.getZeContext();
+
+  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef(), ZeContext);
   if (PGM) {
     // Program already exists.
     return PGM;
@@ -234,7 +238,7 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
 
-  L0ProgramBuilderTy Builder(*this, std::move(TgtImage));
+  L0ProgramBuilderTy Builder(*this, ZeContext, std::move(TgtImage));
   if (auto Err = Builder.buildModules(CompilationOptions))
     return std::move(Err);
 

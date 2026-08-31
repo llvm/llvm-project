@@ -8737,9 +8737,8 @@ void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
   // intrinsic), its users (e.g. extractvalue) may have stale SCEV
   // expressions referencing loop-internal values.
-  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
-        return isa<WithOverflowInst>(Inc);
-      }))
+  if (!isSCEVable(V->getType()) &&
+      any_of(V->incoming_values(), IsaPred<WithOverflowInst>))
     for (User *U : V->users())
       InvalidateValue(U);
   // Also perform the normal invalidation.
@@ -10799,9 +10798,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
     const SCEV *DistancePlusOne = getAddExpr(Distance, One);
     if (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, DistancePlusOne, Zero)) {
       // If Distance + 1 doesn't overflow, we can compute the maximum distance
-      // as "unsigned_max(Distance + 1) - 1".
-      ConstantRange CR = getUnsignedRange(DistancePlusOne);
-      MaxBECount = APIntOps::umin(MaxBECount, CR.getUnsignedMax() - 1);
+      // as "unsigned_max(Distance + 1) - 1". Also apply the loop guards to
+      // Distance + 1; the range of Distance itself may be a wrapped set even
+      // when the guards bound Distance + 1 tightly.
+      APInt Max = APIntOps::umin(
+          getUnsignedRangeMax(applyLoopGuards(DistancePlusOne, Guards)),
+          getUnsignedRangeMax(DistancePlusOne));
+      MaxBECount = APIntOps::umin(MaxBECount, Max - 1);
     }
     return ExitLimit(Distance, getConstant(MaxBECount), Distance, false,
                      Predicates);
@@ -11244,7 +11247,7 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
 
 bool ScalarEvolution::isKnownMultipleOf(
     const SCEV *S, uint64_t M,
-    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   if (M == 0)
     return false;
   if (M == 1)
@@ -11254,8 +11257,8 @@ bool ScalarEvolution::isKnownMultipleOf(
   // starts with a multiple of M and at every iteration step S only adds
   // multiples of M.
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
-           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+    return isKnownMultipleOf(AddRec->getStart(), M, Predicates) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Predicates);
 
   // For a constant, check that "S % M == 0".
   if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
@@ -11280,15 +11283,18 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
     return false;
 
+  if (!Predicates)
+    return false;
+
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
 
   // Detect redundant predicates.
-  for (auto *A : Assumptions)
+  for (auto *A : *Predicates)
     if (A->implies(P, *this))
       return true;
 
   // Only record non-redundant predicates.
-  Assumptions.push_back(P);
+  Predicates->push_back(P);
   return true;
 }
 
@@ -11364,14 +11370,9 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
-  if (isKnownViaInduction(Pred, LHS, RHS))
-    return true;
-
-  if (isKnownPredicateViaSplitting(Pred, LHS, RHS))
-    return true;
-
-  // Otherwise see what can be done with some simple reasoning.
-  return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+  return isKnownViaInduction(Pred, LHS, RHS) ||
+         isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
+         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
 std::optional<bool> ScalarEvolution::evaluatePredicate(CmpPredicate Pred,
@@ -13889,7 +13890,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
 
   // The only time we can solve this is when we have all constant indices.
   // Otherwise, we cannot determine the overflow conditions.
-  if (any_of(operands(), [](const SCEV *Op) { return !isa<SCEVConstant>(Op); }))
+  if (!all_of(operands(), IsaPred<SCEVConstant>))
     return SE.getCouldNotCompute();
 
   // Okay at this point we know that all elements of the chrec are constants and
