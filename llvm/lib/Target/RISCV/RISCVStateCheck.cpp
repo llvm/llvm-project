@@ -19,6 +19,20 @@ class RISCVStateCheck : public MachineFunctionPass {
 public:
   static char ID;
 
+  // Callees that are allowed to be called from a RISC-V state-attributed
+  // function. These are known not to read or write any architecture state, so
+  // calling them is always safe.
+  static constexpr StringLiteral AllowedCallees[] = {
+      "__riscv_save_0",     "__riscv_save_1",    "__riscv_save_2",
+      "__riscv_save_3",     "__riscv_save_4",    "__riscv_save_5",
+      "__riscv_save_6",     "__riscv_save_7",    "__riscv_save_8",
+      "__riscv_save_9",     "__riscv_save_10",   "__riscv_save_11",
+      "__riscv_save_12",    "__riscv_restore_0", "__riscv_restore_1",
+      "__riscv_restore_2",  "__riscv_restore_3", "__riscv_restore_4",
+      "__riscv_restore_5",  "__riscv_restore_6", "__riscv_restore_7",
+      "__riscv_restore_8",  "__riscv_restore_9", "__riscv_restore_10",
+      "__riscv_restore_11", "__riscv_restore_12"};
+
   RISCVStateCheck() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -54,12 +68,6 @@ bool RISCVStateCheck::runOnMachineFunction(MachineFunction &MF) {
       if (!MI.isCall())
         continue;
 
-      // There might be save/restore libcalls generated during frame lowering
-      // that only touch GPRs, in that case we can just skip it.
-      if (MI.getFlag(MachineInstr::FrameSetup) ||
-          MI.getFlag(MachineInstr::FrameDestroy))
-        continue;
-
       const MachineOperand *Callee = getCalleeSymbol(MI);
       if (!Callee)
         continue;
@@ -77,8 +85,16 @@ bool RISCVStateCheck::runOnMachineFunction(MachineFunction &MF) {
         Name = GV->getName().str();
       }
 
-      std::string Message = MF.getName().str() + ": cannot emit call to '" +
-                            Name + "' from an RISC-V attributed function.";
+      if (is_contained(AllowedCallees, Name))
+        continue;
+
+      std::string Message =
+          (MF.getName() + ": cannot emit call to '" + Name +
+           "' from an RISC-V attributed function. Only the following "
+           "functions are allowed to be called: " +
+           join(std::begin(AllowedCallees), std::end(AllowedCallees), ", ") +
+           ".")
+              .str();
       F.getContext().diagnose(DiagnosticInfoGeneric(Message));
     }
   }
