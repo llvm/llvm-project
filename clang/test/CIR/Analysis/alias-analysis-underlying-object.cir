@@ -345,6 +345,31 @@ cir.func @base_and_derived_class_addr() {
 
 // -----
 
+// CHECK-LABEL: Testing : "base_and_derived_class_maybe_null"
+// CHECK-DAG: d#0 <-> base#0: MayAlias
+// CHECK-DAG: d#0 <-> derived#0: MustAlias
+// CHECK-DAG: base#0 <-> derived#0: MayAlias
+// CHECK-DAG: d#0 <-> first#0: MustAlias
+// CHECK-DAG: base#0 <-> first#0: MayAlias
+// CHECK-DAG: derived#0 <-> first#0: MustAlias
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!rec_Base    = !cir.struct<"Base"    {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
+cir.func @base_and_derived_class_maybe_null() {
+  %d = cir.alloca "d" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d"}
+  %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> [4]
+             -> !cir.ptr<!rec_Base> {test.ptr = "base"}
+  %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> [4]
+             -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
+  %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
+           : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "complex_parts_distinct_allocas"
 // CHECK-DAG: c1#0 <-> c2#0: NoAlias
 // CHECK-DAG: c1#0 <-> real1#0: MustAlias
@@ -421,7 +446,7 @@ cir.func @bitint_struct_elements(%s: !cir.ptr<!rec_S>)
   %py = cir.get_member %s[1] {name = "y", test.ptr = "py"}
         : !cir.ptr<!rec_S> -> !cir.ptr<!cir.int<s, 19, bitint>>
   %one  = cir.const #cir.int<1> : !s32i
-  %px_plus_one = cir.ptr_stride %px, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i) 
+  %px_plus_one = cir.ptr_stride %px, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i)
                                           -> !cir.ptr<!cir.int<s, 19, bitint>>
              {test.ptr = "px_plus_one"}
   %pxb = cir.cast bitcast %px : !cir.ptr<!cir.int<s, 19, bitint>> -> !cir.ptr<!u8i> {test.ptr = "pxb"}
@@ -462,7 +487,7 @@ cir.func @bitint_array_elements(%arr: !cir.ptr<!cir.array<!cir.int<s, 19, bitint
   %one  = cir.const #cir.int<1> : !s32i
   %elem1 = cir.get_element %arr[%one : !s32i] {test.ptr = "elem1"}
         : !cir.ptr<!cir.array<!cir.int<s, 19, bitint> x 4>> -> !cir.ptr<!cir.int<s, 19, bitint>>
-  %decay_plus_one = cir.ptr_stride %decay, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i) 
+  %decay_plus_one = cir.ptr_stride %decay, %one : (!cir.ptr<!cir.int<s, 19, bitint>>, !s32i)
                                           -> !cir.ptr<!cir.int<s, 19, bitint>>
              {test.ptr = "decay_plus_one"}
   %db = cir.cast bitcast %decay : !cir.ptr<!cir.int<s, 19, bitint>> -> !cir.ptr<!u8i> {test.ptr = "db"}

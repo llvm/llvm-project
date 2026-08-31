@@ -175,7 +175,9 @@ static PointerOffset decomposePointer(mlir::Value val,
     }
 
     // A base class subobject starts the given number of bytes into the derived
-    // object.
+    // object. This may return null if the input is null, but accessing memory
+    // based on that null pointer would be UB, so we always assume non-null
+    // here.
     if (auto baseOp = mlir::dyn_cast<cir::BaseClassAddrOp>(defOp)) {
       LDBG() << "Walking past BaseClassAddrOp";
       addToOffset(offset, baseOp.getOffset().tryZExtValue());
@@ -184,7 +186,9 @@ static PointerOffset decomposePointer(mlir::Value val,
     }
 
     // Conversely, the derived object starts that many bytes before the base
-    // subobject, so the offset is applied as a negative adjustment.
+    // subobject, so the offset is applied as a negative adjustment. This may
+    // return null if the input is null, but accessing memory based on that null
+    // pointer would be UB, so we always assume non-null here.
     if (auto derivedOp = mlir::dyn_cast<cir::DerivedClassAddrOp>(defOp)) {
       LDBG() << "Walking past DerivedClassAddrOp";
       std::optional<int64_t> baseOffset = derivedOp.getOffset().tryZExtValue();
