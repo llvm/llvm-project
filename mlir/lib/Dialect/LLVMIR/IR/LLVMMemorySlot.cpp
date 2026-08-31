@@ -695,7 +695,9 @@ bool LLVM::GEPOp::canUsesBeRemoved(
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
-  if (!hasAllZeroIndices(*this))
+  // `inrange` is defined relative to the GEP result, so a zero-index GEP is
+  // not a no-op when that would drop the qualifier.
+  if (getInrangeAttr() || !hasAllZeroIndices(*this))
     return false;
   return forwardToUsers(*this, newBlockingUses);
 }
@@ -907,9 +909,21 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
   const MemorySlot &newSlot = subslots.at(indexAttr);
 
   auto byteType = IntegerType::get(builder.getContext(), 8);
-  auto newPtr = builder.createOrFold<LLVM::GEPOp>(
-      getLoc(), getResult().getType(), byteType, newSlot.ptr,
-      ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
+  // `inrange` is relative to the GEP result. The rewired GEP computes the same
+  // address, so the range can be copied as-is. Create the GEP before folding so
+  // a zero-offset GEP is not folded away when that would drop `inrange`.
+  Value newPtr;
+  if (auto inrange = getInrangeAttr()) {
+    auto newGep = LLVM::GEPOp::create(
+        builder, getLoc(), getResult().getType(), byteType, newSlot.ptr,
+        ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
+    newGep.setInrangeAttr(inrange);
+    newPtr = newGep;
+  } else {
+    newPtr = builder.createOrFold<LLVM::GEPOp>(
+        getLoc(), getResult().getType(), byteType, newSlot.ptr,
+        ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
+  }
   getResult().replaceAllUsesWith(newPtr);
   return DeletionKind::Delete;
 }
