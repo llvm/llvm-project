@@ -170,4 +170,19 @@ void g3() {
 
 } // namespace Eight
 
+namespace Nine {
+// A const lvalue reference binds to the materialized temporary, a non-const
+// lvalue reference does not.
+void f(const int (&)[]);
+void g() {
+  f({1, 2, 3});
+}
+
+void h() {
+  int(&r)[] = {1, 2, 3};
+  // expected-error@-1{{cannot bind to an initializer list temporary}}
+}
+
+} // namespace Nine
+
 #endif

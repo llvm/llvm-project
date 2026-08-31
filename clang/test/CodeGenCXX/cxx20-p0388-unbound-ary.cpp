@@ -48,3 +48,21 @@ void gh151716_f() {
 }
 
 } // namespace One
+
+namespace Two {
+
+void unknownBoundArrayRef(const int (&)[]);
+
+// CHECK-LABEL: @_ZN3Two8gh215501Ev
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %ref.tmp = alloca [3 x i32], align 4
+// CHECK:        store i32 1, ptr %ref.tmp, align 4
+// CHECK:        store i32 2, ptr %arrayinit.element, align 4
+// CHECK:        store i32 3, ptr %arrayinit.element1, align 4
+// CHECK:        call void @_ZN3Two20unknownBoundArrayRefERA_Ki(ptr noundef nonnull align 4 %ref.tmp)
+// CHECK:        ret void
+void gh215501() {
+  unknownBoundArrayRef({1, 2, 3});
+}
+
+} // namespace Two
