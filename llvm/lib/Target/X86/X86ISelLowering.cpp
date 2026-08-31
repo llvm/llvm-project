@@ -53784,9 +53784,14 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 	uint64_t ShiftAmount;
 	SDValue X, Y;
 
+	// Check for the following pattern:
+	//   (or (and X, HighBitsMask(C)), (srl Y, C))
 	bool Match = sd_match(N, 
 			m_Or( m_OneUse(m_And( m_Value(X), m_ConstInt(Mask))), 
 					 m_OneUse(m_Shl( m_Value(Y), m_ConstInt(ShiftAmount)))));
+
+	if (!Match)
+		return SDValue();
 
 	// Max bit-width of operands
 	uint64_t MaxMaskBitWidth = VT.getSizeInBits();
@@ -53797,9 +53802,8 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 	// so X must keep exactly the low ShiftAmount.
 	APInt ExpectedMask = APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount);
 
-	bool Applicable = Match && (ShiftAmount > 0) 
-							&& (ShiftAmount < MaxMaskBitWidth)
-							&& (Mask == ExpectedMask);
+	bool Applicable = (ShiftAmount > 0) && (ShiftAmount < MaxMaskBitWidth)
+										&& (Mask == ExpectedMask);
 
 	if (!Applicable)
 		return SDValue();
