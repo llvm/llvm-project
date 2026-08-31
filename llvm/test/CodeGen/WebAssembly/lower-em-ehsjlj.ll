@@ -152,7 +152,7 @@ throw:                                            ; preds = %if.end, %entry
 
 ; The same case with @rethrow_longjmp, but there are multiple function calls
 ; that can possibly longjmp (instead of throwing exception) so we have to
-; rethrow them. Here we test if we correclty generate only one 'rethrow.longjmp'
+; rethrow them. Here we test if we correctly generate only one 'rethrow.longjmp'
 ; BB and share it for multiple calls.
 define void @rethrow_longjmp_multi() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @rethrow_longjmp_multi

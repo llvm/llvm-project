@@ -46,7 +46,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
@@ -1021,8 +1020,12 @@ void DWARFContext::dump(
 
   auto dumpDebugInfo = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
-    if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
-      for (const auto &U : Units) {
+    std::optional<uint64_t> DumpOffset = DumpOffsets[DIDT_ID_DebugInfo];
+    for (const auto &U : Units) {
+      // For dumping of DWOs, remember if unit is already holding its context in
+      // memory
+      bool HadDWO = U->getDWO();
+      if (DumpOffset) {
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
         DWARFDie CUDie = U->getUnitDIE(false);
@@ -1032,10 +1035,18 @@ void DWARFContext::dump(
               ->getDIEForOffset(*DumpOffset)
               .dump(OS, 0, DumpOpts.noImplicitRecursion());
         }
-      }
-    else
-      for (const auto &U : Units)
+      } else {
         U->dump(OS, DumpOpts);
+      }
+      // If our dump caused a new context for the non-skeleton unit in a DWO to
+      // be freshly opened, release it now. We won't re-use it. This avoids
+      // holding a lot of unnecessary anon memory while streaming through
+      // multiple DWOs (OTOH DWP is shared ctx, so better not to drop it
+      // otherwise it will be immediately reopened by the next non-skeleton CU).
+      const DWARFUnit *DWO = U->getDWO();
+      if (!HadDWO && DWO && !DWO->getContext().isDWP())
+        U->clearDWO();
+    }
   };
   if ((DumpType & DIDT_DebugInfo)) {
     if (Explicit || getNumCompileUnits())

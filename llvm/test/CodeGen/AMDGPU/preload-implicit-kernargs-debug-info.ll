@@ -7,7 +7,7 @@
 ; CHECK: define amdgpu_kernel void @preload_block_count_x{{.*}} !dbg ![[#]] !max_work_group_size ![[#]] {
 ; CHECK-NOT: declare void @0{{.*}} #[[#]]
 ; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #[[#]]
-; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #[[#]]
+; CHECK: declare nofreeobj noundef align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #[[#]]
 
 define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) !dbg !4 !max_work_group_size !7 {
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

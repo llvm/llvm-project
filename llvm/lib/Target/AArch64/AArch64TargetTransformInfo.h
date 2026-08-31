@@ -72,7 +72,7 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {},
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
@@ -208,7 +208,7 @@ public:
                                  const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
@@ -218,20 +218,20 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
       TTI::VectorInstrContext VIC =
           TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getVectorInstrCost(const Instruction &I, Type *Val,
+  getVectorInstrCost(const Instruction &I, Type *Ty,
                      TTI::TargetCostKind CostKind, unsigned Index,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Ty,
                                    TTI::TargetCostKind CostKind,
                                    unsigned Index) const override;
 
@@ -505,7 +505,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
