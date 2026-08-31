@@ -26,8 +26,8 @@ inline SymbolizedStack *getCallerLocation(uptr CallerPC) {
   return getSymbolizedLocation(PC);
 }
 
-inline SymbolizedStack *getReportLocation(uptr PC, bool FromDevice) {
-  if (FromDevice)
+inline SymbolizedStack *getReportLocation(uptr PC, bool FromOffload) {
+  if (FromOffload)
     return getSymbolizedLocation(PC);
   return getCallerLocation(PC);
 }
@@ -214,7 +214,7 @@ struct ReportOptions {
   uptr pc;
   uptr bp;
   /// Device only replay options.
-  bool FromDevice;
+  bool FromOffload;
 };
 
 bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
@@ -226,9 +226,9 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
   Opts.pc = pc;                                                                \
   Opts.bp = bp
 
-/// Optional hook from the device interceptor to symbolize a device PC.
+/// Optional hook from the offload interceptor to symbolize a device PC.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__ubsan_set_device_symbolize(SymbolizedStack *(*Fn)(uptr PC));
+__ubsan_set_offload_symbolize(SymbolizedStack *(*Fn)(uptr PC));
 
 /// \brief Instantiate this class before printing diagnostics in the error
 /// report. This class ensures that reports from different threads and from

@@ -1,4 +1,4 @@
-//===-- ubsan_device_rpc.cpp ------------------------------------*- C++ -*-===//
+//===-- ubsan_offload_rpc.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ubsan_device_rpc.h"
+#include "ubsan_offload_rpc.h"
 
 #include <dlfcn.h>
 #include <pthread.h>
@@ -21,8 +21,8 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "shared/rpc.h"
-#include "ubsan_device.h"
-#include "ubsan_device_hsa.h"
+#include "ubsan_offload.h"
+#include "ubsan_offload_hsa.h"
 
 using namespace __sanitizer;
 
@@ -59,13 +59,13 @@ atomic_uint8_t Stop;
 // Receives reports from the device and services them.
 uint32_t handleReport(void *PortPtr, uint32_t) {
   auto &Port = *reinterpret_cast<rpc::Server::Port *>(PortPtr);
-  if (Port.get_opcode() != UBSAN_DEVICE_REPORT_OPCODE)
+  if (Port.get_opcode() != UBSAN_OFFLOAD_REPORT_OPCODE)
     return rpc::RPC_UNHANDLED_OPCODE;
 
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
-    __ubsan_device_report R;
+    __ubsan_offload_report R;
     internal_memcpy(&R, Buffer->data, sizeof(R));
-    PrintDeviceReport(R);
+    PrintOffloadReport(R);
   });
   return rpc::RPC_SUCCESS;
 }
@@ -184,7 +184,7 @@ void StartRpc(hsa_executable_t Exec) {
   if (tryOffload())
     return;
 
-  Lock Dev(&UbsanDeviceMutex);
+  Lock Dev(&UbsanOffloadMutex);
   Hsa &Runtime = GetHsa();
   if (!Runtime.Ready() || atomic_load_relaxed(&Stop))
     return;

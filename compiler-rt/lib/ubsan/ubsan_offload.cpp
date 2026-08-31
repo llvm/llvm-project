@@ -1,4 +1,4 @@
-//===-- ubsan_device.cpp ----------------------------------------*- C++ -*-===//
+//===-- ubsan_offload.cpp ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #include "ubsan_handlers.h"
 #include "ubsan_value.h"
 
-#include "ubsan_device_packet.h"
+#include "ubsan_offload_packet.h"
 
 #include <gpuintrin.h>
 
@@ -48,9 +48,9 @@ void report(uptr Pc, __ubsan_report_kind Kind, bool Fatal, const void *Data,
     return;
 
   rpc::Client::Port Port =
-      __ubsan_rpc_client.open<UBSAN_DEVICE_REPORT_OPCODE>();
+      __ubsan_rpc_client.open<UBSAN_OFFLOAD_REPORT_OPCODE>();
   Port.send([&](rpc::Buffer *Buf, uint32_t) {
-    auto &Rep = *reinterpret_cast<__ubsan_device_report *>(Buf);
+    auto &Rep = *reinterpret_cast<__ubsan_offload_report *>(Buf);
     Rep.pc = static_cast<uint64_t>(Pc);
     Rep.data = static_cast<uint64_t>(reinterpret_cast<uptr>(Data));
     Rep.val0 = static_cast<uint64_t>(Val0);
@@ -65,23 +65,23 @@ void report(uptr Pc, __ubsan_report_kind Kind, bool Fatal, const void *Data,
 
 extern "C" {
 
-#define UBSAN_DEVICE_HANDLER(kind, name, reason, size, locoff, nloc, ntype,    \
-                             flags, params, ...)                               \
+#define UBSAN_OFFLOAD_HANDLER(kind, name, reason, size, locoff, nloc, ntype,   \
+                              flags, params, ...)                              \
   [[gnu::cold, gnu::noinline]] void __ubsan_handle_##name params {             \
-    report(GET_CALLER_PC(), UBSAN_DEVICE_##kind, false, __VA_ARGS__);          \
+    report(GET_CALLER_PC(), UBSAN_OFFLOAD_##kind, false, __VA_ARGS__);         \
   }                                                                            \
   [[gnu::cold, gnu::noinline]] void __ubsan_handle_##name##_abort params {     \
-    report(GET_CALLER_PC(), UBSAN_DEVICE_##kind, true, __VA_ARGS__);           \
+    report(GET_CALLER_PC(), UBSAN_OFFLOAD_##kind, true, __VA_ARGS__);          \
     __builtin_verbose_trap("UndefinedBehaviorSanitizer", reason);              \
   }
 
-#define UBSAN_DEVICE_HANDLER_NORETURN(kind, name, reason, size, locoff, nloc,  \
-                                      ntype, flags, params, ...)               \
+#define UBSAN_OFFLOAD_HANDLER_NORETURN(kind, name, reason, size, locoff, nloc, \
+                                       ntype, flags, params, ...)              \
   [[gnu::cold, gnu::noinline]] void __ubsan_handle_##name params {             \
-    report(GET_CALLER_PC(), UBSAN_DEVICE_##kind, true, __VA_ARGS__);           \
+    report(GET_CALLER_PC(), UBSAN_OFFLOAD_##kind, true, __VA_ARGS__);          \
     __builtin_verbose_trap("UndefinedBehaviorSanitizer", reason);              \
   }
 
-#include "ubsan_device_checks.inc"
+#include "ubsan_offload_checks.inc"
 
 } // extern "C"

@@ -1,4 +1,4 @@
-//===-- ubsan_device_hsa.cpp ------------------------------------*- C++ -*-===//
+//===-- ubsan_offload_hsa.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ubsan_device_hsa.h"
+#include "ubsan_offload_hsa.h"
 
 #include <dlfcn.h>
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "ubsan_device.h"
-#include "ubsan_device_rpc.h"
-#include "ubsan_device_symbolize.h"
+#include "ubsan_offload.h"
+#include "ubsan_offload_rpc.h"
+#include "ubsan_offload_symbolize.h"
 
 using namespace __sanitizer;
 
@@ -211,7 +211,7 @@ bool Hsa::Init() {
 void Hsa::Shutdown() {
   atomic_store(&Active, 0, memory_order_release);
   StopRpc();
-  Lock L(&UbsanDeviceMutex);
+  Lock L(&UbsanOffloadMutex);
   if (Refs)
     return;
   ForgetDeviceImages();

@@ -1,4 +1,4 @@
-//===-- ubsan_device_symbolize.cpp ------------------------------*- C++ -*-===//
+//===-- ubsan_offload_symbolize.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ubsan_device_symbolize.h"
+#include "ubsan_offload_symbolize.h"
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -118,7 +118,7 @@ void ForgetDeviceImages() {
 
 // The custom symbolizer function we use for the device image, returns nullptr
 // if the given program counter is not owned by any known device image.
-SymbolizedStack *SymbolizeDevicePc(uptr PC) {
+SymbolizedStack *SymbolizeOffloadPc(uptr PC) {
   if (!PC)
     return nullptr;
 
