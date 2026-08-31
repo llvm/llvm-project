@@ -4224,8 +4224,8 @@ bool SIRegisterInfo::shouldApplyAntiHints(
 }
 
 void SIRegisterInfo::applyRegAllocationAntiHints(
-    Register VirtReg, ArrayRef<MCPhysReg> &Order,
-    SmallVectorImpl<MCPhysReg> &OrderStorage,
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
     SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
 
@@ -4266,9 +4266,8 @@ void SIRegisterInfo::applyRegAllocationAntiHints(
     return Highest < MaxVGPRsForCurrentOccupancy;
   };
 
-  // Copy order.
-  OrderStorage.clear();
-  OrderStorage.assign(Order.begin(), Order.end());
+  HintsAndCustomOrder.truncate(NumHints);
+  HintsAndCustomOrder.append(Order.begin(), Order.end());
 
   // Helper to check if a register overlaps with any anti-hint.
   auto isAntiHinted = [&](MCPhysReg Reg) {
@@ -4278,21 +4277,21 @@ void SIRegisterInfo::applyRegAllocationAntiHints(
   };
 
   // Find the cutoff point for the current occupancy VGPR budget.
-  auto *BeyondBudgetStart = llvm::find_if(
-      OrderStorage, [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
+  auto *BeyondBudgetStart =
+      llvm::find_if(llvm::drop_begin(HintsAndCustomOrder, NumHints),
+                    [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
 
   // Only shuffle within the current occupancy VGPR budget.
-  auto *PartitionPoint =
-      std::stable_partition(OrderStorage.begin(), BeyondBudgetStart,
-                            [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+  auto *PartitionPoint = std::stable_partition(
+      HintsAndCustomOrder.begin() + NumHints, BeyondBudgetStart,
+      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
 
-  Order = OrderStorage;
   LLVM_DEBUG({
     size_t NonAntiHintedCount =
-        std::distance(OrderStorage.begin(), PartitionPoint);
+        std::distance(HintsAndCustomOrder.begin() + NumHints, PartitionPoint);
     size_t AntiHintedCount = std::distance(PartitionPoint, BeyondBudgetStart);
     size_t BeyondBudgetCount =
-        std::distance(BeyondBudgetStart, OrderStorage.end());
+        std::distance(BeyondBudgetStart, HintsAndCustomOrder.end());
     dbgs() << "Added " << NonAntiHintedCount
            << " non-anti-hinted registers first\n"
            << "Added " << AntiHintedCount

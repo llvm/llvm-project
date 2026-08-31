@@ -374,8 +374,8 @@ public:
                             unsigned &MaxVGPRsForCurrentOccupancy) const;
 
   void applyRegAllocationAntiHints(
-      Register VirtReg, ArrayRef<MCPhysReg> &Order,
-      SmallVectorImpl<MCPhysReg> &OrderStorage,
+      Register VirtReg, ArrayRef<MCPhysReg> Order,
+      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
       SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
       const VirtRegMap *VRM = nullptr,
       const LiveRegMatrix *Matrix = nullptr) const override;
