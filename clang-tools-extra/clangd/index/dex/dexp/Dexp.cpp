@@ -418,11 +418,17 @@ int main(int argc, const char *argv[]) {
 
   // Preserve global options when flag parser is reset, so commands can use
   // them.
-  IndexLocation.setValue(IndexLocation, /*initial=*/true);
-  ExecCommand.setValue(ExecCommand, /*initial=*/true);
-  ProjectRoot.setValue(ProjectRoot, /*initial=*/true);
+  auto PreservedIndexLocation = IndexLocation.getValue();
+  auto PreservedExecCommand = ExecCommand.getValue();
+  auto PreservedProjectRoot = ProjectRoot.getValue();
 
   llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
+
+  // Restore preserved options.
+  IndexLocation.setValue(PreservedIndexLocation);
+  ExecCommand.setValue(PreservedExecCommand);
+  ProjectRoot.setValue(PreservedProjectRoot);
+
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   bool RemoteMode = llvm::StringRef(IndexLocation).starts_with("remote:");
