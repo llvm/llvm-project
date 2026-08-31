@@ -222,6 +222,8 @@ public:
     return false;
   }
 
+  bool shouldBuildLookupTablesForConstant(Constant *C) const override;
+
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,

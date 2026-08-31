@@ -9,6 +9,7 @@
 #include "NVPTXTargetTransformInfo.h"
 #include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -634,6 +635,31 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+// A switch lookup table is materialized as an array with an initializer. PTX
+// only allows a variable's initial value to name a symbol in the .global or
+// .const state space; ptxas rejects anything else with "Variable used as
+// initial value not in .global or .const state space".
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  SmallVector<Constant *, 8> WorkList = {C};
+  SmallPtrSet<Constant *, 8> Visited = {C};
+  while (!WorkList.empty()) {
+    Constant *Cur = WorkList.pop_back_val();
+    if (const auto *GV = dyn_cast<GlobalValue>(Cur)) {
+      const unsigned AS = GV->getAddressSpace();
+      if (AS != NVPTXAS::ADDRESS_SPACE_GENERIC &&
+          AS != NVPTXAS::ADDRESS_SPACE_GLOBAL &&
+          AS != NVPTXAS::ADDRESS_SPACE_CONST)
+        return false;
+      continue;
+    }
+    for (Value *Op : Cur->operands())
+      if (auto *COp = dyn_cast<Constant>(Op))
+        if (Visited.insert(COp).second)
+          WorkList.push_back(COp);
+  }
+  return true;
 }
 
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
