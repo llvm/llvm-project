@@ -4,6 +4,7 @@
 ; RUN: llc < %s -relocation-model=pic -function-sections -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
 ; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
 ; RUN: llc < %s -relocation-model=pic -function-sections -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
+; RUN: llc < %s -relocation-model=pic -function-sections -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -code-model=large | FileCheck %s -check-prefix=CHECK-FS
 ; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -code-model=small -mcpu=pwr8 | FileCheck %s -check-prefix=SCM
 
@@ -142,5 +143,15 @@ define void @w_caller(ptr %ptr) {
 ; CHECK-LABEL: w_caller:
 ; CHECK: bl w_callee
 ; CHECK-NEXT: nop
+}
+
+define dso_local void @dl_callee(ptr %ptr) { ret void }
+define dso_local void @dl_caller(ptr %ptr) {
+  call void @dl_callee(ptr %ptr)
+  ret void
+
+; CHECK-FS-LABEL: dl_caller:
+; CHECK-FS: bl dl_callee
+; CHECK-FS-NEXT: nop
 }
 

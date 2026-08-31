@@ -4904,13 +4904,6 @@ static bool callsShareTOCBase(const Function *Caller,
   if (!CalleeGV->isStrongDefinitionForLinker())
     return false;
 
-  // The medium and large code models are expected to provide a sufficiently
-  // large TOC to provide all data addressing needs of a module with a
-  // single TOC.
-  if (CodeModel::Medium == TM.getCodeModel() ||
-      CodeModel::Large == TM.getCodeModel())
-    return true;
-
   // Any explicitly-specified sections and section prefixes must also match.
   // Also, if we're using -ffunction-sections, then each function is always in
   // a different section (the same is true for COMDAT functions).
