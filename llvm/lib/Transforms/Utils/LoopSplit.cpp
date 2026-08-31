@@ -102,6 +102,7 @@ struct LoopSplit::SplitState {
   BasicBlock *FinalExit = nullptr; // where the partition chain converges.
   Loop *OuterLoop = nullptr;       // parent of the new blocks, if any.
   PHINode *Induction = nullptr;    // the loop's induction variable.
+  MDNode *OrigLoopID = nullptr;    // !llvm.loop on the loop before splitting.
 };
 
 // Record a new partition with the given inclusive iteration range.
@@ -113,6 +114,11 @@ void LoopSplit::addPartition(const SCEV *Start, const SCEV *End) {
   assert(Start->getType() == InductionEnd->getType() &&
          End->getType() == InductionEnd->getType() &&
          "partition bounds must have the induction type");
+  if (Partitions.empty()) {
+    assert((Start == InductionStart ||
+            SE->isKnownPredicate(ICmpInst::ICMP_EQ, Start, InductionStart)) &&
+           "first partition Start must match the induction start");
+  }
   Partitions.emplace_back(Start, End);
 }
 
@@ -211,6 +217,7 @@ static ICmpInst::Predicate guardPredicate(bool Signed, bool Descending) {
 }
 
 struct LoopSplitAnalysis {
+  const SCEV *InductionStart;
   const SCEV *InductionEnd;
   bool InductionIsSigned;
   bool Descending;
@@ -243,17 +250,14 @@ analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has exit values\n");
     return std::nullopt;
   }
-  for (BasicBlock *BB : L->blocks())
-    for (Instruction &I : *BB)
-      for (User *U : I.users())
-        if (auto *UI = dyn_cast<Instruction>(U); UI && !L->contains(UI)) {
-          LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has exit values\n");
-          return std::nullopt;
-        }
+  if (!findDefsUsedOutsideOfLoop(L).empty()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has exit values\n");
+    return std::nullopt;
+  }
 
-  // Splitting a loop clones it, so cloning must be safe.
-  if (!L->isSafeToClone()) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not safe to clone\n");
+  // Guard-gated clones require isSafeToCloneConditionally().
+  if (!L->isSafeToCloneConditionally(*DT)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not safe to clone conditionally\n");
     return std::nullopt;
   }
 
@@ -322,7 +326,7 @@ analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
     return std::nullopt;
   }
 
-  return LoopSplitAnalysis{InductionEnd, InductionIsSigned, Descending};
+  return LoopSplitAnalysis{Start, InductionEnd, InductionIsSigned, Descending};
 }
 
 std::optional<LoopSplit>
@@ -330,8 +334,9 @@ LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
   std::optional<LoopSplitAnalysis> Analysis = analyzeLegality(L, LI, SE, DT);
   if (!Analysis)
     return std::nullopt;
-  return LoopSplit(L, LI, SE, DT, Analysis->InductionEnd,
-                   Analysis->InductionIsSigned, Analysis->Descending);
+  return LoopSplit(L, LI, SE, DT, Analysis->InductionStart,
+                   Analysis->InductionEnd, Analysis->InductionIsSigned,
+                   Analysis->Descending);
 }
 
 //===----------------------------------------------------------------------===//
@@ -341,12 +346,40 @@ LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
 static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
                             DominatorTree *DT, LoopInfo *LI);
 
+const SCEV *LoopSplit::getClampedEndSCEV(const SCEV *EndExpr) const {
+  if (Descending)
+    return InductionIsSigned ? SE->getSMaxExpr(EndExpr, InductionEnd)
+                             : SE->getUMaxExpr(EndExpr, InductionEnd);
+  return InductionIsSigned ? SE->getSMinExpr(EndExpr, InductionEnd)
+                           : SE->getUMinExpr(EndExpr, InductionEnd);
+}
+
+bool LoopSplit::arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
+                                               Instruction *InsertPt) const {
+  for (const PartitionInfo &P : Partitions) {
+    if (!Expander.isSafeToExpandAt(P.StartExpr, InsertPt))
+      return false;
+    if (!Expander.isSafeToExpandAt(getClampedEndSCEV(P.EndExpr), InsertPt))
+      return false;
+  }
+  return true;
+}
+
 // Drive the whole transform: set up scratch state and run each phase in order.
 bool LoopSplit::split() {
   PHINode *Induction = L->getInductionVariable(*SE);
   assert(Induction && "split() requires prior legality analysis");
   if (getNumPartitions() < 2)
     return false;
+
+  // Check expansion safety at the preheader terminator before any CFG change.
+  Instruction *ExpandAt = L->getLoopPreheader()->getTerminator();
+  SCEVExpander Expander(*SE, DEBUG_TYPE);
+  if (!arePartitionBoundsSafeToExpand(Expander, ExpandAt)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << ": partition bounds not safe to expand\n");
+    return false;
+  }
 
   SplitState S;
   // Partition 0 reuses the original loop; record its preheader/exit/guard up
@@ -358,6 +391,7 @@ bool LoopSplit::split() {
   P0.IndPHI = Induction;
   S.OuterLoop = LI->getLoopFor(P0.Exit);
   S.Induction = Induction;
+  S.OrigLoopID = L->getLoopID();
 
   splitFinalExit(S);
   buildEntryGuard(P0.Preheader, P0.GuardBlock, DT, LI);
@@ -365,7 +399,6 @@ bool LoopSplit::split() {
   // Keep the expander and its cleaner alive for the whole transform: the bounds
   // it materializes are consumed by later phases. markResultUsed() below keeps
   // them; without it the cleaner reclaims them.
-  SCEVExpander Expander(*SE, DEBUG_TYPE);
   SCEVExpanderCleaner ExpanderCleaner(Expander);
   expandPartitionBounds(S, Expander);
   clonePartitions(S);
@@ -422,15 +455,7 @@ void LoopSplit::expandPartitionBounds(SplitState &S, SCEVExpander &Expander) {
 
     // Clamp the end to the induction end (min ascending, max descending) so a
     // short trip count keeps the last iteration in the right partition.
-    const SCEV *ClampedEndSCEV;
-    if (Descending)
-      ClampedEndSCEV = InductionIsSigned
-                           ? SE->getSMaxExpr(P.EndExpr, InductionEnd)
-                           : SE->getUMaxExpr(P.EndExpr, InductionEnd);
-    else
-      ClampedEndSCEV = InductionIsSigned
-                           ? SE->getSMinExpr(P.EndExpr, InductionEnd)
-                           : SE->getUMinExpr(P.EndExpr, InductionEnd);
+    const SCEV *ClampedEndSCEV = getClampedEndSCEV(P.EndExpr);
     P.SelEnd = Expander.expandCodeFor(ClampedEndSCEV, IndTy, EntryGuardTerm);
   }
 }
@@ -507,6 +532,15 @@ static void rewriteLatch(Loop *PL, PHINode *IndPHI, Value *SelEnd,
     Cmp->eraseFromParent();
 }
 
+// Attach a distinct !llvm.loop that inherits \p OrigLoopID's attributes.
+static void assignPartitionLoopID(Loop *PL, MDNode *OrigLoopID) {
+  if (!OrigLoopID)
+    return;
+  MDNode *NewLoopID = makePostTransformationMetadata(
+      PL->getHeader()->getContext(), OrigLoopID, {}, {});
+  PL->setLoopID(NewLoopID);
+}
+
 // Emit each partition's guard branch, clamp its latch, wire the partitions into
 // a chain, and update the dominator tree.
 void LoopSplit::chainPartitions(SplitState &S) {
@@ -539,6 +573,7 @@ void LoopSplit::chainPartitions(SplitState &S) {
 
     rewriteLatch(P.SubLoop, P.IndPHI, P.SelEnd, P.Exit, InductionIsSigned,
                  Descending);
+    assignPartitionLoopID(P.SubLoop, S.OrigLoopID);
     P.Exit->getTerminator()->setSuccessor(0, MergeAfter);
   }
 

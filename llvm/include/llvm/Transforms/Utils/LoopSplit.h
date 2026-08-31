@@ -59,7 +59,9 @@ public:
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
   /// later Start = previous End +/- step, last End = induction end (desc: S >=
-  /// E).
+  /// E). For partition 0, \p Start must equal the induction start: that
+  /// partition reuses the original loop and does not reseed the induction PHI
+  /// (only the guard uses \p Start).
   ///
   /// Both bounds must have the induction type and be loop-invariant. They must
   /// also stay within the iteration space, extended by the one step past its
@@ -77,9 +79,11 @@ public:
 
 private:
   LoopSplit(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-            const SCEV *InductionEnd, bool InductionIsSigned, bool Descending)
-      : L(L), LI(LI), SE(SE), DT(DT), InductionEnd(InductionEnd),
-        InductionIsSigned(InductionIsSigned), Descending(Descending) {}
+            const SCEV *InductionStart, const SCEV *InductionEnd,
+            bool InductionIsSigned, bool Descending)
+      : L(L), LI(LI), SE(SE), DT(DT), InductionStart(InductionStart),
+        InductionEnd(InductionEnd), InductionIsSigned(InductionIsSigned),
+        Descending(Descending) {}
 
   /// Everything known about one partition: the caller-supplied range plus the
   /// state split() derives. Indexed by partition number in \c Partitions.
@@ -112,12 +116,19 @@ private:
   DominatorTree *DT;
 
   // Induction analysis, populated during legality analysis.
-  const SCEV *InductionEnd = nullptr; // value on the last iteration.
-  bool InductionIsSigned = false;     // iteration ordering signedness.
-  bool Descending = false;            // step is -1 (the loop counts down).
+  const SCEV *InductionStart = nullptr; // value on the first iteration.
+  const SCEV *InductionEnd = nullptr;   // value on the last iteration.
+  bool InductionIsSigned = false;       // iteration ordering signedness.
+  bool Descending = false;              // step is -1 (the loop counts down).
 
   /// One record per partition, in add order.
   SmallVector<PartitionInfo, 4> Partitions;
+
+  /// Clamp \p EndExpr to the induction end for latch/guard materialization.
+  const SCEV *getClampedEndSCEV(const SCEV *EndExpr) const;
+  /// Return true if every partition bound is safe to expand at \p InsertPt.
+  bool arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
+                                      Instruction *InsertPt) const;
 
   // split() phase helpers, run in order; each is documented at its definition.
   /// Split the final exit off the loop exit block.
