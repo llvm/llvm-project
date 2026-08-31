@@ -9687,6 +9687,28 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
+/// Return the (possibly nested) constant array type in \p T whose size cannot
+/// be represented, if any. BuildArrayType can only check the element count if
+/// the element type is still incomplete when the array type is formed.
+static const ConstantArrayType *findArrayTypeTooLarge(const ASTContext &Context,
+                                                      QualType T) {
+  const auto *CAT = dyn_cast<ConstantArrayType>(T.getCanonicalType());
+  if (!CAT)
+    return nullptr;
+
+  // Check nested arrays from the inside out.
+  QualType ElementType = CAT->getElementType();
+  if (const ConstantArrayType *Inner =
+          findArrayTypeTooLarge(Context, ElementType))
+    return Inner;
+
+  if (ConstantArrayType::getNumAddressingBits(Context, ElementType,
+                                              CAT->getSize()) >
+      ConstantArrayType::getMaxSizeBits(Context))
+    return CAT;
+  return nullptr;
+}
+
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                    CompleteTypeKind Kind,
                                    TypeDiagnoser *Diagnoser) {
@@ -9737,6 +9759,20 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
                               /*Recover*/ TreatAsComplete);
       return !TreatAsComplete;
+    }
+
+    // The element type may have been incomplete when the array type was
+    // formed, in which case BuildArrayType could not check the array's size.
+    if (T->isConstantArrayType() && !T->isDependentType() &&
+        !T->isVariablyModifiedType() && !T->isUndeducedType()) {
+      if (const ConstantArrayType *CAT = findArrayTypeTooLarge(Context, T)) {
+        if (Diagnoser)
+          Diag(Loc, diag::err_array_too_large)
+              << toString(CAT->getSize(), 10, /*Signed=*/false,
+                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                          /*InsertSeparators=*/true);
+        return true;
+      }
     }
     return false;
   }

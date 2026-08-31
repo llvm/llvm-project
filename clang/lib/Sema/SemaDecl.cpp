@@ -14857,6 +14857,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInvalidDecl();
         return;
       }
+      // Completing the element type may reveal that the array is too large.
+      if (Type->isConstantArrayType() &&
+          RequireCompleteType(Var->getLocation(), Type,
+                              diag::err_typecheck_decl_incomplete_type)) {
+        Var->setInvalidDecl();
+        return;
+      }
     } else {
       return;
     }

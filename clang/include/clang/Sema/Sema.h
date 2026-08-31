@@ -15601,7 +15601,8 @@ public:
   /// this routine then attempts to perform class template
   /// instantiation. If instantiation fails, or if @p T is incomplete
   /// and cannot be completed, issues the diagnostic @p diag (giving it
-  /// the type @p T) and returns true.
+  /// the type @p T) and returns true. The same applies to an array type
+  /// that turns out to be too large once its element type is complete.
   ///
   /// @param Loc  The location in the source that the incomplete type
   /// diagnostic should refer to.
