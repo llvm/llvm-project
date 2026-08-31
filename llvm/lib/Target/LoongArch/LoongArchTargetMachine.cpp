@@ -44,6 +44,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
+  initializeLoongArchLateBranchOptPass(*PR);
 }
 
 static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
@@ -156,6 +157,7 @@ public:
   void addPreRegAlloc() override;
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
+  void addMachineLateOptimization() override;
 };
 } // end namespace
 
@@ -229,4 +231,10 @@ bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
+void LoongArchPassConfig::addMachineLateOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchLateBranchOptPass());
+  TargetPassConfig::addMachineLateOptimization();
 }

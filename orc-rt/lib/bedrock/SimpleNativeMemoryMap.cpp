@@ -15,15 +15,10 @@
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt-internal/support/sys/Memory.h"
 #include "orc-rt/bedrock/Session.h"
 
 #include <optional>
-
-#if defined(__APPLE__) || defined(__linux__)
-#include "Unix/NativeMemoryAPIs.inc"
-#else
-#error "Target OS memory APIs unsupported"
-#endif
 
 namespace orc_rt {
 
@@ -57,14 +52,13 @@ void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
             .str()));
   }
 
-  auto Addr = hostOSMemoryReserve(Size);
+  auto Addr = sys::reserveMemory(Size);
   if (!Addr)
     return OnComplete(Addr.takeError());
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    assert(!Slabs.count(*Addr) &&
-           "hostOSMemoryReserve returned duplicate addresses");
+    assert(!Slabs.count(*Addr) && "reserveMemory returned duplicate addresses");
     Slabs.emplace(std::make_pair(*Addr, SlabInfo(Size)));
   }
 
@@ -95,7 +89,7 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   for (auto &[Addr, DAAs] : SI->DeallocActions)
     runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
 
-  OnComplete(hostOSMemoryRelease(Addr, SI->Size));
+  OnComplete(sys::releaseMemory(Addr, SI->Size));
 }
 
 void SimpleNativeMemoryMap::releaseMultiple(OnReleaseCompleteFn &&OnComplete,
@@ -132,7 +126,7 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
     if (size_t ZeroFillSize = S.Size - S.Content.size())
       memset(S.Address + S.Content.size(), 0, ZeroFillSize);
 
-    if (auto Err = hostOSMemoryProtect(S.Address, S.Size, S.AG.getMemProt()))
+    if (auto Err = sys::protectMemory(S.Address, S.Size, S.AG.getMemProt()))
       return OnComplete(std::move(Err));
 
     switch (S.AG.getMemLifetime()) {
