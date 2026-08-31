@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -819,25 +820,25 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     std::optional<llvm::StringRef> name;
     mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
     mlir::Operation *sourceOp = sourceVal.getDefiningOp();
-    bool unknownAllocOp = false;
-    if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
-      name = alloc.getUniqName();
-    else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
-      name = alloc.getUniqName();
-    else if (mlir::StringAttr nameAttr =
-                 sourceOp ? sourceOp->getAttrOfType<mlir::StringAttr>(
-                                fir::AllocaOp::getUniqNameAttrName())
-                          : mlir::StringAttr{}) {
-      // Keep a view into the StringAttr storage; str() returns a temporary.
-      name = nameAttr.getValue();
-    } else if (!fir::isNewAllocationResult(
-                    mlir::dyn_cast<mlir::OpResult>(sourceVal))
-                    .value_or(false)) {
-      // Anonymous allocations of other dialects (e.g. memref.alloca for
-      // a compiler generated temporary) are still recognizable as allocations
-      // through their memory effects, and can use the unnamed
-      // "allocated data" tag below.
-      unknownAllocOp = true;
+    bool unknownAllocOp =
+        !fir::isNewAllocationResult(mlir::dyn_cast<mlir::OpResult>(sourceVal))
+             .value_or(false);
+    if (!unknownAllocOp) {
+      // Non-FIR allocation operations may carry the uniq_name preserved when
+      // a FIR allocation was rewritten.
+      if (auto alloc = mlir::dyn_cast<fir::AllocaOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (auto alloc = mlir::dyn_cast<fir::AllocMemOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (mlir::StringAttr nameAttr =
+                   sourceOp->getDiscardableAttrOfType<mlir::StringAttr>(
+                       fir::getUniqNameAttrName()))
+        // Keep a view into the StringAttr storage; str() returns a temporary.
+        name = nameAttr.getValue();
+
+      // Treat an empty uniq_name like an absent one.
+      if (name && name->empty())
+        name.reset();
     }
 
     // Check if this allocation is a local copy of a VALUE dummy argument.
@@ -898,6 +899,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .allocatedDataTree.getTag(*name);
     } else if (state.attachLocalAllocTag()) {
+      // Recognized anonymous allocations, including allocations from other
+      // dialects, use the generic "allocated data" tag.
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
                  << "\n");

@@ -275,6 +275,46 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 
 // -----
 
+// uniq_name on memref.alloca is used to distinguish named allocations.
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+  func.func @_QPmemrefalloc() {
+    %0 = memref.alloca() {uniq_name = "_QFmemrefallocEi"} : memref<i32>
+    %1 = fir.convert %0 : (memref<i32>) -> !fir.ref<i32>
+    %2 = fir.load %1 : !fir.ref<i32>
+    fir.store %2 to %1 : !fir.ref<i32>
+    return
+  }
+
+// CHECK: #[[MEMREF_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFmemrefallocEi", members = {{{.*}}}>
+// CHECK: #[[MEMREF_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[MEMREF_ALLOC_DATA]], access_type = #[[MEMREF_ALLOC_DATA]], offset = 0>
+// CHECK-LABEL: func.func @_QPmemrefalloc(
+// CHECK: fir.load {{.*}} {tbaa = [#[[MEMREF_ALLOC_TAG]]]}
+// CHECK: fir.store {{.*}} {tbaa = [#[[MEMREF_ALLOC_TAG]]]}
+}
+
+// -----
+
+// An empty uniq_name is treated as absent.
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
+  func.func @_QPemptyname() {
+    %0 = memref.alloca() {uniq_name = ""} : memref<i32>
+    %1 = fir.convert %0 : (memref<i32>) -> !fir.ref<i32>
+    %2 = fir.load %1 : !fir.ref<i32>
+    fir.store %2 to %1 : !fir.ref<i32>
+    return
+  }
+
+// CHECK: #[[EMPTY_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {{{.*}}}>
+// CHECK: #[[EMPTY_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[EMPTY_ANY_DATA]], 0>}>
+// CHECK-NOT: #llvm.tbaa_type_desc<id = "allocated data/
+// CHECK: #[[EMPTY_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EMPTY_ALLOC_DATA]], access_type = #[[EMPTY_ALLOC_DATA]], offset = 0>
+// CHECK-LABEL: func.func @_QPemptyname(
+// CHECK: fir.load {{.*}} {tbaa = [#[[EMPTY_ALLOC_TAG]]]}
+// CHECK: fir.store {{.*}} {tbaa = [#[[EMPTY_ALLOC_TAG]]]}
+}
+
+// -----
+
 // An anonymous allocation of another dialect is still recognized as a local
 // allocation through its memory effects, so accesses get the unnamed
 // "allocated data" tag instead of no tag at all.
