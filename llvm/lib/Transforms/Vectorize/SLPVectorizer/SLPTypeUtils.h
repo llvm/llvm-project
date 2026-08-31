@@ -59,7 +59,7 @@ unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
 /// padded full-register vector type if padding is structurally possible, or
 /// nullptr if the vector already fills a register or the opcode is not
-/// div/rem. Does not check profitability; see getMaskedDivRemCost for that.
+/// div/rem. Does not check profitability.
 FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
                                      unsigned Opcode, Type *ScalarTy,
                                      unsigned NumElts);
