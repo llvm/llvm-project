@@ -316,6 +316,7 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
 else:
     tools.extend(["mlir-opt"])
 
+
 def enable_llc(llc_executable):
     config.available_features.add("llc")
     tools.extend(
