@@ -594,24 +594,23 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
-  // Check if the target file offset is covered by the mmap event.
+  // Check if the FileOffset falls within the [Event.Offset, Event.Offset +
+  // Event.Size) range.
   auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
-    return Event.Offset == FileOffset ||
-           (Event.MemProtectionFlag.contains("x") &&
-            Event.Offset < FileOffset &&
-            FileOffset - Event.Offset < Event.Size);
+    return Event.Offset <= FileOffset &&
+           (FileOffset - Event.Offset) < Event.Size;
   };
 
-  // For ELF, subtract the file offset to get the runtime address corresponding
-  // to file offset zero. Kernel mmap events report the text address as
-  // Event.Offset, so use the text segment offset from the ELF instead.
-  const uint64_t RuntimeBaseAddress =
-      Binary->isCOFF()
-          ? Event.Address
-          : Event.Address -
-                (IsKernel ? Binary->getTextSegmentOffset() : Event.Offset);
-
   if (IsKernel || MMapContainsFileOffset(Binary->getTextSegmentOffset())) {
+    // For ELF, subtract the file offset to get the runtime address
+    // corresponding to file offset zero. Kernel mmap events report the text
+    // address as Event.Offset, so use the text segment offset from the ELF
+    // instead.
+    const uint64_t RuntimeBaseAddress =
+        Binary->isCOFF()
+            ? Event.Address
+            : Event.Address -
+                  (IsKernel ? Binary->getTextSegmentOffset() : Event.Offset);
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
@@ -622,14 +621,19 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
+    auto IsContiguousMMapForSegment = [&](auto SegmentIt, uint64_t FileOffset,
+                                          uint64_t RuntimeAddress) {
+      auto I = std::distance(Offsets.begin(), SegmentIt);
+      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+      return PreferredAddrs[I] + (FileOffset - *SegmentIt) ==
+             Binary->canonicalizeVirtualAddress(RuntimeAddress);
+    };
+
     auto It = llvm::lower_bound(Offsets, Event.Offset);
     if (It != Offsets.end() && MMapContainsFileOffset(*It)) {
       // The event is for loading a separate executable segment.
-      auto I = std::distance(Offsets.begin(), It);
-      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
       uint64_t RuntimeSegmentAddress = Event.Address + (*It - Event.Offset);
-      if (PreferredAddrs[I] !=
-          Binary->canonicalizeVirtualAddress(RuntimeSegmentAddress))
+      if (!IsContiguousMMapForSegment(It, *It, RuntimeSegmentAddress))
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -639,10 +643,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        auto I = std::distance(Offsets.begin(), It);
-        const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
-        if (PreferredAddrs[I] + (Event.Offset - *It) !=
-            Binary->canonicalizeVirtualAddress(Event.Address))
+        if (!IsContiguousMMapForSegment(It, Event.Offset, Event.Address))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
