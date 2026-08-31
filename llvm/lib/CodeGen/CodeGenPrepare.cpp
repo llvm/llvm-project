@@ -1129,7 +1129,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
                                bool IsHuge) {
   auto *OldI = dyn_cast<Instruction>(Old);
   if (OldI) {
-    for (Value::user_iterator UI = OldI->user_begin(), E = OldI->user_end();
+    for (Instruction::user_iterator UI = OldI->user_begin(),
+                                    E = OldI->user_end();
          UI != E; ++UI) {
       Instruction *User = cast<Instruction>(*UI);
       if (IsHuge)
@@ -1435,7 +1436,7 @@ static bool SinkCast(CastInst *CI) {
   DenseMap<BasicBlock *, CastInst *> InsertedCasts;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = CI->user_begin(), E = CI->user_end();
+  for (Instruction::user_iterator UI = CI->user_begin(), E = CI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -1902,7 +1903,7 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
   DenseMap<BasicBlock *, CmpInst *> InsertedCmps;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
+  for (Instruction::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2335,7 +2336,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
   // Push the 'and' into the same block as the icmp 0.  There should only be
   // one (icmp (and, 0)) in each block, since CSE/GVN should have removed any
   // others, so we don't need to keep track of which BBs we insert into.
-  for (Value::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
+  for (Instruction::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2394,8 +2395,8 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
   auto *TruncI = cast<TruncInst>(User);
   bool MadeChange = false;
 
-  for (Value::user_iterator TruncUI = TruncI->user_begin(),
-                            TruncE = TruncI->user_end();
+  for (Instruction::user_iterator TruncUI = TruncI->user_begin(),
+                                  TruncE = TruncI->user_end();
        TruncUI != TruncE;) {
 
     Use &TruncTheUse = TruncUI.getUse();
@@ -2490,7 +2491,8 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
   bool shiftIsLegal = TLI.isTypeLegal(TLI.getValueType(DL, ShiftI->getType()));
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = ShiftI->user_begin(), E = ShiftI->user_end();
+  for (Instruction::user_iterator UI = ShiftI->user_begin(),
+                                  E = ShiftI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);

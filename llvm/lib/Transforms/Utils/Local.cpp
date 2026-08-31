@@ -602,8 +602,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 /// true when there are no uses or multiple uses that all refer to the same
 /// value.
 static bool areAllUsesEqual(Instruction *I) {
-  Value::user_iterator UI = I->user_begin();
-  Value::user_iterator UE = I->user_end();
+  Instruction::user_iterator UI = I->user_begin();
+  Instruction::user_iterator UE = I->user_end();
   if (UI == UE)
     return true;
 

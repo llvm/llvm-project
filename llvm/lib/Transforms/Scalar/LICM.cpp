@@ -1679,7 +1679,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
   // Iterate over users to be ready for actual sinking. Replace users via
   // unreachable blocks with undef and make all user PHIs trivially replaceable.
   SmallPtrSet<Instruction *, 8> VisitedUsers;
-  for (Value::user_iterator UI = I.user_begin(), UE = I.user_end(); UI != UE;) {
+  for (Instruction::user_iterator UI = I.user_begin(), UE = I.user_end();
+       UI != UE;) {
     auto *User = cast<Instruction>(*UI);
     Use &U = UI.getUse();
     ++UI;
