@@ -70,7 +70,7 @@ elif config.target_os == "Windows":
         (
             "%librt ",
             base_lib
-            + " -lmingw32 -lmoldname -lmingwex -lmsvcrt -ladvapi32 -lshell32 -luser32 -lkernel32 ",
+            + " -lmingw32 -lmingwex -lmsvcrt -ladvapi32 -lshell32 -luser32 -lkernel32 ",
         )
     )
 else:

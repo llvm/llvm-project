@@ -74,9 +74,9 @@ if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG AND C_SUPPORTS_NODEFAULTLIBS_FLAG)
     else ()
       set(MINGW_RUNTIME gcc_s gcc)
     endif()
-    set(MINGW_LIBRARIES mingw32 ${MINGW_RUNTIME} moldname mingwex msvcrt advapi32
+    set(MINGW_LIBRARIES mingw32 ${MINGW_RUNTIME} mingwex msvcrt advapi32
                         shell32 user32 kernel32 mingw32 ${MINGW_RUNTIME}
-                        moldname mingwex msvcrt)
+                        mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
   endif()
 endif()
