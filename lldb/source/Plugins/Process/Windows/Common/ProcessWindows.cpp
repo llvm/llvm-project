@@ -546,8 +546,9 @@ ArchSpec ProcessWindows::GetSystemArchitecture() {
   return HostInfo::GetArchitecture();
 }
 
-size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
-                                    size_t size, Status &error) {
+size_t ProcessWindows::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t vm_addr = process_addr.GetValue();
   size_t bytes_read = 0;
   error = ProcessDebugger::ReadMemory(vm_addr, buf, size, bytes_read);
   return bytes_read;

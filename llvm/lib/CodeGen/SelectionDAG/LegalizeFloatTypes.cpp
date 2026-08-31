@@ -176,7 +176,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMIN:
     case ISD::VECREDUCE_FMAX:
     case ISD::VECREDUCE_FMAXIMUM:
-    case ISD::VECREDUCE_FMINIMUM: R = SoftenFloatRes_VECREDUCE(N); break;
+    case ISD::VECREDUCE_FMINIMUM:
+    case ISD::VECREDUCE_FMAXIMUMNUM:
+    case ISD::VECREDUCE_FMINIMUMNUM: R = SoftenFloatRes_VECREDUCE(N); break;
     case ISD::VECREDUCE_SEQ_FADD:
     case ISD::VECREDUCE_SEQ_FMUL: R = SoftenFloatRes_VECREDUCE_SEQ(N); break;
       // clang-format on
@@ -911,9 +913,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
       ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   SDValue NewL;
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
-    NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
+    // If softening widens the integer representation (e.g. x86_fp80 -> i96),
+    // load the original memory width and extend to the softened type.
+    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+    NewL = DAG.getLoad(L->getAddressingMode(), ISD::EXTLOAD, NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->getBaseAlign(), MMOFlags,
+                       L->getPointerInfo(), MemVT, L->getBaseAlign(), MMOFlags,
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
@@ -1346,8 +1351,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
   else
     Val = GetSoftenedFloat(Val);
 
-  return DAG.getStore(ST->getChain(), dl, Val, ST->getBasePtr(),
-                      ST->getMemOperand());
+  // If softening widens the integer representation (e.g. x86_fp80 -> i96),
+  // truncate the value before storing to preserve the original memory width.
+  EVT MemVT =
+      EVT::getIntegerVT(*DAG.getContext(), ST->getMemoryVT().getSizeInBits());
+  return DAG.getTruncStore(ST->getChain(), dl, Val, ST->getBasePtr(), MemVT,
+                           ST->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo) {
@@ -2588,6 +2597,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     R = SoftPromoteHalfRes_VECREDUCE(N);
     break;
   case ISD::VECREDUCE_SEQ_FADD:
@@ -2979,6 +2990,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
                        "operand!");
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
+  case ISD::BUILD_VECTOR:
+    Res = SoftPromoteHalfOp_BUILD_VECTOR(N);
+    break;
   case ISD::FAKE_USE:
     Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
     break;
@@ -3040,6 +3054,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BITCAST(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
 
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+
+  SmallVector<SDValue, 8> Ops(N->getNumOperands());
+  for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I)
+    Ops[I] = GetSoftPromotedHalf(N->getOperand(I));
+
+  EVT IVT = VT.changeVectorElementTypeToInteger();
+  SDValue Res = DAG.getBuildVector(IVT, dl, Ops);
+  return DAG.getBitcast(VT, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo) {

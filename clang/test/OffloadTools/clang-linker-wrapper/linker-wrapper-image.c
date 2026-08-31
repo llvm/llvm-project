@@ -316,6 +316,7 @@
 //      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 // SYCL-NEXT: entry:
 // SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 0)
+// SYCL-NEXT:   %0 = call i32 @atexit(ptr @sycl.descriptor_unreg)
 // SYCL-NEXT:   ret void
 // SYCL-NEXT: }
 
