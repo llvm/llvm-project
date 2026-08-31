@@ -1067,11 +1067,22 @@ DISubprogram *DIBuilder::createFunction(
     DITypeArray ThrownTypes, DINodeArray Annotations, StringRef TargetFuncName,
     bool UseKeyInstructions) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
-  auto *Node = getSubprogram(
-      /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
-      Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
-      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
-      ThrownTypes, Annotations, TargetFuncName, UseKeyInstructions);
+
+  DISubprogram *Node = nullptr;
+  // Look up ODR declaration if requested.
+  if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
+    Node = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+        Context, LinkageName, Ty, TParams.get());
+  // Otherwise or if unable, create it.
+  if (!Node)
+    Node = getSubprogram(
+        /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
+        Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
+        SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
+        ThrownTypes, Annotations, TargetFuncName, UseKeyInstructions);
+
+  if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
+    VMContext.getDebugTypeODRUniquer()->addSubprogramDecl(Node);
 
   AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
@@ -1104,11 +1115,23 @@ DISubprogram *DIBuilder::createMethod(
          "the compile unit.");
   // FIXME: Do we want to use different scope/lines?
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
-  auto *SP = getSubprogram(
-      /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
-      LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
-      Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes, nullptr, "", IsDefinition && UseKeyInstructions);
+
+  DISubprogram *SP = nullptr;
+  // Look up ODR declaration if requested.
+  if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
+    SP = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+        Context, LinkageName, Ty, TParams.get());
+  // Otherwise or if unable, create it.
+  if (!SP)
+    SP = getSubprogram(
+        /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
+        LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex,
+        ThisAdjustment, Flags, SPFlags, IsDefinition ? CUNode : nullptr,
+        TParams, nullptr, nullptr, ThrownTypes, nullptr, "",
+        IsDefinition && UseKeyInstructions);
+
+  if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
+    VMContext.getDebugTypeODRUniquer()->addSubprogramDecl(SP);
 
   AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);

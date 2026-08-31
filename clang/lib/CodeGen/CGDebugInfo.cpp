@@ -148,6 +148,7 @@ CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
       DBuilder(CGM.getModule()) {
+  CGM.getLLVMContext().enableDebugTypeODRUniquing();
   CreateCompileUnit();
 }
 
@@ -6696,6 +6697,7 @@ void CGDebugInfo::finalize() {
       DBuilder.retainType(cast<llvm::DIType>(MD));
 
   DBuilder.finalize();
+  CGM.getLLVMContext().disableDebugTypeODRUniquing();
 }
 
 // Don't ignore in case of explicit cast where it is referenced indirectly.

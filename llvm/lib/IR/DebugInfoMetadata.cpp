@@ -1079,7 +1079,7 @@ DICompositeType *DICompositeType::buildODRType(
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
-  auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
+  auto *&CT = Context.pImpl->ODRUniquer->DITypeMap[&Identifier];
   if (!CT)
     return CT = DICompositeType::getDistinct(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1123,7 +1123,7 @@ DICompositeType *DICompositeType::getODRType(
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
-  auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
+  auto *&CT = Context.pImpl->ODRUniquer->DITypeMap[&Identifier];
   if (!CT) {
     CT = DICompositeType::getDistinct(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1143,7 +1143,7 @@ DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
-  return Context.pImpl->DITypeMap->lookup(&Identifier);
+  return Context.pImpl->ODRUniquer->DITypeMap.lookup(&Identifier);
 }
 DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
                                    DIFlags Flags, uint8_t CC,

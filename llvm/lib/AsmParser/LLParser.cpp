@@ -29,6 +29,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfoODRUniquer.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalIFunc.h"
@@ -6413,13 +6414,28 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
     return error(
         Loc,
         "missing 'distinct', required for !DISubprogram that is a Definition");
-  Result = GET_OR_DISTINCT(
-      DISubprogram,
-      (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
-       type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
-       thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val, keyInstructions.Val));
+
+  Result = nullptr;
+  bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
+                        !(SPFlags & DISubprogram::SPFlagDefinition) &&
+                        linkageName.Val;
+
+  if (MaybeODRUnique)
+    Result = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+        scope.Val, linkageName.Val->getString(), type.Val, templateParams.Val);
+
+  if (!Result)
+    Result = GET_OR_DISTINCT(
+        DISubprogram,
+        (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+         type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
+         thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
+         declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
+         targetFuncName.Val, keyInstructions.Val));
+
+  if (MaybeODRUnique)
+    Context.getDebugTypeODRUniquer()->addSubprogramDecl(
+        cast<DISubprogram>(Result));
 
   if (IsDistinct)
     NewDistinctSPs.push_back(cast<DISubprogram>(Result));

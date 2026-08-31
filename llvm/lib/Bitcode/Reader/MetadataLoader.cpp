@@ -29,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfoODRUniquer.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -2049,34 +2050,48 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
-    DISubprogram *SP = GET_OR_DISTINCT(
-        DISubprogram,
-        (Context,
-         getDITypeRefOrNull(Record[1]),           // scope
-         getMDString(Record[2]),                  // name
-         getMDString(Record[3]),                  // linkageName
-         getMDOrNull(Record[4]),                  // file
-         Record[5],                               // line
-         getMDOrNull(Record[6]),                  // type
-         Record[7 + OffsetA],                     // scopeLine
-         getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
-         Record[10 + OffsetA],                    // virtualIndex
-         HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
-         Flags,                                   // flags
-         SPFlags,                                 // SPFlags
-         HasUnit ? CUorFn : nullptr,              // unit
-         getMDOrNull(Record[13 + OffsetB]),       // templateParams
-         getMDOrNull(Record[14 + OffsetB]),       // declaration
-         getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
-         HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
-                        : nullptr, // thrownTypes
-         HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
-                        : nullptr, // annotations
-         HasTargetFuncName ? getMDString(Record[19 + OffsetB])
-                           : nullptr, // targetFuncName
-         UsesKeyInstructions));
+
+    DISubprogram *SP = nullptr;
+    bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
+                          !(SPFlags & DISubprogram::SPFlagDefinition) &&
+                          getMDString(Record[3]);
+    if (MaybeODRUnique)
+      SP = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+          getDITypeRefOrNull(Record[1]), getMDString(Record[3])->getString(),
+          getMDOrNull(Record[6]), getMDOrNull(Record[13 + OffsetB]));
+
+    if (!SP)
+      SP = GET_OR_DISTINCT(
+          DISubprogram,
+          (Context,
+           getDITypeRefOrNull(Record[1]),           // scope
+           getMDString(Record[2]),                  // name
+           getMDString(Record[3]),                  // linkageName
+           getMDOrNull(Record[4]),                  // file
+           Record[5],                               // line
+           getMDOrNull(Record[6]),                  // type
+           Record[7 + OffsetA],                     // scopeLine
+           getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
+           Record[10 + OffsetA],                    // virtualIndex
+           HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
+           Flags,                                   // flags
+           SPFlags,                                 // SPFlags
+           HasUnit ? CUorFn : nullptr,              // unit
+           getMDOrNull(Record[13 + OffsetB]),       // templateParams
+           getMDOrNull(Record[14 + OffsetB]),       // declaration
+           getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
+           HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
+                          : nullptr, // thrownTypes
+           HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
+                          : nullptr, // annotations
+           HasTargetFuncName ? getMDString(Record[19 + OffsetB])
+                             : nullptr, // targetFuncName
+           UsesKeyInstructions));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
+
+    if (MaybeODRUnique)
+      Context.getDebugTypeODRUniquer()->addSubprogramDecl(SP);
 
     if (IsDistinct)
       NewDistinctSPs.push_back(SP);
