@@ -30,6 +30,8 @@ namespace {
 
 // Saves and restores the host floating-point environment so tests do not
 // leak exception flags into each other or into the rest of the suite.
+// Omit std qualifier on fegetenv, fesetenv: FreeBSD 15.1 defines them as
+// macros.
 class FenvScope {
 public:
   FenvScope() {
