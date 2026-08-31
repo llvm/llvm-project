@@ -1,4 +1,4 @@
-//===-- ubsan_device_hsa_interceptors.cpp -----------------------*- C++ -*-===//
+//===-- ubsan_offload_hsa_interceptors.cpp ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,14 +14,14 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_platform.h"
-#include "ubsan_device.h"
-#include "ubsan_device_hsa.h"
-#include "ubsan_device_rpc.h"
-#include "ubsan_device_symbolize.h"
 #include "ubsan_diag.h"
+#include "ubsan_offload.h"
+#include "ubsan_offload_hsa.h"
+#include "ubsan_offload_rpc.h"
+#include "ubsan_offload_symbolize.h"
 
 #if !SANITIZER_LINUX
-#error "Device UBSan reporting is supported on Linux only"
+#error "Offload UBSan reporting is supported on Linux only"
 #endif
 
 #if SANITIZER_GLIBC
@@ -33,7 +33,7 @@ using namespace __ubsan;
 
 namespace __ubsan {
 
-Mutex UbsanDeviceMutex;
+Mutex UbsanOffloadMutex;
 
 static StaticSpinMutex InitMutex;
 static atomic_uint8_t Initialized;
@@ -45,7 +45,7 @@ void Initialize() {
   if (atomic_load(&Initialized, memory_order_relaxed))
     return;
   SanitizerToolName = "UndefinedBehaviorSanitizer";
-  __ubsan_set_device_symbolize(SymbolizeDevicePc);
+  __ubsan_set_offload_symbolize(SymbolizeOffloadPc);
   Atexit(ForgetDeviceImages);
   AddDieCallback(ForgetDeviceImages);
   atomic_store(&Initialized, 1, memory_order_release);
@@ -141,7 +141,7 @@ INTERCEPTOR(hsa_status_t, hsa_init, void) {
   if (Status != HSA_STATUS_SUCCESS)
     return Status;
 
-  Lock L(&UbsanDeviceMutex);
+  Lock L(&UbsanOffloadMutex);
   if (GetHsa().AddRef())
     GetHsa().Init();
   return Status;
@@ -152,7 +152,7 @@ INTERCEPTOR(hsa_status_t, hsa_shut_down, void) {
 
   bool Last;
   {
-    Lock L(&UbsanDeviceMutex);
+    Lock L(&UbsanOffloadMutex);
     Last = GetHsa().DropRef();
   }
   if (Last)
@@ -167,7 +167,7 @@ INTERCEPTOR(hsa_status_t, hsa_executable_freeze, hsa_executable_t Executable,
   hsa_status_t Status = REAL(hsa_executable_freeze)(Executable, Options);
   if (Status == HSA_STATUS_SUCCESS) {
     {
-      Lock L(&UbsanDeviceMutex);
+      Lock L(&UbsanOffloadMutex);
       if (GetHsa().Ready())
         GetHsa().RecordExecutable(Executable);
     }
@@ -181,19 +181,19 @@ INTERCEPTOR(hsa_status_t, hsa_executable_destroy, hsa_executable_t Executable) {
 
   FlushRpc();
   {
-    Lock L(&UbsanDeviceMutex);
+    Lock L(&UbsanOffloadMutex);
     GetHsa().ForgetExecutable(Executable);
   }
   return REAL(hsa_executable_destroy)(Executable);
 }
 
-extern "C" void __ubsan_device_init() { __ubsan::Initialize(); }
+extern "C" void __ubsan_offload_init() { __ubsan::Initialize(); }
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 __attribute__((section(".preinit_array"), used)) static void (
-    *ubsan_device_preinit)(void) = __ubsan_device_init;
+    *ubsan_offload_preinit)(void) = __ubsan_offload_init;
 #endif
 
-__attribute__((constructor(0))) static void UbsanDeviceDynInit() {
-  __ubsan_device_init();
+__attribute__((constructor(0))) static void UbsanOffloadDynInit() {
+  __ubsan_offload_init();
 }

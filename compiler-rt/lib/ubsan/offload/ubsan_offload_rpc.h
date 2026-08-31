@@ -1,4 +1,4 @@
-//===-- ubsan_device_rpc.h --------------------------------------*- C++ -*-===//
+//===-- ubsan_offload_rpc.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UBSAN_DEVICE_RPC_H
-#define UBSAN_DEVICE_RPC_H
+#ifndef UBSAN_OFFLOAD_RPC_H
+#define UBSAN_OFFLOAD_RPC_H
 
 #include "hsa.h"
 
@@ -19,4 +19,4 @@ void StopRpc();
 
 } // namespace __ubsan
 
-#endif // UBSAN_DEVICE_RPC_H
+#endif // UBSAN_OFFLOAD_RPC_H

@@ -59,7 +59,7 @@ static void MaybePrintStackTrace(const ReportOptions &Opts) {
     return;
 
   // Reports to be symbolized from the device need to use a separate file.
-  if (Opts.FromDevice) {
+  if (Opts.FromOffload) {
     if (!Opts.pc)
       return;
     SymbolizedStackHolder Frame(getReportLocation(Opts.pc, true));
@@ -132,16 +132,16 @@ public:
 
 // Symbolization hook for the remote device support. The hook returns a null
 // pointer if the given PC was not present in any of the known device images.
-static SymbolizedStack *(*DeviceSymbolize)(uptr PC);
+static SymbolizedStack *(*OffloadSymbolize)(uptr PC);
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__ubsan_set_device_symbolize(SymbolizedStack *(*Fn)(uptr PC)) {
-  DeviceSymbolize = Fn;
+__ubsan_set_offload_symbolize(SymbolizedStack *(*Fn)(uptr PC)) {
+  OffloadSymbolize = Fn;
 }
 
 SymbolizedStack *__ubsan::getSymbolizedLocation(uptr PC) {
   InitAsStandaloneIfNecessary();
-  if (DeviceSymbolize)
-    if (SymbolizedStack *S = DeviceSymbolize(PC))
+  if (OffloadSymbolize)
+    if (SymbolizedStack *S = OffloadSymbolize(PC))
       return S;
   return Symbolizer::GetOrInit()->SymbolizePC(PC);
 }

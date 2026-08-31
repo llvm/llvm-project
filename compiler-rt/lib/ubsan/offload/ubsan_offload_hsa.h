@@ -1,4 +1,4 @@
-//===-- ubsan_device_hsa.h --------------------------------------*- C++ -*-===//
+//===-- ubsan_offload_hsa.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UBSAN_DEVICE_HSA_H
-#define UBSAN_DEVICE_HSA_H
+#ifndef UBSAN_OFFLOAD_HSA_H
+#define UBSAN_OFFLOAD_HSA_H
 
 #include "hsa.h"
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -93,4 +93,4 @@ Hsa &GetHsa();
 
 } // namespace __ubsan
 
-#endif // UBSAN_DEVICE_HSA_H
+#endif // UBSAN_OFFLOAD_HSA_H

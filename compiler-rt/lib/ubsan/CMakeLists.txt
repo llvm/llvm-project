@@ -5,7 +5,7 @@ include_directories(..)
 include_directories(../../include)
 
 # GPU targets only need the handler shims. The host interceptor archive is
-# built in the device/ project.
+# built in the offload/ project.
 if(COMPILER_RT_GPU_BUILD)
   include(FindLibcCommonUtils)
   if(NOT TARGET llvm-libc-common-utilities)
@@ -13,17 +13,17 @@ if(COMPILER_RT_GPU_BUILD)
     return()
   endif()
 
-  set(UBSAN_SOURCES ubsan_device.cpp)
+  set(UBSAN_SOURCES ubsan_offload.cpp)
 
   set(UBSAN_HEADERS
-    ubsan_device_packet.h
-    ubsan_device_checks.inc
+    ubsan_offload_packet.h
+    ubsan_offload_checks.inc
     )
 
-  set(UBSAN_DEVICE_CFLAGS
+  set(UBSAN_OFFLOAD_CFLAGS
     ${SANITIZER_COMMON_CFLAGS}
     -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
-  append_rtti_flag(OFF UBSAN_DEVICE_CFLAGS)
+  append_rtti_flag(OFF UBSAN_OFFLOAD_CFLAGS)
 
   add_compiler_rt_component(ubsan)
 
@@ -32,7 +32,7 @@ if(COMPILER_RT_GPU_BUILD)
     ARCHS ${UBSAN_SUPPORTED_ARCH}
     SOURCES ${UBSAN_SOURCES}
     ADDITIONAL_HEADERS ${UBSAN_HEADERS}
-    CFLAGS ${UBSAN_DEVICE_CFLAGS}
+    CFLAGS ${UBSAN_OFFLOAD_CFLAGS}
     LINK_LIBS llvm-libc-common-utilities
     PARENT_TARGET ubsan)
 
@@ -313,6 +313,6 @@ else()
 
   # Thin host interceptors for offloading. Linked with -u to keep it separate.
   if(OS_NAME MATCHES "Linux" AND NOT ANDROID)
-    add_subdirectory(device)
+    add_subdirectory(offload)
   endif()
 endif()

@@ -1,4 +1,4 @@
-//===-- ubsan_device.h ------------------------------------------*- C++ -*-===//
+//===-- ubsan_offload.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,29 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Host device reporting runtime for UBSan.
+// Host offload reporting runtime for UBSan.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UBSAN_DEVICE_H
-#define UBSAN_DEVICE_H
+#ifndef UBSAN_OFFLOAD_H
+#define UBSAN_OFFLOAD_H
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
-#include "ubsan_device_packet.h"
+#include "ubsan_offload_packet.h"
 
 namespace __ubsan {
 
 void Initialize();
-void PrintDeviceReport(const __ubsan_device_report &R);
+void PrintOffloadReport(const __ubsan_offload_report &R);
 
 // Nest only after RpcMutex, the reverse deadlocks the report thread.
-extern __sanitizer::Mutex UbsanDeviceMutex;
+extern __sanitizer::Mutex UbsanOffloadMutex;
 
 } // namespace __ubsan
 
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_device_init();
+SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_offload_init();
 }
 
-#endif // UBSAN_DEVICE_H
+#endif // UBSAN_OFFLOAD_H

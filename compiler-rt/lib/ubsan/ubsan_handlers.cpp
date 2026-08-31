@@ -35,7 +35,7 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET) {
   // thread could have acquired it, but not yet printed the report.
   if (Opts.FromUnrecoverableHandler)
     return false;
-  if (Opts.FromDevice)
+  if (Opts.FromOffload)
     return SLoc.isDisabled();
   return SLoc.isDisabled() || IsPCSuppressed(ET, Opts.pc, SLoc.getFilename());
 }
@@ -108,7 +108,7 @@ void __ubsan::handleTypeMismatchImpl(TypeMismatchData *Data,
 
   SymbolizedStackHolder FallbackLoc;
   if (Data->Loc.isInvalid()) {
-    FallbackLoc.reset(getReportLocation(Opts.pc, Opts.FromDevice));
+    FallbackLoc.reset(getReportLocation(Opts.pc, Opts.FromOffload));
     Loc = FallbackLoc;
   }
 
@@ -136,7 +136,7 @@ void __ubsan::handleTypeMismatchImpl(TypeMismatchData *Data,
   }
 
   // Device pointers are not always host-accessible.
-  if (Pointer && !Opts.FromDevice)
+  if (Pointer && !Opts.FromOffload)
     Diag(Pointer, DL_Note, ET, "pointer points here");
 }
 
@@ -188,7 +188,7 @@ void __ubsan::handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
   if (!AssumptionLoc.isInvalid())
     Diag(AssumptionLoc, DL_Note, ET, "alignment assumption was specified here");
 
-  Diag(Opts.FromDevice ? Loc : Location(RealPointer), DL_Note, ET,
+  Diag(Opts.FromOffload ? Loc : Location(RealPointer), DL_Note, ET,
        "%0address is %1 aligned, misalignment offset is %2 bytes")
       << (Offset ? "offset " : "") << ActualAlignment << MisAlignmentOffset;
 }
@@ -411,7 +411,7 @@ void __ubsan::__ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
 void __ubsan::handleLocalOutOfBoundsImpl(ReportOptions Opts) {
   // FIXME: Pass more diagnostic info.
   SymbolizedStackHolder CallerLoc;
-  CallerLoc.reset(getReportLocation(Opts.pc, Opts.FromDevice));
+  CallerLoc.reset(getReportLocation(Opts.pc, Opts.FromOffload));
   Location Loc;
   Loc = CallerLoc;
   ErrorType ET = ErrorType::LocalOutOfBounds;
@@ -510,7 +510,7 @@ void __ubsan::handleFloatCastOverflow(void *DataPtr, ValueHandle From,
 
   if (looksLikeFloatCastOverflowDataV1(DataPtr)) {
     auto Data = reinterpret_cast<FloatCastOverflowData *>(DataPtr);
-    CallerLoc.reset(getReportLocation(Opts.pc, Opts.FromDevice));
+    CallerLoc.reset(getReportLocation(Opts.pc, Opts.FromOffload));
     Loc = CallerLoc;
     FromType = &Data->FromType;
     ToType = &Data->ToType;
