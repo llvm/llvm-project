@@ -154,6 +154,25 @@ using RewriteableMemOp =
     std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
 using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 
+/// Select instructions that use an alloca and are subsequently loaded can be
+/// rewritten to load both input pointers and then select between the result,
+/// allowing the load of the alloca to be promoted.
+/// From this:
+///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
+///   %V = load <type>, ptr %P2
+/// to:
+///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
+///   %V2 = load <type>, ptr %Other
+///   %V = select i1 %cond, <type> %V1, <type> %V2
+///
+/// We can do this to a select if its only uses are loads
+/// and if either the operand to the select can be loaded unconditionally,
+///        or if we are allowed to perform CFG modifications.
+/// If found an intervening bitcast with a single use of the load,
+/// allow the promotion.
+static std::optional<RewriteableMemOps>
+isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
+
 /// An optimization pass providing Scalar Replacement of Aggregates.
 ///
 /// This pass takes allocations which can be completely analyzed (that is, they
@@ -218,25 +237,6 @@ class SROA {
   /// A worklist of select instructions to rewrite prior to promoting
   /// allocas.
   SmallMapVector<SelectInst *, RewriteableMemOps, 8> SelectsToRewrite;
-
-  /// Select instructions that use an alloca and are subsequently loaded can be
-  /// rewritten to load both input pointers and then select between the result,
-  /// allowing the load of the alloca to be promoted.
-  /// From this:
-  ///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
-  ///   %V = load <type>, ptr %P2
-  /// to:
-  ///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
-  ///   %V2 = load <type>, ptr %Other
-  ///   %V = select i1 %cond, <type> %V1, <type> %V2
-  ///
-  /// We can do this to a select if its only uses are loads
-  /// and if either the operand to the select can be loaded unconditionally,
-  ///        or if we are allowed to perform CFG modifications.
-  /// If found an intervening bitcast with a single use of the load,
-  /// allow the promotion.
-  static std::optional<RewriteableMemOps>
-  isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
@@ -1484,8 +1484,11 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 /// common type. If there is a common type that matches a common type for the
 /// rest of the alloca slices, then we can transform this select to use branched
 /// control flow, with direct loads/stores to the alloca, and promote through
-// the common type.
-static Type *findCommonTypeThroughSelect(SelectInst &SI) {
+/// the common type.
+static Type *findCommonTypeThroughSelect(SelectInst &SI, bool PreserveCFG) {
+  if (!isSafeSelectToSpeculate(SI, PreserveCFG))
+    return nullptr;
+
   Type *Ty = nullptr;
 
   for (User *U : SI.users()) {
@@ -1513,7 +1516,7 @@ static Type *findCommonTypeThroughSelect(SelectInst &SI) {
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
 findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
-               uint64_t EndOffset) {
+               uint64_t EndOffset, bool PreserveCFG) {
   Type *Ty = nullptr;
   bool TyIsCommon = true;
   IntegerType *ITy = nullptr;
@@ -1533,7 +1536,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
     } else if (auto *SI = dyn_cast<SelectInst>(U->getUser())) {
-      UserTy = findCommonTypeThroughSelect(*SI);
+      UserTy = findCommonTypeThroughSelect(*SI, PreserveCFG);
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
@@ -1750,8 +1753,10 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   return Spec;
 }
 
-std::optional<RewriteableMemOps>
-SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+namespace {
+
+static std::optional<RewriteableMemOps>
+isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
@@ -1796,6 +1801,8 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
 
   return Ops;
 }
+
+} // namespace
 
 static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
                                      IRBuilderTy &IRB) {
@@ -5425,7 +5432,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C, bool AggregateToVector) {
+                    LLVMContext &C, bool AggregateToVector, bool PreserveCFG) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
                           VectorType *SelectedVecTy, bool SelectedIntWidening) {
     LLVM_DEBUG({
@@ -5470,7 +5477,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
   auto [CommonUseTy, LargestIntTy] =
-      findCommonType(P.begin(), P.end(), P.endOffset());
+      findCommonType(P.begin(), P.end(), P.endOffset(), PreserveCFG);
   if (CommonUseTy) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
     if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
@@ -5567,7 +5574,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C, AggregateToVector);
+      selectPartitionType(P, DL, AI, *C, AggregateToVector, PreserveCFG);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that

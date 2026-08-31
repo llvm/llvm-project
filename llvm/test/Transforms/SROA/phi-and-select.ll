@@ -350,7 +350,7 @@ define i32 @test9_asan(i32 %b, ptr %ptr) sanitize_address {
 ;
 ; CHECK-PRESERVE-CFG-LABEL: @test9_asan(
 ; CHECK-PRESERVE-CFG-NEXT:  entry:
-; CHECK-PRESERVE-CFG-NEXT:    [[F:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[F:%.*]] = alloca float, align 4
 ; CHECK-PRESERVE-CFG-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-PRESERVE-CFG-NEXT:    [[SELECT:%.*]] = select i1 [[TEST]], ptr [[F]], ptr [[PTR]]
