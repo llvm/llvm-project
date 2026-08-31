@@ -3959,6 +3959,82 @@ namespace {
     ClassTemplatePartialSpecializationDecl *Partial;
     TemplateArgumentList *Args;
   };
+
+  enum class ActualTemplateTemplateMatchKind { Other, InexactPack, Exact };
+
+  static ActualTemplateTemplateMatchKind
+  getActualTemplateTemplateMatchKind(Sema &S,
+                                     const PartialSpecMatchResult &Match) {
+    bool HasTemplateTemplateParameter = false;
+    bool HasInexactPack = false;
+    TemplateParameterList *Params = Match.Partial->getTemplateParameters();
+    for (unsigned I = 0; I != Params->size(); ++I) {
+      auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Params->getParam(I));
+      if (!TTP)
+        continue;
+
+      HasTemplateTemplateParameter = true;
+      const TemplateArgument &Arg = Match.Args->get(I);
+      if (Arg.getKind() != TemplateArgument::Template &&
+          Arg.getKind() != TemplateArgument::TemplateExpansion)
+        return ActualTemplateTemplateMatchKind::Other;
+
+      TemplateName Name = Arg.getAsTemplateOrTemplatePattern()
+                              .getTemplateDeclAndDefaultArgs()
+                              .first;
+      TemplateDecl *Template = Name.getAsTemplateDecl();
+      if (!Template)
+        return ActualTemplateTemplateMatchKind::Other;
+      if (S.TemplateParameterListsAreEqual(
+              Template->getTemplateParameters(), TTP->getTemplateParameters(),
+              /*Complain=*/false, Sema::TPL_TemplateParamsEquivalent))
+        continue;
+
+      TemplateParameterList *TTPParams = TTP->getTemplateParameters();
+      if (TTPParams->empty() ||
+          !TTPParams->getParam(TTPParams->size() - 1)->isParameterPack())
+        return ActualTemplateTemplateMatchKind::Other;
+      HasInexactPack = true;
+    }
+    if (HasInexactPack)
+      return ActualTemplateTemplateMatchKind::InexactPack;
+    return HasTemplateTemplateParameter
+               ? ActualTemplateTemplateMatchKind::Exact
+               : ActualTemplateTemplateMatchKind::Other;
+  }
+
+  static void preferExactTemplateTemplateMatches(
+      Sema &S, SmallVectorImpl<PartialSpecMatchResult> &Matches) {
+    SmallVector<ActualTemplateTemplateMatchKind, 4> MatchKinds;
+    bool HasExactMatch = false;
+    // Preserve ordinary partial ordering if any candidate has no
+    // template-template parameter or has a mismatch other than a trailing
+    // template-template parameter pack.
+    for (const PartialSpecMatchResult &Match : Matches) {
+      ActualTemplateTemplateMatchKind Kind =
+          getActualTemplateTemplateMatchKind(S, Match);
+      if (Kind == ActualTemplateTemplateMatchKind::Other)
+        return;
+      HasExactMatch |= Kind == ActualTemplateTemplateMatchKind::Exact;
+      MatchKinds.push_back(Kind);
+    }
+    if (!HasExactMatch)
+      return;
+
+    // P3310's invented default arguments can make a variadic template-template
+    // parameter candidate appear more specialized than a candidate that
+    // exactly matches the actual template head. Preserve the exact match in
+    // that case.
+    unsigned Out = 0;
+    for (unsigned I = 0; I != Matches.size(); ++I) {
+      if (MatchKinds[I] != ActualTemplateTemplateMatchKind::Exact)
+        continue;
+      if (Out != I)
+        Matches[Out] = std::move(Matches[I]);
+      ++Out;
+    }
+    Matches.resize(Out);
+  }
 }
 
 bool Sema::usesPartialOrExplicitSpecialization(
@@ -4057,6 +4133,8 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     }
     if (Matched.empty() && PrimaryStrictPackMatch)
       Matched = std::move(ExtraMatched);
+    if (Matched.size() > 1)
+      preferExactTemplateTemplateMatches(S, Matched);
 
     // If we're dealing with a member template where the template parameters
     // have been instantiated, this provides the original template parameters
