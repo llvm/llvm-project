@@ -2125,7 +2125,13 @@ define i1 @icmp_ule_offset_with_common_divisor(i64 %x, i64 %y) {
 ; Ensure the identity icmp ult (A - B), Op1 to icmp ule A, Op1 does not occur
 ; when the or disjoint is matched as an add, as nuw of add does not imply nowrap
 ; of the unsigned subtraction.
-; FIXME: This is a miscompilation.
+;
+; Note: by the time the first InstCombine iteration is completed, the %xor has been
+; sunk into the `if` block, and the first icmp ult has been canonicalized to an equality.
+; This exposes a constant-folding opportunity knowing that `%arg` is zero from the dominating
+; condition. However, %xor was already visited before the canonicalization, and not re-added
+; to the worklist (as it does not directly use the branch condition), thus we fail to reach a
+; fixpoint within the same iteration.
 define i1 @icmp_ult_neg_offset_or_disjoint(i16 %arg) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: define i1 @icmp_ult_neg_offset_or_disjoint(
 ; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
