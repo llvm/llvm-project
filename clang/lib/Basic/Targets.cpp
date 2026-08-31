@@ -554,7 +554,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     }
     
   case llvm::Triple::sh:
-  case llvm::Triple::sh_le:
+  case llvm::Triple::shl:
     switch (os) {
     default:
       return std::make_unique<SuperHTargetInfo>(Triple, Opts);
