@@ -4873,7 +4873,7 @@ public:
   };
 
   /// RISC-V type attributes for states.
-  enum RISCVTypeAttributes : uint8_t {
+  enum RISCVTypeAttributes : unsigned {
     RISCVNormalFunction = 0,
 
     // Describes the value of the xsfmm tile state using RISCVStateValue.
@@ -5580,8 +5580,11 @@ public:
       return RISCVAttributes != RISCVNormalFunction;
     }
 
-    void setRISCVAttribute(RISCVTypeAttributes Kind) {
-      RISCVAttributes |= Kind;
+    void setRISCVAttribute(RISCVTypeAttributes Kind, bool Enable = true) {
+      if (Enable)
+        RISCVAttributes |= Kind;
+      else
+        RISCVAttributes &= ~Kind;
     }
   };
 

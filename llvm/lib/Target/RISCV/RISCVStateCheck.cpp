@@ -77,9 +77,9 @@ bool RISCVStateCheck::runOnMachineFunction(MachineFunction &MF) {
         Name = GV->getName().str();
       }
 
-      std::string Message = "cannot emit call to '" + Name +
-                            "' from an RISC-V attributed function.";
-      reportFatalUsageError(MF.getName() + ": " + Message);
+      std::string Message = MF.getName().str() + ": cannot emit call to '" +
+                            Name + "' from an RISC-V attributed function.";
+      F.getContext().diagnose(DiagnosticInfoGeneric(Message));
     }
   }
 

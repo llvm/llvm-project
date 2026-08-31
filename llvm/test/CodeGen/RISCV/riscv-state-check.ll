@@ -1,13 +1,13 @@
 ; RUN: not llc -mtriple=riscv64 -mattr=+xsfmmbase,+save-restore -o /dev/null < %s 2>&1 \
 ; RUN:   | FileCheck %s --implicit-check-not=error:
 
-declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 ; CHECK: error: libgcc_call: cannot emit call to '__divdi3' from an RISC-V attributed function.
 define i64 @libgcc_call(i64 %a, i64 %b) "riscv_inout" {
   %d = sdiv i64 %a, %b
   ret i64 %d
 }
 
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 ; CHECK: error: memcpy_call: cannot emit call to 'memcpy' from an RISC-V attributed function.
 define void @memcpy_call(ptr %d, ptr %s) "riscv_in" {
   call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 1024, i1 false)
