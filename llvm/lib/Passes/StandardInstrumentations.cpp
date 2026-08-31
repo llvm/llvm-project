@@ -169,7 +169,7 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
-      if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
+      if (Force || isFunctionInPrintList(F.getName())) {
         return F.getParent();
       }
     }
@@ -212,7 +212,7 @@ void printIR(raw_ostream &OS, const Module *M) {
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
-    if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+    if (isFunctionInPrintList(F.getName())) {
       F.print(OS);
     }
   }
@@ -370,7 +370,7 @@ std::optional<std::unique_ptr<Module>> unwrapAndSaveClone(IRUnitRef IR) {
 
     for (LazyCallGraph::Node &N : *C) {
       Function &F = N.getFunction();
-      if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+      if (isFunctionInPrintList(F.getName())) {
         FuncsToSave.push_back(&F);
       }
     }
