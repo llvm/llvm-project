@@ -2054,7 +2054,7 @@ struct TestTryLock {
     bool failed = !mu.TryLock(); // expected-note {{mutex acquired here}}
     if (failed)
       cond = true;
-    // Lock state genuinely differs at this join: nothing re-branches on
+    // Lock state genuinely differs at this join: nothing rebranches on
     // 'failed' here, so the warning must be retained.
     a = 3;          // expected-warning {{mutex 'mu' is not held on every path through here}} \
                     // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
@@ -2076,7 +2076,7 @@ struct TestTryLock {
     bool failed = !mu.TryLock();
     if (failed)
       mu2.Lock();   // expected-note {{mutex acquired here}}
-    // The re-branch on 'failed' only suppresses the warning for 'mu', the
+    // The rebranch on 'failed' only suppresses the warning for 'mu', the
     // capability the try-lock acquires; 'mu2' must still warn at the join.
     if (failed)     // expected-warning {{mutex 'mu2' is not held on every path through here}}
       return;
