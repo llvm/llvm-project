@@ -21,18 +21,53 @@ def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (apply [{ applySelectFCmpToFMinFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
+def uchar_to_float_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_UITOFP, G_SITOFP],
+           (pattern (op $dst, $src)))>;
+
 def uchar_to_float : GICombineRule<
-  (defs root:$itofp),
-  (match (wip_match_opcode G_UITOFP, G_SITOFP):$itofp,
+  (defs root:$dst),
+  (match (uchar_to_float_frags $dst):$itofp,
          [{ return matchUCharToFloat(*${itofp}); }]),
   (apply [{ applyUCharToFloat(*${itofp}); }])>;
 
 
-def rcp_sqrt_to_rsq : GICombineRule<
-  (defs root:$rcp, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_INTRINSIC, G_FSQRT):$rcp,
-         [{ return matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
+// Fold rcp(sqrt(x)) and sqrt(rcp(x)) into rsq(x) when contraction is allowed.
+// The square root may be either the native G_FSQRT or the amdgcn.sqrt
+// intrinsic, so each direction is spelled out for both forms.
+
+// rcp(fsqrt(x)) -> rsq(x)
+def rcp_of_fsqrt_to_rsq : GICombineRule<
+  (defs root:$dst),
+  (match (G_FSQRT $sqrt, $x, (MIFlags FmContract)),
+         (int_amdgcn_rcp $dst, $sqrt, (MIFlags FmContract)):$rcp),
+  (apply (int_amdgcn_rsq $dst, $x, (MIFlags $rcp)))>;
+
+// rcp(amdgcn.sqrt(x)) -> rsq(x)
+def rcp_of_amdgcn_sqrt_to_rsq : GICombineRule<
+  (defs root:$dst),
+  (match (int_amdgcn_sqrt $sqrt, $x, (MIFlags FmContract)),
+         (int_amdgcn_rcp $dst, $sqrt, (MIFlags FmContract)):$rcp),
+  (apply (int_amdgcn_rsq $dst, $x, (MIFlags $rcp)))>;
+
+// fsqrt(rcp(x)) -> rsq(x)
+def fsqrt_of_rcp_to_rsq : GICombineRule<
+  (defs root:$dst),
+  (match (int_amdgcn_rcp $rcp, $x, (MIFlags FmContract)),
+         (G_FSQRT $dst, $rcp, (MIFlags FmContract)):$sqrt),
+  (apply (int_amdgcn_rsq $dst, $x, (MIFlags $sqrt)))>;
+
+// amdgcn.sqrt(rcp(x)) -> rsq(x)
+def amdgcn_sqrt_of_rcp_to_rsq : GICombineRule<
+  (defs root:$dst),
+  (match (int_amdgcn_rcp $rcp, $x, (MIFlags FmContract)),
+         (int_amdgcn_sqrt $dst, $rcp, (MIFlags FmContract)):$sqrt),
+  (apply (int_amdgcn_rsq $dst, $x, (MIFlags $sqrt)))>;
+
+def rcp_sqrt_to_rsq : GICombineGroup<[
+  rcp_of_fsqrt_to_rsq, rcp_of_amdgcn_sqrt_to_rsq,
+  fsqrt_of_rcp_to_rsq, amdgcn_sqrt_of_rcp_to_rsq]>;
 
 def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
   (defs root:$root),
@@ -43,12 +78,15 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
+def cvt_f32_ubyteN_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_AMDGPU_CVT_F32_UBYTE0, G_AMDGPU_CVT_F32_UBYTE1,
+                G_AMDGPU_CVT_F32_UBYTE2, G_AMDGPU_CVT_F32_UBYTE3],
+           (pattern (op $dst, $src)))>;
+
 def cvt_f32_ubyteN : GICombineRule<
-  (defs root:$cvt_f32_ubyteN, cvt_f32_ubyteN_matchdata:$matchinfo),
-  (match (wip_match_opcode G_AMDGPU_CVT_F32_UBYTE0,
-                           G_AMDGPU_CVT_F32_UBYTE1,
-                           G_AMDGPU_CVT_F32_UBYTE2,
-                           G_AMDGPU_CVT_F32_UBYTE3):$cvt_f32_ubyteN,
+  (defs root:$dst, cvt_f32_ubyteN_matchdata:$matchinfo),
+  (match (cvt_f32_ubyteN_frags $dst):$cvt_f32_ubyteN,
          [{ return matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
   (apply [{ applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
@@ -62,12 +100,14 @@ def clamp_i64_to_i16 : GICombineRule<
 
 def med3_matchdata : GIDefMatchData<"Med3MatchInfo">;
 
+def int_minmax_to_med3_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_SMAX, G_SMIN, G_UMAX, G_UMIN],
+           (pattern (op $dst, $lhs, $rhs)))>;
+
 def int_minmax_to_med3 : GICombineRule<
-  (defs root:$min_or_max, med3_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SMAX,
-                           G_SMIN,
-                           G_UMAX,
-                           G_UMIN):$min_or_max,
+  (defs root:$dst, med3_matchdata:$matchinfo),
+  (match (int_minmax_to_med3_frags $dst):$min_or_max,
          [{ return matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
@@ -77,21 +117,20 @@ def d16_load : GICombineRule<
   (combine (G_BITCAST $dst, $src):$bitcast,
            [{ return combineD16Load(*${bitcast} ); }])>;
 
+def fp_minmax_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_FMAXNUM, G_FMINNUM, G_FMAXNUM_IEEE, G_FMINNUM_IEEE],
+           (pattern (op $dst, $lhs, $rhs)))>;
+
 def fp_minmax_to_med3 : GICombineRule<
-  (defs root:$min_or_max, med3_matchdata:$matchinfo),
-  (match (wip_match_opcode G_FMAXNUM,
-                           G_FMINNUM,
-                           G_FMAXNUM_IEEE,
-                           G_FMINNUM_IEEE):$min_or_max,
+  (defs root:$dst, med3_matchdata:$matchinfo),
+  (match (fp_minmax_frags $dst):$min_or_max,
          [{ return matchFPMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
 def fp_minmax_to_clamp : GICombineRule<
-  (defs root:$min_or_max, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FMAXNUM,
-                           G_FMINNUM,
-                           G_FMAXNUM_IEEE,
-                           G_FMINNUM_IEEE):$min_or_max,
+  (defs root:$dst, register_matchinfo:$matchinfo),
+  (match (fp_minmax_frags $dst):$min_or_max,
          [{ return matchFPMinMaxToClamp(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${min_or_max}, ${matchinfo}); }])>;
 
