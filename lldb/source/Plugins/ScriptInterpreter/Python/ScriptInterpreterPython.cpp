@@ -95,10 +95,12 @@ namespace {
 // save off initial state at the beginning, and restore it at the end
 struct InitializePythonRAII {
 public:
-  InitializePythonRAII() {
+  llvm::Error DoInitialize() {
+    const bool was_initialized = Py_IsInitialized();
+
     // The table of built-in modules can only be extended before Python is
     // initialized.
-    if (!Py_IsInitialized()) {
+    if (!was_initialized) {
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
       // Python's readline is incompatible with libedit being linked into lldb.
       // Provide a patched version local to the embedded interpreter.
@@ -110,43 +112,63 @@ public:
     }
 
 #if LLDB_EMBED_PYTHON_HOME
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    if (!was_initialized) {
+      PyConfig config;
+      PyConfig_InitPythonConfig(&config);
 
-    static std::string g_python_home = []() -> std::string {
-      if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
-        return LLDB_PYTHON_HOME;
+      static std::string g_python_home = []() -> std::string {
+        if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
+          return LLDB_PYTHON_HOME;
 
-      FileSpec spec = HostInfo::GetShlibDir();
-      if (!spec)
-        return {};
-      spec.AppendPathComponent(LLDB_PYTHON_HOME);
-      return spec.GetPath();
-    }();
-    if (!g_python_home.empty()) {
-      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+        FileSpec spec = HostInfo::GetShlibDir();
+        if (!spec)
+          return {};
+        spec.AppendPathComponent(LLDB_PYTHON_HOME);
+        return spec.GetPath();
+      }();
+      if (!g_python_home.empty()) {
+        PyStatus status = PyConfig_SetBytesString(&config, &config.home,
+                                                  g_python_home.c_str());
+        if (PyStatus_Exception(status)) {
+          PyConfig_Clear(&config);
+          return llvm::createStringError(
+              "failed to set the Python config: '%s'", status.err_msg);
+        }
+      }
+
+      config.install_signal_handlers = 0;
+      PyStatus status = Py_InitializeFromConfig(&config);
+      PyConfig_Clear(&config);
+      if (PyStatus_Exception(status))
+        return llvm::createStringError("Python failed to initialize: '%s'",
+                                       status.err_msg);
     }
-
-    config.install_signal_handlers = 0;
-    Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
 #else
-    Py_InitializeEx(/*install_sigs=*/0);
+    if (!was_initialized)
+      Py_InitializeEx(/*install_sigs=*/0);
+    if (!Py_IsInitialized())
+      return llvm::createStringError("Python failed to initialize");
 #endif
+
+    m_python_initialized = true;
 
     // The only case we should go further and acquire the GIL: it is unlocked.
     PyGILState_STATE gil_state = PyGILState_Ensure();
     if (gil_state != PyGILState_UNLOCKED)
-      return;
+      return llvm::Error::success();
 
     m_was_already_initialized = true;
     m_gil_state = gil_state;
     LLDB_LOG_VERBOSE(
         GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
         m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+    return llvm::Error::success();
   }
 
   ~InitializePythonRAII() {
+    if (!m_python_initialized)
+      return;
+
     if (m_was_already_initialized) {
       LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
                        "Releasing PyGILState. Returning to state = {0}",
@@ -162,6 +184,7 @@ public:
 private:
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
   bool m_was_already_initialized = false;
+  bool m_python_initialized = false;
 };
 
 #if LLDB_USE_PYTHON_SET_INTERRUPT
@@ -677,11 +700,20 @@ void ScriptInterpreterPython::Initialize() {
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
 #endif
+
+  // Bring the interpreter up before registering, so a Python that refuses to
+  // initialize leaves no plugin claiming eScriptLanguagePython behind.
+  // GetScriptInterpreterForLanguage then hands out ScriptInterpreterNone and
+  // the rest of lldb keeps working without scripting.
+  if (llvm::Error error = ScriptInterpreterPythonImpl::Initialize()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), std::move(error), "{0}");
+    return;
+  }
+
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
       ScriptInterpreterPythonImpl::GetPythonDir);
-  ScriptInterpreterPythonImpl::Initialize();
   ScriptInterpreterPythonInterfaces::Initialize();
 }
 
@@ -2797,7 +2829,7 @@ ScriptInterpreterPythonImpl::AcquireInterpreterLock() {
   return py_lock;
 }
 
-void ScriptInterpreterPythonImpl::Initialize() {
+llvm::Error ScriptInterpreterPythonImpl::Initialize() {
   LLDB_SCOPED_TIMER();
 
   // RAII-based initialization which correctly handles multiple-initialization,
@@ -2805,6 +2837,8 @@ void ScriptInterpreterPythonImpl::Initialize() {
   // restoring various other pieces of state that can get mucked with during
   // initialization.
   InitializePythonRAII initialize_guard;
+  if (llvm::Error error = initialize_guard.DoInitialize())
+    return error;
 
   LLDBSwigPyInit();
 
@@ -2846,6 +2880,7 @@ void ScriptInterpreterPythonImpl::Initialize() {
                   "lldb_setup_sigint_handler();\n"
                   "del lldb_setup_sigint_handler\n");
 #endif
+  return llvm::Error::success();
 }
 
 void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,
