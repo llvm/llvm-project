@@ -17,7 +17,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
@@ -242,29 +241,24 @@ public:
 /// declared in this TU.
 class CollectVisitor : public DynamicRecursiveASTVisitor {
 public:
-  CollectVisitor(const ReachabilityMap &Reach,
-                 const NestedBuildNamespace &TUNamespace,
-                 const NestedBuildNamespace &LUNamespace, DeclLevels &Decls,
+  CollectVisitor(const ReachabilityMap &Reach, DeclLevels &Decls,
                  ReturnLevels &Returns)
-      : Reach(Reach), TUNamespace(TUNamespace), LUNamespace(LUNamespace),
-        Decls(Decls), Returns(Returns) {}
+      : Reach(Reach), Decls(Decls), Returns(Returns) {}
 
   bool VisitVarDecl(VarDecl *D) override {
-    collect(D, D->getType(),
-            getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType(), getEntityName(D));
     return true;
   }
 
   bool VisitFieldDecl(FieldDecl *D) override {
-    collect(D, D->getType(),
-            getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType(), getEntityName(D));
     return true;
   }
 
   bool VisitFunctionDecl(FunctionDecl *FD) override {
     if (!FD->isTemplated() && isCandidateType(FD->getReturnType())) {
-      llvm::SmallSet<unsigned, 4> Levels = Reach.levelsFor(
-          getQualifiedEntityNameForReturn(FD, TUNamespace, LUNamespace));
+      llvm::SmallSet<unsigned, 4> Levels =
+          Reach.levelsFor(getEntityNameForReturn(FD));
       if (!Levels.empty())
         Returns[FD] = std::move(Levels);
     }
@@ -281,8 +275,6 @@ private:
   }
 
   const ReachabilityMap &Reach;
-  NestedBuildNamespace TUNamespace;
-  NestedBuildNamespace LUNamespace;
   DeclLevels &Decls;
   ReturnLevels &Returns;
 };
@@ -466,12 +458,9 @@ private:
   /// Reports \p Reason for \p D, if one is given. Always returns true so that
   /// visitors can tail-call it.
   bool report(const DeclaratorDecl *D, std::optional<ReportReason> Reason) {
-    if (Reason) {
-      CharSourceRange Range = Lexer::getAsCharRange(
-          declTypeRange(D), Ctx.getSourceManager(), Ctx.getLangOpts());
-      Report.addResult(SkippedRuleId, SarifResultLevel::Note, Range,
+    if (Reason)
+      Report.addResult(SkippedRuleId, SarifResultLevel::Note, declTypeRange(D),
                        messageFor(*Reason));
-    }
     return true;
   }
 
@@ -600,16 +589,11 @@ void CppBoundedBuffers::HandleTranslationUnit(ASTContext &Ctx) {
   }
 
   ReachabilityMap Reach(Suite, Reachable->Reachables);
-  NestedBuildNamespace TUNamespace =
-      NestedBuildNamespace::makeCompilationUnit(Opts.CompilationUnitId);
-  NestedBuildNamespace LUNamespace =
-      NestedBuildNamespace::makeLinkUnit(Opts.LinkUnitId);
   DeclLevels Decls;
   ReturnLevels Returns;
 
   Decl *TU = Ctx.getTranslationUnitDecl();
-  CollectVisitor(Reach, TUNamespace, LUNamespace, Decls, Returns)
-      .TraverseDecl(TU);
+  CollectVisitor(Reach, Decls, Returns).TraverseDecl(TU);
   RewriteVisitor(Ctx, Decls, Returns, Edits, Report).TraverseDecl(TU);
 }
 
