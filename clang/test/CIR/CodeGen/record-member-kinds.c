@@ -35,15 +35,15 @@ struct ZeroLenOfEmpty { struct E e; struct E a[0]; };
 // CIR-DAG: !rec_ZeroLenOfEmpty = !cir.struct<"ZeroLenOfEmpty" {empty !rec_E, empty !cir.array<!rec_E x 0>}>
 
 struct UnnamedBitOnly { int : 8; };
-// CIR-DAG: !rec_UnnamedBitOnly = !cir.struct<"UnnamedBitOnly" {empty !u8i}>
+// CIR-DAG: !rec_UnnamedBitOnly = !cir.struct<"UnnamedBitOnly" {empty !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>}>
 
 struct UnnamedBitThenField { int : 8; int f; };
-// CIR-DAG: !rec_UnnamedBitThenField = !cir.struct<"UnnamedBitThenField" {empty !u8i, data !s32i}>
+// CIR-DAG: !rec_UnnamedBitThenField = !cir.struct<"UnnamedBitThenField" {empty !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, data !s32i}>
 
 // The trailing unit is narrower than its bit-field's declared type and is not
 // pad, so it stays in the data size.
 struct NamedFieldThenUnnamedBit { char c; int : 24; };
-// CIR-DAG: !rec_NamedFieldThenUnnamedBit = !cir.struct<"NamedFieldThenUnnamedBit" {data !s8i, empty !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_NamedFieldThenUnnamedBit = !cir.struct<"NamedFieldThenUnnamedBit" {data !s8i, empty !cir.array<!u8i x 3>, bitfield !cir.array<!u8i x 0>}>
 
 // The discrete ms_struct path allocates a unit per formal type.  A unit whose
 // only occupant is unnamed holds no data.
@@ -79,7 +79,7 @@ struct MsZeroWidthSplit2 { int : 3; int : 0; int b : 3; } __attribute__((ms_stru
 // CIR-DAG: !rec_MsZeroWidthSplit2 = !cir.struct<"MsZeroWidthSplit2" {empty !s32i, bitfield !cir.array<!s32i x 0>, bitfield !s32i}>
 
 union UnnamedBitUnion { int : 8; };
-// CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i}>
+// CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>}>
 
 union ContainsEmptyUnion { struct E e; };
 // CIR-DAG: !rec_ContainsEmptyUnion = !cir.union<"ContainsEmptyUnion" {empty !rec_E}>
@@ -87,13 +87,13 @@ union ContainsEmptyUnion { struct E e; };
 // The two pairs that follow are byte-identical apart from their marks, in a
 // struct and in a union alike.
 struct BitWideUnit { long long x : 32; } __attribute__((aligned(16)));
-// CIR-DAG: !rec_BitWideUnit = !cir.struct<"BitWideUnit" {bitfield !u32i, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_BitWideUnit = !cir.struct<"BitWideUnit" {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>, pad !cir.array<!u8i x 12>}>
 
 struct UIntOverAligned { unsigned x; } __attribute__((aligned(16)));
 // CIR-DAG: !rec_UIntOverAligned = !cir.struct<"UIntOverAligned" {data !u32i, pad !cir.array<!u8i x 12>}>
 
 union BitUnit { unsigned a : 1; unsigned b : 1; };
-// CIR-DAG: !rec_BitUnit = !cir.union<"BitUnit" {bitfield !u8i, bitfield !u8i}, padding = {!cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_BitUnit = !cir.union<"BitUnit" {bitfield !u8i, bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>}, padding = {!cir.array<!u8i x 3>}>
 
 union UCharOverAligned { unsigned char c, d; } __attribute__((aligned(4)));
 // CIR-DAG: !rec_UCharOverAligned = !cir.union<"UCharOverAligned" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>

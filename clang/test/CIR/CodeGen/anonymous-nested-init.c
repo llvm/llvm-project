@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
 // Anonymous struct as a field.
 struct StructWithAnon {
@@ -31,5 +31,8 @@ struct StructWithAnonBitfields {
 };
 struct StructWithAnonBitfields g_anon_bits = { 7, {0xA, 0x5}, 9 };
 
-// CIR: cir.global external @g_anon_bits = #cir.const_record<{#cir.int<7> : !s32i, #cir.const_record<{#cir.int<90> : !u8i, #cir.zero : !cir.array<!u8i x 3>}> : !rec_anon2E2, #cir.int<9> : !s32i}> : !rec_StructWithAnonBitfields
-// LLVM: @g_anon_bits = global %struct.StructWithAnonBitfields { i32 7, %struct.anon{{.*}} { i8 90, [3 x i8] zeroinitializer }, i32 9 }
+// CIR: cir.global external @g_anon_bits = #cir.const_record<{#cir.int<7> : !s32i, #cir.const_record<{#cir.int<90> : !u8i, #cir.zero : !cir.array<!cir.array<!u8i x 4> x 0>, #cir.zero : !cir.array<!u8i x 3>}> : !rec_anon2E2, #cir.int<9> : !s32i}> : !rec_StructWithAnonBitfields
+// The zero-length member carrying the bit-field's declared reach has no
+// counterpart in classic CodeGen.
+// LLVMCIR: @g_anon_bits = global %struct.StructWithAnonBitfields { i32 7, %struct.anon{{.*}} { i8 90, [0 x i8] zeroinitializer, [3 x i8] zeroinitializer }, i32 9 }
+// OGCG: @g_anon_bits = global %struct.StructWithAnonBitfields { i32 7, %struct.anon{{.*}} { i8 90, [3 x i8] zeroinitializer }, i32 9 }

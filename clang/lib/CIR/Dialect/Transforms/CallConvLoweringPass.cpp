@@ -76,12 +76,12 @@ namespace {
 // Integer (including `_BitInt` up to 128 bits) / pointer / vtable pointer /
 // bool / floating-point scalars are handled, as are struct / union / array
 // aggregates, `_Complex`, and a fixed-width vector whose width is a power
-// of two.  Other vectors, a padded record reached through a named bit-field
-// access unit, a record holding an empty-for-ABI member that occupies bytes
-// or a zero-sized one off its own alignment, a union no member of which spans
-// its declared size, and a union with a bit-field access unit no spanning
-// member of which supplies data are reported NYI by classifyX86_64Function
-// so an unsupported signature fails the pass instead of being misclassified.
+// of two.  Other vectors, a record holding an empty-for-ABI member that
+// occupies bytes or a zero-sized one off its own alignment, a union no member
+// of which spans its declared size, and a union with a bit-field access unit
+// no spanning member of which supplies data or records a declared reach are
+// reported NYI by classifyX86_64Function so an unsupported signature fails
+// the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -116,24 +116,6 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
   if (!layout)
     return llvm::Align(dl.getTypeABIAlignment(recTy));
   return llvm::Align(layout.getRecordAlign());
-}
-
-/// Whether \p ty reaches a bit-field access unit holding a named bit-field,
-/// looking through member records and array element types.
-static bool reachesNamedBitFieldUnit(mlir::Type ty) {
-  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return reachesNamedBitFieldUnit(arrTy.getElementType());
-  auto recTy = dyn_cast<cir::RecordType>(ty);
-  if (!recTy)
-    return false;
-  // A zero-length array under the bit-field mark is a zero-width bit-field, not
-  // an access unit, and it carries its declared type rather than a unit width.
-  for (auto [memberTy, kind] :
-       llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
-    if (cir::isBitFieldAccessUnit(kind) &&
-        !cir::isZeroWidthBitField(memberTy, kind))
-      return true;
-  return llvm::any_of(recTy.getMembers(), reachesNamedBitFieldUnit);
 }
 
 /// Whether \p ty, or an aggregate member/element reached by value (never
@@ -241,31 +223,39 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         if (recordBits > 128)
           return false;
       } else {
-        auto spansRecord = [&](mlir::Type m) {
-          return dl.getTypeSizeInBits(m).getFixedValue() == recordBits;
+        // A member recording a bit-field's declared reach occupies no storage
+        // of its own, so its element type is what covers the union's bytes.
+        // That reach can outrun the union, which a real member never does,
+        // hence the comparison is not an equality.
+        llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
+        auto spansRecord = [&](mlir::Type m, cir::RecordMemberKind k) {
+          if (cir::isZeroWidthBitField(m, k))
+            m = cast<cir::ArrayType>(m).getElementType();
+          return dl.getTypeSizeInBits(m).getFixedValue() >= recordBits;
         };
-        if (!llvm::any_of(members, spansRecord))
+        if (!llvm::any_of(llvm::zip_equal(members, kinds),
+                          [&](const auto &pair) {
+                            auto [memberTy, kind] = pair;
+                            return spansRecord(memberTy, kind);
+                          }))
           return false;
         // A bit-field access unit's width may not match the bits it actually
-        // stores, so some member (the unit itself or another one) must both
-        // match the union's size and hold data.
-        llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
+        // stores, so some member (the unit itself or another one) must match
+        // the union's size and either hold data or record how far the
+        // declared types in it reach.
         if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
             !llvm::any_of(llvm::zip_equal(members, kinds),
                           [&](const auto &pair) {
                             auto [memberTy, kind] = pair;
-                            return spansRecord(memberTy) &&
-                                   cir::holdsDataForABI(memberTy, kind) &&
+                            if (!spansRecord(memberTy, kind))
+                              return false;
+                            if (cir::isZeroWidthBitField(memberTy, kind))
+                              return true;
+                            return cir::holdsDataForABI(memberTy, kind) &&
                                    !memberIsEmptyRecord(memberTy);
                           }))
           return false;
       }
-    } else if (recTy.getPadded() && reachesNamedBitFieldUnit(recTy)) {
-      // A named access unit can be narrower than the type its bit-fields were
-      // declared with, and that declared type is what classic CodeGen coerces
-      // from.  CIR does not record it, so classifying here would coerce to the
-      // unit's width instead.
-      return false;
     }
     // An `empty` member that occupies bytes is later read as an unnamed access
     // unit.  One that is itself an empty-for-ABI record can occupy bytes by
@@ -412,34 +402,14 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         SmallVector<llvm::abi::FieldInfo> fields;
         fields.reserve(recTy.getMembers().size());
 
-        // The size passed here spans the tail padding, so an eightbyte covers
-        // the whole union rather than just the member the classifier reduces
-        // it to.
-        if (recTy.isUnion()) {
-          // Classify only the members that hold data for the ABI.  A member
-          // that holds none, such as an unnamed bit-field's storage, is
-          // skipped so it does not appear as a spurious argument.
-          for (auto [fieldTy, kind] :
-               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
-            if (cir::holdsDataForABI(fieldTy, kind))
-              fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(fieldTy, typeMapper, dl, modOp)));
-          return tb.getUnionType(fields, sizeBits, align,
-                                 llvm::abi::StructPacking::Default, flags);
-        }
-
-        // Padding is dropped, so the eightbyte rules see its bytes as holding
-        // nothing, while the record's full size set above still spans them.  An
-        // unnamed bit-field access unit is flagged rather than dropped, since
-        // classic CodeGen ignores it when assigning eightbyte classes but
-        // counts it when choosing the coerce type, and a member's presence
-        // alone cannot say both.
-        for (auto [idx, fieldTy, kind] :
-             llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
-          if (kind == cir::RecordMemberKind::Pad)
-            continue;
-          // A zero-width bit-field occupies nothing, so its declared type is
-          // what the ABI counts, and that is the element type it carries.
+        // An unnamed bit-field access unit is flagged rather than dropped: the
+        // classifier passes a flagged member over when assigning eightbyte
+        // classes and still counts its bytes when choosing the coerce type,
+        // and a member's presence alone cannot say both.
+        auto addMember = [&](mlir::Type fieldTy, cir::RecordMemberKind kind,
+                             uint64_t offsetBits) {
+          // A zero-width bit-field and a declared reach occupy nothing, so
+          // what the ABI counts is the element type they carry.
           mlir::Type countedTy = fieldTy;
           bool isUnnamedUnit = kind == cir::RecordMemberKind::Empty;
           if (cir::isZeroWidthBitField(fieldTy, kind)) {
@@ -448,7 +418,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           }
           uint64_t widthBits = dl.getTypeSizeInBits(countedTy).getFixedValue();
           if (isUnnamedUnit && widthBits == 0)
-            continue;
+            return;
           assert((!isUnnamedUnit || !memberIsEmptyRecord(countedTy)) &&
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
@@ -458,10 +428,35 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           // a bit-field, which may sit at any offset.
           bool isAccessUnit = isUnnamedUnit || cir::isBitFieldAccessUnit(kind);
           fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(countedTy, typeMapper, dl, modOp),
-              recTy.getElementOffset(dl, idx) * 8,
+              mapCIRType(countedTy, typeMapper, dl, modOp), offsetBits,
               /*IsBitField=*/isAccessUnit, isAccessUnit ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamedUnit));
+        };
+
+        // The size passed here spans the tail padding, so an eightbyte covers
+        // the whole union rather than just the member the classifier reduces
+        // it to.
+        if (recTy.isUnion()) {
+          // Classify only the members that hold data for the ABI, plus one
+          // recording a declared reach.  A member that does neither, such as
+          // an unnamed bit-field's storage, is skipped so it does not appear
+          // as a spurious argument.  A union's members all sit at offset zero.
+          for (auto [fieldTy, kind] :
+               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
+            if (cir::holdsDataForABI(fieldTy, kind) ||
+                cir::isZeroWidthBitField(fieldTy, kind))
+              addMember(fieldTy, kind, /*offsetBits=*/0);
+          return tb.getUnionType(fields, sizeBits, align,
+                                 llvm::abi::StructPacking::Default, flags);
+        }
+
+        // Padding is dropped, so the eightbyte rules see its bytes as holding
+        // nothing, while the record's full size set above still spans them.
+        for (auto [idx, fieldTy, kind] :
+             llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
+          if (kind == cir::RecordMemberKind::Pad)
+            continue;
+          addMember(fieldTy, kind, recTy.getElementOffset(dl, idx) * 8);
         }
 
         return tb.getRecordType(

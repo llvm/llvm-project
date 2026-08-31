@@ -572,21 +572,27 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
 
 mlir::Type
 UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout) const {
-  return getUnionStorageType(dataLayout, getMembers());
+  return getUnionStorageType(dataLayout, getMembers(), getMemberKinds());
 }
 
-mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
-                                          llvm::ArrayRef<mlir::Type> members) {
-  if (members.empty())
-    return {};
-  return *std::max_element(
-      members.begin(), members.end(), [&](mlir::Type lhs, mlir::Type rhs) {
-        return dataLayout.getTypeABIAlignment(lhs) <
-                   dataLayout.getTypeABIAlignment(rhs) ||
-               (dataLayout.getTypeABIAlignment(lhs) ==
-                    dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-      });
+mlir::Type
+UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
+                               llvm::ArrayRef<mlir::Type> members,
+                               llvm::ArrayRef<RecordMemberKind> kinds) {
+  // A member occupying no storage cannot be the storage.
+  mlir::Type storage;
+  for (auto [memberTy, kind] : llvm::zip_equal(members, kinds)) {
+    if (isZeroWidthBitField(memberTy, kind))
+      continue;
+    if (!storage ||
+        dataLayout.getTypeABIAlignment(storage) <
+            dataLayout.getTypeABIAlignment(memberTy) ||
+        (dataLayout.getTypeABIAlignment(storage) ==
+             dataLayout.getTypeABIAlignment(memberTy) &&
+         dataLayout.getTypeSize(storage) < dataLayout.getTypeSize(memberTy)))
+      storage = memberTy;
+  }
+  return storage;
 }
 
 bool UnionType::isLayoutIdentical(const UnionType &other) {

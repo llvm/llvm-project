@@ -43,8 +43,9 @@ struct Anon anon = { 101, 1 };
 
 struct Bitfields { int a : 3; int b : 4; union PtrToIntUnion u; };
 struct Bitfields bitfields = { 1, 2, { 9 } };
-// CIR-DAG: cir.global external @bitfields = #cir.const_record<{#cir.int<17> : !u8i, #cir.const_record<{#cir.int<9> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Bitfields {alignment = 8 : i64} loc(#loc42)
-// LLVM-DAG: @bitfields = global { i8, [7 x i8], { i32, [4 x i8] } } { i8 17, [7 x i8] zeroinitializer, { i32, [4 x i8] } { i32 9, [4 x i8] zeroinitializer } }
+// CIR-DAG: cir.global external @bitfields = #cir.const_record<{#cir.int<17> : !u8i, #cir.zero : !cir.array<!cir.array<!u8i x 4> x 0>, #cir.const_record<{#cir.int<9> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Bitfields {alignment = 8 : i64} loc(#loc42)
+// LLVMCIR-DAG: @bitfields = global { i8, [0 x i8], [7 x i8], { i32, [4 x i8] } } { i8 17, [0 x i8] zeroinitializer, [7 x i8] zeroinitializer, { i32, [4 x i8] } { i32 9, [4 x i8] zeroinitializer } }
+// OGCG-DAG: @bitfields = global { i8, [7 x i8], { i32, [4 x i8] } } { i8 17, [7 x i8] zeroinitializer, { i32, [4 x i8] } { i32 9, [4 x i8] zeroinitializer } }
 
 struct FamUnion { int n; union PtrToIntUnion u; char fam[]; };
 struct FamUnion fam_union = { 3, { 7 }, { 'a','b','c' } };

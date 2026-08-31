@@ -959,8 +959,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     /// the storage type when lowering to LLVM IR).  Returns a null type for
     /// empty unions.
     mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
-    static mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout,
-                                          llvm::ArrayRef<mlir::Type> members);
+    static mlir::Type getUnionStorageType(
+        const mlir::DataLayout &dataLayout,
+        llvm::ArrayRef<mlir::Type> members,
+        llvm::ArrayRef<RecordMemberKind> kinds);
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                   mlir::Type padding,

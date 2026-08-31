@@ -31,8 +31,8 @@ typedef struct { char c; int i; } PragmaPacked;
 // CIR-DAG: !rec_CharInt = !cir.struct<"CharInt" packed {data !s8i, data !s32i}>
 // CIR-DAG: !rec_CharIntBF = !cir.struct<"CharIntBF" packed {data !s8i, bitfield !u32i}>
 // CIR-DAG: !rec_CharWideBF = !cir.struct<"CharWideBF" packed {data !s8i, bitfield !u64i}>
-// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.array<!u8i x 6>}>
-// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.array<!u8i x 6>, bitfield !cir.array<!cir.array<!u8i x 4> x 0>}>
+// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.array<!u8i x 3>, bitfield !cir.array<!u8i x 0>}>
 // CIR-DAG: !rec_BFDouble = !cir.struct<"BFDouble" packed {data !s8i, bitfield !u32i, data !cir.array<!s8i x 3>, data !cir.double}>
 // CIR-DAG: !rec_Nine = !cir.struct<"Nine" packed {data !s32i, data !s32i, data !s8i}>
 // CIR-DAG: !rec_FiveShort = !cir.struct<"FiveShort" packed {data !s16i, data !s16i, data !s8i}>
@@ -134,9 +134,9 @@ FiveShort ret_five_short(short x) { FiveShort v = {0, x, 0}; return v; }
 // LLVM: define dso_local i32 @take_five_short(i40 %{{.+}})
 // LLVM: define dso_local i40 @ret_five_short(i16 noundef signext %{{.+}})
 
-// A named access unit is only ambiguous where padding lets classic read the
-// declared type through the gap, so a packed record whose every byte holds
-// data is classified rather than refused by the unit-width rule.
+// The char bit-field here is declared no wider than the byte its unit
+// occupies, so the unit records no reach and every byte of the record holds
+// data.
 int take_ninebf(NineBF v) { return v.b; }
 
 // CIR: cir.func{{.*}} @take_ninebf(%arg0: !u64i{{.*}}, %arg1: !u8i{{.*}}) -> !s32i
