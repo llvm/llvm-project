@@ -11243,7 +11243,7 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
 
 bool ScalarEvolution::isKnownMultipleOf(
     const SCEV *S, uint64_t M,
-    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   if (M == 0)
     return false;
   if (M == 1)
@@ -11253,8 +11253,8 @@ bool ScalarEvolution::isKnownMultipleOf(
   // starts with a multiple of M and at every iteration step S only adds
   // multiples of M.
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
-           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+    return isKnownMultipleOf(AddRec->getStart(), M, Predicates) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Predicates);
 
   // For a constant, check that "S % M == 0".
   if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
@@ -11279,15 +11279,18 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
     return false;
 
+  if (!Predicates)
+    return false;
+
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
 
   // Detect redundant predicates.
-  for (auto *A : Assumptions)
+  for (auto *A : *Predicates)
     if (A->implies(P, *this))
       return true;
 
   // Only record non-redundant predicates.
-  Assumptions.push_back(P);
+  Predicates->push_back(P);
   return true;
 }
 
