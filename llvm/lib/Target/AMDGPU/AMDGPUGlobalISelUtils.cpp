@@ -56,9 +56,10 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      ValueTracking->maskedValueIsZero(Base,
-                                       APInt(32, Offset, /*isSigned=*/true)))
+  if (mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      (Def->getFlag(MachineInstr::Disjoint) ||
+       (ValueTracking && ValueTracking->maskedValueIsZero(
+                             Base, APInt(32, Offset, /*isSigned=*/true)))))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case

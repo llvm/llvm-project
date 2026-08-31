@@ -1257,9 +1257,9 @@ public:
   /// a multiple of \p M if \p S starts with a multiple of \p M and at every
   /// iteration step \p S only adds multiples of \p M. \p Assumptions records
   /// the runtime predicates under which \p S is a multiple of \p M.
-  LLVM_ABI bool
-  isKnownMultipleOf(const SCEV *S, uint64_t M,
-                    SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+  LLVM_ABI bool isKnownMultipleOf(
+      const SCEV *S, uint64_t M,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
   /// Return true if we know that S1 and S2 must have the same sign.
   LLVM_ABI bool haveSameSign(const SCEV *S1, const SCEV *S2);
