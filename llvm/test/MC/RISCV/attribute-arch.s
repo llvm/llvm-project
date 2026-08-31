@@ -363,6 +363,12 @@
 .attribute arch, "rv32i_smepmp1p0"
 # CHECK: attribute      5, "rv32i2p1_smepmp1p0"
 
+.attribute arch, "rv32i_smidctrl0p20"
+# CHECK: attribute      5, "rv32i2p1_smaia1p0_smcsrind1p0_smidctrl0p20"
+
+.attribute arch, "rv32i_ssidctrl0p20"
+# CHECK: attribute      5, "rv32i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20"
+
 .attribute arch, "rv32i_smijt0p20"
 # CHECK: attribute      5, "rv32i2p1_smijt0p20"
 
@@ -380,6 +386,12 @@
 
 .attribute arch, "rv32i_ssip0p20"
 # CHECK: attribute      5, "rv32i2p1_ssip0p20"
+
+.attribute arch, "rv32i_smnip0p20"
+# CHECK: attribute      5, "rv32i2p1_smaia1p0_smcsrind1p0_smidctrl0p20_smnip0p20"
+
+.attribute arch, "rv32i_ssnip0p20"
+# CHECK: attribute      5, "rv32i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20_ssnip0p20"
 
 .attribute arch, "rv32i_smpmpmt0p6"
 # CHECK: attribute      5, "rv32i2p1_smpmpmt0p6"

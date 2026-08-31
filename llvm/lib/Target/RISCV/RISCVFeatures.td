@@ -1099,6 +1099,15 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
     : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
@@ -1129,6 +1138,15 @@ def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
                     AssemblerPredicate<(all_of FeatureStdExtSsip),
                         "'Ssip' (Support for Interrupt Handler Push/Pop at "
                         "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;

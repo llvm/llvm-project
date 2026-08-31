@@ -40,9 +40,11 @@
 // CHECK-NOT: __riscv_smdbltrp {{.*$}}
 // CHECK-NOT: __riscv_smehv {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
+// CHECK-NOT: __riscv_smidctrl {{.*$}}
 // CHECK-NOT: __riscv_smijt {{.*$}}
 // CHECK-NOT: __riscv_smip {{.*$}}
 // CHECK-NOT: __riscv_smmpm{{.*$}}
+// CHECK-NOT: __riscv_smnip {{.*$}}
 // CHECK-NOT: __riscv_smnpm{{.*$}}
 // CHECK-NOT: __riscv_smpmpmt {{.*$}}
 // CHECK-NOT: __riscv_smrnmi {{.*$}}
@@ -57,8 +59,10 @@
 // CHECK-NOT: __riscv_ssctr{{.*$}}
 // CHECK-NOT: __riscv_ssdbltrp {{.*$}}
 // CHECK-NOT: __riscv_ssehv {{.*$}}
+// CHECK-NOT: __riscv_ssidctrl {{.*$}}
 // CHECK-NOT: __riscv_ssijt {{.*$}}
 // CHECK-NOT: __riscv_ssip {{.*$}}
+// CHECK-NOT: __riscv_ssnip {{.*$}}
 // CHECK-NOT: __riscv_ssnpm{{.*$}}
 // CHECK-NOT: __riscv_sspm{{.*$}}
 // CHECK-NOT: __riscv_ssqosid{{.*$}}
@@ -1414,6 +1418,26 @@
 // CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_smidctrl0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMIDCTRL-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_smidctrl0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMIDCTRL-EXT %s
+// CHECK-SMIDCTRL-EXT: __riscv_smaia 1000000{{$}}
+// CHECK-SMIDCTRL-EXT: __riscv_smcsrind 1000000{{$}}
+// CHECK-SMIDCTRL-EXT: __riscv_smidctrl 20000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_ssidctrl0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSIDCTRL-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_ssidctrl0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSIDCTRL-EXT %s
+// CHECK-SSIDCTRL-EXT: __riscv_ssaia 1000000{{$}}
+// CHECK-SSIDCTRL-EXT: __riscv_sscsrind 1000000{{$}}
+// CHECK-SSIDCTRL-EXT: __riscv_ssidctrl 20000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_smijt0p20 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMIJT-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
@@ -1462,6 +1486,28 @@
 // RUN:   -march=rv64i_ssip0p20 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSIP-EXT %s
 // CHECK-SSIP-EXT: __riscv_ssip 20000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_smnip0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMNIP-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_smnip0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMNIP-EXT %s
+// CHECK-SMNIP-EXT: __riscv_smaia 1000000{{$}}
+// CHECK-SMNIP-EXT: __riscv_smcsrind 1000000{{$}}
+// CHECK-SMNIP-EXT: __riscv_smidctrl 20000{{$}}
+// CHECK-SMNIP-EXT: __riscv_smnip 20000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_ssnip0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSNIP-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_ssnip0p20 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSNIP-EXT %s
+// CHECK-SSNIP-EXT: __riscv_ssaia 1000000{{$}}
+// CHECK-SSNIP-EXT: __riscv_sscsrind 1000000{{$}}
+// CHECK-SSNIP-EXT: __riscv_ssidctrl 20000{{$}}
+// CHECK-SSNIP-EXT: __riscv_ssnip 20000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32ismpmpmt0p6 -x c -E -dM %s \
