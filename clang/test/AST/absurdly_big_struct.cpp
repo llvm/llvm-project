@@ -20,5 +20,5 @@ struct b { // bit32-error {{structure 'b' is too large, which exceeds maximum al
   char c2[2];
 };
 
-long long y(int i) { return __builtin_offsetof(b, c2[i]); }
+long long y() { return __builtin_offsetof(b, c2[0]); }
 
