@@ -2283,8 +2283,8 @@ public:
   /// bytes at the given \p Alignment. The default implementation only allows
   /// naturally aligned atomics, unless setSupportsUnalignedAtomics(true) was
   /// called.
-  virtual bool supportsAtomicAlignment(Align Alignment,
-                                       uint64_t SizeInBytes) const {
+  virtual bool isAtomicAlignmentSupported(Align Alignment,
+                                          uint64_t SizeInBytes) const {
     return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
   }
 
