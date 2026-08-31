@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
@@ -140,7 +141,6 @@ static constexpr unsigned g_string_read_width = 256;
 enum {
 #define LLDB_PROPERTIES_process
 #include "TargetPropertiesEnum.inc"
-  ePropertyExperimental,
 };
 
 #define LLDB_PROPERTIES_process_experimental
@@ -173,9 +173,24 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties_def);
+    // MemoryCache divides by the cache line size and holds it in a uint32_t, so
+    // reject a value it could not use.
+    OptionValueUInt64 *line_size =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
+            ePropertyMemCacheLineSize);
+    line_size->SetMinimumValue(1);
+    line_size->SetMaximumValue(UINT32_MAX);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
+
+    m_experimental_properties_up =
+        std::make_unique<ProcessExperimentalProperties>();
+    m_collection_sp->AppendProperty(
+        Properties::GetExperimentalSettingsName(),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
+        true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -186,14 +201,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
-
-  m_experimental_properties_up =
-      std::make_unique<ProcessExperimentalProperties>();
-  m_collection_sp->AppendProperty(
-      Properties::GetExperimentalSettingsName(),
-      "Experimental settings - setting these won't produce "
-      "errors if the setting is not present.",
-      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -378,26 +385,25 @@ Args ProcessProperties::GetAlwaysRunThreadNames() const {
   return args;
 }
 
+OptionValueProperties *ProcessProperties::GetExperimentalProperties() const {
+  if (const Property *exp_property = m_collection_sp->GetProperty(
+          Properties::GetExperimentalSettingsName()))
+    return exp_property->GetValue()->GetAsProperties();
+  return nullptr;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
+  OptionValueProperties *exp_values = GetExperimentalProperties();
   if (!exp_values)
     return fail_value;
-
   return exp_values
       ->GetPropertyAtIndexAs<bool>(ePropertyOSPluginReportsAllThreads)
       .value_or(fail_value);
 }
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
+  if (OptionValueProperties *exp_values = GetExperimentalProperties())
     exp_values->SetPropertyAtIndex(ePropertyOSPluginReportsAllThreads,
                                    does_report);
 }

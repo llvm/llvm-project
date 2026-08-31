@@ -768,7 +768,7 @@ static ConceptReference *createTrivialConceptReference(ASTContext &Context,
                                                        SourceLocation Loc,
                                                        const AutoType *AT) {
   DeclarationName ConceptName =
-      AT->getTypeConstraintConcept().getAsTemplateDecl()->getDeclName();
+      Context.getNameForTemplate(AT->getTypeConstraintConcept(), Loc).getName();
   DeclarationNameInfo DNI = DeclarationNameInfo(ConceptName, Loc, ConceptName);
   unsigned size = AT->getTypeConstraintArguments().size();
   llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
