@@ -113,25 +113,27 @@ inline void __atomic_smart_ptr_wait_on_address(const void* __address, const _Pol
 // CMPXCHG16B/CASP require 16-byte alignment; the public ABI size is 16 bytes.
 template <class _Element>
 struct alignas(16) __atomic_smart_ptr_fields {
-  mutable __cxx_atomic_impl<_Element*> __ptr_;
-  mutable __cxx_atomic_impl<uintptr_t> __ctrl_;
-
-  __atomic_smart_ptr_fields(_Element* __p, __shared_weak_count* __c) noexcept
-      : __ptr_(__p), __ctrl_(__atomic_smart_ptr_storage::__encode_dwcas(__c, 0)) {}
-
-  // DWCAS updates __ptr_ and __ctrl_ as one 16-byte pair, so waiters observe
-  // the struct base; watching only __ctrl_ would miss stores where the pointer
-  // changes but the CB stays the same (e.g., aliasing constructor).
-  const void* __wait_address() const noexcept { return static_cast<const void*>(this); }
-
   __extension__ using __sp_u128 = unsigned __int128;
 
-  // Storage layout: low 64 bits = __ptr_, high 64 bits = __ctrl_. The wide
-  // view is the only access path while DWCAS is enabled; the sub-atomics are
-  // not read or written through __cxx_atomic_*.
-  __sp_u128* __dwcas_address() const noexcept {
-    return const_cast<__sp_u128*>(reinterpret_cast<const __sp_u128*>(this));
-  }
+  // Sole storage: low 64 bits = pointer, high 64 bits = control word. This
+  // used to be two separate __cxx_atomic_impl<_Element*>/__cxx_atomic_impl<uintptr_t>
+  // sub-objects, accessed as one 16-byte pair by reinterpret_cast'ing the
+  // struct's address to __sp_u128* - a strict-aliasing violation, since the
+  // storage was never created as a __sp_u128. Storing it as a __sp_u128 to
+  // begin with removes the cast entirely: __dwcas_address() now just takes
+  // this object's own address.
+  mutable __sp_u128 __word_;
+
+  __atomic_smart_ptr_fields(_Element* __p, __shared_weak_count* __c) noexcept
+      : __word_(__pair_make(__p, __atomic_smart_ptr_storage::__encode_dwcas(__c, 0))) {}
+
+  // DWCAS updates the pointer and control word as one 16-byte pair, so
+  // waiters observe the struct base; watching only the control half would
+  // miss stores where the pointer changes but the CB stays the same (e.g.,
+  // aliasing constructor).
+  const void* __wait_address() const noexcept { return static_cast<const void*>(this); }
+
+  __sp_u128* __dwcas_address() const noexcept { return __builtin_addressof(__word_); }
 
   __sp_u128 __dwcas_load(memory_order __o) const noexcept {
     __sp_u128 __word;
