@@ -249,3 +249,30 @@ subroutine test_seq_loop
   !REF: /test_seq_loop/j
   print *, i, j
 end subroutine test_seq_loop
+
+! I/O implied-DO variables are private in the innermost enclosing parallel
+! or task generating construct.
+!DEF: /test_output_implied_do (Subroutine) Subprogram
+subroutine test_output_implied_do
+  implicit none
+  !DEF: /test_output_implied_do/i ObjectEntity INTEGER(4)
+  integer i
+  !$omp parallel default(none)
+  !DEF: /test_output_implied_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  print *, (i, i=1,2)
+  !$omp end parallel
+end subroutine test_output_implied_do
+
+!DEF: /test_input_implied_do (Subroutine) Subprogram
+!DEF: /test_input_implied_do/a ObjectEntity INTEGER(4)
+subroutine test_input_implied_do(a)
+  implicit none
+  !REF: /test_input_implied_do/a
+  !DEF: /test_input_implied_do/i ObjectEntity INTEGER(4)
+  integer a(2), i
+  !$omp parallel default(none) shared(a)
+  !DEF: /test_input_implied_do/OtherConstruct1/a (OmpShared, OmpExplicit) HostAssoc INTEGER(4)
+  !DEF: /test_input_implied_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  read *, (a(i), i=1,2)
+  !$omp end parallel
+end subroutine test_input_implied_do

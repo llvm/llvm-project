@@ -29,6 +29,71 @@ subroutine default_none_seq_loop
   enddo
 end subroutine
 
+! I/O implied-DO variables are predetermined private in the innermost
+! enclosing parallel construct. See https://github.com/llvm/llvm-project/issues/197396.
+subroutine default_none_output_implied_do
+  integer :: ido
+
+  call omp_set_num_threads(2)
+  !$omp parallel default(none)
+  print *, (ido, ido=1,2)
+  !$omp end parallel
+  print *, 'pass'
+end subroutine
+
+subroutine default_none_output_implied_do_arrays
+  use omp_lib
+  implicit none
+  integer, parameter :: n = 10
+  integer :: a(n) = 0, i = 0, b(n) = 0
+
+  !$omp parallel default(none) private(a) shared(b)
+  a = omp_get_thread_num()
+  !$omp critical
+  b = b + a
+  print *, (b(i), a(i), i=2,4)
+  !$omp end critical
+  !$omp end parallel
+end subroutine
+
+subroutine default_none_input_implied_do
+  implicit none
+  integer, parameter :: n = 10
+  integer :: a(n), i
+
+  !$omp parallel default(none) shared(a)
+  read *, (a(i), i=1,n)
+  !$omp end parallel
+end subroutine
+
+subroutine default_none_simd_loop(n)
+  implicit none
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp parallel default(none) shared(n)
+  !$omp simd
+  do i = 1, n
+  end do
+  !$omp end simd
+  !$omp end parallel
+end subroutine
+
+subroutine default_none_simd_loop_outer_reference(n)
+  implicit none
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp parallel default(none) shared(n)
+  !$omp simd
+  do i = 1, n
+  end do
+  !$omp end simd
+  !ERROR: The DEFAULT(NONE) clause requires that 'i' must be listed in a data-sharing attribute clause
+  print *, i
+  !$omp end parallel
+end subroutine
+
 ! Test that DEFAULT(NONE) error check sees implicit references
 subroutine default_none_nested()
   integer :: a

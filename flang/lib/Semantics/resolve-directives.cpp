@@ -591,6 +591,8 @@ public:
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
   bool Pre(const parser::DoConstruct &);
+  bool Pre(const parser::InputImpliedDo &);
+  bool Pre(const parser::OutputImpliedDo &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -2216,6 +2218,28 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::InputImpliedDo &x) {
+  if (WithinConstruct()) {
+    const auto &iv{parser::UnwrapRef<parser::Name>(
+        std::get<parser::IoImpliedDoControl>(x.t).Name())};
+    if (iv.symbol) {
+      ResolveSeqLoopIndexInParallelOrTaskConstruct(iv);
+    }
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OutputImpliedDo &x) {
+  if (WithinConstruct()) {
+    const auto &iv{parser::UnwrapRef<parser::Name>(
+        std::get<parser::IoImpliedDoControl>(x.t).Name())};
+    if (iv.symbol) {
+      ResolveSeqLoopIndexInParallelOrTaskConstruct(iv);
+    }
+  }
+  return true;
+}
+
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
 //   - The loop iteration variable(s) in the associated do-loop(s) of a do,
 //     parallel do, taskloop, or distribute construct is (are) private.
@@ -2651,6 +2675,13 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       }
     };
     initSymbolDSA(symbol, dsa);
+
+    // A predetermined symbol in a nested construct does not acquire an
+    // implicit DSA from an enclosing DEFAULT(NONE) construct.
+    if (symbol->test(Symbol::Flag::OmpPreDetermined) && dsa.none() &&
+        prevDSA.none() && dirContext.defaultDSA == Symbol::Flag::OmpNone) {
+      continue;
+    }
 
     // When handling each implicit rule for a given symbol, one of the
     // following actions may be taken:
