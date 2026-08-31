@@ -2886,13 +2886,13 @@ define <8 x i16> @test_pmulhw_shift_v8i16_i64(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: test_pmulhw_shift_v8i16_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulhw %xmm1, %xmm0
-; SSE-NEXT:    psrlw $13, %xmm0
+; SSE-NEXT:    psraw $13, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_pmulhw_shift_v8i16_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlw $13, %xmm0, %xmm0
+; AVX-NEXT:    vpsraw $13, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a.ext = sext <8 x i16> %a to <8 x i64>
   %b.ext = sext <8 x i16> %b to <8 x i64>
