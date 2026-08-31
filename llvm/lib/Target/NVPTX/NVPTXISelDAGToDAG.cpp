@@ -1103,6 +1103,8 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
                                         ES->getTargetFlags());
   if (const auto *FIN = dyn_cast<FrameIndexSDNode>(N))
     return DAG->getTargetFrameIndex(FIN->getIndex(), FIN->getValueType(0));
+  if (N.getOpcode() == NVPTXISD::Symbol)
+    return N.getOperand(0);
 
   return N;
 }
