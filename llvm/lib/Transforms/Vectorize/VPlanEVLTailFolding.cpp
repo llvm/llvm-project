@@ -443,21 +443,51 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     return isa<VPWidenPointerInductionRecipe>(U);
   });
 
-  // Create a scalar phi to track the previous EVL if fixed-order recurrence is
-  // contained.
-  bool ContainsFORs =
-      any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
-  if (ContainsFORs) {
-    // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
-    VPValue *MaxEVL = &Plan.getVF();
-    // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
-    VPBuilder Builder(LoopRegion->getPreheaderVPBB());
-    MaxEVL = Builder.createScalarZExtOrTrunc(
-        MaxEVL, Type::getInt32Ty(Plan.getContext()), DebugLoc::getUnknown());
-
-    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+  // Collect fixed-order recurrence phis to fix up start values and splices for
+  // EVL tail folding.
+  // Transforms
+  //   vector.ph:
+  //     %vec.recur.init = insertelement poison, %start, (VF - 1)
+  //   vector.body:
+  //     %for = phi [%vec.recur.init, vector.ph], [%next, vector.body]
+  //     ...
+  //     %splice = call @llvm.vector.splice(%for, %next, -1)
+  // into
+  //   vector.ph:
+  //     %vec.recur.init = insertelement poison, %start, 0
+  //   vector.body:
+  //     %prev.evl = phi [1, vector.ph], [%evl, vector.body]
+  //     %for = phi [%vec.recur.init, vector.ph], [%next, vector.body]
+  //     %evl = call @llvm.experimental.get.vector.length
+  //     ...
+  //     %splice = call @llvm.experimental.vp.splice(%for, %next, -1, true,
+  //                                                  %prev.evl, %evl)
+  SmallVector<VPFirstOrderRecurrencePHIRecipe *> FORPhis;
+  for (VPRecipeBase &R : Header->phis())
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      FORPhis.push_back(FOR);
+  if (!FORPhis.empty()) {
+    // Create a scalar phi to track the previous EVL.
+    VPBuilder Builder(Header, Header->getFirstNonPhi());
     VPValue *PrevEVL = Builder.createScalarPhi(
-        {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
+        {Plan.getConstantInt(EVL.getScalarType(), 1), &EVL},
+        DebugLoc::getUnknown(), "prev.evl");
+
+    // Adjust the start value of fixed-order recurrence phi.
+    for (auto *FORPhi : FORPhis) {
+      VPValue *Start = FORPhi->getStartValue();
+      VPValue *Poison, *X;
+      [[maybe_unused]] bool Matched = match(
+          Start, m_InsertElement(m_VPValue(Poison), m_VPValue(X),
+                                 m_Sub(m_Specific(&Plan.getVF()), m_One())));
+      assert(Matched &&
+             "expected FOR start value to be insertelement poison, X, VF-1");
+      auto *InsertR = cast<VPInstruction>(Start);
+      VPValue *Zero = Plan.getConstantInt(Plan.getVF().getScalarType(), 0);
+      auto *NewInsert = InsertR->cloneWithOperands({Poison, X, Zero});
+      NewInsert->insertAfter(InsertR);
+      FORPhi->setStartValue(NewInsert);
+    }
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {

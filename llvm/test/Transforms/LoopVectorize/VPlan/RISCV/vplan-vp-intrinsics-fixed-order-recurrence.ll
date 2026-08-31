@@ -8,7 +8,6 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NOT: CURRENT-ITERATION-PHI
 ;
 ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
-; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
 ; IF-EVL-NEXT: Live-in ir<%TC> = original trip-count
@@ -17,9 +16,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL: vector.ph:
-; IF-EVL-NEXT:  EMIT vp<[[LASTIDX:%[0-9]+]]> = sub vp<[[VF]]>, ir<1>
-; IF-EVL-NEXT:  EMIT vp<[[FORINIT:%.+]]> = insertelement ir<poison>, ir<33>, vp<[[LASTIDX]]>
-; IF-EVL-NEXT:  EMIT-SCALAR vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
+; IF-EVL-NEXT:  EMIT vp<[[FORINIT:%.+]]> = insertelement ir<poison>, ir<33>, ir<0>
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL: <x1> vector loop: {
@@ -29,7 +26,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi vp<[[FORINIT]]>, ir<[[LD:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%TC>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
-; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
+; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ ir<1>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
