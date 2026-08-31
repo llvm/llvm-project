@@ -13585,6 +13585,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(Context).getTypePtr();
 
+  // Nothing to diagnose if stripping the wrappers left identical element types
+  // (e.g. a scalar splatted to a vector of its own type).
+  if (Source == Target)
+    return;
+
   // If the source is floating point...
   if (SourceBT && SourceBT->isFloatingPoint()) {
     // ...and the target is floating point...
