@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -S -o %t
 ; RUN: FileCheck %s < %t
-; RUN: llc %t -mtriple=x86_64 -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=MIR
+; RUN: llc %t -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=MIR
 
 ; CHECK-LABEL: @caller(
 
@@ -15,9 +15,11 @@
 ; CHECK-NOT:  call void @llvm.pseudoprobe({{.*}}), !dbg ![[#]]
 ; CHECK:  call void @llvm.pseudoprobe({{.*}})
 
+; CHECK-DAG: ![[INNER_CALL_LOC]] = !DILocation(line: 4, scope: ![[INNER_CALL_SCOPE:[0-9]+]])
+; CHECK-DAG: ![[INNER_CALL_SCOPE]] = !DILexicalBlockFile({{.*}}discriminator: 3)
+
 ; MIR-LABEL: name: caller
 ; MIR-NOT: PSEUDO_PROBE {{.*}}, 2, 2
-; MIR: CALL64pcrel32 {{.*}}@inner
 
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
@@ -54,4 +56,5 @@ entry:
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 3.5.0 (210174)"}
 !11 = !DILocation(line: 2, scope: !7)
-!12 = !DILocation(line: 4, scope: !4)
+!12 = !DILocation(line: 4, scope: !13)
+!13 = !DILexicalBlockFile(scope: !4, file: !1, discriminator: 6)
