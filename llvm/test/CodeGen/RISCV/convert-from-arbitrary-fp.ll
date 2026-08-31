@@ -21,13 +21,12 @@ define bfloat @fp8e5m2_to_bf16(i8 signext %x) nounwind {
 ; CHECK-NEXT:    j .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    clz a4, a2
-; CHECK-NEXT:    li a5, 142
-; CHECK-NEXT:    li a6, 31
+; CHECK-NEXT:    li a5, 174
 ; CHECK-NEXT:    sub a5, a5, a4
-; CHECK-NEXT:    sub a6, a6, a4
+; CHECK-NEXT:    not a6, a4
 ; CHECK-NEXT:    slli a5, a5, 23
 ; CHECK-NEXT:    binv a6, a2, a6
-; CHECK-NEXT:    addi a4, a4, -8
+; CHECK-NEXT:    addi a4, a4, -40
 ; CHECK-NEXT:    or a5, a0, a5
 ; CHECK-NEXT:    sll a4, a6, a4
 ; CHECK-NEXT:  .LBB0_3:
