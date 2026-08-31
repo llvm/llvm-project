@@ -69,10 +69,10 @@ attributes #0 = { nounwind uwtable }
 
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello: %a"}
-; CHECK: !2 = distinct !{!2, !"hello"}
+; CHECK: !2 = distinct !{!2, i1 false, !"hello"}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !5, !"hello2: %a"}
-; CHECK: !5 = distinct !{!5, !"hello2"}
+; CHECK: !5 = distinct !{!5, i1 false, !"hello2"}
 ; CHECK: !6 = !{!7}
 ; CHECK: !7 = distinct !{!7, !5, !"hello2: %b"}
 ; CHECK: !8 = !{!4, !7}

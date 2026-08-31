@@ -214,7 +214,7 @@ define <8 x i16> @fold_sel_into_masked_load_drop_attrs(ptr %ptr, <8 x i1> %mask,
 !2 = !{!"omnipotent char", !8, i64 0}
 !3 = !{!4}
 !4 = distinct !{!4, !5, !"scope"}
-!5 = distinct !{!5, !"domain"}
+!5 = distinct !{!5, i1 false, !"domain"}
 !6 = !{!7}
 !7 = distinct !{!7, !5, !"noscope"}
 !8 = !{!"Simple C/C++ TBAA"}

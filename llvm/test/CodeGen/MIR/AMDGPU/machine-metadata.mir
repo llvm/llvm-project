@@ -59,7 +59,7 @@
 
   !0 = !{!1}
   !1 = distinct !{!1, !2, !"bax: %p"}
-  !2 = distinct !{!2, !"bax"}
+  !2 = distinct !{!2, i1 false, !"bax"}
   !3 = !{!4}
   !4 = distinct !{!4, !2, !"bax: %q"}
 
@@ -79,23 +79,25 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: test_memcpy
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; CHECK: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-    ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
-    ; CHECK: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
-    ; CHECK: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
-    ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
-    ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
-    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
-    ; CHECK: $vgpr0 = COPY [[V_ADD_U32_e64_]]
-    ; CHECK: SI_RETURN implicit $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY4]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY5]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY6]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY7]], killed [[COPY8]], 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1
@@ -130,23 +132,25 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: test_memcpy_inline
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; CHECK: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; CHECK: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-    ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY5]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
-    ; CHECK: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; CHECK: GLOBAL_STORE_DWORDX4 [[COPY6]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
-    ; CHECK: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-    ; CHECK: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY7]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
-    ; CHECK: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
-    ; CHECK: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
-    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY8]], killed [[COPY9]], 0, implicit $exec
-    ; CHECK: $vgpr0 = COPY [[V_ADD_U32_e64_]]
-    ; CHECK: SI_RETURN implicit $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY4]], 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8, addrspace 1)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY5]], killed [[GLOBAL_LOAD_DWORDX4_]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11, addrspace 1)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 killed [[COPY6]], 0, 0, implicit $exec :: (load (s64) from %ir.1, align 4, !alias.scope !3, !noalias !0, addrspace 1)
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[COPY7]], killed [[COPY8]], 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %3:vgpr_32 = COPY $vgpr3
     %2:vgpr_32 = COPY $vgpr2
     %1:vgpr_32 = COPY $vgpr1

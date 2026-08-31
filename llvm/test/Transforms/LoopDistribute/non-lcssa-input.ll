@@ -224,7 +224,7 @@ outer.exit:
 ; CHECK: [[META1]] = !{!"llvm.loop.isdistributed", i32 1}
 ; CHECK: [[META2]] = !{[[META3:![0-9]+]]}
 ; CHECK: [[META3]] = distinct !{[[META3]], [[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], !"LVerDomain"}
+; CHECK: [[META4]] = distinct !{[[META4]], i1 false, !"LVerDomain"}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META4]]}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
@@ -232,7 +232,7 @@ outer.exit:
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"LVerDomain"}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
 ; CHECK: [[META15]] = !{[[META16:![0-9]+]]}

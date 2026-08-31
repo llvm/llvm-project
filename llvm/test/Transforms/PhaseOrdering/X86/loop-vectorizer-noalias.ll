@@ -72,5 +72,5 @@ attributes #0 = { "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87"}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"acc: %val"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"acc"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"acc"}
 ;.

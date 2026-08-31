@@ -26,9 +26,9 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !100 = !{!101}
 !101 = !{!101, !102}
-!102 = !{!102}
+!102 = !{!102, i1 false}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]]}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false}
 ;.

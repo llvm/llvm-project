@@ -68,4 +68,4 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{!1}
 !1 = !{!1, !2, !"scope"}
-!2 = !{!2, !"domain"}
+!2 = !{!2, i1 false, !"domain"}
