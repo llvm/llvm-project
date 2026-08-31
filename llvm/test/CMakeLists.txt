@@ -128,7 +128,6 @@ set(LLVM_TEST_DEPENDS
   llvm-objdump
   llvm-opt-fuzzer
   llvm-opt-report
-  llvm-ordergen
   llvm-offload-binary
   llvm-offload-wrapper
   llvm-otool
@@ -191,6 +190,10 @@ endif ()
 # Only built when the AMDGPU target is enabled.
 if (TARGET llvm-calc-occupancy)
   list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
+endif ()
+
+if (TARGET llvm-ordergen)
+  list(APPEND LLVM_TEST_DEPENDS llvm-ordergen)
 endif ()
 
 if(LLVM_INCLUDE_EXAMPLES)
