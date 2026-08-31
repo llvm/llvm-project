@@ -1100,9 +1100,15 @@ void Fortran::lower::genDeallocateStmt(
               Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
         }
     }
-    mlir::Value beginOpValue = genDeallocate(
-        builder, converter, loc, box, errorManager, declaredTypeDesc, &symbol,
-        getCUDAAttrParentSymbol(allocateObject));
+    // ALLOCATE gives the object's own attribute precedence over the parent's;
+    // both sides must match or the allocators differ.
+    const Fortran::semantics::Symbol *cudaSymbol = nullptr;
+    if (!Fortran::semantics::HasCUDAAttr(symbol) &&
+        !Fortran::semantics::HasCUDAComponent(symbol))
+      cudaSymbol = getCUDAAttrParentSymbol(allocateObject);
+    mlir::Value beginOpValue =
+        genDeallocate(builder, converter, loc, box, errorManager,
+                      declaredTypeDesc, &symbol, cudaSymbol);
     preDeallocationAction(converter, builder, beginOpValue, symbol);
   }
   builder.restoreInsertionPoint(insertPt);
