@@ -366,6 +366,9 @@ TraitParserError             "trait parser while parsing %1$s: error: %2$s"
 TraitParserInvalidTraitValue "trait parser while parsing %1$s: invalid value for trait '%2$s' (%3$s)"
 TraitParserMaxRecursion      "trait parser while parsing %1$s: max recursion depth (%2$d) exceeded"
 TraitParserFailed            "trait parser while parsing %1$s: failed to parse trait specification (%2$s)"
+TraitParserValueTooSmall     "trait parser while parsing %1$s: value %2$d below limit (%3$d)"
+TraitParserValueTooLarge     "trait parser while parsing %1$s: value %2$d above limit (%3$d)"
+TraitParserLegacyFailed      "legacy device number parser while parsing %1$s: failed to parse device number (%2$s)"
 
 # --- OpenMP errors detected at runtime ---
 #
