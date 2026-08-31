@@ -1351,8 +1351,12 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges())
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+          for (auto &SR : LI.subranges()) {
+            // New segment VNI must be from the subrange.
+            if (VNInfo *SubVNI = SR.getVNInfoAt(PrevIndex))
+              SR.addSegment(
+                  LiveInterval::Segment(StartIndex, EndIndex, SubVNI));
+          }
         }
       }
     }
