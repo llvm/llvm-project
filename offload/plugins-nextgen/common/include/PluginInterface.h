@@ -983,11 +983,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
-  /// Load the binary image into the device and return the target table.
+  /// Load the binary image into the device and return the target table. When
+  /// \p Context is null the plugin's driver-scoped default context is used.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage);
+                                       StringRef TgtImage,
+                                       PluginContextTy *Context);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *Context) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);

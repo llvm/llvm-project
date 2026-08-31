@@ -472,6 +472,62 @@ llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
 
 // -----
 
+llvm.func @int_attr_and_type_required_same_index() -> i64 {
+  // expected-error @below{{attribute and type have different integer types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(1 : index) : i64
+  llvm.return %0 : i64
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_width() -> i16 {
+  // expected-error @below{{attribute and type have different integer types: 'i8' vs. 'i16'}}
+  %0 = llvm.mlir.constant(1 : i8) : i16
+  llvm.return %0 : i16
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_signedness() -> i32 {
+  // expected-error @below{{attribute and type have different integer types: 'ui32' vs. 'i32'}}
+  %0 = llvm.mlir.constant(1 : ui32) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_index() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xindex>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_width() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @scalable_vector_int_attr_and_type_required_same() -> vector<[2]xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<1> : vector<2xi32>) : vector<[2]xi64>
+  llvm.return %0 : vector<[2]xi64>
+}
+
+// -----
+
+llvm.func @array_int_attr_and_type_required_same() -> !llvm.array<2 x i64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i64>
+  llvm.return %0 : !llvm.array<2 x i64>
+}
+
+// -----
+
 llvm.func @float_attr_and_type_required_same() -> f16 {
   // expected-error @below{{attribute and type have different float semantics}}
   %cst = llvm.mlir.constant(1.0 : bf16) : f16

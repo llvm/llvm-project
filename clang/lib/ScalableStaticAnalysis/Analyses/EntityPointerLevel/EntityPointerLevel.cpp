@@ -14,6 +14,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
+#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 using namespace clang;
@@ -41,11 +42,11 @@ namespace clang::ssaf {
 //   Translate(&arr[5])            -> {(arr, 1)}
 class EntityPointerLevelTranslator
     : ConstStmtVisitor<EntityPointerLevelTranslator,
-                       Expected<EntityPointerLevelSet>> {
+                       Expected<DeclPointerLevelVec>> {
   friend class StmtVisitorBase;
 
   // Fallback method for all unsupported expression kind:
-  Expected<EntityPointerLevelSet> fallback(const Stmt *S) {
+  Expected<DeclPointerLevelVec> fallback(const Stmt *S) {
     // Report an error/warning (at least in debug mode) for any unsupported kind
     // of pointer/array typed expression, because we want to understand every
     // pointer/array expression. But for non-pointer/array typed expressions, we
@@ -55,7 +56,7 @@ class EntityPointerLevelTranslator
       return makeErrAtNode(Ctx, E,
                            "attempt to translate %s to EntityPointerLevels",
                            E->getStmtClassName());
-    return EntityPointerLevelSet{};
+    return DeclPointerLevelVec{};
   }
 
   Expected<EntityPointerLevel>
@@ -79,15 +80,15 @@ class EntityPointerLevelTranslator
 
   // The common helper function for Translate(*base):
   // Translate(*base) -> Translate(base) with .pointerLevel + 1
-  Expected<EntityPointerLevelSet> translateDereferencePointer(const Expr *Ptr) {
+  Expected<DeclPointerLevelVec> translateDereferencePointer(const Expr *Ptr) {
     assert(hasPtrOrArrType(Ptr));
 
-    Expected<EntityPointerLevelSet> SubResult = Visit(Ptr);
+    Expected<DeclPointerLevelVec> SubResult = Visit(Ptr);
     if (!SubResult)
       return SubResult.takeError();
 
-    auto Incremented = llvm::map_range(*SubResult, incrementPointerLevel);
-    return EntityPointerLevelSet{Incremented.begin(), Incremented.end()};
+    llvm::for_each(*SubResult, [](DeclPointerLevel &D) { ++D.PointerLevel; });
+    return SubResult;
   }
 
   TUSummaryExtractor &Extractor;
@@ -97,7 +98,7 @@ public:
   EntityPointerLevelTranslator(TUSummaryExtractor &Extractor, ASTContext &Ctx)
       : Extractor(Extractor), Ctx(Ctx) {}
 
-  Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
+  Expected<DeclPointerLevelVec> translate(const Expr *E) { return Visit(E); }
   Expected<EntityPointerLevel> translate(const NamedDecl *D, bool IsRet) {
     if (!IsRet)
       return createEntityPointerLevelFor(D);
@@ -109,26 +110,23 @@ public:
                          D->getDeclKindName());
   }
 
-  static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
-    return EntityPointerLevel({E.getEntity(), E.getPointerLevel() + 1});
-  }
-
-  static EntityPointerLevel decrementPointerLevel(const EntityPointerLevel &E) {
-    assert(E.getPointerLevel() > 0);
-    return EntityPointerLevel({E.getEntity(), E.getPointerLevel() - 1});
+  // Converts a `DeclPointerLevel` to an `EntityPointerLevel`
+  Expected<EntityPointerLevel> toEntityPointerLevel(const DeclPointerLevel &D) {
+    Expected<EntityPointerLevel> Base = translate(D.Decl, D.IsReturn);
+    if (!Base)
+      return Base.takeError();
+    return buildEntityPointerLevel(Base->getEntity(), D.PointerLevel);
   }
 
 private:
-  Expected<EntityPointerLevelSet> VisitStmt(const Stmt *E) {
-    return fallback(E);
-  }
+  Expected<DeclPointerLevelVec> VisitStmt(const Stmt *E) { return fallback(E); }
 
   // Translate(base + x)           -> Translate(base)
   // Translate(x + base)           -> Translate(base)
   // Translate(base - x)           -> Translate(base)
   // Translate(base {+=, -=, =} x) -> Translate(base)
   // Translate(x, base)            -> Translate(base)
-  Expected<EntityPointerLevelSet> VisitBinaryOperator(const BinaryOperator *E) {
+  Expected<DeclPointerLevelVec> VisitBinaryOperator(const BinaryOperator *E) {
     switch (E->getOpcode()) {
     case clang::BO_Add:
       if (hasPtrOrArrType(E->getLHS()))
@@ -152,7 +150,7 @@ private:
   // Translate(&base)          -> {}, if Translate(base) is {}
   //                           -> Translate(base) with .pointerLevel -= 1
   // Translate(+base)          -> Translate(base)
-  Expected<EntityPointerLevelSet> VisitUnaryOperator(const UnaryOperator *E) {
+  Expected<DeclPointerLevelVec> VisitUnaryOperator(const UnaryOperator *E) {
     switch (E->getOpcode()) {
     case clang::UO_PostInc:
     case clang::UO_PostDec:
@@ -160,12 +158,15 @@ private:
     case clang::UO_PreDec:
       return Visit(E->getSubExpr());
     case clang::UO_AddrOf: {
-      Expected<EntityPointerLevelSet> SubResult = Visit(E->getSubExpr());
+      Expected<DeclPointerLevelVec> SubResult = Visit(E->getSubExpr());
       if (!SubResult)
         return SubResult.takeError();
 
-      auto Decremented = llvm::map_range(*SubResult, decrementPointerLevel);
-      return EntityPointerLevelSet{Decremented.begin(), Decremented.end()};
+      llvm::for_each(*SubResult, [](DeclPointerLevel &D) {
+        assert(D.PointerLevel > 0);
+        --D.PointerLevel;
+      });
+      return SubResult;
     }
     case clang::UO_Deref:
       return translateDereferencePointer(E->getSubExpr());
@@ -178,36 +179,34 @@ private:
 
   // Translate((T*)base) -> Translate(base) if base has pointer type
   //                     -> {} otherwise
-  Expected<EntityPointerLevelSet> VisitCastExpr(const CastExpr *E) {
+  Expected<DeclPointerLevelVec> VisitCastExpr(const CastExpr *E) {
     if (hasPtrOrArrType(E->getSubExpr()))
       return Visit(E->getSubExpr());
-    return EntityPointerLevelSet{};
+    return DeclPointerLevelVec{};
   }
 
   // Translate(f(...)) -> {} if it is an indirect call
   //                   -> {(f_return, 1)}, otherwise
-  Expected<EntityPointerLevelSet> VisitCallExpr(const CallExpr *E) {
-    if (auto *FD = E->getDirectCallee()) {
-      if (auto ReturnId = Extractor.addEntityForReturn(FD))
-        return EntityPointerLevelSet{buildEntityPointerLevel(*ReturnId, 1)};
-    }
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitCallExpr(const CallExpr *E) {
+    if (auto *FD = E->getDirectCallee())
+      return DeclPointerLevelVec{{FD, /*PointerLevel=*/1, /*IsReturn=*/true}};
+    return DeclPointerLevelVec{};
   }
 
   // Translate(base[x]) -> Translate(*base)
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     return translateDereferencePointer(E->getBase());
   }
 
   // Translate(cond ? base1 : base2) := Translate(base1) U Translate(base2)
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
-    Expected<EntityPointerLevelSet> ReT = Visit(E->getTrueExpr());
-    Expected<EntityPointerLevelSet> ReF = Visit(E->getFalseExpr());
+    Expected<DeclPointerLevelVec> ReT = Visit(E->getTrueExpr());
+    Expected<DeclPointerLevelVec> ReF = Visit(E->getFalseExpr());
 
     if (ReT && ReF) {
-      ReT->insert(ReF->begin(), ReF->end());
+      ReT->insert(ReT->end(), ReF->begin(), ReF->end());
       return ReT;
     }
     if (!ReF && !ReT)
@@ -217,100 +216,95 @@ private:
     return ReT.takeError();
   }
 
-  Expected<EntityPointerLevelSet> VisitParenExpr(const ParenExpr *E) {
+  Expected<DeclPointerLevelVec> VisitParenExpr(const ParenExpr *E) {
     return Visit(E->getSubExpr());
   }
 
   // Translate("string-literal") -> {} // no entity involved
-  Expected<EntityPointerLevelSet> VisitStringLiteral(const StringLiteral *E) {
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitStringLiteral(const StringLiteral *E) {
+    return DeclPointerLevelVec{};
   }
 
   // Translate(predefined-expr) -> {} // treated the same as string literals
-  Expected<EntityPointerLevelSet> VisitPredefinedExpr(const PredefinedExpr *E) {
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitPredefinedExpr(const PredefinedExpr *E) {
+    return DeclPointerLevelVec{};
   }
 
   // Translate(integer-literal) -> {} // no entity involved
-  Expected<EntityPointerLevelSet> VisitIntegerLiteral(const IntegerLiteral *E) {
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitIntegerLiteral(const IntegerLiteral *E) {
+    return DeclPointerLevelVec{};
   }
 
   // Translate(DRE) -> {(Decl, 1)}
-  Expected<EntityPointerLevelSet> VisitDeclRefExpr(const DeclRefExpr *E) {
-    auto Res = createEntityPointerLevelFor(E->getDecl());
-    if (!Res)
-      return Res.takeError();
-    return EntityPointerLevelSet{*Res};
+  Expected<DeclPointerLevelVec> VisitDeclRefExpr(const DeclRefExpr *E) {
+    return DeclPointerLevelVec{
+        {E->getDecl(), /*PointerLevel=*/1, /*IsReturn=*/false}};
   }
 
   // Translate({., ->}f) -> {(MemberDecl, 1)}
-  Expected<EntityPointerLevelSet> VisitMemberExpr(const MemberExpr *E) {
-    auto Res = createEntityPointerLevelFor(E->getMemberDecl());
-    if (!Res)
-      return Res.takeError();
-    return EntityPointerLevelSet{*Res};
+  Expected<DeclPointerLevelVec> VisitMemberExpr(const MemberExpr *E) {
+    return DeclPointerLevelVec{
+        {E->getMemberDecl(), /*PointerLevel=*/1, /*IsReturn=*/false}};
   }
 
   // Unwrap CXXDefaultArgExpr
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     return Visit(E->getExpr());
   }
 
   // Unwrap OpaqueValueExpr
-  Expected<EntityPointerLevelSet>
-  VisitOpaqueValueExpr(const OpaqueValueExpr *S) {
+  Expected<DeclPointerLevelVec> VisitOpaqueValueExpr(const OpaqueValueExpr *S) {
     return Visit(S->getSourceExpr());
   }
 
   // Unwrap ExprWithCleanups
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitExprWithCleanups(const ExprWithCleanups *S) {
     return Visit(S->getSubExpr());
   }
 
   // Unwrap MaterializeTemporaryExpr
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *S) {
     return Visit(S->getSubExpr());
   }
 
   // Unwrap CXXDefaultInitExpr
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
     return Visit(E->getExpr());
   }
 
   // Translate(`nullptr`) -> {}
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *S) {
-    return EntityPointerLevelSet{};
+    return DeclPointerLevelVec{};
   }
 
   // Translate(`this`) -> {}
-  Expected<EntityPointerLevelSet> VisitCXXThisExpr(const CXXThisExpr *S) {
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitCXXThisExpr(const CXXThisExpr *S) {
+    return DeclPointerLevelVec{};
   }
 
   // Translate(`new`/`new [*]`) -> {}
-  Expected<EntityPointerLevelSet> VisitCXXNewExpr(const CXXNewExpr *S) {
-    return EntityPointerLevelSet{};
+  Expected<DeclPointerLevelVec> VisitCXXNewExpr(const CXXNewExpr *S) {
+    return DeclPointerLevelVec{};
   }
 
   // ImplicitValueInitExpr, for raw pointer type,
   // evaluates to a compile-time constant zero (or null). So no EPL in the
   // result.
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitImplicitValueInitExpr(const ImplicitValueInitExpr *S) {
-    return EntityPointerLevelSet{};
+    return DeclPointerLevelVec{};
   }
 
   // The InitListExpr must be an empty or singleton list that
   // initializes a pointer scalar.  Other cases are unexpected thus an error.
-  Expected<EntityPointerLevelSet> VisitInitListExpr(const InitListExpr *E) {
+  Expected<DeclPointerLevelVec> VisitInitListExpr(const InitListExpr *E) {
     if (E->getNumInits() < 1)
-      return EntityPointerLevelSet{};
+      return DeclPointerLevelVec{};
     if (E->getType()->isPointerType())
       return Visit(E->getInit(0));
     return llvm::createStringError(
@@ -323,28 +317,43 @@ private:
   // When a CXXConstructExpr has an array type, clang is initializing an array
   // of class-type objects with default values.  In this case, no entity is
   // associated with the initializer.
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (E->getType()->isArrayType()) {
-      return EntityPointerLevelSet{};
+      return DeclPointerLevelVec{};
     }
     return fallback(E);
   }
 
   // No entity is associated with a CXXScalarValueInitExpr:
-  Expected<EntityPointerLevelSet>
+  Expected<DeclPointerLevelVec>
   VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
-    return EntityPointerLevelSet{};
+    return DeclPointerLevelVec{};
   }
 };
 } // namespace clang::ssaf
+
+Expected<DeclPointerLevelVec>
+clang::ssaf::translateDeclPointerLevel(const Expr *E, ASTContext &Ctx,
+                                       TUSummaryExtractor &Extractor) {
+  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+
+  return Translator.translate(E);
+}
 
 Expected<EntityPointerLevelSet>
 clang::ssaf::translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
                                          TUSummaryExtractor &Extractor) {
   EntityPointerLevelTranslator Translator(Extractor, Ctx);
+  auto DPLs = Translator.translate(E);
+  if (!DPLs)
+    return DPLs.takeError();
+  return toEntityPointerLevels(*DPLs, Ctx, Extractor);
+}
 
-  return Translator.translate(E);
+DeclPointerLevel clang::ssaf::createDeclPointerLevel(const NamedDecl *ND,
+                                                     bool IsFunRet) {
+  return {ND, 1, IsFunRet};
 }
 
 /// Create an EntityPointerLevel from a ValueDecl of a pointer type.
@@ -355,9 +364,59 @@ Expected<EntityPointerLevel> clang::ssaf::createEntityPointerLevel(
   return Translator.translate(ND, IsFunRet);
 }
 
-EntityPointerLevel
-clang::ssaf::incrementPointerLevel(const EntityPointerLevel &E) {
-  return EntityPointerLevelTranslator::incrementPointerLevel(E);
+DeclPointerLevelVec
+clang::ssaf::elaborateHigherDeclPointerLevels(const DeclPointerLevel &DPL) {
+  DeclPointerLevelVec Result{DPL};
+  QualType T;
+
+  if (DPL.IsReturn) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(DPL.Decl))
+      T = FD->getReturnType().getNonReferenceType();
+  } else if (const auto *VD = dyn_cast<ValueDecl>(DPL.Decl)) {
+    T = VD->getType().getNonReferenceType();
+  }
+  if (T.isNull())
+    return Result;
+
+  // Count the max pointer/array levels of `T`:
+  unsigned MaxLevel = 0;
+
+  T = T.getCanonicalType();
+  while (!T.isNull() && (T->isPointerType() || T->isArrayType())) {
+    if (const auto *PT = dyn_cast<PointerType>(T))
+      T = PT->getPointeeType();
+    else
+      T = cast<ArrayType>(T)->getElementType();
+    ++MaxLevel;
+  }
+  assert(MaxLevel > 0);
+  Result.reserve(MaxLevel);
+  for (unsigned Level = DPL.PointerLevel + 1; Level <= MaxLevel; ++Level)
+    Result.push_back({DPL.Decl, Level, DPL.IsReturn});
+  return Result;
+}
+
+Expected<EntityPointerLevelSet>
+clang::ssaf::toEntityPointerLevels(const DeclPointerLevelVec &DPLs,
+                                   ASTContext &Ctx,
+                                   TUSummaryExtractor &Extractor) {
+  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+  EntityPointerLevelSet Result;
+
+  for (const auto &DPL : DPLs) {
+    Expected<EntityPointerLevel> EPL = Translator.toEntityPointerLevel(DPL);
+    if (!EPL)
+      return EPL.takeError();
+    Result.insert(*EPL);
+  }
+  return Result;
+}
+
+Expected<EntityPointerLevel>
+clang::ssaf::toEntityPointerLevel(const DeclPointerLevel &DPL, ASTContext &Ctx,
+                                  TUSummaryExtractor &Extractor) {
+  EntityPointerLevelTranslator Translator(Extractor, Ctx);
+  return Translator.toEntityPointerLevel(DPL);
 }
 
 EntityPointerLevel clang::ssaf::buildEntityPointerLevel(EntityId Id,
