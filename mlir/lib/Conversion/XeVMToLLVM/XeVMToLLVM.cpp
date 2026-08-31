@@ -1161,6 +1161,17 @@ static Value takeLeadingElements(ConversionPatternRewriter &rewriter,
   return LLVM::ShuffleVectorOp::create(rewriter, loc, val, val, mask);
 }
 
+//
+// Note: TruncfToOCLPattern and ExtfToOCLPattern does not lower to OpenCL API
+// calls as there are not official ones yet. They are lowered directly to Intel
+// graphics compiler built in functions.
+// See
+// https://github.com/intel/intel-graphics-compiler/tree/master/IGC/BiFModule/Implementation/SPV_INTEL_fp_conversions
+// for builtin function usage. The folder contains implementation of
+// experimental SPIR-V extension for truncf and extf using builtin functions.
+// TODO: Move to OpenCL API call once they are available.
+//
+
 class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
