@@ -105,25 +105,9 @@ LLVMBool LLVMCreateExecutionEngineForModule(LLVMExecutionEngineRef *OutEE,
                                             char **OutError) {
   std::string Error;
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
-  builder.setEngineKind(EngineKind::Either)
-         .setErrorStr(&Error);
-  if (ExecutionEngine *EE = builder.create()){
+  builder.setErrorStr(&Error);
+  if (ExecutionEngine *EE = builder.create()) {
     *OutEE = wrap(EE);
-    return 0;
-  }
-  *OutError = strdup(Error.c_str());
-  return 1;
-}
-
-LLVMBool LLVMCreateInterpreterForModule(LLVMExecutionEngineRef *OutInterp,
-                                        LLVMModuleRef M,
-                                        char **OutError) {
-  std::string Error;
-  EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
-  builder.setEngineKind(EngineKind::Interpreter)
-         .setErrorStr(&Error);
-  if (ExecutionEngine *Interp = builder.create()) {
-    *OutInterp = wrap(Interp);
     return 0;
   }
   *OutError = strdup(Error.c_str());
@@ -136,9 +120,7 @@ LLVMBool LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
                                         char **OutError) {
   std::string Error;
   EngineBuilder builder(std::unique_ptr<Module>(unwrap(M)));
-  builder.setEngineKind(EngineKind::JIT)
-      .setErrorStr(&Error)
-      .setOptLevel((CodeGenOptLevel)OptLevel);
+  builder.setErrorStr(&Error).setOptLevel((CodeGenOptLevel)OptLevel);
   if (ExecutionEngine *JIT = builder.create()) {
     *OutJIT = wrap(JIT);
     return 0;
@@ -194,8 +176,7 @@ LLVMBool LLVMCreateMCJITCompilerForModule(
 
   std::string Error;
   EngineBuilder builder(std::move(Mod));
-  builder.setEngineKind(EngineKind::JIT)
-      .setErrorStr(&Error)
+  builder.setErrorStr(&Error)
       .setOptLevel((CodeGenOptLevel)options.OptLevel)
       .setTargetOptions(targetOptions);
   bool JIT;

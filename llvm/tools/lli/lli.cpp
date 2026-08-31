@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -100,11 +99,6 @@ static cl::opt<std::string> InputFile(cl::desc("<input bitcode>"),
 
 static cl::list<std::string> InputArgv(cl::ConsumeAfter,
                                        cl::desc("<program arguments>..."));
-
-static cl::opt<bool>
-    ForceInterpreter("force-interpreter",
-                     cl::desc("Force interpretation: disable JIT"),
-                     cl::init(false));
 
 static cl::opt<JITKind>
     UseJITKind("jit-kind", cl::desc("Choose underlying JIT kind."),
@@ -442,7 +436,7 @@ int main(int argc, char **argv, char * const *envp) {
     exit(1);
   }
 
-  if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
+  if (UseJITKind == JITKind::MCJIT)
     disallowOrcOptions();
   else
     return runOrcJIT(argv[0]);
@@ -481,9 +475,6 @@ int main(int argc, char **argv, char * const *envp) {
   if (auto CM = codegen::getExplicitCodeModel())
     builder.setCodeModel(*CM);
   builder.setErrorStr(&ErrorMsg);
-  builder.setEngineKind(ForceInterpreter
-                        ? EngineKind::Interpreter
-                        : EngineKind::JIT);
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
@@ -491,21 +482,14 @@ int main(int argc, char **argv, char * const *envp) {
 
   // Enable MCJIT if desired.
   RTDyldMemoryManager *RTDyldMM = nullptr;
-  if (!ForceInterpreter) {
-    if (RemoteMCJIT)
-      RTDyldMM = new ForwardingMemoryManager();
-    else
-      RTDyldMM = new SectionMemoryManager();
+  if (RemoteMCJIT)
+    RTDyldMM = new ForwardingMemoryManager();
+  else
+    RTDyldMM = new SectionMemoryManager();
 
-    // Deliberately construct a temp std::unique_ptr to pass in. Do not null out
-    // RTDyldMM: We still use it below, even though we don't own it.
-    builder.setMCJITMemoryManager(
-      std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
-  } else if (RemoteMCJIT) {
-    WithColor::error(errs(), argv[0])
-        << "remote process execution does not work with the interpreter.\n";
-    exit(1);
-  }
+  // Deliberately construct a temp std::unique_ptr to pass in. Do not null out
+  // RTDyldMM: We still use it below, even though we don't own it.
+  builder.setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
 
   builder.setOptLevel(getOptLevel());
 
@@ -671,11 +655,8 @@ int main(int argc, char **argv, char * const *envp) {
     FunctionCallee Exit = Mod->getOrInsertFunction(
         "exit", Type::getVoidTy(Context), Type::getInt32Ty(Context));
 
-    // Run static constructors.
-    if (!ForceInterpreter) {
-      // Give MCJIT a chance to apply relocations and set page permissions.
-      EE->finalizeObject();
-    }
+    // Give MCJIT a chance to apply relocations and set page permissions.
+    EE->finalizeObject();
     EE->runStaticConstructorsDestructors(false);
 
     // Trigger compilation separately so code regions that need to be

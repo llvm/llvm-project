@@ -88,8 +88,6 @@ function(LLVMBuildResolveComponentsLink)
 
   if(llvm_has_jit_native)
     set_property(TARGET Engine APPEND PROPERTY LLVM_LINK_COMPONENTS "MCJIT" "Native")
-  else()
-    set_property(TARGET Engine APPEND PROPERTY LLVM_LINK_COMPONENTS "Interpreter")
   endif()
 
   get_property(llvm_components GLOBAL PROPERTY LLVM_COMPONENT_LIBS)
