@@ -343,7 +343,7 @@ cloneFunctionsIntoNewModule(ArrayRef<const Function *> FunctionsToClone) {
                       Returns);
   }
 
-  return std::move(M);
+  return M;
 }
 
 std::optional<std::unique_ptr<Module>> unwrapAndSaveClone(IRUnitRef IR) {
