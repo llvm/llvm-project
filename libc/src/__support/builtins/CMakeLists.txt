@@ -243,6 +243,16 @@ add_header_library(
     truncdfsf2.h
   DEPENDS
     libc.src.__support.builtins.fpconvert_helper
+)
+
+add_header_library(
+  cmp_helper
+  HDRS
+    cmp_helper.h
+  DEPENDS
+    libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -496,4 +506,31 @@ add_header_library(
     libc.src.__support.builtins.floatint_helper
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  unordsf2
+  HDRS
+    unordsf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  gesf2
+  HDRS
+    gesf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  lesf2
+  HDRS
+    lesf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
 )
