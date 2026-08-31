@@ -27,5 +27,5 @@ void test_mmap_vm_make_tag(void) {
 void test_mmap_size_constraint(void) {
   void *p = mmap(0, 0, 0, MAP_ANON | MAP_PRIVATE, -1, 0);
   // darwin-warning@-1 {{The 2nd argument to 'mmap' is 0 but should be > 0}}
-  // linux-warning@-2 {{The 2nd argument to 'mmap' is 0 but should be > 0}}
+  // linux-warning@-2  {{The 2nd argument to 'mmap' is 0 but should be > 0}}
 }
