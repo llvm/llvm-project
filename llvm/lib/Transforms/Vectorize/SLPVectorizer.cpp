@@ -2663,7 +2663,8 @@ public:
                          const InstructionsState &LocalState,
                          SmallVectorImpl<Value *> &Op1,
                          SmallVectorImpl<Value *> &Op2,
-                         OrdersType &ReorderIndices) const;
+                         OrdersType &ReorderIndices,
+                         bool TreeExists = true) const;
 
   ~BoUpSLP();
 
@@ -11091,7 +11092,8 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                 const InstructionsState &LocalState,
                                 SmallVectorImpl<Value *> &Op1,
                                 SmallVectorImpl<Value *> &Op2,
-                                OrdersType &ReorderIndices) const {
+                                OrdersType &ReorderIndices,
+                                bool TreeExists) const {
   constexpr unsigned SmallNodeSize = 4;
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !SplitAlternateInstructions)
@@ -11211,7 +11213,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind);
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
-        (!VectorizableTree.empty() && getRootNode().hasState() &&
+        (TreeExists && !VectorizableTree.empty() && getRootNode().hasState() &&
                  getRootNode().getOpcode() == Instruction::Store
              ? NewShuffleCost
              : 0);
@@ -31138,7 +31140,8 @@ public:
           SmallVector<Value *> Op1, Op2;
           BoUpSLP::OrdersType ReorderIndices;
           if (MainOp && AltOp &&
-              V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices)) {
+              V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices,
+                                  /*TreeExists*/ false)) {
             if (LocalReducedVals.empty()) {
               LocalReducedVals.push_back(Ops);
               States.push_back(OpS);
