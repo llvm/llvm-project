@@ -2744,11 +2744,12 @@ private:
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);
-  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op, void *&InsertPos);
+  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op,
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &loc);
 
   void DeleteNodeNotInCSEMaps(SDNode *N);
@@ -2756,17 +2757,18 @@ private:
 
   void allnodes_clear();
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  This
-  /// overload is for nodes other than Constant or ConstantFP, use the other one
-  /// for those.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. This overload is for nodes other than Constant or
+  /// ConstantFP, use the other one for those.
+  SDNode *lookupNode(const FoldingSetNodeID &ID,
+                     FoldingSetInsertToken &InsertToken);
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  Performs
-  /// additional processing for constant nodes.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
-                              void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. Performs additional processing for constant nodes.
+  SDNode *lookupNode(const FoldingSetNodeID &ID, const SDLoc &DL,
+                     FoldingSetInsertToken &InsertToken);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;
