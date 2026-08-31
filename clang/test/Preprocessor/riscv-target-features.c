@@ -1488,12 +1488,12 @@
 // CHECK-ZFA-EXT: __riscv_zfa 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zve64x_zvabd0p7 -E -dM %s \
+// RUN:   -march=rv32i_zve64x_zvabd0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVABD-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zve64x_zvabd0p7 -E -dM %s \
+// RUN:   -march=rv64i_zve64x_zvabd0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVABD-EXT %s
-// CHECK-ZVABD-EXT: __riscv_zvabd  7000{{$}}
+// CHECK-ZVABD-EXT: __riscv_zvabd  9000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zve64x_zvbb1p0 -E -dM %s \

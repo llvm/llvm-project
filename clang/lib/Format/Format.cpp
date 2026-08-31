@@ -221,10 +221,12 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
+    IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
     IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
     IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
     IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
@@ -1724,8 +1726,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterFunction=*/false,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
+                            /*AfterRequiresExpression=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
+                            /*AfterExportBlock=*/false,
                             /*AfterExternBlock=*/false,
                             /*BeforeCatch=*/false,
                             /*BeforeElse=*/false,
@@ -1747,6 +1751,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
@@ -1764,8 +1769,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
@@ -1779,6 +1786,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
@@ -1794,8 +1802,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterFunction=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
+        /*AfterRequiresExpression=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
+        /*AfterExportBlock=*/true,
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
@@ -1896,8 +1906,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterFunction=*/false,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
+                             /*AfterRequiresExpression=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
+                             /*AfterExportBlock=*/false,
                              /*AfterExternBlock=*/false,
                              /*BeforeCatch=*/false,
                              /*BeforeElse=*/false,
@@ -4381,12 +4393,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
   }
 
-  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return DefinitionBlockSeparator(Env, Expanded).process();
-    });
-  }
-
   if (Style.Language == FormatStyle::LK_ObjC &&
       !Style.ObjCPropertyAttributeOrder.empty()) {
     Passes.emplace_back([&](const Environment &Env) {
@@ -4404,6 +4410,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
 
   if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped) {

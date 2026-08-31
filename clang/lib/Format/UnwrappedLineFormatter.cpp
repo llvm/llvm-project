@@ -444,7 +444,8 @@ private:
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         (FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
                                   TT_ForEachMacro) ||
-         TheLine->startsWithExportBlock())) {
+         (TheLine->Last->is(TT_ExportLBrace) &&
+          !Style.BraceWrapping.AfterExportBlock))) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -518,9 +519,14 @@ private:
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                        TT_UnionLBrace) ||
-                 (TheLine->Last->is(TT_RecordLBrace) && Style.isJava())) {
+                                        TT_UnionLBrace)) {
         return tryMergeRecord(I, E, Limit);
+      } else if (TheLine->Last->is(TT_RecordLBrace) && Style.isJava()) {
+        // Java `interface` and `record` have no dedicated `BraceWrapping.After`
+        // option and are not governed by `AllowShortRecordOnASingleLine`.
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (NextLine.First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, tok::kw_union)) {
@@ -892,7 +898,7 @@ private:
         Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
                             tok::kw___finally, tok::r_brace,
                             Keywords.kw___except) ||
-        Line.startsWithExportBlock()) {
+        Line.Last->is(TT_ExportLBrace)) {
       if (IsSplitBlock)
         return 0;
       // Don't merge when we can't except the case when
@@ -937,6 +943,11 @@ private:
     }
 
     if (Line.endsWith(tok::l_brace)) {
+      if (Style.BraceWrapping.AfterExportBlock &&
+          Line.First->is(TT_ExportLBrace)) {
+        return 0;
+      }
+
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never &&
           Line.First->is(TT_BlockLBrace)) {
         return 0;

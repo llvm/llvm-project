@@ -46,6 +46,9 @@ struct DerivesBitFieldBase : BitFieldBase { int i; };
 struct HasBitFieldVBase : virtual BitFieldBase { int i; };
 // CIR-DAG: !rec_HasBitFieldVBase = !cir.struct<"HasBitFieldVBase" packed {data !cir.vptr, data !s32i, empty !rec_BitFieldBase, pad !cir.array<!u8i x 3>}>
 
+struct ZeroWidthWide { char c; long long : 0; char d; };
+// CIR-DAG: !rec_ZeroWidthWide = !cir.struct<"ZeroWidthWide" {data !s8i, pad !cir.array<!u8i x 7>, bitfield !cir.array<!s64i x 0>, data !s8i}>
+
 struct ZeroLenEmptyArr { Empty e[0]; };
 // CIR-DAG: !rec_ZeroLenEmptyArr = !cir.struct<"ZeroLenEmptyArr" {empty !cir.array<!rec_Empty x 0>}>
 
@@ -77,13 +80,14 @@ struct NamedFirst { int a : 8; int : 16; };
 struct UnnamedFirst { int : 16; int a : 8; };
 // CIR-DAG: !rec_UnnamedFirst = !cir.struct<"UnnamedFirst" {bitfield !u32i}>
 
-// A zero-length bit-field separates one span into two units, and a record can
-// carry a data unit and an empty unit at once, in either order.
+// A zero-length bit-field separates one span into two units and becomes a
+// member of its own.  A record can carry a data unit and an empty unit at
+// once, in either order.
 struct SpanMixed { int a : 3; int : 0; int : 3; };
-// CIR-DAG: !rec_SpanMixed = !cir.struct<"SpanMixed" {bitfield !u8i, pad !cir.array<!u8i x 3>, empty !u8i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_SpanMixed = !cir.struct<"SpanMixed" {bitfield !u8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, empty !u8i, pad !cir.array<!u8i x 3>}>
 
 struct SpanEmptyFirst { int : 3; int : 0; int b : 3; };
-// CIR-DAG: !rec_SpanEmptyFirst = !cir.struct<"SpanEmptyFirst" {empty !u8i, pad !cir.array<!u8i x 3>, bitfield !u8i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_SpanEmptyFirst = !cir.struct<"SpanEmptyFirst" {empty !u8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, bitfield !u8i, pad !cir.array<!u8i x 3>}>
 
 // One unit covering both of these would need more than one register, so they
 // split into two units that are marked independently.
@@ -129,13 +133,20 @@ struct DerivedClipped : Clipped { char c; };
 // Name every record so that its CIR type reaches the output.
 void useTypes(HoldsEmpty *, NuaEmpty *, NuaEmptyUnion *, NuaPolyUnion *,
               NuaDerivedUnion *, NuaDerivesNonEmptyUnion *, BitFieldBase *,
-              DerivesBitFieldBase *, HasBitFieldVBase *, ZeroLenEmptyArr *,
+              DerivesBitFieldBase *, HasBitFieldVBase *, ZeroWidthWide *,
+              ZeroLenEmptyArr *,
               EmptyArr2 *, NuaEmptyArr *, OnlyUnnamedBit *, NamedClipped *,
               NamedFirst *, UnnamedFirst *, SpanMixed *, SpanEmptyFirst *,
               WideSpanMixed *, WideSpanEmptyFirst *, WideSpanAllEmpty *,
               UnnamedBitUnion *, NoMemberUnion *, Pod *, NearlyEmptyVBase *,
               HasNearlyEmptyVBase *, Clipped *, NamedClippedTail *) {}
 
+// The zero-length bit-field member leaves the record's alignment alone, so
+// these still agree with the classic layout.
+SpanMixed gSpanMixed;
+// LLVM-DAG: @gSpanMixed = global %struct.SpanMixed zeroinitializer, align 4
+SpanEmptyFirst gSpanEmptyFirst;
+// LLVM-DAG: @gSpanEmptyFirst = global %struct.SpanEmptyFirst zeroinitializer, align 4
 Empty gEmpty;
 AlignasTail gAlignasTail;
 
