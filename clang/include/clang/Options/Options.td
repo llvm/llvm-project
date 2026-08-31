@@ -3554,14 +3554,20 @@ def fno_lto : Flag<["-"], "fno-lto">,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption]>, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
 def foffload_lto_EQ : Joined<["-"], "foffload-lto=">,
-  Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>, Group<f_Group>,
   HelpText<"Set LTO mode for offload compilation">, Values<"thin,full">;
 def foffload_lto : Flag<["-"], "foffload-lto">,
-  Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>, Group<f_Group>,
   Alias<foffload_lto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode for offload compilation">;
 def fno_offload_lto : Flag<["-"], "fno-offload-lto">,
-  Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>, Group<f_Group>,
   HelpText<"Disable LTO mode (default) for offload compilation">;
+def foffload_object_linking : Flag<["-"], "foffload-object-linking">,
+  Visibility<[ClangOption]>, Group<f_Group>,
+  HelpText<"Enable object linking for offload compilation (AMDGPU)">;
+def fno_offload_object_linking : Flag<["-"], "fno-offload-object-linking">,
+  Visibility<[ClangOption]>, Group<f_Group>,
+  HelpText<"Disable object linking for offload compilation (default)">;
 def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   HelpText<"Controls the backend parallelism of -flto=thin (default "

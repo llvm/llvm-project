@@ -1,5 +1,9 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP-WAVE32 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP-WAVE64 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU-WAVE32 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU-WAVE64 %s
 
 ; Test that with object linking enabled, external LDS declarations produce
 ; @abs32@lo relocations, SHN_AMDGPU_LDS symbols, .amdgpu_lds directives,
@@ -37,6 +41,20 @@
 ; ASM-DAG:   .amdgpu_use lds_small
 ; ASM-DAG:   .amdgpu_call device_func
 ; ASM-DAG: .end_amdgpu_info
+
+; COM: FUNC_WGP_MODE (0x8) and FUNC_WAVE32 (0x10) track the subtarget execution
+; COM: mode and wave size. gfx11 defaults to WGP mode + wave32; +cumode selects
+; COM: CU mode and +wavefrontsize64 selects wave64. The kernel and the device
+; COM: function share the same subtarget-derived flags, so both .amdgpu_flags
+; COM: entries carry the same value in each run.
+; COM: WGP | WAVE32 = 0x8 | 0x10 = 24.
+; WGP-WAVE32-COUNT-2: .amdgpu_flags 24
+; COM: WGP only = 0x8 = 8.
+; WGP-WAVE64-COUNT-2: .amdgpu_flags 8
+; COM: WAVE32 only = 0x10 = 16.
+; CU-WAVE32-COUNT-2: .amdgpu_flags 16
+; COM: neither set = 0.
+; CU-WAVE64-COUNT-2: .amdgpu_flags 0
 
 ; SHN_AMDGPU_LDS directives.
 ; ASM-DAG: .amdgpu_lds lds_large, 256, 16

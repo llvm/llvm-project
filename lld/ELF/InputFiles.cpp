@@ -1220,7 +1220,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
     Symbol *sym = symbols[i];
     sym->isUsedInRegularObj = true;
-    if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
+    if (LLVM_UNLIKELY(eSym.isCommon(this->emachine))) {
       if (value == 0 || value >= UINT32_MAX)
         Err(ctx) << this << ": common symbol '" << sym->getName()
                  << "' has invalid alignment: " << value;
@@ -1327,7 +1327,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     if (!sym.isDefined() || secIdx == SHN_UNDEF)
       continue;
     if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE)) {
-      if (secIdx == SHN_COMMON)
+      if (eSym.isCommon(this->emachine))
         continue;
       if (secIdx == SHN_XINDEX)
         secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
@@ -1411,7 +1411,7 @@ static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
     Expected<StringRef> name = sym.getName(stringtable);
     if (name && name.get() == symName)
       return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
-             !sym.isCommon();
+             !sym.isCommon(obj->emachine);
   }
   return false;
 }

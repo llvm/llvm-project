@@ -257,6 +257,12 @@ struct Config {
   /// splitting the module.
   ModuleHookFn PreCodeGenModuleHook;
 
+  /// This hook is called in the ThinLTO backend after finalization and import,
+  /// but before optimization. Unlike ModuleHookFn, it takes a mutable Module
+  /// reference, allowing targets to apply cross-TU propagated attributes.
+  using MutableModuleHookFn = std::function<void(unsigned Task, Module &)>;
+  MutableModuleHookFn ApplyThinLTOAttributes;
+
   /// A combined index hook is called after all per-module indexes have been
   /// combined (ThinLTO-specific). It can be used to implement -save-temps for
   /// the combined index.

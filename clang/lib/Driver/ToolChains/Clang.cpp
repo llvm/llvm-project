@@ -9981,28 +9981,39 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       // Forward the LTO mode for this toolchain.
       auto DeviceLTOMode = TC->getLTOMode(ToolChainArgs, Kind);
-      if (DeviceLTOMode == LTOK_Full)
+      bool IsThinLTOObjectLinking =
+          TC->getTriple().isAMDGPU() && DeviceLTOMode == LTOK_Thin;
+      bool HasObjectLinking = Args.hasFlag(
+          options::OPT_foffload_object_linking,
+          options::OPT_fno_offload_object_linking, IsThinLTOObjectLinking);
+
+      if (HasObjectLinking && DeviceLTOMode == LTOK_Full &&
+          Args.hasArg(options::OPT_foffload_lto,
+                      options::OPT_foffload_lto_EQ)) {
+        C.getDriver().Diag(diag::err_drv_cannot_mix_options)
+            << "-foffload-object-linking" << "-foffload-lto";
+      }
+
+      bool UseObjectLinkingOnly =
+          HasObjectLinking && DeviceLTOMode != LTOK_Thin;
+      if (HasObjectLinking && DeviceLTOMode == LTOK_Thin &&
+          TC->getTriple().isAMDGPU()) {
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                               "=-plugin-opt=-amdgpu-enable-object-linking"));
+      }
+
+      if (UseObjectLinkingOnly) {
+        // Explicit object linking without ThinLTO uses ISA-level linking.
+      } else if (DeviceLTOMode == LTOK_Full) {
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
-      else if (DeviceLTOMode == LTOK_Thin) {
+      } else if (DeviceLTOMode == LTOK_Thin) {
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
-        if (TC->getTriple().isAMDGPU()) {
-          CmdArgs.push_back(
-              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                 "=-plugin-opt=-force-import-all"));
-          CmdArgs.push_back(
-              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                 "=-plugin-opt=-avail-extern-to-local"));
-          CmdArgs.push_back(Args.MakeArgString(
-              "--device-linker=" + TC->getTripleString() +
-              "=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
-          if (Kind == Action::OFK_OpenMP) {
-            CmdArgs.push_back(
-                Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                   "=-plugin-opt=-amdgpu-internalize-symbols"));
-          }
-        }
+      } else if (TC->getTriple().isAMDGPU()) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-flto"));
       }
     }
   }

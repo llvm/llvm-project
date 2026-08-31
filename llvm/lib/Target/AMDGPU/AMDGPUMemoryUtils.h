@@ -46,6 +46,12 @@ TargetExtType *isNamedBarrier(const GlobalVariable &GV);
 bool isDynamicLDS(const GlobalVariable &GV);
 bool isLDSVariableToLower(const GlobalVariable &GV);
 
+/// Convert \p GV to an external LDS declaration for link-time allocation.
+void externalizeLDSGlobalForObjectLinking(GlobalVariable &GV);
+
+/// Externalize \p GV and record that \p F uses it.
+void recordLDSUseForObjectLinking(Function &F, GlobalVariable &GV);
+
 struct GVUsesInfoTy {
   FunctionVariableMap DirectAccess;
   FunctionVariableMap IndirectAccess;

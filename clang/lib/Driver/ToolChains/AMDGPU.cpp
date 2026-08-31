@@ -935,6 +935,13 @@ void AMDGPUToolChain::addClangTargetOptions(
     }
   }
 
+  LTOKind DeviceLTOMode = getLTOMode(DriverArgs, DeviceOffloadingKind);
+  bool IsThinLTOObjectLinking = DeviceLTOMode == LTOK_Thin;
+  if (DriverArgs.hasFlag(options::OPT_foffload_object_linking,
+                         options::OPT_fno_offload_object_linking,
+                         IsThinLTOObjectLinking))
+    CC1Args.append({"-mllvm", "-amdgpu-enable-object-linking"});
+
   DriverArgs.AddLastArg(CC1Args, options::OPT_gpu_max_threads_per_block_EQ);
 
   // Default to "hidden" visibility, as object level linking will not be

@@ -141,9 +141,10 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
 // RUN:   --linker-path=/usr/bin/ld --device-linker=foo=bar --device-linker=a \
 // RUN:   --device-linker=nvptx64-nvidia-cuda=b --device-compiler=foo\
+// RUN:   --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-enable-object-linking \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER-ARGS
 
-// LINKER-ARGS: clang{{.*}}--target=amdgpu9.08-amd-amdhsa{{.*}}-Xlinker foo=bar{{.*}}-Xlinker a{{.*}}foo
+// LINKER-ARGS: clang{{.*}}--target=amdgpu9.08-amd-amdhsa{{.*}}-Xlinker foo=bar{{.*}}-Xlinker a{{.*}}-Xlinker -plugin-opt=-amdgpu-enable-object-linking{{.*}}foo
 // LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}-Xlinker foo=bar{{.*}}-Xlinker a -Xlinker b{{.*}}foo
 
 // RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \

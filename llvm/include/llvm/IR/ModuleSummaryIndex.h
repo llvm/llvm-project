@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -1387,6 +1388,34 @@ struct TypeIdSummary {
   std::map<uint64_t, WholeProgramDevirtResolution> WPDRes;
 };
 
+/// Optional per-function AMDGPU information carried in the module summary.
+///
+/// Attribute presence is retained because an absent attribute can have a
+/// subtarget-dependent default and is not equivalent to an explicit value.
+struct AMDGPUFunctionSummary {
+  struct WavesPerEUInfo {
+    uint32_t Min = 0;
+    std::optional<uint32_t> Max;
+
+    bool operator==(const WavesPerEUInfo &Other) const {
+      return Min == Other.Min && Max == Other.Max;
+    }
+  };
+
+  CallingConv::ID CC = CallingConv::C;
+  std::optional<std::pair<uint32_t, uint32_t>> FlatWorkGroupSize;
+  std::optional<WavesPerEUInfo> WavesPerEU;
+  std::optional<std::array<uint32_t, 3>> MaxNumWorkgroups;
+
+  bool operator==(const AMDGPUFunctionSummary &Other) const {
+    return CC == Other.CC && FlatWorkGroupSize == Other.FlatWorkGroupSize &&
+           WavesPerEU == Other.WavesPerEU &&
+           MaxNumWorkgroups == Other.MaxNumWorkgroups;
+  }
+};
+
+using AMDGPUSummaryMap = DenseMap<GlobalValue::GUID, AMDGPUFunctionSummary>;
+
 /// Encapsulate the names of CFI target functions. It interfaces with ThinLTO to
 /// determine efficiently which of the names need to be exported for a
 /// particular module.
@@ -1619,6 +1648,11 @@ private:
   // built via releaseTemporaryMemory.
   DenseMap<uint64_t, unsigned> StackIdToIndex;
 
+  // Optional AMDGPU per-function occupancy data, indexed by GUID.
+  // Populated during summary parsing and used by ThinLTO to propagate
+  // kernel occupancy constraints to device functions.
+  AMDGPUSummaryMap AMDGPUSummaries;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -1669,6 +1703,9 @@ public:
   }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
+
+  AMDGPUSummaryMap &getAMDGPUSummaries() { return AMDGPUSummaries; }
+  const AMDGPUSummaryMap &getAMDGPUSummaries() const { return AMDGPUSummaries; }
 
   unsigned addOrGetStackIdIndex(uint64_t StackId) {
     auto Inserted = StackIdToIndex.insert({StackId, StackIds.size()});

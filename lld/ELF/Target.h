@@ -32,6 +32,9 @@ class TargetInfo {
 public:
   TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
+  // Finalize target-specific symbols after LTO and symbol redirection, but
+  // before common symbols are converted to regular definitions.
+  virtual void finalizeSymbols() {}
   // Create target-specific synthetic sections, defined in Arch/ files.
   virtual void initTargetSpecificSections() {}
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,

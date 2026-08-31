@@ -31,15 +31,16 @@ addr_taken_func:
 
 	.globl	extern_func
 
-// COM: Kernel: flags=7 (KERNEL|VCC|FLAT_SCRATCH), resources, call edge, use
-// COM: edge, indirect call, and type ID. Non-zero AGPR to verify conditional
-// COM: emission.
+// COM: Kernel: flags=31 (VCC|FLAT_SCRATCH|HAS_DYN_STACK|WGP_MODE|WAVE32),
+// COM: resources, call edge, use edge, indirect call, and type ID. Non-zero AGPR
+// COM: to verify conditional emission.
 	.amdgpu_info my_kernel
-		.amdgpu_flags 7
+		.amdgpu_flags 31
 		.amdgpu_num_sgpr 33
 		.amdgpu_num_vgpr 32
 		.amdgpu_num_agpr 4
 		.amdgpu_private_segment_size 0
+		.amdgpu_occupancy 4
 		.amdgpu_use lds_var
 		.amdgpu_call helper
 		.amdgpu_indirect_call "vi"
@@ -53,6 +54,7 @@ addr_taken_func:
 		.amdgpu_num_sgpr 8
 		.amdgpu_num_vgpr 10
 		.amdgpu_private_segment_size 16
+		.amdgpu_occupancy 8
 		.amdgpu_call extern_func
 	.end_amdgpu_info
 
@@ -62,15 +64,17 @@ addr_taken_func:
 		.amdgpu_num_sgpr 2
 		.amdgpu_num_vgpr 4
 		.amdgpu_private_segment_size 0
+		.amdgpu_occupancy 10
 		.amdgpu_typeid "vi"
 	.end_amdgpu_info
 
 // ASM: .amdgpu_info my_kernel
-// ASM: .amdgpu_flags 7
+// ASM: .amdgpu_flags 31
 // ASM: .amdgpu_num_sgpr 33
 // ASM: .amdgpu_num_vgpr 32
 // ASM: .amdgpu_num_agpr 4
 // ASM: .amdgpu_private_segment_size 0
+// ASM: .amdgpu_occupancy 4
 // ASM: .amdgpu_use lds_var
 // ASM: .amdgpu_call helper
 // ASM: .amdgpu_indirect_call "vi"
@@ -82,6 +86,7 @@ addr_taken_func:
 // ASM: .amdgpu_num_vgpr 10
 // ASM-NOT: .amdgpu_num_agpr
 // ASM: .amdgpu_private_segment_size 16
+// ASM: .amdgpu_occupancy 8
 // ASM: .amdgpu_call extern_func
 // ASM: .end_amdgpu_info
 
@@ -91,6 +96,7 @@ addr_taken_func:
 // ASM: .amdgpu_num_vgpr 4
 // ASM-NOT: .amdgpu_num_agpr
 // ASM: .amdgpu_private_segment_size 0
+// ASM: .amdgpu_occupancy 10
 // ASM: .amdgpu_typeid "vi"
 // ASM: .end_amdgpu_info
 

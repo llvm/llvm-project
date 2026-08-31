@@ -4677,6 +4677,101 @@ static void writeFunctionHeapProfileRecords(
   }
 }
 
+/// Build an AMDGPUFunctionSummary from the IR attributes on \p F.
+static AMDGPUFunctionSummary buildAMDGPUFunctionSummary(const Function &F) {
+  AMDGPUFunctionSummary AFS;
+  AFS.CC = F.getCallingConv();
+
+  Attribute A = F.getFnAttribute("amdgpu-flat-work-group-size");
+  if (A.isStringAttribute()) {
+    auto [MinS, MaxS] = A.getValueAsString().split(',');
+    uint32_t Min, Max;
+    if (!MinS.trim().getAsInteger(0, Min) && !MaxS.trim().getAsInteger(0, Max))
+      AFS.FlatWorkGroupSize = std::make_pair(Min, Max);
+  }
+
+  A = F.getFnAttribute("amdgpu-waves-per-eu");
+  if (A.isStringAttribute()) {
+    auto [MinS, MaxS] = A.getValueAsString().split(',');
+    uint32_t Min;
+    if (!MinS.trim().getAsInteger(0, Min)) {
+      AMDGPUFunctionSummary::WavesPerEUInfo WavesPerEU{Min, std::nullopt};
+      uint32_t Max;
+      if (MaxS.trim().empty() || !MaxS.trim().getAsInteger(0, Max)) {
+        if (!MaxS.trim().empty())
+          WavesPerEU.Max = Max;
+        AFS.WavesPerEU = WavesPerEU;
+      }
+    }
+  }
+
+  A = F.getFnAttribute("amdgpu-max-num-workgroups");
+  if (A.isStringAttribute()) {
+    SmallVector<StringRef, 3> Parts;
+    A.getValueAsString().split(Parts, ',');
+    if (Parts.size() == 3) {
+      uint32_t X, Y, Z;
+      if (!Parts[0].trim().getAsInteger(0, X) &&
+          !Parts[1].trim().getAsInteger(0, Y) &&
+          !Parts[2].trim().getAsInteger(0, Z))
+        AFS.MaxNumWorkgroups = std::array<uint32_t, 3>{X, Y, Z};
+    }
+  }
+
+  return AFS;
+}
+
+/// Emit an FS_AMDGPU_ENTRY record for a pre-built summary.
+static void writeAMDGPUSummaryRecord(BitstreamWriter &Stream,
+                                     const AMDGPUFunctionSummary &AFS) {
+  uint64_t Flags = 0;
+  uint32_t FlatWGSizeMin = 0;
+  uint32_t FlatWGSizeMax = 0;
+  uint32_t WavesPerEUMin = 0;
+  uint32_t WavesPerEUMax = 0;
+  uint32_t MaxNumWGX = 0;
+  uint32_t MaxNumWGY = 0;
+  uint32_t MaxNumWGZ = 0;
+
+  if (AFS.FlatWorkGroupSize) {
+    Flags |= bitc::AFS_HAS_FLAT_WORK_GROUP_SIZE;
+    FlatWGSizeMin = AFS.FlatWorkGroupSize->first;
+    FlatWGSizeMax = AFS.FlatWorkGroupSize->second;
+  }
+  if (AFS.WavesPerEU) {
+    Flags |= bitc::AFS_HAS_WAVES_PER_EU;
+    WavesPerEUMin = AFS.WavesPerEU->Min;
+    if (AFS.WavesPerEU->Max) {
+      Flags |= bitc::AFS_HAS_WAVES_PER_EU_MAX;
+      WavesPerEUMax = *AFS.WavesPerEU->Max;
+    }
+  }
+  if (AFS.MaxNumWorkgroups) {
+    Flags |= bitc::AFS_HAS_MAX_NUM_WORKGROUPS;
+    MaxNumWGX = (*AFS.MaxNumWorkgroups)[0];
+    MaxNumWGY = (*AFS.MaxNumWorkgroups)[1];
+    MaxNumWGZ = (*AFS.MaxNumWorkgroups)[2];
+  }
+
+  SmallVector<uint64_t> NameVals = {AFS.CC,        Flags,         FlatWGSizeMin,
+                                    FlatWGSizeMax, WavesPerEUMin, WavesPerEUMax,
+                                    MaxNumWGX,     MaxNumWGY,     MaxNumWGZ};
+  Stream.EmitRecord(bitc::FS_AMDGPU_ENTRY, NameVals);
+}
+
+/// Emit an FS_AMDGPU_ENTRY record for \p F if it is a kernel or carries
+/// explicit occupancy attributes on an amdgcn target.
+static void writeAMDGPUSummaryRecord(BitstreamWriter &Stream,
+                                     const Function &F) {
+  bool IsKernel = F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
+  bool HasAttrs = F.hasFnAttribute("amdgpu-flat-work-group-size") ||
+                  F.hasFnAttribute("amdgpu-waves-per-eu") ||
+                  F.hasFnAttribute("amdgpu-max-num-workgroups");
+  if (!IsKernel && !HasAttrs)
+    return;
+  writeAMDGPUSummaryRecord(Stream, buildAMDGPUFunctionSummary(F));
+}
+
 // Helper to emit a single function summary record.
 void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
@@ -4712,6 +4807,11 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   // Emit the finished record.
   Stream.EmitRecord(bitc::FS_PERMODULE_PROFILE, NameVals, FSCallsProfileAbbrev);
   NameVals.clear();
+
+  // Emit optional AMDGPU per-function information immediately after the
+  // corresponding function summary.
+  if (M.getTargetTriple().isAMDGCN())
+    writeAMDGPUSummaryRecord(Stream, F);
 
   writeFunctionHeapProfileRecords(
       Stream, FS, CallsiteAbbrev, AllocAbbrev, ContextIdAbbvId,
@@ -5359,6 +5459,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_COMBINED_PROFILE, NameVals,
                       FSCallsProfileAbbrev);
     NameVals.clear();
+
+    // Emit optional AMDGPU per-function occupancy record if present.
+    if (auto It = Index.getAMDGPUSummaries().find(I.first);
+        It != Index.getAMDGPUSummaries().end())
+      writeAMDGPUSummaryRecord(Stream, It->second);
 
     writeFunctionHeapProfileRecords(
         Stream, FS, CallsiteAbbrev, AllocAbbrev, /*ContextIdAbbvId*/ 0,

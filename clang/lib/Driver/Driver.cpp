@@ -1069,6 +1069,21 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
+  bool IsOpenMP =
+      C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                               options::OPT_fno_openmp, false);
+  const Arg *ObjectLinkingArg =
+      C.getInputArgs().getLastArg(options::OPT_foffload_object_linking,
+                                  options::OPT_fno_offload_object_linking);
+  bool IsExplicitObjectLinking =
+      C.getInputArgs().hasFlag(options::OPT_foffload_object_linking,
+                               options::OPT_fno_offload_object_linking, false);
+  if (IsOpenMP && ObjectLinkingArg) {
+    Diag(clang::diag::err_drv_unsupported_opt_for_language_mode)
+        << ObjectLinkingArg->getSpelling() << "OpenMP";
+    return;
+  }
+
   bool IsCuda =
       llvm::any_of(Inputs, [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
         return types::isCuda(I.first);
@@ -1079,15 +1094,14 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                       return types::isHIP(I.first);
                     }) ||
        C.getInputArgs().hasArg(options::OPT_hip_link) ||
-       C.getInputArgs().hasArg(options::OPT_hipstdpar));
+       C.getInputArgs().hasArg(options::OPT_hipstdpar) ||
+       IsExplicitObjectLinking);
   bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
                                          options::OPT_fno_sycl, false);
   bool IsOpenMPOffloading =
-      (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                                options::OPT_fno_openmp, false) &&
-       (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ) ||
-        (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
-         !(IsCuda || IsHIP))));
+      IsOpenMP && (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ) ||
+                   (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
+                    !(IsCuda || IsHIP)));
 
   llvm::SmallSet<Action::OffloadKind, 4> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
@@ -5198,8 +5212,20 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         // Propagate the ToolChain so we can use it in ConstructPhaseAction.
         A->propagateDeviceOffloadInfo(Kind, TCAndArch->second,
                                       TCAndArch->first);
-        A = ConstructPhaseAction(C, Args, Phase, A, Kind,
-                                 TCAndArch->first->getLTOMode(Args, Kind));
+        // ThinLTO backends emit relocatable objects for final object linking.
+        // For other LTO modes, explicit object linking replaces LTO.
+        LTOKind RequestedDeviceLTOMode =
+            TCAndArch->first->getLTOMode(Args, Kind);
+        bool IsThinLTOObjectLinking =
+            TCAndArch->first->getTriple().isAMDGPU() &&
+            RequestedDeviceLTOMode == LTOK_Thin;
+        bool IsObjectLinking = Args.hasFlag(
+            options::OPT_foffload_object_linking,
+            options::OPT_fno_offload_object_linking, IsThinLTOObjectLinking);
+        LTOKind DeviceLTOMode = IsObjectLinking && !IsThinLTOObjectLinking
+                                    ? LTOK_None
+                                    : RequestedDeviceLTOMode;
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind, DeviceLTOMode);
 
         if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
             Kind == Action::OFK_OpenMP &&

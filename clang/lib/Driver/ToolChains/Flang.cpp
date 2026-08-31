@@ -384,9 +384,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fcoarray");
 }
 
-void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                          Action::OffloadKind DeviceOffloadKind) const {
   const ToolChain &TC = getToolChain();
-  LTOKind LTOMode = TC.getLTOMode(Args);
+  LTOKind LTOMode = TC.getLTOMode(Args, DeviceOffloadKind);
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
@@ -1347,7 +1348,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
-  addLTOOptions(Args, CmdArgs);
+  addLTOOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
   // -fPIC and related options.
   addPicOptions(Args, CmdArgs);

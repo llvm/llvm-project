@@ -14,8 +14,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -447,6 +449,166 @@ unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
 
 unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
   return getMaxWavesPerEU(getGPUKindFromSubArch(SubArch));
+}
+
+static bool hasFeature(const AMDGPU::TargetID &Target,
+                       AMDGPU::AMDGPUFeature Feature) {
+  return AMDGPU::getFeatureBitset(Target.getGPUKind()).test(Feature);
+}
+
+static AMDGPU::IsaVersion getVersion(const AMDGPU::TargetID &Target) {
+  return AMDGPU::getIsaVersion(AMDGPU::getArchNameAMDGCN(Target.getGPUKind()));
+}
+
+static bool isGFX10Plus(const AMDGPU::TargetID &Target) {
+  return hasFeature(Target, AMDGPU::FEAT_GFX10_INSTS);
+}
+
+static bool hasAccVGPRs(const AMDGPU::TargetID &Target) {
+  return hasFeature(Target, AMDGPU::FEAT_GFX90A_INSTS);
+}
+
+static bool supportsWGP(const AMDGPU::TargetID &Target) {
+  return hasFeature(Target, AMDGPU::FEAT_SUPPORTS_WGP);
+}
+
+static bool hasArchitectedFlatScratch(const AMDGPU::TargetID &Target) {
+  AMDGPU::IsaVersion Version = getVersion(Target);
+  return Version.Major >= 11 || (Version.Major == 9 && Version.Minor >= 4);
+}
+
+static bool isGFX1250(const AMDGPU::TargetID &Target) {
+  const AMDGPU::AMDGPUFeatureBitset &Features =
+      AMDGPU::getFeatureBitset(Target.getGPUKind());
+  return Features.test(AMDGPU::FEAT_GFX1250_INSTS) &&
+         !Features.test(AMDGPU::FEAT_GFX13_INSTS);
+}
+
+// TargetParser does not expose FeatureHalfAddressablePhysicalLocalMemory. It
+// is set on gfx10/11/12, while gfx12.5 and gfx13 imply FEAT_GFX1250_INSTS.
+static bool
+hasHalfAddressablePhysicalLocalMemory(const AMDGPU::TargetID &Target) {
+  return isGFX10Plus(Target) && !hasFeature(Target, AMDGPU::FEAT_GFX1250_INSTS);
+}
+
+// Keep these byte values in sync with
+// AMDGPU::IsaInfo::getLdsDwGranularity().
+static unsigned getLDSAllocationGranularity(const AMDGPU::TargetID &Target) {
+  switch (AMDGPU::getMaxHWAddressableLocalMemorySize(Target.getGPUKind())) {
+  case 32768:
+    return 256;
+  case 65536:
+    return 512;
+  case 163840:
+    return 1280;
+  case 196608:
+    return 1024;
+  case 327680:
+    return 2048;
+  default:
+    return 256;
+  }
+}
+
+static unsigned getObjectLinkingLocalMemorySize(const AMDGPU::TargetID &Target,
+                                                bool FullSIMDMode) {
+  unsigned Size =
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Target.getGPUKind());
+  if (hasHalfAddressablePhysicalLocalMemory(Target))
+    Size *= 2;
+  if (!FullSIMDMode)
+    Size /= 2;
+  return Size;
+}
+
+bool AMDGPU::isObjectLinkingWaveSizeSupported(const TargetID &Target,
+                                              unsigned WaveSize) {
+  if (WaveSize == 32)
+    return hasFeature(Target, FEAT_SUPPORTS_WAVE32);
+  if (WaveSize == 64)
+    return !hasFeature(Target, FEAT_GFX1250_INSTS) ||
+           hasFeature(Target, FEAT_GFX13_INSTS);
+  return false;
+}
+
+static unsigned getVGPREncodingGranule(const AMDGPU::TargetID &Target,
+                                       unsigned WaveSize) {
+  if (hasAccVGPRs(Target))
+    return 8;
+
+  bool IsWave32 = WaveSize == 32;
+  if (isGFX1250(Target)) {
+    assert(IsWave32 && "gfx12.5 only supports wave32");
+    return 16;
+  }
+
+  return IsWave32 ? 8 : 4;
+}
+
+unsigned AMDGPU::getNumExtraSGPRs(const TargetID &Target, bool VCCUsed,
+                                  bool FlatScrUsed) {
+  unsigned ExtraSGPRs = VCCUsed ? 2 : 0;
+  if (isGFX10Plus(Target))
+    return ExtraSGPRs;
+
+  if (!hasFeature(Target, FEAT_GFX8_INSTS)) {
+    if (FlatScrUsed)
+      ExtraSGPRs = 4;
+  } else {
+    if (Target.isXnackOnOrAny())
+      ExtraSGPRs = 4;
+
+    if (FlatScrUsed || hasArchitectedFlatScratch(Target))
+      ExtraSGPRs = 6;
+  }
+
+  return ExtraSGPRs;
+}
+
+static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
+                                               unsigned Granule) {
+  return divideCeil(std::max(1u, NumRegs), Granule);
+}
+
+unsigned AMDGPU::getEncodedNumVGPRBlocks(const TargetID &Target,
+                                         unsigned NumVGPRs, unsigned WaveSize) {
+  return getGranulatedNumRegisterBlocks(
+             NumVGPRs, getVGPREncodingGranule(Target, WaveSize)) -
+         1;
+}
+
+unsigned AMDGPU::getNumSGPRBlocks(unsigned NumSGPRs) {
+  // SGPRBlocks is actual number of SGPR blocks minus 1.
+  return getGranulatedNumRegisterBlocks(NumSGPRs, 8) - 1;
+}
+
+bool AMDGPU::isLDSSizeCompatibleWithOccupancy(const TargetID &Target,
+                                              unsigned WaveSize, bool IsCuMode,
+                                              uint64_t LDSBytes,
+                                              unsigned Occupancy) {
+  assert(Occupancy != 0 && Occupancy <= getMaxWavesPerEU(Target.getGPUKind()) &&
+         "invalid occupancy");
+  assert(WaveSize != 0 && "invalid wave size");
+
+  unsigned AddressableLocalMemorySize =
+      getMaxHWAddressableLocalMemorySize(Target.getGPUKind());
+  uint64_t Granularity = getLDSAllocationGranularity(Target);
+  uint64_t AlignedLDSBytes = alignTo(LDSBytes, Granularity);
+  if (AlignedLDSBytes > AddressableLocalMemorySize)
+    return false;
+
+  bool FullSIMDMode = !supportsWGP(Target) || !IsCuMode;
+  unsigned NumSIMDs = getNumWorkGroupSIMDs(FullSIMDMode);
+
+  uint64_t LocalMemorySize =
+      getObjectLinkingLocalMemorySize(Target, FullSIMDMode);
+
+  uint64_t WavesPerWorkgroup = divideCeil(1024u, WaveSize);
+  uint64_t RequiredWavesPerCU = uint64_t(Occupancy) * NumSIMDs;
+  uint64_t WorkGroupsPerCU =
+      std::max<uint64_t>(divideCeil(RequiredWavesPerCU, WavesPerWorkgroup), 1);
+
+  return AlignedLDSBytes <= LocalMemorySize / WorkGroupsPerCU;
 }
 
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {

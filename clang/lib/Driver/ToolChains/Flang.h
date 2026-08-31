@@ -45,8 +45,10 @@ private:
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
+  /// \param [in] DeviceOffloadKind The offload kind
   void addLTOOptions(const llvm::opt::ArgList &Args,
-                     llvm::opt::ArgStringList &CmdArgs) const;
+                     llvm::opt::ArgStringList &CmdArgs,
+                     Action::OffloadKind DeviceOffloadKind) const;
 
   /// Extract PIC options from the driver arguments and add them to
   /// the command arguments.

@@ -391,11 +391,14 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=gfx906 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=THINLTO-GFX906 %s
-// THINLTO-GFX906: --device-compiler=amdgpu-amd-amdhsa=-flto=thin
-// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-force-import-all
-// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-avail-extern-to-local
-// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3
-// THINLTO-GFX906-SAME: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
+// THINLTO-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
+// THINLTO-GFX906-SAME: "-emit-llvm-bc"
+// THINLTO-GFX906-SAME: "-flto=thin"
+// THINLTO-GFX906-SAME: "-mllvm" "-amdgpu-enable-object-linking"
+// THINLTO-GFX906: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-enable-object-linking
+// THINLTO-GFX906-SAME: --device-compiler=amdgpu-amd-amdhsa=-flto=thin
+// THINLTO-GFX906-NOT: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-force-import-all
+// THINLTO-GFX906-NOT: --device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
@@ -436,7 +439,6 @@
 // RUN:   | FileCheck --check-prefix=PROFILE-SUBARCH %s
 //
 // PROFILE-SUBARCH: clang-linker-wrapper{{.*}}--device-compiler=amdgpu10.30-amd-amdhsa-llvm=-fprofile-generate
-
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

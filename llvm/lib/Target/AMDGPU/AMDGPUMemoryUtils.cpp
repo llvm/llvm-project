@@ -17,6 +17,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -108,6 +110,23 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
     return false;
   }
   return true;
+}
+
+void externalizeLDSGlobalForObjectLinking(GlobalVariable &GV) {
+  assert(GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS);
+  GV.setInitializer(nullptr);
+  GV.setLinkage(GlobalValue::ExternalLinkage);
+  GV.setComdat(nullptr);
+  GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+}
+
+void recordLDSUseForObjectLinking(Function &F, GlobalVariable &GV) {
+  assert(F.getParent() == GV.getParent());
+  externalizeLDSGlobalForObjectLinking(GV);
+  NamedMDNode *LDSMD =
+      F.getParent()->getOrInsertNamedMetadata("amdgpu.lds.uses");
+  LDSMD->addOperand(MDNode::get(
+      F.getContext(), {ValueAsMetadata::get(&F), ValueAsMetadata::get(&GV)}));
 }
 
 bool eliminateGVConstantExprUsesFromAllInstructions(

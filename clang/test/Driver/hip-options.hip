@@ -84,9 +84,13 @@
 // Ensure we don't error about -fwhole-program-vtables for the non-device offload compile.
 // HIPTHINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// HIPTHINLTO: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit" {{.*}} "-fwhole-program-vtables"
+// HIPTHINLTO: "-cc1"{{.*}} "-triple" "amdgpu9.06-amd-amdhsa" {{.*}} "-emit-llvm-bc"
+// HIPTHINLTO-SAME: "-flto=thin"
+// HIPTHINLTO-SAME: "-mllvm" "-amdgpu-enable-object-linking"
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-flto=thin"
+// HIPTHINLTO: clang-linker-wrapper
+// HIPTHINLTO-SAME: "--device-linker=amdgpu-amd-amdhsa=-plugin-opt=-amdgpu-enable-object-linking"
+// HIPTHINLTO-SAME: "--device-compiler=amdgpu-amd-amdhsa=-flto=thin"
 
 // Check -no-canonical-prefixes is propagated correctly.
 

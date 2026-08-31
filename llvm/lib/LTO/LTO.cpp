@@ -62,6 +62,7 @@
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
+#include <limits>
 #include <optional>
 #include <set>
 
@@ -2056,6 +2057,198 @@ ThinBackend lto::createWriteIndexesThinBackend(
   return ThinBackend(Func, Parallelism);
 }
 
+namespace {
+
+/// Values used by the current AMDGPU ThinLTO propagation policy.
+/// A missing waves-per-EU maximum remains target-dependent.
+struct AMDGPUPropagatedFunctionAttrs {
+  CallingConv::ID CC = CallingConv::C;
+  uint32_t FlatWGSizeMin = 1;
+  uint32_t FlatWGSizeMax = 1024;
+  uint32_t WavesPerEUMin = 1;
+  std::optional<uint32_t> WavesPerEUMax;
+  uint32_t MaxNumWGX = std::numeric_limits<uint32_t>::max();
+  uint32_t MaxNumWGY = std::numeric_limits<uint32_t>::max();
+  uint32_t MaxNumWGZ = std::numeric_limits<uint32_t>::max();
+
+  void mergeFrom(const AMDGPUPropagatedFunctionAttrs &Caller) {
+    FlatWGSizeMin = std::min(FlatWGSizeMin, Caller.FlatWGSizeMin);
+    FlatWGSizeMax = std::max(FlatWGSizeMax, Caller.FlatWGSizeMax);
+    WavesPerEUMin = std::max(WavesPerEUMin, Caller.WavesPerEUMin);
+    if (WavesPerEUMax && Caller.WavesPerEUMax)
+      WavesPerEUMax = std::max(*WavesPerEUMax, *Caller.WavesPerEUMax);
+    else
+      WavesPerEUMax = std::nullopt;
+    MaxNumWGX = std::max(MaxNumWGX, Caller.MaxNumWGX);
+    MaxNumWGY = std::max(MaxNumWGY, Caller.MaxNumWGY);
+    MaxNumWGZ = std::max(MaxNumWGZ, Caller.MaxNumWGZ);
+  }
+
+  bool hasValidWavesPerEU() const {
+    return !WavesPerEUMax || WavesPerEUMin <= *WavesPerEUMax;
+  }
+};
+
+using AMDGPUPropagatedAttrsMap =
+    DenseMap<GlobalValue::GUID, AMDGPUPropagatedFunctionAttrs>;
+
+static AMDGPUPropagatedFunctionAttrs
+getAMDGPUPropagatedAttrs(const AMDGPUFunctionSummary &Summary) {
+  AMDGPUPropagatedFunctionAttrs Attrs;
+  Attrs.CC = Summary.CC;
+
+  if (Summary.FlatWorkGroupSize) {
+    Attrs.FlatWGSizeMin = Summary.FlatWorkGroupSize->first;
+    Attrs.FlatWGSizeMax = Summary.FlatWorkGroupSize->second;
+  }
+
+  if (Summary.WavesPerEU) {
+    Attrs.WavesPerEUMin = Summary.WavesPerEU->Min;
+    if (Summary.WavesPerEU->Max)
+      Attrs.WavesPerEUMax = *Summary.WavesPerEU->Max;
+  }
+
+  if (Summary.MaxNumWorkgroups) {
+    Attrs.MaxNumWGX = (*Summary.MaxNumWorkgroups)[0];
+    Attrs.MaxNumWGY = (*Summary.MaxNumWorkgroups)[1];
+    Attrs.MaxNumWGZ = (*Summary.MaxNumWorkgroups)[2];
+  }
+
+  return Attrs;
+}
+
+/// Propagate AMDGPU kernel occupancy attributes (flat-work-group-size,
+/// waves-per-eu, max-num-workgroups) top-down from kernels to device functions
+/// through the combined index call graph. Sets a backend callback on \p Conf
+/// to apply the propagated attributes when each module is compiled.
+static void
+thinLTOPropagateAMDGPUAttributes(const ModuleSummaryIndex &CombinedIndex,
+                                 lto::Config &Conf) {
+  const AMDGPUSummaryMap &AMDGPUSummaries = CombinedIndex.getAMDGPUSummaries();
+  if (AMDGPUSummaries.empty())
+    return;
+
+  LLVM_DEBUG(dbgs() << "AMDGPU ThinLTO: read " << AMDGPUSummaries.size()
+                    << " function summaries\n");
+
+  AMDGPUPropagatedAttrsMap Propagated;
+  SmallVector<GlobalValue::GUID> KernelGUIDs;
+  for (const auto &[GUID, Summary] : AMDGPUSummaries) {
+    if (Summary.CC == CallingConv::AMDGPU_KERNEL) {
+      KernelGUIDs.push_back(GUID);
+      Propagated[GUID] = getAMDGPUPropagatedAttrs(Summary);
+    }
+  }
+
+  // Per-kernel BFS: propagate each kernel's constraints to all reachable
+  // callees. When a callee is reached by multiple kernels, merge
+  // conservatively. Callees are initialized from the first reaching
+  // kernel (not from their own defaults) to avoid loose defaults
+  // diluting the propagated constraints.
+  for (GlobalValue::GUID KernelGUID : KernelGUIDs) {
+    auto KIt = AMDGPUSummaries.find(KernelGUID);
+    if (KIt == AMDGPUSummaries.end())
+      continue;
+    const AMDGPUPropagatedFunctionAttrs KernelAttrs =
+        getAMDGPUPropagatedAttrs(KIt->second);
+
+    SmallVector<GlobalValue::GUID> Worklist;
+    DenseSet<GlobalValue::GUID> Visited;
+    Worklist.push_back(KernelGUID);
+    Visited.insert(KernelGUID);
+
+    for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
+      GlobalValue::GUID CurGUID = Worklist[Idx];
+      ValueInfo VI = CombinedIndex.getValueInfo(CurGUID);
+      if (!VI)
+        continue;
+
+      for (const auto &Summary : VI.getSummaryList()) {
+        auto *FS = dyn_cast<FunctionSummary>(Summary->getBaseObject());
+        if (!FS)
+          continue;
+        for (const auto &Edge : FS->calls()) {
+          GlobalValue::GUID CalleeGUID = Edge.first.getGUID();
+          if (!Visited.insert(CalleeGUID).second)
+            continue;
+          Worklist.push_back(CalleeGUID);
+
+          auto [It, Inserted] = Propagated.try_emplace(CalleeGUID);
+          if (Inserted) {
+            auto CalleeIt = AMDGPUSummaries.find(CalleeGUID);
+            if (CalleeIt != AMDGPUSummaries.end())
+              It->second = getAMDGPUPropagatedAttrs(CalleeIt->second);
+            else
+              It->second = KernelAttrs;
+          }
+          It->second.mergeFrom(KernelAttrs);
+        }
+      }
+    }
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "AMDGPU ThinLTO: propagated to " << Propagated.size()
+           << " functions\n";
+    for (auto &[GUID, Attrs] : Propagated) {
+      dbgs() << "  GUID=" << GUID << " flat_wg=[" << Attrs.FlatWGSizeMin << ","
+             << Attrs.FlatWGSizeMax << "]"
+             << " waves=[" << Attrs.WavesPerEUMin << ",";
+      if (Attrs.WavesPerEUMax)
+        dbgs() << *Attrs.WavesPerEUMax;
+      else
+        dbgs() << "target";
+      dbgs() << "]"
+             << " max_wg=[" << Attrs.MaxNumWGX << "," << Attrs.MaxNumWGY << ","
+             << Attrs.MaxNumWGZ << "]"
+             << (Attrs.CC == CallingConv::AMDGPU_KERNEL ? " [kernel]" : "")
+             << "\n";
+    }
+  });
+
+  auto PropagatedPtr =
+      std::make_shared<AMDGPUPropagatedAttrsMap>(std::move(Propagated));
+  Conf.ApplyThinLTOAttributes = [PropagatedPtr](unsigned /*Task*/, Module &M) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      auto It = PropagatedPtr->find(F.getGUID());
+      if (It == PropagatedPtr->end())
+        continue;
+      const AMDGPUPropagatedFunctionAttrs &Attrs = It->second;
+
+      if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
+        continue;
+
+      if (!Attrs.hasValidWavesPerEU()) {
+        F.getContext().emitError(
+            "amdgpu ThinLTO: contradictory waves-per-eu constraints "
+            "propagated to function '" +
+            F.getName() + "': min=" + Twine(Attrs.WavesPerEUMin) +
+            " > max=" + Twine(*Attrs.WavesPerEUMax));
+        continue;
+      }
+
+      std::string Val;
+      Val = std::to_string(Attrs.FlatWGSizeMin) + "," +
+            std::to_string(Attrs.FlatWGSizeMax);
+      F.addFnAttr("amdgpu-flat-work-group-size", Val);
+
+      Val = std::to_string(Attrs.WavesPerEUMin);
+      if (Attrs.WavesPerEUMax)
+        Val += "," + std::to_string(*Attrs.WavesPerEUMax);
+      F.addFnAttr("amdgpu-waves-per-eu", Val);
+
+      Val = std::to_string(Attrs.MaxNumWGX) + "," +
+            std::to_string(Attrs.MaxNumWGY) + "," +
+            std::to_string(Attrs.MaxNumWGZ);
+      F.addFnAttr("amdgpu-max-num-workgroups", Val);
+    }
+  };
+}
+
+} // end anonymous namespace
+
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   llvm::TimeTraceScope timeScope("Run ThinLTO");
@@ -2245,6 +2438,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                                   recordNewLinkage, GUIDPreservedSymbols);
 
   thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
+
+  thinLTOPropagateAMDGPUAttributes(ThinLTO.CombinedIndex, Conf);
 
   generateParamAccessSummary(ThinLTO.CombinedIndex);
 

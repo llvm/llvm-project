@@ -20,6 +20,7 @@ endif()
 
 add_lld_library(lldELF
   AArch64ErrataFix.cpp
+  AMDGPUObjectLinking.cpp
   Arch/AArch64.cpp
   Arch/AMDGPU.cpp
   Arch/ARM.cpp

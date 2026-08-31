@@ -23,7 +23,6 @@ class MCSymbol;
 class formatted_raw_ostream;
 
 namespace AMDGPU {
-
 struct AMDGPUMCKernelCodeT;
 struct MCKernelDescriptor;
 namespace HSAMD {
@@ -35,6 +34,9 @@ struct FuncInfo {
   uint32_t NumArchVGPR = 0;
   uint32_t NumAccVGPR = 0;
   uint32_t PrivateSegmentSize = 0;
+  uint32_t Occupancy = 0;
+  bool UsesWgpMode = false;
+  bool UsesWave32 = false;
   bool UsesVCC = false;
   bool UsesFlatScratch = false;
   bool HasDynStack = false;

@@ -264,6 +264,11 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
     return getType() == ELF::STT_COMMON || st_shndx == ELF::SHN_COMMON;
   }
 
+  bool isCommon(uint16_t EMachine) const {
+    return isCommon() ||
+           (EMachine == ELF::EM_AMDGPU && st_shndx == ELF::SHN_AMDGPU_LDS);
+  }
+
   bool isDefined() const { return !isUndefined(); }
 
   bool isProcessorSpecific() const {

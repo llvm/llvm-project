@@ -26,6 +26,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,6 +46,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
@@ -1633,7 +1636,17 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
       Mod, GVTy, false, GlobalValue::InternalLinkage, PoisonValue::get(GVTy),
       Twine(F->getName()) + Twine('.') + AA.Alloca->getName(), nullptr,
       GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
-  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    if (F->hasLocalLinkage()) {
+      std::string ModuleId = getUniqueModuleId(&Mod);
+      assert(!ModuleId.empty() &&
+             "modules with promoted LDS allocas should have a unique ID");
+      GV->setName(GV->getName() + ModuleId);
+    }
+    AMDGPU::recordLDSUseForObjectLinking(*F, *GV);
+  } else {
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  }
   GV->setAlignment(AA.Alloca->getAlign());
 
   Value *TCntY, *TCntZ;

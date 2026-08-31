@@ -514,8 +514,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
-  Kern[".wavefront_size"] =
-      Kern.getDocument()->getNode(STM.getWavefrontSize());
+  Kern[".wavefront_size"] = Kern.getDocument()->getNode(STM.getWavefrontSize());
   DelayedExprs->assignDocNode(Kern[".sgpr_count"], msgpack::Type::UInt,
                               ProgramInfo.NumSGPR);
   DelayedExprs->assignDocNode(Kern[".vgpr_count"], msgpack::Type::UInt,

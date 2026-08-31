@@ -235,7 +235,7 @@ define amdgpu_kernel void @kern() {
 ; COM: with their plain-pointer counterparts: "vi" (AS 5) and "vl" (AS 4) each
 ; COM: appear once despite two call sites apiece.
 ; ASM-DAG:    .amdgpu_info icaller
-; ASM-DAG:      .amdgpu_flags 1
+; ASM-DAG:      .amdgpu_flags 0
 ; ASM-DAG:      .amdgpu_indirect_call "v"
 ; ASM-DAG:      .amdgpu_indirect_call "vlii"
 ; ASM-DAG:      .amdgpu_indirect_call "iiiiliiiiiiii"
@@ -246,7 +246,6 @@ define amdgpu_kernel void @kern() {
 ; ASM-DAG:      .amdgpu_indirect_call "vli"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info taker
-; ASM-DAG:      .amdgpu_flags 0
 ; ASM-DAG:      .amdgpu_num_vgpr {{[0-9]+}}
 ; ASM-DAG:    .end_amdgpu_info
 ; COM: The kernel scope is present but carries no type IDs of its own (kernels

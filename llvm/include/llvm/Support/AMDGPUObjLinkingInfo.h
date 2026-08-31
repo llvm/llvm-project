@@ -58,6 +58,9 @@ enum class InfoKind : uint8_t {
   /// string (at the given `.amdgpu.strtab` offset) so the linker can match
   /// it against INFO_INDIRECT_CALL entries.  [u32]
   INFO_TYPEID = 10,
+  /// Occupancy used to compile the function.
+  /// [u32]
+  INFO_OCCUPANCY = 11,
 };
 
 /// Per-function flags packed into INFO_FLAGS entries.
@@ -65,7 +68,11 @@ enum class FuncInfoFlags : uint32_t {
   FUNC_USES_VCC = 1U << 0,
   FUNC_USES_FLAT_SCRATCH = 1U << 1,
   FUNC_HAS_DYN_STACK = 1U << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_HAS_DYN_STACK),
+  /// Function uses WGP mode. If unset, the function uses CU mode.
+  FUNC_WGP_MODE = 1U << 3,
+  /// Function uses wave32. If unset, the function uses wave64.
+  FUNC_WAVE32 = 1U << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_WAVE32),
 };
 
 } // namespace AMDGPU
