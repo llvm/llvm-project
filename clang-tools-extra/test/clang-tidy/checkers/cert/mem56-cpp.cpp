@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t -- -config="{CheckOptions: {bugprone-smart-ptr-initialization.StrictMode: 'true'}}"
+// RUN: %check_clang_tidy -check-suffix=STRICT -std=c++11-or-later %s cert-mem56-cpp %t -- -config="{CheckOptions: {cert-mem56-cpp.StrictMode: 'true'}}"
+// RUN: %check_clang_tidy -check-suffix=PERMISSIVE -std=c++11-or-later %s cert-mem56-cpp %t -- -config="{CheckOptions: {cert-mem56-cpp.StrictMode: 'false'}}"
 #include <memory>
 
 namespace std {
@@ -24,9 +25,10 @@ std::shared_ptr<T>
 void f0() {
   int *i = new int;
   std::shared_ptr<int> p1(i);
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
   std::shared_ptr<int> p2(i);
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
+// CHECK-MESSAGES-STRICT: :[[@LINE-2]]:27: warning: passing a raw pointer 'int*' to 'std::shared_ptr<int>' constructor may cause double deletion
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -53,7 +55,8 @@ void f2() {
   std::shared_ptr<B> poly(new D);
   // ...
   g(std::shared_ptr<D>(dynamic_cast<D *>(poly.get())));
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer 'D*' to 'std::shared_ptr<D>' constructor may cause double deletion
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:24: warning: passing a raw pointer 'D*' to 'std::shared_ptr<D>' constructor may cause double deletion
+  // // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:24: warning: passing a raw pointer 'D*' to 'std::shared_ptr<D>' constructor may cause double deletion
   // Any use of poly will now result in accessing freed memory.
 }
 
@@ -73,7 +76,8 @@ void f3() {
 // ╚══════════════════════════════════════════════════════════════╝
 struct S1 {
   std::shared_ptr<S1> g() { return std::shared_ptr<S1>(this); }
-  // CHECK-MESSAGES: :[[@LINE-1]]:56: warning: passing a raw pointer 'S1*' to 'std::shared_ptr<S1>' constructor may cause double deletion
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:56: warning: passing a raw pointer 'S1*' to 'std::shared_ptr<S1>' constructor may cause double deletion
+// CHECK-MESSAGES-STRICT: :[[@LINE-2]]:56: warning: passing a raw pointer 'S1*' to 'std::shared_ptr<S1>' constructor may cause double deletion
 };
 
 void f4() {
