@@ -104,6 +104,10 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
+static cl::opt<bool> DisableRewriteMFMACostCheck(
+    "amdgpu-disable-rewrite-mfma-cost-check", cl::Hidden,
+    cl::desc("Always accept MFMA rewrite regardless of cost"), cl::init(false));
+
 namespace {
 
 struct VGPRThresholdParser : public cl::parser<unsigned> {
@@ -1410,7 +1414,7 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
 
   // If we haven't found the beneficial conditions, prefer the VGPR form which
   // may result in less cross RC copies.
-  if (Cost > 0)
+  if (Cost > 0 && !DisableRewriteMFMACostCheck)
     return false;
 
   return rewrite(RewriteCands);
@@ -2316,18 +2320,20 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
 }
 
 /// Returns true if reaching def \p RD will be in AGPR form after the rewrite
-/// and so needs no bridge copy: a candidate MFMA in \p RewriteSet, an
-/// AV_MOV_*_IMM_PSEUDO, or a copy from a candidate src2 reg in \p CandSrc2Regs.
-/// A non-candidate MFMA stays in VGPR form and still needs a bridge.
+/// and so needs no bridge copy.
 static bool isReachingDefAGPRForm(
     MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
     const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
     return RewriteSet.contains(RD);
-  if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
-      RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
-    return true;
   if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
+    return true;
+  // Instructions whose def operand accepts AGPR (DS_READ, AV_MOV, etc.)
+  // will produce AGPR after reclassification - no bridge copy needed.
+  const SIRegisterInfo &SRI =
+      static_cast<const SIRegisterInfo &>(TII.getRegisterInfo());
+  const TargetRegisterClass *DefRC = TII.getRegClass(RD->getDesc(), 0);
+  if (DefRC && (SRI.isAGPRClass(DefRC) || SRI.isVectorSuperClass(DefRC)))
     return true;
   return false;
 }
@@ -2341,14 +2347,25 @@ bool RewriteMFMAFormStage::hasUseRequiringVGPR(
     findReachingUses(RD, DAG.LIS, ReachingUses);
     for (const MachineOperand *UseMO : ReachingUses) {
       const MachineInstr *UseMI = UseMO->getParent();
-      if (UseMI->isCopy())
-        continue;
       if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
+        continue;
+      if (operandAcceptsAGPR(*UseMI, UseMO->getOperandNo()))
         continue;
       return true;
     }
   }
   return false;
+}
+
+bool RewriteMFMAFormStage::operandAcceptsAGPR(const MachineInstr &MI,
+                                              unsigned OpIdx) const {
+  // Conservatively consider inline asm as not accepting AGPR.
+  if (MI.isInlineAsm())
+    return false;
+  const TargetRegisterClass *RC = TII->getRegClass(MI.getDesc(), OpIdx);
+  if (!RC)
+    return true;
+  return SRI->isAGPRClass(RC) || SRI->isVectorSuperClass(RC);
 }
 
 void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
@@ -2696,14 +2713,23 @@ bool RewriteMFMAFormStage::rewrite(
       // AGPR.
       bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
 
+      SmallVector<MachineInstr *, 4> Src2AGPRDefs;
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
         if (!Src2NeedsVGPR &&
-            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
+            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII)) {
+          Src2AGPRDefs.push_back(RD);
           continue;
+        }
 
         Src2DefsReplace.insert(RD);
       }
+
+      // If a split will happen, AGPR-form defs also need bridge copies so
+      // that NewReg is defined on all paths.
+      if (!Src2DefsReplace.empty())
+        for (MachineInstr *RD : Src2AGPRDefs)
+          Src2DefsReplace.insert(RD);
 
       if (!Src2DefsReplace.empty()) {
         auto RI = RedefMap.find(Src2Reg);
