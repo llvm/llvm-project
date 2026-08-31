@@ -98,6 +98,7 @@ public:
     xtensa,         // Tensilica: Xtensa
     nvptx,          // NVPTX: 32-bit
     nvptx64,        // NVPTX: 64-bit
+    pisa,           // PISA: Intel GPU portable ISA (64-bit)
     amdil,          // AMDIL
     amdil64,        // AMDIL with 64-bit pointers
     hsail,          // AMD HSAIL
@@ -986,6 +987,9 @@ public:
   bool isNVPTX() const {
     return getArch() == Triple::nvptx || getArch() == Triple::nvptx64;
   }
+
+  /// Tests whether the target is PISA (64-bit only).
+  bool isPISA() const { return getArch() == Triple::pisa; }
 
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgpu; }
