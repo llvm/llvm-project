@@ -17,6 +17,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestAST.h"

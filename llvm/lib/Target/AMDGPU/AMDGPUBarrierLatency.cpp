@@ -26,6 +26,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
 
@@ -44,17 +45,22 @@ private:
 public:
   BarrierLatency(MachineFunction *MF) {
     LLVMContext &Context = MF->getFunction().getContext();
+    const Triple &TT = MF->getSubtarget<GCNSubtarget>().getTargetTriple();
+    auto ScopeID = [&](AtomicScope Scope, bool OneAS) {
+      return Context.getOrInsertSyncScopeID(
+          *getAtomicScopeIRString(TT, Scope, OneAS));
+    };
     IgnoredScopes.insert(SyncScope::SingleThread);
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/false));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/true));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Single, /*OneAS=*/true));
 
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
     bool TgSplit =
         ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF->getFunction());
     if (!ST.requiresWaitOnWorkgroupReleaseFence(TgSplit)) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
-      IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
+      IgnoredScopes.insert(ScopeID(AtomicScope::Workgroup, /*OneAS=*/false));
     }
   }
   void apply(ScheduleDAGInstrs *DAG) override;
@@ -132,9 +138,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         }
       }
     } else if (TII->isLDSDMA(*MI)) {
-      if (MI->getDesc().TSFlags & SIInstrFlags::TENSOR_CNT)
+      if (SIInstrFlags::usesTENSOR_CNT(*MI))
         RegionTDM.push_back(&SU);
-      else if (MI->getDesc().TSFlags & SIInstrFlags::ASYNC_CNT)
+      else if (SIInstrFlags::usesASYNC_CNT(*MI))
         RegionAsync.push_back(&SU);
     } else if (Op == AMDGPU::S_WAIT_TENSORCNT ||
                Op == AMDGPU::S_WAIT_ASYNCCNT) {
@@ -164,12 +170,8 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
           continue;
 
         Register DepReg = PredDep.getReg();
-        Register LDSDMACnt = AMDGPU::TENSORcnt;
-        uint64_t LDSDMAFlags = SIInstrFlags::TENSOR_CNT;
-        if (Op == AMDGPU::S_WAIT_ASYNCCNT) {
-          LDSDMACnt = AMDGPU::ASYNCcnt;
-          LDSDMAFlags = SIInstrFlags::ASYNC_CNT;
-        }
+        bool IsAsync = Op == AMDGPU::S_WAIT_ASYNCCNT;
+        Register LDSDMACnt = IsAsync ? AMDGPU::ASYNCcnt : AMDGPU::TENSORcnt;
 
         if (DepReg != LDSDMACnt)
           continue;
@@ -179,7 +181,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         // The data dep can be carried by a non-LDSDMA SU
         // (e.g. an intervening COPY or pseudo). Such predecessors are not
         // tracked, so needWaitFor cannot reason about them.
-        if (!(PredSU->getInstr()->getDesc().TSFlags & LDSDMAFlags))
+        const MachineInstr &PredMI = *PredSU->getInstr();
+        if (IsAsync ? !SIInstrFlags::usesASYNC_CNT(PredMI)
+                    : !SIInstrFlags::usesTENSOR_CNT(PredMI))
           continue;
 
         if (!needWaitFor(Op == AMDGPU::S_WAIT_ASYNCCNT ? RegionAsync

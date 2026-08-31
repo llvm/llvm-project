@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getrusage
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getrusage
+)
+
+add_entrypoint_object(
   setrlimit
   ALIAS
   DEPENDS
