@@ -1094,3 +1094,29 @@ add_header_library(
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )
+
+add_header_library(
+  getpriority
+  HDRS
+    getpriority.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  setpriority
+  HDRS
+    setpriority.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
