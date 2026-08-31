@@ -155,6 +155,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::LogicalAbbreviations);
   disable_.set(LanguageFeature::XOROperator);
   disable_.set(LanguageFeature::OldStyleParameter);
+  disable_.set(LanguageFeature::ImplicitModulePrefix);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);
@@ -228,6 +229,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnUsage_.set(UsageWarning::BOZLiteralTruncation);
+  warnUsage_.set(UsageWarning::MissingModulePrefix);
   warnLanguage_.set(LanguageFeature::PreferIntrinsicModuleUseAssociation);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
