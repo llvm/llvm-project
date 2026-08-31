@@ -53,7 +53,6 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <optional>

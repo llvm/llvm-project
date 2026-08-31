@@ -24,7 +24,6 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
