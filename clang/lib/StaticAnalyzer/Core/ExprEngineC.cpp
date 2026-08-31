@@ -849,8 +849,13 @@ void ExprEngine::VisitStmtExpr(const StmtExpr *S, ExplodedNode *Pred,
   Dst.insert(Pred);
 }
 
-void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
+void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst) {
+  // FIXME: Prechecks eventually go in ::Visit().
+  ExplodedNodeSet CheckedSet;
+  getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, U, *this);
+
+  ExplodedNodeSet EvalSet;
 
   // Lambda for handling the case when the operand is returned unchanged.
   auto MakeNodeForIdentityOp = [U, &Engine = Engine](ExplodedNode *N) {
@@ -859,11 +864,12 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
     return Engine.makeNodeWithBinding(N, U, SV);
   };
 
-  auto VisitUnaryOperatorImpl = [U, Pred, &Engine = Engine, this,
-                                 MakeNodeForIdentityOp](ExplodedNodeSet &Dst) {
+  for (ExplodedNode *N : CheckedSet) {
     switch (U->getOpcode()) {
     default: {
-      VisitIncrementDecrementOperator(U, Pred, Dst);
+      ExplodedNodeSet Tmp;
+      VisitIncrementDecrementOperator(U, N, Tmp);
+      EvalSet.insert(Tmp);
       break;
     }
     case UO_Real: {
@@ -872,13 +878,13 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
       // FIXME: We don't have complex SValues yet.
       if (Ex->getType()->isAnyComplexType()) {
         // Just report "Unknown."
-        Dst.insert(Pred);
+        EvalSet.insert(N);
         break;
       }
 
       // For all other types, UO_Real is an identity operation.
       assert (U->getType() == Ex->getType());
-      Dst.insert(MakeNodeForIdentityOp(Pred));
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
 
@@ -887,12 +893,12 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
       // FIXME: We don't have complex SValues yet.
       if (Ex->getType()->isAnyComplexType()) {
         // Just report "Unknown."
-        Dst.insert(Pred);
+        EvalSet.insert(N);
         break;
       }
       // For all other types, UO_Imag returns 0.
       SVal X = svalBuilder.makeZeroVal(Ex->getType());
-      Dst.insert(Engine.makeNodeWithBinding(Pred, U, X));
+      EvalSet.insert(Engine.makeNodeWithBinding(N, U, X));
       break;
     }
 
@@ -904,12 +910,12 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
 
         if (isa<CXXMethodDecl, FieldDecl, IndirectFieldDecl>(VD)) {
           SVal SV = svalBuilder.getMemberPointer(cast<NamedDecl>(VD));
-          Dst.insert(Engine.makeNodeWithBinding(Pred, U, SV));
+          EvalSet.insert(Engine.makeNodeWithBinding(N, U, SV));
           break;
         }
       }
       // Explicitly proceed with default handler for this case cascade.
-      Dst.insert(MakeNodeForIdentityOp(Pred));
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
     case UO_Plus:
@@ -917,7 +923,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
       [[fallthrough]];
     case UO_Deref:
     case UO_Extension: {
-      Dst.insert(MakeNodeForIdentityOp(Pred));
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
 
@@ -926,62 +932,57 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator *U, ExplodedNode *Pred,
     case UO_Not: {
       assert (!U->isGLValue());
       const Expr *Ex = U->getSubExpr()->IgnoreParens();
-      ProgramStateRef state = Pred->getState();
-      const StackFrame *SF = Pred->getStackFrame();
+      ProgramStateRef state = N->getState();
+      const StackFrame *SF = N->getStackFrame();
 
       // Get the value of the subexpression.
       SVal V = state->getSVal(Ex, SF);
 
       if (V.isUnknownOrUndef()) {
-        Dst.insert(Engine.makeNodeWithBinding(Pred, U, V));
+        EvalSet.insert(Engine.makeNodeWithBinding(N, U, V));
         break;
       }
 
       switch (U->getOpcode()) {
-      default:
-        llvm_unreachable("Invalid Opcode.");
-      case UO_Not:
-        // FIXME: Do we need to handle promotions?
-        state = state->BindExpr(U, SF,
-                                svalBuilder.evalComplement(V.castAs<NonLoc>()));
-        break;
-      case UO_Minus:
-        // FIXME: Do we need to handle promotions?
-        state =
-            state->BindExpr(U, SF, svalBuilder.evalMinus(V.castAs<NonLoc>()));
-        break;
-      case UO_LNot:
-        // C99 6.5.3.3: "The expression !E is equivalent to (0==E)."
-        //
-        //  Note: technically we do "E == 0", but this is the same in the
-        //    transfer functions as "0 == E".
-        SVal Result;
-        if (std::optional<Loc> LV = V.getAs<Loc>()) {
+        default:
+          llvm_unreachable("Invalid Opcode.");
+        case UO_Not:
+          // FIXME: Do we need to handle promotions?
+          state = state->BindExpr(
+              U, SF, svalBuilder.evalComplement(V.castAs<NonLoc>()));
+          break;
+        case UO_Minus:
+          // FIXME: Do we need to handle promotions?
+          state =
+              state->BindExpr(U, SF, svalBuilder.evalMinus(V.castAs<NonLoc>()));
+          break;
+        case UO_LNot:
+          // C99 6.5.3.3: "The expression !E is equivalent to (0==E)."
+          //
+          //  Note: technically we do "E == 0", but this is the same in the
+          //    transfer functions as "0 == E".
+          SVal Result;
+          if (std::optional<Loc> LV = V.getAs<Loc>()) {
           Loc X = svalBuilder.makeNullWithType(Ex->getType());
           Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
-        } else if (Ex->getType()->isFloatingType()) {
+          } else if (Ex->getType()->isFloatingType()) {
           // FIXME: handle floating point types.
           Result = UnknownVal();
-        } else {
+          } else {
           nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
           Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X, U->getType());
-        }
+          }
 
-        state = state->BindExpr(U, SF, Result);
-        break;
+          state = state->BindExpr(U, SF, Result);
+          break;
       }
-      Dst.insert(Engine.makePostStmtNode(U, state, Pred));
+      EvalSet.insert(Engine.makePostStmtNode(U, state, N));
       break;
     }
     }
-  };
+  }
 
-  if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
-    ExplodedNodeSet Tmp;
-    VisitUnaryOperatorImpl(Tmp);
-    evalEagerlyAssumeBifurcation(Dst, Tmp, U);
-  } else
-    VisitUnaryOperatorImpl(Dst);
+  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, U, *this);
 }
 
 void ExprEngine::VisitPseudoObjectExpr(const PseudoObjectExpr *PE,

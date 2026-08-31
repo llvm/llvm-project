@@ -1109,7 +1109,8 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   switch (S->getStmtClass()) {
 
-  default: return true;
+  default:
+    return true;
 
   // FIXME: Does not call checkers
   case Stmt::GNUNullExprClass:
@@ -1226,6 +1227,10 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call checkers
   case Stmt::StmtExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic in this case
+  case Stmt::UnaryOperatorClass:
     return false;
 
   // FIXME: Does not call checkers
@@ -2351,9 +2356,17 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitStmtExpr(cast<StmtExpr>(S), Pred, Dst);
       break;
 
-    case Stmt::UnaryOperatorClass:
-      VisitUnaryOperator(cast<UnaryOperator>(S), Pred, Dst);
+    case Stmt::UnaryOperatorClass: {
+      const auto *U = cast<UnaryOperator>(S);
+      if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
+        ExplodedNodeSet Tmp;
+        VisitUnaryOperator(U, Pred, Tmp);
+        evalEagerlyAssumeBifurcation(Dst, Tmp, U);
+      }
+      else
+        VisitUnaryOperator(U, Pred, Dst);
       break;
+    }
 
     case Stmt::PseudoObjectExprClass:
       VisitPseudoObjectExpr(cast<PseudoObjectExpr>(S), Pred, Dst);
