@@ -250,16 +250,14 @@ locateModuleReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
     if (!Imported || !Imported->isNamedModule() || IdentifierLocs.empty())
       continue;
 
-    std::string Name = Imported->getFullModuleName();
-    if (auto Colon = Name.find(':'); Colon != std::string::npos)
-      Name.erase(0, Colon + 1);
-    if (Name.empty())
-      continue;
-
-    const size_t NameSize = static_cast<int>(Name.size() - 1);
-
     const SourceLocation NameBegin = SM.getSpellingLoc(IdentifierLocs.front());
-    const SourceLocation NameEnd = NameBegin.getLocWithOffset(NameSize);
+    // Imports are visited in source order; bail out once we pass the cursor.
+    if (SM.isBeforeInTranslationUnit(TouchedIdentifier.location(), NameBegin))
+      break;
+
+    const std::string FullName = Imported->getFullModuleName();
+    const SourceLocation NameEnd =
+        NameBegin.getLocWithOffset(FullName.size() - 1);
 
     if (SM.isPointWithin(TouchedIdentifier.location(), NameBegin, NameEnd)) {
       ResultModule = Imported;
