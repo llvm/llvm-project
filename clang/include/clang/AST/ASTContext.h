@@ -4072,7 +4072,7 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
 
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
 
   static bool isEqual(const FoldingSetNodeID &LHS,
@@ -4082,13 +4082,13 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
 };
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
   static unsigned getHashValue(FoldingSetNodeIDRef Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
   static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
   }
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
   static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;

@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 
@@ -178,7 +179,7 @@ public:
   // The hash value is not guaranteed to be deterministic across processes.
   // Never returns NotAHash: FoldingSetBase reserves it for the empty insert
   // token and for a node belonging to no set.
-  unsigned ComputeHash() const {
+  unsigned computeHash() const {
     unsigned Hash =
         static_cast<unsigned>(hash_combine_range(Data, Data + Size));
     return Hash == NotAHash ? 1 : Hash;
@@ -191,7 +192,10 @@ public:
         reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
   }
 
-  LLVM_ABI bool operator==(FoldingSetNodeIDRef) const;
+  bool operator==(FoldingSetNodeIDRef RHS) const {
+    return Size == RHS.Size &&
+           memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
+  }
 
   bool operator!=(FoldingSetNodeIDRef RHS) const { return !(*this == RHS); }
 
@@ -257,8 +261,8 @@ public:
   // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
   // node in the FoldingSetBase. The hash value is not guaranteed to be
   // deterministic across processes.
-  unsigned ComputeHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
+  unsigned computeHash() const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeHash();
   }
 
   // Compute a deterministic hash value across processes that is suitable for
@@ -268,8 +272,12 @@ public:
   }
 
   /// operator== - Used to compare two nodes to each other.
-  LLVM_ABI bool operator==(const FoldingSetNodeID &RHS) const;
-  LLVM_ABI bool operator==(const FoldingSetNodeIDRef RHS) const;
+  bool operator==(const FoldingSetNodeID &RHS) const {
+    return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
+  }
+  bool operator==(const FoldingSetNodeIDRef RHS) const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
+  }
 
   bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
   bool operator!=(const FoldingSetNodeIDRef RHS) const {
@@ -376,7 +384,7 @@ protected:
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  LLVM_ABI bool RemoveNode(Node *N);
+  LLVM_ABI bool erase(Node *N);
 
   /// Walk the probe chain for \p Hash, offering each node whose cached hash
   /// matches to \p IsMatch. \p IsMatch is a template parameter so that it, and
@@ -401,17 +409,6 @@ protected:
   /// already in the folding set.  \p Token must come from lookup for an ID that
   /// \p N profiles identically to.
   LLVM_ABI void insert(Node *N, FoldingSetInsertToken Token);
-  LLVM_ABI void InsertNode(Node *N, void *InsertPos);
-
-  /// Convert between a token and the opaque InsertPos of the legacy API. The
-  /// empty token is null, so decoding null asserts as InsertNode requires.
-  static void *encodeInsertPos(FoldingSetInsertToken Token) {
-    return reinterpret_cast<void *>(static_cast<uintptr_t>(Token.Hash));
-  }
-  static FoldingSetInsertToken decodeInsertPos(void *InsertPos) {
-    return FoldingSetInsertToken(
-        static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos)));
-  }
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -489,8 +486,7 @@ public:
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  bool erase(T *N) { return FoldingSetBase::RemoveNode(N); }
-  bool RemoveNode(T *N) { return erase(N); }
+  bool erase(T *N) { return FoldingSetBase::erase(N); }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -506,20 +502,13 @@ public:
     FoldingSetBase::insert(N, Token);
     return N;
   }
-  T *GetOrInsertNode(T *N) { return getOrInsert(N); }
 
   /// Look up the node specified by ID. If it exists, return it and clear
   /// \p Token; otherwise return null and set \p Token for a subsequent insert.
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return static_cast<T *>(
-        probe(ID.ComputeHash(), Token,
+        probe(ID.computeHash(), Token,
               [&](FoldingSetNode *N) { return nodeEquals(N, ID); }));
-  }
-  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
-    FoldingSetInsertToken Token;
-    T *N = lookup(ID, Token);
-    InsertPos = encodeInsertPos(Token);
-    return N;
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -527,9 +516,6 @@ public:
   /// \p N profiles identically to.
   void insert(T *N, FoldingSetInsertToken Token) {
     FoldingSetBase::insert(N, Token);
-  }
-  void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos);
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -539,7 +525,6 @@ public:
     (void)Inserted;
     assert(Inserted == N && "Node already inserted!");
   }
-  void InsertNode(T *N) { insert(N); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -599,9 +584,6 @@ public:
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return Set.lookup(ID, Token);
   }
-  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
-    return Set.FindNodeOrInsertPos(ID, InsertPos);
-  }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -611,17 +593,12 @@ public:
       Vector.push_back(N);
     return Result;
   }
-  T *GetOrInsertNode(T *N) { return getOrInsert(N); }
 
   /// Insert the specified node into the folding set, knowing that it is not
   /// already in the folding set.  \p Token must come from lookup for an ID that
   /// \p N profiles identically to.
   void insert(T *N, FoldingSetInsertToken Token) {
     Set.insert(N, Token);
-    Vector.push_back(N);
-  }
-  void InsertNode(T *N, void *InsertPos) {
-    Set.InsertNode(N, InsertPos);
     Vector.push_back(N);
   }
 
@@ -631,7 +608,6 @@ public:
     Set.insert(N);
     Vector.push_back(N);
   }
-  void InsertNode(T *N) { insert(N); }
 
   /// Returns the number of nodes in the folding set.
   unsigned size() const { return Set.size(); }
