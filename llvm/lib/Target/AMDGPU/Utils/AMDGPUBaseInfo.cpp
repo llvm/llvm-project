@@ -1368,8 +1368,6 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs) {
 unsigned getVGPRAllocGranule(const MCSubtargetInfo &STI,
                              unsigned DynamicVGPRBlockSize,
                              std::optional<bool> EnableWavefrontSize32) {
-  // Tested first: the gfx90a+ granule is fixed and dynamic VGPR mode, which is
-  // otherwise the granule, does not override it.
   if (STI.getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
@@ -1380,7 +1378,13 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo &STI,
                       ? *EnableWavefrontSize32
                       : STI.getFeatureBits().test(FeatureWavefrontSize32);
 
-  return AMDGPU::getVGPRAllocGranule(parseArchAMDGCN(STI.getCPU()), IsWave32);
+  if (STI.getFeatureBits().test(Feature1536VGPRs))
+    return IsWave32 ? 24 : 12;
+
+  if (hasGFX10_3Insts(STI))
+    return IsWave32 ? 16 : 8;
+
+  return IsWave32 ? 8 : 4;
 }
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,

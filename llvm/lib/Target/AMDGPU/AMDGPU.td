@@ -3198,6 +3198,7 @@ def WaveSizeVT : ValueTypeByHwMode<[
 // the backend.
 def AMDGPUFrontendVisibleFeatures {
   list<SubtargetFeature> Features = [
+  Feature1536VGPRs,
   Feature16BitInsts, FeatureAddMinMaxInsts, FeatureAshrPkInsts,
   FeatureAsyncLoadToLDSInsts, FeatureAsyncStoreFromLDSInsts, FeatureAsynccnt,
   FeatureAtomicBufferGlobalPkAddF16Insts, FeatureAtomicBufferPkAddBF16Inst, FeatureAtomicDsPkAdd16Insts,
@@ -3234,7 +3235,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs,
+  FeatureAGPRAlloc
   ];
 }
 
