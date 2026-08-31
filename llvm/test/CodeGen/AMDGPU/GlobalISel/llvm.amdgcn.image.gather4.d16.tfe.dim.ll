@@ -34,8 +34,8 @@ define amdgpu_ps <2 x float> @image_gather4_lz_2d_v4f16_tfe(<8 x i32> inreg %rsr
 ; GFX81-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX81-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX81-NEXT:    v_mov_b32_e32 v2, v0
-; GFX81-NEXT:    image_gather4_lz v[0:2], v[4:5], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX81-NEXT:    v_mov_b32_e32 v7, v3
+; GFX81-NEXT:    image_gather4_lz v[0:4], v[4:5], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    flat_store_dword v[6:7], v2
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
@@ -49,8 +49,8 @@ define amdgpu_ps <2 x float> @image_gather4_lz_2d_v4f16_tfe(<8 x i32> inreg %rsr
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
-; GFX9-NEXT:    image_gather4_lz v[0:2], v[4:5], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX9-NEXT:    v_mov_b32_e32 v7, v3
+; GFX9-NEXT:    image_gather4_lz v[0:4], v[4:5], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[6:7], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

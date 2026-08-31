@@ -28,7 +28,7 @@ define amdgpu_ps <2 x float> @image_gather4_b_2d_v4f16(<8 x i32> inreg %rsrc, <4
 ; GFX81-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX81-NEXT:    s_wqm_b64 exec, exec
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GFX81-NEXT:    image_gather4_b v[0:1], v[0:2], s[0:7], s[8:11] dmask:0x4 d16
+; GFX81-NEXT:    image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x4 d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
 ;
@@ -37,7 +37,7 @@ define amdgpu_ps <2 x float> @image_gather4_b_2d_v4f16(<8 x i32> inreg %rsrc, <4
 ; GFX9-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX9-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[12:13]
-; GFX9-NEXT:    image_gather4_b v[0:1], v[0:2], s[0:7], s[8:11] dmask:0x4 d16
+; GFX9-NEXT:    image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x4 d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -70,13 +70,13 @@ define amdgpu_ps <2 x float> @image_gather4_lz_2d_v4f16(<8 x i32> inreg %rsrc, <
 ;
 ; GFX81-LABEL: image_gather4_lz_2d_v4f16:
 ; GFX81:       ; %bb.0: ; %main_body
-; GFX81-NEXT:    image_gather4_lz v[0:1], v[0:1], s[0:7], s[8:11] dmask:0x1 d16
+; GFX81-NEXT:    image_gather4_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1 d16
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: image_gather4_lz_2d_v4f16:
 ; GFX9:       ; %bb.0: ; %main_body
-; GFX9-NEXT:    image_gather4_lz v[0:1], v[0:1], s[0:7], s[8:11] dmask:0x1 d16
+; GFX9-NEXT:    image_gather4_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1 d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
