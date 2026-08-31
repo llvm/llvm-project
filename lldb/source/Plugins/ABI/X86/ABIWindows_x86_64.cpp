@@ -766,7 +766,7 @@ UnwindPlanSP ABIWindows_x86_64::CreateDefaultUnwindPlan() {
   plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("x86_64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
   return plan_sp;
 }
 
