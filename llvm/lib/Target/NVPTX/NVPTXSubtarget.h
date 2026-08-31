@@ -198,7 +198,7 @@ public:
   bool hasTargetName() const { return !getCPU().empty(); }
 
   // The architecture's name, which is what `.target` is emitted from.
-  StringRef getTargetName() const { return NVPTX::getArchName(Arch); }
+  StringRef getTargetName() const;
 
   bool hasNativeBF16Support(unsigned Opcode) const;
 

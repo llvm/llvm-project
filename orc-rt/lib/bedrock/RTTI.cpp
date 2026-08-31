@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/RTTI.h header.
+// Contains the implementation of APIs in the orc-rt/support/RTTI.h header.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bedrock/RTTI.h"
+#include "orc-rt/support/RTTI.h"
 
 namespace orc_rt {
 

@@ -274,6 +274,22 @@ mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
   return mlir::ArrayAttr::get(ctx, {mlir::DictionaryAttr::get(ctx, attrs)});
 }
 
+/// The number of bytes a coercion memory slot needs to hold a value of type
+/// \p ty without truncating it. For most types this is the ordinary storage
+/// size. For a _BitInt it is deliberately the value's own literal byte
+/// footprint (ceil(width/8)) rather than the wider, ABI-alignment-padded
+/// footprint a _BitInt gets as a record member (see
+/// cir::IntType::getStorageTypeWidth): this coercion is about how many bytes
+/// the *value* needs to round-trip, not how a record would lay it out, and
+/// those are genuinely different questions for a _BitInt (e.g. _BitInt(33)
+/// only needs 5 bytes here, even though it occupies 8 padded bytes as a
+/// record member).
+static uint64_t coercionByteSize(mlir::Type ty, const mlir::DataLayout &dl) {
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
+    return llvm::divideCeil(intTy.getWidth(), 8);
+  return dl.getTypeSize(ty);
+}
+
 /// Coerce \p src into a temporary memory slot typed for \p dstTy at the
 /// current builder insertion point, and return the destination-typed pointer
 /// to that slot without loading the value back out.  This is the shared
@@ -310,8 +326,9 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
   uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
-  mlir::Type slotTy =
-      dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
+  mlir::Type slotTy = coercionByteSize(srcTy, dl) >= coercionByteSize(dstTy, dl)
+                          ? srcTy
+                          : dstTy;
 
   auto slotPtrTy = cir::PointerType::get(slotTy);
   auto srcPtrTy = cir::PointerType::get(srcTy);
