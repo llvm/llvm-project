@@ -243,6 +243,65 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
 }
 
 //----------------------------------------------------------------------------//
+// ExpOp/Exp2Op quotient strength reduction.
+//----------------------------------------------------------------------------//
+
+namespace {
+/// Replaces `exp(a) / exp(b)` with `exp(a - b)`, and likewise for `exp2`,
+/// trading a division and an exponential for a subtraction.
+template <typename ExpOpTy>
+struct ExpQuotientStrengthReduction : public OpRewritePattern<arith::DivFOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::DivFOp op,
+                                PatternRewriter &rewriter) const final {
+    auto numerator = op.getLhs().getDefiningOp<ExpOpTy>();
+    auto denominator = op.getRhs().getDefiningOp<ExpOpTy>();
+    if (!numerator || !denominator)
+      return failure();
+
+    // The rewrite is only valid when the division may be turned into a
+    // reciprocal multiplication and then reassociated with the exponentials:
+    //   exp(a) / exp(b) --> exp(a) * exp(-b) --> exp(a + -b)
+    // This mirrors LLVM's InstCombine, which reaches the same result with
+    // `arcp` for the first step and `reassoc` for the second. Note that the
+    // rewrite also changes the overflow behaviour: for a large `a == b` the
+    // original expression is `inf / inf`, i.e. NaN, while the folded one is
+    // `exp(0.0)`, i.e. 1.0.
+    arith::FastMathFlags fmf = op.getFastmath();
+    if (!bitEnumContainsAll(fmf, arith::FastMathFlags::arcp |
+                                     arith::FastMathFlags::reassoc))
+      return failure();
+
+    // The rewrite introduces a new exponential, so it is only profitable if at
+    // least one of the two it feeds on dies with the division; the exponential
+    // count then never grows while a division is traded for a subtraction.
+    // This is the fused equivalent of the `isOnlyUserOfAnyOperand()` check
+    // LLVM's InstCombine applies to `exp(X) * exp(Y) --> exp(X + Y)`.
+    Operation *divOp = op;
+    auto diesWithDivision = [divOp](Operation *exp) {
+      return llvm::all_of(exp->getUsers(),
+                          [divOp](Operation *user) { return user == divOp; });
+    };
+    if (!diesWithDivision(numerator) && !diesWithDivision(denominator))
+      return failure();
+
+    // Do not loosen the accuracy contract of the exponentials being replaced:
+    // the new one may only carry the flags that both of them carry.
+    arith::FastMathFlags expFmf =
+        numerator.getFastmath() & denominator.getFastmath();
+
+    Value exponent =
+        arith::SubFOp::create(rewriter, op.getLoc(), numerator.getOperand(),
+                              denominator.getOperand(), fmf);
+    rewriter.replaceOpWithNewOp<ExpOpTy>(op, exponent, expFmf);
+    return success();
+  }
+};
+} // namespace
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathAlgebraicSimplificationPatterns(
     RewritePatternSet &patterns) {
@@ -252,4 +311,7 @@ void mlir::populateMathAlgebraicSimplificationPatterns(
       PowIStrengthReduction<math::FPowIOp, arith::DivFOp, arith::MulFOp>,
       PowIStrengthReduction<complex::PowiOp, complex::DivOp, complex::MulOp>>(
       patterns.getContext(), /*exponentThreshold=*/8);
+  patterns.add<ExpQuotientStrengthReduction<math::ExpOp>,
+               ExpQuotientStrengthReduction<math::Exp2Op>>(
+      patterns.getContext());
 }
