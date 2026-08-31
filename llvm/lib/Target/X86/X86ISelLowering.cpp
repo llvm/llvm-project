@@ -53775,10 +53775,8 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 										const X86Subtarget &Subtarget) {
 	using namespace SDPatternMatch;
 
-	N->dump();
-
-	// Bail if the OR is not disjoint or if SHLD is slow
-	if (!N->getFlags().hasDisjoint() || Subtarget.isSHLDSlow())
+	// Bail if SHLD is slow
+	if (Subtarget.isSHLDSlow())
 		return SDValue();
 
 	EVT VT = N->getValueType(0);
