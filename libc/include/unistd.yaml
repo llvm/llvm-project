@@ -257,6 +257,18 @@ functions:
       - type: int
       - type: __getoptargv_t
       - type: const char *
+  - name: getpgid
+    standards:
+      - posix
+    return_type: pid_t
+    arguments:
+      - type: pid_t
+  - name: getpgrp
+    standards:
+      - posix
+    return_type: pid_t
+    arguments:
+      - type: void
   - name: getpid
     standards:
       - posix
@@ -409,6 +421,13 @@ functions:
     return_type: int
     arguments:
       - type: gid_t
+  - name: setpgid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: pid_t
   - name: setregid
     standards:
       - posix
