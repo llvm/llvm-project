@@ -551,6 +551,11 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Allow redeclaration lookup to consider conversion function templates, allowing
+  Clang to match an in-class specialization such as `template<> operator int()`
+  against a prior conversion function template `template<class T> operator T()`.
+  (#GH218261)
+
 - Fixed an assertion when an ill-formed qualified member function definition
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
