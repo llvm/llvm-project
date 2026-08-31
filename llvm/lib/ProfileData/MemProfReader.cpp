@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -297,12 +298,12 @@ GlobalValue::GUID getModuleGUID(StringRef FunctionName,
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
                          bool KeepName) {
-  std::string BinaryPath = ProfiledBinary.str();
-  return create(Path, ArrayRef<std::string>(BinaryPath), KeepName);
+  return create(Path, ArrayRef<StringRef>(ProfiledBinary), KeepName);
 }
 
-Expected<std::unique_ptr<RawMemProfReader>> RawMemProfReader::create(
-    const Twine &Path, ArrayRef<std::string> ProfiledBinaries, bool KeepName) {
+Expected<std::unique_ptr<RawMemProfReader>>
+RawMemProfReader::create(const Twine &Path,
+                         ArrayRef<StringRef> ProfiledBinaries, bool KeepName) {
   auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = BufferOr.getError())
     return report(errorCodeToError(EC), Path.getSingleStringRef());
@@ -314,20 +315,19 @@ Expected<std::unique_ptr<RawMemProfReader>> RawMemProfReader::create(
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                          const StringRef ProfiledBinary, bool KeepName) {
-  std::string BinaryPath = ProfiledBinary.str();
-  return create(std::move(Buffer), ArrayRef<std::string>(BinaryPath), KeepName);
+  return create(std::move(Buffer), ArrayRef<StringRef>(ProfiledBinary),
+                KeepName);
 }
 
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                         ArrayRef<std::string> ProfiledBinaries,
-                         bool KeepName) {
+                         ArrayRef<StringRef> ProfiledBinaries, bool KeepName) {
   if (Error E = checkBuffer(*Buffer))
     return report(std::move(E), Buffer->getBufferIdentifier());
 
   if (ProfiledBinaries.empty() ||
       llvm::all_of(ProfiledBinaries,
-                   [](const std::string &Path) { return Path.empty(); })) {
+                   [](StringRef Path) { return Path.empty(); })) {
     // Peek the build ids to print a helpful error message.
     const std::vector<std::string> BuildIds = peekBuildIds(Buffer.get());
     std::string ErrorMessage(
@@ -420,11 +420,11 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
 }
 
 Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
-                                   ArrayRef<std::string> ProfiledBinaries) {
+                                   ArrayRef<StringRef> ProfiledBinaries) {
   // Open each profiled binary and perform the ELF and executable-segment sanity
   // checks needed to translate runtime PCs for symbolization.
   StringSet<> SeenBuildIds;
-  for (const std::string &BinaryPath : ProfiledBinaries) {
+  for (StringRef BinaryPath : ProfiledBinaries) {
     if (BinaryPath.empty())
       continue;
 
@@ -438,19 +438,22 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
     auto *ElfObject =
         dyn_cast<object::ELFObjectFileBase>(Module->Binary.getBinary());
     if (!ElfObject)
-      return report(
-          make_error<StringError>("Not an ELF file", inconvertibleErrorCode()),
-          FileName);
-
-    auto *Elf64LEObject = dyn_cast<object::ELF64LEObjectFile>(ElfObject);
-    if (!Elf64LEObject)
-      return report(make_error<StringError>("Not a 64-bit little-endian ELF",
+      return report(make_error<StringError>(Twine("Not an ELF file: "),
                                             inconvertibleErrorCode()),
                     FileName);
+    auto *Elf64LEObject = dyn_cast<object::ELF64LEObjectFile>(ElfObject);
+    if (!Elf64LEObject)
+      return report(
+          make_error<StringError>(Twine("Not a 64-bit little-endian ELF"),
+                                  inconvertibleErrorCode()),
+          FileName);
     const object::ELF64LEFile &ElfFile = Elf64LEObject->getELFFile();
     auto PHdrsOr = ElfFile.program_headers();
     if (!PHdrsOr)
-      return report(PHdrsOr.takeError(), FileName);
+      return report(
+          make_error<StringError>(Twine("Could not read program headers: "),
+                                  inconvertibleErrorCode()),
+          FileName);
 
     // Check whether the profiled binary was built with position independent
     // code (PIC). Perform sanity checks for assumptions we rely on to simplify
@@ -474,7 +477,7 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
              "Expect p_vaddr to always be page aligned");
     }
     if (NumExecutableSegments == 0)
-      return report(make_error<StringError>("No executable load segment",
+      return report(make_error<StringError>(Twine("No executable load segment"),
                                             inconvertibleErrorCode()),
                     FileName);
 
@@ -488,7 +491,7 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
     auto *Object = cast<object::ObjectFile>(Module->Binary.getBinary());
     object::BuildIDRef BinaryId = object::getBuildID(Object);
     if (BinaryId.empty())
-      return make_error<StringError>(Twine("No build id found in binary ") +
+      return make_error<StringError>(Twine("No build ID found in binary ") +
                                          FileName,
                                      inconvertibleErrorCode());
     std::string BuildIdString = toHex(BinaryId, /*LowerCase=*/true);
@@ -514,12 +517,12 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
     auto *Object = cast<object::ObjectFile>(Module->Binary.getBinary());
     std::unique_ptr<DIContext> Context = DWARFContext::create(
         *Object, DWARFContext::ProcessDebugRelocations::Process);
-    auto SymbolizerOr = symbolize::SymbolizableObjectFile::create(
+    auto SOFOr = symbolize::SymbolizableObjectFile::create(
         Object, std::move(Context), /*UntagAddresses=*/false);
-    if (!SymbolizerOr)
-      return report(SymbolizerOr.takeError(),
+    if (!SOFOr)
+      return report(SOFOr.takeError(),
                     Module->Binary.getBinary()->getFileName());
-    Module->Symbolizer = std::move(SymbolizerOr.get());
+    Module->Symbolizer = std::move(SOFOr.get());
   }
 
   if (Error E = symbolizeAndFilterStackFrames())
@@ -552,6 +555,11 @@ Error RawMemProfReader::setupForSymbolization() {
           Twine("No matching executable segments found in binary ") + FileName,
           inconvertibleErrorCode());
   }
+
+  std::sort(ProfiledModules.begin(), ProfiledModules.end(),
+            [](const auto &LHS, const auto &RHS) {
+              return LHS->ProfiledTextSegmentEnd < RHS->ProfiledTextSegmentEnd;
+            });
   return Error::success();
 }
 
@@ -681,7 +689,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        // A PC identifies its module, but the normal MemProf GUID only hashes
+        // The PC identified its module, but the normal MemProf GUID only hashes
         // the linkage name. Qualify it with the build ID when multiple binaries
         // are supplied so equal external symbols in different DSOs remain
         // distinct. Keep single-binary GUIDs unchanged for compatibility.
@@ -848,11 +856,15 @@ Error RawMemProfReader::readRawProfile(
 
 RawMemProfReader::ProfiledModule *
 RawMemProfReader::findModule(const uint64_t VirtualAddress) const {
-  for (const auto &Module : ProfiledModules)
-    if (VirtualAddress > Module->ProfiledTextSegmentStart &&
-        VirtualAddress <= Module->ProfiledTextSegmentEnd)
-      return Module.get();
-  return nullptr;
+  auto It = std::lower_bound(ProfiledModules.begin(), ProfiledModules.end(),
+                             VirtualAddress,
+                             [](const auto &Module, uint64_t Address) {
+                               return Module->ProfiledTextSegmentEnd < Address;
+                             });
+  if (It == ProfiledModules.end() ||
+      VirtualAddress <= (*It)->ProfiledTextSegmentStart)
+    return nullptr;
+  return It->get();
 }
 
 object::SectionedAddress
@@ -860,12 +872,16 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress,
                                   const ProfiledModule &Module) const {
   assert(VirtualAddress > Module.ProfiledTextSegmentStart &&
          VirtualAddress <= Module.ProfiledTextSegmentEnd);
-  // For position-independent binaries, remove the runtime load bias and add
-  // the executable segment's preferred ELF address. For a non-PIE binary whose
-  // preferred and runtime addresses are equal, this is a no-op.
+  // For PIE binaries, the preferred address is zero and we adjust the virtual
+  // address by start of the profiled segment assuming that the offset of the
+  // segment in the binary is zero. For non-PIE binaries the preferred and
+  // profiled segment addresses should be equal and this is a no-op.
   const uint64_t AdjustedAddress = VirtualAddress +
                                    Module.PreferredTextSegmentAddress -
                                    Module.ProfiledTextSegmentStart;
+  // Addresses which do not originate from the profiled text segment in the
+  // binary are not adjusted. These will fail symbolization and be filtered out
+  // during processing.
   return object::SectionedAddress{AdjustedAddress};
 }
 

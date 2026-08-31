@@ -129,14 +129,14 @@ public:
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(const Twine &Path, StringRef ProfiledBinary, bool KeepName = false);
   static Expected<std::unique_ptr<RawMemProfReader>>
-  create(const Twine &Path, ArrayRef<std::string> ProfiledBinaries,
+  create(const Twine &Path, ArrayRef<StringRef> ProfiledBinaries,
          bool KeepName = false);
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer, StringRef ProfiledBinary,
          bool KeepName = false);
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
-         ArrayRef<std::string> ProfiledBinaries, bool KeepName = false);
+         ArrayRef<StringRef> ProfiledBinaries, bool KeepName = false);
 
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
@@ -186,7 +186,7 @@ private:
   explicit RawMemProfReader(bool KeepName) : KeepSymbolName(KeepName) {}
   // Initializes the RawMemProfReader with the contents in `DataBuffer`.
   Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
-                   ArrayRef<std::string> ProfiledBinaries);
+                   ArrayRef<StringRef> ProfiledBinaries);
   // Read and parse the contents of the `DataBuffer` as a binary format profile.
   Error readRawProfile(std::unique_ptr<MemoryBuffer> DataBuffer);
   // Match each profiled module to its executable runtime segment using its
@@ -212,7 +212,8 @@ private:
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
   readMemInfoBlocks(const char *Ptr);
 
-  // The binaries which contributed symbolizable frames to the raw profile.
+  // The binaries which contributed symbolizable frames to the raw profile,
+  // sorted by profiled text segment end address after initialization.
   llvm::SmallVector<std::unique_ptr<ProfiledModule>, 4> ProfiledModules;
   // Version of raw memprof binary currently being read. Defaults to most up
   // to date version.
