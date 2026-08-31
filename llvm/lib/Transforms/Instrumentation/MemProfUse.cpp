@@ -31,7 +31,6 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -183,8 +182,8 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
                                            const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;
-  LibFunc Func;
-  if (!TLI.getLibFunc(*Callee, Func))
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func == NotLibFunc)
     return false;
   switch (Func) {
   case LibFunc_Znwm:

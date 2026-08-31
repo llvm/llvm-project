@@ -559,8 +559,10 @@ to the entry block of the region. The types of the entry block arguments are
 often tied semantically to the operation, e.g., `func::FuncOp`, `AffineForOp`,
 etc.
 
-To convert the signature of just one given block, the
-`applySignatureConversion` hook can be used.
+To convert the signature of just one given block, the `applySignatureConversion`
+hook can be used. Note that `applySignatureConversion` replaces and erases the
+original block, so each block's signature can be converted at most once per
+conversion run.
 
 A signature conversion, `TypeConverter::SignatureConversion`, can be built
 programmatically:
