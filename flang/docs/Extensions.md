@@ -579,6 +579,13 @@ end program
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Treat a subprogram in a submodule as if it had a missing `MODULE` prefix
+  when its name matches a separate module procedure interface in an ancestor
+  module [-fimplicit-module-prefix]. This extension is disabled by default
+  because the unprefixed subprogram can instead be a conforming local
+  procedure. By default, that likely mistake is diagnosed with
+  `-Wmissing-module-prefix` without changing the program. When the extension
+  is enabled, `-Wimplicit-module-prefix` reports each repaired prefix.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)

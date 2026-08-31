@@ -631,7 +631,8 @@ public:
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
   Symbol *FindInScopeOrBlockConstructs(const Scope &, SourceName);
-  Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
+  Symbol *FindSeparateModuleProcedureInterface(
+      const parser::Name &, bool emitError = true);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
   // Make a new symbol with the name and attrs of an existing one
@@ -5515,6 +5516,11 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 Symbol &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
+  if (symbol.get<SubprogramDetails>().moduleInterface()) {
+    // An omitted MODULE prefix accepted as an extension still defines the
+    // separate module procedure declared by the interface body.
+    SetExplicitAttr(symbol, Attr::MODULE);
+  }
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
     symbol.implicitAttrs().set(Attr::EXTERNAL, false);
@@ -5764,7 +5770,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
 }
 
 Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
-    const parser::Name &name) {
+    const parser::Name &name, bool emitError) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
     const Scope *parent{nullptr};
@@ -5783,7 +5789,9 @@ Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
     symbol = const_cast<Symbol *>(defnIface);
   }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
-    Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    if (emitError) {
+      Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    }
     symbol = nullptr;
   }
   return symbol;
@@ -5848,6 +5856,26 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       } else {
         EraseSymbol(name);
       }
+    }
+  } else if (isValid && !inInterfaceBlock() && currScope().IsSubmodule() &&
+      (moduleInterface = FindSeparateModuleProcedureInterface(
+           name, /*emitError=*/false))) {
+    if (context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+      context().Warn(common::LanguageFeature::ImplicitModulePrefix, name.source,
+          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
+    } else {
+      context().Warn(common::UsageWarning::MissingModulePrefix, name.source,
+          "'%s' is a local procedure that hides the separate module procedure "
+          "interface '%s:%s'; "
+          "a call to that interface will fail to link with this local "
+          "procedure. "
+          "If this procedure is supposed to implement the interface, "
+          "add the MODULE keyword or enable -fimplicit-module-prefix."_warn_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
+      moduleInterface = nullptr;
     }
   }
   Symbol *newSymbol{
