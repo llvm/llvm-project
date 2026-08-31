@@ -3455,8 +3455,7 @@ static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
-                                     const ParmVarDecl *oldDecl,
-                                     Sema &S) {
+                                     const ParmVarDecl *oldDecl, Sema &S) {
   propagateAttributes(
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
