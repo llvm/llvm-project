@@ -199,12 +199,15 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
   MI.eraseFromParent();
 }
 
-static bool
-runCombiner(MachineFunction &MF, function_ref<GISelCSEInfo *()> GetCSEInfo,
-            function_ref<GISelValueTracking *()> GetVT,
-            function_ref<MachineDominatorTree *()> GetMDT,
-            const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig,
-            bool EnableOpt) {
+static bool runCombiner(MachineFunction &MF,
+                        function_ref<GISelCSEInfo *()> GetCSEInfo,
+                        function_ref<GISelValueTracking *()> GetVT,
+                        function_ref<MachineDominatorTree *()> GetMDT,
+                        bool EnableOpt) {
+  AMDGPUPreLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
+
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasFailedISel())
     return false;
@@ -235,7 +238,8 @@ class AMDGPUPreLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUPreLegalizerCombinerLegacy(bool IsOptNone = false);
+  AMDGPUPreLegalizerCombinerLegacy(bool IsOptLevelNone = false)
+      : MachineFunctionPass(ID), IsOptLevelNone(IsOptLevelNone) {}
 
   StringRef getPassName() const override {
     return "AMDGPUPreLegalizerCombiner";
@@ -246,8 +250,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  bool IsOptNone;
-  AMDGPUPreLegalizerCombinerImplRuleConfig RuleConfig;
+  bool IsOptLevelNone;
 };
 } // end anonymous namespace
 
@@ -258,20 +261,13 @@ void AMDGPUPreLegalizerCombinerLegacy::getAnalysisUsage(
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
+  if (!IsOptLevelNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
   }
 
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AMDGPUPreLegalizerCombinerLegacy::AMDGPUPreLegalizerCombinerLegacy(
-    bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
 }
 
 bool AMDGPUPreLegalizerCombinerLegacy::runOnMachineFunction(
@@ -291,11 +287,11 @@ bool AMDGPUPreLegalizerCombinerLegacy::runOnMachineFunction(
         return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
       },
       [&]() -> MachineDominatorTree * {
-        return IsOptNone ? nullptr
-                         : &getAnalysis<MachineDominatorTreeWrapperPass>()
-                                .getDomTree();
+        return IsOptLevelNone ? nullptr
+                              : &getAnalysis<MachineDominatorTreeWrapperPass>()
+                                     .getDomTree();
       },
-      RuleConfig, EnableOpt);
+      EnableOpt);
 }
 
 char AMDGPUPreLegalizerCombinerLegacy::ID = 0;
@@ -308,28 +304,24 @@ INITIALIZE_PASS_END(AMDGPUPreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs before legalization", false,
                     false)
 
-FunctionPass *llvm::createAMDGPUPreLegalizeCombinerLegacy(bool IsOptNone) {
-  return new AMDGPUPreLegalizerCombinerLegacy(IsOptNone);
+FunctionPass *llvm::createAMDGPUPreLegalizeCombinerLegacy(bool IsOptLevelNone) {
+  return new AMDGPUPreLegalizerCombinerLegacy(IsOptLevelNone);
 }
 
 PreservedAnalyses
 AMDGPUPreLegalizerCombinerPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  AMDGPUPreLegalizerCombinerImplRuleConfig RuleConfig;
-  if (!RuleConfig.parseCommandLineOption())
-    reportFatalUsageError("Invalid rule identifier");
-
-  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
+  bool IsOptLevelNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   if (!runCombiner(
           MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
           [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
           [&]() -> MachineDominatorTree * {
-            return IsOptNone
+            return IsOptLevelNone
                        ? nullptr
                        : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
           },
-          RuleConfig, /*EnableOpt=*/!IsOptNone))
+          /*EnableOpt=*/!IsOptLevelNone))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
