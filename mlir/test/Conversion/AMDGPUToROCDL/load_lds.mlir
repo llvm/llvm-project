@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx942 | FileCheck %s
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx950 | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func @global_load_to_rocdl_f32
 // CHECK-SAME: (%[[ARG0:.*]]: memref<128x72xf32, #gpu.address_space<global>>)

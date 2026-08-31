@@ -1,11 +1,11 @@
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx908 %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX908
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx90a %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX90A
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx90c %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX90C
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1030 %s | FileCheck %s --check-prefixes=CHECK,GFX10
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1100 %s | FileCheck %s --check-prefixes=CHECK,GFX11
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx1200 %s | FileCheck %s --check-prefixes=CHECK,GFX12
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx942 %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX942
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=chipset=gfx950 %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX950
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.08-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX908
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.0a-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX90A
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.0c-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX90C
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu10.30-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX10
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu11.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX11
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu12.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX12
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.42-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX942
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.50-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX950
 
 // -----
 
@@ -46,19 +46,17 @@ func.func @atomic_fmax_f64(%val: f64, %buffer: memref<?xf64>, %idx: i32) {
 // GFX12: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
 // GFX942: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
 // GFX950: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
-// gfx908 has no f64 buffer fmin/fmax, so it is emulated.
-// GFX908:  [[ld:%.+]] = amdgpu.raw_buffer_load boundsCheck(true) [[buffer]][[[idx]]]
-// GFX908:  cf.br [[loop:\^.+]]([[ld]] : f64)
-// GFX908:  [[loop]]([[arg:%.+]]: f64):
-// GFX908:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
-// GFX908: [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) [[operated]], [[arg]] -> [[buffer]][[[idx]]]
-// GFX908:  [[argCast:%.+]] = arith.bitcast [[arg]] : f64 to i64
-// GFX908:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f64 to i64
-// GFX908:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
-// GFX908:  cf.cond_br [[test]], [[post:\^.+]]([[arg]] : f64), [[loop]]([[atomicRes]] : f64)
-// GFX908:  [[post]]([[old:%.+]]: f64):
-// gfx90c has none either, but sorts after gfx90a by ISA version.
-// GFX90C: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// Neither gfx908 nor gfx90c has f64 buffer fmin/fmax.
+// GFX9NOF64:  [[ld:%.+]] = amdgpu.raw_buffer_load boundsCheck(true) [[buffer]][[[idx]]]
+// GFX9NOF64:  cf.br [[loop:\^.+]]([[ld]] : f64)
+// GFX9NOF64:  [[loop]]([[arg:%.+]]: f64):
+// GFX9NOF64:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
+// GFX9NOF64: [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) [[operated]], [[arg]] -> [[buffer]][[[idx]]]
+// GFX9NOF64:  [[argCast:%.+]] = arith.bitcast [[arg]] : f64 to i64
+// GFX9NOF64:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f64 to i64
+// GFX9NOF64:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
+// GFX9NOF64:  cf.cond_br [[test]], [[post:\^.+]]([[arg]] : f64), [[loop]]([[atomicRes]] : f64)
+// GFX9NOF64:  [[post]]([[old:%.+]]: f64):
 // CHECK-NEXT: gpu.printf "End\0A"
   gpu.printf "Begin\n"
   %old = amdgpu.raw_buffer_atomic_fmax boundsCheck(true) %val -> %buffer[%idx] : f64 -> memref<?xf64>, i32
@@ -77,8 +75,11 @@ func.func @atomic_fadd(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 // GFX12: amdgpu.raw_buffer_atomic_fadd
 // GFX942: amdgpu.raw_buffer_atomic_fadd
 // GFX950: amdgpu.raw_buffer_atomic_fadd
+// gfx908 only has the no-return form, which suffices here as %old is unused.
 // GFX908: amdgpu.raw_buffer_atomic_fadd
-// GFX90C: amdgpu.raw_buffer_atomic_fadd
+// gfx90c has no buffer fadd at all.
+// GFX90C: amdgpu.raw_buffer_load
+// GFX90C: amdgpu.raw_buffer_atomic_cmpswap
   %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : f32 -> memref<?xf32>, i32
   func.return
 }
@@ -100,8 +101,11 @@ func.func @atomic_fadd_v2f16(%val: vector<2xf16>, %buffer: memref<?xf16>, %idx: 
 // GFX942: amdgpu.raw_buffer_atomic_fadd
 // GFX12:  amdgpu.raw_buffer_atomic_fadd
 // GFX950:  amdgpu.raw_buffer_atomic_fadd
-// GFX908: amdgpu.raw_buffer_atomic_fadd
-// GFX90C: amdgpu.raw_buffer_atomic_fadd
+// Neither gfx908 nor gfx90c has the packed f16 buffer fadd.
+// GFX908: amdgpu.raw_buffer_load
+// GFX908: amdgpu.raw_buffer_atomic_cmpswap
+// GFX90C: amdgpu.raw_buffer_load
+// GFX90C: amdgpu.raw_buffer_atomic_cmpswap
   %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : vector<2xf16> -> memref<?xf16>, i32
   func.return
 }
@@ -124,4 +128,25 @@ func.func @atomic_fadd_v2bf16(%val: vector<2xbf16>, %buffer: memref<?xbf16>, %id
 // GFX90C: amdgpu.raw_buffer_atomic_cmpswap
   %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : vector<2xbf16> -> memref<?xbf16>, i32
   func.return
+}
+
+// -----
+
+// gfx908 has only the no-return buffer fadd, so a *used* result has to be
+// emulated even though the discarded-result case above lowers natively.
+// CHECK: func @atomic_fadd_used_result
+func.func @atomic_fadd_used_result(%val: f32, %buffer: memref<?xf32>, %idx: i32) -> f32 {
+// GFX908: amdgpu.raw_buffer_load
+// GFX908: amdgpu.raw_buffer_atomic_cmpswap
+// GFX90A: amdgpu.raw_buffer_atomic_fadd
+// GFX942: amdgpu.raw_buffer_atomic_fadd
+// GFX950: amdgpu.raw_buffer_atomic_fadd
+// GFX90C: amdgpu.raw_buffer_load
+// GFX90C: amdgpu.raw_buffer_atomic_cmpswap
+// GFX10: amdgpu.raw_buffer_load
+// GFX10: amdgpu.raw_buffer_atomic_cmpswap
+// GFX11: amdgpu.raw_buffer_atomic_fadd
+// GFX12: amdgpu.raw_buffer_atomic_fadd
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : f32 -> memref<?xf32>, i32
+  func.return %old : f32
 }

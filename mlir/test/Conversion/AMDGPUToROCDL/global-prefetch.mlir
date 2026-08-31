@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1250 --split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa --split-input-file --verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @glb_prefetch0
 func.func @glb_prefetch0(%src : memref<64x64xf16, #gpu.address_space<global>>, %i : i64, %j : i64) {

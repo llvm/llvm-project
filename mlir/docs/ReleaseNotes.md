@@ -8,6 +8,38 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
+## LLVM 24
+
+### GPU/AMDGPU Changes
+
+- `mlir::amdgpu::Chipset` is deprecated in favour of `mlir::ROCDL::TargetInfo`,
+  which describes a target by its triple, subarch, and the resolved set of
+  target features from LLVM's own tables. Lowerings should ask whether a target
+  has a feature rather than inaccurately compare chipset versions.
+  `TargetInfo` also represents generic targets such as `gfx9-4-generic` and, unlike
+  `Chipset`, explicitly stores the wavesize for targets where it is configurable.
+- Accordingly, the `chipset` option on `convert-amdgpu-to-rocdl`,
+  `convert-gpu-to-rocdl`, `convert-arith-to-amdgpu`, `convert-math-to-rocdl` and
+  `amdgpu-emulate-atomics` is replaced by `triple`, `chip` and `features`,
+  matching `rocdl-attach-target` and `#rocdl.target`. `triple` accepts either a
+  triple (`amdgpu9.42-amd-amdhsa`) or a bare GPU name (`gfx942`), so existing
+  invocations can migrate by renaming the option alone.
+- `triple` has no usable default: it is `invalid`, so a target must be passed
+  explicitly. The old `chipset` default of `gfx000` parsed successfully into a
+  target that then failed every capability check, causing silent failures.
+- The IR-visible `chipset` attribute on
+  `transform.apply_conversion_patterns.gpu.gpu_to_rocdl` and
+  `transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu` is likewise replaced by
+  `triple`, `chip` and `features`, now spelled as a property dictionary so that
+  further target knobs don't each need their own keyword:
+
+  ```mlir
+  transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <triple = "gfx950">
+  ```
+
+  This breaks existing transform scripts, which have to be updated by hand;
+  `triple` accepts a bare GPU name, so no target spelling has to change.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

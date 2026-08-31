@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1250 \
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa \
 // RUN:   --split-input-file --verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @wmma_k4

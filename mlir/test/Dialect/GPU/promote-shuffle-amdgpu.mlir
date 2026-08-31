@@ -4,7 +4,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu chipset = "gfx950"
+      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <triple = "amdgpu9.50-amd-amdhsa">
     } : !transform.any_op
     transform.yield
   }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1250 --split-input-file --verify-diagnostics \
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa --split-input-file --verify-diagnostics \
 // RUN: | FileCheck %s
 
 // CHECK-LABEL: @scaled_ext_packed_matrix_fp4

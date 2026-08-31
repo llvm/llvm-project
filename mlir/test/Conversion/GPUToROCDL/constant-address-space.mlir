@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-gpu-to-rocdl %s | FileCheck %s
+// RUN: mlir-opt -convert-gpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa %s | FileCheck %s
 
 module attributes {gpu.container_module} {
   gpu.module @kernel_module {
