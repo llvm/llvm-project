@@ -7,6 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.assume(i1) #1
 declare ptr @get_ptr()
 declare void @use_i64(i64)
+declare void @use_i1(i1)
 
 ; Check that the assume has not been removed:
 
@@ -587,6 +588,27 @@ define i1 @nonnull5(ptr %a) {
   %integral = ptrtoint ptr %load to i64
   %cmp = icmp slt i64 %integral, 0
   tail call void @llvm.assume(i1 %cmp) ; %load has at least highest bit set
+  %rval = icmp eq ptr %load, null
+  ret i1 %rval
+}
+
+define i1 @nonnullNotEq(ptr %a) {
+; CHECK-LABEL: @nonnullNotEq(
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LOAD]], null
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    tail call void @escape(ptr [[LOAD]])
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq ptr [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL]]
+;
+  %load = load ptr, ptr %a
+  %cmp = icmp eq ptr %load, null
+  call void @use_i1(i1 %cmp)
+  %not = xor i1 %cmp, true
+  tail call void @llvm.assume(i1 %not)
+  tail call void @escape(ptr %load)
   %rval = icmp eq ptr %load, null
   ret i1 %rval
 }
