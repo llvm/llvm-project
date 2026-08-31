@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -6147,167 +6148,196 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   if (!DemandedElts)
     return Known;
 
-  unsigned Opcode = Op.getOpcode();
-  switch (Opcode) {
-  case ISD::POISON: {
-    Known.KnownFPClasses = fcNone;
-    Known.SignBit = false;
-    break;
-  }
-  case ISD::FNEG: {
-    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
-                                InterestedClasses, Depth + 1);
-    Known.fneg();
-    break;
-  }
-  case ISD::BUILD_VECTOR: {
-    assert(!VT.isScalableVector());
-    bool First = true;
-    for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
-      if (!DemandedElts[I])
-        continue;
+  {
+    FPClassTest KnownNotFromFlags = fcNone;
+    if (Op->getFlags().hasNoNaNs())
+      KnownNotFromFlags |= fcNan;
+    if (Op->getFlags().hasNoInfs())
+      KnownNotFromFlags |= fcInf;
 
-      if (First) {
-        Known =
-            computeKnownFPClass(Op.getOperand(I), InterestedClasses, Depth + 1);
-        First = false;
-      } else {
-        Known |=
-            computeKnownFPClass(Op.getOperand(I), InterestedClasses, Depth + 1);
-      }
+    llvm::scope_exit ClearClassesFromFlags(
+        [=, &Known] { Known.knownNot(KnownNotFromFlags); });
 
-      if (Known.isUnknown())
-        break;
+    unsigned Opcode = Op.getOpcode();
+    switch (Opcode) {
+    case ISD::POISON: {
+      Known.KnownFPClasses = fcNone;
+      Known.SignBit = false;
+      break;
     }
-    break;
-  }
-  case ISD::EXTRACT_VECTOR_ELT: {
-    SDValue Src = Op.getOperand(0);
-    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-    EVT SrcVT = Src.getValueType();
-    if (SrcVT.isFixedLengthVector() && CIdx) {
-      if (CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
-        APInt DemandedSrcElts = APInt::getOneBitSet(
-            SrcVT.getVectorNumElements(), CIdx->getZExtValue());
+    case ISD::FNEG: {
+      Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                  InterestedClasses, Depth + 1);
+      Known.fneg();
+      break;
+    }
+    case ISD::FSQRT: {
+      FPClassTest InterestedSrcs = InterestedClasses;
+      if (InterestedClasses & fcNan)
+        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+
+      KnownFPClass KnownSrc = computeKnownFPClass(
+          Op.getOperand(0), DemandedElts, InterestedSrcs, Depth + 1);
+
+      const fltSemantics &FltSem =
+          Op.getValueType().getScalarType().getFltSemantics();
+      DenormalMode Mode = getMachineFunction().getDenormalMode(FltSem);
+
+      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      break;
+    }
+    case ISD::BUILD_VECTOR: {
+      assert(!VT.isScalableVector());
+      bool First = true;
+      for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
+        if (!DemandedElts[I])
+          continue;
+
+        if (First) {
+          Known = computeKnownFPClass(Op.getOperand(I), InterestedClasses,
+                                      Depth + 1);
+          First = false;
+        } else {
+          Known |= computeKnownFPClass(Op.getOperand(I), InterestedClasses,
+                                       Depth + 1);
+        }
+
+        if (Known.isUnknown())
+          break;
+      }
+      break;
+    }
+    case ISD::EXTRACT_VECTOR_ELT: {
+      SDValue Src = Op.getOperand(0);
+      auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+      EVT SrcVT = Src.getValueType();
+      if (SrcVT.isFixedLengthVector() && CIdx) {
+        if (CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+          APInt DemandedSrcElts = APInt::getOneBitSet(
+              SrcVT.getVectorNumElements(), CIdx->getZExtValue());
+          Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
+                                      Depth + 1);
+        } else {
+          // Out of bounds index is poison.
+          Known.KnownFPClasses = fcNone;
+        }
+      } else {
+        Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
+      }
+      break;
+    }
+    case ISD::SPLAT_VECTOR: {
+      Known =
+          computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
+      break;
+    }
+    case ISD::BITCAST: {
+      // FIXME: It should not be necessary to check for an elementwise bitcast.
+      // If a bitcast is not elementwise between vector / scalar types,
+      // computeKnownBits already splices the known bits of the source elements
+      // appropriately so as to line up with the bits of the result's demanded
+      // elements.
+      EVT SrcVT = Op.getOperand(0).getValueType();
+      if (VT.isScalableVector() || SrcVT.isScalableVector())
+        break;
+      unsigned VTNumElts = VT.isVector() ? VT.getVectorNumElements() : 1;
+      unsigned SrcVTNumElts =
+          SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+      if (VTNumElts != SrcVTNumElts)
+        break;
+
+      KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
+      Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
+      break;
+    }
+    case ISD::FABS: {
+      Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                  InterestedClasses, Depth + 1);
+      Known.fabs();
+      break;
+    }
+    case ISD::FCOPYSIGN: {
+      Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                  InterestedClasses, Depth + 1);
+      KnownFPClass KnownSign = computeKnownFPClass(
+          Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);
+      Known.copysign(KnownSign);
+      break;
+    }
+    case ISD::AssertNoFPClass: {
+      Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                  InterestedClasses, Depth + 1);
+      FPClassTest AssertedClasses =
+          static_cast<FPClassTest>(Op->getConstantOperandVal(1));
+      Known.KnownFPClasses &= ~AssertedClasses;
+      break;
+    }
+    case ISD::EXTRACT_SUBVECTOR: {
+      SDValue Src = Op.getOperand(0);
+      EVT SrcVT = Src.getValueType();
+      if (SrcVT.isFixedLengthVector()) {
+        unsigned Idx = Op.getConstantOperandVal(1);
+        unsigned NumSrcElts = SrcVT.getVectorNumElements();
+
+        APInt DemandedSrcElts = DemandedElts.zextOrTrunc(NumSrcElts).shl(Idx);
         Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
                                     Depth + 1);
       } else {
-        // Out of bounds index is poison.
-        Known.KnownFPClasses = fcNone;
+        Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
       }
-    } else {
-      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
-    }
-    break;
-  }
-  case ISD::SPLAT_VECTOR: {
-    Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
-    break;
-  }
-  case ISD::BITCAST: {
-    // FIXME: It should not be necessary to check for an elementwise bitcast.
-    // If a bitcast is not elementwise between vector / scalar types,
-    // computeKnownBits already splices the known bits of the source elements
-    // appropriately so as to line up with the bits of the result's demanded
-    // elements.
-    EVT SrcVT = Op.getOperand(0).getValueType();
-    if (VT.isScalableVector() || SrcVT.isScalableVector())
       break;
-    unsigned VTNumElts = VT.isVector() ? VT.getVectorNumElements() : 1;
-    unsigned SrcVTNumElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
-    if (VTNumElts != SrcVTNumElts)
-      break;
-
-    KnownBits Bits = computeKnownBits(Op, DemandedElts, Depth + 1);
-    Known = KnownFPClass::bitcast(VT.getFltSemantics(), Bits);
-    break;
-  }
-  case ISD::FABS: {
-    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
-                                InterestedClasses, Depth + 1);
-    Known.fabs();
-    break;
-  }
-  case ISD::FCOPYSIGN: {
-    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
-                                InterestedClasses, Depth + 1);
-    KnownFPClass KnownSign = computeKnownFPClass(Op.getOperand(1), DemandedElts,
-                                                 InterestedClasses, Depth + 1);
-    Known.copysign(KnownSign);
-    break;
-  }
-  case ISD::AssertNoFPClass: {
-    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
-                                InterestedClasses, Depth + 1);
-    FPClassTest AssertedClasses =
-        static_cast<FPClassTest>(Op->getConstantOperandVal(1));
-    Known.KnownFPClasses &= ~AssertedClasses;
-    break;
-  }
-  case ISD::EXTRACT_SUBVECTOR: {
-    SDValue Src = Op.getOperand(0);
-    EVT SrcVT = Src.getValueType();
-    if (SrcVT.isFixedLengthVector()) {
-      unsigned Idx = Op.getConstantOperandVal(1);
-      unsigned NumSrcElts = SrcVT.getVectorNumElements();
-
-      APInt DemandedSrcElts = DemandedElts.zextOrTrunc(NumSrcElts).shl(Idx);
-      Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
-                                  Depth + 1);
-    } else {
-      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
     }
-    break;
-  }
-  case ISD::INSERT_SUBVECTOR: {
-    SDValue BaseVector = Op.getOperand(0);
-    SDValue SubVector = Op.getOperand(1);
-    EVT BaseVT = BaseVector.getValueType();
-    if (BaseVT.isFixedLengthVector()) {
-      unsigned Idx = Op.getConstantOperandVal(2);
-      unsigned NumBaseElts = BaseVT.getVectorNumElements();
-      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
+    case ISD::INSERT_SUBVECTOR: {
+      SDValue BaseVector = Op.getOperand(0);
+      SDValue SubVector = Op.getOperand(1);
+      EVT BaseVT = BaseVector.getValueType();
+      if (BaseVT.isFixedLengthVector()) {
+        unsigned Idx = Op.getConstantOperandVal(2);
+        unsigned NumBaseElts = BaseVT.getVectorNumElements();
+        unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
 
-      APInt DemandedMask =
-          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
-      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
-      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+        APInt DemandedMask =
+            APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+        APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+        APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
 
-      if (!DemandedSrcElts.isZero())
-        Known = computeKnownFPClass(BaseVector, DemandedSrcElts,
-                                    InterestedClasses, Depth + 1);
-      if (!DemandedSubElts.isZero()) {
-        KnownFPClass SubKnown = computeKnownFPClass(
-            SubVector, DemandedSubElts, InterestedClasses, Depth + 1);
-        Known = DemandedSrcElts.isZero() ? SubKnown : (Known | SubKnown);
+        if (!DemandedSrcElts.isZero())
+          Known = computeKnownFPClass(BaseVector, DemandedSrcElts,
+                                      InterestedClasses, Depth + 1);
+        if (!DemandedSubElts.isZero()) {
+          KnownFPClass SubKnown = computeKnownFPClass(
+              SubVector, DemandedSubElts, InterestedClasses, Depth + 1);
+          Known = DemandedSrcElts.isZero() ? SubKnown : (Known | SubKnown);
+        }
+      } else {
+        Known = computeKnownFPClass(SubVector, InterestedClasses, Depth + 1);
+        if (!Known.isUnknown())
+          Known |=
+              computeKnownFPClass(BaseVector, InterestedClasses, Depth + 1);
       }
-    } else {
-      Known = computeKnownFPClass(SubVector, InterestedClasses, Depth + 1);
-      if (!Known.isUnknown())
-        Known |= computeKnownFPClass(BaseVector, InterestedClasses, Depth + 1);
-    }
-    break;
-  }
-  case ISD::SELECT:
-  case ISD::VSELECT: {
-    // TODO: Add adjustKnownFPClassForSelectArm clamp recognition as in
-    // IR-level ValueTracking.
-    KnownFPClass KnownFalseClass = computeKnownFPClass(
-        Op.getOperand(2), DemandedElts, InterestedClasses, Depth + 1);
-    if (KnownFalseClass.isUnknown())
       break;
-    KnownFPClass KnownTrueClass = computeKnownFPClass(
-        Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);
-    Known = KnownTrueClass.intersectWith(KnownFalseClass);
-    break;
-  }
-  default:
-    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
-        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
-      TLI->computeKnownFPClassForTargetNode(Op, Known, DemandedElts, *this,
-                                            Depth);
     }
-    break;
+    case ISD::SELECT:
+    case ISD::VSELECT: {
+      // TODO: Add adjustKnownFPClassForSelectArm clamp recognition as in
+      // IR-level ValueTracking.
+      KnownFPClass KnownFalseClass = computeKnownFPClass(
+          Op.getOperand(2), DemandedElts, InterestedClasses, Depth + 1);
+      if (KnownFalseClass.isUnknown())
+        break;
+      KnownFPClass KnownTrueClass = computeKnownFPClass(
+          Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);
+      Known = KnownTrueClass.intersectWith(KnownFalseClass);
+      break;
+    }
+    default:
+      if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+          Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
+        TLI->computeKnownFPClassForTargetNode(Op, Known, DemandedElts, *this,
+                                              Depth);
+      }
+      break;
+    }
   }
 
   return Known;
