@@ -2154,20 +2154,26 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
         }
       }
     } else {
-      SDValue Val = convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue);
-      // For i8/i16 formals under XPLINK64, LocVT=i64/AExt means the DAG
-      // would otherwise select LGFR (sign-extend from bit 31).  Truncate
-      // down to the true original i8/i16 so the subsequent sign/zero-extend
-      // to i64 selects the correct narrow instruction (LGBR/LGHR/LLGCR/LLGHR
-      // for register args, LGB/LGH/LLGC/LLGH for stack args).
-      // Guard with isSimple() since non-simple EVTs must not reach
-      // getSimpleVT().
+      // For XPLINK64, the ABI does not require the caller to have extended
+      // sub-i32 integer arguments (i8/i16).  When the original argument type
+      // is narrower than both the CC ValVT and LocVT, bypass
+      // convertLocVTToValVT and truncate ArgValue directly to the original
+      // type.  This produces a single TRUNCATE node (e.g. i64->i8) so the
+      // subsequent sign/zero-extend to i64 selects the correct narrow
+      // instruction (LGBR/LGHR/LLGCR/LLGHR for register args,
+      // LGB/LGH/LLGC/LLGH for stack args), matching XL compiler output.
+      // The ValVT guard is essential: it excludes cases like 32-bit pointers
+      // (OrigVT==ValVT==i32, LocVT==i64) that need convertLocVTToValVT to
+      // emit AssertZext so the zero-extend is optimised away.
+      SDValue Val;
       if (Subtarget.isTargetXPLINK64() && Ins[I].ArgVT.isSimple()) {
         MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
-        if (OrigVT != VA.getValVT() && OrigVT.isScalarInteger() &&
+        if (OrigVT.isScalarInteger() &&
             OrigVT.getSizeInBits() < VA.getValVT().getSizeInBits())
-          Val = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Val);
+          Val = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, ArgValue);
       }
+      if (!Val)
+        Val = convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue);
       InVals.push_back(Val);
     }
   }
