@@ -2130,6 +2130,11 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   bool IsD16 = MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16 ||
                MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16;
 
+  const bool NoUnpackedD16VMem = !STI.hasUnpackedD16VMem();
+  const bool HasGather4D16Bug = BaseOpcode->Gather4 && IsD16 &&
+                                NoUnpackedD16VMem &&
+                                STI.hasImageGather4D16Bug();
+
   bool Unorm;
   if (!BaseOpcode->Sampler)
     Unorm = true;
@@ -2189,7 +2194,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       VDataTy = MRI->getType(VDataOut);
       NumVDataDwords = DMaskLanes;
 
-      if (IsD16 && !STI.hasUnpackedD16VMem())
+      if (IsD16 && NoUnpackedD16VMem && !HasGather4D16Bug)
         NumVDataDwords = (DMaskLanes + 1) / 2;
     }
   }
@@ -2287,17 +2292,19 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     .cloneMemRefs(MI);
 
   if (VDataOut) {
-    if (BaseOpcode->AtomicX2) {
-      const bool Is64 = MRI->getType(VDataOut).getSizeInBits() == 64;
-
+    if (BaseOpcode->AtomicX2 || HasGather4D16Bug) {
+      assert(!HasGather4D16Bug ||
+             NumVDataDwords == static_cast<int>(DMaskLanes + IsTexFail));
+      const unsigned DataDwords =
+          divideCeil(MRI->getType(VDataOut).getSizeInBits(), 32);
       Register TmpReg = MRI->createVirtualRegister(
-        Is64 ? &AMDGPU::VReg_128RegClass : &AMDGPU::VReg_64RegClass);
-      unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
+          TRI.getVGPRClassForBitWidth(NumVDataDwords * 32));
 
       MIB.addDef(TmpReg);
       if (!MRI->use_empty(VDataOut)) {
         BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
-            .addReg(TmpReg, RegState::Kill, SubReg);
+            .addReg(TmpReg, RegState::Kill,
+                    TRI.getSubRegFromChannel(0, DataDwords));
       }
 
     } else {
