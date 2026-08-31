@@ -240,8 +240,8 @@ private:
     /// Not in use; a register is allocatable iff all of its units are free.
     regFree,
 
-    /// In use by a register fixed before allocation: a physreg operand such as
-    /// a call argument, or a block live-out. Cannot be spilled.
+    /// Not available to the allocator and not a virtual register: a physreg
+    /// operand or a block live-out. Cannot be spilled.
     regPreAssigned,
 
     /// A scratch marker, not an occupancy state: reloadAtBegin() stamps
@@ -745,9 +745,9 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   LiveVirtRegs.clear();
 }
 
-/// Handle the direct use of a physical register.  Check that the register is
-/// not used by a virtreg. Kill the physreg, marking it free. This may add
-/// implicit kills to MO->getParent() and invalidate MO.
+/// Handle the direct use of a physical register. Displace any virtreg holding
+/// it and mark it occupied: backwards, a use means live from here upward. This
+/// may add implicit kills to MO->getParent() and invalidate MO.
 bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
   assert(Reg.isPhysical() && "expected physreg");
   bool displacedAny = displacePhysReg(MI, Reg);
@@ -756,6 +756,8 @@ bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
   return displacedAny;
 }
 
+/// Displace whatever holds \p Reg and reserve it, so a virtual register def on
+/// the same instruction cannot take it. The free-def-operands step frees it.
 bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCRegister Reg) {
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
