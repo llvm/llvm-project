@@ -631,6 +631,17 @@ enum SegmentOverride {
   SEG_OVERRIDE_max
 };
 
+/// All possible branch hints.
+enum BranchHint {
+  BRANCH_HINT_NONE,
+
+  // HWNT (branch Hint Weakly Not Taken)
+  BRANCH_HINT_2E,
+
+  // Can be either NOTRACK or HST (branch Hint Strongly Taken) depending on instruction.
+  BRANCH_HINT_3E,
+};
+
 /// Possible values for the VEX.m-mmmm field
 enum VEXLeadingOpcodeByte {
   VEX_LOB_0F = 0x1,
@@ -700,6 +711,8 @@ struct InternalInstruction {
   uint8_t rexPrefix;
   // The segment override type
   SegmentOverride segmentOverride;
+  // The branch hint, if present
+  BranchHint branchHint;
   // 1 if the prefix byte, 0xf2 or 0xf3 is xacquire or xrelease
   bool xAcquireRelease;
 

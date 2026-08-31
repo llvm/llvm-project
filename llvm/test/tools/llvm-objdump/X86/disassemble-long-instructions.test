@@ -2,7 +2,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-objdump -d %t.o | FileCheck %s --strict-whitespace
 
-# CHECK: 0: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 	nopw	%cs:(%rax,%rax)
+# CHECK: 0: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 	nopw	(%rax,%rax)
 
 --- !ELF
 FileHeader:
