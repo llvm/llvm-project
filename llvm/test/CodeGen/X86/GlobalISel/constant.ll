@@ -63,7 +63,7 @@ define i64 @const_i64_i32() {
 define void @main(ptr %data) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
   store ptr null, ptr %data, align 8

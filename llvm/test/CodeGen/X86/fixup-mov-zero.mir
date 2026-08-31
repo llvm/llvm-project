@@ -23,7 +23,7 @@ body:             |
     ; CHECK-LABEL: name: flags_dead_by_def
     ; CHECK: liveins: $rdi, $rsi
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $eax = MOV32ri 0
+    ; CHECK-NEXT: $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     ; CHECK-NEXT: CMP64rr renamable $rdi, renamable $rsi, implicit-def $eflags
     ; CHECK-NEXT: renamable $cl = SETCCr 4, implicit $eflags
     ; CHECK-NEXT: RET64 implicit $eax, implicit $cl
@@ -37,7 +37,7 @@ name:            flags_dead_at_ret
 body:             |
   bb.0:
     ; CHECK-LABEL: name: flags_dead_at_ret
-    ; CHECK: renamable $eax = MOV32ri 0
+    ; CHECK: $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     ; CHECK-NEXT: RET64 implicit $eax
     renamable $eax = MOV32ri 0
     RET64 implicit $eax
@@ -102,7 +102,7 @@ name:            superreg_def
 body:             |
   bb.0:
     ; CHECK-LABEL: name: superreg_def
-    ; CHECK: renamable $eax = MOV32ri 0, implicit-def $rax
+    ; CHECK: $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $rax
     ; CHECK-NEXT: RET64 implicit $rax
     renamable $eax = MOV32ri 0, implicit-def $rax
     RET64 implicit $rax
