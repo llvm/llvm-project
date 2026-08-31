@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"

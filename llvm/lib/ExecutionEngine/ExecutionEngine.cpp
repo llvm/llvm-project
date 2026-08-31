@@ -469,8 +469,8 @@ int ExecutionEngine::runFunctionAsMain(Function *Fn,
 EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
-    : M(std::move(M)), ErrorStr(nullptr),
-      OptLevel(CodeGenOptLevel::Default), MemMgr(nullptr), Resolver(nullptr) {
+    : M(std::move(M)), ErrorStr(nullptr), OptLevel(CodeGenOptLevel::Default),
+      MemMgr(nullptr), Resolver(nullptr) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
