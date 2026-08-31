@@ -249,6 +249,10 @@ HexagonTargetLowering::initializeHVXLowering() {
     if (Subtarget.useHVXQFloatOps()) {
       setOperationAction(ISD::FP_EXTEND, MVT::v64f32, Custom);
       setOperationAction(ISD::FP_ROUND,  MVT::v64f16, Legal);
+      // qf16 has a fused multiply-accumulate form (see HexagonPatternsHVX.td).
+      // Declaring it legal lets DAGCombine contract fmul+fadd into fma where
+      // the fast-math flags permit it, instead of emitting both separately.
+      setOperationAction(ISD::FMA, MVT::v64f16, Legal);
     } else if (Subtarget.useHVXIEEEFPOps()) {
       setOperationAction(ISD::FP_EXTEND, MVT::v64f32, Legal);
       setOperationAction(ISD::FP_ROUND,  MVT::v64f16, Legal);
