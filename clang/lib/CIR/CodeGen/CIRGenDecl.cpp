@@ -1129,8 +1129,8 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
     // The cleanup is destroying elements in reverse from arrayEnd back to
     // begin, but only if arrayEnd != begin (i.e. something was
     // constructed).
-    mlir::Value ne = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
-                                        arrayEnd, begin);
+    mlir::Value ne =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, arrayEnd, begin);
     cir::IfOp::create(
         builder, loc, ne, /*withElseRegion=*/false,
         [&](mlir::OpBuilder &b, mlir::Location loc) {
