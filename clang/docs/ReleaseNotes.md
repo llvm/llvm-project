@@ -243,6 +243,10 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- The `cannot overload a member function` diagnostic now describes the previous
+  declaration first, matching the order in which the declarations appear in the
+  source. (#GH219803)
+
 - More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
