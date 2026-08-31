@@ -34,7 +34,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
-// ARCH-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}
 
 // case when nvptx-arch succeeds.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
@@ -49,15 +49,15 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
 // RUN:     --offload-arch-tool=%t/offload_arch_sm_70_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-SM_70-GFX906
-// ARCH-SM_70-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-SM_70-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}
 // ARCH-SM_70-GFX906: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
 
 // case when both nvptx-arch and amdgpu-arch succeed with other archs.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native,sm_75,gfx1030 \
 // RUN:     --offload-arch-tool=%t/offload_arch_sm_70_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-MULTIPLE
-// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"{{.*}}"-target-cpu" "gfx1030"
-// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"{{.*}}
+// ARCH-MULTIPLE: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_75"
 

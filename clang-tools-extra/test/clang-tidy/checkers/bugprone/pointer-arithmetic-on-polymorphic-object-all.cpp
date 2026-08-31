@@ -150,3 +150,13 @@ struct TemplateHolder : Base {
     (void)x;
   }
 };
+
+// pointer arithmetic on an incomplete type must not crash the matcher.
+template <typename T>
+struct IncompletePointeeCrash {
+  struct Incomplete;
+  void f(Incomplete *p) {
+    p[0];
+    // no-warning
+  }
+};

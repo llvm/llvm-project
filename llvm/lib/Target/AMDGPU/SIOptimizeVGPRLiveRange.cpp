@@ -220,7 +220,8 @@ void SIOptimizeVGPRLiveRange::findNonPHIUsesInBlock(
     Register Reg, MachineBasicBlock *MBB,
     SmallVectorImpl<MachineInstr *> &Uses) const {
   for (auto &UseMI : MRI->use_nodbg_instructions(Reg)) {
-    if (UseMI.getParent() == MBB && !UseMI.isPHI())
+    if (UseMI.getParent() == MBB && !UseMI.isPHI() &&
+        UseMI.readsVirtualRegister(Reg))
       Uses.push_back(&UseMI);
   }
 }

@@ -274,7 +274,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
   // Ensure the collapsed loop has an attribute indicating the number
   // of collapsed loops
   auto collapseAttr =
-      forOp->getAttrOfType<IntegerAttr>(getCollapseCountAttrName());
+      forOp->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName());
   ASSERT_TRUE(collapseAttr);
   EXPECT_EQ(collapseAttr.getInt(), 2);
 
@@ -311,7 +311,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
   EXPECT_TRUE(hasNestedFor);
 
   // No collapse happened, so no collapse_count attribute is expected
-  EXPECT_FALSE(forOp->hasAttr(getCollapseCountAttrName()));
+  EXPECT_FALSE(forOp->hasDiscardableAttr(getCollapseCountAttrName()));
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {
@@ -1006,9 +1006,11 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
   b.setInsertionPoint(loopBody->getTerminator());
   Value replacementVal =
       arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  Value cleanupVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(2)).getResult();
   loopBody->getTerminator()->erase();
   b.setInsertionPointToEnd(loopBody);
-  acc::YieldOp::create(b, loc, ValueRange{replacementVal});
+  acc::YieldOp::create(b, loc, ValueRange{replacementVal, cleanupVal});
 
   b.setInsertionPointToEnd(entry);
   Value c1value =
@@ -1024,7 +1026,9 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
   auto [replacements, ip] = acc::cloneACCRegionInto(
       &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{origVal});
 
-  ASSERT_EQ(replacements.size(), 1u);
+  ASSERT_EQ(replacements.size(), 2u);
+  EXPECT_EQ(replacements[1].getDefiningOp<arith::ConstantOp>().getValue(),
+            b.getI32IntegerAttr(2));
   // The addi should now use the replacement (constant 1), not origVal
   bool addiUsesReplacement = false;
   for (Operation &op : entry->getOperations()) {

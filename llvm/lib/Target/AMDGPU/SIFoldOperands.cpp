@@ -1702,7 +1702,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src0 = &MI->getOperand(Src0Idx);
-  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
+  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*MRI, *Src0);
 
   if ((Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
        Opc == AMDGPU::S_NOT_B32) &&
@@ -1718,7 +1718,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src1 = &MI->getOperand(Src1Idx);
-  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
+  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
 
   if (!Src0Imm && !Src1Imm)
     return false;
@@ -1831,11 +1831,11 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0)) {
-    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
     if (!Src1Imm)
       return false;
 
-    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
+    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*MRI, *Src0);
     if (!Src0Imm || *Src0Imm != *Src1Imm)
       return false;
   }
@@ -1874,11 +1874,11 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
     return std::nullopt;
 
   std::optional<int64_t> MaskImm =
-      TII->getImmOrMaterializedImm(AndMI.getOperand(1));
+      TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(1));
   if (MaskImm && AndMI.getOperand(2).isReg())
     return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
 
-  MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
+  MaskImm = TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(2));
   if (MaskImm && AndMI.getOperand(1).isReg())
     return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
 
@@ -1904,6 +1904,9 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   if (!ChildResult)
     return false;
 
+  if (!ChildResult->Reg.isVirtual())
+    return false;
+
   MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
   if (!ParentMI)
     return false;
@@ -1925,11 +1928,19 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
     return false;
 
   Register Dst = ChildMI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, ChildResult->Reg);
+  Register Src = ChildResult->Reg;
+
+  // Src must be legal in every use of Dst. An S_AND_B32 parent with a
+  // V_AND_B32 child defines Src in the scalar bank, and a use that requires a
+  // VGPR does not accept it.
+  if (!Dst.isVirtual() || !MRI->constrainRegClass(Src, MRI->getRegClass(Dst)))
+    return false;
+
+  MRI->replaceRegWith(Dst, Src);
 
   // Clear kill flags if the register operand is not marked as kill.
   if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
-    MRI->clearKillFlags(ChildResult->Reg);
+    MRI->clearKillFlags(Src);
 
   ChildMI.eraseFromParent();
   return true;
@@ -2403,6 +2414,18 @@ static int getOModValue(unsigned Opc, int64_t Val) {
       return SIOutMods::NONE;
     }
   }
+  case AMDGPU::V_PK_MUL_BF16: {
+    switch (static_cast<uint16_t>(Val)) {
+    case 0x3F00: // 0.5 in BF16
+      return SIOutMods::DIV2;
+    case 0x4000: // 2.0 in BF16
+      return SIOutMods::MUL2;
+    case 0x4080: // 4.0 in BF16
+      return SIOutMods::MUL4;
+    default:
+      return SIOutMods::NONE;
+    }
+  }
   default:
     llvm_unreachable("invalid mul opcode");
   }
@@ -2430,30 +2453,25 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
          MFI->getMode().FP64FP16Denormals.Output !=
              DenormalMode::PreserveSign) ||
         MI.mayRaiseFPException())
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
-    const MachineOperand *RegOp = nullptr;
-    const MachineOperand *ImmOp = nullptr;
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    if (Src0->isImm()) {
-      ImmOp = Src0;
-      RegOp = Src1;
-    } else if (Src1->isImm()) {
-      ImmOp = Src1;
-      RegOp = Src0;
-    } else
-      return std::pair(nullptr, SIOutMods::NONE);
 
-    int OMod = getOModValue(Op, ImmOp->getImm());
+    // If there is an immediate operand, it must be Src1
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
+    if (!Src1Imm)
+      return {nullptr, SIOutMods::NONE};
+
+    int OMod = getOModValue(Op, *Src1Imm);
     if (OMod == SIOutMods::NONE ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
-    return std::pair(RegOp, OMod);
+    return {Src0, OMod};
   }
   case AMDGPU::V_ADD_F64_e64:
   case AMDGPU::V_ADD_F64_pseudo_e64:
@@ -2468,7 +2486,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
           Op == AMDGPU::V_ADD_F16_e64 || Op == AMDGPU::V_ADD_F16_t16_e64 ||
           Op == AMDGPU::V_ADD_F16_fake16_e64) &&
          MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -2480,12 +2498,71 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
         !TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
-      return std::pair(Src0, SIOutMods::MUL2);
+      return {Src0, SIOutMods::MUL2};
 
-    return std::pair(nullptr, SIOutMods::NONE);
+    return {nullptr, SIOutMods::NONE};
+  }
+  case AMDGPU::V_PK_MUL_BF16: {
+    // OMOD folding for BF16 packed multiply. bf16 has no denormal mode of its
+    // own; it follows the default ("denormal-fp-math") mode, which is the same
+    // field as f64/f16.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign ||
+        MI.mayRaiseFPException())
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    // If there is an immediate operand, it must be Src1
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*MRI, *Src1);
+    if (!Src1Imm)
+      return {nullptr, SIOutMods::NONE};
+
+    int OMod = getOModValue(AMDGPU::V_PK_MUL_BF16, *Src1Imm);
+    if (OMod == SIOutMods::NONE)
+      return {nullptr, SIOutMods::NONE};
+
+    // Modifiers other than op_sel_hi block OMOD folding
+    const MachineOperand *Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    const MachineOperand *Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    if ((Src0Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return {nullptr, SIOutMods::NONE};
+
+    return {Src0, OMod};
+  }
+  case AMDGPU::V_PK_ADD_BF16: {
+    // OMOD folding for BF16 packed add: x + x -> x * 2. See the bf16 denormal
+    // mode note in the V_PK_MUL_BF16 case above.
+    if (MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign)
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    if (!Src0->isReg() || !Src1->isReg() || Src0->getReg() != Src1->getReg() ||
+        Src0->getSubReg() != Src1->getSubReg())
+      return {nullptr, SIOutMods::NONE};
+
+    // Modifiers other than op_sel_hi block OMOD folding
+    const MachineOperand *Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    const MachineOperand *Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    if ((Src0Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return {nullptr, SIOutMods::NONE};
+
+    return {Src0, SIOutMods::MUL2};
   }
   default:
-    return std::pair(nullptr, SIOutMods::NONE);
+    return {nullptr, SIOutMods::NONE};
   }
 }
 
@@ -2500,6 +2577,29 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
     return false;
 
   MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());
+  Register OModSrcReg = Def->getOperand(0).getReg();
+
+  // In real-true16 mode, vgpr_16 results are packed into vgpr_32 via
+  // REG_SEQUENCE. Look through it to find the actual instruction.
+  if (Def->isRegSequence() && Def->getNumOperands() == 5 &&
+      Def->getOperand(2).getImm() == AMDGPU::lo16) {
+    // Only look through if the high 16 bits are undefined
+    bool CanLookThrough = true;
+    MachineInstr *Hi16Def = MRI->getVRegDef(Def->getOperand(3).getReg());
+    if (!Hi16Def || !Hi16Def->isImplicitDef())
+      CanLookThrough = false;
+
+    if (CanLookThrough) {
+      Register SrcReg = Def->getOperand(1).getReg();
+      if (!MRI->hasOneNonDBGUse(SrcReg))
+        return false;
+
+      Def = MRI->getVRegDef(SrcReg);
+      if (!Def)
+        return false;
+    }
+  }
+
   MachineOperand *DefOMod = TII->getNamedOperand(*Def, AMDGPU::OpName::omod);
   if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
     return false;
@@ -2515,10 +2615,10 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def);
 
   DefOMod->setImm(OMod);
-  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), OModSrcReg);
   // Kill flags can be wrong if we replaced a def inside a loop with a def
   // outside the loop.
-  MRI->clearKillFlags(Def->getOperand(0).getReg());
+  MRI->clearKillFlags(OModSrcReg);
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
