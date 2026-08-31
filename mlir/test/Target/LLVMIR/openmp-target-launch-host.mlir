@@ -40,7 +40,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
   llvm.func @main_multidim_num_teams(%num_teams_y : i32) {
     %num_teams_x = llvm.mlir.constant(20) : i32
-    omp.target host_eval(%num_teams_x -> %arg_ntx, %num_teams_y -> %arg_nty : i32, i32) {
+    omp.target kernel_type(generic) host_eval(%num_teams_x -> %arg_ntx, %num_teams_y -> %arg_nty : i32, i32) {
       omp.teams num_teams(to %arg_ntx, %arg_nty : i32, i32) {
         omp.terminator
       }

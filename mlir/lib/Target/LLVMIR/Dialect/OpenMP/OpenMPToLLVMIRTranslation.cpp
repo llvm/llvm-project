@@ -9192,10 +9192,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     break;
   case omp::TargetExecMode::spmd_no_loop:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+    break;
+  }
 
-  attrs.MinTeams = minTeamsVal;
+  attrs.MinTeams.front() = minTeamsVal;
   attrs.MaxTeams = maxTeamsVals;
-  attrs.MinThreads = 1;
+  attrs.MinThreads.front() = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
 }

@@ -679,7 +679,7 @@ llvm.func @teams_num_teams_multi_dim_standalone(%lb : i32, %ub : i32) {
 
 llvm.func @teams_num_teams_too_many_dims() {
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target {
+  omp.target kernel_type(generic) {
     %c100 = llvm.mlir.constant(100 : i32) : i32
     // expected-error@below {{not yet implemented: Unhandled clause num_teams with more than 3 dimensions in omp.teams operation}}
     // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
