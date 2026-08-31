@@ -12,6 +12,7 @@
 
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -116,6 +117,78 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
       },
       [&](Operation *op, Region *) { return isPure(op); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
+}
+
+size_t mlir::hoistLoopInvariantLoadOps(LoopLikeOpInterface loopLike,
+                                       AliasAnalysis &aa) {
+  // Only perform load hoisting if we have alias analysis and the loop is
+  // guaranteed to execute at least once.
+  //
+  // TODO: We can still perform load hoisting for loops with unknown trip
+  // count, but we need to be more careful about the legality of hoisting a
+  // load out of the loop.
+  std::optional<APInt> tripCount = loopLike.getStaticTripCount();
+  if (!tripCount.has_value() || *tripCount == 0)
+    return 0;
+
+  size_t numMoved = 0;
+  SmallVector<Operation *> loadOps;
+  SmallVector<MemoryEffects::EffectInstance> writeEffects;
+
+  auto noAlias = [&](Value val1, Value val2) -> bool {
+    return aa.alias(val1, val2).isNo();
+  };
+
+  for (Region *region : loopLike.getLoopRegions())
+    for (Operation &op : region->getOps()) {
+      // Collect loop-invariant load ops. We will check that the loaded value
+      // is not written to by the loop before hoisting the load.
+      //
+      // TODO: we can also consider hoisting load ops that have multiple
+      // effects.
+      if (hasSingleEffect<MemoryEffects::Read>(&op)) {
+        loadOps.push_back(&op);
+        continue;
+      }
+
+      if (auto effects = getEffectsRecursively(&op)) {
+        // Collect all write effects in the loop. We will check that the loaded
+        // value is not written to by any of these effects before hoisting the
+        // load.
+        for (auto &effect : *effects)
+          if (isa<MemoryEffects::Write>(effect.getEffect()))
+            writeEffects.push_back(effect);
+      }
+    }
+
+  for (Operation *loadOp : loadOps) {
+    LDBG() << "Checking load op: "
+           << OpWithFlags(loadOp, OpPrintingFlags().skipRegions());
+
+    if (!canBeHoisted(loadOp, [&](Value value) {
+          return loopLike.isDefinedOutsideOfLoop(value);
+        }))
+      continue;
+
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    cast<MemoryEffectOpInterface>(loadOp).getEffects(effects);
+    assert(effects.size() == 1 &&
+           isa<MemoryEffects::Read>(effects[0].getEffect()) &&
+           "expected a single read effect");
+
+    Value loadedValue = effects[0].getValue();
+    if (llvm::all_of(writeEffects,
+                     [&](MemoryEffects::EffectInstance &writeEffect) {
+                       return noAlias(loadedValue, writeEffect.getValue());
+                     })) {
+      LDBG() << "Hoisting loop-invariant load op: "
+             << OpWithFlags(loadOp, OpPrintingFlags().skipRegions());
+      loopLike.moveOutOfLoop(loadOp);
+      ++numMoved;
+    }
+  }
+
+  return numMoved;
 }
 
 namespace {
