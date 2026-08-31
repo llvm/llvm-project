@@ -2663,8 +2663,7 @@ public:
                          const InstructionsState &LocalState,
                          SmallVectorImpl<Value *> &Op1,
                          SmallVectorImpl<Value *> &Op2,
-                         OrdersType &ReorderIndices,
-                         bool TreeExists = true) const;
+                         OrdersType &ReorderIndices) const;
 
   ~BoUpSLP();
 
@@ -11092,8 +11091,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                 const InstructionsState &LocalState,
                                 SmallVectorImpl<Value *> &Op1,
                                 SmallVectorImpl<Value *> &Op2,
-                                OrdersType &ReorderIndices,
-                                bool TreeExists) const {
+                                OrdersType &ReorderIndices) const {
   constexpr unsigned SmallNodeSize = 4;
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !SplitAlternateInstructions)
@@ -11213,7 +11211,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind);
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
-        (TreeExists && !VectorizableTree.empty() && getRootNode().hasState() &&
+        (!VectorizableTree.empty() && getRootNode().hasState() &&
                  getRootNode().getOpcode() == Instruction::Store
              ? NewShuffleCost
              : 0);
@@ -31139,9 +31137,9 @@ public:
           // Last chance to try to vectorize alternate node.
           SmallVector<Value *> Op1, Op2;
           BoUpSLP::OrdersType ReorderIndices;
+          V.deleteTree();
           if (MainOp && AltOp &&
-              V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices,
-                                  /*TreeExists*/ false)) {
+              V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices)) {
             if (LocalReducedVals.empty()) {
               LocalReducedVals.push_back(Ops);
               States.push_back(OpS);
