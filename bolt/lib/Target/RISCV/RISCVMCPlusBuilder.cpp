@@ -40,6 +40,25 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
+
+  bool isCleanRegXOR(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case RISCV::XOR:
+    case RISCV::C_XOR:
+      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg();
+    default:
+      return false;
+    }
+  }
+
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs(RegInfo->getNumRegs(), false);
+    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X17; ++Reg)
+      Regs |= getAliases(Reg);
+    return Regs;
+  }
+
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
                          bool CreateNewSymbols) const override {
@@ -71,6 +90,33 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    // The RISC-V psABI uses a0 (x10) and a1 (x11) to return integer and pointer
+    // values. 
+    Regs |= getAliases(RISCV::X10);
+    Regs |= getAliases(RISCV::X11);
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    for (MCPhysReg Reg = RISCV::X1; Reg <= RISCV::X31; ++Reg) {
+      if (IncludeAlias)
+        Regs |= getAliases(Reg);
+      else
+        Regs.set(Reg);
+    }
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask(RegInfo->getNumRegs(), false);
+    ExclusionMask |= getAliases(RISCV::X1); // return address
+    ExclusionMask |= getAliases(RISCV::X2); // stack pointer
+    ExclusionMask |= getAliases(RISCV::X3); // global pointer
+    ExclusionMask |= getAliases(RISCV::X4); // thread pointer
+    ExclusionMask |= getAliases(RISCV::X8); // frame pointer
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -182,6 +228,31 @@ public:
     replaceBranchTarget(Inst, TBB, Ctx);
     return {Inst};
   }
+
+  // Return the effective signed PC-relative offset width, including the
+  // implicit zero bit required by the instruction alignment.
+  int getPCRelEncodingSize(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("Failed to get RISC-V PC-relative encoding size");
+    case RISCV::C_BEQZ:
+    case RISCV::C_BNEZ:
+      return 9;
+    case RISCV::C_J:
+      return 12;
+    case RISCV::BEQ:
+    case RISCV::BNE:
+    case RISCV::BLT:
+    case RISCV::BGE:
+    case RISCV::BLTU:
+    case RISCV::BGEU:
+      return 13;
+    case RISCV::JAL:
+      return 21;
+    }
+  }
+
+  int getUncondBranchEncodingSize() const override { return 21; }
 
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
@@ -698,6 +769,29 @@ public:
     if (IsTailCall)
       setTailCall(Inst);
     Seq.swap(Insts);
+  }
+
+  void createLongJmp(InstructionListType &Seq, const MCSymbol *Target,
+                     MCContext *Ctx, bool IsTailCall,
+                     MCPhysReg ScratchReg) override {
+    assert(ScratchReg && "RISC-V long jump requires a scratch register");
+    MCSymbol *AuipcLabel = Ctx->createNamedTempSymbol("long_jmp");
+
+    MCInst Inst = MCInstBuilder(RISCV::AUIPC).addReg(ScratchReg).addImm(0);
+    setOperandToSymbolRef(Inst, /*OpNum=*/1, Target, /*Addend=*/0, Ctx,
+                          ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(Inst, AuipcLabel);
+    Seq.emplace_back(std::move(Inst));
+
+    Inst = MCInstBuilder(RISCV::JALR)
+               .addReg(RISCV::X0)
+               .addReg(ScratchReg)
+               .addImm(0);
+    setOperandToSymbolRef(Inst, /*OpNum=*/2, AuipcLabel, /*Addend=*/0, Ctx,
+                          ELF::R_RISCV_PCREL_LO12_I);
+    if (IsTailCall)
+      setTailCall(Inst);
+    Seq.emplace_back(std::move(Inst));
   }
 
   InstructionListType createGetter(MCContext *Ctx, const char *name) const {

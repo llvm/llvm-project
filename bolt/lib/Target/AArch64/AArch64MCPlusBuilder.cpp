@@ -2771,7 +2771,8 @@ public:
   }
 
   void createLongJmp(InstructionListType &Seq, const MCSymbol *Target,
-                     MCContext *Ctx, bool IsTailCall) override {
+                     MCContext *Ctx, bool IsTailCall,
+                     MCPhysReg /*ScratchReg*/) override {
     // ip0 (r16) is reserved to the linker (refer to 5.3.1.1 of "Procedure Call
     //   Standard for the ARM 64-bit Architecture (AArch64)".
     // The sequence of instructions we create here is the following:
