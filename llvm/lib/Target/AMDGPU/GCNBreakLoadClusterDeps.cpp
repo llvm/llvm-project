@@ -45,16 +45,14 @@
 #include <utility>
 #include <vector>
 
-using std::bitset;
-using std::pair;
-using std::reverse;
-using std::tie;
-using std::unordered_set;
-using std::vector;
-
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-break-load-cluster-deps"
+
+// The lane sets only ever hold 32-bit VGPRs, so they are indexed by
+// (Reg - AMDGPU::VGPR0) into a bitset sized to the number of VGPRs, rather than
+// one spanning every target register (which would be tens of thousands of bits).
+static constexpr unsigned NumVGPR32 = 1024;
 
 namespace {
 
@@ -66,18 +64,20 @@ class GCNBreakLoadClusterDepsImpl {
   MachineRegisterInfo *MRI = nullptr;
   unsigned OccupancyBudget;
 
-  bitset<AMDGPU::NUM_TARGET_REGS> getVGPR32Lanes(Register Reg) const;
-  pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
+  std::bitset<NumVGPR32> getVGPR32Lanes(Register Reg) const;
+  std::pair<std::bitset<NumVGPR32>,
+            std::bitset<NumVGPR32>>
   getUsesAndDefsFor(MachineInstr &MI) const;
   Register promoteToSuperRegister(MachineInstr &MI, Register SubReg, bool Defs,
                                   bool Uses);
   Register renameRegister(Register FromReg, Register ToReg, Register RenameReg);
-  bool
-  findReplaceRegisterOperand(MachineInstr &MI, unsigned OpNum,
-                             const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs,
-                             bool MIMustBeKiller = false);
+  bool findReplaceRegisterOperand(
+      MachineInstr &MI, unsigned OpNum,
+      const std::bitset<NumVGPR32> &BannedRegs,
+      bool MIMustBeKiller = false);
   bool isVGPRLoad(MachineInstr &MI) const {
-    return MI.mayLoad() && MI.getOperand(0).isReg() &&
+    return SIInstrInfo::isVMEM(MI) && MI.mayLoad() &&
+           MI.getOperand(0).isReg() &&
            TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
   }
 
@@ -108,26 +108,29 @@ public:
 } // end anonymous namespace
 
 // Append the 32-bit VGPR lanes of physical VGPR `Reg` (any width) to `Lanes`.
-bitset<AMDGPU::NUM_TARGET_REGS>
+std::bitset<NumVGPR32>
 GCNBreakLoadClusterDepsImpl::getVGPR32Lanes(Register Reg) const {
-  bitset<AMDGPU::NUM_TARGET_REGS> ToReturn;
+  std::bitset<NumVGPR32> ToReturn;
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   unsigned NumLanes = TRI->getRegSizeInBits(*RC).getFixedValue() / 32;
   if (NumLanes <= 1) { // already a VGPR_32
-    ToReturn[Reg] = true;
+    ToReturn[Reg - AMDGPU::VGPR0] = true;
     return ToReturn;
   }
   for (unsigned C = 0; C < NumLanes; ++C)
-    ToReturn[TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C))] = true;
+    ToReturn[TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C)) - AMDGPU::VGPR0] =
+        true;
   return ToReturn;
 }
 
-pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
+std::pair<std::bitset<NumVGPR32>,
+          std::bitset<NumVGPR32>>
 GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
-  pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
+  std::pair<std::bitset<NumVGPR32>,
+            std::bitset<NumVGPR32>>
       ToReturn;
   for (unsigned I = 0; I < MI.getNumExplicitOperands(); I++)
     if (MI.getOperand(I).isReg())
@@ -162,11 +165,12 @@ Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
 
 bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     MachineInstr &MI, unsigned OpNum,
-    const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs, bool MIMustBeKiller) {
-  MachineBasicBlock& MBB = *MI.getParent();
+    const std::bitset<NumVGPR32> &BannedRegs,
+    bool MIMustBeKiller) {
+  MachineBasicBlock &MBB = *MI.getParent();
   MachineInstr *DefToRename = nullptr, *KillerIns = nullptr;
   Register OldReg = MI.getOperand(OpNum).getReg();
-  bitset<AMDGPU::NUM_TARGET_REGS> OldRegClobbers = getVGPR32Lanes(OldReg);
+  std::bitset<NumVGPR32> OldRegClobbers = getVGPR32Lanes(OldReg);
   if (MI.getOperand(OpNum).isDef())
     DefToRename = &MI;
   else
@@ -178,7 +182,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
 
     // First, go forward from def to find the kill
     if (DefToRename) {
-      bitset<AMDGPU::NUM_TARGET_REGS> ClobberedSubregs;
+      std::bitset<NumVGPR32> ClobberedSubregs;
       MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
       Register OldOldReg = OldReg;
       for (MachineBasicBlock::iterator It =
@@ -190,8 +194,9 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           NewKiller = &*It;
         ClobberedSubregs |= Subregs.first;
 
-        //Handle promoting OldReg to a super-register of it
-        Register NewOldReg = promoteToSuperRegister(*std::prev(It),OldReg,true,false);
+        // Handle promoting OldReg to a super-register of it
+        Register NewOldReg =
+            promoteToSuperRegister(*std::prev(It), OldReg, true, false);
         NewOldReg = promoteToSuperRegister(*It, NewOldReg, false, true);
         if (NewOldReg != OldReg) {
           Changed = true;
@@ -215,9 +220,9 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       }
     }
 
-    //Second, go backward from killer to find the def
+    // Second, go backward from killer to find the def
     if (KillerIns) {
-      bitset<AMDGPU::NUM_TARGET_REGS> ClobberedSubregs;
+      std::bitset<NumVGPR32> ClobberedSubregs;
       MachineInstr *NewDef = DefToRename ? DefToRename : nullptr;
       for (MachineBasicBlock::reverse_iterator RIt =
                std::next(KillerIns->getReverseIterator());
@@ -244,12 +249,13 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   // Pre-mutation guards over the window [DefToRename, KillerIns].  Bail before
   // changing anything if the rename can't be done correctly.
 
-  // Tied guard (conservative, whole footprint): a tied def/use pair is pinned to
-  // a single physical register.  If it couples something we must rename (a def,
-  // or a use reading the renamed value) with something we must not (a use whose
-  // incoming value is defined before the window), no single register satisfies
-  // both and renaming would silently corrupt the untouched side.  We don't
-  // distinguish those cases, so bail on any tied operand overlapping OldReg.
+  // Tied guard (conservative, whole footprint): a tied def/use pair is pinned
+  // to a single physical register.  If it couples something we must rename (a
+  // def, or a use reading the renamed value) with something we must not (a use
+  // whose incoming value is defined before the window), no single register
+  // satisfies both and renaming would silently corrupt the untouched side.  We
+  // don't distinguish those cases, so bail on any tied operand overlapping
+  // OldReg.
   for (MachineBasicBlock::iterator It = DefToRename->getIterator(),
                                    End = std::next(KillerIns->getIterator());
        It != End; ++It)
@@ -270,7 +276,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
            KillerIns->getReverseIterator();
        &*AccumIt != DefToRename; ++AccumIt)
     LRU.accumulate(*AccumIt);
-  
+
   // Iterate over registers in physical register class
   const TargetRegisterClass &DefinedRegClass =
       *TRI->getPhysRegBaseClass(OldReg);
@@ -289,7 +295,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     return false;
 
   auto renameRegisters = [&](bool DryRun) {
-    bitset<AMDGPU::NUM_TARGET_REGS> RedefinedRegs;
+    std::bitset<NumVGPR32> RedefinedRegs;
     // Actually rename the register
     for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
       if (DefToRename->getOperand(Op).isReg() &&
@@ -298,7 +304,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         Register NewDef =
             renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                            DefToRename->getOperand(Op).getReg());
-        if(!DryRun)
+        if (!DryRun)
           DefToRename->getOperand(Op).setReg(NewDef);
         else if (!DefToRename->getOperand(Op).isRenamable())
           return false;
@@ -318,11 +324,11 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           Register NewReg =
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              RenameIt->getOperand(Op).getReg());
-          if(!DryRun)
+          if (!DryRun)
             RenameIt->getOperand(Op).setReg(NewReg);
           else if (!RenameIt->getOperand(Op).isRenamable())
             return false;
-          
+
           if (RenameIt->getOperand(Op).isDef())
             RedefinedRegs |= getVGPR32Lanes(NewReg);
         }
@@ -330,7 +336,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       if (KillerIns->getOperand(Op).isReg() &&
           KillerIns->getOperand(Op).isUse() &&
           TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg)) {
-        if(!DryRun)
+        if (!DryRun)
           KillerIns->getOperand(Op).setReg(
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              KillerIns->getOperand(Op).getReg()));
@@ -355,18 +361,19 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
   // Find clusterable loads whose address operands share a register with an
   // earlier load's address, or whose address def chains funnel through a
   // common scratch register (WAR/WAW anti-dependencies).
-  vector<MachineInstr *> AllVectorLoads;
+  std::vector<MachineInstr *> AllVectorLoads;
   for (MachineInstr &MI : MBB)
     if (isVGPRLoad(MI))
       AllVectorLoads.push_back(&MI);
 
-  reverse(AllVectorLoads.begin(), AllVectorLoads.end()); // efficiency
-  bitset<AMDGPU::NUM_TARGET_REGS> UsedLoadSourcePhysregs, UsedLoadDestPhysregs;
-  unordered_set<MachineInstr*> ClusterLoads;
+  std::reverse(AllVectorLoads.begin(), AllVectorLoads.end()); // efficiency
+  std::bitset<NumVGPR32> UsedLoadSourcePhysregs,
+      UsedLoadDestPhysregs;
+  std::unordered_set<MachineInstr *> ClusterLoads;
   while (!AllVectorLoads.empty()) {
     MachineInstr &VecLoadIns = *AllVectorLoads.back();
-    bitset<AMDGPU::NUM_TARGET_REGS> InsDefs, InsUses;
-    tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+    std::bitset<NumVGPR32> InsDefs, InsUses;
+    std::tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
 
     if (ClusterLoads.size() && !ClusterLoads.count(&VecLoadIns)) {
       ClusterLoads.clear();
@@ -375,16 +382,16 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       AllVectorLoads.pop_back();
       continue;
     } else if (!ClusterLoads.count(&VecLoadIns)) {
-      bitset<AMDGPU::NUM_TARGET_REGS> ClusterRAWHazards;
+      std::bitset<NumVGPR32> ClusterRAWHazards;
       for (MachineBasicBlock::iterator ForwardIt = VecLoadIns.getIterator();
            ForwardIt != MBB.end(); ++ForwardIt) {
         if (isVGPRLoad(*ForwardIt)) {
-          bitset<AMDGPU::NUM_TARGET_REGS> UsedVGPRs;
+          std::bitset<NumVGPR32> UsedVGPRs;
           for (MachineOperand &Operand : ForwardIt->uses())
             if (Operand.isReg() && Operand.isUse() &&
                 TRI->isVGPR(*MRI, Operand.getReg()))
               UsedVGPRs |= getVGPR32Lanes(Operand.getReg());
-          
+
           if ((ClusterRAWHazards & UsedVGPRs).any())
             break;
 
@@ -393,7 +400,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
               getVGPR32Lanes(ForwardIt->getOperand(0).getReg());
         } else
           for (MachineOperand &Operand : ForwardIt->defs())
-            if (TRI->isVGPR(*MRI,Operand.getReg()))
+            if (TRI->isVGPR(*MRI, Operand.getReg()))
               ClusterRAWHazards &= getVGPR32Lanes(Operand.getReg());
       }
     } else
@@ -401,19 +408,19 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
 
     // If it's used or defined by a load that could be in our cluster, it's
     // _NOT_ free.
-    bitset<AMDGPU::NUM_TARGET_REGS> BannedRegs =
-      UsedLoadDestPhysregs | UsedLoadSourcePhysregs;
+    std::bitset<NumVGPR32> BannedRegs =
+        UsedLoadDestPhysregs | UsedLoadSourcePhysregs;
     for (MachineInstr *FutureVecLoad : ClusterLoads) {
       auto UsesAndDefs = getUsesAndDefsFor(*FutureVecLoad);
       BannedRegs |= UsesAndDefs.first;
       BannedRegs |= UsesAndDefs.second;
     }
-    
+
     // Check if we have something to rename due to WAR
-    bitset<AMDGPU::NUM_TARGET_REGS> WarConflicts =
-      (InsUses | InsDefs) & (UsedLoadSourcePhysregs | UsedLoadDestPhysregs);
+    std::bitset<NumVGPR32> WarConflicts =
+        (InsUses | InsDefs) & (UsedLoadSourcePhysregs | UsedLoadDestPhysregs);
     while (WarConflicts.any()) {
-      Register OldReg = WarConflicts._Find_first();
+      Register OldReg = AMDGPU::VGPR0 + WarConflicts._Find_first();
       unsigned OpNum;
       for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
         if (VecLoadIns.getOperand(OpNum).isReg() &&
@@ -424,16 +431,16 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       if (!findReplaceRegisterOperand(VecLoadIns, OpNum, BannedRegs))
         break;
       ToReturn = true;
-      
-      tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+
+      std::tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
       WarConflicts =
           (InsUses | InsDefs) & (UsedLoadSourcePhysregs | UsedLoadDestPhysregs);
     }
-    
+
     // Check if we have something to rename due to WAR
-    bitset<AMDGPU::NUM_TARGET_REGS> SelfConflicts = InsUses & InsDefs;
+    std::bitset<NumVGPR32> SelfConflicts = InsUses & InsDefs;
     while (SelfConflicts.any()) {
-      Register OldReg = SelfConflicts._Find_first();
+      Register OldReg = AMDGPU::VGPR0 + SelfConflicts._Find_first();
       unsigned OpNum;
       for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
         if (VecLoadIns.getOperand(OpNum).isReg() &&
@@ -442,15 +449,16 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
           break;
       assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
              "There should be a conflicting register operand.  Where is it?");
-      bitset<AMDGPU::NUM_TARGET_REGS> SelfBannedRegs = BannedRegs | InsDefs;
+      std::bitset<NumVGPR32> SelfBannedRegs =
+          BannedRegs | InsDefs;
       if (!findReplaceRegisterOperand(VecLoadIns, OpNum, SelfBannedRegs, true))
         break;
       ToReturn = true;
-      
-      tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+
+      std::tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
       SelfConflicts = InsUses & InsDefs;
     }
-    
+
     // Coda
     UsedLoadDestPhysregs |= InsDefs;
     UsedLoadSourcePhysregs |= InsUses;
