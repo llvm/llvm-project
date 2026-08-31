@@ -407,9 +407,9 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr {fir.bindc_name = "y"}) {
 
 // CHECK-LABEL:  @_QQmain
 llvm.func @_QQmain() {
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(5 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(5 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.mlir.constant(1 : i64) : i64
   %4 = llvm.alloca %3 x i32 : (i64) -> !llvm.ptr
 // CHECK: omp.taskgroup
@@ -448,8 +448,8 @@ llvm.func @_QFPdo_work(%arg0: !llvm.ptr {fir.bindc_name = "i"}) {
 
 // CHECK-LABEL:  @sub_
 llvm.func @sub_() {
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFsubEi"} : (i64) -> !llvm.ptr
 // CHECK: omp.ordered.region
@@ -479,16 +479,16 @@ llvm.func @sub_() {
 
 // CHECK-LABEL:   llvm.func @_QPtarget_map_with_bounds(
 // CHECK:           %[[ARG_0:.*]]: !llvm.ptr, %[[ARG_1:.*]]: !llvm.ptr, %[[ARG_2:.*]]: !llvm.ptr) {
-// CHECK: %[[C_01:.*]] = llvm.mlir.constant(4 : index) : i64
-// CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_04:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[C_01:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_04:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C_02]] : i64) upper_bound(%[[C_01]] : i64) stride(%[[C_04]] : i64) start_idx(%[[C_04]] : i64)
 // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) name("") -> !llvm.ptr
-// CHECK: %[[C_11:.*]] = llvm.mlir.constant(4 : index) : i64
-// CHECK: %[[C_12:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_13:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_14:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[C_11:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK: %[[C_12:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_13:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_14:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_12]] : i64) upper_bound(%[[C_11]] : i64) stride(%[[C_14]] : i64) start_idx(%[[C_14]] : i64)
 // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_2]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) name("") -> !llvm.ptr
 // CHECK: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %[[BB_ARG0:.*]], %[[MAP1]]  -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
@@ -498,16 +498,16 @@ llvm.func @sub_() {
 // CHECK:}
 
 llvm.func @_QPtarget_map_with_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
-  %0 = llvm.mlir.constant(4 : index) : i64
-  %1 = llvm.mlir.constant(1 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
-  %3 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(4 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.mlir.constant(1 : i64) : i64
   %4 = omp.map.bounds   lower_bound(%1 : i64) upper_bound(%0 : i64) stride(%3 : i64) start_idx(%3 : i64)
   %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%4) name("") -> !llvm.ptr
-  %6 = llvm.mlir.constant(4 : index) : i64
-  %7 = llvm.mlir.constant(1 : index) : i64
-  %8 = llvm.mlir.constant(1 : index) : i64
-  %9 = llvm.mlir.constant(1 : index) : i64
+  %6 = llvm.mlir.constant(4 : i64) : i64
+  %7 = llvm.mlir.constant(1 : i64) : i64
+  %8 = llvm.mlir.constant(1 : i64) : i64
+  %9 = llvm.mlir.constant(1 : i64) : i64
   %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%9 : i64) start_idx(%9 : i64)
   %11 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%10) name("") -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%5 -> %arg3, %11 -> %arg4: !llvm.ptr, !llvm.ptr) {
