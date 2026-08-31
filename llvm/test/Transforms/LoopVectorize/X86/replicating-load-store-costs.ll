@@ -563,7 +563,7 @@ define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr 
 ; I64:       [[INNER_LOOP_PREHEADER]]:
 ; I64-NEXT:    br label %[[INNER_LOOP:.*]]
 ; I64:       [[INNER_LOOP]]:
-; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i32 1
+; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i64 1
 ; I64-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR_A]], align 8
 ; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 0.000000e+00
 ; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0

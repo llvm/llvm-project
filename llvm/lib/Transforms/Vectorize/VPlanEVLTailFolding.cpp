@@ -398,40 +398,33 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
                                    DebugLoc::getUnknown());
 
   assert(
-      all_of(Plan.getVF().users(),
-             [&Plan](VPUser *U) {
-               auto IsAllowedUser =
-                   IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                           VPWidenIntOrFpInductionRecipe,
-                           VPWidenMemIntrinsicRecipe>;
-               auto IsFORStartIdx = [](VPUser *V) {
-                 if (!match(V, m_Sub(m_VPValue(), m_One())))
-                   return false;
-                 auto *SubR = cast<VPSingleDefRecipe>(V);
-                 return all_of(SubR->users(), [SubR](VPUser *InsertUser) {
-                   if (!match(InsertUser,
-                              m_InsertElement(m_VPValue(), m_VPValue(),
-                                              m_Specific(SubR))))
-                     return false;
-                   auto *InsertR = cast<VPSingleDefRecipe>(InsertUser);
-                   return all_of(InsertR->users(), [InsertR](VPUser *PhiUser) {
-                     auto *FOR =
-                         dyn_cast<VPFirstOrderRecurrencePHIRecipe>(PhiUser);
-                     return FOR && FOR->getStartValue() == InsertR;
-                   });
-                 });
-               };
-               if (match(U, m_CombineOr(m_Trunc(m_Specific(&Plan.getVF())),
-                                        m_ZExt(m_Specific(&Plan.getVF()))))) {
-                 return all_of(cast<VPSingleDefRecipe>(U)->users(),
-                               [&](VPUser *V) {
-                                 return IsAllowedUser(V) || IsFORStartIdx(V);
-                               });
-               }
-               if (IsFORStartIdx(U))
-                 return true;
-               return IsAllowedUser(U);
-             }) &&
+      all_of(
+          Plan.getVF().users(),
+          [&Plan](VPUser *U) {
+            auto IsAllowedUser =
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                        VPWidenIntOrFpInductionRecipe,
+                        VPWidenMemIntrinsicRecipe>;
+            auto IsFORStartIdx = [](VPUser *V) {
+              if (!match(V, m_Sub(m_VPValue(), m_One())))
+                return false;
+              auto *SubR = cast<VPSingleDefRecipe>(V);
+              return all_of(SubR->users(), [SubR](VPUser *InsertUser) {
+                if (!match(InsertUser, m_InsertElement(m_VPValue(), m_VPValue(),
+                                                       m_Specific(SubR))))
+                  return false;
+                auto *InsertR = cast<VPSingleDefRecipe>(InsertUser);
+                return all_of(InsertR->users(), [InsertR](VPUser *PhiUser) {
+                  auto *FOR =
+                      dyn_cast<VPFirstOrderRecurrencePHIRecipe>(PhiUser);
+                  return FOR && FOR->getStartValue() == InsertR;
+                });
+              });
+            };
+            if (match(U, m_Trunc(m_Specific(&Plan.getVF()))))
+              return all_of(cast<VPSingleDefRecipe>(U)->users(), IsAllowedUser);
+            return IsFORStartIdx(U) || IsAllowedUser(U);
+          }) &&
       "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
