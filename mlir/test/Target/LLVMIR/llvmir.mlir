@@ -122,6 +122,15 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   llvm.return %gepinit : !llvm.ptr
 }
 
+// CHECK: @vt = external constant { [3 x ptr] }
+llvm.mlir.global external constant @vt() : !llvm.struct<(array<3 x ptr>)>
+// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @vt, i32 0, i32 0, i32 2)
+llvm.mlir.global internal constant @int_gep_inrange() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @vt : !llvm.ptr
+  %gepinit = llvm.getelementptr inbounds inrange <i32, -16, 8> %addr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.return %gepinit : !llvm.ptr
+}
+
 // CHECK{LITERAL}: @dense_float_vector = internal global <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 llvm.mlir.global internal @dense_float_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf32>) : vector<3xf32>
 

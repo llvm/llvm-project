@@ -1,5 +1,40 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
+llvm.func @gep_inrange_nonconstant_base(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // expected-error @below{{'inrange' requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @gep_base() : i8
+
+llvm.func @gep_inrange_nonconstant_index(%idx: i64) -> !llvm.ptr {
+  %addr = llvm.mlir.addressof @gep_base : !llvm.ptr
+  // expected-error @below{{'inrange' requires the base and indices to translate to LLVM constants}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %addr[%idx] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+module attributes {llvm.data_layout = "e-p:32:32"} {
+  llvm.mlir.global external @gep_base() : i8
+  llvm.mlir.global internal @gep_inrange_truncated() : !llvm.ptr {
+    %addr = llvm.mlir.addressof @gep_base : !llvm.ptr
+    // expected-error @below{{expected 'inrange' end to be larger than start after conversion to the pointer index type}}
+    // expected-error @below{{LLVM Translation failed for operation: llvm.getelementptr}}
+    // expected-error @below{{fail to convert global initializer}}
+    %0 = llvm.getelementptr inrange <i64, 2147483647, 2147483648> %addr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.return %0 : !llvm.ptr
+  }
+}
+
+// -----
+
 // expected-error @below{{cannot be converted to LLVM IR}}
 func.func @foo() {
   llvm.return
