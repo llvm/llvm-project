@@ -74,8 +74,8 @@ Type *getWidenedType(Type *ScalarTy, unsigned VF) {
 }
 
 unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
-                                       unsigned Sz) {
-  if (!isValidElementType(Ty) || isa<StructType>(Ty))
+                                       unsigned Sz, bool ReVec) {
+  if (!isValidElementType(Ty, ReVec) || isa<StructType>(Ty))
     return bit_ceil(Sz);
   // Find the number of elements, which forms full vectors.
   const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
@@ -85,8 +85,8 @@ unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
 }
 
 unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
-                                            Type *Ty, unsigned Sz) {
-  if (!isValidElementType(Ty) || isa<StructType>(Ty))
+                                            Type *Ty, unsigned Sz, bool ReVec) {
+  if (!isValidElementType(Ty, ReVec) || isa<StructType>(Ty))
     return bit_floor(Sz);
   // Find the number of elements, which forms full vectors.
   unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
@@ -100,21 +100,21 @@ unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
 
 FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
                                      unsigned Opcode, Type *ScalarTy,
-                                     unsigned NumElts) {
+                                     unsigned NumElts, bool ReVec) {
   if (!Instruction::isIntDivRem(Opcode) || has_single_bit(NumElts))
     return nullptr;
   unsigned PaddedNumElts =
-      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
+      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts, ReVec);
   if (PaddedNumElts == NumElts)
     return nullptr;
   return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
 }
 
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
-                              unsigned Sz) {
+                              unsigned Sz, bool ReVec) {
   if (Sz <= 1)
     return false;
-  if (!isValidElementType(Ty) && !isa<FixedVectorType>(Ty))
+  if (!isValidElementType(Ty, ReVec) && !isa<FixedVectorType>(Ty))
     return false;
   if (has_single_bit(Sz))
     return true;

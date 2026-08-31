@@ -48,13 +48,13 @@ Type *getWidenedType(Type *ScalarTy, unsigned VF);
 /// which forms type, which splits by \p TTI into whole vector types during
 /// legalization.
 unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
-                                       unsigned Sz);
+                                       unsigned Sz, bool ReVec);
 
 /// Returns the number of elements of the given type \p Ty, not greater than \p
 /// Sz, which forms type, which splits by \p TTI into whole vector types during
 /// legalization.
 unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
-                                            Type *Ty, unsigned Sz);
+                                            Type *Ty, unsigned Sz, bool ReVec);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
 /// padded full-register vector type if padding is structurally possible, or
@@ -62,13 +62,13 @@ unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
 /// div/rem. Does not check profitability.
 FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
                                      unsigned Opcode, Type *ScalarTy,
-                                     unsigned NumElts);
+                                     unsigned NumElts, bool ReVec);
 
 /// Returns true if widened type of \p Ty elements with size \p Sz represents
 /// full vector type, i.e. adding extra element results in extra parts upon type
 /// legalization.
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
-                              unsigned Sz);
+                              unsigned Sz, bool ReVec);
 
 } // namespace llvm::slpvectorizer
 
