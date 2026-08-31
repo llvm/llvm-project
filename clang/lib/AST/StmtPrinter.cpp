@@ -780,7 +780,8 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
   llvm::omp::Version OpenMPVersion =
-      Context ? Context->getLangOpts().getOpenMP() : llvm::omp::FallbackVersion;
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
@@ -1026,7 +1027,8 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
   llvm::omp::Version OpenMPVersion =
-      Context ? Context->getLangOpts().getOpenMP() : llvm::omp::FallbackVersion;
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
@@ -1034,7 +1036,8 @@ void StmtPrinter::VisitOMPCancellationPointDirective(
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
   llvm::omp::Version OpenMPVersion =
-      Context ? Context->getLangOpts().getOpenMP() : llvm::omp::FallbackVersion;
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);

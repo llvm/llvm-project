@@ -824,7 +824,9 @@ public:
   }
 
   /// Return the OpenMP version.
-  llvm::omp::Version getOpenMP() const { return llvm::omp::Version(OpenMP); }
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMP);
+  }
 
   /// Returns the most applicable C standard-compliant language version code.
   /// If none could be determined, returns \ref std::nullopt.
