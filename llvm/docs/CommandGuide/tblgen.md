@@ -1,8 +1,7 @@
 # tblgen - Description to C++ Code
 
-```{eval-rst}
-.. program:: tblgen
-```
+:::{program} tblgen
+:::
 
 ## SYNOPSIS
 

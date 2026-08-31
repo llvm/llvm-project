@@ -1,8 +1,7 @@
 # llvm-test-mustache-spec - LLVM tool to test Mustache library compliance
 
-```{eval-rst}
-.. program:: llvm-test-mustache-spec
-```
+:::{program} llvm-test-mustache-spec
+:::
 
 ## SYNOPSIS
 
@@ -30,6 +29,5 @@ files to standard output.
 ## EXAMPLE
 
 ```console
-$ llvm-test-mustache-spec path/to/specs/\*.json
+$ llvm-test-mustache-spec path/to/specs/*.json
 ```
-

@@ -1,8 +1,7 @@
 # llvm-lipo - LLVM tool for manipulating universal binaries
 
-```{eval-rst}
-.. program:: llvm-lipo
-```
+:::{program} llvm-lipo
+:::
 
 ## SYNOPSIS
 

@@ -1,8 +1,7 @@
 # llvm-strip - object stripping tool
 
-```{eval-rst}
-.. program:: llvm-strip
-```
+:::{program} llvm-strip
+:::
 
 ## SYNOPSIS
 

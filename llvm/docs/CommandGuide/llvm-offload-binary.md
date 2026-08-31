@@ -1,8 +1,7 @@
 # llvm-offload-binary - LLVM Offload Binary Packager
 
-```{eval-rst}
-.. program:: llvm-offload-binary
-```
+:::{program} llvm-offload-binary
+:::
 
 ## SYNOPSIS
 
@@ -109,65 +108,48 @@ to locate offloading sections even after linker operations such as relocatable
 linking. Conceptually, this binary format is a serialization of a string map and
 an image buffer.
 
-```{eval-rst}
-.. table:: Offloading Binary Header
-   :name: table-binary_header
+:::{table} Offloading Binary Header
+:name: table-binary_header
+:widths: auto
 
-   +----------+--------------+----------------------------------------------------+
-   |   Type   |  Identifier  | Description                                        |
-   +==========+==============+====================================================+
-   | uint8_t  |    magic     | The magic bytes for the binary format (0x10FF10AD) |
-   +----------+--------------+----------------------------------------------------+
-   | uint32_t |   version    | Version of this format (currently version 1)       |
-   +----------+--------------+----------------------------------------------------+
-   | uint64_t |    size      | Size of this binary in bytes                       |
-   +----------+--------------+----------------------------------------------------+
-   | uint64_t | entry offset | Absolute offset of the offload entries in bytes    |
-   +----------+--------------+----------------------------------------------------+
-   | uint64_t |  entry size  | Size of the offload entries in bytes               |
-   +----------+--------------+----------------------------------------------------+
-```
+| Type     | Identifier   | Description                                        |
+| -------- | ------------ | -------------------------------------------------- |
+| uint8_t  | magic        | The magic bytes for the binary format (0x10FF10AD) |
+| uint32_t | version      | Version of this format (currently version 1)       |
+| uint64_t | size         | Size of this binary in bytes                       |
+| uint64_t | entry offset | Absolute offset of the offload entries in bytes    |
+| uint64_t | entry size   | Size of the offload entries in bytes               |
+:::
 
 Each offload entry describes a bundled image along with its associated metadata.
 
-```{eval-rst}
-.. table:: Offloading Entry Table
-   :name: table-binary_entry
+:::{table} Offloading Entry Table
+:name: table-binary_entry
+:widths: auto
 
-   +----------+---------------+----------------------------------------------------+
-   |   Type   |   Identifier  | Description                                        |
-   +==========+===============+====================================================+
-   | uint16_t |  image kind   | The kind of the device image (e.g. bc, cubin)      |
-   +----------+---------------+----------------------------------------------------+
-   | uint16_t | offload kind  | The producer of the image (e.g. openmp, cuda)      |
-   +----------+---------------+----------------------------------------------------+
-   | uint32_t |     flags     | Generic flags for the image                        |
-   +----------+---------------+----------------------------------------------------+
-   | uint64_t | string offset | Absolute offset of the string metadata table       |
-   +----------+---------------+----------------------------------------------------+
-   | uint64_t |  num strings  | Number of string entries in the table              |
-   +----------+---------------+----------------------------------------------------+
-   | uint64_t |  image offset | Absolute offset of the device image in bytes       |
-   +----------+---------------+----------------------------------------------------+
-   | uint64_t |   image size  | Size of the device image in bytes                  |
-   +----------+---------------+----------------------------------------------------+
-```
+| Type     | Identifier    | Description                                     |
+| -------- | ------------- | ----------------------------------------------- |
+| uint16_t | image kind    | The kind of the device image (e.g. bc, cubin)   |
+| uint16_t | offload kind  | The producer of the image (e.g. openmp, cuda)   |
+| uint32_t | flags         | Generic flags for the image                     |
+| uint64_t | string offset | Absolute offset of the string metadata table    |
+| uint64_t | num strings   | Number of string entries in the table           |
+| uint64_t | image offset  | Absolute offset of the device image in bytes    |
+| uint64_t | image size    | Size of the device image in bytes               |
+:::
 
 The entry table refers to both a string table and the raw device image itself.
 The string table provides arbitrary key-value metadata.
 
-```{eval-rst}
-.. table:: Offloading String Entry
-   :name: table-binary_string
+:::{table} Offloading String Entry
+:name: table-binary_string
+:widths: auto
 
-   +----------+--------------+-------------------------------------------------------+
-   |   Type   |   Identifier | Description                                           |
-   +==========+==============+=======================================================+
-   | uint64_t |  key offset  | Absolute byte offset of the key in the string table   |
-   +----------+--------------+-------------------------------------------------------+
-   | uint64_t | value offset | Absolute byte offset of the value in the string table |
-   +----------+--------------+-------------------------------------------------------+
-```
+| Type     | Identifier   | Description                                           |
+| -------- | ------------ | ----------------------------------------------------- |
+| uint64_t | key offset   | Absolute byte offset of the key in the string table   |
+| uint64_t | value offset | Absolute byte offset of the value in the string table |
+:::
 
 The string table is a collection of null-terminated strings stored in the image.
 Offsets allow string entries to be interpreted as key-value pairs, enabling
@@ -175,45 +157,32 @@ flexible metadata such as architecture or target triple.
 
 The enumerated values for `image kind` and `offload kind` are:
 
-```{eval-rst}
-.. table:: Image Kind
-   :name: table-image_kind
+:::{table} Image Kind
+:name: table-image_kind
+:widths: auto
 
-   +---------------+-------+---------------------------------------+
-   |      Name     | Value | Description                           |
-   +===============+=======+=======================================+
-   | IMG_None      | 0x00  | No image information provided         |
-   +---------------+-------+---------------------------------------+
-   | IMG_Object    | 0x01  | The image is a generic object file    |
-   +---------------+-------+---------------------------------------+
-   | IMG_Bitcode   | 0x02  | The image is an LLVM-IR bitcode file  |
-   +---------------+-------+---------------------------------------+
-   | IMG_Cubin     | 0x03  | The image is a CUDA object file       |
-   +---------------+-------+---------------------------------------+
-   | IMG_Fatbinary | 0x04  | The image is a CUDA fatbinary file    |
-   +---------------+-------+---------------------------------------+
-   | IMG_PTX       | 0x05  | The image is a CUDA PTX file          |
-   +---------------+-------+---------------------------------------+
-```
+| Name          | Value  | Description                            |
+| ------------- | ------ | -------------------------------------- |
+| IMG_None      | 0x00   | No image information provided          |
+| IMG_Object    | 0x01   | The image is a generic object file     |
+| IMG_Bitcode   | 0x02   | The image is an LLVM-IR bitcode file   |
+| IMG_Cubin     | 0x03   | The image is a CUDA object file        |
+| IMG_Fatbinary | 0x04   | The image is a CUDA fatbinary file     |
+| IMG_PTX       | 0x05   | The image is a CUDA PTX file           |
+:::
 
-```{eval-rst}
-.. table:: Offload Kind
-   :name: table-offload_kind
+:::{table} Offload Kind
+:name: table-offload_kind
+:widths: auto
 
-   +------------+-------+---------------------------------------+
-   |      Name  | Value | Description                           |
-   +============+=======+=======================================+
-   | OFK_None   | 0x00  | No offloading information provided    |
-   +------------+-------+---------------------------------------+
-   | OFK_OpenMP | 0x01  | The producer was OpenMP offloading    |
-   +------------+-------+---------------------------------------+
-   | OFK_CUDA   | 0x02  | The producer was CUDA                 |
-   +------------+-------+---------------------------------------+
-   | OFK_HIP    | 0x03  | The producer was HIP                  |
-   +------------+-------+---------------------------------------+
-   | OFK_SYCL   | 0x04  | The producer was SYCL                 |
-   +------------+-------+---------------------------------------+
-```
+| Name       | Value | Description                        |
+| ---------- | ----- | ---------------------------------- |
+| OFK_None   | 0x00  | No offloading information provided |
+| OFK_OpenMP | 0x01  | The producer was OpenMP offloading |
+| OFK_CUDA   | 0x02  | The producer was CUDA              |
+| OFK_HIP    | 0x03  | The producer was HIP               |
+| OFK_SYCL   | 0x04  | The producer was SYCL              |
+:::
 
 ## COMMON WORKFLOWS
 
@@ -285,4 +254,3 @@ $ llvm-offload-binary -o new_bundle.bin \
 ## SEE ALSO
 
 {manpage}`clang(1)`, {manpage}`llvm-objdump(1)`, {manpage}`spirv-val(1)`, {manpage}`spirv-dis(1)`
-

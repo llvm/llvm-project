@@ -1,8 +1,7 @@
 # llvm-profgen - LLVM SPGO profile generation tool
 
-```{eval-rst}
-.. program:: llvm-profgen
-```
+:::{program} llvm-profgen
+:::
 
 ## SYNOPSIS
 

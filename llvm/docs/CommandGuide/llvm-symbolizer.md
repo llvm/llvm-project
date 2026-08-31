@@ -1,8 +1,7 @@
 # llvm-symbolizer - convert addresses into source code locations
 
-```{eval-rst}
-.. program:: llvm-symbolizer
-```
+:::{program} llvm-symbolizer
+:::
 
 ## SYNOPSIS
 

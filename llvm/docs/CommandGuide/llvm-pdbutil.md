@@ -1,9 +1,7 @@
 # llvm-pdbutil - PDB File forensics and diagnostics
 
-```{eval-rst}
-.. program:: llvm-pdbutil
-
-```
+:::{program} llvm-pdbutil
+:::
 
 ## Synopsis
 
@@ -23,28 +21,27 @@ and forensics, or as a replacement for cvdump.
 a different purpose. A brief summary of each command follows, with more detail
 in the sections that follow.
 
-> - {ref}`pretty_subcommand` - Dump symbol and type information in a format that
->   tries to look as much like the original source code as possible.
-> - {ref}`dump_subcommand` - Dump low level types and structures from the PDB
->   file, including CodeView records, hash tables, PDB streams, etc.
-> - {ref}`bytes_subcommand` - Dump data from the PDB file's streams, records,
->   types, symbols, etc as raw bytes.
-> - {ref}`yaml2pdb_subcommand` - Given a yaml description of a PDB file, produce
->   a valid PDB file that matches that description.
-> - {ref}`pdb2yaml_subcommand` - For a given PDB file, produce a YAML
->   description of some or all of the file in a way that the PDB can be
->   reconstructed.
-> - {ref}`merge_subcommand` - Given two PDBs, produce a third PDB that is the
->   result of merging the two input PDBs.
-> - {ref}`export_subcommand` - Write the contents of a PDB stream to a file.
+- {ref}`pretty-subcommand` - Dump symbol and type information in a format that
+  tries to look as much like the original source code as possible.
+- {ref}`dump-subcommand` - Dump low level types and structures from the PDB
+  file, including CodeView records, hash tables, PDB streams, etc.
+- {ref}`bytes-subcommand` - Dump data from the PDB file's streams, records,
+  types, symbols, etc as raw bytes.
+- {ref}`yaml2pdb-subcommand` - Given a yaml description of a PDB file, produce
+  a valid PDB file that matches that description.
+- {ref}`pdb2yaml-subcommand` - For a given PDB file, produce a YAML
+  description of some or all of the file in a way that the PDB can be
+  reconstructed.
+- {ref}`merge-subcommand` - Given two PDBs, produce a third PDB that is the
+  result of merging the two input PDBs.
+- {ref}`export-subcommand` - Write the contents of a PDB stream to a file.
 
 (pretty-subcommand)=
 
 ### pretty
 
-```{eval-rst}
-.. program:: llvm-pdbutil pretty
-```
+:::{program} llvm-pdbutil pretty
+:::
 
 :::{important}
 The **pretty** subcommand is built on the Windows DIA SDK, and as such is not
@@ -243,9 +240,8 @@ given address and display what would be the absolute address.
 
 USAGE: {program}`llvm-pdbutil` dump \[*options*\] \<input PDB file>
 
-```{eval-rst}
-.. program:: llvm-pdbutil dump
-```
+:::{program} llvm-pdbutil dump
+:::
 
 #### Summary
 
@@ -422,9 +418,8 @@ Dump PDB string table.
 
 USAGE: {program}`llvm-pdbutil` bytes \[*options*\] \<input PDB file>
 
-```{eval-rst}
-.. program:: llvm-pdbutil bytes
-```
+:::{program} llvm-pdbutil bytes
+:::
 
 #### Summary
 
@@ -528,9 +523,8 @@ Dump the record from the TPI stream with the given type index.
 
 USAGE: {program}`llvm-pdbutil` pdb2yaml \[*options*\] \<input PDB file>
 
-```{eval-rst}
-.. program:: llvm-pdbutil pdb2yaml
-```
+:::{program} llvm-pdbutil pdb2yaml
+:::
 
 #### Summary
 
@@ -557,14 +551,13 @@ llvm-pdbutil pdb2yaml --dxcontainer shader.pdb
 
 USAGE: {program}`llvm-pdbutil` yaml2pdb \[*options*\] \<input YAML file>
 
-```{eval-rst}
-.. program:: llvm-pdbutil yaml2pdb
-```
+:::{program} llvm-pdbutil yaml2pdb
+:::
 
 #### Summary
 
 Generate a PDB file from a YAML description. The YAML syntax is not described
-here. Instead, use {ref}`llvm-pdbutil pdb2yaml <pdb2yaml_subcommand>` and
+here. Instead, use {ref}`llvm-pdbutil pdb2yaml <pdb2yaml-subcommand>` and
 examine the output for an example starting point.
 
 #### Options
@@ -580,9 +573,8 @@ Write the resulting PDB to the specified file.
 
 USAGE: {program}`llvm-pdbutil` export --out=\<file> \[*options*\] \<input PDB file>
 
-```{eval-rst}
-.. program:: llvm-pdbutil export
-```
+:::{program} llvm-pdbutil export
+:::
 
 #### Summary
 
@@ -603,8 +595,8 @@ The resulting file can be inspected with the same DXContainer tooling used for
 the main shader output, such as {program}`obj2yaml` and
 {program}`llvm-objcopy`. See {doc}`../DirectX/DXContainer` for part format
 details. To inspect the embedded container without extracting it, use
-{ref}`llvm-pdbutil dump <dump_subcommand>` or
-{ref}`llvm-pdbutil pdb2yaml <pdb2yaml_subcommand>`.
+{ref}`llvm-pdbutil dump <dump-subcommand>` or
+{ref}`llvm-pdbutil pdb2yaml <pdb2yaml-subcommand>`.
 
 #### Options
 
@@ -629,9 +621,8 @@ Export the contents of the specified PDB stream.
 
 USAGE: {program}`llvm-pdbutil` merge \[*options*\] \<input PDB file 1> \<input PDB file 2>
 
-```{eval-rst}
-.. program:: llvm-pdbutil merge
-```
+:::{program} llvm-pdbutil merge
+:::
 
 #### Summary
 

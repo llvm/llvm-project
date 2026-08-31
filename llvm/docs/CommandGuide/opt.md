@@ -1,8 +1,7 @@
 # opt - LLVM optimizer
 
-```{eval-rst}
-.. program:: opt
-```
+:::{program} opt
+:::
 
 ## SYNOPSIS
 
@@ -47,7 +46,7 @@ Write output in LLVM intermediate language (instead of bitcode).
 :::{option} -passes=<string>
 A textual (comma-separated) description of the pass pipeline,
 e.g., `-passes="sroa,instcombine"`. See
-[invoking opt](../NewPassManager.html#invoking-opt) for more details on the
+[invoking opt](../NewPassManager.md#invoking-opt) for more details on the
 pass pipeline syntax.
 :::
 
@@ -97,7 +96,9 @@ error.
 
 :::{option} -debug
 If this is a debug build, this option will enable debug printouts from passes
-which use the `LLVM_DEBUG()` macro. See the [LLVM Programmer's Manual](../ProgrammersManual.html), section `#DEBUG` for more information.
+which use the `LLVM_DEBUG()` macro. See {ref}`the LDBG and LLVM_DEBUG() macros
+and -debug option <debug>` for more
+information.
 :::
 
 :::{option} -load=<plugin>
@@ -120,4 +121,3 @@ Print all available passes and exit.
 
 If {program}`opt` succeeds, it will exit with 0. Otherwise, if an error
 occurs, it will exit with a non-zero value.
-

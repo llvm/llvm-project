@@ -1,8 +1,7 @@
 # llvm-otool - Mach-O dumping tool
 
-```{eval-rst}
-.. program:: llvm-otool
-```
+:::{program} llvm-otool
+:::
 
 ## SYNOPSIS
 

@@ -1,8 +1,7 @@
 # llvm-ranlib - generates an archive index
 
-```{eval-rst}
-.. program:: llvm-ranlib
-```
+:::{program} llvm-ranlib
+:::
 
 ## SYNOPSIS
 

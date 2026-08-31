@@ -1,8 +1,7 @@
 # llvm-strings - print strings
 
-```{eval-rst}
-.. program:: llvm-strings
-```
+:::{program} llvm-strings
+:::
 
 ## SYNOPSIS
 

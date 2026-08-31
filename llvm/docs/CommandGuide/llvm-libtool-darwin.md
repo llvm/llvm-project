@@ -1,8 +1,7 @@
 # llvm-libtool-darwin - LLVM tool for creating libraries for Darwin
 
-```{eval-rst}
-.. program:: llvm-libtool-darwin
-```
+:::{program} llvm-libtool-darwin
+:::
 
 ## SYNOPSIS
 

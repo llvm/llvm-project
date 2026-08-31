@@ -1,8 +1,7 @@
 # llvm-nm - list LLVM bitcode and object file's symbol table
 
-```{eval-rst}
-.. program:: llvm-nm
-```
+:::{program} llvm-nm
+:::
 
 ## SYNOPSIS
 
@@ -27,88 +26,88 @@ upper-case characters are listed for the same meaning, a lower-case character
 represents a local symbol, whilst an upper-case character represents a global
 (external) symbol:
 
-a, A
+`a`, `A`
 
-> Absolute symbol.
+: Absolute symbol.
 
-b, B
+`b`, `B`
 
-> Uninitialized data (bss) object.
+: Uninitialized data (bss) object.
 
-C
+`C`
 
-> Common symbol. Multiple definitions link together into one definition.
+: Common symbol. Multiple definitions link together into one definition.
 
-d, D
+`d`, `D`
 
-> Writable data object.
+: Writable data object.
 
-i, I
+`i`, `I`
 
-> COFF: .idata symbol or symbol in a section with IMAGE_SCN_LNK_INFO set.
+: COFF: .idata symbol or symbol in a section with IMAGE_SCN_LNK_INFO set.
 
-n
+`n`
 
-> ELF: local symbol from non-alloc section.
->
-> COFF: debug symbol.
+: ELF: local symbol from non-alloc section.
 
-N
+  COFF: debug symbol.
 
-> ELF: debug section symbol, or global symbol from non-alloc section.
+`N`
 
-s, S
+: ELF: debug section symbol, or global symbol from non-alloc section.
 
-> COFF: section symbol.
->
-> Mach-O: absolute symbol or symbol from a section other than \_\_TEXT_EXEC \_\_text,
-> \_\_TEXT \_\_text, \_\_DATA \_\_data, or \_\_DATA \_\_bss.
+`s`, `S`
 
-r, R
+: COFF: section symbol.
 
-> Read-only data object.
+  Mach-O: absolute symbol or symbol from a section other than \_\_TEXT_EXEC \_\_text,
+  \_\_TEXT \_\_text, \_\_DATA \_\_data, or \_\_DATA \_\_bss.
 
-t, T
+`r`, `R`
 
-> Code (text) object.
+: Read-only data object.
 
-u
+`t`, `T`
 
-> ELF: GNU unique symbol.
+: Code (text) object.
 
-U
+`u`
 
-> Named object is undefined in this file.
+: ELF: GNU unique symbol.
 
-v
+`U`
 
-> ELF: Undefined weak object. It is not a link failure if the object is not
-> defined.
+: Named object is undefined in this file.
 
-V
+`v`
 
-> ELF: Defined weak object symbol. This definition will only be used if no
-> regular definitions exist in a link. If multiple weak definitions and no
-> regular definitions exist, one of the weak definitions will be used.
+: ELF: Undefined weak object. It is not a link failure if the object is not
+  defined.
 
-w
+`V`
 
-> Undefined weak symbol other than an ELF object symbol. It is not a link failure
-> if the symbol is not defined.
+: ELF: Defined weak object symbol. This definition will only be used if no
+  regular definitions exist in a link. If multiple weak definitions and no
+  regular definitions exist, one of the weak definitions will be used.
 
-W
+`w`
 
-> Defined weak symbol other than an ELF object symbol. This definition will only
-> be used if no regular definitions exist in a link. If multiple weak definitions
-> and no regular definitions exist, one of the weak definitions will be used.
+: Undefined weak symbol other than an ELF object symbol. It is not a link failure
+  if the symbol is not defined.
 
-\-
+`W`
 
-> Mach-O: N_STAB symbol.
+: Defined weak symbol other than an ELF object symbol. This definition will only
+  be used if no regular definitions exist in a link. If multiple weak definitions
+  and no regular definitions exist, one of the weak definitions will be used.
 
-?
+`-`
 
-> Something unrecognizable.
+: Mach-O: N_STAB symbol.
+
+`?` 
+
+: Something unrecognizable.
 
 Because LLVM bitcode files typically contain objects that are not considered to
 have addresses until they are linked into an executable image or dynamically
@@ -118,9 +117,8 @@ file.
 
 ## OPTIONS
 
-```{eval-rst}
-.. program:: llvm-nm
-```
+:::{program} llvm-nm
+:::
 
 :::{option} -B
 Use BSD output format. Alias for `--format=bsd`.
@@ -131,30 +129,26 @@ Specify the type of XCOFF object file, ELF object file, or IR object file input
 from command line or from archive files that llvm-nm should examine. The
 mode must be one of the following:
 
-> > 32
-> >
-> > : Process only 32-bit object files.
-> >
-> > 64
-> >
-> > : Process only 64-bit object files.
-> >
-> > 32_64
-> >
-> > : Process both 32-bit and 64-bit object files.
-> >
-> > any
-> >
-> > : Process all the supported object files.
->
-> On AIX OS, the default is to process 32-bit object files only and to ignore
-> 64-bit objects. The can be changed by setting the OBJECT_MODE environment
-> variable. For example, OBJECT_MODE=64 causes {program}`llvm-nm` to process
-> 64-bit objects and ignore 32-bit objects. The -X flag overrides the OBJECT_MODE
-> variable.
->
-> On other operating systems, the default is to process all object files: the
-> OBJECT_MODE environment variable is not supported.
+32
+: Process only 32-bit object files.
+
+64
+: Process only 64-bit object files.
+
+32_64
+: Process both 32-bit and 64-bit object files.
+
+any
+: Process all the supported object files.
+
+On AIX OS, the default is to process 32-bit object files only and to ignore
+64-bit objects. The can be changed by setting the OBJECT_MODE environment
+variable. For example, OBJECT_MODE=64 causes {program}`llvm-nm` to process
+64-bit objects and ignore 32-bit objects. The -X flag overrides the OBJECT_MODE
+variable.
+
+On other operating systems, the default is to process all object files: the
+OBJECT_MODE environment variable is not supported.
 :::
 
 :::{option} --debug-syms, -a
@@ -316,8 +310,8 @@ Exclude resource file symbols (`__rsrc`) from export symbol list.
 
 ## BUGS
 
-> - {program}`llvm-nm` does not support the full set of arguments that GNU
->   {program}`nm` does.
+- {program}`llvm-nm` does not support the full set of arguments that GNU
+  {program}`nm` does.
 
 ## EXIT STATUS
 
@@ -327,4 +321,3 @@ Exclude resource file symbols (`__rsrc`) from export symbol list.
 
 {manpage}`llvm-ar(1)`, {manpage}`llvm-objdump(1)`, {manpage}`llvm-readelf(1)`,
 {manpage}`llvm-readobj(1)`
-

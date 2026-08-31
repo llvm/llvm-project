@@ -1,8 +1,7 @@
 # llvm-opt-report - generate optimization report from YAML
 
-```{eval-rst}
-.. program:: llvm-opt-report
-```
+:::{program} llvm-opt-report
+:::
 
 ## SYNOPSIS
 

@@ -1,8 +1,7 @@
 # llvm-mc - LLVM Machine Code Playground
 
-```{eval-rst}
-.. program:: llvm-mc
-```
+:::{program} llvm-mc
+:::
 
 ## SYNOPSIS
 

@@ -1065,7 +1065,7 @@ the external storage will not be freed). If you need this ability, consider
 using `std::function`. `function_ref` is small enough that it should always
 be passed by value.
 
-(DEBUG)=
+(debug)=
 
 ### The `LDBG` and `LLVM_DEBUG()` macros and `-debug` option
 

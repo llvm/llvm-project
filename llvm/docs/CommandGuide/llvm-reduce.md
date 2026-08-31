@@ -1,8 +1,7 @@
 # llvm-reduce - LLVM automatic testcase reducer.
 
-```{eval-rst}
-.. program:: llvm-reduce
-```
+:::{program} llvm-reduce
+:::
 
 ## SYNOPSIS
 

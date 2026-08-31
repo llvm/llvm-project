@@ -1,8 +1,7 @@
 # mlir-tblgen - Description to C++ Code for MLIR
 
-```{eval-rst}
-.. program:: mlir-tblgen
-```
+:::{program} mlir-tblgen
+:::
 
 ## SYNOPSIS
 

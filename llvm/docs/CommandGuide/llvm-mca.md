@@ -1,8 +1,7 @@
 # llvm-mca - LLVM Machine Code Analyzer
 
-```{eval-rst}
-.. program:: llvm-mca
-```
+:::{program} llvm-mca
+:::
 
 ## SYNOPSIS
 

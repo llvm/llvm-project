@@ -1,8 +1,7 @@
 # llvm-profdata - Profile data tool
 
-```{eval-rst}
-.. program:: llvm-profdata
-```
+:::{program} llvm-profdata
+:::
 
 ## SYNOPSIS
 
@@ -20,9 +19,8 @@ data files.
 - {ref}`overlap <profdata-overlap>`
 - {ref}`order <profdata-order>`
 
-```{eval-rst}
-.. program:: llvm-profdata merge
-```
+:::{program} llvm-profdata merge
+:::
 
 (profdata-merge)=
 
@@ -275,9 +273,8 @@ Exactly equivalent to the previous invocation (explicit form; useful for program
 llvm-profdata merge --weighted-input=10,foo.profdata --weighted-input=1,bar.profdata --weighted-input=1,baz.profdata --output merged.profdata
 ```
 
-```{eval-rst}
-.. program:: llvm-profdata show
-```
+:::{program} llvm-profdata show
+:::
 
 (profdata-show)=
 
@@ -393,9 +390,8 @@ Show only the functions that have been executed, i.e., functions with non-zero
 counts.
 :::
 
-```{eval-rst}
-.. program:: llvm-profdata overlap
-```
+:::{program} llvm-profdata overlap
+:::
 
 (profdata-overlap)=
 
@@ -456,9 +452,8 @@ Only show overlap for the context sensitive profile counts. The default is to sh
 non-context sensitive profile counts.
 :::
 
-```{eval-rst}
-.. program:: llvm-profdata order
-```
+:::{program} llvm-profdata order
+:::
 
 (profdata-order)=
 

@@ -1,8 +1,7 @@
 # llvm-tli-checker - TargetLibraryInfo vs library checker
 
-```{eval-rst}
-.. program:: llvm-tli-checker
-```
+:::{program} llvm-tli-checker
+:::
 
 ## SYNOPSIS
 

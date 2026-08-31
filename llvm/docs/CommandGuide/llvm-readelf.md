@@ -1,8 +1,7 @@
 # llvm-readelf - GNU-style LLVM Object Reader
 
-```{eval-rst}
-.. program:: llvm-readelf
-```
+:::{program} llvm-readelf
+:::
 
 ## SYNOPSIS
 

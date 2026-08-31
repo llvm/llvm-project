@@ -1,8 +1,7 @@
 # llvm-stress - generate random .ll files
 
-```{eval-rst}
-.. program:: llvm-stress
-```
+:::{program} llvm-stress
+:::
 
 ## SYNOPSIS
 

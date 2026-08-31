@@ -1,8 +1,7 @@
 # llvm-readobj - LLVM Object Reader
 
-```{eval-rst}
-.. program:: llvm-readobj
-```
+:::{program} llvm-readobj
+:::
 
 ## SYNOPSIS
 

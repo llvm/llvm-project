@@ -1,8 +1,7 @@
 # llvm-objdump - LLVM's object file dumper
 
-```{eval-rst}
-.. program:: llvm-objdump
-```
+:::{program} llvm-objdump
+:::
 
 ## SYNOPSIS
 
@@ -347,13 +346,13 @@ Deprecated.
 When used with {option}`--disassemble`, choose style of code to emit from
 X86 backend. Supported values are:
 
-> :::{option} att
-> AT&T-style assembly
-> :::
->
-> :::{option} intel
-> Intel-style assembly
-> :::
+:::{option} att
+AT&T-style assembly
+:::
+
+:::{option} intel
+Intel-style assembly
+:::
 
 The default disassembly style is **att**.
 ::::
@@ -505,4 +504,3 @@ To report bugs, please visit \<<https://github.com/llvm/llvm-project/labels/tool
 
 {manpage}`llvm-nm(1)`, {manpage}`llvm-otool(1)`, {manpage}`llvm-readelf(1)`,
 {manpage}`llvm-readobj(1)`
-

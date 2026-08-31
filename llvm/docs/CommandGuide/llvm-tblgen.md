@@ -1,8 +1,7 @@
 # llvm-tblgen - Target Description to C++ Code for LLVM
 
-```{eval-rst}
-.. program:: llvm-tblgen
-```
+:::{program} llvm-tblgen
+:::
 
 ## SYNOPSIS
 

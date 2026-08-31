@@ -1,8 +1,7 @@
 # llvm-objcopy - object copying and editing tool
 
-```{eval-rst}
-.. program:: llvm-objcopy
-```
+:::{program} llvm-objcopy
+:::
 
 ## SYNOPSIS
 

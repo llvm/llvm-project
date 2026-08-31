@@ -1,8 +1,7 @@
 # llvm-link - LLVM bitcode linker
 
-```{eval-rst}
-.. program:: llvm-link
-```
+:::{program} llvm-link
+:::
 
 ## SYNOPSIS
 

@@ -1,8 +1,7 @@
 # llvm-size - print size information
 
-```{eval-rst}
-.. program:: llvm-size
-```
+:::{program} llvm-size
+:::
 
 ## SYNOPSIS
 

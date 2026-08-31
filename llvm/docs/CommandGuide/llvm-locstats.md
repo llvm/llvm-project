@@ -1,8 +1,7 @@
 # llvm-locstats - calculate statistics on DWARF debug location
 
-```{eval-rst}
-.. program:: llvm-locstats
-```
+:::{program} llvm-locstats
+:::
 
 ## SYNOPSIS
 

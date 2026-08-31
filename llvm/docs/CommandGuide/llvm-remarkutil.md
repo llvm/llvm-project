@@ -1,8 +1,7 @@
 # llvm-remarkutil - Remark utility
 
-```{eval-rst}
-.. program:: llvm-remarkutil
-```
+:::{program} llvm-remarkutil
+:::
 
 ## Synopsis
 
@@ -15,19 +14,18 @@ Utility for displaying information from, and converting between different
 
 ## Subcommands
 
-> - {ref}`bitstream2yaml_subcommand` - Reserialize bitstream remarks to YAML.
-> - {ref}`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
-> - {ref}`instruction-count_subcommand` - Output function instruction counts.
-> - {ref}`annotation-count_subcommand` - Output remark type count from annotation remarks.
-> - {ref}`size-diff_subcommand` - Compute diff in size remarks.
+- {ref}`bitstream2yaml-subcommand` - Reserialize bitstream remarks to YAML.
+- {ref}`yaml2bitstream-subcommand` - Reserialize YAML remarks to bitstream.
+- {ref}`instruction-count-subcommand` - Output function instruction counts.
+- {ref}`annotation-count-subcommand` - Output remark type count from annotation remarks.
+- {ref}`size-diff-subcommand` - Compute diff in size remarks.
 
 (bitstream2yaml-subcommand)=
 
 ### bitstream2yaml
 
-```{eval-rst}
-.. program:: llvm-remarkutil bitstream2yaml
-```
+:::{program} llvm-remarkutil bitstream2yaml
+:::
 
 USAGE: {program}`llvm-remarkutil` bitstream2yaml \<input file> -o \<output file>
 
@@ -39,9 +37,8 @@ Takes a bitstream remark file as input, and reserializes that file as YAML.
 
 ### yaml2bitstream
 
-```{eval-rst}
-.. program:: llvm-remarkutil yaml2bitstream
-```
+:::{program} llvm-remarkutil yaml2bitstream
+:::
 
 USAGE: {program}`llvm-remarkutil` yaml2bitstream \<input file> -o \<output file>
 
@@ -54,9 +51,8 @@ format.
 
 ### instruction-count
 
-```{eval-rst}
-.. program:: llvm-remarkutil instruction-count
-```
+:::{program} llvm-remarkutil instruction-count
+:::
 
 USAGE: {program}`llvm-remarkutil` instruction-count \<input file> --parser=\<bitstream|yaml> [--use-debug-loc] -o \<output file>
 
@@ -85,9 +81,8 @@ path:line:column,foo,3
 
 ### annotation-count
 
-```{eval-rst}
-.. program:: llvm-remarkutil annotation-count
-```
+:::{program} llvm-remarkutil annotation-count
+:::
 
 USAGE: {program}`llvm-remarkutil` annotation-count \<input file> --parser=\<bitstream|yaml> --annotation-type=\<type> [--use-debug-loc] -o \<output file>
 
@@ -116,9 +111,8 @@ path:line:column,foo,3
 
 ### count
 
-```{eval-rst}
-.. program:: llvm-remarkutil count
-```
+:::{program} llvm-remarkutil count
+:::
 
 USAGE: {program}`llvm-remarkutil` count \[*options*\] \<input file>
 
@@ -205,9 +199,8 @@ Filter remarks by type with the following options.
 
 ### size-diff
 
-```{eval-rst}
-.. program:: llvm-remarkutil size-diff
-```
+:::{program} llvm-remarkutil size-diff
+:::
 
 USAGE: {program}`llvm-remarkutil` size-diff \[*options*\] *file_a* *file_b* **--parser** *parser*
 
