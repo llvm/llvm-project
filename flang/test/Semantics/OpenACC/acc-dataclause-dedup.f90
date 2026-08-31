@@ -110,35 +110,49 @@ program test_dataclause_dedup
     end type
     type(pt) :: s
 
-    ! Different array elements -- not duplicates.
+    ! Distinct elements of one array still represent the same data-sharing
+    ! entity and cannot be lowered as separate private operands.
+    !ERROR: 'arr(2)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1), arr(2))
     do i = 1, 10
     end do
 
-    ! Different array sections -- not duplicates.
+    !ERROR: 'arr(6:10)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1:5), arr(6:10))
     do i = 1, 10
     end do
 
-    ! Different array elements in different data-sharing clauses -- not
-    ! duplicates.
+    ! Different array elements in different data-sharing clauses conflict.
+    !ERROR: 'arr(2)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1)) firstprivate(arr(2))
     do i = 1, 10
     end do
 
-    ! Different array sections in different data-sharing clauses -- not
-    ! duplicates.
+    ! Reversing the clause order does not change the entity-level conflict.
+    !ERROR: 'arr(1)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop firstprivate(arr(2)) private(arr(1))
+    do i = 1, 10
+    end do
+
+    !ERROR: 'arr(6:10)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1:5)) firstprivate(arr(6:10))
     do i = 1, 10
     end do
 
+    !ERROR: 'arr(1:5)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop firstprivate(arr(6:10)) private(arr(1:5))
+    do i = 1, 10
+    end do
+
     ! A literal element outside a literal section is disjoint across
-    ! data-sharing kinds.
+    ! data-sharing kinds but still belongs to the same array entity.
+    !ERROR: 'arr(6)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1:5)) firstprivate(arr(6))
     do i = 1, 10
     end do
 
-    ! Named constant sections that fold to disjoint ranges are not conflicts.
+    ! Named constant sections that fold to disjoint ranges still conflict.
+    !ERROR: 'arr(split+1:right)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(left:split)) firstprivate(arr(split+1:right))
     do i = 1, 10
     end do
@@ -217,14 +231,15 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Variable index/section containment cannot yet be proven, so it is treated
-    ! as disjoint.
+    ! Variable index/section containment cannot be proven, so separate
+    ! appearances of the same array entity are rejected.
+    !ERROR: 'arr(lo:hi)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(idx), arr(lo:hi))
     do i = 1, 10
     end do
 
-    ! Variable index/section overlap is ambiguous, so assume disjoint across
-    ! data-sharing kinds unless overlap can be proven.
+    ! Variable index/section overlap is ambiguous across data-sharing kinds.
+    !ERROR: 'arr(idx)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(lo:hi)) firstprivate(arr(idx))
     do i = 1, 10
     end do
@@ -235,15 +250,21 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Variable section overlap cannot yet be proven, so it is treated as
-    ! disjoint.
+    ! Variable section overlap cannot be proven, so separate appearances of
+    ! the same array entity are rejected.
+    !ERROR: 'arr(mid:hi)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(lo:hi), arr(mid:hi))
     do i = 1, 10
     end do
 
-    ! Variable section overlap is ambiguous, so assume disjoint across
-    ! data-sharing kinds unless overlap can be proven.
+    ! Variable section overlap is ambiguous across data-sharing kinds.
+    !ERROR: 'arr(mid:hi)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(lo:hi)) firstprivate(arr(mid:hi))
+    do i = 1, 10
+    end do
+
+    !ERROR: 'arr(lo:hi)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop firstprivate(arr(mid:hi)) private(arr(lo:hi))
     do i = 1, 10
     end do
 
