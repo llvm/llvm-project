@@ -603,7 +603,7 @@ def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             imm:$m4, imm:$m5, imm:$m6, imm:$m7,
             imm:$m8, imm:$m9, imm:$mA, imm:$mB,
             imm:$mC, imm:$mD, imm:$mE, imm:$mF)>;
-// Normal shufflevector instructions may have normal constant arguemnts.
+// Normal shufflevector instructions may have normal constant arguments.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),

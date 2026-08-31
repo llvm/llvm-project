@@ -39,7 +39,7 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
 
   // .so file
   if (auto *f = dyn_cast<SharedFile>(file)) {
-    // If we are not reporting undefined symbols that we don't actualy
+    // If we are not reporting undefined symbols that we don't actually
     // parse the shared library symbol table.
     f->parse();
     ctx.sharedFiles.push_back(f);
@@ -748,7 +748,7 @@ updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
     existing->flags = (existing->flags & ~WASM_SYMBOL_BINDING_MASK) | binding;
   }
 
-  // Certain flags such as NO_STRIP should be maintianed if either old or
+  // Certain flags such as NO_STRIP should be maintained if either old or
   // new symbol is marked as such.
   existing->flags |= flags & WASM_SYMBOL_NO_STRIP;
 }
