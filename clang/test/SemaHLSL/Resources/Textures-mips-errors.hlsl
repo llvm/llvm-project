@@ -10,18 +10,18 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=RWTexture2DArray -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=TextureCube -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //
 //   TEXTURE            resource type name
 //   INDEX_TYPE         operator[] index type
-//   HAS_MIPS           defined for the texture types that have a `mips` view
+//   HAS_MIPS           defined for types that have a `mips` view
 //
 // A texture with a mips view exposes mips_type / mips_slice_type as private
-// members with protected constructors, so naming them is an access error; a
-// texture without one has no such member or type. The diagnostics use `-re`
-// directives so that the type name does not have to be spelled out per type.
 
 TEXTURE<float4> t;
 
