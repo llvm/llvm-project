@@ -112,11 +112,15 @@ MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
 //   all be populated, started at RecSym).
 // - Shape of the resource symbol's MCExpr (`max` args are order agnostic):
 //   RecSym.MCExpr := max(<constant>+, <callee_symbol>*)
+// Unresolved cycle members are kept as symbolic max args instead of dropped.
 const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
+                                                MCSymbol *AssigneeSym,
                                                 ResourceInfoKind RIK,
                                                 MCContext &OutContext) {
   SmallPtrSet<const MCExpr *, 8> Seen;
   SmallVector<const MCExpr *, 8> WorkList;
+  SmallPtrSet<const MCSymbol *, 8> SeenUnassigned;
+  SmallVector<const MCExpr *, 8> Unassigned;
   int64_t Maximum = 0;
 
   const MCExpr *RecExpr = RecSym->getVariableValue();
@@ -165,6 +169,9 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
         const MCExpr *SymVal = SymRef.getVariableValue();
         if (Seen.insert(SymVal).second)
           WorkList.push_back(SymVal);
+      } else if (&SymRef != AssigneeSym &&
+                 SeenUnassigned.insert(&SymRef).second) {
+        Unassigned.push_back(CurExpr);
       }
       break;
     }
@@ -182,7 +189,12 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
   LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
                     << ": Using flattened max: << " << Maximum << '\n');
 
-  return MCConstantExpr::create(Maximum, OutContext);
+  const MCExpr *MaxConst = MCConstantExpr::create(Maximum, OutContext);
+  if (Unassigned.empty())
+    return MaxConst;
+
+  Unassigned.insert(Unassigned.begin(), MaxConst);
+  return AMDGPUMCExpr::createMax(Unassigned, OutContext);
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
@@ -231,7 +243,8 @@ void MCResourceInfo::assignResourceInfoExpr(
         case RIK_NumVGPR:
         case RIK_NumSGPR:
         case RIK_NumAGPR:
-          ArgExprs.push_back(flattenedCycleMax(CalleeValSym, RIK, OutContext));
+          ArgExprs.push_back(
+              flattenedCycleMax(CalleeValSym, Sym, RIK, OutContext));
           break;
         case RIK_NumNamedBarrier:
           ArgExprs.push_back(MCSymbolRefExpr::create(
