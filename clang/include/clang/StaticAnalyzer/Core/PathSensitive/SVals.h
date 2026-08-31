@@ -317,6 +317,11 @@ public:
     return APFloatPtr(castDataAs<llvm::APFloat>());
   }
 
+  /// A human-readabale name for the floating-point format of this value,
+  /// e.g., "IEEEsingle." Formats with no explicit name are reported
+  /// as "unknown."
+  StringRef getSemanticsName() const;
+
   static bool classof(SVal V) { return V.getKind() == ConcreteFloatKind; }
 };
 
