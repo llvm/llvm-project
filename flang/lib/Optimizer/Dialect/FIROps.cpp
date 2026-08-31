@@ -2188,6 +2188,12 @@ static mlir::Value getAliasedSlotPointer(mlir::Value value) {
 /// default value, which is fir.undefined for fir.alloca but poison for a memref
 /// allocation, so promoting through a view would change what reading an
 /// uninitialized variable does.
+///
+/// TODO: this is only needed because memref::AllocaOp::getDefaultValue returns
+/// ub.poison, whereas fir::AllocaOp and LLVM::AllocaOp both return undef, as
+/// LLVM's own mem2reg does. Once those align semantically, a read that no
+/// write dominates promotes the same way it already does for fir.alloca and
+/// this check, along with the dominance query it needs, can go away.
 static bool everyReadIsDominatedByAWrite(mlir::Value pointer,
                                          mlir::Type pointee) {
   // Start at the root of the chain, to see writes through a sibling alias.
