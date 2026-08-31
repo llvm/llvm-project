@@ -3583,9 +3583,9 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
 
   // Fold the canonicalized form of vector_reduce_or if the arg is
   // get_active_lane mask.
-  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 -> 
-  //            icmp ult l, h 
-  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 -> 
+  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp ult l, h
+  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
   //            icmp uge l, h
   Value *Upper, *Lower;
   if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
