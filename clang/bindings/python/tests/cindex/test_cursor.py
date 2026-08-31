@@ -988,8 +988,9 @@ int d_noninline;
             assert c.binary_operator == typ
 
     def test_unaryop(self):
-        tu = get_tu("""
-            void func(void) {
+        tu = get_tu(
+            """
+                void func(void) {
                 int a = 0;
                 a++;
                 ++a;
@@ -1004,8 +1005,9 @@ int d_noninline;
                 __real b;
                 __imag b;
                 __extension__ a;
-            }
-        """, lang="cpp")
+            }""",
+            lang="cpp",
+        )
 
         operators = {
             "&": UnaryOperator.AddrOf,
@@ -1023,9 +1025,14 @@ int d_noninline;
             c = get_cursor(tu, op)
             assert c.unary_operator == typ
 
-        for should_be, has in zip(
-                (UnaryOperator.PostInc, UnaryOperator.PreInc, UnaryOperator.PostDec, UnaryOperator.PreDec),
-                list(next(tu.cursor.get_children()).get_children())[1:]):
+        shoulds = (
+            UnaryOperator.PostInc,
+            UnaryOperator.PreInc,
+            UnaryOperator.PostDec,
+            UnaryOperator.PreDec,
+        )
+        haves = list(next(tu.cursor.get_children()).get_children())[1:]
+        for should_be, has in zip(shoulds, haves):
             assert should_be == has
 
     def test_from_result_null(self):
