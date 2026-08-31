@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -2127,8 +2128,12 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
-  for (const auto &[Kind, Node] : Metadata)
+  for (const auto &[Kind, Node] : Metadata) {
+    // Estimated weights must not be emitted as profile data, see setProfile.
+    if (Kind == LLVMContext::MD_prof && EstimatedProfile)
+      continue;
     I.setMetadata(Kind, Node);
+  }
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
@@ -2157,6 +2162,15 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
+    SmallVector<uint32_t> Weights;
+    if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
+      if (EstimatedProfile)
+        O << "estimated ";
+      O << "{";
+      interleaveComma(Weights, O);
+      O << "}";
+      return;
+    }
     Node->printAsOperand(O, M);
   });
   O << ")";
@@ -3994,7 +4008,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+    ScalarCost /= Ctx.getPredBlockCostDivisor(getRegion());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -4053,7 +4067,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+      Cost /= Ctx.getPredBlockCostDivisor(ParentRegion);
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(

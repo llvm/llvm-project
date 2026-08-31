@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -220,6 +221,18 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 /// Operands are foldable live-ins.
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
+
+/// Computes for each block in \p Blocks the probability that it executes,
+/// relative to the first block in \p Blocks (the header block), which always
+/// executes. The probability of a block is the accumulated probability of its
+/// incoming edges.
+DenseMap<const VPBasicBlock *, BranchProbability>
+computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks);
+
+/// Returns the probability of entering replicate region \p Region, taken from
+/// the branch weights recorded on its guarding branch-on-mask, or unknown if it
+/// carries none.
+BranchProbability getRegionEntryProbability(const VPRegionBlock *Region);
 
 namespace detail {
 

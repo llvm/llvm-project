@@ -484,6 +484,14 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Then1 || !Then2)
       continue;
 
+    // The merged region is entered whenever either of the original regions was,
+    // so use the higher, i.e. more conservative, of their entry probabilities.
+    BranchProbability Prob1 = vputils::getRegionEntryProbability(Region1);
+    BranchProbability Prob2 = vputils::getRegionEntryProbability(Region2);
+    if (!Prob1.isUnknown() && !Prob2.isUnknown() && Prob2 < Prob1)
+      Region2->getEntryBranchOnMask()->copyProfileFrom(
+          *Region1->getEntryBranchOnMask());
+
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
     // checks, which guarantee accesses can be re-ordered for vectorization.
@@ -551,6 +559,10 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
+  // Move the predicated recipes's branch weights onto the guarding
+  // branch-on-mask.
+  BOMRecipe->copyProfileFrom(*RecipeWithoutMask);
+  RecipeWithoutMask->eraseMetadata(LLVMContext::MD_prof);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
   auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
@@ -3690,6 +3702,9 @@ static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
   VPIRMetadata CommonMetadata = *Recipes.front();
   for (VPReplicateRecipe *Recipe : drop_begin(Recipes))
     CommonMetadata.intersect(*Recipe);
+  // The recipe the common metadata is used for is not predicated, so drop
+  // !prof.
+  CommonMetadata.eraseMetadata(LLVMContext::MD_prof);
   return CommonMetadata;
 }
 
@@ -5550,6 +5565,19 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::dropBranchWeightsFromUnguardedRecipes(VPlan &Plan) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (RepR && RepR->isPredicated())
+        continue;
+      if (auto *MD = dyn_cast<VPIRMetadata>(&R))
+        MD->eraseMetadata(LLVMContext::MD_prof);
     }
   }
 }

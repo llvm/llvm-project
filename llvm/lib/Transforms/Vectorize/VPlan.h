@@ -1180,12 +1180,20 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
+  /// True if the MD_prof metadata is estimated, see setProfile.
+  bool EstimatedProfile = false;
+
 public:
   VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+  VPIRMetadata(Instruction &I) {
+    getMetadataToPropagate(&I, Metadata);
+    if (I.isTerminator())
+      if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
+        Metadata.emplace_back(LLVMContext::MD_prof, BW);
+  }
 
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
@@ -1208,15 +1216,40 @@ public:
       Metadata.emplace_back(Kind, Node);
   }
 
+  /// Copy the MD_prof metadata of \p From, including whether it is estimated.
+  void copyProfileFrom(const VPIRMetadata &From) {
+    if (MDNode *BW = From.getMetadata(LLVMContext::MD_prof))
+      setProfile(BW, From.EstimatedProfile);
+  }
+
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Remove metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
+    if (Kind == LLVMContext::MD_prof)
+      EstimatedProfile = false;
+  }
 
   /// Get metadata of kind \p Kind. Returns nullptr if not found.
   MDNode *getMetadata(unsigned Kind) const {
     auto It =
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
+  }
+
+  /// Returns true if the MD_prof metadata is estimated, see setProfile.
+  bool hasEstimatedProfile() const { return EstimatedProfile; }
+
+  /// Set the MD_prof metadata to \p Node. If \p IsEstimated is true, the
+  /// weights are estimated from static heuristics rather than taken from the
+  /// original IR's profile data; they must only be used for cost modeling and
+  /// are not applied to the generated IR, see applyMetadata.
+  void setProfile(MDNode *Node, bool IsEstimated) {
+    setMetadata(LLVMContext::MD_prof, Node);
+    EstimatedProfile = IsEstimated;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3510,13 +3543,16 @@ protected:
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
-class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase {
+class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase,
+                                               public VPIRMetadata {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
-      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL) {}
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL,
+                       const VPIRMetadata &Metadata = {})
+      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL),
+        VPIRMetadata(Metadata) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc(), *this);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPBranchOnMaskSC)
@@ -4379,10 +4415,11 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<
-          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-          VPInterleaveBase, VPWidenMemoryRecipe, VPHistogramRecipe> {};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe,
+                                  VPHistogramRecipe, VPBranchOnMaskRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>

@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -154,9 +155,15 @@ struct VPlanTransforms {
   ///    \   |
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
+  ///
+  /// The branch weights of the loop's conditional branches are recorded on the
+  /// branch recipes created for them. If \p BPI is non-null, branches without
+  /// profile data get estimated weights, see VPIRMetadata::setProfile.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE,
+              const BranchProbabilityInfo *BPI = nullptr,
+              LoopVersioning *LVer = nullptr);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -615,6 +622,10 @@ struct VPlanTransforms {
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
+
+  /// Drop the branch weights from all recipes that cannot preserve them.
+  /// Currently that is all recipes, except VPReplicateRecipes.
+  static void dropBranchWeightsFromUnguardedRecipes(VPlan &Plan);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.

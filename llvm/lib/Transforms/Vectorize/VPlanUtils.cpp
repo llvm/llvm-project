@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -1117,6 +1118,79 @@ SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
       Users.insert_range(V->users());
   }
   return Users.takeVector();
+}
+
+/// Returns the probability of the edge from \p Src to \p Dst, taken from the
+/// branch weights recorded on Src's terminator, or unknown if not available.
+/// See llvm::getBranchProbability in llvm/Transforms/Utils/LoopUtils.h for the
+/// IR version.
+static BranchProbability getEdgeProbability(const VPBasicBlock *Src,
+                                            const VPBasicBlock *Dst) {
+  // With a single successor the edge is always taken.
+  ArrayRef<VPBlockBase *> Successors = Src->getSuccessors();
+  if (Successors.size() == 1)
+    return BranchProbability::getOne();
+
+  auto *Term = dyn_cast_if_present<VPInstruction>(Src->getTerminator());
+  SmallVector<uint32_t> Weights;
+  if (!Term ||
+      !extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) ||
+      Weights.size() != Successors.size())
+    return BranchProbability::getUnknown();
+
+  uint64_t Total = sum_of(Weights, uint64_t(0));
+  if (Total == 0)
+    return BranchProbability::getUnknown();
+
+  // Sum the weights of all edges from Src to Dst; the same block may be the
+  // destination of multiple successors, e.g. for switches.
+  uint64_t ToDst = 0;
+  for (const auto &[Succ, Weight] : zip(Successors, Weights))
+    if (Succ == Dst)
+      ToDst += Weight;
+  return BranchProbability::getBranchProbability(ToDst, Total);
+}
+
+DenseMap<const VPBasicBlock *, BranchProbability>
+vputils::computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
+  assert(!Blocks.empty() && "expected at least the header block");
+  DenseMap<const VPBasicBlock *, BranchProbability> Probabilities;
+  // The header (first block) always executes. Any other block executes if any
+  // of its incoming edges is taken, so accumulate their probabilities.
+  Probabilities[Blocks.front()] = BranchProbability::getOne();
+  for (VPBasicBlock *VPBB : Blocks.drop_front()) {
+    BranchProbability Prob = BranchProbability::getZero();
+    // A predecessor may be listed once per edge to VPBB, e.g. for a switch with
+    // multiple cases branching here.
+    SmallSetVector<VPBlockBase *, 4> Preds(from_range, VPBB->getPredecessors());
+    for (VPBasicBlock *PredVPBB : VPBlockUtils::blocksAs<VPBasicBlock>(Preds)) {
+      BranchProbability PredProb = Probabilities.lookup(PredVPBB);
+      BranchProbability EdgeProb = getEdgeProbability(PredVPBB, VPBB);
+      if (PredProb.isUnknown() || EdgeProb.isUnknown()) {
+        Prob = BranchProbability::getUnknown();
+        break;
+      }
+      BranchProbability Contribution = PredProb * EdgeProb;
+      // Force to lowest possible probability if result gets rounded to zero.
+      if (Contribution.isZero() && !PredProb.isZero() && !EdgeProb.isZero())
+        Contribution = BranchProbability::getRaw(1);
+      Prob += Contribution;
+    }
+    Probabilities[VPBB] = Prob;
+  }
+  return Probabilities;
+}
+
+BranchProbability
+vputils::getRegionEntryProbability(const VPRegionBlock *Region) {
+  const VPBranchOnMaskRecipe *Guard = Region->getEntryBranchOnMask();
+  SmallVector<uint32_t, 2> Weights;
+  if (!extractBranchWeights(Guard->getMetadata(LLVMContext::MD_prof), Weights))
+    return BranchProbability::getUnknown();
+  // The weights are {Taken, NotTaken}: the region is entered if the branch on
+  // the guarding mask is taken.
+  return BranchProbability::getBranchProbability(Weights[0],
+                                                 sum_of(Weights, uint64_t(0)));
 }
 
 VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,

@@ -722,8 +722,11 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
+        // Carry the branch weights describing how often the predicated block
+        // is entered onto the generated conditional branch.
         Builder.createNaryOp(VPInstruction::BranchOnCond,
-                             {BranchOnMask->getOperand(0)}, OldDL);
+                             {BranchOnMask->getOperand(0)},
+                             /*Inst=*/nullptr, {}, *BranchOnMask, OldDL);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);

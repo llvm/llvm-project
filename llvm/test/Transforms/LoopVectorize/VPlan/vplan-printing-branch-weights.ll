@@ -82,11 +82,11 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-NEXT:    Successor(s): if.then
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    if.then:
-; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp>
+; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!prof {1, 3})
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
 ; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
 ; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
-; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp>
+; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!prof {1, 3})
 ; CONSTRUCT-NEXT:    Successor(s): latch
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    latch:
@@ -129,7 +129,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; REGION-EMPTY:
 ; REGION-NEXT:    <xVFxUF> pred.store: {
 ; REGION-NEXT:      pred.store.entry:
-; REGION-NEXT:        BRANCH-ON-MASK ir<%cmp>
+; REGION-NEXT:        BRANCH-ON-MASK ir<%cmp> (!prof {1, 3})
 ; REGION-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; REGION-EMPTY:
 ; REGION-NEXT:      pred.store.if:
@@ -171,7 +171,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%ext> = sext ir<%t> to i64
 ; DISSOLVE-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%cmp>, ir<0>
-; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
+; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP1]]> (!prof {1, 3})
 ; DISSOLVE-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:
@@ -183,7 +183,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.continue:
 ; DISSOLVE-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = extractelement ir<%cmp>, ir<1>
-; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
+; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP5]]> (!prof {1, 3})
 ; DISSOLVE-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:

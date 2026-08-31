@@ -1033,6 +1033,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
+  /// Returns the BranchProbabilityInfo retained by the BlockFrequencyInfo for
+  /// the function, or nullptr if unavailable.
+  const BranchProbabilityInfo *getBPI() { return getBFI().getBPI(); }
+
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) const;
@@ -5544,8 +5548,18 @@ void VPCostContext::invalidateWideningDecision(Instruction *I,
                          LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
-uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
-  return CM.getPredBlockCostDivisor(CostKind, BB);
+uint64_t
+VPCostContext::getPredBlockCostDivisor(const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  // The branch weights of the guarding branch-on-mask describe how often the
+  // predicated block is entered, relative to the loop header.
+  BranchProbability Prob = vputils::getRegionEntryProbability(Region);
+  if (Prob.isUnknown() || Prob.isZero())
+    return 1;
+  // Round the reciprocal of Prob to nearest.
+  uint64_t Numerator = Prob.getNumerator();
+  return (BranchProbability::getDenominator() + Numerator / 2) / Numerator;
 }
 
 bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
@@ -6470,6 +6484,68 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 // optimizations.
 static void printOptimizedVPlan(VPlan &) {}
 
+#ifndef NDEBUG
+/// Cross-check the probabilities vputils::computeBlockProbabilities computes
+/// for the blocks of the loop region of \p Plan against the frequencies \p BFI
+/// computed for the corresponding blocks of \p OrigLoop.
+/// FIXME: Temporary verification aid, to be removed.
+static bool verifyBlockProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
+                                             LoopInfo *LI,
+                                             BlockFrequencyInfo &BFI) {
+
+  // The verification is limited inner loops where the latch is the only exiting
+  // block and there are no extra VPBBs not mapped to IR BBs (when tailfolding).
+  if (Plan.isOuterLoop() ||
+      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Plan.hasTailFolded())
+    return true;
+
+  // Visit the blocks of the loop region in the same order as
+  // introduceMasksAndLinearize does.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock());
+  auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
+  assert(Blocks.size() == OrigLoop->getNumBlocks());
+
+  LoopBlocksRPO OrigRPO(OrigLoop);
+  OrigRPO.perform(LI);
+
+  uint64_t HeaderFreq = BFI.getBlockFreq(OrigLoop->getHeader()).getFrequency();
+  if (HeaderFreq == 0)
+    return true;
+
+  // BFI's fixed-point mass propagation rounds per edge, losing up to 1 ULP per
+  // block on the path from the header.
+  uint64_t Tolerance =
+      Blocks.size() + BranchProbability::getDenominator() / HeaderFreq;
+
+  DenseMap<const VPBasicBlock *, BranchProbability> Probabilities =
+      vputils::computeBlockProbabilities(Blocks);
+  for (const auto &[VPBB, BB] :
+       zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
+    BranchProbability Computed = Probabilities.lookup(VPBB);
+    // Currently VPlan-based probabilities are only computed when all blocks
+    // have branch-weights.
+    if (Computed.isUnknown())
+      continue;
+
+    // Clamp the frequency to the header's; it may exceed it slightly due to
+    // BFI's rounding.
+    uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
+    BranchProbability Expected = BranchProbability::getBranchProbability(
+        std::min(Freq, HeaderFreq), HeaderFreq);
+    if (AbsoluteDifference(Computed.getNumerator(), Expected.getNumerator()) <=
+        Tolerance)
+      continue;
+
+    errs() << "Block probability mismatch for " << VPBB->getName() << ": VPlan "
+           << Computed << ", BlockFrequencyInfo " << Expected << "\n";
+    return false;
+  }
+  return true;
+}
+#endif
+
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
@@ -6491,9 +6567,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // Create initial base VPlan0, to serve as common starting point for all
   // candidates built later for specific VF ranges.
-  auto VPlan0 = VPlanTransforms::buildVPlan0(OrigLoop, *LI,
-                                             Legal->getWidestInductionType(),
-                                             PSE, LVer ? &*LVer : nullptr);
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(), PSE, CM.getBPI(),
+      LVer ? &*LVer : nullptr);
 
   VPDominatorTree VPDT(*VPlan0);
   if (const LoopAccessInfo *LAI = Legal->getLAI())
@@ -6555,6 +6631,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM->foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
+
+  assert(verifyBlockProbabilitiesMatchBFI(*VPlan0, OrigLoop, LI, CM.getBFI()) &&
+         "block probabilities do not match the original loop's frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   return VPlan0;
@@ -6771,6 +6850,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
+  RUN_VPLAN_PASS(VPlanTransforms::dropBranchWeightsFromUnguardedRecipes, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
 
