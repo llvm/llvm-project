@@ -56,7 +56,8 @@ class ModulePass;
   ModulePass *createPPCPrepareIFuncsOnAIXPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
-  bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+  bool LowerPPCMachineOperandToMCOperand(unsigned MIOpcode,
+                                         const MachineOperand &MO,
                                          MCOperand &OutMO, AsmPrinter &AP);
 
 #ifndef NDEBUG
