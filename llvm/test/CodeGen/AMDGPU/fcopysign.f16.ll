@@ -265,23 +265,14 @@ define i16 @s_test_copysign_f16_10_mag(half inreg %sign) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_10_mag:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, 0x4900
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_10_mag:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0x8000
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    s_or_b32 s0, s0, 0x4900
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: s_test_copysign_f16_10_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x8000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s0, s0, 0x4900
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half 10.0, half %sign)
   %cast = bitcast half %result to i16
   ret i16 %cast
