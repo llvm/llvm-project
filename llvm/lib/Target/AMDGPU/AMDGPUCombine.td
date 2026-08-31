@@ -94,7 +94,7 @@ def clamp_i64_to_i16_matchdata : GIDefMatchData<"ClampI64ToI16MatchInfo">;
 
 def clamp_i64_to_i16 : GICombineRule<
   (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
-  (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
+  (match (G_TRUNC $dst, $src):$clamp_i64_to_i16,
       [{ return matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, MF, ${matchinfo}); }]),
   (apply [{ applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
 
@@ -136,21 +136,21 @@ def fp_minmax_to_clamp : GICombineRule<
 
 def fmed3_intrinsic_to_clamp : GICombineRule<
   (defs root:$fmed3, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_AMDGPU_FMED3):$fmed3,
+  (match (G_AMDGPU_FMED3 $dst, $src0, $src1, $src2):$fmed3,
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
 def remove_fcanonicalize : GICombineRule<
-  (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
-         [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
+  (defs root:$fcanonicalize),
+  (match (G_FCANONICALIZE $dst, $src):$fcanonicalize,
+         [{ return matchRemoveFcanonicalize(*${fcanonicalize}); }]),
+  (apply (GIReplaceReg $dst, $src))>;
 
 def foldable_fneg_matchdata : GIDefMatchData<"MachineInstr *">;
 
 def foldable_fneg : GICombineRule<
   (defs root:$ffn, foldable_fneg_matchdata:$matchinfo),
-  (match (wip_match_opcode G_FNEG):$ffn,
+  (match (G_FNEG $dst, $src):$ffn,
          [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
   (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
 
@@ -165,7 +165,7 @@ def fold_fabs_fptrunc : GICombineRule<
 // Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
 def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_MUL):$smul,
+  (match (G_MUL $dst, $src0, $src1):$smul,
          [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
   (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
 
@@ -173,7 +173,7 @@ def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, u
 
 def sign_extension_in_reg : GICombineRule<
   (defs root:$sign_inreg, sign_exension_in_reg_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SEXT_INREG):$sign_inreg,
+  (match (G_SEXT_INREG $dst, $src, $width):$sign_inreg,
          [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
