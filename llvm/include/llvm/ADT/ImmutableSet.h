@@ -326,7 +326,7 @@ private:
     // Compute digest of stored data.
     FoldingSetNodeID ID;
     ImutInfo::Profile(ID,V);
-    digest += ID.ComputeHash();
+    digest += ID.computeHash();
 
     if (R)
       digest += R->computeDigest();

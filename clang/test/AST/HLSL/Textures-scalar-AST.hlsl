@@ -3,20 +3,21 @@
 // RUN:   -DHAS_GETDIM_XY -DTEXTURE=Texture2D -DCOORD_TYPE=float2 \
 // RUN:   -DGRAD_TYPE=float2 -DLOD_LOCATION=loc -DOFFSET_ARG="int2(1, 2)" -o - \
 // RUN:   %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NOARRAY,TEXEL,OFFSET,GETDIM-XY \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,TEXEL,OFFSET,GETDIM-XY \
 // RUN:   -DTEXTURE=Texture2D -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=2 -DLOAD_DIM=3 \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>"
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" -DIS_ARRAY=""
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DLOD_LOCATION=loc -o - %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NOARRAY -DTEXTURE=TextureCube \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=3
+// RUN:   | FileCheck %s --check-prefixes=CHECK -DTEXTURE=TextureCube \
+// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=3 -DIS_ARRAY=""
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -DGRAD_TYPE=float3 \
 // RUN:   -DLOD_LOCATION=loc.xyz -o - %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=TextureCubeArray \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=4
+// RUN:   | FileCheck %s --check-prefixes=CHECK -DTEXTURE=TextureCubeArray \
+// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=4 \
+// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]"
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
 // RUN:   -DHAS_GETDIM_XY -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 \
@@ -24,7 +25,8 @@
 // RUN:   -o - %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,GETDIM-XY \
 // RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=3 \
-// RUN:   -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>"
+// RUN:   -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]"
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -55,7 +57,8 @@
 //                      overloads
 //   GETDIM-XY          the width/height GetDimensions overloads exist
 //   ARRAY              the resource has an array slice
-//   NOARRAY            the resource has no array slice
+//   IS_ARRAY           the [[hlsl::is_array]] attribute on arrayed resources,
+//                      or empty
 
 // CHECK: CXXRecordDecl {{.*}} SamplerState definition
 // CHECK: FinalAttr {{.*}} Implicit final
@@ -72,8 +75,7 @@
 // CHECK: CXXRecordDecl {{.*}} [[TEXTURE]] definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// ARRAY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]] [[hlsl::is_array]] [[hlsl::contained_type(element_type)]]
-// NOARRAY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]] [[hlsl::contained_type(element_type)]]
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
 // CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 
 // TEXEL: CXXMethodDecl {{.*}} Load 'element_type (vector<int, [[LOAD_DIM]]>)'
@@ -83,7 +85,12 @@
 // TEXEL-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // TEXEL-NEXT: CallExpr {{.*}} '<dependent type>'
 // TEXEL-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
-// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// TEXEL-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// TEXEL-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// TEXEL-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// TEXEL-SAME: ' lvalue .__handle
 // TEXEL-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOAD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOAD_DIM]]>'
 // TEXEL-NEXT: AlwaysInlineAttr
@@ -96,7 +103,12 @@
 // TEXEL-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // TEXEL-NEXT: CallExpr {{.*}} '<dependent type>'
 // TEXEL-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
-// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// TEXEL-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// TEXEL-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// TEXEL-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// TEXEL-SAME: ' lvalue .__handle
 // TEXEL-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOAD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOAD_DIM]]>'
 // TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
@@ -110,7 +122,12 @@
 // TEXEL-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
 // TEXEL-NEXT: CallExpr {{.*}} '<dependent type>'
 // TEXEL-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
-// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// TEXEL-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// TEXEL-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// TEXEL-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// TEXEL-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// TEXEL-SAME: ' lvalue .__handle
 // TEXEL-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // TEXEL-NEXT: DeclRefExpr {{.*}} '[[INDEX_TYPE]]' lvalue ParmVar {{.*}} 'Index' '[[INDEX_TYPE]]'
 // TEXEL-NEXT: AlwaysInlineAttr
@@ -123,7 +140,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -141,7 +161,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -161,7 +186,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -181,7 +211,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -201,7 +234,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -223,7 +261,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_bias' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -245,7 +288,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -267,7 +313,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -291,7 +342,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_grad' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -313,7 +369,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -333,7 +392,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_level' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -353,7 +417,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -373,7 +440,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -395,7 +467,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -416,7 +493,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -436,7 +516,12 @@
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
 // OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -455,7 +540,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -472,7 +560,10 @@
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_calculate_lod_unclamped' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
@@ -489,7 +580,12 @@
 // GETDIM-XY-NEXT: CompoundStmt
 // GETDIM-XY-NEXT: CallExpr {{.*}} '<dependent type>'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy' 'void (__hlsl_resource_t, unsigned int &, unsigned int &) noexcept'
-// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// GETDIM-XY-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// GETDIM-XY-SAME: ' lvalue .__handle
 // GETDIM-XY-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'height' 'unsigned int &__restrict'
@@ -506,7 +602,12 @@
 // GETDIM-XY-NEXT: CompoundStmt
 // GETDIM-XY-NEXT: CallExpr {{.*}} '<dependent type>'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy' 'void (__hlsl_resource_t, unsigned int, unsigned int &, unsigned int &, unsigned int &) noexcept'
-// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// GETDIM-XY-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// GETDIM-XY-SAME: ' lvalue .__handle
 // GETDIM-XY-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
@@ -522,7 +623,12 @@
 // GETDIM-XY-NEXT: CompoundStmt
 // GETDIM-XY-NEXT: CallExpr {{.*}} '<dependent type>'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy_float' 'void (__hlsl_resource_t, float &, float &) noexcept'
-// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// GETDIM-XY-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// GETDIM-XY-SAME: ' lvalue .__handle
 // GETDIM-XY-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'height' 'float &__restrict'
@@ -539,7 +645,12 @@
 // GETDIM-XY-NEXT: CompoundStmt
 // GETDIM-XY-NEXT: CallExpr {{.*}} '<dependent type>'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy_float' 'void (__hlsl_resource_t, unsigned int, float &, float &, float &) noexcept'
-// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t{{.*}}' lvalue .__handle
+// GETDIM-XY-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// GETDIM-XY-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// GETDIM-XY-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// GETDIM-XY-SAME: ' lvalue .__handle
 // GETDIM-XY-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
