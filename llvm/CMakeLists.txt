@@ -503,6 +503,12 @@ if(WIN32 AND NOT UNIX)
     # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
     # use LZMA the way the NSIS generator does.
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
+    # Make the LLVM installation available for all users.
+    set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    # Identifies the LLVM product line accross all versions. Must not be changed.
+    # Ensures previous installations are uninstalled and do not live side by
+    # side.
+    set(CPACK_WIX_UPGRADE_GUID "B08613CD-8BD0-4FB6-8937-621936604DE3")
   endif()
 endif()
 include(CPack)
