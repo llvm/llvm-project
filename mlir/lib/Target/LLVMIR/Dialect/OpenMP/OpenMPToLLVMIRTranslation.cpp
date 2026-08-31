@@ -9228,14 +9228,14 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.TeamsThreadLimit.front() = builder.CreateSExtOrTrunc(
         moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
-<<<<<<< HEAD
-  if (numThreads)
-    attrs.MaxThreads.front() = moduleTranslation.lookupValue(numThreads);
-=======
-  // Handle multi-dimensional num_threads (only first value for now)
-  if (!numThreadsVars.empty())
-    attrs.MaxThreads = moduleTranslation.lookupValue(numThreadsVars[0]);
->>>>>>> [OpenMP][MLIR] Add num_threads mlir->llvm lowering
+  // One runtime value per num_threads dimension.
+  if (!numThreadsVars.empty()) {
+    attrs.MaxThreads.clear();
+    for (Value numThreadsVar : numThreadsVars)
+      attrs.MaxThreads.push_back(
+          numThreadsVar ? moduleTranslation.lookupValue(numThreadsVar)
+                        : nullptr);
+  }
 
   if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
