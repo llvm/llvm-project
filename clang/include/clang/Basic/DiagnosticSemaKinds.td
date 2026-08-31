@@ -13557,6 +13557,10 @@ def err_sycl_external_invalid_deleted_function : Error<
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;
+def warn_sycl_external_ignored : Warning<
+  "%0 attribute is ignored %enum_select<IgnoredSyclExternalReason>{"
+  "%NoGpuRDC{when GPU relocatable device code (-fgpu-rdc) is disabled}}1">,
+  DefaultError;
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=SPIR
+// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -fgpu-rdc -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=SPIR
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-host -emit-llvm %s -o - | FileCheck %s --check-prefix=ITANIUM
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fsycl-is-host -emit-llvm %s -o - | FileCheck %s --check-prefix=MS
 

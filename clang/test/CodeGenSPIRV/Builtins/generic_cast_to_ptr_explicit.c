@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -triple spirv64 -fsycl-is-device -x c++ %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -O1 -triple spirv64 -fsycl-is-device -fgpu-rdc -x c++ %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -O1 -triple spirv64 -cl-std=CL3.0 -x cl %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -O1 -triple spirv32 -cl-std=CL3.0 -x cl %s -emit-llvm -o - | FileCheck %s
 

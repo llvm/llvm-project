@@ -293,6 +293,9 @@ void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
          diag::err_sycl_external_invalid_deleted_function)
         << SEAttr;
   }
+  if (!getLangOpts().GPURelocatableDeviceCode)
+    Diag(SEAttr->getLocation(), diag::warn_sycl_external_ignored)
+        << SEAttr << diag::IgnoredSyclExternalReason::NoGpuRDC;
 }
 
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
