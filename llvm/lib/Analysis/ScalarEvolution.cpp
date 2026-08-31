@@ -8737,9 +8737,8 @@ void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
   // intrinsic), its users (e.g. extractvalue) may have stale SCEV
   // expressions referencing loop-internal values.
-  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
-        return isa<WithOverflowInst>(Inc);
-      }))
+  if (!isSCEVable(V->getType()) &&
+      any_of(V->incoming_values(), IsaPred<WithOverflowInst>))
     for (User *U : V->users())
       InvalidateValue(U);
   // Also perform the normal invalidation.
@@ -13889,7 +13888,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
 
   // The only time we can solve this is when we have all constant indices.
   // Otherwise, we cannot determine the overflow conditions.
-  if (any_of(operands(), [](const SCEV *Op) { return !isa<SCEVConstant>(Op); }))
+  if (!all_of(operands(), IsaPred<SCEVConstant>))
     return SE.getCouldNotCompute();
 
   // Okay at this point we know that all elements of the chrec are constants and
