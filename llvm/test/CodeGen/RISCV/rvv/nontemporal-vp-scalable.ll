@@ -2354,7 +2354,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_P1(<vscale x 1 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1i32_P1:
@@ -2369,7 +2370,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_P1(<vscale x 1 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 1 x i32> %x
@@ -2389,7 +2391,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_PALL(<vscale x 1 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1i32_PALL:
@@ -2404,7 +2407,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_PALL(<vscale x 1 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 1 x i32> %x
@@ -2424,7 +2428,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_S1(<vscale x 1 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1i32_S1:
@@ -2439,7 +2444,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_S1(<vscale x 1 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 1 x i32> %x
@@ -2459,7 +2465,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_ALL(<vscale x 1 x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1i32_ALL:
@@ -2474,7 +2481,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_ALL(<vscale x 1 x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 1 x i32> %x
@@ -2493,7 +2501,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_DEFAULT(<vscale x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1i32_DEFAULT:
@@ -2508,7 +2517,8 @@ define <vscale x 1 x i32> @test_nontemporal_vp_gather_nxv1i32_DEFAULT(<vscale x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 1 x i32> %x
@@ -3340,7 +3350,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_P1(<vscale x 1 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1i64_P1:
@@ -3355,7 +3366,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_P1(<vscale x 1 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1i64_P1:
@@ -3375,7 +3387,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_PALL(<vscale x 1 x
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1i64_PALL:
@@ -3390,7 +3403,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_PALL(<vscale x 1 x
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1i64_PALL:
@@ -3410,7 +3424,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_S1(<vscale x 1 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1i64_S1:
@@ -3425,7 +3440,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_S1(<vscale x 1 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1i64_S1:
@@ -3445,7 +3461,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_ALL(<vscale x 1 x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1i64_ALL:
@@ -3460,7 +3477,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_ALL(<vscale x 1 x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1i64_ALL:
@@ -3479,7 +3497,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_DEFAULT(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1i64_DEFAULT:
@@ -3494,7 +3513,8 @@ define <vscale x 1 x i64> @test_nontemporal_vp_gather_nxv1i64_DEFAULT(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1i64_DEFAULT:
@@ -4342,7 +4362,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_P1(<vscale x 1 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1f32_P1:
@@ -4357,7 +4378,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_P1(<vscale x 1 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 1 x float> %x
@@ -4377,7 +4399,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_PALL(<vscale x 1
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1f32_PALL:
@@ -4392,7 +4415,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_PALL(<vscale x 1
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 1 x float> %x
@@ -4412,7 +4436,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_S1(<vscale x 1 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1f32_S1:
@@ -4427,7 +4452,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_S1(<vscale x 1 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 1 x float> %x
@@ -4447,7 +4473,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_ALL(<vscale x 1 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1f32_ALL:
@@ -4462,7 +4489,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_ALL(<vscale x 1 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 1 x float> %x
@@ -4481,7 +4509,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_DEFAULT(<vscale 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv1f32_DEFAULT:
@@ -4496,7 +4525,8 @@ define <vscale x 1 x float> @test_nontemporal_vp_gather_nxv1f32_DEFAULT(<vscale 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv1r.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 1 x float> %x
@@ -5328,7 +5358,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_P1(<vscale x 1 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1f64_P1:
@@ -5343,7 +5374,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_P1(<vscale x 1 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1f64_P1:
@@ -5363,7 +5395,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_PALL(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1f64_PALL:
@@ -5378,7 +5411,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_PALL(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1f64_PALL:
@@ -5398,7 +5432,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_S1(<vscale x 1 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1f64_S1:
@@ -5413,7 +5448,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_S1(<vscale x 1 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1f64_S1:
@@ -5433,7 +5469,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_ALL(<vscale x 1
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1f64_ALL:
@@ -5448,7 +5485,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_ALL(<vscale x 1
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1f64_ALL:
@@ -5467,7 +5505,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_DEFAULT(<vscale
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv1f64_DEFAULT:
@@ -5482,7 +5521,8 @@ define <vscale x 1 x double> @test_nontemporal_vp_gather_nxv1f64_DEFAULT(<vscale
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v9, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv1f64_DEFAULT:
@@ -8338,7 +8378,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_P1(<vscale x 2 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2i32_P1:
@@ -8353,7 +8394,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_P1(<vscale x 2 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 2 x i32> %x
@@ -8373,7 +8415,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_PALL(<vscale x 2 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2i32_PALL:
@@ -8388,7 +8431,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_PALL(<vscale x 2 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 2 x i32> %x
@@ -8408,7 +8452,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_S1(<vscale x 2 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2i32_S1:
@@ -8423,7 +8468,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_S1(<vscale x 2 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 2 x i32> %x
@@ -8443,7 +8489,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_ALL(<vscale x 2 x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2i32_ALL:
@@ -8458,7 +8505,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_ALL(<vscale x 2 x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 2 x i32> %x
@@ -8477,7 +8525,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_DEFAULT(<vscale x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2i32_DEFAULT:
@@ -8492,7 +8541,8 @@ define <vscale x 2 x i32> @test_nontemporal_vp_gather_nxv2i32_DEFAULT(<vscale x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 2 x i32> %x
@@ -9324,7 +9374,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_P1(<vscale x 2 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2i64_P1:
@@ -9340,7 +9391,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_P1(<vscale x 2 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2i64_P1:
@@ -9361,7 +9413,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_PALL(<vscale x 2 x
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2i64_PALL:
@@ -9377,7 +9430,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_PALL(<vscale x 2 x
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2i64_PALL:
@@ -9398,7 +9452,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_S1(<vscale x 2 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2i64_S1:
@@ -9414,7 +9469,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_S1(<vscale x 2 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2i64_S1:
@@ -9435,7 +9491,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_ALL(<vscale x 2 x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2i64_ALL:
@@ -9451,7 +9508,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_ALL(<vscale x 2 x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2i64_ALL:
@@ -9471,7 +9529,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_DEFAULT(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2i64_DEFAULT:
@@ -9487,7 +9546,8 @@ define <vscale x 2 x i64> @test_nontemporal_vp_gather_nxv2i64_DEFAULT(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2i64_DEFAULT:
@@ -10336,7 +10396,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_P1(<vscale x 2 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2f32_P1:
@@ -10351,7 +10412,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_P1(<vscale x 2 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 2 x float> %x
@@ -10371,7 +10433,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_PALL(<vscale x 2
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2f32_PALL:
@@ -10386,7 +10449,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_PALL(<vscale x 2
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 2 x float> %x
@@ -10406,7 +10470,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_S1(<vscale x 2 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2f32_S1:
@@ -10421,7 +10486,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_S1(<vscale x 2 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 2 x float> %x
@@ -10441,7 +10507,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_ALL(<vscale x 2 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2f32_ALL:
@@ -10456,7 +10523,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_ALL(<vscale x 2 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 2 x float> %x
@@ -10475,7 +10543,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_DEFAULT(<vscale 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv2f32_DEFAULT:
@@ -10490,7 +10559,8 @@ define <vscale x 2 x float> @test_nontemporal_vp_gather_nxv2f32_DEFAULT(<vscale 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v9, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v9
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 2 x float> %x
@@ -11322,7 +11392,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_P1(<vscale x 2 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2f64_P1:
@@ -11338,7 +11409,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_P1(<vscale x 2 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2f64_P1:
@@ -11359,7 +11431,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_PALL(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2f64_PALL:
@@ -11375,7 +11448,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_PALL(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2f64_PALL:
@@ -11396,7 +11470,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_S1(<vscale x 2 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2f64_S1:
@@ -11412,7 +11487,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_S1(<vscale x 2 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2f64_S1:
@@ -11433,7 +11509,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_ALL(<vscale x 2
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2f64_ALL:
@@ -11449,7 +11526,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_ALL(<vscale x 2
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2f64_ALL:
@@ -11469,7 +11547,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_DEFAULT(<vscale
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv2f64_DEFAULT:
@@ -11485,7 +11564,8 @@ define <vscale x 2 x double> @test_nontemporal_vp_gather_nxv2f64_DEFAULT(<vscale
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v10, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv2f64_DEFAULT:
@@ -14342,7 +14422,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_P1(<vscale x 4 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4i32_P1:
@@ -14357,7 +14438,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_P1(<vscale x 4 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 4 x i32> %x
@@ -14377,7 +14459,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_PALL(<vscale x 4 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4i32_PALL:
@@ -14392,7 +14475,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_PALL(<vscale x 4 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 4 x i32> %x
@@ -14412,7 +14496,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_S1(<vscale x 4 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4i32_S1:
@@ -14427,7 +14512,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_S1(<vscale x 4 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 4 x i32> %x
@@ -14447,7 +14533,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_ALL(<vscale x 4 x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4i32_ALL:
@@ -14462,7 +14549,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_ALL(<vscale x 4 x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 4 x i32> %x
@@ -14481,7 +14569,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_DEFAULT(<vscale x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4i32_DEFAULT:
@@ -14496,7 +14585,8 @@ define <vscale x 4 x i32> @test_nontemporal_vp_gather_nxv4i32_DEFAULT(<vscale x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 4 x i32> %x
@@ -15328,7 +15418,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_P1(<vscale x 4 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4i64_P1:
@@ -15344,7 +15435,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_P1(<vscale x 4 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4i64_P1:
@@ -15365,7 +15457,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_PALL(<vscale x 4 x
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4i64_PALL:
@@ -15381,7 +15474,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_PALL(<vscale x 4 x
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4i64_PALL:
@@ -15402,7 +15496,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_S1(<vscale x 4 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4i64_S1:
@@ -15418,7 +15513,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_S1(<vscale x 4 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4i64_S1:
@@ -15439,7 +15535,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_ALL(<vscale x 4 x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4i64_ALL:
@@ -15455,7 +15552,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_ALL(<vscale x 4 x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4i64_ALL:
@@ -15475,7 +15573,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_DEFAULT(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4i64_DEFAULT:
@@ -15491,7 +15590,8 @@ define <vscale x 4 x i64> @test_nontemporal_vp_gather_nxv4i64_DEFAULT(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4i64_DEFAULT:
@@ -16340,7 +16440,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_P1(<vscale x 4 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4f32_P1:
@@ -16355,7 +16456,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_P1(<vscale x 4 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 4 x float> %x
@@ -16375,7 +16477,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_PALL(<vscale x 4
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4f32_PALL:
@@ -16390,7 +16493,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_PALL(<vscale x 4
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 4 x float> %x
@@ -16410,7 +16514,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_S1(<vscale x 4 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4f32_S1:
@@ -16425,7 +16530,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_S1(<vscale x 4 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 4 x float> %x
@@ -16445,7 +16551,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_ALL(<vscale x 4 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4f32_ALL:
@@ -16460,7 +16567,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_ALL(<vscale x 4 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 4 x float> %x
@@ -16479,7 +16587,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_DEFAULT(<vscale 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv4f32_DEFAULT:
@@ -16494,7 +16603,8 @@ define <vscale x 4 x float> @test_nontemporal_vp_gather_nxv4f32_DEFAULT(<vscale 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v10, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v10
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 4 x float> %x
@@ -17326,7 +17436,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_P1(<vscale x 4 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4f64_P1:
@@ -17342,7 +17453,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_P1(<vscale x 4 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4f64_P1:
@@ -17363,7 +17475,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_PALL(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4f64_PALL:
@@ -17379,7 +17492,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_PALL(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4f64_PALL:
@@ -17400,7 +17514,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_S1(<vscale x 4 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4f64_S1:
@@ -17416,7 +17531,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_S1(<vscale x 4 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4f64_S1:
@@ -17437,7 +17553,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_ALL(<vscale x 4
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4f64_ALL:
@@ -17453,7 +17570,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_ALL(<vscale x 4
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4f64_ALL:
@@ -17473,7 +17591,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_DEFAULT(<vscale
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv4f64_DEFAULT:
@@ -17489,7 +17608,8 @@ define <vscale x 4 x double> @test_nontemporal_vp_gather_nxv4f64_DEFAULT(<vscale
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v12, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv4f64_DEFAULT:
@@ -20346,7 +20466,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_P1(<vscale x 8 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8i32_P1:
@@ -20361,7 +20482,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_P1(<vscale x 8 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 8 x i32> %x
@@ -20381,7 +20503,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_PALL(<vscale x 8 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8i32_PALL:
@@ -20396,7 +20519,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_PALL(<vscale x 8 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 8 x i32> %x
@@ -20416,7 +20540,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_S1(<vscale x 8 x p
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8i32_S1:
@@ -20431,7 +20556,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_S1(<vscale x 8 x p
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 8 x i32> %x
@@ -20451,7 +20577,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_ALL(<vscale x 8 x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8i32_ALL:
@@ -20466,7 +20593,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_ALL(<vscale x 8 x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 8 x i32> %x
@@ -20485,7 +20613,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_DEFAULT(<vscale x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8i32_DEFAULT:
@@ -20500,7 +20629,8 @@ define <vscale x 8 x i32> @test_nontemporal_vp_gather_nxv8i32_DEFAULT(<vscale x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 8 x i32> %x
@@ -21332,7 +21462,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_P1(<vscale x 8 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8i64_P1:
@@ -21348,7 +21479,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_P1(<vscale x 8 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8i64_P1:
@@ -21369,7 +21501,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_PALL(<vscale x 8 x
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8i64_PALL:
@@ -21385,7 +21518,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_PALL(<vscale x 8 x
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8i64_PALL:
@@ -21406,7 +21540,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_S1(<vscale x 8 x p
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8i64_S1:
@@ -21422,7 +21557,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_S1(<vscale x 8 x p
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8i64_S1:
@@ -21443,7 +21579,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_ALL(<vscale x 8 x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8i64_ALL:
@@ -21459,7 +21596,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_ALL(<vscale x 8 x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8i64_ALL:
@@ -21479,7 +21617,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_DEFAULT(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8i64_DEFAULT:
@@ -21495,7 +21634,8 @@ define <vscale x 8 x i64> @test_nontemporal_vp_gather_nxv8i64_DEFAULT(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8i64_DEFAULT:
@@ -22344,7 +22484,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_P1(<vscale x 8 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8f32_P1:
@@ -22359,7 +22500,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_P1(<vscale x 8 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 8 x float> %x
@@ -22379,7 +22521,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_PALL(<vscale x 8
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8f32_PALL:
@@ -22394,7 +22537,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_PALL(<vscale x 8
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 8 x float> %x
@@ -22414,7 +22558,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_S1(<vscale x 8 x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8f32_S1:
@@ -22429,7 +22574,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_S1(<vscale x 8 x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 8 x float> %x
@@ -22449,7 +22595,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_ALL(<vscale x 8 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8f32_ALL:
@@ -22464,7 +22611,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_ALL(<vscale x 8 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 8 x float> %x
@@ -22483,7 +22631,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_DEFAULT(<vscale 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv8f32_DEFAULT:
@@ -22498,7 +22647,8 @@ define <vscale x 8 x float> @test_nontemporal_vp_gather_nxv8f32_DEFAULT(<vscale 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v12, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v12
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 8 x float> %x
@@ -23330,7 +23480,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_P1(<vscale x 8 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.p1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8f64_P1:
@@ -23346,7 +23497,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_P1(<vscale x 8 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.p1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8f64_P1:
@@ -23367,7 +23519,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_PALL(<vscale x 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.pall
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8f64_PALL:
@@ -23383,7 +23536,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_PALL(<vscale x 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.pall
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8f64_PALL:
@@ -23404,7 +23558,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_S1(<vscale x 8 
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.s1
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8f64_S1:
@@ -23420,7 +23575,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_S1(<vscale x 8 
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.s1
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8f64_S1:
@@ -23441,7 +23597,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_ALL(<vscale x 8
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8f64_ALL:
@@ -23457,7 +23614,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_ALL(<vscale x 8
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8f64_ALL:
@@ -23477,7 +23635,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_DEFAULT(<vscale
 ; CHECK-RV64V:       # %bb.0:
 ; CHECK-RV64V-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64V-NEXT:    ntl.all
-; CHECK-RV64V-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64V-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64V-NEXT:    ret
 ;
 ; CHECK-RV32V-LABEL: test_nontemporal_vp_gather_nxv8f64_DEFAULT:
@@ -23493,7 +23652,8 @@ define <vscale x 8 x double> @test_nontemporal_vp_gather_nxv8f64_DEFAULT(<vscale
 ; CHECK-RV64VC:       # %bb.0:
 ; CHECK-RV64VC-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64VC-NEXT:    c.ntl.all
-; CHECK-RV64VC-NEXT:    vluxei64.v v8, (zero), v8
+; CHECK-RV64VC-NEXT:    vluxei64.v v16, (zero), v8
+; CHECK-RV64VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV64VC-NEXT:    ret
 ;
 ; CHECK-RV32VC-LABEL: test_nontemporal_vp_gather_nxv8f64_DEFAULT:
@@ -26882,7 +27042,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_P1(<vscale x 16 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16i32_P1:
@@ -26909,7 +27070,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_P1(<vscale x 16 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.gather.nxv16i32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 16 x i32> %x
@@ -26941,7 +27103,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_PALL(<vscale x 1
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16i32_PALL:
@@ -26968,7 +27131,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_PALL(<vscale x 1
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.gather.nxv16i32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 16 x i32> %x
@@ -27000,7 +27164,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_S1(<vscale x 16 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16i32_S1:
@@ -27027,7 +27192,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_S1(<vscale x 16 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.gather.nxv16i32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 16 x i32> %x
@@ -27059,7 +27225,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_ALL(<vscale x 16
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16i32_ALL:
@@ -27086,7 +27253,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_ALL(<vscale x 16
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.gather.nxv16i32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 16 x i32> %x
@@ -27117,7 +27285,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_DEFAULT(<vscale 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16i32_DEFAULT:
@@ -27144,7 +27313,8 @@ define <vscale x 16 x i32> @test_nontemporal_vp_gather_nxv16i32_DEFAULT(<vscale 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.gather.nxv16i32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 16 x i32> %x
@@ -28136,7 +28306,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_P1(<vscale x 1
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.p1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16f32_P1:
@@ -28163,7 +28334,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_P1(<vscale x 1
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.p1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x float> @llvm.vp.gather.nxv16f32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !1
   ret <vscale x 16 x float> %x
@@ -28195,7 +28367,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_PALL(<vscale x
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.pall
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16f32_PALL:
@@ -28222,7 +28395,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_PALL(<vscale x
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.pall
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x float> @llvm.vp.gather.nxv16f32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !2
   ret <vscale x 16 x float> %x
@@ -28254,7 +28428,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_S1(<vscale x 1
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.s1
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16f32_S1:
@@ -28281,7 +28456,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_S1(<vscale x 1
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.s1
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x float> @llvm.vp.gather.nxv16f32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !3
   ret <vscale x 16 x float> %x
@@ -28313,7 +28489,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_ALL(<vscale x 
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16f32_ALL:
@@ -28340,7 +28517,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_ALL(<vscale x 
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x float> @llvm.vp.gather.nxv16f32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0, !riscv-nontemporal-domain !4
   ret <vscale x 16 x float> %x
@@ -28371,7 +28549,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_DEFAULT(<vscal
 ; CHECK-RV32V:       # %bb.0:
 ; CHECK-RV32V-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32V-NEXT:    ntl.all
-; CHECK-RV32V-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32V-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32V-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32V-NEXT:    ret
 ;
 ; CHECK-RV64VC-LABEL: test_nontemporal_vp_gather_nxv16f32_DEFAULT:
@@ -28398,7 +28577,8 @@ define <vscale x 16 x float> @test_nontemporal_vp_gather_nxv16f32_DEFAULT(<vscal
 ; CHECK-RV32VC:       # %bb.0:
 ; CHECK-RV32VC-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-RV32VC-NEXT:    c.ntl.all
-; CHECK-RV32VC-NEXT:    vluxei32.v v8, (zero), v8
+; CHECK-RV32VC-NEXT:    vluxei32.v v16, (zero), v8
+; CHECK-RV32VC-NEXT:    vmv.v.v v8, v16
 ; CHECK-RV32VC-NEXT:    ret
   %x = call <vscale x 16 x float> @llvm.vp.gather.nxv16f32.nxv16p0(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> splat(i1 true), i32 %vl), !nontemporal !0
   ret <vscale x 16 x float> %x
