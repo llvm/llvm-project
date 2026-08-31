@@ -10798,9 +10798,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
     const SCEV *DistancePlusOne = getAddExpr(Distance, One);
     if (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, DistancePlusOne, Zero)) {
       // If Distance + 1 doesn't overflow, we can compute the maximum distance
-      // as "unsigned_max(Distance + 1) - 1".
-      ConstantRange CR = getUnsignedRange(DistancePlusOne);
-      MaxBECount = APIntOps::umin(MaxBECount, CR.getUnsignedMax() - 1);
+      // as "unsigned_max(Distance + 1) - 1". Also apply the loop guards to
+      // Distance + 1; the range of Distance itself may be a wrapped set even
+      // when the guards bound Distance + 1 tightly.
+      APInt Max = APIntOps::umin(
+          getUnsignedRangeMax(applyLoopGuards(DistancePlusOne, Guards)),
+          getUnsignedRangeMax(DistancePlusOne));
+      MaxBECount = APIntOps::umin(MaxBECount, Max - 1);
     }
     return ExitLimit(Distance, getConstant(MaxBECount), Distance, false,
                      Predicates);
