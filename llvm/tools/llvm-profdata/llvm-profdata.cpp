@@ -757,7 +757,7 @@ static void overlapInput(const std::string &BaseFilename,
 static Error loadInput(
     const WeightedFile &Input, SymbolRemapper *Remapper,
     const InstrProfCorrelator *Correlator,
-    ArrayRef<std::string> ProfiledBinaries, WriterContext *WC,
+    ArrayRef<StringRef> ProfiledBinaries, WriterContext *WC,
     const object::BuildIDFetcher *BIDFetcher = nullptr,
     std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
@@ -1032,7 +1032,7 @@ static Error writeInstrProfile(StringRef OutputFilename,
 static Error mergeInstrProfile(const WeightedFileVector &Inputs,
                                SymbolRemapper *Remapper,
                                int MaxDbgCorrelationWarnings,
-                               ArrayRef<std::string> ProfiledBinaries) {
+                               ArrayRef<StringRef> ProfiledBinaries) {
   const uint64_t TraceReservoirSize = TemporalProfTraceReservoirSize.getValue();
   const uint64_t MaxTraceLength = TemporalProfMaxTraceLength.getValue();
   if (OutputFormat == PF_Compact_Binary)
@@ -1954,11 +1954,12 @@ static Error merge_main(StringRef ProgName) {
                                   ZeroCounterThreshold, InstrProfColdThreshold);
   }
 
-  if (ProfileKind == instr)
-    return mergeInstrProfile(
-        WeightedInputs, Remapper.get(), MaxDbgCorrelationWarnings,
-        SmallVector<std::string>(ProfiledBinaries.begin(),
-                                 ProfiledBinaries.end()));
+  if (ProfileKind == instr) {
+    SmallVector<StringRef> ProfiledBinaryRefs(ProfiledBinaries.begin(),
+                                              ProfiledBinaries.end());
+    return mergeInstrProfile(WeightedInputs, Remapper.get(),
+                             MaxDbgCorrelationWarnings, ProfiledBinaryRefs);
+  }
 
   return mergeSampleProfile(WeightedInputs, Remapper.get(),
                             ProfileSymbolListFile, OutputSizeLimit);
@@ -3467,11 +3468,10 @@ static Error showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   // Show the raw profile in YAML.
   if (memprof::RawMemProfReader::hasFormat(Filename)) {
+    SmallVector<StringRef> ProfiledBinaryRefs(ProfiledBinaries.begin(),
+                                              ProfiledBinaries.end());
     auto ReaderOr = llvm::memprof::RawMemProfReader::create(
-        Filename,
-        SmallVector<std::string>(ProfiledBinaries.begin(),
-                                 ProfiledBinaries.end()),
-        /*KeepNames=*/true);
+        Filename, ProfiledBinaryRefs, /*KeepNames=*/true);
     if (Error E = ReaderOr.takeError()) {
       // Since the error can be related to the profile or the binary we do not
       // pass whence. Instead additional context is provided where necessary in
