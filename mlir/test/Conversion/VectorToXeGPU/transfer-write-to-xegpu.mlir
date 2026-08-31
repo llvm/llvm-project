@@ -137,8 +137,13 @@ gpu.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32>
 // STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
+// Only the outer dimension is out of bounds, so its 1D mask is spread over the
+// full vector shape.
 // STORE-SCATTER-LABEL:  @store_out_of_bounds(
-// STORE-SCATTER:   vector.transfer_write
+// STORE-SCATTER:   %[[CMP:.+]] = arith.cmpi slt, {{.*}} : vector<8xindex>
+// STORE-SCATTER:   %[[CAST:.+]] = vector.shape_cast %[[CMP]] : vector<8xi1> to vector<8x1xi1>
+// STORE-SCATTER:   %[[MASK:.+]] = vector.broadcast %[[CAST]] : vector<8x1xi1> to vector<8x16xi1>
+// STORE-SCATTER:   xegpu.store {{.*}}, %[[MASK]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 }
 
 // -----
@@ -324,48 +329,21 @@ gpu.func @store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
   gpu.return
 }
 
-// A 1D out-of-bounds write is promoted to a single-row block store, the only
-// access with a boundary check. The rank-3 source already collapses to a 2D
-// view, so no expand_shape is needed.
-// STORE-ND-LABEL:  @store_out_of_bounds_1D_vector(
-// STORE-ND-SAME:   %[[VEC:.+]]: vector<8xf32>,
-// STORE-ND-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// STORE-ND-SAME:   %[[OFFSET:.+]]: index
-// STORE-ND:        %[[ROW:.+]] = vector.shape_cast %[[VEC]] : vector<8xf32> to vector<1x8xf32>
-// STORE-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]]
-// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SUBVIEW]]
-// STORE-ND-SAME:     -> !xegpu.tensor_desc<1x8xf32>
-// STORE-ND:        xegpu.store_nd %[[ROW]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<1x8xf32>
-
-// STORE-SCATTER-LABEL:  @store_out_of_bounds_1D_vector(
-// STORE-SCATTER:        vector.transfer_write
-}
-
-// -----
-gpu.module @xevm_module {
-gpu.func @store_out_of_bounds_1D_memref(%vec: vector<8xf32>,
-    %source: memref<?xf32, strided<[1], offset: ?>>, %offset: index) {
-  vector.transfer_write %vec, %source[%offset]
-    : vector<8xf32>, memref<?xf32, strided<[1], offset: ?>>
-  gpu.return
-}
-
-// A 1D memref is a surface of a single row holding all of its elements, so it
-// is expanded to a 1xD view to describe it.
-// STORE-ND-LABEL:  @store_out_of_bounds_1D_memref(
-// STORE-ND-SAME:   %[[VEC:.+]]: vector<8xf32>,
-// STORE-ND-SAME:   %[[SRC:.+]]: memref<?xf32, strided<[1], offset: ?>>,
-// STORE-ND-SAME:   %[[OFFSET:.+]]: index
-// STORE-ND:        %[[ROW:.+]] = vector.shape_cast %[[VEC]] : vector<8xf32> to vector<1x8xf32>
-// STORE-ND:        %[[DIM:.+]] = memref.dim %[[SRC]]
-// STORE-ND:        %[[VIEW:.+]] = memref.expand_shape %[[SRC]] {{\[\[}}0, 1{{\]\]}} output_shape [1, %[[DIM]]]
-// STORE-ND-SAME:     into memref<1x?xf32, strided<[?, 1], offset: ?>>
-// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[VIEW]]
-// STORE-ND-SAME:     -> !xegpu.tensor_desc<1x8xf32>
-// STORE-ND:        xegpu.store_nd %[[ROW]], %[[DESC]][0, %[[OFFSET]]] : vector<1x8xf32>
-
-// STORE-SCATTER-LABEL:  @store_out_of_bounds_1D_memref(
-// STORE-SCATTER:        vector.transfer_write
+// A 1D vector has no nd block instruction to get a boundary check from, so the
+// out-of-bounds elements are masked off in the scattered path instead. Unlike a
+// read, a store needs no padding counterpart - the masked lanes just are not
+// written.
+// CHECK-LABEL:  @store_out_of_bounds_1D_vector(
+// CHECK-SAME:   %[[VEC:.+]]: vector<8xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-DAG:    %[[C32:.+]] = arith.constant 32 : index
+// CHECK:        %[[LIMIT:.+]] = arith.subi %[[C32]], %[[OFFSET]] : index
+// CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// CHECK:        %[[LIMIT_V:.+]] = vector.broadcast %[[LIMIT]] : index to vector<8xindex>
+// CHECK:        %[[MASK:.+]] = arith.cmpi slt, %[[STEP]], %[[LIMIT_V]] : vector<8xindex>
+// CHECK:        xegpu.store %[[VEC]], {{.*}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK-NOT:    arith.select
 }
 
 // -----

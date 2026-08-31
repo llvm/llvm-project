@@ -108,9 +108,9 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   unsigned vecRank = vecTy.getRank();
   if (vecRank == 0)
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
-  // A 1-D out-of-bounds transfer is not rejected here: it is promoted to a
-  // single-row 2-D block access, the only one with a boundary check. The
-  // individual patterns bail out if they cannot take that nd path.
+  // An out-of-bounds transfer is not rejected here. A block instruction gets a
+  // boundary check from its descriptor, and the scattered path masks off the
+  // out-of-bounds elements instead.
 
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
@@ -327,6 +327,68 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   return localOffsets;
 }
 
+// Builds the mask a scattered access needs to stay within the source bounds.
+//
+// The element at vector position `i` along vector dimension `v` accesses memref
+// dimension `d` (the one `v` maps to) at `indices[d] + i`, so it is in bounds
+// iff `i < dim(d) - indices[d]`. Dimensions the transfer declares in-bounds are
+// skipped; non-vector dimensions are always in bounds by the op's contract. The
+// per-dimension masks are spread over the full vector shape and combined, the
+// same way `computeOffsets` spreads the per-dimension offsets.
+//
+// Example, for a `vector<8xf32>` read of a `memref<?xf32>` at `%off`:
+//   %dim = memref.dim %src, %c0
+//   %limit = arith.subi %dim, %off
+//   %step = vector.step : vector<8xindex>
+//   %bcast = vector.broadcast %limit : index to vector<8xindex>
+//   %mask = arith.cmpi slt, %step, %bcast : vector<8xindex>
+static Value computeInBoundsMask(VectorTransferOpInterface xferOp,
+                                 PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
+  auto maskType = VectorType::get(vectorShape, rewriter.getI1Type());
+  auto memrefTy = cast<MemRefType>(xferOp.getShapedType());
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value mask;
+  for (unsigned v = 0, e = vectorShape.size(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound =
+        memrefTy.isDynamicDim(d)
+            ? memref::DimOp::create(rewriter, loc, xferOp.getBase(), d)
+                  .getResult()
+            : arith::ConstantIndexOp::create(rewriter, loc,
+                                             memrefTy.getDimSize(d))
+                  .getResult();
+    // A negative limit masks the dimension off entirely, which is what a
+    // starting index past the end of the dimension should do.
+    Value limit = arith::SubIOp::create(rewriter, loc, bound, indices[d]);
+    auto stepType = VectorType::get({vectorShape[v]}, rewriter.getIndexType());
+    Value step = vector::StepOp::create(rewriter, loc, stepType);
+    Value limitVec =
+        vector::BroadcastOp::create(rewriter, loc, stepType, limit);
+    Value dimMask = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, step, limitVec);
+    if (vectorShape.size() > 1) {
+      SmallVector<int64_t> expandedShape(vectorShape.size(), 1);
+      expandedShape[v] = vectorShape[v];
+      dimMask = vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(expandedShape, rewriter.getI1Type()),
+          dimMask);
+      dimMask = vector::BroadcastOp::create(rewriter, loc, maskType, dimMask);
+    }
+    mask = mask
+               ? arith::AndIOp::create(rewriter, loc, mask, dimMask).getResult()
+               : dimMask;
+  }
+  if (mask)
+    return mask;
+  return vector::ConstantMaskOp::create(rewriter, loc, maskType, vectorShape);
+}
+
 // Compute the element-wise offsets for vector.gather or vector.scatter ops.
 //
 // This function linearizes the base offsets of the gather/scatter operation
@@ -421,19 +483,6 @@ convertMemrefAndOffsetsToTargetRank(PatternRewriter &rewriter, Location loc,
   return {subviewOp.getResult(), newOffsets};
 }
 
-// Reassociation viewing a 1-D memref as a `1xD` one, i.e. as a surface of a
-// single row holding all of its elements.
-static SmallVector<ReassociationIndices> getRowViewReassociation() {
-  return {ReassociationIndices{0, 1}};
-}
-
-// The `1xD` type of that view, or failure if it cannot be expressed.
-static FailureOr<MemRefType> getRowViewType(MemRefType memrefTy) {
-  assert(memrefTy.getRank() == 1 && "Expected a 1-D memref");
-  return memref::ExpandShapeOp::computeExpandedType(
-      memrefTy, {1, memrefTy.getDimSize(0)}, getRowViewReassociation());
-}
-
 template <
     typename OpType,
     typename = std::enable_if_t<llvm::is_one_of<
@@ -455,7 +504,6 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
 
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
@@ -469,9 +517,7 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
 
   Value flatMemref = memrefToIndexPtr(readOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  Value mask = computeInBoundsMask(readOp, rewriter);
   auto gatherOp = xegpu::LoadGatherOp::create(
       rewriter, loc, vectorType, flatMemref, localOffsets, mask,
       /*chunk_size=*/IntegerAttr{},
@@ -480,7 +526,18 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       /*l3_hint=*/xegpu::CachePolicyAttr{},
       /*layout=*/nullptr, /*contiguity=*/nullptr);
 
-  rewriter.replaceOp(readOp, gatherOp.getResult());
+  // The masked-off lanes of an xegpu.load are unspecified, so the transfer's
+  // padding has to be applied explicitly. A poison padding leaves them "don't
+  // care", so the select can be skipped.
+  Value result = gatherOp.getResult();
+  if (readOp.hasOutOfBoundsDim() &&
+      !readOp.getPadding().getDefiningOp<ub::PoisonOp>()) {
+    Value padding = vector::BroadcastOp::create(rewriter, loc, vectorType,
+                                                readOp.getPadding());
+    result = arith::SelectOp::create(rewriter, loc, mask, result, padding);
+  }
+
+  rewriter.replaceOp(readOp, result);
   return success();
 }
 
@@ -488,9 +545,6 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                              PatternRewriter &rewriter) {
 
   Location loc = writeOp.getLoc();
-  VectorType vectorType = writeOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
-
   auto memrefType = dyn_cast<MemRefType>(writeOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(writeOp, "Expected memref source");
@@ -504,9 +558,9 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
 
   Value flatMemref = memrefToIndexPtr(writeOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  // Out-of-bounds elements are simply not stored, so the mask is all this
+  // needs - no counterpart to the read's padding.
+  Value mask = computeInBoundsMask(writeOp, rewriter);
   xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
                                 localOffsets, mask,
                                 /*chunk_size=*/IntegerAttr{},
@@ -578,29 +632,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
-    // A 1-D out-of-bounds read has to take the nd path as well: the scattered
-    // load has no notion of bounds, and a 1-D nd load lowers to a 1-D block
-    // load, which has no boundary check either. Reading the vector as a single
-    // row of a 2-D surface puts it on the 2-D block load, whose boundary check
-    // is exactly the transfer's out-of-bounds semantics. A 1-D memref needs a
-    // `1xD` view to describe that surface; a higher-rank one already provides
-    // it below.
-    bool promoteToRow = loadedVecTy.getRank() == 1 && isOutOfBounds &&
-                        readMap.isMinorIdentity();
-    FailureOr<MemRefType> rowViewTy = failure();
-    if (promoteToRow && readMemTy.getRank() == 1) {
-      rowViewTy = getRowViewType(readMemTy);
-      promoteToRow = succeeded(rowViewTy);
-    }
-
     // Prefer an nd block load. It requires HW block-load support, a vector of
     // rank >= 2 backed by a scalar-element memref, and a map the block load can
-    // realize. In-bounds 1D vectors use the scattered xegpu.load path instead,
-    // which has a richer interface (e.g. layout capabilities). Out-of-bounds
-    // reads are allowed as long as the padding matches load_nd's implicit zero
-    // padding.
+    // realize. 1D vectors use the scattered xegpu.load path instead, which has
+    // a richer interface (e.g. layout capabilities). Out-of-bounds reads are
+    // allowed as long as the padding matches load_nd's implicit zero padding.
     bool canLowerToLoadNd =
-        hasBlockLoadSupport && (loadedVecTy.getRank() > 1 || promoteToRow) &&
+        hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         readMemTy.getElementType().isIntOrFloat() &&
         (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
@@ -609,10 +647,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       auto elementType = loadedVecTy.getElementType();
 
       SmallVector<int64_t> descShape(loadedVecTy.getShape());
-      if (promoteToRow) {
-        descShape.insert(descShape.begin(), 1);
-        loadedVecTy = VectorType::get(descShape, elementType);
-      }
       if (isTransposeLoad) {
         // If load is transposed, simply swap the last two dimensions of the
         // loaded vector type to get the descriptor shape.
@@ -627,12 +661,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
           rewriter, loc, readOp.getBase(),
           getAsOpFoldResult(readOp.getIndices()), loadedVecTy.getRank());
-      if (succeeded(rowViewTy)) {
-        src = memref::ExpandShapeOp::create(rewriter, loc, *rowViewTy, src,
-                                            getRowViewReassociation());
-        // The promoted row is the only row of the surface.
-        indices.insert(indices.begin(), rewriter.getIndexAttr(0));
-      }
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
       xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
@@ -644,11 +672,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                   /*l1_hint=*/hint,
                                   /*l2_hint=*/hint, /*l3_hint=*/hint,
                                   /*layout=*/nullptr);
-      if (promoteToRow) {
-        // Drop the unit row dimension the promotion introduced.
-        loadedOp = vector::ShapeCastOp::create(
-            rewriter, loc, readOp.getVectorType(), loadedOp->getResult(0));
-      }
       if (isTransposeLoad) {
         // Undo the innermost-two-dims swap with a trailing vector.transpose:
         // keep the leading dimensions in place and interchange only the last
@@ -664,10 +687,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     }
 
     // Fall back to a scattered load. It supports arbitrary permutations and any
-    // rank, but cannot express out-of-bounds accesses.
-    if (isOutOfBounds)
-      return rewriter.notifyMatchFailure(
-          readOp, "Out-of-bounds reads require an nd block load");
+    // rank, and masks off the out-of-bounds elements.
     return lowerToScatteredLoadOp(readOp, rewriter);
   }
 };
@@ -721,71 +741,41 @@ struct TransferWriteLowering
     bool hasBlockStoreSupport =
         (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-    AffineMap map = writeOp.getPermutationMap();
-    bool isOutOfBounds = writeOp.hasOutOfBoundsDim();
-
-    // Mirrors the read side: a 1-D out-of-bounds write is stored as a single
-    // row of a 2-D surface, the only access with a boundary check.
-    bool promoteToRow =
-        vecTy.getRank() == 1 && isOutOfBounds && map.isMinorIdentity();
-    FailureOr<MemRefType> rowViewTy = failure();
-    if (promoteToRow && writeMemTy.getRank() == 1) {
-      rowViewTy = getRowViewType(writeMemTy);
-      promoteToRow = succeeded(rowViewTy);
-    }
-
     // Prefer an nd block store. It requires HW block-store support, a vector of
     // rank >= 2 backed by a scalar-element memref, and a minor-identity map
-    // (block stores have no transpose support). In-bounds 1D vectors use the
-    // scattered xegpu.store path instead, which has a richer interface.
-    // Out-of-bounds writes are handled by the descriptor's boundary check.
-    bool canLowerToStoreNd =
-        hasBlockStoreSupport && (vecTy.getRank() > 1 || promoteToRow) &&
-        map.isMinorIdentity() && writeMemTy.getElementType().isIntOrFloat();
+    // (block stores have no transpose support). 1D vectors use the scattered
+    // xegpu.store path instead, which has a richer interface. Out-of-bounds
+    // writes are handled by the descriptor's boundary check.
+    AffineMap map = writeOp.getPermutationMap();
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
+                             map.isMinorIdentity() &&
+                             writeMemTy.getElementType().isIntOrFloat();
 
     if (canLowerToStoreNd) {
-      Value storedVec = writeOp.getVector();
-      SmallVector<int64_t> descShape(vecTy.getShape());
-      if (promoteToRow) {
-        descShape.insert(descShape.begin(), 1);
-        storedVec = vector::ShapeCastOp::create(
-            rewriter, loc, VectorType::get(descShape, vecTy.getElementType()),
-            storedVec);
-      }
-
       auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
           rewriter, loc, writeOp.getBase(),
-          getAsOpFoldResult(writeOp.getIndices()), descShape.size());
-      if (succeeded(rowViewTy)) {
-        src = memref::ExpandShapeOp::create(rewriter, loc, *rowViewTy, src,
-                                            getRowViewReassociation());
-        // The promoted row is the only row of the surface.
-        indices.insert(indices.begin(), rewriter.getIndexAttr(0));
-      }
+          getAsOpFoldResult(writeOp.getIndices()), vecTy.getRank());
 
       auto descType = xegpu::TensorDescType::get(
-          descShape, vecTy.getElementType(),
-          /*array_length=*/1, /*boundary_check=*/isOutOfBounds,
+          vecTy.getShape(), vecTy.getElementType(),
+          /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
           xegpu::MemorySpace::Global);
       // By default, no specific caching policy is assigned.
       xegpu::CachePolicyAttr hint = nullptr;
       xegpu::CreateNdDescOp ndDesc = xegpu::CreateNdDescOp::create(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
-      auto storeOp =
-          xegpu::StoreNdOp::create(rewriter, loc, storedVec, ndDesc, indices,
-                                   /*l1_hint=*/hint,
-                                   /*l2_hint=*/hint, /*l3_hint=*/hint,
-                                   /*layout=*/nullptr);
+      auto storeOp = xegpu::StoreNdOp::create(
+          rewriter, loc, writeOp.getVector(), ndDesc, indices,
+          /*l1_hint=*/hint,
+          /*l2_hint=*/hint, /*l3_hint=*/hint,
+          /*layout=*/nullptr);
       rewriter.replaceOp(writeOp, storeOp);
       return success();
     }
 
     // Fall back to a scattered store. It supports arbitrary permutations and
-    // any rank, but cannot express out-of-bounds accesses.
-    if (isOutOfBounds)
-      return rewriter.notifyMatchFailure(
-          writeOp, "Out-of-bounds writes require an nd block store");
+    // any rank, and masks off the out-of-bounds elements.
     return lowerToScatteredStoreOp(writeOp, rewriter);
   }
 };
