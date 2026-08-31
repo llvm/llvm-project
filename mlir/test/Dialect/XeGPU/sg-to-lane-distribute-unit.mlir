@@ -1682,4 +1682,38 @@ gpu.func @convert_layout_broadcast_to_sliced_target() {
   "some_use"(%cvt) : (vector<8x2xbf16>) -> ()
   gpu.return
 }
+
+// The same redistribution as @convert_layout_broadcast_to_lane_distributed, but
+// reaching it through two nested slices. They are coalesced, so what counts is
+// the parent lane_layout covering all 16 lanes and the dims the slices drop
+// together: the 8 lanes of the dropped dim 0 hold the same fragment, while the
+// kept dim of extent 2 splits the columns between the two groups.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_nested_slice
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<8xf8E8M0FNU> to vector<8xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[SLOT:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
+// CHECK:         %[[ELEM:.*]] = vector.extract %[[BITS]][%[[SLOT]]] : i8 from vector<8xi8>
+// CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM]], %[[ZERO]] [0] : i8 into vector<2xi8>
+// CHECK:         %[[WIDTH:.*]] = arith.constant 16 : i32
+// CHECK:         %[[SLOT_I32:.*]] = arith.index_cast %[[SLOT]] : index to i32
+// CHECK:         %[[C8_I32:.*]] = arith.constant 8 : i32
+// CHECK:         %[[DONOR:.*]] = arith.addi %[[SLOT_I32]], %[[C8_I32]] : i32
+// CHECK:         %[[SHUF:.*]], %{{.*}} = gpu.shuffle idx %[[ELEM]], %[[DONOR]], %[[WIDTH]] : i8
+// CHECK:         %[[INS1:.*]] = vector.insert %[[SHUF]], %[[INS0]] [1] : i8 into vector<2xi8>
+// CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<2xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+gpu.func @convert_layout_broadcast_nested_slice() {
+  %scale_a_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 1, 2], lane_data = [1, 1, 1, 1], order = [0, 3, 2, 1]>, dims = [2]>, dims = [0]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
 }

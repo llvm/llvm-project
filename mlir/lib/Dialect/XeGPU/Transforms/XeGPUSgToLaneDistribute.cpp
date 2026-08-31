@@ -1865,9 +1865,33 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 /// Number of lanes of the subgroup `layout` distributes over. Lanes covered by
 /// sliced dimensions count too: they hold a replicated fragment, not nothing.
 static int64_t getNumParticipatingLanes(xegpu::DistributeLayoutAttr layout) {
+  // flatten() coalesces nested slices, so the parent it leaves is always a
+  // plain LayoutAttr carrying the lane_layout of the whole subgroup.
   if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
-    layout = sliceAttr.flatten().getParent();
+    layout = cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent());
   return computeProduct(layout.getEffectiveLaneLayoutAsInt());
+}
+
+/// Matches the layout change `redistributeBroadcastedValue` implements: both
+/// layouts hand the lanes the same distribution unit (equal effective
+/// lane_data), so only the assignment of elements to lanes changes, and the
+/// input lays out the whole subgroup. A target laying out only part of it
+/// replicates its fragments over the lanes it leaves out, which
+/// `redistributeBroadcastedValue` verifies element-wise.
+///
+/// That the layouts differ is not checked: they are already known to be
+/// incompatible here, and the difference may equally be in `order`.
+static bool isBroadcastRedistribution(xegpu::DistributeLayoutAttr inputLayout,
+                                      xegpu::DistributeLayoutAttr targetLayout,
+                                      int64_t subgroupSize) {
+  // TODO: computeOwnedCoords only tabulates unit lane_data, so equal but
+  // non-unit lane_data is rejected further down rather than here.
+  if (inputLayout.getEffectiveLaneDataAsInt() !=
+      targetLayout.getEffectiveLaneDataAsInt())
+    return false;
+  int64_t numSlots = getNumParticipatingLanes(targetLayout);
+  return getNumParticipatingLanes(inputLayout) == subgroupSize &&
+         numSlots > 0 && subgroupSize % numSlots == 0;
 }
 
 /// Ownership table: `owned[lane][i]` is the coordinate, in the undistributed
@@ -1889,18 +1913,16 @@ computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
   return owned;
 }
 
-/// Index into the lane's fragment as a function of its slot:
-/// `stride * ((slot / slotStride) % extent) + offset`.
+/// Index into the lane's fragment as a function of its slot.
 struct FragmentIndex {
   int64_t stride;
   int64_t offset;
-  /// Slots apart two lanes have to be for their index along the selected
-  /// lane_layout dimension to differ by one.
+  /// Slots apart for the index along the selected dimension to advance by one.
   int64_t slotStride;
   /// Number of values that index takes.
   int64_t extent;
 
-  /// The index `slot` reads. Compile-time twin of the emitted arithmetic.
+  /// Compile-time twin of the arithmetic the emitter builds.
   int64_t at(int64_t slot) const {
     return stride * ((slot / slotStride) % extent) + offset;
   }
@@ -1911,10 +1933,8 @@ struct FragmentIndex {
   }
 };
 
-/// Where one element of the target fragment comes from: `index` picks it out of
-/// the fragment of the donor `donorDelta` lanes away, and `gpu.shuffle idx`
-/// moves it from there to the lane that owns it, unless the donor is that lane
-/// itself.
+/// Where one element of the target fragment comes from: which donor, and where
+/// in that donor's fragment.
 struct ElementSource {
   FragmentIndex index;
   int64_t donorDelta;
@@ -1925,10 +1945,8 @@ struct ElementSource {
 /// to a `FragmentIndex`. Fails when no index reproduces `needed`.
 static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
                                                  int64_t numSlots) {
-  // Slots sharing an index along the selected lane_layout dimension are
-  // adjacent, so the first change in `needed` tells how many of them there are
-  // (`slotStride`) and how far apart the elements of consecutive indices are
-  // (`stride`).
+  // Slots sharing an index are adjacent, so the first change in `needed` gives
+  // both how many of them there are and how far apart their elements sit.
   int64_t offset = needed[0];
   int64_t slotStride = 1;
   while (slotStride < numSlots && needed[slotStride] == offset)
@@ -1937,8 +1955,8 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
   if (stride < 0 || numSlots % slotStride != 0)
     return failure();
 
-  // The index wraps around once it has taken all its values, which is how far
-  // `needed` gets from `offset`.
+  // The index wraps once it has taken all its values, so how far `needed` gets
+  // from `offset` gives the extent.
   int64_t extent = 1;
   if (stride == 0) {
     // Every slot reads `offset`; no dimension is involved.
@@ -1961,10 +1979,8 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
   return index;
 }
 
-/// Works out where element `pos` of the target fragment comes from, using the
-/// two ownership tables. Fails when no donor group provides that element
-/// through a single extract, i.e. when the data movement is not of the form
-/// described above.
+/// Works out where element `pos` of the target fragment comes from. Fails when
+/// no donor group provides it through a single extract.
 static FailureOr<ElementSource>
 deriveElementSource(const OwnedCoords &inputOwned,
                     const OwnedCoords &targetOwned, int64_t pos,
@@ -1978,10 +1994,7 @@ deriveElementSource(const OwnedCoords &inputOwned,
     return -1;
   };
 
-  // A donor shares the slot of the lane it serves, so it is a whole number of
-  // target lane layouts away. Replication can put the element in more than one
-  // donor group; the smallest `delta` wins, as it is the only one that can read
-  // the lane's own fragment and so skip the shuffle.
+  // Donor groups, smallest `delta` first.
   for (int64_t donorDelta = 0; donorDelta < subgroupSize;
        donorDelta += numSlots) {
     // Where in its fragment each slot's donor keeps the element it needs.
@@ -1999,9 +2012,8 @@ deriveElementSource(const OwnedCoords &inputOwned,
     if (failed(index))
       continue;
 
-    // A shuffle is needed unless the donor is the lane itself, that is unless
-    // the local extract already lands on the element the lane owns. Only the
-    // lanes of a slot decide that, the rest being replicas.
+    // The donor is the lane itself only if the local extract lands on the
+    // element the lane owns, which just the slots get to decide.
     bool needsShuffle =
         donorDelta != 0 ||
         !llvm::all_of(llvm::seq<int64_t>(0, numSlots), [&](int64_t slot) {
@@ -2013,9 +2025,8 @@ deriveElementSource(const OwnedCoords &inputOwned,
 }
 
 /// Redistributes `src`, the fragment the lane holds under `inputLayout`, into
-/// the `resTy` fragment of the `shape`-shaped value it owns under
-/// `targetLayout`, over a subgroup of `subgroupSize` lanes. See the algorithm
-/// above; returns failure if the layout change is not of that form.
+/// the `resTy` fragment it owns under `targetLayout`. Fails if the layout
+/// change is not of the form described above.
 static FailureOr<Value>
 redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
                              Value src, VectorType resTy,
@@ -2089,9 +2100,8 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
   Value width;
   Value slotI32;
 
-  // `(slot / slotStride) % extent`, the lane's index along the lane_layout
-  // dimension the fragment index varies with. Indices over the same dimension
-  // share it, and either step is skipped when it is a no-op over `slot`.
+  // The lane's index along the selected dimension, shared by sources over the
+  // same one. Either step is skipped when it is a no-op over `slot`.
   llvm::DenseMap<std::pair<int64_t, int64_t>, Value> dimIndices;
   auto getDimIndex = [&](const FragmentIndex &index) -> Value {
     Value &dimIndex = dimIndices[{index.slotStride, index.extent}];
@@ -2109,7 +2119,7 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
     return dimIndex;
   };
 
-  // `stride * dimIndex + offset`, the index the lane extracts.
+  // The index the lane extracts.
   auto getFragmentIndex = [&](const FragmentIndex &index) -> OpFoldResult {
     // Every slot reads the same element; no dimension is involved.
     if (index.stride == 0)
@@ -2273,8 +2283,7 @@ struct SgToLaneConvertLayout
         targetLayout, cast<VectorType>(valType));
     if (uArch && succeeded(resDistTy)) {
       int64_t subgroupSize = uArch->getSubgroupSize();
-      // The target may leave the remaining lanes with a replicated value.
-      if (getNumParticipatingLanes(inputLayout) == subgroupSize) {
+      if (isBroadcastRedistribution(inputLayout, targetLayout, subgroupSize)) {
         FailureOr<Value> res = redistributeBroadcastedValue(
             rewriter, op.getLoc(), adaptor.getSource(), *resDistTy, inputLayout,
             targetLayout, resShapeVec, subgroupSize);
