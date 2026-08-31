@@ -444,8 +444,8 @@ bool TargetRegisterInfo::getRegAllocationHints(
 }
 
 void TargetRegisterInfo::applyRegAllocationAntiHints(
-    Register VirtReg, ArrayRef<MCPhysReg> &Order,
-    SmallVectorImpl<MCPhysReg> &OrderStorage,
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
     SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
 
@@ -458,29 +458,24 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
     });
   };
 
-  // Copy order into storage
-  OrderStorage.clear();
-  OrderStorage.assign(Order.begin(), Order.end());
+  HintsAndCustomOrder.truncate(NumHints);
+  HintsAndCustomOrder.append(Order.begin(), Order.end());
 
   // Partition non-anti-hinted register go first
-  auto PartionPoint =
-      std::stable_partition(OrderStorage.begin(), OrderStorage.end(),
-                            [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+  auto *PartitionPoint = std::stable_partition(
+      HintsAndCustomOrder.begin() + NumHints, HintsAndCustomOrder.end(),
+      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
 
-  Order = OrderStorage;
-
-  // print the details
   LLVM_DEBUG({
     size_t NonAntiHintedCount =
-        std::distance(OrderStorage.begin(), PartionPoint);
-    size_t AntiHintedCount = std::distance(PartionPoint, OrderStorage.end());
+        std::distance(HintsAndCustomOrder.begin() + NumHints, PartitionPoint);
+    size_t AntiHintedCount =
+        std::distance(PartitionPoint, HintsAndCustomOrder.end());
     dbgs() << "Added " << NonAntiHintedCount
            << " non-anti-hinted registers first\n"
            << "Added " << AntiHintedCount
            << " anti-hinted registers at the end\n";
   });
-
-  return;
 }
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
