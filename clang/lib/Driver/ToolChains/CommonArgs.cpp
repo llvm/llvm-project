@@ -1669,8 +1669,7 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
-// Host interceptor library for offload UBSan. Enabled if we are
-// offloading to a target that supports UBSan.
+// Host interceptor library for offload UBSan.
 static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
   if (HostTC.getTriple().isGPU())
     return false;
@@ -1681,7 +1680,8 @@ static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
     for (const auto &Entry : llvm::make_range(C.getOffloadToolChains(Kind))) {
       const ToolChain *DevTC = Entry.second;
       // FIXME: CUDA/HIPSPV copy the host mask and ignore device sanitizers.
-      if (DevTC->getTriple().isNVPTX() || DevTC->getTriple().isSPIROrSPIRV())
+      const llvm::Triple &TT = DevTC->getTriple();
+      if (!TT.isAMDGCN() || TT.getOS() != llvm::Triple::AMDHSA)
         continue;
 
       const ArgList &DevArgs = C.getArgsForToolChain(DevTC, {}, Kind);
@@ -1703,6 +1703,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
   assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  const bool NeedsOffloadRt = hostNeedsUbsanOffloadRt(C, TC);
+  const bool NeedsUbsanRt = SanArgs.needsUbsanRt() || NeedsOffloadRt;
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
     if (SanArgs.needsAsanRt()) {
@@ -1717,7 +1719,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     }
     if (SanArgs.needsNsanRt())
       SharedRuntimes.push_back("nsan");
-    if (SanArgs.needsUbsanRt()) {
+    if (NeedsUbsanRt) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
       else
@@ -1750,9 +1752,17 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   if (SanArgs.needsAsanRt())
     HelperStaticRuntimes.push_back("asan_static");
 
+  // Offloading images can live in DSOs, the host interceptors must follow.
+  if (NeedsOffloadRt) {
+    NonWholeStaticRuntimes.push_back("ubsan_offload");
+    RequiredSymbols.push_back("__ubsan_offload_init");
+  }
+
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
     // Don't link static runtimes into DSOs.
+    if (NeedsOffloadRt && !SanArgs.needsSharedRt() && !SanArgs.needsUbsanRt())
+      StaticRuntimes.push_back("ubsan_standalone");
     return;
   }
 
@@ -1804,7 +1814,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   }
   if (!SanArgs.needsSharedRt() && SanArgs.needsTysanRt())
     StaticRuntimes.push_back("tysan");
-  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
+  if (!SanArgs.needsSharedRt() && NeedsUbsanRt) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
@@ -1837,10 +1847,6 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   }
   if (SanArgs.needsUbsanLoopDetectRt())
     NonWholeStaticRuntimes.push_back("ubsan_loop_detect");
-  if (hostNeedsUbsanOffloadRt(C, TC)) {
-    NonWholeStaticRuntimes.push_back("ubsan_offload");
-    RequiredSymbols.push_back("__ubsan_offload_init");
-  }
 }
 
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
