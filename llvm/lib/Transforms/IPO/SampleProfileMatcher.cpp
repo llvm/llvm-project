@@ -188,6 +188,15 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
   }
 }
 
+bool SampleProfileMatcher::anchorsMatch(const FunctionId &IRAnchor,
+                                        const FunctionId &ProfileAnchor) const {
+  // An indirect IR call has no statically known callee, so any profiled
+  // target is compatible. The reverse is not true: multiple sampled profile
+  // targets cannot match a direct IR call.
+  return IRAnchor == ProfileAnchor ||
+         IRAnchor == FunctionId(UnknownIndirectCallee);
+}
+
 bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
                                               Function *&FuncWithoutProfile) {
   FuncWithoutProfile = nullptr;
@@ -236,6 +245,8 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
   llvm::longestCommonSequence<LineLocation, FunctionId>(
       AnchorList1, AnchorList2,
       [&](const FunctionId &A, const FunctionId &B) {
+        if (anchorsMatch(A, B))
+          return true;
         return functionMatchesProfile(
             A, B,
             !MatchUnusedFunction // Find matched function only
@@ -540,7 +551,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId) {
+    if (anchorsMatch(IRCalleeId, ProfCalleeId)) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);

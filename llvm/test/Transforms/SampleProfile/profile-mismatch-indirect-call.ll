@@ -3,14 +3,15 @@
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
 
-; The profile records one sampled target, "foo", and one unsampled target at the
-; location of the IR indirect call(line offset 1). This is not a mismatch since
-; only one call target was sampled. Only the "baz"(IR) vs "qux"(profile)
-; callsite at line offset 3 is a real mismatch.
+; The profile records one sampled target, "foo", and one unsampled target at
+; both a direct call to "foo" and an indirect call. The direct call matches the
+; sampled target, while the indirect IR call is compatible with any profiled
+; target. Only the "baz" (IR) vs "qux" (profile) callsite at line offset 4 is
+; a real mismatch.
 
-; CHECK: (1/3) of callsites' profile are invalid and (100/300) of samples are discarded due to callsite location mismatch.
+; CHECK: (1/4) of callsites' profile are invalid and (100/400) of samples are discarded due to callsite location mismatch.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 0, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 100, !"RecoveredCallsiteSamples", i64 0}
+; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 0, !"TotalProfiledCallsites", i64 4, !"MismatchedCallsiteSamples", i64 100, !"RecoveredCallsiteSamples", i64 0}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -19,12 +20,15 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @test() local_unnamed_addr #0 !dbg !9 {
 entry:
-  %0 = load ptr, ptr @fp, align 8, !dbg !12
-  tail call void %0(), !dbg !12
-  tail call void @bar(), !dbg !13
-  tail call void @baz(), !dbg !14
-  ret void, !dbg !15
+  tail call void @foo(), !dbg !12
+  %0 = load ptr, ptr @fp, align 8, !dbg !13
+  tail call void %0(), !dbg !13
+  tail call void @bar(), !dbg !14
+  tail call void @baz(), !dbg !15
+  ret void, !dbg !16
 }
+
+declare void @foo() local_unnamed_addr
 
 declare void @bar() local_unnamed_addr
 
@@ -48,4 +52,5 @@ attributes #0 = { nounwind uwtable "use-sample-profile" }
 !12 = !DILocation(line: 6, column: 3, scope: !9)
 !13 = !DILocation(line: 7, column: 3, scope: !9)
 !14 = !DILocation(line: 8, column: 3, scope: !9)
-!15 = !DILocation(line: 9, column: 1, scope: !9)
+!15 = !DILocation(line: 9, column: 3, scope: !9)
+!16 = !DILocation(line: 10, column: 1, scope: !9)
