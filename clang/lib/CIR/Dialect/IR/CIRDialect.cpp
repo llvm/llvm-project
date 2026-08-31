@@ -4478,13 +4478,18 @@ LogicalResult cir::TryOp::verify() {
         return emitOpError("'cir.lifetime.start' in a catch handler region "
                            "must be followed by the 'cir.cleanup.scope' of "
                            "its lifetime-end cleanup");
+      if (lifetimeScope.getBodyRegion().empty())
+        return emitOpError(
+            "'cir.lifetime.start' in a catch handler region must be "
+            "followed by the 'cir.cleanup.scope' of its lifetime-end "
+            "cleanup");
       mlir::Block &scopeBody = lifetimeScope.getBodyRegion().front();
       firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
     }
 
     if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
       firstOp = firstOp->getNextNode();
-    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
+    if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }

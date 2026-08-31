@@ -4,9 +4,9 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-o0.cir
 // RUN: FileCheck --input-file=%t-o0.cir %s --implicit-check-not "cir.lifetime"
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
 // RUN: FileCheck --input-file=%t-eh.cir %s --check-prefix=CIR-EH
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
 // RUN: FileCheck --input-file=%t-eh.ll %s --check-prefixes=LLVM-EH
 
 void use(int);
