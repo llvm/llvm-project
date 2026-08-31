@@ -11,8 +11,8 @@ define void @indirect_ptr_recurrences_read_write(ptr %A, ptr %B) {
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l = load i32, ptr %ptr.recur, align 4, !tbaa !4 ->
-; CHECK-NEXT:            store i32 %xor, ptr %ptr.recur, align 4, !tbaa !4
+; CHECK-NEXT:            %l = load i32, ptr %ptr.recur, align 4, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store i32 %xor, ptr %ptr.recur, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

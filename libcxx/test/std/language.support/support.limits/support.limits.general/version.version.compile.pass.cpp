@@ -9241,8 +9241,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++29"
 #  endif
-#  if __cpp_lib_expected != 202211L
-#    error "__cpp_lib_expected should have the value 202211L in c++29"
+#  if __cpp_lib_expected != 202606L
+#    error "__cpp_lib_expected should have the value 202606L in c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM

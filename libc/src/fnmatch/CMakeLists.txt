@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  fnmatch
+  SRCS
+    fnmatch.cpp
+  HDRS
+    fnmatch.h
+  DEPENDS
+    libc.hdr.fnmatch_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
