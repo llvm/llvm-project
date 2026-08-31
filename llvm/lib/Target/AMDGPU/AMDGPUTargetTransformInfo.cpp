@@ -983,7 +983,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
 // A vector of i1 has no packed form on this target: every element lives in its
 // own mask. Measured instruction counts per element to pack the masks into an
 // integer, and to unpack them again. From gfx900 to gfx1201 the packing costs
-// 4.0 per element, and 5.0 with true16; the unpacking costs 2.6 to 2.9.
+// 4.0 to 4.8 per element, 5.0 to 5.4 with true16, and the unpacking 2.6 to 2.9.
 static constexpr unsigned MaskPackCostPerElt = 4;
 static constexpr unsigned MaskUnpackCostPerElt = 3;
 
