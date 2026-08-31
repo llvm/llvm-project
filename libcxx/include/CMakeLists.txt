@@ -698,6 +698,7 @@ set(files
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/min_element.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
   __pstl/cpu_algos/search.h
