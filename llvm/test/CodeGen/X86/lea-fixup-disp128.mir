@@ -25,7 +25,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: disp128
     ; CHECK: renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 0, $noreg
-    ; CHECK-NEXT: $rax = ADD64ri32 $rax, 128, implicit-def $eflags
+    ; CHECK-NEXT: $rax = SUB64ri32 $rax, -128, implicit-def $eflags
     ; CHECK-NEXT: JMP64r renamable $rax
     renamable $rax = LEA64r renamable $rdi, 1, renamable $rsi, 128, $noreg
     JMP64r renamable $rax
@@ -36,7 +36,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: disp128_32
     ; CHECK: renamable $eax = LEA64_32r renamable $rdi, 1, renamable $rsi, 0, $noreg
-    ; CHECK-NEXT: $eax = ADD32ri $eax, 128, implicit-def $eflags
+    ; CHECK-NEXT: $eax = SUB32ri $eax, -128, implicit-def $eflags
     ; CHECK-NEXT: RET64 implicit $eax
     renamable $eax = LEA64_32r renamable $rdi, 1, renamable $rsi, 128, $noreg
     RET64 implicit $eax

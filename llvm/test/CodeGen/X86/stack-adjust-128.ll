@@ -17,14 +17,14 @@ define ptr @frame128(ptr %p) {
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq %rbx
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-NEXT:    subq $128, %rsp
+; LINUX-NEXT:    addq $-128, %rsp
 ; LINUX-NEXT:    .cfi_def_cfa_offset 144
 ; LINUX-NEXT:    .cfi_offset %rbx, -16
 ; LINUX-NEXT:    movq %rdi, %rbx
 ; LINUX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; LINUX-NEXT:    callq escape@PLT
 ; LINUX-NEXT:    movq %rbx, %rax
-; LINUX-NEXT:    addq $128, %rsp
+; LINUX-NEXT:    subq $-128, %rsp
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    popq %rbx
 ; LINUX-NEXT:    .cfi_def_cfa_offset 8
