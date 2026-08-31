@@ -1,44 +1,26 @@
-; The raw profiles (and reduced IR if needed) could be re-generated (e.g., when
-; there is a profile version bump) from script
-; Inputs/update_thinlto_indirect_call_promotion_inputs.sh
-;
-; The script generates raw profiles. This regression test will convert it to
-; indexed profiles. This way the test exercises code path where a profiled
-; callee address in raw profiles is converted to function hash in index profiles.
+; RUN: rm -rf %t && split-file %s %t
 
-; The raw profiles storesd compressed function names, so profile reader should
-; be built with zlib support to decompress them.
-; REQUIRES: zlib
-
-; RUN: rm -rf %t && split-file %s %t && cd %t
-
-; Do setup work for all below tests: convert raw profiles to indexed profiles,
-; run profile-use pass, generate bitcode and combined ThinLTO index.
-; Note `pgo-instr-use` pass runs without `pgo-icall-prom` pass. As a result ICP
-; transformation won't happen at test setup time.
-; RUN: llvm-profdata merge %p/Inputs/thinlto_indirect_call_promotion.profraw -o icp.profdata
-; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=icp.profdata -module-summary main.ll -o main.bc
-; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=icp.profdata -module-summary lib.ll -o lib.bc
-; RUN: llvm-lto -thinlto -o summary main.bc lib.bc
+; RUN: llvm-profdata merge %t/a.proftext -o %t/a.profdata
+; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=%t/a.profdata -module-summary %t/main.ll -o %t/main.bc
+; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=%t/a.profdata -module-summary %t/lib.ll -o %t/lib.bc
+; RUN: llvm-lto -thinlto -o %t/summary %t/main.bc %t/lib.bc
 
 ; Test that callee with local linkage has `PGOFuncName` metadata while callee with external doesn't have it.
-; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=PGOName
-; PGOName-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]]
-; PGOName-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !guid ![[#]] !PGOFuncName ![[#MD:]]
-; The source filename of `lib.ll` is specified as "lib.cc" (i.e., the name does
-; not change with the directory), so match the full name here.
-; PGOName: ![[#MD]] = !{!"lib.cc;_ZL7callee0v"}
+; RUN: llvm-dis %t/lib.bc -o - | FileCheck %s --check-prefix=PGONAME
+; PGONAME-DAG: define void @_Z7callee1v() {{.*}} !prof ![[#]]
+; PGONAME-DAG: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !guid ![[#]] !PGOFuncName ![[#MD:]]
+; PGONAME: ![[#MD]] = !{!"lib.cc;_ZL7callee0v"}
 
 ; Tests that both external and internal callees are correctly imported.
-; RUN: opt -passes=function-import -summary-file summary.thinlto.bc main.bc -o main.import.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
+; RUN: opt -passes=function-import -summary-file %t/summary.thinlto.bc %t/main.bc -o %t/main.import.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
 ; IMPORTS-DAG: Import _Z7callee1v
 ; IMPORTS-DAG: Import _ZL7callee0v.llvm.[[#]]
 ; IMPORTS-DAG: Import _Z11global_funcv
 
 ; Tests that ICP transformations happen.
 ; Both candidates are ICP'ed, check there is no `!VP` in the IR.
-; RUN: opt main.import.bc -icp-lto -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM --implicit-check-not="!VP"
-; RUN: opt main.import.bc -icp-lto -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt %t/main.import.bc -icp-lto -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM --implicit-check-not="!VP"
+; RUN: opt %t/main.import.bc -icp-lto -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 
 ; PASS-REMARK: Promote indirect call to _ZL7callee0v.llvm.[[#]] with count 1 out of 1
 ; PASS-REMARK: Promote indirect call to _Z7callee1v with count 1 out of 1
@@ -82,3 +64,47 @@ entry:
   call void %1()
   ret void
 }
+
+;--- a.proftext
+:ir
+_Z7callee1v
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+main
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+lib.cc;_ZL7callee0v
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+_Z11global_funcv
+# Func Hash:
+567090795815895039
+# Num Counters:
+1
+# Counter Values:
+1
+# Num Value Kinds:
+1
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+2
+1
+lib.cc;_ZL7callee0v:1
+1
+_Z7callee1v:1

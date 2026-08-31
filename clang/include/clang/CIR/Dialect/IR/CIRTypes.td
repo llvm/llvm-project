@@ -93,6 +93,17 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// Returns a maximum bitwidth of cir::IntType.
     /// Matches llvm::IntegerType::MAX_INT_BITS (1 << 23).
     static unsigned maxBitwidth() { return (1 << 23); }
+
+    /// The bit-width of this integer type when stored via LLVM-IR. This
+    /// is just sizeof(ty)*CHAR_BIT for all but _BitInt, which is represented as
+    /// widened for layout.
+    unsigned getStorageTypeWidth(const mlir::DataLayout &dataLayout) const;
+
+    /// Like getStorageTypeWidth, this gets the alignment of the type when
+    /// lowered to LLVM-IR for the purposes of ensuring we get layout correct
+    /// for record types (particularly around _BitInt, which has a different
+    /// alignment in LLVM-IR vs the FE).
+    uint64_t getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const;
   }];
   let genVerifyDecl = 1;
 }
