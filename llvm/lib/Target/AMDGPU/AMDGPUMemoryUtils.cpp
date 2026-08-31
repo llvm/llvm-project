@@ -395,7 +395,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   // is a universal MemoryDef from MSSA's point of view too, just like a fence.
   // Acquire (or stronger) fences/atomics act as clobbers because they can bring
   // in effects from other threads.
-  const auto mayAlias = [AA, Ptr](auto I) -> bool {
+  const auto MayAlias = [AA, Ptr](auto I) -> bool {
     return !AA->isNoAlias(I->getPointerOperand(), Ptr);
   };
 
@@ -403,17 +403,17 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     return isAcquireOrStronger(F->getOrdering());
 
   if (const auto *I = dyn_cast<AtomicRMWInst>(DefInst))
-    return isAcquireOrStronger(I->getOrdering()) || mayAlias(I);
+    return isAcquireOrStronger(I->getOrdering()) || MayAlias(I);
 
   if (const auto *I = dyn_cast<AtomicCmpXchgInst>(DefInst))
-    return isAcquireOrStronger(I->getMergedOrdering()) || mayAlias(I);
+    return isAcquireOrStronger(I->getMergedOrdering()) || MayAlias(I);
 
   if (const auto *I = dyn_cast<LoadInst>(DefInst))
     return isAcquireOrStronger(I->getOrdering());
 
   // (Atomic) stores that don't alias do not clobber.
   if (const auto *I = dyn_cast<StoreInst>(DefInst))
-    return mayAlias(I);
+    return MayAlias(I);
 
   return true;
 }
