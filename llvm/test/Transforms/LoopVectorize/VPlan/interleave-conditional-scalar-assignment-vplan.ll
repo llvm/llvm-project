@@ -36,7 +36,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-NEXT:    WIDEN-REDUCTION-PHI ir<%data.phi>.1 = phi (find-last) ir<-1>, vp<[[VP12:%[0-9]+]]>
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP9:%[0-9]+]]>, vector.body ]
 ; IC2-NEXT:    WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP10:%[0-9]+]]>, vector.body ]
-; IC2-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>
+; IC2-NEXT:    EMIT-SCALAR ir<%ld.addr> = getelementptr inbounds i32, ir<%data>, vp<%index>
 ; IC2-NEXT:    vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>, ir<4>
 ; IC2-NEXT:    WIDEN ir<%ld> = load ir<%ld.addr>
 ; IC2-NEXT:    WIDEN ir<%ld>.1 = load vp<[[VP7]]>
@@ -109,7 +109,7 @@ define i32 @find_last_int_select(i64 %N, ptr %data, i32 %a) {
 ; IC2-TF-NEXT:    EMIT vp<%vec.iv>.1 = add nuw vp<[[VP7]]>, vp<[[VP10]]>
 ; IC2-TF-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%vec.iv>, vp<[[VP3]]>
 ; IC2-TF-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = icmp ule vp<%vec.iv>.1, vp<[[VP3]]>
-; IC2-TF-NEXT:    CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%index>
+; IC2-TF-NEXT:    EMIT-SCALAR ir<%ld.addr> = getelementptr inbounds i32, ir<%data>, vp<%index>
 ; IC2-TF-NEXT:    vp<[[VP13:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>, ir<4>
 ; IC2-TF-NEXT:    WIDEN ir<%ld> = load ir<%ld.addr>, vp<[[VP11]]>
 ; IC2-TF-NEXT:    WIDEN ir<%ld>.1 = load vp<[[VP13]]>, vp<[[VP12]]>

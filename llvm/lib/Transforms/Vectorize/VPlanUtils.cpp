@@ -126,6 +126,20 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
   return GEPNoWrapFlags::none();
 }
 
+Type *vputils::getGEPSourceElementType(const VPSingleDefRecipe *R) {
+  // All VPInstructions that lower to GEPs must have the i8 source element
+  // type (as they are PtrAdds), so we omit it.
+  return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
+      .Case([](const VPReplicateRecipe *I) -> Type * {
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
+          return GEP->getSourceElementType();
+        return nullptr;
+      })
+      .Case<VPVectorPointerRecipe, VPWidenGEPRecipe, VPGEPInstruction>(
+          [](auto *I) { return I->getSourceElementType(); })
+      .Default([](auto *) { return nullptr; });
+}
+
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
@@ -1170,8 +1184,7 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
                             Ops[1]);
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
-      auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+      return Folder.FoldGEP(getGEPSourceElementType(&RFlags), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:

@@ -1247,7 +1247,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr float, ir<%addr>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer float, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%pred> = fcmp une ir<%0>, ir<0.000000e+00>
@@ -1434,7 +1434,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP5]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
-; CHECK-NEXT:      CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<%next.gep>, ir<-1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ptr.iv.next> = getelementptr inbounds i8, vp<%next.gep>, ir<-1>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds i8, ir<%ptr.iv.next>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%l>

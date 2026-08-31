@@ -18,9 +18,9 @@ define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep1> = getelementptr ir<%p1>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep1> = getelementptr [8 x i8], ir<%p1>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%load1> = load ir<%gep1>
-; CHECK-NEXT:      EMIT ir<%gep2> = getelementptr ir<%p2>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep2> = getelementptr [8 x i8], ir<%p2>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%load2> = load ir<%gep2>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%load2.zext> = zext ir<%load2> to i64
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%load1>, ir<%load2.zext>
@@ -39,10 +39,10 @@ define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; ALL-MEMOP-WIDEN-EMPTY:
 ; ALL-MEMOP-WIDEN-NEXT:    vector.body:
 ; ALL-MEMOP-WIDEN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep1> = getelementptr ir<%p1>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%gep1> = getelementptr [8 x i8], ir<%p1>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep1>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%load1> = load vp<[[VP4]]>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep2> = getelementptr ir<%p2>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%gep2> = getelementptr [8 x i8], ir<%p2>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%load2> = load ir<%gep2>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%load2.zext> = zext ir<%load2> to i64
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%add> = add ir<%load1>, ir<%load2.zext>
@@ -83,11 +83,11 @@ define void @irregular_gather(ptr noalias %p, ptr noalias %idx, ptr noalias %out
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i64, ir<%idx>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%offset> = load ir<%gep.idx>
-; CHECK-NEXT:      EMIT ir<%gep.p> = getelementptr inbounds ir<%p>, ir<%offset>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.p> = getelementptr inbounds i62, ir<%p>, ir<%offset>
 ; CHECK-NEXT:      REPLICATE ir<%v> = load ir<%gep.p>
-; CHECK-NEXT:      EMIT ir<%gep.out> = getelementptr inbounds ir<%out>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.out> = getelementptr inbounds i62, ir<%out>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE store ir<%v>, ir<%gep.out>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>
@@ -103,12 +103,12 @@ define void @irregular_gather(ptr noalias %p, ptr noalias %idx, ptr noalias %out
 ; ALL-MEMOP-WIDEN-EMPTY:
 ; ALL-MEMOP-WIDEN-NEXT:    vector.body:
 ; ALL-MEMOP-WIDEN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%gep.idx> = getelementptr inbounds i64, ir<%idx>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.idx>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%offset> = load vp<[[VP4]]>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.p> = getelementptr inbounds ir<%p>, ir<%offset>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%gep.p> = getelementptr inbounds i62, ir<%p>, ir<%offset>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%v> = load ir<%gep.p>
-; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.out> = getelementptr inbounds ir<%out>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT-SCALAR ir<%gep.out> = getelementptr inbounds i62, ir<%out>, ir<%iv>
 ; ALL-MEMOP-WIDEN-NEXT:      REPLICATE store ir<%v>, ir<%gep.out>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>

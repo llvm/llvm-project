@@ -25,11 +25,11 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds float, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%call> = call llvm.sqrt(ir<%lv>)
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx2> = getelementptr inbounds float, ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx2>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%call>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -107,7 +107,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
 ; CHECK-NEXT:      WIDEN ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
 ; CHECK-NEXT:      WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx2> = getelementptr inbounds float, ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx2>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%add>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -205,7 +205,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.then.0:
 ; CHECK-NEXT:      BLEND ir<%d> = ir<0> vp<%7>/ir<%cmp>
-; CHECK-NEXT:      CLONE ir<%idx> = getelementptr ir<%x>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = getelementptr i64, ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%idx>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%d>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -280,13 +280,13 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV nuw ir<0> + vp<[[VP4]]> * ir<4>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<4>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.AB.0> = getelementptr inbounds ir<@AB>, ir<0>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.AB.0> = getelementptr inbounds [1024 x i32], ir<@AB>, ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4, ir<%gep.AB.0>
 ; CHECK-NEXT:        ir<%AB.0> = load from index 0
 ; CHECK-NEXT:        ir<%AB.1> = load from index 1
 ; CHECK-NEXT:        ir<%AB.3> = load from index 3
 ; CHECK-NEXT:      WIDEN ir<%add> = add nsw ir<%AB.0>, ir<%AB.1>
-; CHECK-NEXT:      CLONE ir<%gep.CD.0> = getelementptr inbounds ir<@CD>, ir<0>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.CD.0> = getelementptr inbounds [1024 x i32], ir<@CD>, ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4, ir<%gep.CD.0>
 ; CHECK-NEXT:        store ir<%add> to index 0
 ; CHECK-NEXT:        store ir<1> to index 1
@@ -385,7 +385,7 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%isd> = getelementptr inbounds ir<%src>, vp<[[VP4]]>, !dbg /tmp/s.c:5:3
+; CHECK-NEXT:      EMIT-SCALAR ir<%isd> = getelementptr inbounds i32, ir<%src>, vp<[[VP4]]>, !dbg /tmp/s.c:5:3
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%isd>, ir<1>, !dbg /tmp/s.c:6:3
 ; CHECK-NEXT:      WIDEN ir<%lsd> = load vp<[[VP5]]>, !dbg /tmp/s.c:6:3
 ; CHECK-NEXT:      WIDEN ir<%psd> = add nuw nsw ir<%lsd>, ir<23>, !dbg /tmp/s.c:7:3
@@ -570,7 +570,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i8, ir<%ptr>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i8, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<0>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -640,13 +640,13 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.y> = getelementptr inbounds ir<%y>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.y> = getelementptr inbounds float, ir<%y>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.y>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%add> = fadd nnan ir<%lv>, ir<1.000000e+00>
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul fast ir<%add>, ir<2.000000e+00>
 ; CHECK-NEXT:      WIDEN ir<%div> = fdiv reassoc nsz contract ir<%mul>, ir<2.000000e+00>
-; CHECK-NEXT:      CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.x> = getelementptr inbounds float, ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.x>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%div>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -720,7 +720,7 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.x> = getelementptr inbounds i32, ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.x>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%div.1> = udiv exact ir<%lv>, ir<20>
@@ -797,7 +797,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld.addr> = getelementptr inbounds float, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%ld.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.value> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ifcond> = fcmp oeq ir<%ld.value>, ir<5.000000e+00>
@@ -823,7 +823,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:    if.then.1:
 ; CHECK-NEXT:      WIDEN ir<%fadd> = fadd vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      BLEND ir<%st.value> = ir<%ld.value> ir<%fadd>/ir<%ifcond>
-; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%st.addr> = getelementptr inbounds float, ir<%dest>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds float, ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%st.value>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -900,7 +900,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.x> = getelementptr inbounds i32, ir<%x>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.x>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%or.1> = or disjoint ir<%lv>, ir<1>
@@ -977,7 +977,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%idx> = getelementptr ir<%p>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = getelementptr i32, ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i32, ir<%idx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-CAST ir<%zext> = zext nneg ir<%l> to i64
@@ -1050,7 +1050,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.ptr> = getelementptr inbounds i16, ir<%ptr>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%for.1>, ir<%for.1.next>
@@ -1129,16 +1129,16 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds nuw ir<%b>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds nuw float, ir<%b>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw float, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
-; CHECK-NEXT:      CLONE ir<%gep3> = getelementptr inbounds nuw ir<%c>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep3> = getelementptr inbounds nuw float, ir<%c>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw float, ir<%gep3>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp4> = fcmp ogt fast ir<%0>, ir<%1>
 ; CHECK-NEXT:      WIDEN ir<%add> = fadd fast ir<%0>, ir<1.000000e+01>
 ; CHECK-NEXT:      WIDEN ir<%cond> = select fast ir<%cmp4>, ir<%add>, ir<%1>
-; CHECK-NEXT:      CLONE ir<%gep11> = getelementptr inbounds nuw ir<%a>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep11> = getelementptr inbounds nuw float, ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds nuw float, ir<%gep11>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%cond>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

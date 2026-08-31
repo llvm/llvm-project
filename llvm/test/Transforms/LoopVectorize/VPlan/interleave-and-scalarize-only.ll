@@ -25,7 +25,7 @@ define void @test_scalarize_call(i32 %start, ptr %dst) {
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<%start> + vp<[[VP5]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%min> = call @llvm.smin.i32(vp<[[VP7]]>, ir<65535>)
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%arrayidx> = getelementptr inbounds i32, ir<%dst>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE store ir<%min>, ir<%arrayidx>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -101,9 +101,9 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
 ; CHECK-NEXT:        vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:        CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP7]]>
+; CHECK-NEXT:        EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i32, ir<%src>, vp<[[VP7]]>
 ; CHECK-NEXT:        CLONE ir<%l> = load ir<%gep.src>
-; CHECK-NEXT:        CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[VP7]]>
+; CHECK-NEXT:        EMIT-SCALAR ir<%gep.dst> = getelementptr inbounds i32, ir<%dst>, vp<[[VP7]]>
 ; CHECK-NEXT:        CLONE store ir<%l>, ir<%gep.dst>
 ; CHECK-NEXT:      Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -331,7 +331,7 @@ define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr ptr, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE ir<%l> = load ir<%gep>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -407,12 +407,12 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.src> = getelementptr inbounds i8, ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%sext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EMIT-SCALAR ir<%trunc> = trunc ir<%sext> to i16
 ; CHECK-NEXT:      CLONE ir<%sdiv> = sdiv ir<%trunc>, ir<%arg>
-; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.dst> = getelementptr inbounds i16, ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE store ir<%sdiv>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

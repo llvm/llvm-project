@@ -27,14 +27,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<%evl> to i64
 ; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
-; IF-EVL-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; IF-EVL-NEXT:    EMIT-SCALAR ir<[[GEP1:%.+]]> = getelementptr inbounds i32, ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; IF-EVL-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<%evl>
-; IF-EVL-NEXT:    CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
+; IF-EVL-NEXT:    EMIT-SCALAR ir<[[GEP2:%.+]]> = getelementptr inbounds i32, ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR2:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP2]]>
 ; IF-EVL-NEXT:    WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<%evl>
 ; IF-EVL-NEXT:    WIDEN ir<[[ADD:%.+]]> = add nsw ir<[[LD2]]>, ir<[[LD1]]>
-; IF-EVL-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
+; IF-EVL-NEXT:    EMIT-SCALAR ir<[[GEP3:%.+]]> = getelementptr inbounds i32, ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP3]]>
 ; IF-EVL-NEXT:    WIDEN vp.store vp<[[PTR3]]>, ir<[[ADD]]>, vp<%evl>
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<[[CAST2:%[0-9]+]]> = zext vp<%evl> to i64
@@ -59,14 +59,14 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-EMPTY:
 ; NO-VP-NEXT:   vector.body:
 ; NO-VP-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
-; NO-VP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; NO-VP-NEXT:    EMIT-SCALAR ir<[[GEP1:%.+]]> = getelementptr inbounds i32, ir<%b>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; NO-VP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
-; NO-VP-NEXT:    CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
+; NO-VP-NEXT:    EMIT-SCALAR ir<[[GEP2:%.+]]> = getelementptr inbounds i32, ir<%c>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR2:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP2]]>
 ; NO-VP-NEXT:    WIDEN ir<[[LD2:%.+]]> = load vp<[[PTR2]]>
 ; NO-VP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add nsw ir<[[LD2]]>, ir<[[LD1]]>
-; NO-VP-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
+; NO-VP-NEXT:    EMIT-SCALAR ir<[[GEP3:%.+]]> = getelementptr inbounds i32, ir<%a>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP3]]>
 ; NO-VP-NEXT:    WIDEN store vp<[[PTR3]]>, ir<[[ADD]]>
 ; NO-VP-NEXT:    EMIT vp<[[IV_NEXT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
@@ -109,11 +109,11 @@ define void @safe_dep(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr ir<%p>, vp<[[ST]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<[[GEP1:%.+]]> = getelementptr i64, ir<%p>, vp<[[ST]]>
 ; CHECK-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer i64, ir<[[GEP1]]>
 ; CHECK-NEXT:    WIDEN ir<[[V:%.+]]> = load vp<[[PTR1]]>
 ; CHECK-NEXT:    CLONE ir<[[OFFSET:.+]]> = add vp<[[ST]]>, ir<100>
-; CHECK-NEXT:    CLONE ir<[[GEP2:%.+]]> = getelementptr ir<%p>, ir<[[OFFSET]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<[[GEP2:%.+]]> = getelementptr i64, ir<%p>, ir<[[OFFSET]]>
 ; CHECK-NEXT:    vp<[[PTR2:%[0-9]+]]> = vector-pointer i64, ir<[[GEP2]]>
 ; CHECK-NEXT:    WIDEN store vp<[[PTR2]]>, ir<[[V]]>
 ; CHECK-NEXT:    EMIT vp<[[IV_NEXT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>

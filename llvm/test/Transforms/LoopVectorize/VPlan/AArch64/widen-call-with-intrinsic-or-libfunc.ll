@@ -23,7 +23,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
+; CHECK-NEXT:     EMIT-SCALAR ir<%gep.src> = getelementptr inbounds float, ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds float, ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double
@@ -71,7 +71,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
+; CHECK-NEXT:     EMIT-SCALAR ir<%gep.src> = getelementptr inbounds float, ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds float, ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double

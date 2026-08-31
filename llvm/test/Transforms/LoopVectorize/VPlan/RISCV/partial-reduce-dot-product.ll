@@ -25,10 +25,10 @@ define i32 @vdota4(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.a> = getelementptr i8, ir<%a>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.a> = vp.load vp<[[VP8]]>, vp<%evl>
-; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep.b> = getelementptr i8, ir<%b>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.b> = vp.load vp<[[VP9]]>, vp<%evl>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> sext to i32), vp<%evl>)

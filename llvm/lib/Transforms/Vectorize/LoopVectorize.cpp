@@ -6729,8 +6729,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
               VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
-          (isa<VPInstructionWithType>(R) &&
-           Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
+          (((isa<VPInstructionWithType>(R) &&
+             Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode())) ||
+            isa<VPGEPInstruction>(R)) &&
            vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);

@@ -21,7 +21,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%gep> = getelementptr inbounds i64, ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%iv>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -91,7 +91,7 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%q> = getelementptr ir<%p>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%q> = getelementptr i64, ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%q>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%x> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%y> = add ir<%x>, ir<%iv>
@@ -165,7 +165,7 @@ define void @iv_truncated_wrap_flags(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i16)
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%ptr> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ptr> = getelementptr inbounds i16, ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%iv>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

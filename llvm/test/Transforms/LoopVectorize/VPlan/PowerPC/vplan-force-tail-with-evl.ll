@@ -94,11 +94,11 @@ define void @safe_dep(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%a1> = getelementptr ir<%p>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%a1> = getelementptr i64, ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%a1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%v> = load vp<[[VP5]]>
 ; CHECK-NEXT:      CLONE ir<%offset> = add vp<[[VP4]]>, ir<100>
-; CHECK-NEXT:      CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
+; CHECK-NEXT:      EMIT-SCALAR ir<%a2> = getelementptr i64, ir<%p>, ir<%offset>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%a2>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%v>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
