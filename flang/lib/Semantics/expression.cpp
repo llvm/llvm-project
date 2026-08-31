@@ -2715,7 +2715,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               latest{DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
                          .FindComponent(sym->name())}) {
             if (sym->attrs().test(semantics::Attr::PRIVATE)) {
-              const auto *bindingModule{FindModuleContaining(generic.owner())};
+              const auto *bindingModule{FindModuleContaining(sym->owner())};
               const Symbol *s{latest};
               while (s && FindModuleContaining(s->owner()) != bindingModule) {
                 if (const auto *parent{s->owner().GetDerivedTypeParent()}) {

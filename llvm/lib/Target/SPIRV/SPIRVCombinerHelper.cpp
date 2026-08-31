@@ -59,6 +59,55 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 }
 
 /// This match is part of a combine that
+/// rewrites X / length(X) to normalize(X)
+///   (vXf32 (g_fdiv
+///             (vXf32 X)
+///             (vXf32 splat
+///                    (f32 (g_intrinsic length (vXf32 X))))))
+/// ->
+///   (vXf32 (g_intrinsic normalize (vXf32 X)))
+///
+bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register DivisorReg = MI.getOperand(2).getReg();
+
+  // Match the divisor as a splat of length, inserted into lane 0.
+  MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
+  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+    return false;
+  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
+              [](int M) { return M == 0; }))
+    return false;
+
+  MachineInstr *InsertInstr =
+      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
+  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return false;
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
+    return false;
+
+  MachineInstr *LengthInstr =
+      MRI.getVRegDef(InsertInstr->getOperand(3).getReg());
+  if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
+    return false;
+
+  // Check that length's argument is the same as the numerator.
+  return LengthInstr->getOperand(2).getReg() == NumeratorReg;
+}
+
+void SPIRVCombinerHelper::applySPIRVNormalize(MachineInstr &MI) const {
+  // Extract the operand for X from the match criteria.
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_normalize, ResultReg)
+      .addUse(NumeratorReg);
+
+  MI.eraseFromParent();
+}
+
+/// This match is part of a combine that
 /// rewrites select(fcmp(dot(I, Ng), 0), N, -N) to faceforward(N, I, Ng)
 ///   (vXf32 (g_select
 ///             (g_fcmp
@@ -240,7 +289,7 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
   // If there is only one column, then each row is a scalar that needs
   // to be extracted.
   if (NumCols == 1) {
-    assert(SpvRowType->getOpcode() != SPIRV::OpTypeVector);
+    assert(!isVectorType(SpvRowType));
     for (uint32_t I = 0; I < NumRows; ++I)
       Rows.push_back(MRI.createGenericVirtualRegister(VecTy));
     Builder.buildUnmerge(Rows, MatrixReg);
@@ -271,13 +320,12 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
 Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
                                                 SPIRVTypeInst SpvVecType,
                                                 SPIRVGlobalRegistry *GR) const {
-  bool IsVectorOp = SpvVecType->getOpcode() == SPIRV::OpTypeVector;
   SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
   bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
   LLT VecTy = GR->getRegType(SpvVecType);
 
   Register DotRes;
-  if (IsVectorOp) {
+  if (isVectorType(SpvVecType)) {
     LLT ScalarTy = VecTy.getElementType();
     Intrinsic::SPVIntrinsics DotIntrinsic =
         (IsFloatOp ? Intrinsic::spv_fdot : Intrinsic::spv_udot);

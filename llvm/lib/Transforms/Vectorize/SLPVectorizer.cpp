@@ -949,6 +949,7 @@ public:
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     ExternalUsesWithNonUsers.clear();
+    ExternalUseReplacements.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
     HasNonCheckableMemBlocker = false;
@@ -2504,6 +2505,7 @@ public:
         if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
+            !ExternalUseReplacements.contains(OpI) &&
             (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
                return Entry->VectorizedValue == OpI;
              })))
@@ -2553,6 +2555,7 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
+              !ExternalUseReplacements.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(
                    VectorValuesAndScales,
@@ -2991,8 +2994,7 @@ private:
         return VL.size() == Mask.size() &&
                std::equal(VL.begin(), VL.end(), Mask.begin(),
                           [Scalars](Value *V, int Idx) {
-                            return (isa<UndefValue>(V) &&
-                                    Idx == PoisonMaskElem) ||
+                            return isa<PoisonValue>(V) ||
                                    (Idx != PoisonMaskElem && V == Scalars[Idx]);
                           });
       };
@@ -3304,9 +3306,14 @@ private:
       if (!Res.second)
         return Res.first->second;
       unsigned &FoundLane = Res.first->getSecond();
-      for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
-           std::advance(It, 1)) {
-        if (*It != V)
+      // Poison can take any lane, match it to the lane of the first non-poison
+      // scalar.
+      auto IsMatch = [V](Value *S) {
+        return isa<PoisonValue>(V) ? !isa<PoisonValue>(S) : S == V;
+      };
+      for (auto *It = find_if(Scalars, IsMatch), *End = Scalars.end();
+           It != End; std::advance(It, 1)) {
+        if (!IsMatch(*It))
           continue;
         FoundLane = std::distance(Scalars.begin(), It);
         assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
@@ -3959,6 +3966,11 @@ private:
   /// A list of scalar to be extracted without specific user necause of too many
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
+
+  /// Replacements emitted for the external uses without users, consumed after
+  /// the tree vectorization; must not be collected as dead operands of the
+  /// erased scalars.
+  SmallPtrSet<Value *, 4> ExternalUseReplacements;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -5141,7 +5153,7 @@ private:
             for (const ScheduleBundle *Bundle : Bundles) {
               if (TotalOpCount == 0)
                 break;
-              const TreeEntry *TE = Bundle->getTreeEntry();
+              TreeEntry *TE = Bundle->getTreeEntry();
               if (!TE->hasReassocScalars())
                 continue;
               for (Value *V : TE->getReassocScalars()) {
@@ -5168,8 +5180,22 @@ private:
                       if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
                               .second)
                         DecrUnsched(CD, /*IsControl=*/false);
-                      ReleasedAsCopyable = true;
                     }
+                  }
+                  // The dep is released through copyable data only if this
+                  // very entry models the scalar as a copyable operand on one
+                  // of its edges, mirroring the dependency calculation;
+                  // copyable data on some other entry's edge does not cover
+                  // the dep registered for this entry.
+                  for (auto It = find(TE->Scalars, In);
+                       It != TE->Scalars.end() && !ReleasedAsCopyable;
+                       It = find(make_range(std::next(It), TE->Scalars.end()),
+                                 In)) {
+                    int Lane = std::distance(TE->Scalars.begin(), It);
+                    for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                      ReleasedAsCopyable |=
+                          TE->getOperand(OpIdx)[Lane] == OpI &&
+                          getScheduleCopyableData(EdgeInfo(TE, OpIdx), OpI);
                   }
                 }
                 if (!ReleasedAsCopyable) {
@@ -10379,7 +10405,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (isa<PoisonValue>(V))
         continue;
       auto *Cmp = cast<CmpInst>(V);
-      if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0) ||
+      if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0 &&
+           !CmpSamePredicateHelper::canConvertTo(Cmp, P0)) ||
           Cmp->getOperand(0)->getType() != ComparedTy) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering cmp with different predicate.\n");
         return TreeEntry::NeedToGather;
@@ -10981,8 +11008,58 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                          /*Extract=*/false, CostKind,
                                          AreAllValuesNonConst, UniqueValues);
     UniquesCost += ReusesCost;
-    if (UniquesCost <= InsertsCost)
+    if (UniquesCost <= InsertsCost) {
+      // Packing to a vector that occupies the same register width as the
+      // original only adds the reshuffle cost; keep the originals. Loads may
+      // instead benefit from a wider contiguous load.
+      if (S && S.getOpcode() != Instruction::Load) {
+        unsigned EltBits =
+            S.getMainOp()->getDataLayout().getTypeSizeInBits(ScalarTy);
+        unsigned MinVF = R.getMinVF(EltBits);
+        auto RegWidth = [&](unsigned N) {
+          return std::max(getFullVectorNumberOfElements(TTI, ScalarTy, N),
+                          MinVF);
+        };
+        // Keeping the originals just moves the reshuffle to the operand
+        // columns with duplicates; keep them only if at most one column has
+        // duplicates, so the total number of reshuffles does not grow.
+        auto HasExtraReshuffle = [&]() {
+          if (BuildGatherOnly)
+            return false;
+          unsigned NumDupColumns = 0;
+          for (unsigned OpIdx :
+               seq<unsigned>(S.getMainOp()->getNumOperands())) {
+            SmallPtrSet<const Value *, 16> UniqueOps;
+            for (Value *V : VL) {
+              if (isa<PoisonValue>(V))
+                continue;
+              Value *Op;
+              if (S.isCopyableElement(V)) {
+                if (OpIdx != 0)
+                  continue;
+                Op = V;
+              } else {
+                auto *I = dyn_cast<Instruction>(V);
+                if (!I || OpIdx >= I->getNumOperands())
+                  continue;
+                Op = I->getOperand(OpIdx);
+              }
+              if (!isConstant(Op) && !UniqueOps.insert(Op).second) {
+                ++NumDupColumns;
+                break;
+              }
+            }
+            if (NumDupColumns > 1)
+              return true;
+          }
+          return false;
+        };
+        return std::make_pair(true, RegWidth(NumUniqueScalarValues) >=
+                                            RegWidth(VL.size()) &&
+                                        !HasExtraReshuffle());
+      }
       return std::make_pair(true, false);
+    }
     InstructionCost CostDiff = UniquesCost - InsertsCost;
     if (CostDiff < TTI::TCC_Expensive ||
         (R.getTreeSize() == 0 && R.isReductionTree() &&
@@ -12705,6 +12782,30 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   if (S.isAltShuffle() && TrySplitNode(S))
     return;
 
+  // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
+  // try the split by the original predicates, like the alternate nodes.
+  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle()) {
+    auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
+      return CI->getPredicate() == P ||
+             CI->getPredicate() == CmpInst::getSwappedPredicate(P);
+    };
+    ICmpInst *MainI = cast<ICmpInst>(*find_if(VL, IsaPred<ICmpInst>));
+    auto *AltIt = find_if(VL, [&](Value *V) {
+      auto *CI = dyn_cast<ICmpInst>(V);
+      return CI && !SameOrSwapped(CI, MainI->getPredicate());
+    });
+    ICmpInst *AltI = AltIt == VL.end() ? nullptr : cast<ICmpInst>(*AltIt);
+    if (AltI &&
+        all_of(VL,
+               [&](Value *V) {
+                 auto *CI = dyn_cast<ICmpInst>(V);
+                 return !CI || SameOrSwapped(CI, MainI->getPredicate()) ||
+                        SameOrSwapped(CI, AltI->getPredicate());
+               }) &&
+        TrySplitNode(InstructionsState(MainI, AltI)))
+      return;
+  }
+
   // Check that every instruction appears once in this bundle.
   if (!tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx,
                            *this, /*BuildGatherOnly=*/false)) {
@@ -13219,11 +13320,14 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands.back() = Ops.getVL(1);
       } else {
         // Collect operands - commute if it uses the swapped predicate.
+        // Lanes interchangeable with P0 (e.g. x == 0 in an x <u C bundle)
+        // already have their operands adjusted, no need to commute them.
         for (auto [Idx, V] : enumerate(VL)) {
           if (isa<PoisonValue>(V))
             continue;
           auto *Cmp = cast<CmpInst>(V);
-          if (Cmp->getPredicate() != P0)
+          if (Cmp->getPredicate() != P0 &&
+              !CmpSamePredicateHelper::canConvertTo(Cmp, P0))
             std::swap(Operands.front()[Idx], Operands.back()[Idx]);
         }
       }
@@ -18785,7 +18889,13 @@ InstructionCost BoUpSLP::getSpillCost() {
           LastInst, Completed ? First : &*PrevInstIt, NoCallsInRange ? 1 : 0);
     return NoCallsInRange;
   };
-  auto AddCosts = [&](const TreeEntry *Op) {
+  // The spill/reload is executed once per execution of the call, so the
+  // cost is scaled by the trip count of the loop containing the call, even
+  // for hoisted loop-invariant values defined outside of it.
+  auto GetSpillScale = [&](const BasicBlock *BB) {
+    return getLoopNestScale(LI->getLoopFor(BB));
+  };
+  auto AddCosts = [&](const TreeEntry *Op, uint64_t Scale) {
     if (ScalarOrPseudoEntries.contains(Op))
       return;
     Type *ScalarTy = Op->Scalars.front()->getType();
@@ -18793,7 +18903,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
     auto *VecTy = getWidenedType(ScalarTy, Op->getVectorFactor());
-    uint64_t Scale = getScaleToLoopIterations(*Op);
     InstructionCost KeepLiveCost = TTI->getCostOfKeepingLiveOverCall(VecTy);
     KeepLiveCost *= Scale;
     Cost += KeepLiveCost;
@@ -18803,10 +18912,11 @@ InstructionCost BoUpSLP::getSpillCost() {
               Scale;
     }
   };
-  // Memoize the relationship between blocks, i.e. if there is (at least one)
-  // non-vectorized call between the blocks. This allows to skip the analysis of
-  // the same block paths multiple times.
-  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
+  // Memoize the relationship between blocks, i.e. the spill scale if every
+  // path between the blocks crosses a non-vectorized call, 0 if there is (at
+  // least one) call-free path. This allows to skip the analysis of the same
+  // block paths multiple times.
+  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, uint64_t>
       ParentOpParentToPreds;
   // Memoize whether a basic block contains a non-terminator no-return call.
   // Such blocks are dead-end paths in normal control flow (execution does not
@@ -18860,7 +18970,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (auto It = ParentOpParentToPreds.find(Key);
         It != ParentOpParentToPreds.end())
       return It->second;
-    bool Res = false;
+    uint64_t Res = 0;
     scope_exit Cleanup([&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
     // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
     // even when a call-free forward path from Root back to OpParent exists on
@@ -18872,8 +18982,10 @@ InstructionCost BoUpSLP::getSpillCost() {
       Outermost = L;
       L = L->getParentLoop();
     }
-    if (Outermost && LoopBodyHasCall(Outermost))
+    if (Outermost && LoopBodyHasCall(Outermost)) {
+      Res = getLoopNestScale(Outermost);
       return Res;
+    }
     SmallVector<BasicBlock *> Worklist;
     if (Pred)
       Worklist.push_back(Pred);
@@ -18885,7 +18997,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     // blocks that were visited during the BFS are not necessarily
     // call-free-reachable to OpParent themselves - we may have reached
     // OpParent through a *sibling* path that bypassed them.
-    // We return `true` (no spill cost) if at least one backward path from
+    // We return 0 (no spill cost) if at least one backward path from
     // some predecessor of Root back to OpParent is call-free. Only when
     // *every* such path goes through a non-vec call do we charge the spill
     // cost: only then is it actually necessary to keep the vectorized value
@@ -18898,15 +19010,14 @@ InstructionCost BoUpSLP::getSpillCost() {
     //
     // If we ever pop OpParent from the worklist, we have reached it through
     // a chain of call-free, non-dominated blocks: a call-free path exists
-    // and we return true. If the worklist is exhausted without reaching
-    // OpParent, every admissible path is blocked by a call and we return
-    // false so the caller charges the spill cost.
+    // and we return 0. If the worklist is exhausted or the scan budget
+    // overflows without reaching OpParent, no call-free path was found and
+    // we return the scale of the loop containing Root, so the caller charges
+    // the spill cost.
     while (!Worklist.empty()) {
       BasicBlock *BB = Worklist.pop_back_val();
-      if (BB == OpParent) {
-        Res = true;
+      if (BB == OpParent)
         return Res;
-      }
       if (!Visited.insert(BB).second)
         continue;
       // Blocks strictly dominated by Root are reached only *after* Root in
@@ -18923,11 +19034,9 @@ InstructionCost BoUpSLP::getSpillCost() {
       auto Pair = std::make_pair(BB, OpParent);
       if (auto It = ParentOpParentToPreds.find(Pair);
           It != ParentOpParentToPreds.end()) {
-        if (It->second) {
-          // BB is known to reach OpParent via a call-free path.
-          Res = true;
+        // BB is known to reach OpParent via a call-free path.
+        if (It->second == 0)
           return Res;
-        }
         // BB is known to be blocked from OpParent by calls; keep checking
         // other paths.
         continue;
@@ -18937,15 +19046,14 @@ InstructionCost BoUpSLP::getSpillCost() {
         continue;
       Budget += BlockSize;
       if (Budget > BudgetLimit)
-        return Res;
+        break;
       if (!isa<CatchSwitchInst>(BB->getTerminator()) &&
           !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrDbgOrAlloca(),
                                           BB->getTerminator()))
         continue;
       Worklist.append(pred_begin(BB), pred_end(BB));
     }
-    // Worklist drained without ever reaching OpParent: every path between
-    // Root and OpParent is blocked by a non-vec call.
+    Res = GetSpillScale(Root);
     return Res;
   };
   SmallVector<const TreeEntry *> LiveEntries(1, Root);
@@ -18999,7 +19107,7 @@ InstructionCost BoUpSLP::getSpillCost() {
             all_of(Op->Scalars, [&](Value *V) {
               return !isa<Instruction>(V) || L->isLoopInvariant(V);
             }))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       Budget = 0;
@@ -19032,11 +19140,11 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (OpParent == Parent) {
         if (Entry->getOpcode() == Instruction::PHI) {
           if (!CheckForNonVecCallsInSameBlock(LastInst, OpLastInst))
-            AddCosts(Op);
+            AddCosts(Op, GetSpillScale(Parent));
           continue;
         }
         if (!CheckForNonVecCallsInSameBlock(OpLastInst, LastInst))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // Check for call instruction in between blocks.
@@ -19044,20 +19152,18 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Entry->getOpcode() != Instruction::PHI &&
           !CheckForNonVecCallsInSameBlock(
               &*Parent->getFirstNonPHIOrDbgOrAlloca(), LastInst)) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // 2. Check op's block from the end.
       if (!CheckForNonVecCallsInSameBlock(OpLastInst,
                                           OpParent->getTerminator())) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(OpParent));
         continue;
       }
       // 3. Check the predecessors of entry's block till op's block.
-      if (!CheckPredecessors(Parent, Pred, OpParent)) {
-        AddCosts(Op);
-        continue;
-      }
+      if (uint64_t Scale = CheckPredecessors(Parent, Pred, OpParent))
+        AddCosts(Op, Scale);
     }
   }
 
@@ -19451,6 +19557,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -19484,8 +19593,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   PriorityQueue<CostIndicesTy, SmallVector<CostIndicesTy>, FirstGreater>
       Worklist;
-  for (const auto [Idx, P] : enumerate(SubtreeCosts))
+  for (const auto [Idx, P] : enumerate(SubtreeCosts)) {
+    // Combined subnodes are not trimmed on their own, only as a whole combined
+    // node, so only the root nodes are checked and included into the worklist.
+    if (VectorizableTree[Idx]->State == TreeEntry::CombinedVectorize)
+      continue;
     Worklist.emplace(VectorizableTree[Idx].get(), P);
+  }
 
   // Narrow store trees with non-profitable immediate values - exit.
   if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&
@@ -22781,10 +22895,22 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // process to keep correct order.
         return *Delayed;
       }
+      // Match against the expanded vector of the gather node, so that poison
+      // lanes of the matched entry cannot wildcard-match its real scalars.
+      auto IsFullVectorMatch = [&](const TreeEntry *FrontTE) {
+        SmallVector<int> CommonMask = E->getCommonMask();
+        SmallVector<Value *> Expanded(E->getVectorFactor());
+        for (unsigned I : seq<unsigned>(E->getVectorFactor()))
+          Expanded[I] = CommonMask.empty() ? E->Scalars[I]
+                        : CommonMask[I] == PoisonMaskElem
+                            ? PoisonValue::get(OrigScalarTy)
+                            : E->Scalars[CommonMask[I]];
+        return FrontTE->isSame(Expanded);
+      };
       if (GatherShuffles.size() == 1 &&
           *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
           (Entries.front().front()->isSame(E->Scalars) ||
-           E->isSame(Entries.front().front()->Scalars))) {
+           IsFullVectorMatch(Entries.front().front()))) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
         LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
@@ -22810,7 +22936,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // nodes.
         ShuffleBuilder.resetForSameNode();
         // Full matched entry found, no need to insert subvectors.
-        if ((E->isSame(FrontTE->Scalars) &&
+        if ((IsFullVectorMatch(FrontTE) &&
              FrontTE->ReuseShuffleIndices.empty() &&
              FrontTE->ReorderIndices.empty() &&
              E->getVectorFactor() == FrontTE->getVectorFactor()) ||
@@ -23506,8 +23632,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return CI && CI->getValue() == CI->getBitWidth() - 1;
         }))
       I->setHasNoSignedWrap(/*b=*/false);
-    if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
-      ICmp->setSameSign(/*B=*/false);
+    // Keep the intersected samesign unless the compared operands were
+    // narrowed (the sign relation may change in the narrower type) or a
+    // converted lane's adjusted constant flips the sign.
+    if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
+      bool Narrowed = MinBWs.contains(getOperandEntry(E, 0)) ||
+                      MinBWs.contains(getOperandEntry(E, 1));
+      CmpInst::Predicate P0 = cast<CmpInst>(E->getMainOp())->getPredicate();
+      bool SignFlip = !Narrowed && any_of(E->Scalars, [&](Value *Scalar) {
+        auto *LaneCI = dyn_cast<ICmpInst>(Scalar);
+        if (!LaneCI)
+          return false;
+        auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
+        if (!OrigC)
+          return false;
+        ConstantInt *AdjC =
+            CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
+        return AdjC && AdjC->isNegative() != OrigC->isNegative();
+      });
+      if (Narrowed || SignFlip)
+        ICmp->setSameSign(/*B=*/false);
+    }
     return I;
   };
   switch (ShuffleOrOp) {
@@ -25817,7 +25962,17 @@ Value *BoUpSLP::vectorizeTree(
         assert((!isa<ExtractElementInst>(Scalar) ||
                 !IgnoredExtracts.contains(cast<ExtractElementInst>(Scalar))) &&
                "Extractelements should not be replaced.");
+        // Reduced values that are not operands of the reduction ops (e.g.
+        // narrowed reduction leaves) lose all users once the tree scalars are
+        // erased; keep the replacement alive for the reduction epilogue.
+        bool NeedsProtection =
+            UserIgnoreList && none_of(Scalar->users(), [&](llvm::User *U) {
+              return UserIgnoreList->contains(U);
+            });
         Scalar->replaceAllUsesWith(NewInst);
+        if (NeedsProtection)
+          if (auto *I = dyn_cast<Instruction>(NewInst))
+            ExternalUseReplacements.insert(I);
       }
       continue;
     }
@@ -31097,9 +31252,14 @@ public:
         TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
-      // Try to handle shuffled extractelements.
+      // Try to handle shuffled extractelements. Only pure extractelement
+      // groups can be merged: merged groups are skipped for external uses,
+      // and other values would be erased while still used by reduction ops.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && I + 1 < E &&
+          all_of(ReducedVals[I + 1], [&](Value *RV) {
+            return isa<ExtractElementInst>(TrackedVals.at(RV));
+          })) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);

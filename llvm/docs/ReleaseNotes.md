@@ -52,6 +52,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
+  intrinsics, the reduction variants of `llvm.maximumnum` and
+  `llvm.minimumnum`. 
 * Added `nofreeobj` attribute for attributes and returns, which forbids
   freeing the underlying object (as opposed to only frees through that specific
   pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
@@ -171,6 +174,10 @@ Makes programs 10x faster by doing Special New Thing.
   `numRecords` argument to account for targets that use 32-bit and 45-bit
   `numRecords` widths more accurately. If an integer of the incorrect width
   is used, it will be zero-extended or truncated as needed.
+
+* These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
+  * `llvm.amdgcn.icmp`
+  * `llvm.amdgcn.fcmp`
 
 ### Changes to the ARM Backend
 
