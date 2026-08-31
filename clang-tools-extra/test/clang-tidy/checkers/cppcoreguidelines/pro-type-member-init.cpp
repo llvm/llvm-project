@@ -647,7 +647,7 @@ namespace gh192510 {
   };
 
   template<typename T>
-  class X: public Base {
+  class X: public Base, private C<T> {
     using INT = C<T>;
 
     X(INT i) : INT(i) {} // no crash
