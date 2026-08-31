@@ -339,6 +339,8 @@ and one of the following holds:
   Then `Y` makes `W` visible in the intersection `S` of `S1` and `S2`,
   and every subscope instance of `S` that includes `Y`.
 
+(amdgpu-location-order)=
+
 ### Location Order
 
 A write `W` is *location-ordered* before an access `Y` to the same address
