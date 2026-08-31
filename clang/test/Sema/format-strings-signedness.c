@@ -220,3 +220,13 @@ void test_suppress(int x)
 #pragma GCC diagnostic ignored "-Wformat"
     printf("%u", x);
 }
+
+struct {
+  unsigned int bf : 16;
+  unsigned char c;
+} s;
+
+void test_printf_bitfield(void) {
+  printf("%x\n", s.bf); // no-warning
+  printf("%x\n", s.c); // no-warning
+}
