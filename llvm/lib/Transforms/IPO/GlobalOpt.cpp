@@ -769,13 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
   SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
   for (User *U : Users) {
-    Instruction *I = dyn_cast<Instruction>(U);
-    if (!I)
-      continue;
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
