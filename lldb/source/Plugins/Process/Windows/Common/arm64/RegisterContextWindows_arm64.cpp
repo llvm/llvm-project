@@ -8,16 +8,18 @@
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 
+#include "RegisterContextWindows_arm64.h"
+#include "ProcessWindowsLog.h"
+#include "TargetThreadWindows.h"
+
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
-#include "RegisterContextWindows_arm64.h"
-#include "TargetThreadWindows.h"
-
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -85,10 +87,85 @@ RegisterSet g_register_sets[] = {
      g_fpu_reg_indices},
 };
 
+static Status GetThreadContextLength(DWORD context_flags,
+                                     DWORD &context_length) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+
+  if (InitializeContext(nullptr, context_flags, nullptr, &context_length)) {
+    error = Status::FromErrorString("InitializeContext succeeded unexpectedly");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log,
+             "InitializeContext failed with unexpected error {0}, expected "
+             "ERROR_INSUFFICIENT_BUFFER",
+             error);
+    return error;
+  }
+
+  return error;
+}
+
+static Status GetThreadContextHelper(lldb::thread_t thread_handle,
+                                     DWORD context_flags, PCONTEXT &context,
+                                     DataBufferHeap *context_buffer) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+  DWORD context_length = 0;
+
+  if (!context_buffer) {
+    error = Status::FromErrorString("context buffer not allocated");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
+    return error;
+
+  if (context_buffer->SetByteSize(context_length) != context_length) {
+    error = Status::FromErrorString("failed to resize context buffer");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (!InitializeContext(context_buffer->GetBytes(), context_flags, &context,
+                         &context_length)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "InitializeContext failed with error {0}", error);
+    return error;
+  }
+
+  if (!::GetThreadContext(thread_handle, context)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "GetThreadContext failed with error {0}", error);
+    return error;
+  }
+
+  return error;
+}
+
+static bool SetThreadContextHelper(lldb::thread_t thread_handle,
+                                   PCONTEXT context) {
+  Log *log = GetLog(WindowsLog::Registers);
+
+  if (!::SetThreadContext(thread_handle, context)) {
+    LLDB_LOG(log, "SetThreadContext failed with error {0}", GetLastError());
+    return false;
+  }
+
+  return true;
+}
+
 // Constructors and Destructors
 RegisterContextWindows_arm64::RegisterContextWindows_arm64(
     Thread &thread, uint32_t concrete_frame_idx)
-    : RegisterContextWindows(thread, concrete_frame_idx) {}
+    : RegisterContextWindows(thread, concrete_frame_idx),
+      m_context_arm64(nullptr), m_context_arm64_buffer(nullptr) {}
 
 RegisterContextWindows_arm64::~RegisterContextWindows_arm64() {}
 
@@ -114,326 +191,601 @@ RegisterContextWindows_arm64::GetRegisterSet(size_t reg_set) {
 
 bool RegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &reg_value) {
-  if (!CacheAllRegisterValues())
-    return false;
+  Log *log = GetLog(WindowsLog::Registers);
 
-  if (reg_info == nullptr)
-    return false;
-
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-
-  switch (reg) {
-  case gpr_x0:
-  case gpr_x1:
-  case gpr_x2:
-  case gpr_x3:
-  case gpr_x4:
-  case gpr_x5:
-  case gpr_x6:
-  case gpr_x7:
-  case gpr_x8:
-  case gpr_x9:
-  case gpr_x10:
-  case gpr_x11:
-  case gpr_x12:
-  case gpr_x13:
-  case gpr_x14:
-  case gpr_x15:
-  case gpr_x16:
-  case gpr_x17:
-  case gpr_x18:
-  case gpr_x19:
-  case gpr_x20:
-  case gpr_x21:
-  case gpr_x22:
-  case gpr_x23:
-  case gpr_x24:
-  case gpr_x25:
-  case gpr_x26:
-  case gpr_x27:
-  case gpr_x28:
-    reg_value.SetUInt64(m_context.X[reg - gpr_x0]);
-    break;
-
-  case gpr_fp:
-    reg_value.SetUInt64(m_context.Fp);
-    break;
-  case gpr_sp:
-    reg_value.SetUInt64(m_context.Sp);
-    break;
-  case gpr_lr:
-    reg_value.SetUInt64(m_context.Lr);
-    break;
-  case gpr_pc:
-    reg_value.SetUInt64(m_context.Pc);
-    break;
-  case gpr_cpsr:
-    reg_value.SetUInt32(m_context.Cpsr);
-    break;
-
-  case gpr_w0:
-  case gpr_w1:
-  case gpr_w2:
-  case gpr_w3:
-  case gpr_w4:
-  case gpr_w5:
-  case gpr_w6:
-  case gpr_w7:
-  case gpr_w8:
-  case gpr_w9:
-  case gpr_w10:
-  case gpr_w11:
-  case gpr_w12:
-  case gpr_w13:
-  case gpr_w14:
-  case gpr_w15:
-  case gpr_w16:
-  case gpr_w17:
-  case gpr_w18:
-  case gpr_w19:
-  case gpr_w20:
-  case gpr_w21:
-  case gpr_w22:
-  case gpr_w23:
-  case gpr_w24:
-  case gpr_w25:
-  case gpr_w26:
-  case gpr_w27:
-  case gpr_w28:
-    reg_value.SetUInt32(
-        static_cast<uint32_t>(m_context.X[reg - gpr_w0] & 0xffffffff));
-    break;
-
-  case fpu_v0:
-  case fpu_v1:
-  case fpu_v2:
-  case fpu_v3:
-  case fpu_v4:
-  case fpu_v5:
-  case fpu_v6:
-  case fpu_v7:
-  case fpu_v8:
-  case fpu_v9:
-  case fpu_v10:
-  case fpu_v11:
-  case fpu_v12:
-  case fpu_v13:
-  case fpu_v14:
-  case fpu_v15:
-  case fpu_v16:
-  case fpu_v17:
-  case fpu_v18:
-  case fpu_v19:
-  case fpu_v20:
-  case fpu_v21:
-  case fpu_v22:
-  case fpu_v23:
-  case fpu_v24:
-  case fpu_v25:
-  case fpu_v26:
-  case fpu_v27:
-  case fpu_v28:
-  case fpu_v29:
-  case fpu_v30:
-  case fpu_v31:
-    reg_value.SetBytes(m_context.V[reg - fpu_v0].B, reg_info->byte_size,
-                       endian::InlHostByteOrder());
-    break;
-
-  case fpu_s0:
-  case fpu_s1:
-  case fpu_s2:
-  case fpu_s3:
-  case fpu_s4:
-  case fpu_s5:
-  case fpu_s6:
-  case fpu_s7:
-  case fpu_s8:
-  case fpu_s9:
-  case fpu_s10:
-  case fpu_s11:
-  case fpu_s12:
-  case fpu_s13:
-  case fpu_s14:
-  case fpu_s15:
-  case fpu_s16:
-  case fpu_s17:
-  case fpu_s18:
-  case fpu_s19:
-  case fpu_s20:
-  case fpu_s21:
-  case fpu_s22:
-  case fpu_s23:
-  case fpu_s24:
-  case fpu_s25:
-  case fpu_s26:
-  case fpu_s27:
-  case fpu_s28:
-  case fpu_s29:
-  case fpu_s30:
-  case fpu_s31:
-    reg_value.SetFloat(m_context.V[reg - fpu_s0].S[0]);
-    break;
-
-  case fpu_d0:
-  case fpu_d1:
-  case fpu_d2:
-  case fpu_d3:
-  case fpu_d4:
-  case fpu_d5:
-  case fpu_d6:
-  case fpu_d7:
-  case fpu_d8:
-  case fpu_d9:
-  case fpu_d10:
-  case fpu_d11:
-  case fpu_d12:
-  case fpu_d13:
-  case fpu_d14:
-  case fpu_d15:
-  case fpu_d16:
-  case fpu_d17:
-  case fpu_d18:
-  case fpu_d19:
-  case fpu_d20:
-  case fpu_d21:
-  case fpu_d22:
-  case fpu_d23:
-  case fpu_d24:
-  case fpu_d25:
-  case fpu_d26:
-  case fpu_d27:
-  case fpu_d28:
-  case fpu_d29:
-  case fpu_d30:
-  case fpu_d31:
-    reg_value.SetDouble(m_context.V[reg - fpu_d0].D[0]);
-    break;
-
-  case fpu_fpsr:
-    reg_value.SetUInt32(m_context.Fpsr);
-    break;
-
-  case fpu_fpcr:
-    reg_value.SetUInt32(m_context.Fpcr);
-    break;
-
-  default:
-    reg_value.SetValueToInvalid();
+  if (!reg_info) {
+    LLDB_LOG(log, "reg_info NULL");
     return false;
   }
-  return true;
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  if (reg == LLDB_INVALID_REGNUM) {
+    // This is likely an internal register for lldb use only and should not be
+    // directly queried.
+    LLDB_LOG(log,
+             "register is an internal-only lldb register, cannot read "
+             "directly {1}",
+             reg_info->name);
+    return false;
+  }
+
+  if (IsGPR(reg))
+    return GPRRead(reg, reg_value);
+
+  if (IsFPR(reg))
+    return FPRRead(reg, reg_value);
+
+  LLDB_LOG(log, "unsupported register");
+  return false;
 }
 
 bool RegisterContextWindows_arm64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  // Since we cannot only write a single register value to the inferior, we
-  // need to make sure our cached copy of the register values are fresh.
-  // Otherwise when writing one register, we may also overwrite some other
-  // register with a stale value.
-  if (!CacheAllRegisterValues())
-    return false;
+  Log *log = GetLog(WindowsLog::Registers);
 
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-
-  switch (reg) {
-  case gpr_x0:
-  case gpr_x1:
-  case gpr_x2:
-  case gpr_x3:
-  case gpr_x4:
-  case gpr_x5:
-  case gpr_x6:
-  case gpr_x7:
-  case gpr_x8:
-  case gpr_x9:
-  case gpr_x10:
-  case gpr_x11:
-  case gpr_x12:
-  case gpr_x13:
-  case gpr_x14:
-  case gpr_x15:
-  case gpr_x16:
-  case gpr_x17:
-  case gpr_x18:
-  case gpr_x19:
-  case gpr_x20:
-  case gpr_x21:
-  case gpr_x22:
-  case gpr_x23:
-  case gpr_x24:
-  case gpr_x25:
-  case gpr_x26:
-  case gpr_x27:
-  case gpr_x28:
-    m_context.X[reg - gpr_x0] = reg_value.GetAsUInt64();
-    break;
-
-  case gpr_fp:
-    m_context.Fp = reg_value.GetAsUInt64();
-    break;
-  case gpr_sp:
-    m_context.Sp = reg_value.GetAsUInt64();
-    break;
-  case gpr_lr:
-    m_context.Lr = reg_value.GetAsUInt64();
-    break;
-  case gpr_pc:
-    m_context.Pc = reg_value.GetAsUInt64();
-    break;
-  case gpr_cpsr:
-    m_context.Cpsr = reg_value.GetAsUInt32();
-    break;
-
-  case fpu_v0:
-  case fpu_v1:
-  case fpu_v2:
-  case fpu_v3:
-  case fpu_v4:
-  case fpu_v5:
-  case fpu_v6:
-  case fpu_v7:
-  case fpu_v8:
-  case fpu_v9:
-  case fpu_v10:
-  case fpu_v11:
-  case fpu_v12:
-  case fpu_v13:
-  case fpu_v14:
-  case fpu_v15:
-  case fpu_v16:
-  case fpu_v17:
-  case fpu_v18:
-  case fpu_v19:
-  case fpu_v20:
-  case fpu_v21:
-  case fpu_v22:
-  case fpu_v23:
-  case fpu_v24:
-  case fpu_v25:
-  case fpu_v26:
-  case fpu_v27:
-  case fpu_v28:
-  case fpu_v29:
-  case fpu_v30:
-  case fpu_v31:
-    memcpy(m_context.V[reg - fpu_v0].B, reg_value.GetBytes(), 16);
-    break;
-
-  case fpu_fpsr:
-    m_context.Fpsr = reg_value.GetAsUInt32();
-    break;
-
-  case fpu_fpcr:
-    m_context.Fpcr = reg_value.GetAsUInt32();
-    break;
-
-  default:
+  if (!reg_info) {
+    LLDB_LOG(log, "reg_info NULL");
     return false;
   }
 
-  // Physically update the registers in the target process.
-  return ApplyAllRegisterValues();
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  if (reg == LLDB_INVALID_REGNUM) {
+    // This is likely an internal register for lldb use only and should not be
+    // directly queried.
+    LLDB_LOG(log,
+             "register is an internal-only lldb register, cannot read "
+             "directly {1}",
+             reg_info->name);
+    return false;
+  }
+
+  if (IsGPR(reg))
+    return GPRWrite(reg, reg_value);
+
+  if (IsFPR(reg))
+    return FPRWrite(reg, reg_value);
+
+  LLDB_LOG(log, "unsupported register");
+  return false;
+}
+
+void RegisterContextWindows_arm64::InvalidateAllRegisters() {
+  m_context_arm64 = nullptr;
+  m_context_arm64_buffer.reset();
+}
+
+bool RegisterContextWindows_arm64::ReadAllRegisterValues(
+    lldb::WritableDataBufferSP &data_sp) {
+  Log *log = GetLog(WindowsLog::Registers);
+
+  if (!CacheAllRegisterValues())
+    return false;
+
+  if (!m_context_arm64_buffer) {
+    LLDB_LOG(log, "register context buffer is not available");
+    return false;
+  }
+
+  data_sp =
+      std::make_shared<DataBufferHeap>(m_context_arm64_buffer->GetBytes(),
+                                       m_context_arm64_buffer->GetByteSize());
+
+  return true;
+}
+
+bool RegisterContextWindows_arm64::WriteAllRegisterValues(
+    const lldb::DataBufferSP &data_sp) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+
+  auto cleanup = llvm::make_scope_exit([&]() { m_context_arm64 = nullptr; });
+
+  if (!data_sp) {
+    LLDB_LOG(log, "invalid data_sp", error);
+    return false;
+  }
+
+  DWORD context_flags = CONTEXT_ALL;
+  DWORD context_length = 0;
+
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
+    return false;
+
+  if (data_sp->GetByteSize() != context_length) {
+    LLDB_LOG(log,
+             "data_sp contained mismatched data size, expected {0}, actual {1}",
+             context_length, data_sp->GetByteSize());
+    return false;
+  }
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  error = GetThreadContextHelper(GetThreadHandle(), context_flags, context,
+                                 &context_buffer);
+  if (error.Fail())
+    return false;
+
+  ::memcpy(context_buffer.GetBytes(), data_sp->GetBytes(), context_length);
+
+  return SetThreadContextHelper(GetThreadHandle(), context);
+}
+
+bool RegisterContextWindows_arm64::CacheAllRegisterValues() {
+  DWORD context_flags = CONTEXT_ALL;
+
+  if (m_context_arm64 &&
+      (m_context_arm64->ContextFlags & context_flags) == context_flags)
+    return true;
+
+  m_context_arm64 = nullptr;
+
+  if (!m_context_arm64_buffer)
+    m_context_arm64_buffer = std::make_shared<DataBufferHeap>();
+
+  if (GetThreadContextHelper(GetThreadHandle(), context_flags, m_context_arm64,
+                             m_context_arm64_buffer.get())
+          .Fail()) {
+    m_context_arm64 = nullptr;
+    return false;
+  }
+
+  return true;
+}
+
+bool RegisterContextWindows_arm64::GPRRead(const uint32_t reg,
+                                           RegisterValue &reg_value) {
+  if (!CacheAllRegisterValues())
+    return false;
+
+  switch (reg) {
+  case gpr_x0_arm64:
+  case gpr_x1_arm64:
+  case gpr_x2_arm64:
+  case gpr_x3_arm64:
+  case gpr_x4_arm64:
+  case gpr_x5_arm64:
+  case gpr_x6_arm64:
+  case gpr_x7_arm64:
+  case gpr_x8_arm64:
+  case gpr_x9_arm64:
+  case gpr_x10_arm64:
+  case gpr_x11_arm64:
+  case gpr_x12_arm64:
+  case gpr_x13_arm64:
+  case gpr_x14_arm64:
+  case gpr_x15_arm64:
+  case gpr_x16_arm64:
+  case gpr_x17_arm64:
+  case gpr_x18_arm64:
+  case gpr_x19_arm64:
+  case gpr_x20_arm64:
+  case gpr_x21_arm64:
+  case gpr_x22_arm64:
+  case gpr_x23_arm64:
+  case gpr_x24_arm64:
+  case gpr_x25_arm64:
+  case gpr_x26_arm64:
+  case gpr_x27_arm64:
+  case gpr_x28_arm64:
+    reg_value.SetUInt64(m_context_arm64->X[reg - gpr_x0_arm64]);
+    break;
+
+  case gpr_fp_arm64:
+    reg_value.SetUInt64(m_context_arm64->Fp);
+    break;
+  case gpr_sp_arm64:
+    reg_value.SetUInt64(m_context_arm64->Sp);
+    break;
+  case gpr_lr_arm64:
+    reg_value.SetUInt64(m_context_arm64->Lr);
+    break;
+  case gpr_pc_arm64:
+    reg_value.SetUInt64(m_context_arm64->Pc);
+    break;
+  case gpr_cpsr_arm64:
+    reg_value.SetUInt32(m_context_arm64->Cpsr);
+    break;
+
+  case gpr_w0_arm64:
+  case gpr_w1_arm64:
+  case gpr_w2_arm64:
+  case gpr_w3_arm64:
+  case gpr_w4_arm64:
+  case gpr_w5_arm64:
+  case gpr_w6_arm64:
+  case gpr_w7_arm64:
+  case gpr_w8_arm64:
+  case gpr_w9_arm64:
+  case gpr_w10_arm64:
+  case gpr_w11_arm64:
+  case gpr_w12_arm64:
+  case gpr_w13_arm64:
+  case gpr_w14_arm64:
+  case gpr_w15_arm64:
+  case gpr_w16_arm64:
+  case gpr_w17_arm64:
+  case gpr_w18_arm64:
+  case gpr_w19_arm64:
+  case gpr_w20_arm64:
+  case gpr_w21_arm64:
+  case gpr_w22_arm64:
+  case gpr_w23_arm64:
+  case gpr_w24_arm64:
+  case gpr_w25_arm64:
+  case gpr_w26_arm64:
+  case gpr_w27_arm64:
+  case gpr_w28_arm64:
+    reg_value.SetUInt32(static_cast<uint32_t>(
+        m_context_arm64->X[reg - gpr_w0_arm64] & 0xffffffff));
+    break;
+  }
+
+  return true;
+}
+
+bool RegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
+                                            const RegisterValue &reg_value) {
+  auto cleanup = llvm::make_scope_exit([&]() { m_context_arm64 = nullptr; });
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  DWORD context_flags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+  auto thread_handle = GetThreadHandle();
+
+  if (GetThreadContextHelper(thread_handle, context_flags, context,
+                             &context_buffer)
+          .Fail())
+    return false;
+
+  switch (reg) {
+  case gpr_x0_arm64:
+  case gpr_x1_arm64:
+  case gpr_x2_arm64:
+  case gpr_x3_arm64:
+  case gpr_x4_arm64:
+  case gpr_x5_arm64:
+  case gpr_x6_arm64:
+  case gpr_x7_arm64:
+  case gpr_x8_arm64:
+  case gpr_x9_arm64:
+  case gpr_x10_arm64:
+  case gpr_x11_arm64:
+  case gpr_x12_arm64:
+  case gpr_x13_arm64:
+  case gpr_x14_arm64:
+  case gpr_x15_arm64:
+  case gpr_x16_arm64:
+  case gpr_x17_arm64:
+  case gpr_x18_arm64:
+  case gpr_x19_arm64:
+  case gpr_x20_arm64:
+  case gpr_x21_arm64:
+  case gpr_x22_arm64:
+  case gpr_x23_arm64:
+  case gpr_x24_arm64:
+  case gpr_x25_arm64:
+  case gpr_x26_arm64:
+  case gpr_x27_arm64:
+  case gpr_x28_arm64:
+    context->X[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
+    break;
+
+  case gpr_fp_arm64:
+    context->Fp = reg_value.GetAsUInt64();
+    break;
+  case gpr_sp_arm64:
+    context->Sp = reg_value.GetAsUInt64();
+    break;
+  case gpr_lr_arm64:
+    context->Lr = reg_value.GetAsUInt64();
+    break;
+  case gpr_pc_arm64:
+    context->Pc = reg_value.GetAsUInt64();
+    break;
+  case gpr_cpsr_arm64:
+    context->Cpsr = reg_value.GetAsUInt32();
+    break;
+
+  case gpr_w0_arm64:
+  case gpr_w1_arm64:
+  case gpr_w2_arm64:
+  case gpr_w3_arm64:
+  case gpr_w4_arm64:
+  case gpr_w5_arm64:
+  case gpr_w6_arm64:
+  case gpr_w7_arm64:
+  case gpr_w8_arm64:
+  case gpr_w9_arm64:
+  case gpr_w10_arm64:
+  case gpr_w11_arm64:
+  case gpr_w12_arm64:
+  case gpr_w13_arm64:
+  case gpr_w14_arm64:
+  case gpr_w15_arm64:
+  case gpr_w16_arm64:
+  case gpr_w17_arm64:
+  case gpr_w18_arm64:
+  case gpr_w19_arm64:
+  case gpr_w20_arm64:
+  case gpr_w21_arm64:
+  case gpr_w22_arm64:
+  case gpr_w23_arm64:
+  case gpr_w24_arm64:
+  case gpr_w25_arm64:
+  case gpr_w26_arm64:
+  case gpr_w27_arm64:
+  case gpr_w28_arm64:
+    context->X[reg - gpr_w0_arm64] = reg_value.GetAsUInt32();
+    break;
+  }
+
+  return SetThreadContextHelper(thread_handle, context);
+}
+
+bool RegisterContextWindows_arm64::FPRRead(const uint32_t reg,
+                                           RegisterValue &reg_value) {
+  if (!CacheAllRegisterValues())
+    return false;
+
+  switch (reg) {
+  case fpu_v0_arm64:
+  case fpu_v1_arm64:
+  case fpu_v2_arm64:
+  case fpu_v3_arm64:
+  case fpu_v4_arm64:
+  case fpu_v5_arm64:
+  case fpu_v6_arm64:
+  case fpu_v7_arm64:
+  case fpu_v8_arm64:
+  case fpu_v9_arm64:
+  case fpu_v10_arm64:
+  case fpu_v11_arm64:
+  case fpu_v12_arm64:
+  case fpu_v13_arm64:
+  case fpu_v14_arm64:
+  case fpu_v15_arm64:
+  case fpu_v16_arm64:
+  case fpu_v17_arm64:
+  case fpu_v18_arm64:
+  case fpu_v19_arm64:
+  case fpu_v20_arm64:
+  case fpu_v21_arm64:
+  case fpu_v22_arm64:
+  case fpu_v23_arm64:
+  case fpu_v24_arm64:
+  case fpu_v25_arm64:
+  case fpu_v26_arm64:
+  case fpu_v27_arm64:
+  case fpu_v28_arm64:
+  case fpu_v29_arm64:
+  case fpu_v30_arm64:
+  case fpu_v31_arm64: {
+    reg_value.SetBytes(m_context_arm64->V[reg - fpu_v0_arm64].B, 16,
+                       endian::InlHostByteOrder());
+    break;
+  }
+
+  case fpu_s0_arm64:
+  case fpu_s1_arm64:
+  case fpu_s2_arm64:
+  case fpu_s3_arm64:
+  case fpu_s4_arm64:
+  case fpu_s5_arm64:
+  case fpu_s6_arm64:
+  case fpu_s7_arm64:
+  case fpu_s8_arm64:
+  case fpu_s9_arm64:
+  case fpu_s10_arm64:
+  case fpu_s11_arm64:
+  case fpu_s12_arm64:
+  case fpu_s13_arm64:
+  case fpu_s14_arm64:
+  case fpu_s15_arm64:
+  case fpu_s16_arm64:
+  case fpu_s17_arm64:
+  case fpu_s18_arm64:
+  case fpu_s19_arm64:
+  case fpu_s20_arm64:
+  case fpu_s21_arm64:
+  case fpu_s22_arm64:
+  case fpu_s23_arm64:
+  case fpu_s24_arm64:
+  case fpu_s25_arm64:
+  case fpu_s26_arm64:
+  case fpu_s27_arm64:
+  case fpu_s28_arm64:
+  case fpu_s29_arm64:
+  case fpu_s30_arm64:
+  case fpu_s31_arm64:
+    reg_value.SetFloat(m_context_arm64->V[reg - fpu_s0_arm64].S[0]);
+    break;
+
+  case fpu_d0_arm64:
+  case fpu_d1_arm64:
+  case fpu_d2_arm64:
+  case fpu_d3_arm64:
+  case fpu_d4_arm64:
+  case fpu_d5_arm64:
+  case fpu_d6_arm64:
+  case fpu_d7_arm64:
+  case fpu_d8_arm64:
+  case fpu_d9_arm64:
+  case fpu_d10_arm64:
+  case fpu_d11_arm64:
+  case fpu_d12_arm64:
+  case fpu_d13_arm64:
+  case fpu_d14_arm64:
+  case fpu_d15_arm64:
+  case fpu_d16_arm64:
+  case fpu_d17_arm64:
+  case fpu_d18_arm64:
+  case fpu_d19_arm64:
+  case fpu_d20_arm64:
+  case fpu_d21_arm64:
+  case fpu_d22_arm64:
+  case fpu_d23_arm64:
+  case fpu_d24_arm64:
+  case fpu_d25_arm64:
+  case fpu_d26_arm64:
+  case fpu_d27_arm64:
+  case fpu_d28_arm64:
+  case fpu_d29_arm64:
+  case fpu_d30_arm64:
+  case fpu_d31_arm64:
+    reg_value.SetDouble(m_context_arm64->V[reg - fpu_d0_arm64].D[0]);
+    break;
+
+  case fpu_fpsr_arm64:
+    reg_value.SetUInt32(m_context_arm64->Fpsr);
+    break;
+
+  case fpu_fpcr_arm64:
+    reg_value.SetUInt32(m_context_arm64->Fpcr);
+    break;
+  }
+
+  return true;
+}
+
+bool RegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
+                                            const RegisterValue &reg_value) {
+  auto cleanup = llvm::make_scope_exit([&]() { m_context_arm64 = nullptr; });
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  DWORD context_flags = CONTEXT_CONTROL | CONTEXT_FLOATING_POINT;
+  auto thread_handle = GetThreadHandle();
+
+  if (GetThreadContextHelper(thread_handle, context_flags, context,
+                             &context_buffer)
+          .Fail())
+    return false;
+
+  switch (reg) {
+  case fpu_v0_arm64:
+  case fpu_v1_arm64:
+  case fpu_v2_arm64:
+  case fpu_v3_arm64:
+  case fpu_v4_arm64:
+  case fpu_v5_arm64:
+  case fpu_v6_arm64:
+  case fpu_v7_arm64:
+  case fpu_v8_arm64:
+  case fpu_v9_arm64:
+  case fpu_v10_arm64:
+  case fpu_v11_arm64:
+  case fpu_v12_arm64:
+  case fpu_v13_arm64:
+  case fpu_v14_arm64:
+  case fpu_v15_arm64:
+  case fpu_v16_arm64:
+  case fpu_v17_arm64:
+  case fpu_v18_arm64:
+  case fpu_v19_arm64:
+  case fpu_v20_arm64:
+  case fpu_v21_arm64:
+  case fpu_v22_arm64:
+  case fpu_v23_arm64:
+  case fpu_v24_arm64:
+  case fpu_v25_arm64:
+  case fpu_v26_arm64:
+  case fpu_v27_arm64:
+  case fpu_v28_arm64:
+  case fpu_v29_arm64:
+  case fpu_v30_arm64:
+  case fpu_v31_arm64:
+    memcpy(context->V[reg - fpu_v0_arm64].B, reg_value.GetBytes(), 16);
+    break;
+
+  case fpu_s0_arm64:
+  case fpu_s1_arm64:
+  case fpu_s2_arm64:
+  case fpu_s3_arm64:
+  case fpu_s4_arm64:
+  case fpu_s5_arm64:
+  case fpu_s6_arm64:
+  case fpu_s7_arm64:
+  case fpu_s8_arm64:
+  case fpu_s9_arm64:
+  case fpu_s10_arm64:
+  case fpu_s11_arm64:
+  case fpu_s12_arm64:
+  case fpu_s13_arm64:
+  case fpu_s14_arm64:
+  case fpu_s15_arm64:
+  case fpu_s16_arm64:
+  case fpu_s17_arm64:
+  case fpu_s18_arm64:
+  case fpu_s19_arm64:
+  case fpu_s20_arm64:
+  case fpu_s21_arm64:
+  case fpu_s22_arm64:
+  case fpu_s23_arm64:
+  case fpu_s24_arm64:
+  case fpu_s25_arm64:
+  case fpu_s26_arm64:
+  case fpu_s27_arm64:
+  case fpu_s28_arm64:
+  case fpu_s29_arm64:
+  case fpu_s30_arm64:
+  case fpu_s31_arm64:
+    context->V[reg - fpu_s0_arm64].S[0] = reg_value.GetAsFloat();
+    break;
+
+  case fpu_d0_arm64:
+  case fpu_d1_arm64:
+  case fpu_d2_arm64:
+  case fpu_d3_arm64:
+  case fpu_d4_arm64:
+  case fpu_d5_arm64:
+  case fpu_d6_arm64:
+  case fpu_d7_arm64:
+  case fpu_d8_arm64:
+  case fpu_d9_arm64:
+  case fpu_d10_arm64:
+  case fpu_d11_arm64:
+  case fpu_d12_arm64:
+  case fpu_d13_arm64:
+  case fpu_d14_arm64:
+  case fpu_d15_arm64:
+  case fpu_d16_arm64:
+  case fpu_d17_arm64:
+  case fpu_d18_arm64:
+  case fpu_d19_arm64:
+  case fpu_d20_arm64:
+  case fpu_d21_arm64:
+  case fpu_d22_arm64:
+  case fpu_d23_arm64:
+  case fpu_d24_arm64:
+  case fpu_d25_arm64:
+  case fpu_d26_arm64:
+  case fpu_d27_arm64:
+  case fpu_d28_arm64:
+  case fpu_d29_arm64:
+  case fpu_d30_arm64:
+  case fpu_d31_arm64:
+    context->V[reg - fpu_d0_arm64].D[0] = reg_value.GetAsDouble();
+    break;
+
+  case fpu_fpsr_arm64:
+    context->Fpsr = reg_value.GetAsUInt32();
+    break;
+
+  case fpu_fpcr_arm64:
+    context->Fpcr = reg_value.GetAsUInt32();
+    break;
+  }
+
+  return SetThreadContextHelper(thread_handle, context);
+}
+
+bool RegisterContextWindows_arm64::IsGPR(uint32_t reg) const {
+  return (reg >= k_first_gpr_arm64 && reg <= k_last_gpr_arm64);
+}
+
+bool RegisterContextWindows_arm64::IsFPR(uint32_t reg) const {
+  return (reg >= k_first_fpr_arm64 && reg <= k_last_fpr_arm64);
 }
 
 #endif // defined(__aarch64__) || defined(_M_ARM64)
