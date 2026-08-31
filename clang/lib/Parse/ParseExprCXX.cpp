@@ -188,43 +188,54 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
            GetLookAheadToken(1).is(tok::ellipsis) &&
            GetLookAheadToken(2).is(tok::l_square) &&
            !GetLookAheadToken(3).is(tok::r_square)) {
-    SourceLocation Start = Tok.getLocation();
-    DeclSpec DS(AttrFactory);
-    SourceLocation CCLoc;
-    SourceLocation EndLoc = ParsePackIndexingType(DS);
-    if (DS.getTypeSpecType() == DeclSpec::TST_error)
-      return false;
+    // C++29 [temp.names]p1:
+    //   pack-index-template-name:
+    //     simple-template-name ... [ constant-expression ]
+    UnqualifiedId TemplateName;
+    TemplateTy Template;
+    TemplateNameKind TNK = isPackIndexingTemplateName(TemplateName, Template);
+    if (TNK != TNK_Non_template) {
+      if (AnnotatePackIndexingTemplateName(SS, TemplateName, Template, TNK))
+        return true;
+    } else {
+      SourceLocation Start = Tok.getLocation();
+      DeclSpec DS(AttrFactory);
+      SourceLocation CCLoc;
+      SourceLocation EndLoc = ParsePackIndexingType(DS);
+      if (DS.getTypeSpecType() == DeclSpec::TST_error)
+        return false;
 
-    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
-    QualType Type =
-        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
-                                      DS.getBeginLoc(), DS.getEllipsisLoc());
+      QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+      QualType Type =
+          Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                        DS.getBeginLoc(), DS.getEllipsisLoc());
 
-    if (Type.isNull())
-      return false;
+      if (Type.isNull())
+        return false;
 
-    // C++ [cpp23.dcl.dcl-2]:
-    //   Previously, T...[n] would declare a pack of function parameters.
-    //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code that
-    //   declares a pack of parameters without specifying a declarator-id
-    //   becomes ill-formed.
-    //
-    // However, we still treat it as a pack indexing type because the use case
-    // is fairly rare, to ensure semantic consistency given that we have
-    // backported this feature to pre-C++26 modes.
-    if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
-        getCurScope()->isFunctionDeclarationScope())
-      Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
+      // C++ [cpp23.dcl.dcl-2]:
+      //   Previously, T...[n] would declare a pack of function parameters.
+      //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code
+      //   that declares a pack of parameters without specifying a
+      //   declarator-id becomes ill-formed.
+      //
+      // However, we still treat it as a pack indexing type because the use
+      // case is fairly rare, to ensure semantic consistency given that we have
+      // backported this feature to pre-C++26 modes.
+      if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
+          getCurScope()->isFunctionDeclarationScope())
+        Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
-    if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
-      AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
-                                          EndLoc);
-      return false;
+      if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
+        AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
+                                            EndLoc);
+        return false;
+      }
+      if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
+                                                         std::move(Type)))
+        SS.SetInvalid(SourceRange(Start, CCLoc));
+      HasScopeSpecifier = true;
     }
-    if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
-                                                       std::move(Type)))
-      SS.SetInvalid(SourceRange(Start, CCLoc));
-    HasScopeSpecifier = true;
   }
 
   // Preferred type might change when parsing qualifiers, we need the original.
