@@ -2865,6 +2865,12 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   SourceLocation NameLoc = NameInfo.getLoc();
 
+  if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId &&
+      Id.TemplateId->Template)
+    if (TemplateName TN = Id.TemplateId->Template.get();
+        TN.getAsPackIndexingTemplate())
+      return CheckVarOrConceptTemplateTemplateId(NameInfo, TN, TemplateArgs);
+
   if (II && II->isEditorPlaceholder()) {
     // FIXME: When typed placeholders are supported we can create a typed
     // placeholder expression node.

@@ -12,6 +12,7 @@
 ! from the outer clause to the mapper's s%y entry.
 
 ! REQUIRES: flang
+! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 ! RUN: %libomptarget-compile-fortran-generic
 ! RUN: %libomptarget-run-generic | %fcheck-generic
