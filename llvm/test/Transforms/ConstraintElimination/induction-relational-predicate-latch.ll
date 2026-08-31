@@ -90,8 +90,7 @@ define void @stride2_slt_latch(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
@@ -163,8 +162,7 @@ define void @stride2_sge_latch(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
@@ -282,8 +280,7 @@ define void @negative_start_unsigned_precondition_blocks(i64 %n, i1 %header.ec) 
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -4, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C_S:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C_S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_U:%.*]] = icmp ult i64 [[IV]], [[N]]
 ; CHECK-NEXT:    call void @use(i1 [[C_U]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
@@ -361,8 +358,7 @@ define void @stride2_ult_latch(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
@@ -400,8 +396,7 @@ define void @stride2_uge_latch(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
@@ -439,8 +434,7 @@ define void @stride2_sle_latch(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
@@ -478,8 +472,7 @@ define void @unsigned_latch_signed_fact(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
@@ -598,8 +591,7 @@ define void @commuted_compare(i64 %n, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
