@@ -2333,11 +2333,6 @@ private:
     } else if (Current.Previous && Current.Previous->is(TT_InheritanceColon)) {
       Contexts.back().ContextType = Context::InheritanceList;
     } else if (Current.isOneOf(tok::r_paren, tok::greater, tok::comma)) {
-      for (FormatToken *Previous = Current.Previous;
-           Previous && Previous->isOneOf(tok::star, tok::amp);
-           Previous = Previous->Previous) {
-        Previous->setType(TT_PointerOrReference);
-      }
       if (Line.MustBeDeclaration &&
           Contexts.front().ContextType != Context::CtorInitializer) {
         Contexts.back().IsExpression = false;
