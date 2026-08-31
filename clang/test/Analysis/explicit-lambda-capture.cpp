@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -std=c++23 -analyzer-checker=core.DivideZero -verify %s
+// RUN: %clang_analyze_cc1 -std=c++23 -analyzer-checker=core -verify %s
 
 int implicit_capture_by_value() {
   int d = 0;
@@ -32,12 +32,12 @@ int gh218708_explicit_by_value_self() {
 
 int explicit_rvalue_no_error() {
   int d = 5;
-  auto lam = [d](this auto &&self) { return 1 / d; }; // 'd' is non-zero so there is no division by zero error. 
+  auto lam = [d](this auto &&self) { return 1 / d; }; // no-warning 
   return lam(); 
 }
 
 int explicit_by_value_no_error() {
   int d = 9;
-  auto lam = [d](this auto self) { return 1 / d; }; // 'd' is non-zero so there is no division by zero error.
+  auto lam = [d](this auto self) { return 1 / d; }; // no-warning 
   return lam();
 }
