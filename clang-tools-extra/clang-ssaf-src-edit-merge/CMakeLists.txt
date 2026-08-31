@@ -8,5 +8,6 @@ add_clang_tool(clang-ssaf-src-edit-merge
 
 clang_target_link_libraries(clang-ssaf-src-edit-merge
   PRIVATE
+  clangAST
   clangToolingCore
   )
