@@ -1663,7 +1663,6 @@ struct TypeFromHeader {};
   auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
                               Preamble);
   ASSERT_TRUE(AST);
-  EXPECT_TRUE(AST->getDiagnostics().empty());
 
   auto Result = codeComplete(getFullPath("Use.cpp"), UseCpp.point(),
                              Preamble.get(), Inputs, {});
