@@ -133,15 +133,21 @@ entry:
 ; EABI-NEXT: adc r1
 ; EABI-NOT: __aeabi_ldivmod
 ; DARWIN: ___divdi3
-; DARWIN: mov [[div1:r[0-9]+]], r0
-; DARWIN: mov [[div2:r[0-9]+]], r1
-; DARWIN: __moddi3
+; DARWIN: umull
+; DARWIN: mla
+; DARWIN: subs
+; DARWIN: mla
+; DARWIN: sbc
 ; DARWIN-O0: __divdi3
-; DARWIN-O0: __moddi3
+; DARWIN-O0: umull
+; DARWIN-O0: mla
+; DARWIN-O0: mla
+; DARWIN-O0: subs
+; DARWIN-O0: sbc
 ; WINDOWS: __rt_sdiv64
   %add = add nsw i64 %rem, %div
-; DARWIN: adds r0{{.*}}[[div1]]
-; DARWIN: adc r1{{.*}}[[div2]]
+; DARWIN: adds r0
+; DARWIN: adc r1
 ; WINDOWS: adds r0, r0, r2
 ; WINDOWS: adcs r1, r3
   ret i64 %add

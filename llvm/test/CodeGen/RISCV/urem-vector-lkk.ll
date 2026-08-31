@@ -328,7 +328,6 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lhu s1, 0(a1)
 ; RV32I-NEXT:    lhu s2, 4(a1)
 ; RV32I-NEXT:    lhu s3, 8(a1)
@@ -336,43 +335,47 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s4
-; RV32I-NEXT:    call __umodsi3
+; RV32I-NEXT:    call __udivsi3
 ; RV32I-NEXT:    mv s5, a0
+; RV32I-NEXT:    slli a0, a0, 5
+; RV32I-NEXT:    slli a1, s5, 7
+; RV32I-NEXT:    add a0, s5, a0
+; RV32I-NEXT:    sub a1, s4, a1
+; RV32I-NEXT:    add s6, a1, a0
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s3
-; RV32I-NEXT:    call __umodsi3
-; RV32I-NEXT:    mv s6, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    call __umodsi3
-; RV32I-NEXT:    mv s7, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __umodsi3
-; RV32I-NEXT:    mv s8, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s4
 ; RV32I-NEXT:    call __udivsi3
 ; RV32I-NEXT:    mv s4, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s3
-; RV32I-NEXT:    call __udivsi3
-; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    slli a0, a0, 5
+; RV32I-NEXT:    slli a1, s4, 7
+; RV32I-NEXT:    add a0, s4, a0
+; RV32I-NEXT:    sub a1, s3, a1
+; RV32I-NEXT:    add s7, a1, a0
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    call __udivsi3
-; RV32I-NEXT:    mv s2, a0
+; RV32I-NEXT:    mv s3, a0
+; RV32I-NEXT:    slli a0, a0, 5
+; RV32I-NEXT:    slli a1, s3, 7
+; RV32I-NEXT:    add a0, s3, a0
+; RV32I-NEXT:    sub a1, s2, a1
+; RV32I-NEXT:    add s2, a1, a0
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __udivsi3
-; RV32I-NEXT:    add s2, s7, s2
-; RV32I-NEXT:    add s3, s6, s3
-; RV32I-NEXT:    add a0, s8, a0
-; RV32I-NEXT:    add s4, s5, s4
+; RV32I-NEXT:    add s2, s2, s3
+; RV32I-NEXT:    slli a1, a0, 5
+; RV32I-NEXT:    slli a2, a0, 7
+; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    sub s1, s1, a2
+; RV32I-NEXT:    add s4, s7, s4
+; RV32I-NEXT:    add a1, s1, a1
+; RV32I-NEXT:    add s5, s6, s5
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    sh a0, 0(s0)
 ; RV32I-NEXT:    sh s2, 2(s0)
-; RV32I-NEXT:    sh s3, 4(s0)
-; RV32I-NEXT:    sh s4, 6(s0)
+; RV32I-NEXT:    sh s4, 4(s0)
+; RV32I-NEXT:    sh s5, 6(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -382,7 +385,6 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
 ;
@@ -429,7 +431,6 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lhu s1, 0(a1)
 ; RV64I-NEXT:    lhu s2, 8(a1)
 ; RV64I-NEXT:    lhu s3, 16(a1)
@@ -437,43 +438,47 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s4
-; RV64I-NEXT:    call __umoddi3
+; RV64I-NEXT:    call __udivdi3
 ; RV64I-NEXT:    mv s5, a0
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, s5, 7
+; RV64I-NEXT:    add a0, s5, a0
+; RV64I-NEXT:    sub a1, s4, a1
+; RV64I-NEXT:    add s6, a1, a0
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s3
-; RV64I-NEXT:    call __umoddi3
-; RV64I-NEXT:    mv s6, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    call __umoddi3
-; RV64I-NEXT:    mv s7, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __umoddi3
-; RV64I-NEXT:    mv s8, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s4
 ; RV64I-NEXT:    call __udivdi3
 ; RV64I-NEXT:    mv s4, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s3
-; RV64I-NEXT:    call __udivdi3
-; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, s4, 7
+; RV64I-NEXT:    add a0, s4, a0
+; RV64I-NEXT:    sub a1, s3, a1
+; RV64I-NEXT:    add s7, a1, a0
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __udivdi3
-; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slli a1, s3, 7
+; RV64I-NEXT:    add a0, s3, a0
+; RV64I-NEXT:    sub a1, s2, a1
+; RV64I-NEXT:    add s2, a1, a0
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __udivdi3
-; RV64I-NEXT:    add s2, s7, s2
-; RV64I-NEXT:    add s3, s6, s3
-; RV64I-NEXT:    add a0, s8, a0
-; RV64I-NEXT:    add s4, s5, s4
+; RV64I-NEXT:    add s2, s2, s3
+; RV64I-NEXT:    slli a1, a0, 5
+; RV64I-NEXT:    slli a2, a0, 7
+; RV64I-NEXT:    add a1, a0, a1
+; RV64I-NEXT:    sub s1, s1, a2
+; RV64I-NEXT:    add s4, s7, s4
+; RV64I-NEXT:    add a1, s1, a1
+; RV64I-NEXT:    add s5, s6, s5
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    sh a0, 0(s0)
 ; RV64I-NEXT:    sh s2, 2(s0)
-; RV64I-NEXT:    sh s3, 4(s0)
-; RV64I-NEXT:    sh s4, 6(s0)
+; RV64I-NEXT:    sh s4, 4(s0)
+; RV64I-NEXT:    sh s5, 6(s0)
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -483,7 +488,6 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
 ;

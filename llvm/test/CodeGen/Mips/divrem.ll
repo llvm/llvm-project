@@ -154,20 +154,19 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR32-DAG:     mod $[[R0:[0-9]+]], $4, $5
+; GPR32-DAG:     div $[[R0:[0-9]+]], $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
+; GPR32-DAG:     mul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR32-DAG:     subu $[[R2:[0-9]+]], $4, $[[R1]]
 ; NOCHECK-NOT:   teq
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
-; GPR32-DAG:     div $2, $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
+; GPR32:         sw $[[R2]], 0(${{[0-9]+}})
 
-; GPR64-DAG:     mod $[[R0:[0-9]+]], $4, $5
+; GPR64-DAG:     div $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
+; GPR64-DAG:     mul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR64-DAG:     subu $[[R2:[0-9]+]], $4, $[[R1]]
 ; NOCHECK-NOT:   teq
-; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
-; GPR64-DAG:     div $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
+; GPR64:         sw $[[R2]], 0(${{[0-9]+}})
 
 ; ALL: .end sdivrem1
 
@@ -195,21 +194,19 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR32-DAG:     modu $[[R0:[0-9]+]], $4, $5
+; GPR32-DAG:     divu $[[R0:[0-9]+]], $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
-; NOCHECK-NOT:   teq
-; GPR32-DAG:     divu $2, $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
+; GPR32-DAG:     mul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR32-DAG:     subu $[[R2:[0-9]+]], $4, $[[R1]]
+; GPR32:         sw $[[R2]], 0(${{[0-9]+}})
 ; NOCHECK-NOT:   teq
 
-; GPR64-DAG:     modu $[[R0:[0-9]+]], $4, $5
+; GPR64-DAG:     divu $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
+; GPR64-DAG:     mul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR64-DAG:     subu $[[R2:[0-9]+]], $4, $[[R1]]
 ; NOCHECK-NOT:   teq
-; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
-; GPR64-DAG:     divu $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
+; GPR64:         sw $[[R2]], 0(${{[0-9]+}})
 
 ; ALL: .end udivrem1
 
@@ -325,10 +322,10 @@ entry:
 
 ; sdivrem2 is too complex to effectively check. We can at least check for the
 ; calls though.
-; ACC32:         lw $25, %call16(__moddi3)(
-; ACC32:         jalr $25
 ; ACC32:         lw $25, %call16(__divdi3)(
 ; ACC32:         jalr $25
+; ACC32:         mul
+; ACC32:         subu
 
 ; ACC64:         ddiv $zero, $4, $5
 ; ACC64-TRAP:    teq $5, $zero, 7
@@ -337,14 +334,12 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
-; GPR64-DAG:     dmod $[[R0:[0-9]+]], $4, $5
+; GPR64-DAG:     ddiv $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
-
-; GPR64-DAG:     ddiv $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
+; GPR64-DAG:     dmul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR64-DAG:     dsubu $[[R2:[0-9]+]], $4, $[[R1]]
+; GPR64:         sd $[[R2]], 0(${{[0-9]+}})
 
 ; ALL: .end sdivrem2
 
@@ -360,10 +355,10 @@ entry:
 
 ; udivrem2 is too complex to effectively check. We can at least check for the
 ; calls though.
-; ACC32:         lw $25, %call16(__umoddi3)(
-; ACC32:         jalr $25
 ; ACC32:         lw $25, %call16(__udivdi3)(
 ; ACC32:         jalr $25
+; ACC32:         mul
+; ACC32:         subu
 
 ; ACC64:         ddivu $zero, $4, $5
 ; ACC64-TRAP:    teq $5, $zero, 7
@@ -372,14 +367,12 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
-; GPR64:         dmodu $[[R0:[0-9]+]], $4, $5
+; GPR64:         ddivu $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
-
-; GPR64-DAG:     ddivu $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
+; GPR64-DAG:     dmul $[[R1:[0-9]+]], $[[R0]], $5
+; GPR64-DAG:     dsubu $[[R2:[0-9]+]], $4, $[[R1]]
+; GPR64:         sd $[[R2]], 0(${{[0-9]+}})
 
 ; ALL: .end udivrem2
 
