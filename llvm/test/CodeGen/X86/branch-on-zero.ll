@@ -5,26 +5,24 @@
 define i32 @lshr3_then(i32 %a) {
 ; CHECK64-LABEL: lshr3_then:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $7, %edi
-; CHECK64-NEXT:    ja .LBB0_2
-; CHECK64-NEXT:  # %bb.1: # %then
-; CHECK64-NEXT:    xorl %eax, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB0_2: # %else
 ; CHECK64-NEXT:    shrl $3, %edi
+; CHECK64-NEXT:    je .LBB0_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB0_1: # %then
+; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: lshr3_then:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $7, %eax
-; CHECK32-NEXT:    ja .LBB0_2
-; CHECK32-NEXT:  # %bb.1: # %then
-; CHECK32-NEXT:    xorl %eax, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB0_2: # %else
 ; CHECK32-NEXT:    shrl $3, %eax
+; CHECK32-NEXT:    je .LBB0_1
+; CHECK32-NEXT:  # %bb.2: # %else
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB0_1: # %then
+; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp ult i32 %a, 8
@@ -41,26 +39,24 @@ else:
 define i32 @lshr5_else(i32 %a) {
 ; CHECK64-LABEL: lshr5_else:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $31, %edi
-; CHECK64-NEXT:    ja .LBB1_2
-; CHECK64-NEXT:  # %bb.1: # %then
 ; CHECK64-NEXT:    shrl $5, %edi
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB1_2: # %else
+; CHECK64-NEXT:    je .LBB1_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB1_1: # %then
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: lshr5_else:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $31, %eax
-; CHECK32-NEXT:    ja .LBB1_2
-; CHECK32-NEXT:  # %bb.1: # %then
 ; CHECK32-NEXT:    shrl $5, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB1_2: # %else
+; CHECK32-NEXT:    je .LBB1_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB1_1: # %then
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp ult i32 %a, 32
@@ -77,26 +73,24 @@ else:
 define i32 @lshr2_entry(i32 %a) {
 ; CHECK64-LABEL: lshr2_entry:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $1, %edi
-; CHECK64-NEXT:    ja .LBB2_2
-; CHECK64-NEXT:  # %bb.1: # %then
 ; CHECK64-NEXT:    shrl %edi
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB2_2: # %else
+; CHECK64-NEXT:    je .LBB2_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB2_1: # %then
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: lshr2_entry:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $1, %eax
-; CHECK32-NEXT:    ja .LBB2_2
-; CHECK32-NEXT:  # %bb.1: # %then
 ; CHECK32-NEXT:    shrl %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB2_2: # %else
+; CHECK32-NEXT:    je .LBB2_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB2_1: # %then
 ; CHECK32-NEXT:    retl
 entry:
   %l = lshr i32 %a, 1
@@ -149,26 +143,24 @@ else:
 define i32 @ashr5_else(i32 %a) {
 ; CHECK64-LABEL: ashr5_else:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $31, %edi
-; CHECK64-NEXT:    ja .LBB4_2
-; CHECK64-NEXT:  # %bb.1: # %then
 ; CHECK64-NEXT:    sarl $5, %edi
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB4_2: # %else
+; CHECK64-NEXT:    je .LBB4_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB4_1: # %then
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: ashr5_else:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $31, %eax
-; CHECK32-NEXT:    ja .LBB4_2
-; CHECK32-NEXT:  # %bb.1: # %then
 ; CHECK32-NEXT:    sarl $5, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB4_2: # %else
+; CHECK32-NEXT:    je .LBB4_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB4_1: # %then
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp ult i32 %a, 32
@@ -221,26 +213,24 @@ else:
 define i32 @addm10_then(i32 %a) {
 ; CHECK64-LABEL: addm10_then:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $10, %edi
-; CHECK64-NEXT:    jne .LBB6_2
-; CHECK64-NEXT:  # %bb.1: # %then
 ; CHECK64-NEXT:    addl $-10, %edi
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB6_2: # %else
+; CHECK64-NEXT:    je .LBB6_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB6_1: # %then
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: addm10_then:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $10, %eax
-; CHECK32-NEXT:    jne .LBB6_2
-; CHECK32-NEXT:  # %bb.1: # %then
 ; CHECK32-NEXT:    addl $-10, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB6_2: # %else
+; CHECK32-NEXT:    je .LBB6_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB6_1: # %then
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp eq i32 %a, 10
@@ -293,26 +283,24 @@ else:
 define i32 @sub10_else(i32 %a) {
 ; CHECK64-LABEL: sub10_else:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $10, %edi
-; CHECK64-NEXT:    jne .LBB8_2
-; CHECK64-NEXT:  # %bb.1: # %then
-; CHECK64-NEXT:    xorl %eax, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB8_2: # %else
 ; CHECK64-NEXT:    addl $-10, %edi
+; CHECK64-NEXT:    je .LBB8_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB8_1: # %then
+; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: sub10_else:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $10, %eax
-; CHECK32-NEXT:    jne .LBB8_2
-; CHECK32-NEXT:  # %bb.1: # %then
-; CHECK32-NEXT:    xorl %eax, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB8_2: # %else
 ; CHECK32-NEXT:    addl $-10, %eax
+; CHECK32-NEXT:    je .LBB8_1
+; CHECK32-NEXT:  # %bb.2: # %else
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB8_1: # %then
+; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp eq i32 %a, 10
@@ -329,26 +317,24 @@ else:
 define i32 @sub10_else_drop_nuw(i32 %a) {
 ; CHECK64-LABEL: sub10_else_drop_nuw:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $10, %edi
-; CHECK64-NEXT:    jne .LBB9_2
-; CHECK64-NEXT:  # %bb.1: # %then
-; CHECK64-NEXT:    xorl %eax, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB9_2: # %else
 ; CHECK64-NEXT:    addl $-10, %edi
+; CHECK64-NEXT:    je .LBB9_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB9_1: # %then
+; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: sub10_else_drop_nuw:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $10, %eax
-; CHECK32-NEXT:    jne .LBB9_2
-; CHECK32-NEXT:  # %bb.1: # %then
-; CHECK32-NEXT:    xorl %eax, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB9_2: # %else
 ; CHECK32-NEXT:    addl $-10, %eax
+; CHECK32-NEXT:    je .LBB9_1
+; CHECK32-NEXT:  # %bb.2: # %else
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB9_1: # %then
+; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp eq i32 %a, 10
@@ -365,26 +351,24 @@ else:
 define i32 @subm10_then(i32 %a) {
 ; CHECK64-LABEL: subm10_then:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $-10, %edi
-; CHECK64-NEXT:    jne .LBB10_2
-; CHECK64-NEXT:  # %bb.1: # %then
 ; CHECK64-NEXT:    addl $10, %edi
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB10_2: # %else
+; CHECK64-NEXT:    je .LBB10_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB10_1: # %then
+; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: subm10_then:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $-10, %eax
-; CHECK32-NEXT:    jne .LBB10_2
-; CHECK32-NEXT:  # %bb.1: # %then
 ; CHECK32-NEXT:    addl $10, %eax
-; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB10_2: # %else
+; CHECK32-NEXT:    je .LBB10_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    retl
+; CHECK32-NEXT:  .LBB10_1: # %then
 ; CHECK32-NEXT:    retl
 entry:
   %c = icmp eq i32 %a, -10
@@ -402,25 +386,24 @@ define i64 @lshr64(i64 %a) {
 ; CHECK64-LABEL: lshr64:
 ; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    shrq $40, %rdi
-; CHECK64-NEXT:    jne .LBB11_2
-; CHECK64-NEXT:  # %bb.1: # %then
-; CHECK64-NEXT:    xorl %eax, %eax
-; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB11_2: # %else
+; CHECK64-NEXT:    je .LBB11_1
+; CHECK64-NEXT:  # %bb.2: # %else
 ; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    retq
+; CHECK64-NEXT:  .LBB11_1: # %then
+; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: lshr64:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    testl $-256, %eax
-; CHECK32-NEXT:    jne .LBB11_2
-; CHECK32-NEXT:  # %bb.1: # %then
-; CHECK32-NEXT:    xorl %eax, %eax
+; CHECK32-NEXT:    shrl $8, %eax
+; CHECK32-NEXT:    je .LBB11_1
+; CHECK32-NEXT:  # %bb.2: # %else
 ; CHECK32-NEXT:    xorl %edx, %edx
 ; CHECK32-NEXT:    retl
-; CHECK32-NEXT:  .LBB11_2: # %else
-; CHECK32-NEXT:    shrl $8, %eax
+; CHECK32-NEXT:  .LBB11_1: # %then
+; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    xorl %edx, %edx
 ; CHECK32-NEXT:    retl
 entry:
@@ -438,55 +421,47 @@ else:
 define i128 @lshr128(i128 %a) {
 ; CHECK64-LABEL: lshr128:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpq $1, %rsi
-; CHECK64-NEXT:    ja .LBB12_2
-; CHECK64-NEXT:  # %bb.1: # %then
-; CHECK64-NEXT:    xorl %eax, %eax
+; CHECK64-NEXT:    shrq %rsi
+; CHECK64-NEXT:    je .LBB12_1
+; CHECK64-NEXT:  # %bb.2: # %else
+; CHECK64-NEXT:    movq %rsi, %rax
 ; CHECK64-NEXT:    xorl %edx, %edx
 ; CHECK64-NEXT:    retq
-; CHECK64-NEXT:  .LBB12_2: # %else
-; CHECK64-NEXT:    shrq %rsi
-; CHECK64-NEXT:    movq %rsi, %rax
+; CHECK64-NEXT:  .LBB12_1: # %then
+; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    xorl %edx, %edx
 ; CHECK64-NEXT:    retq
 ;
 ; CHECK32-LABEL: lshr128:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    pushl %edi
-; CHECK32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK32-NEXT:    pushl %esi
-; CHECK32-NEXT:    .cfi_def_cfa_offset 12
-; CHECK32-NEXT:    pushl %eax
+; CHECK32-NEXT:    .cfi_def_cfa_offset 8
+; CHECK32-NEXT:    subl $8, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK32-NEXT:    .cfi_offset %esi, -12
-; CHECK32-NEXT:    .cfi_offset %edi, -8
+; CHECK32-NEXT:    .cfi_offset %esi, -8
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    xorl %esi, %esi
-; CHECK32-NEXT:    movl $1, %edi
-; CHECK32-NEXT:    cmpl %ecx, %edi
-; CHECK32-NEXT:    sbbl %edx, %esi
-; CHECK32-NEXT:    jb .LBB12_3
-; CHECK32-NEXT:  # %bb.1: # %then
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK32-NEXT:    shrdl $1, %edx, %ecx
+; CHECK32-NEXT:    shrl %edx
+; CHECK32-NEXT:    movl %ecx, %esi
+; CHECK32-NEXT:    orl %edx, %esi
+; CHECK32-NEXT:    je .LBB12_1
+; CHECK32-NEXT:  # %bb.3: # %else
+; CHECK32-NEXT:    movl %ecx, (%eax)
+; CHECK32-NEXT:    movl %edx, 4(%eax)
+; CHECK32-NEXT:    movl $0, 12(%eax)
+; CHECK32-NEXT:    movl $0, 8(%eax)
+; CHECK32-NEXT:    jmp .LBB12_2
+; CHECK32-NEXT:  .LBB12_1: # %then
 ; CHECK32-NEXT:    movl $0, 12(%eax)
 ; CHECK32-NEXT:    movl $0, 8(%eax)
 ; CHECK32-NEXT:    movl $0, 4(%eax)
 ; CHECK32-NEXT:    movl $0, (%eax)
-; CHECK32-NEXT:    jmp .LBB12_2
-; CHECK32-NEXT:  .LBB12_3: # %else
-; CHECK32-NEXT:    shrdl $1, %edx, %ecx
-; CHECK32-NEXT:    shrl %edx
-; CHECK32-NEXT:    movl %edx, 4(%eax)
-; CHECK32-NEXT:    movl %ecx, (%eax)
-; CHECK32-NEXT:    movl $0, 12(%eax)
-; CHECK32-NEXT:    movl $0, 8(%eax)
 ; CHECK32-NEXT:  .LBB12_2: # %then
-; CHECK32-NEXT:    addl $4, %esp
-; CHECK32-NEXT:    .cfi_def_cfa_offset 12
-; CHECK32-NEXT:    popl %esi
+; CHECK32-NEXT:    addl $8, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 8
-; CHECK32-NEXT:    popl %edi
+; CHECK32-NEXT:    popl %esi
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK32-NEXT:    retl $4
 entry:
@@ -550,11 +525,10 @@ else:
 define i32 @xor_branch_imm_ret(i32 %x) {
 ; CHECK64-LABEL: xor_branch_imm_ret:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $-1365, %edi # imm = 0xFAAB
-; CHECK64-NEXT:    je .LBB14_2
-; CHECK64-NEXT:  # %bb.1: # %if.then
 ; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    xorl $-1365, %eax # imm = 0xFAAB
+; CHECK64-NEXT:    je .LBB14_2
+; CHECK64-NEXT:  # %bb.1: # %if.then
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB14_2: # %if.end
 ; CHECK64-NEXT:    pushq %rax
@@ -565,11 +539,10 @@ define i32 @xor_branch_imm_ret(i32 %x) {
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    subl $12, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $-1365, %eax # imm = 0xFAAB
+; CHECK32-NEXT:    movl $-1365, %eax # imm = 0xFAAB
+; CHECK32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    je .LBB14_2
 ; CHECK32-NEXT:  # %bb.1: # %if.then
-; CHECK32-NEXT:    xorl $-1365, %eax # imm = 0xFAAB
 ; CHECK32-NEXT:    addl $12, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK32-NEXT:    retl
@@ -590,11 +563,10 @@ if.end:
 define i32 @xor_branch_ret(i32 %x) {
 ; CHECK64-LABEL: xor_branch_ret:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    cmpl $2048, %edi # imm = 0x800
-; CHECK64-NEXT:    je .LBB15_2
-; CHECK64-NEXT:  # %bb.1: # %if.then
 ; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    xorl $2048, %eax # imm = 0x800
+; CHECK64-NEXT:    je .LBB15_2
+; CHECK64-NEXT:  # %bb.1: # %if.then
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB15_2: # %if.end
 ; CHECK64-NEXT:    pushq %rax
@@ -605,11 +577,10 @@ define i32 @xor_branch_ret(i32 %x) {
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    subl $12, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    cmpl $2048, %eax # imm = 0x800
+; CHECK32-NEXT:    movl $2048, %eax # imm = 0x800
+; CHECK32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    je .LBB15_2
 ; CHECK32-NEXT:  # %bb.1: # %if.then
-; CHECK32-NEXT:    xorl $2048, %eax # imm = 0x800
 ; CHECK32-NEXT:    addl $12, %esp
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK32-NEXT:    retl
