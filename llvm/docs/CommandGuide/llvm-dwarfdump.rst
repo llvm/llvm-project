@@ -95,6 +95,13 @@ OPTIONS
             Redirect output to a file specified by <path>, where `-` is the
             standard output stream.
 
+.. option:: --output-style=<value>
+
+            Specify the format of the output. The supported values are:
+
+            `LLVM` - Output in the format used by llvm-dwarfdump. [default]
+            `JSON` - Output in JSON format.
+
 .. option:: -p, --show-parents
 
             Show a debug info entry's parents when selectively printing with

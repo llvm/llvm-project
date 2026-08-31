@@ -1,0 +1,28 @@
+## Show that --output-style=LLVM (the default) dumps normally.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump --output-style=LLVM %t.o | FileCheck %s --check-prefix=LLVM
+
+# LLVM: file format elf64-x86-64
+
+## Show that omitting --output-style is equivalent to passing --output-style=LLVM explicitly.
+# RUN: llvm-dwarfdump %t.o > %t.default.txt
+# RUN: llvm-dwarfdump --output-style=LLVM %t.o > %t.llvm.txt
+# RUN: cmp %t.default.txt %t.llvm.txt
+
+## Show that --output-style=JSON emits a warning, since JSON output is not yet implemented.
+# RUN: llvm-dwarfdump --output-style=JSON %t.o 2>&1 | FileCheck %s --check-prefix=JSON
+
+#      JSON: file format elf64-x86-64
+# JSON-NEXT: warning: JSON output style is not yet implemented
+
+## Show that an unrecognized --output-style value is rejected.
+# RUN: not llvm-dwarfdump --output-style=YAML 2>&1 | FileCheck %s --check-prefix=INVALID
+
+# INVALID: error: --output-style value should be either 'LLVM' or 'JSON', but was 'YAML'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

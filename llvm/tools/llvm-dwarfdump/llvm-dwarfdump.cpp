@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -134,6 +135,8 @@ enum ErrorDetailLevel {
   BothDetailsAndSummary,
   Unspecified
 };
+
+enum class OutputStyleKind { LLVM, JSON, Unknown };
 
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
@@ -334,6 +337,11 @@ static opt<bool> Verbose("verbose",
                          cat(DwarfDumpCategory));
 static alias VerboseAlias("v", desc("Alias for --verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory), cl::NotHidden);
+static opt<std::string>
+    OutputStyleOpt("output-style", init("LLVM"),
+                   desc("Specify the format of the output (LLVM or JSON)"),
+                   cat(DwarfDumpCategory));
+static OutputStyleKind Style = OutputStyleKind::LLVM;
 static opt<bool>
     ShowVariableCoverage("show-variable-coverage",
                          desc("Show per-variable coverage metrics."),
@@ -784,7 +792,19 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // Dump the complete DWARF structure.
   auto DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  DICtx.dump(OS, DumpOpts, DumpOffsets);
+  switch (Style) {
+  case OutputStyleKind::LLVM:
+    DICtx.dump(OS, DumpOpts, DumpOffsets);
+    break;
+  case OutputStyleKind::JSON:
+    WithColor::warning() << "JSON output style is not yet implemented\n";
+    break;
+  case OutputStyleKind::Unknown:
+    WithColor::error() << "--output-style value should be either 'LLVM' or "
+                          "'JSON', but was '"
+                       << OutputStyleOpt << "'\n";
+    return false;
+  }
   return true;
 }
 
@@ -897,6 +917,17 @@ int main(int argc, char **argv) {
       argc, argv,
       "pretty-print DWARF debug information in object files"
       " and debug info archives.\n");
+
+  Style = StringSwitch<OutputStyleKind>(OutputStyleOpt)
+              .Case("LLVM", OutputStyleKind::LLVM)
+              .Case("JSON", OutputStyleKind::JSON)
+              .Default(OutputStyleKind::Unknown);
+  if (Style == OutputStyleKind::Unknown) {
+    WithColor::error(errs(), sys::path::filename(argv[0]))
+        << "--output-style value should be either 'LLVM' or 'JSON', but was '"
+        << OutputStyleOpt << "'\n";
+    return 1;
+  }
 
   // FIXME: Audit interactions between these two options and make them
   //        compatible.
