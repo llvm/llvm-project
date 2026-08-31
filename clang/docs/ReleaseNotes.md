@@ -573,6 +573,9 @@ features cannot lower the translation-unit ABI level;
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed an assertion failure when a method or function definition follows an
+  Objective-C `@implementation` that was ended by a nested `@interface`,
+  `@protocol` or `@implementation` before its `@end`. (#GH209503)
 
 ### OpenACC Specific Changes
 
