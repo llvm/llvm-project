@@ -61,7 +61,7 @@ static Value *emitAMDGPUBufferAtomicBuiltin(CodeGenFunction &CGF,
   StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
   Value *Ops[] = {MetadataAsValue::get(Ctx, MDString::get(Ctx, toIRString(AO))),
                   MetadataAsValue::get(Ctx, MDString::get(Ctx, Scope))};
-  llvm::OperandBundleDef Bundle("amdgpu.atomicity", Ops);
+  llvm::OperandBundleDef Bundle("atomicity", Ops);
 
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
   CallInst *Call = CGF.Builder.CreateCall(F, Args, {Bundle});

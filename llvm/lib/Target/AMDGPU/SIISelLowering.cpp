@@ -1428,36 +1428,22 @@ static AtomicOrdering parseAtomicOrderingCABIArg(const CallBase &CI,
   }
 }
 
-static SyncScope::ID getSyncScopeID(const CallBase &CI, const Metadata *MD) {
-  return CI.getContext().getOrInsertSyncScopeID(
-      cast<MDString>(MD)->getString());
-}
-
 static SyncScope::ID parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   MDNode *ScopeMD = cast<MDNode>(
       cast<MetadataAsValue>(CI.getArgOperand(ArgIdx))->getMetadata());
-  return getSyncScopeID(CI, ScopeMD->getOperand(0));
+  return CI.getContext().getOrInsertSyncScopeID(
+      cast<MDString>(ScopeMD->getOperand(0))->getString());
 }
 
 // A buffer instruction is identical whether or not the access is atomic, so
-// the "amdgpu.atomicity" bundle is the only record of it.
+// the "atomicity" bundle is the only record of it.
 static void applyBufferAtomicityBundle(const CallBase &CI,
                                        TargetLowering::IntrinsicInfo &Info) {
-  std::optional<OperandBundleUse> Bundle =
-      CI.getOperandBundle(LLVMContext::OB_amdgpu_atomicity);
-  if (!Bundle)
-    return;
-
-  // The Verifier guarantees the shape of the bundle.
-  assert(Bundle->Inputs.size() == 2 && "malformed amdgpu.atomicity bundle");
-  auto GetMD = [](const Value *V) {
-    return cast<MetadataAsValue>(V)->getMetadata();
-  };
-  std::optional<AtomicOrdering> Order = parseAtomicOrdering(
-      cast<MDString>(GetMD(Bundle->Inputs[0]))->getString());
-  assert(Order && "malformed amdgpu.atomicity ordering");
-  Info.order = *Order;
-  Info.ssid = getSyncScopeID(CI, GetMD(Bundle->Inputs[1]));
+  if (std::optional<AtomicityBundleInfo> Atomicity =
+          CI.getAtomicityBundleInfo()) {
+    Info.order = Atomicity->Order;
+    Info.ssid = Atomicity->SSID;
+  }
 }
 
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,

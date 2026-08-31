@@ -1554,13 +1554,13 @@ A call to a buffer memory intrinsic (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load
 ``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}.format``,
 ``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` or
 ``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) may carry an
-``"amdgpu.atomicity"`` operand bundle recording the atomicity of the access:
+``"atomicity"`` operand bundle recording the atomicity of the access:
 
 .. code-block:: llvm
 
   call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %val, ptr addrspace(8) %rsrc,
       i32 %off, i32 0, i32 0)
-      [ "amdgpu.atomicity"(metadata !"release", metadata !"agent") ]
+      [ "atomicity"(metadata !"release", metadata !"agent") ]
 
 The first bundle operand is the LLVM IR spelling of the memory ordering
 (``unordered``, ``monotonic``, ``acquire``, ``release``, ``acq_rel`` or

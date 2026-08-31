@@ -252,6 +252,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -268,6 +269,13 @@ using GetTTIFn = function_ref<const TargetTransformInfo *(Function &)>;
 using GetSEFn = function_ref<ScalarEvolution *(Function &)>;
 
 static constexpr unsigned BufferOffsetWidth = 32;
+
+// Prototype: rely on the "atomicity" operand bundle alone to keep generic
+// transforms from reordering across an atomic buffer access, instead of
+// bracketing the access with explicit fences.
+static cl::opt<bool> NoAtomicityFences(
+    "amdgpu-buffer-atomicity-no-fences", cl::Hidden, cl::init(false),
+    cl::desc("Do not emit fences around atomic buffer memory intrinsics"));
 
 namespace {
 /// Recursively replace instances of ptr addrspace(7) and vector<Nxptr
@@ -1918,11 +1926,13 @@ SplitPtrStructs::getAtomicityBundle(AtomicOrdering Order, SyncScope::ID SSID) {
   Value *Ops[] = {
       MetadataAsValue::get(Ctx, MDString::get(Ctx, toIRString(Order))),
       MetadataAsValue::get(Ctx, MDString::get(Ctx, Scope))};
-  return {OperandBundleDef("amdgpu.atomicity", Ops)};
+  return {OperandBundleDef("atomicity", Ops)};
 }
 
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
                                           SyncScope::ID SSID) {
+  if (NoAtomicityFences)
+    return;
   switch (Order) {
   case AtomicOrdering::Release:
   case AtomicOrdering::AcquireRelease:
@@ -1936,6 +1946,8 @@ void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
 
 void SplitPtrStructs::insertPostMemOpFence(AtomicOrdering Order,
                                            SyncScope::ID SSID) {
+  if (NoAtomicityFences)
+    return;
   switch (Order) {
   case AtomicOrdering::Acquire:
   case AtomicOrdering::AcquireRelease:

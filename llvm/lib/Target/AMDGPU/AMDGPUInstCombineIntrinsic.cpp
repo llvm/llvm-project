@@ -2209,7 +2209,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   // Narrowing the access and shifting its offset would change the granularity
   // of an atomic access.
-  if (II.getOperandBundle(LLVMContext::OB_amdgpu_atomicity))
+  if (II.getOperandBundle(LLVMContext::OB_atomicity))
     return nullptr;
 
   auto *IIVTy = cast<FixedVectorType>(IsLoad ? II.getType()

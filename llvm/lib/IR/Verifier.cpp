@@ -495,6 +495,8 @@ private:
   void verifyAttachedCallBundle(const CallBase &Call,
                                 const OperandBundleUse &BU);
 
+  void verifyAtomicityBundle(const CallBase &Call, const OperandBundleUse &BU);
+
   /// Verify the llvm.experimental.noalias.scope.decl declarations
   void verifyNoAliasScopeDecl();
 };
@@ -4097,7 +4099,7 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false, FoundAMDGPUAtomicityBundle = false;
+       FoundAttachedCallBundle = false, FoundAtomicityBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -4160,11 +4162,11 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_amdgpu_atomicity) {
-      Check(!FoundAMDGPUAtomicityBundle,
-            "Multiple \"amdgpu.atomicity\" operand bundles", Call);
-      FoundAMDGPUAtomicityBundle = true;
-      verifyAMDGPUAtomicityBundle(*this, Call, BU);
+    } else if (Tag == LLVMContext::OB_atomicity) {
+      Check(!FoundAtomicityBundle, "Multiple \"atomicity\" operand bundles",
+            Call);
+      FoundAtomicityBundle = true;
+      verifyAtomicityBundle(Call, BU);
     }
   }
 
@@ -7644,6 +7646,25 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
            FnName == "objc_unsafeClaimAutoreleasedReturnValue"),
           "invalid function argument", Call);
   }
+}
+
+void Verifier::verifyAtomicityBundle(const CallBase &Call,
+                                     const OperandBundleUse &BU) {
+  Check(BU.Inputs.size() == 2,
+        "Expected exactly two \"atomicity\" bundle operands", Call);
+
+  auto GetMDString = [](const Value *V) -> const MDString * {
+    const auto *MAV = dyn_cast<MetadataAsValue>(V);
+    return MAV ? dyn_cast<MDString>(MAV->getMetadata()) : nullptr;
+  };
+
+  const MDString *Ordering = GetMDString(BU.Inputs[0]);
+  Check(Ordering && parseAtomicOrdering(Ordering->getString()),
+        "\"atomicity\" ordering operand must be a metadata string naming an "
+        "atomic ordering",
+        Call);
+  Check(GetMDString(BU.Inputs[1]),
+        "\"atomicity\" syncscope operand must be a metadata string", Call);
 }
 
 void Verifier::verifyNoAliasScopeDecl() {

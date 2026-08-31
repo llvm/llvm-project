@@ -1336,9 +1336,9 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
   // Helper to determine if operand bundles on a call site are benign or
-  // potentially problematic. We handle llvm.assume and "amdgpu.atomicity".
+  // potentially problematic. We handle llvm.assume and "atomicity".
   auto CanIgnoreOperandBundles = [](const CallBase &CB) {
-    return !CB.hasOperandBundlesOtherThan(LLVMContext::OB_amdgpu_atomicity) ||
+    return !CB.hasOperandBundlesOtherThan(LLVMContext::OB_atomicity) ||
            (isa<IntrinsicInst>(CB) &&
             cast<IntrinsicInst>(CB).getIntrinsicID() == Intrinsic::assume);
   };
