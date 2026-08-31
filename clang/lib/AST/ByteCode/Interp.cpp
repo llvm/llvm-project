@@ -3045,19 +3045,25 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
   return false;
 }
 
+// Destroy one scope: deallocate all local variables of the scope and diagnose
+// out-of-lifetime destroys.
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   assert(S.Current->getFunction());
-  // FIXME: We iterate the scope once here and then again in the destroy() call
-  // below.
   for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
-    if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
+    Block *LocalBlock = S.Current->getLocalBlock(Local.Offset);
+
+    if (!LocalBlock->isInitialized())
       continue;
-    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-    if (Ptr.getLifetime() == Lifetime::Ended)
+
+    if (LocalBlock->getBlockDesc<InlineDescriptor>().LifeState ==
+        Lifetime::Ended) {
+      const Pointer Ptr = S.Current->getLocalPointer(Local.Offset);
       return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
+    }
+
+    S.deallocate(LocalBlock);
   }
 
-  S.Current->destroy(I);
   return true;
 }
 
