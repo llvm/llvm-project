@@ -120,6 +120,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   MCRegister matchRegisterNameHelper(StringRef Name) const;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  bool parseCFIRegister(int64_t &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
@@ -1944,6 +1945,24 @@ bool RISCVAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
   if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
     return Error(StartLoc, "invalid register name");
   return false;
+}
+
+bool RISCVAsmParser::parseCFIRegister(int64_t &Reg, SMLoc &StartLoc,
+                                      SMLoc &EndLoc) {
+  if (getLexer().is(AsmToken::Identifier)) {
+    const AsmToken &Tok = getParser().getTok();
+    if (const auto *SysReg =
+            RISCVSysReg::lookupSysRegByName(Tok.getIdentifier())) {
+      // RISC-V DWARF register numbers for CSRs start at 4096.
+      constexpr int64_t FirstCSRDwarfReg = 4096;
+      Reg = FirstCSRDwarfReg + SysReg->Encoding;
+      StartLoc = Tok.getLoc();
+      EndLoc = Tok.getEndLoc();
+      getParser().Lex();
+      return false;
+    }
+  }
+  return MCTargetAsmParser::parseCFIRegister(Reg, StartLoc, EndLoc);
 }
 
 ParseStatus RISCVAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
