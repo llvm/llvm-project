@@ -78,14 +78,28 @@ llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
   %0 = llvm.mlir.undef : !llvm.array<4 x !llvm.array<4 x f32>>
 
-  // CHECK: insertvalue
-  // CHECK: insertvalue
+  // CHECK-NOT: insertvalue
   // CHECK: extractvalue
   %1 = llvm.insertvalue %f0, %0[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %2 = llvm.insertvalue %arr, %1[0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
 
   llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_nested_extractvalue
+// CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32)
+// CHECK-NOT: insertvalue
+// CHECK-NOT: extractvalue
+// CHECK: llvm.return %[[arg1]] : i32
+llvm.func @fold_nested_extractvalue(%arg1: i32, %arg2: i32) -> i32 {
+  %0 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %1 = llvm.insertvalue %arg1, %0[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %2 = llvm.insertvalue %arg2, %1[0, 1] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %3 = llvm.extractvalue %2[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  llvm.return %3 : i32
 }
 
 // -----
@@ -103,10 +117,10 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // -----
 // CHECK-LABEL: fold_extract_extractvalue
 llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
-  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0]
   // CHECK-NOT: extractvalue
-  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
-  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)>
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>>
   llvm.return %b : !llvm.ptr<1>
 }
 
@@ -167,6 +181,30 @@ llvm.func @fold_extract_sparse() -> f32 {
   // CHECK: llvm.fadd %[[C42]], %[[C0]]
   %3 = llvm.fadd %1, %2 : f32
   llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_splat_rank_mismatch
+llvm.func @no_fold_extract_splat_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(dense<23> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: no_fold_extract_sparse_rank_mismatch
+llvm.func @no_fold_extract_sparse_rank_mismatch() -> vector<2xi32> {
+  %0 = llvm.mlir.constant(dense<12> : vector<2xi32>) : vector<2xi32>
+  %1 = llvm.mlir.constant(sparse<[[0, 0]], [23]> : vector<4x2xi32>) : !llvm.array<4 x vector<2xi32>>
+  // CHECK: extractvalue
+  %2 = llvm.extractvalue %1[0] : !llvm.array<4 x vector<2xi32>>
+  %3 = llvm.shl %0, %2 : vector<2xi32>
+  llvm.return %3 : vector<2xi32>
 }
 
 // -----
@@ -412,4 +450,20 @@ llvm.func @inline_asm_side_effects(%x : i32) {
   // CHECK: llvm.inline_asm has_side_effects "inline asm with side effects"
   llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @metadata_as_value_dedup
+llvm.func @metadata_as_value_dedup() -> i32 {
+  // CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK-NOT: llvm.mlir.metadata_as_value
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %2 = llvm.call_intrinsic "llvm.read_register.i32"(%0) : (!llvm.metadata) -> i32
+  // CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]])
+  %3 = llvm.call_intrinsic "llvm.read_register.i32"(%1) : (!llvm.metadata) -> i32
+  %4 = llvm.add %2, %3 : i32
+  llvm.return %4 : i32
 }

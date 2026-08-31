@@ -17,7 +17,7 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; CHECK-NEXT:    mov r9, r13
 ; CHECK-NEXT:    call #cosf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r14
+; CHECK-NEXT:    mov r12, r13
 ; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    pop r10
 ; CHECK-NEXT:    pop r9
@@ -60,34 +60,33 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; CHECK-NEXT:    push r8
 ; CHECK-NEXT:    push r9
 ; CHECK-NEXT:    push r10
-; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    mov r13, r12
+; CHECK-NEXT:    mov r13, r7
 ; CHECK-NEXT:    call #__extendhfsf2
-; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mov r13, r9
+; CHECK-NEXT:    mov r12, r9
+; CHECK-NEXT:    mov r13, r8
 ; CHECK-NEXT:    call #sinf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r8
+; CHECK-NEXT:    mov r12, r10
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    call #__extendhfsf2
-; CHECK-NEXT:    mov r12, r6
-; CHECK-NEXT:    mov r13, r5
-; CHECK-NEXT:    call #cosf
-; CHECK-NEXT:    call #__truncsfhf2
 ; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    mov r5, r13
+; CHECK-NEXT:    mov r13, r6
 ; CHECK-NEXT:    call #sinf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r6
-; CHECK-NEXT:    mov r10, r12
-; CHECK-NEXT:    mov r9, r13
+; CHECK-NEXT:    mov r12, r5
+; CHECK-NEXT:    mov r9, r12
+; CHECK-NEXT:    mov r8, r13
+; CHECK-NEXT:    call #cosf
+; CHECK-NEXT:    call #__truncsfhf2
+; CHECK-NEXT:    mov r12, r9
+; CHECK-NEXT:    mov r7, r12
+; CHECK-NEXT:    mov r6, r13
 ; CHECK-NEXT:    call #cosf
 ; CHECK-NEXT:    call #__truncsfhf2
 ; CHECK-NEXT:    mov r12, r15
-; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    mov r8, r13
-; CHECK-NEXT:    mov r7, r14
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:    mov r5, r13
+; CHECK-NEXT:    mov r9, r14
 ; CHECK-NEXT:    pop r10
 ; CHECK-NEXT:    pop r9
 ; CHECK-NEXT:    pop r8
@@ -274,79 +273,6 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ; CHECK-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
-}
-
-define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
-; CHECK-LABEL: test_sincos_f128:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r4
-; CHECK-NEXT:    push r5
-; CHECK-NEXT:    push r6
-; CHECK-NEXT:    push r7
-; CHECK-NEXT:    push r8
-; CHECK-NEXT:    push r9
-; CHECK-NEXT:    push r10
-; CHECK-NEXT:    sub #48, r1
-; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mov 78(r1), r12
-; CHECK-NEXT:    mov r12, 14(r1)
-; CHECK-NEXT:    mov 76(r1), r12
-; CHECK-NEXT:    mov r12, 12(r1)
-; CHECK-NEXT:    mov 74(r1), r7
-; CHECK-NEXT:    mov r7, 10(r1)
-; CHECK-NEXT:    mov 72(r1), r6
-; CHECK-NEXT:    mov r6, 8(r1)
-; CHECK-NEXT:    mov 70(r1), r5
-; CHECK-NEXT:    mov r5, 6(r1)
-; CHECK-NEXT:    mov 68(r1), r4
-; CHECK-NEXT:    mov r4, 4(r1)
-; CHECK-NEXT:    mov 66(r1), r9
-; CHECK-NEXT:    mov r9, 2(r1)
-; CHECK-NEXT:    mov 64(r1), r8
-; CHECK-NEXT:    mov r8, 0(r1)
-; CHECK-NEXT:    mov r1, r12
-; CHECK-NEXT:    add #16, r12
-; CHECK-NEXT:    call #cosl
-; CHECK-NEXT:    mov 78(r1), r12
-; CHECK-NEXT:    mov r12, 14(r1)
-; CHECK-NEXT:    mov 76(r1), r12
-; CHECK-NEXT:    mov r12, 12(r1)
-; CHECK-NEXT:    mov r7, 10(r1)
-; CHECK-NEXT:    mov r6, 8(r1)
-; CHECK-NEXT:    mov r5, 6(r1)
-; CHECK-NEXT:    mov r4, 4(r1)
-; CHECK-NEXT:    mov r9, 2(r1)
-; CHECK-NEXT:    mov r8, 0(r1)
-; CHECK-NEXT:    mov r1, r12
-; CHECK-NEXT:    add #32, r12
-; CHECK-NEXT:    call #sinl
-; CHECK-NEXT:    mov 30(r1), 30(r10)
-; CHECK-NEXT:    mov 28(r1), 28(r10)
-; CHECK-NEXT:    mov 26(r1), 26(r10)
-; CHECK-NEXT:    mov 24(r1), 24(r10)
-; CHECK-NEXT:    mov 22(r1), 22(r10)
-; CHECK-NEXT:    mov 20(r1), 20(r10)
-; CHECK-NEXT:    mov 18(r1), 18(r10)
-; CHECK-NEXT:    mov 16(r1), 16(r10)
-; CHECK-NEXT:    mov 46(r1), 14(r10)
-; CHECK-NEXT:    mov 44(r1), 12(r10)
-; CHECK-NEXT:    mov 42(r1), 10(r10)
-; CHECK-NEXT:    mov 40(r1), 8(r10)
-; CHECK-NEXT:    mov 38(r1), 6(r10)
-; CHECK-NEXT:    mov 36(r1), 4(r10)
-; CHECK-NEXT:    mov 34(r1), 2(r10)
-; CHECK-NEXT:    mov 32(r1), 0(r10)
-; CHECK-NEXT:    add #48, r1
-; CHECK-NEXT:    pop r10
-; CHECK-NEXT:    pop r9
-; CHECK-NEXT:    pop r8
-; CHECK-NEXT:    pop r7
-; CHECK-NEXT:    pop r6
-; CHECK-NEXT:    pop r5
-; CHECK-NEXT:    pop r4
-; CHECK-NEXT:    ret
-  %result = call { fp128, fp128 } @llvm.sincos.f16(fp128 %a)
-  ret { fp128, fp128 } %result
 }
 
 attributes #0 = { nounwind }

@@ -107,7 +107,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; MACHO:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; MACHO:   ret i32 %[[REG]]
 ; MACHO: }
-; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
+; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {{.*}} {
 ; ELFRT-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; ELFRT-NOT:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; PS: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {

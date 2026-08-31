@@ -21,19 +21,19 @@
 define spir_kernel void @testFAdd_float(float %a, float %b, ptr addrspace(1) %out) {
 entry:
   %r1 = fadd float %a, %b
-  store volatile float %r1, float addrspace(1)* %out
+  store volatile float %r1, ptr addrspace(1) %out
   %r2 = fadd nnan float %a, %b
-  store volatile float %r2, float addrspace(1)* %out
+  store volatile float %r2, ptr addrspace(1) %out
   %r3 = fadd ninf float %a, %b
-  store volatile float %r3, float addrspace(1)* %out
+  store volatile float %r3, ptr addrspace(1) %out
   %r4 = fadd nsz float %a, %b
-  store volatile float %r4, float addrspace(1)* %out
+  store volatile float %r4, ptr addrspace(1) %out
   %r5 = fadd arcp float %a, %b
-  store volatile float %r5, float addrspace(1)* %out
+  store volatile float %r5, ptr addrspace(1) %out
   %r6 = fadd fast float %a, %b
-  store volatile float %r6, float addrspace(1)* %out
+  store volatile float %r6, ptr addrspace(1) %out
   %r7 = fadd nnan ninf float %a, %b
-  store volatile float %r7, float addrspace(1)* %out
+  store volatile float %r7, ptr addrspace(1) %out
   ret void
 }
 
@@ -45,21 +45,21 @@ entry:
 ; CHECK-SPIRV:     %[[#]] = OpFAdd %[[#double]]
 ; CHECK-SPIRV:     %[[#]] = OpFAdd %[[#double]]
 
-define spir_kernel void @testFAdd_double(double %a, double %b, double addrspace(1)* %out) local_unnamed_addr {
+define spir_kernel void @testFAdd_double(double %a, double %b, ptr addrspace(1) %out) local_unnamed_addr {
 entry:
   %r11 = fadd double %a, %b
-  store volatile double %r11, double addrspace(1)* %out
+  store volatile double %r11, ptr addrspace(1) %out
   %r12 = fadd nnan double %a, %b
-  store volatile double %r12, double addrspace(1)* %out
+  store volatile double %r12, ptr addrspace(1) %out
   %r13 = fadd ninf double %a, %b
-  store volatile double %r13, double addrspace(1)* %out
+  store volatile double %r13, ptr addrspace(1) %out
   %r14 = fadd nsz double %a, %b
-  store volatile double %r14, double addrspace(1)* %out
+  store volatile double %r14, ptr addrspace(1) %out
   %r15 = fadd arcp double %a, %b
-  store volatile double %r15, double addrspace(1)* %out
+  store volatile double %r15, ptr addrspace(1) %out
   %r16 = fadd fast double %a, %b
-  store volatile double %r16, double addrspace(1)* %out
+  store volatile double %r16, ptr addrspace(1) %out
   %r17 = fadd nnan ninf double %a, %b
-  store volatile double %r17, double addrspace(1)* %out
+  store volatile double %r17, ptr addrspace(1) %out
   ret void
 }

@@ -160,3 +160,76 @@ define <8 x float> @concat_roundps_v8f32_v4f32_mismatch(<4 x float> %a0, <4 x fl
   %res  = shufflevector <4 x float> %v0, <4 x float> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %res
 }
+
+; FIXME: late expansion of roundps prevents concatenation of comparisons
+define i8 @concat_roundps_cmp_v8f32_v4f32(<4 x float> %x0, <4 x float> %x1, <4 x float> %y0, <4 x float> %y1) {
+; AVX1OR2-LABEL: concat_roundps_cmp_v8f32_v4f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vroundps $4, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vroundps $4, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vcmpltps %xmm2, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vcmpltps %xmm3, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1OR2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1OR2-NEXT:    retq
+;
+; AVX512-LABEL: concat_roundps_cmp_v8f32_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $4, %ymm0, %ymm0
+; AVX512-NEXT:    vcmpltps %ymm2, %ymm0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %rnd0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %x0, i32 4)
+  %rnd1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %x1, i32 4)
+  %cmp0 = fcmp olt <4 x float> %rnd0, %y0
+  %cmp1 = fcmp olt <4 x float> %rnd1, %y1
+  %concat = shufflevector <4 x i1> %cmp0, <4 x i1> %cmp1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res = bitcast <8 x i1> %concat to i8
+  ret i8 %res
+}
+
+define i16 @concat_roundps_cmp_v8f32(<8 x float> %x0, <8 x float> %x1, <8 x float> %y0, <8 x float> %y1) {
+; AVX1OR2-LABEL: concat_roundps_cmp_v8f32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vroundps $4, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vroundps $4, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1OR2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vcmpltps %ymm3, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1OR2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1OR2-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX1OR2-NEXT:    vzeroupper
+; AVX1OR2-NEXT:    retq
+;
+; AVX512-LABEL: concat_roundps_cmp_v8f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm2, %zmm2
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vrndscaleps $4, %zmm0, %zmm0
+; AVX512-NEXT:    vcmpltps %zmm2, %zmm0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %rnd0 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %x0, i32 4)
+  %rnd1 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %x1, i32 4)
+  %cmp0 = fcmp olt <8 x float> %rnd0, %y0
+  %cmp1 = fcmp olt <8 x float> %rnd1, %y1
+  %concat = shufflevector <8 x i1> %cmp0, <8 x i1> %cmp1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res = bitcast <16 x i1> %concat to i16
+  ret i16 %res
+}

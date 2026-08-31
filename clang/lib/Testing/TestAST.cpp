@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Testing/TestAST.h"
+
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnostic.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
-
 #include "gtest/gtest.h"
 #include <string>
 
@@ -80,8 +81,8 @@ TestAST::TestAST(const TestInputs &In) {
   Clang = std::make_unique<CompilerInstance>();
   // If we don't manage to finish parsing, create CompilerInstance components
   // anyway so that the test will see an empty AST instead of crashing.
-  auto RecoverFromEarlyExit =
-      llvm::make_scope_exit([&] { createMissingComponents(*Clang); });
+  llvm::scope_exit RecoverFromEarlyExit(
+      [&] { createMissingComponents(*Clang); });
 
   std::string Filename = In.FileName;
   if (Filename.empty())

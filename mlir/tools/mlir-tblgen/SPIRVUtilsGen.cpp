@@ -496,9 +496,17 @@ static mlir::GenRegistration
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
 constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
-    "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
-    "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
-    "SPIRV_MatrixLayoutAttr"};
+    "SPIRV_ScopeAttr",
+    "SPIRV_KHR_CooperativeMatrixUseAttr",
+    "SPIRV_KHR_CooperativeMatrixLayoutAttr",
+    "SPIRV_MemorySemanticsAttr",
+    "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
+    "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
+    "SPIRV_QuadSwapDirectionAttr",
+};
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
@@ -506,9 +514,9 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
 static void emitAttributeSerialization(const Attribute &attr,
                                        ArrayRef<SMLoc> loc, StringRef tabs,
                                        StringRef opVar, StringRef operandList,
-                                       StringRef attrName, raw_ostream &os) {
+                                       StringRef getterName, raw_ostream &os) {
   os << tabs
-     << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
+     << formatv("if (auto attr = {0}.{1}Attr()) {{\n", opVar, getterName);
   if (llvm::is_contained(constantIdEnumAttrs, attr.getAttrDefName())) {
     EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
@@ -552,6 +560,19 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_TensorArmAxisAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName())) {
+    os << tabs
+       << formatv(
+              "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
+              operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -607,7 +628,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
     for (const NamedAttribute &attr : op.getAttributes()) {
       emitAttributeSerialization(
           (attr.attr.isOptional() ? attr.attr.getBaseAttr() : attr.attr), loc,
-          tabs, opVar, operands, attr.name, os);
+          tabs, opVar, operands, op.getGetterName(attr.name), os);
       os << tabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr.name);
     }
@@ -638,7 +659,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
-          loc, newtabs, opVar, operands, attr->name, os);
+          loc, newtabs, opVar, operands, op.getGetterName(attr->name), os);
       os << newtabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr->name);
     }
@@ -681,7 +702,10 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
                                         StringRef resultID, raw_ostream &os) {
   if (op.getNumResults() == 1) {
     // All non-argument attributes translated into OpDecorate instruction
-    os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
+    os << tabs
+       << formatv("for (auto attr : "
+                  "{0}->getDiscardableAttrDictionary().getValue()) {{\n",
+                  opVar);
     os << tabs
        << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
                   elidedAttrs);
@@ -846,6 +870,26 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName()) ||
+             attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("std::optional<std::pair<Attribute, Type>> c = "
+                  "getConstant({0}[{1}++]);\n",
+                  words, wordIndex);
+    os << tabs << "if (!c.has_value()) {\n";
+    os << tabs
+       << formatv("  "
+                  "return emitError(unknownLoc, \"could not fetch "
+                  "constant attribute for {0}\") << "
+                  "{1} << \" of \" << {2}.size() << \" processed\";\n",
+                  attrName, wordIndex, words);
+    os << tabs << "}\n";
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "c.value().first));\n",
+                  attrList, attrName);
   } else {
     PrintFatalError(
         loc, llvm::Twine(

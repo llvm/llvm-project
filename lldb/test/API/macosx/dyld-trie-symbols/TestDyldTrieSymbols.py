@@ -12,7 +12,7 @@ class DyldTrieSymbolsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_dyld_trie_symbols(self):
         """Test that we make create symbol table entries from the dyld trie data structure."""
         self.build()

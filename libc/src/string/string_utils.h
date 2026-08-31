@@ -124,6 +124,12 @@ LIBC_INLINE void *find_first_character(const unsigned char *src,
   return find_first_character_impl(src, ch, max_strlen);
 }
 
+LIBC_INLINE size_t strnlen(const char *s, size_t max_len) {
+  const void *temp = internal::find_first_character(
+      reinterpret_cast<const unsigned char *>(s), '\0', max_len);
+  return temp ? reinterpret_cast<const char *>(temp) - s : max_len;
+}
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 

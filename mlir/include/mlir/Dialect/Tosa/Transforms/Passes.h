@@ -41,6 +41,8 @@ void populateTosaConstantReduction(MLIRContext *ctx,
 void populateTosaTypeConversion(TypeConverter &converter);
 
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
+std::unique_ptr<Pass>
+createTosaInputShapePass(std::vector<std::string> args = {});
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"

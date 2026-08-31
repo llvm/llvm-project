@@ -5,12 +5,12 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %0 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %0 x i32 {bindc_name = "cond"} : (i64) -> !llvm.ptr
     %6 = llvm.load %3 : !llvm.ptr -> i32
-    %7 = llvm.mlir.constant(0 : i64) : i32
+    %7 = llvm.mlir.constant(0 : i32) : i32
     %8 = llvm.icmp "ne" %6, %7 : i32
-    %9 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "cond"}
-    %10 = omp.map.info var_ptr(%arg0 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "var"}
-    %11 = omp.map.info var_ptr(%arg1 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "val"}
-    omp.target if(%8) nowait map_entries(%10 -> %arg3, %11 -> %arg4 : !llvm.ptr, !llvm.ptr) {
+    %9 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("cond") -> !llvm.ptr
+    %10 = omp.map.info var_ptr(%arg0 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("var") -> !llvm.ptr
+    %11 = omp.map.info var_ptr(%arg1 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("val") -> !llvm.ptr
+    omp.target kernel_type(generic) if(%8) nowait map_entries(%10 -> %arg3, %11 -> %arg4 : !llvm.ptr, !llvm.ptr) {
       %12 = llvm.load %arg4 : !llvm.ptr -> f32
       llvm.store %12, %arg3 : f32, !llvm.ptr
       omp.terminator

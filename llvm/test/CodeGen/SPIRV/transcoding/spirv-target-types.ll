@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability Float16
 ; CHECK-DAG: OpCapability ImageBasic
@@ -10,7 +10,9 @@
 ; CHECK-DAG: %[[#VOID:]] = OpTypeVoid
 ; CHECK-DAG: %[[#INT:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#HALF:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#BFLOAT:]] = OpTypeFloat 16 0
 ; CHECK-DAG: %[[#FLOAT:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#DOUBLE:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#PIPE_RD:]] = OpTypePipe ReadOnly
 ; CHECK-DAG: %[[#PIPE_WR:]] = OpTypePipe WriteOnly
 ; CHECK-DAG: %[[#IMG1D_RD:]] = OpTypeImage %[[#VOID]] 1D 0 0 0 0 Unknown ReadOnly
@@ -20,7 +22,9 @@
 ; CHECK-DAG: %[[#IMG2DD_RD:]] = OpTypeImage %[[#FLOAT]] Buffer 0 0 0
 ; CHECK-DAG: %[[#IMG1D_WR:]] = OpTypeImage %[[#VOID]] 1D 0 0 0 0 Unknown WriteOnly
 ; CHECK-DAG: %[[#IMG2D_RW:]] = OpTypeImage %[[#VOID]] 2D 0 0 0 0 Unknown ReadWrite
+; CHECK-DAG: %[[#IMG2DBF_RD:]] = OpTypeImage %[[#BFLOAT]] 2D 0 0 0 0
 ; CHECK-DAG: %[[#IMG1DB_RD:]] = OpTypeImage %[[#FLOAT]] 2D 1 0 0 0
+; CHECK-DAG: %[[#IMG2DDBL_RD:]] = OpTypeImage %[[#DOUBLE]] 2D 0 0 0 0
 
 ; CHECK-DAG: %[[#DEVEVENT:]] = OpTypeDeviceEvent
 ; CHECK-DAG: %[[#EVENT:]] = OpTypeEvent
@@ -39,6 +43,8 @@
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG2DD_RD]]
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG1D_WR]]
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG2D_RW]]
+; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG2DBF_RD]]
+; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#IMG2DDBL_RD]]
 
 define spir_kernel void @foo(
   target("spirv.Pipe", 0) %a,
@@ -49,7 +55,9 @@ define spir_kernel void @foo(
   target("spirv.Image", half, 1, 0, 1, 0, 0, 0, 0) %f1,
   target("spirv.Image", float, 5, 0, 0, 0, 0, 0, 0) %g1,
   target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 1) %c2,
-  target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 2) %d3) #0 !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
+  target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 2) %d3,
+  target("spirv.Image", bfloat, 1, 0, 0, 0, 0, 0, 0) %i1,
+  target("spirv.Image", double, 1, 0, 0, 0, 0, 0, 0) %h1) #0 !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
 entry:
   ret void
 }
@@ -93,11 +101,11 @@ attributes #0 = { nounwind readnone "less-precise-fpmad"="false" "no-frame-point
 !opencl.used.optional.core.features = !{!9}
 !opencl.compiler.options = !{!8}
 
-!1 = !{i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1}
-!2 = !{!"read_only", !"write_only", !"read_only", !"read_only", !"read_only", !"read_only", !"read_only", !"write_only", !"read_write"}
-!3 = !{!"int", !"int", !"image1d_t", !"image2d_t", !"image3d_t", !"image2d_array_t", !"image1d_buffer_t", !"image1d_t", !"image2d_t"}
-!4 = !{!"int", !"int", !"image1d_t", !"image2d_t", !"image3d_t", !"image2d_array_t", !"image1d_buffer_t", !"image1d_t", !"image2d_t"}
-!5 = !{!"pipe", !"pipe", !"", !"", !"", !"", !"", !"", !""}
+!1 = !{i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1}
+!2 = !{!"read_only", !"write_only", !"read_only", !"read_only", !"read_only", !"read_only", !"read_only", !"write_only", !"read_write", !"read_only", !"read_only"}
+!3 = !{!"int", !"int", !"image1d_t", !"image2d_t", !"image3d_t", !"image2d_array_t", !"image1d_buffer_t", !"image1d_t", !"image2d_t", !"image2d_t", !"image2d_t"}
+!4 = !{!"int", !"int", !"image1d_t", !"image2d_t", !"image3d_t", !"image2d_array_t", !"image1d_buffer_t", !"image1d_t", !"image2d_t", !"image2d_t", !"image2d_t"}
+!5 = !{!"pipe", !"pipe", !"", !"", !"", !"", !"", !"", !"", !"", !""}
 !6 = !{i32 1, i32 2}
 !7 = !{i32 2, i32 0}
 !8 = !{!"cl_khr_fp16"}

@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -34,6 +35,13 @@ LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   return [IsExtendedInts, TypeIdx](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     return IsExtendedInts && Ty.isValid() && Ty.isScalar();
+  };
+}
+
+LegalityPredicate typeOfLongVectors(unsigned TypeIdx, bool IsLongVecs) {
+  return [TypeIdx, IsLongVecs](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return IsLongVecs && Ty.isValid() && Ty.isVector();
   };
 }
 
@@ -100,11 +108,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,    p5,     p6,     p7,    p8,
-      p9,    p10,   p11,   p12,   p13,   s1,     s8,     s16,   s32,
-      s64,   v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16,
-      v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,
-      v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,    p5,    p6,     p7,     p8,
+      p9,    p10,   p11,   p12,   p13,   s1,    s8,     s16,    s32,
+      s64,   s128,  v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,
+      v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,
+      v8s8,  v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -123,20 +131,40 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       v4s1,  v4s8,  v4s16, v4s32, v4s64,  v8s1,   v8s8,  v8s16,
       v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
+  auto allShaderScalarsAndVectors = {
+      s1,   s8,   s16,   s32,   s64,   s128, v2s1, v2s8,  v2s16, v2s32, v2s64,
+      v3s1, v3s8, v3s16, v3s32, v3s64, v4s1, v4s8, v4s16, v4s32, v4s64};
+
+  auto &allowedScalarsAndVectors =
+      ST.isShader() ? allShaderScalarsAndVectors : allScalarsAndVectors;
+
   auto allIntScalarsAndVectors = {
       s8,    s16,   s32,   s64,   s128,   v2s8,   v2s16, v2s32, v2s64,
       v3s8,  v3s16, v3s32, v3s64, v4s8,   v4s16,  v4s32, v4s64, v8s8,
       v8s16, v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
 
   auto allBoolScalarsAndVectors = {s1, v2s1, v3s1, v4s1, v8s1, v16s1};
+  auto allBoolVectors = {v2s1, v3s1, v4s1, v8s1, v16s1};
 
   auto allIntScalars = {s8, s16, s32, s64, s128};
 
   auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
+  auto allFloatScalars = {s16, s32, s64};
+
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto allShaderFloatVectors = {v2s16, v2s32, v2s64, v3s16, v3s32,
+                                v3s64, v4s16, v4s32, v4s64};
+
+  auto allFloatVectors = {v2s16, v2s32, v2s64,  v3s16,  v3s32,
+                          v3s64, v4s16, v4s32,  v4s64,  v8s16,
+                          v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto &allowedFloatVectorTypes =
+      ST.isShader() ? allShaderFloatVectors : allFloatVectors;
 
   auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0,  p1,
                                        p2, p3,  p4,  p5,  p6,  p7,
@@ -146,23 +174,26 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto &allowedVectorTypes = ST.isShader() ? allShaderVectors : allVectors;
 
+  bool HasArbitraryPrecisionInts = ST.canUseExtension(
+      SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
   bool IsExtendedInts =
-      ST.canUseExtension(
-          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      HasArbitraryPrecisionInts ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
-  auto extendedScalarsAndVectors =
+  bool IsLongVecs = ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
+  auto ExtendedIntScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
-        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+        return IsExtendedInts && Ty.isValid() &&
+               !Ty.isPointerOrPointerVector() && Ty.getScalarSizeInBits() > 1;
       };
-  auto extendedScalarsAndVectorsProduct = [IsExtendedInts](
+  auto ExtendedScalarsAndVectorsProduct = [IsExtendedInts](
                                               const LegalityQuery &Query) {
     const LLT Ty1 = Query.Types[0], Ty2 = Query.Types[1];
     return IsExtendedInts && Ty1.isValid() && Ty2.isValid() &&
            !Ty1.isPointerOrPointerVector() && !Ty2.isPointerOrPointerVector();
   };
-  auto extendedPtrsScalarsAndVectors =
+  auto ExtendedPtrsScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
         return IsExtendedInts && Ty.isValid();
@@ -175,6 +206,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // non-shader contexts, vector sizes of 8 and 16 are also permitted, but
   // arbitrary sizes (e.g., 6 or 11) are not.
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
+  LLVM_DEBUG(dbgs() << "MaxVectorSize: " << MaxVectorSize << "\n");
 
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
     switch (Opc) {
@@ -189,6 +221,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       getActionDefinitionsBuilder(Opc)
           .customFor(allScalars)
           .customFor(allowedVectorTypes)
+          .customIf(typeOfLongVectors(0, IsLongVecs))
           .moreElementsToNextPow2(0)
           .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                            LegalizeMutations::changeElementCountTo(
@@ -201,6 +234,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_UREM, G_SREM, G_SDIV, G_UDIV, G_FREM})
       .customFor(allScalars)
       .customFor(allowedVectorTypes)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .scalarizeIf(numElementsNotPow2(0), 0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -210,6 +244,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allScalars)
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -220,13 +255,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .legalIf(typeOfLongVectors(1, IsLongVecs))
       .moreElementsToNextPow2(0)
       .lowerIf(vectorElementCountIsGreaterThan(0, MaxVectorSize))
       .moreElementsToNextPow2(1)
-      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize))
-      .alwaysLegal();
+      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize));
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .customIf(typeOfLongVectors(1, IsLongVecs))
       .moreElementsToNextPow2(1)
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -234,6 +271,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .custom();
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -243,6 +281,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Illegal G_UNMERGE_VALUES instructions should be handled
   // during the combine phase.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize))
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -255,6 +294,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // we turn it back into a call to the intrinsic with a custom rule to avoid
   // potential machine verifier failures.
   getActionDefinitionsBuilder(G_BITCAST)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .moreElementsToNextPow2(1)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
@@ -266,10 +306,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // If the result is still illegal, the combiner should be able to remove it.
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
-      .moreElementsToNextPow2(0);
+      .legalIf(LegalityPredicates::any(typeOfLongVectors(0, IsLongVecs),
+                                       typeOfLongVectors(1, IsLongVecs)));
 
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementSizeTo(0, MaxVectorSize))
@@ -282,6 +324,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
        G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
        G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       .legalFor(allowedVectorTypes)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .scalarize(1)
       .lower();
 
@@ -292,33 +335,43 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // Illegal G_UNMERGE_VALUES instructions should be handled
   // during the combine phase.
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+      .legalIf(LegalityPredicates::any(typeOfLongVectors(0, IsLongVecs),
+                                       typeOfLongVectors(1, IsLongVecs)))
       .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize));
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE})
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
-  getActionDefinitionsBuilder(G_MEMSET)
+  getActionDefinitionsBuilder({G_MEMSET, G_MEMSET_INLINE})
       .unsupportedIf(typeIs(0, p9))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-      .unsupportedIf(
-          LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
-                                  all(typeIsNot(0, p9), typeIs(1, p9))))
       .legalForCartesianProduct(allPtrs, allPtrs);
 
+  // Should we be legalizing bad scalar sizes like s5 here instead
+  // of handling them in the instruction selector?
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .unsupportedIf(typeIs(1, p9))
-      .legalIf(typeInSet(1, allPtrs));
+      .legalForCartesianProduct(allowedVectorTypes, allPtrs)
+      .legalForCartesianProduct(allPtrs, allPtrs)
+      .legalIf(isScalar(0))
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .custom();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectors);
+      .legalIf(ExtendedIntScalarsAndVectors)
+      // LLVM i1 maps to OpTypeBool, not OpTypeInt.
+      .scalarizeIf(typeInSet(0, allBoolVectors), 0)
+      .minScalar(0, s32);
 
-  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+  getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
+
+  getActionDefinitionsBuilder({G_FLDEXP, G_STRICT_FLDEXP})
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
@@ -335,16 +388,34 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_CTPOP)
       .legalForCartesianProduct(allIntScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct);
+      .legalIf(ExtendedScalarsAndVectorsProduct)
+      .legalIf(typeOfLongVectors(0, IsLongVecs));
 
-  // Extensions.
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct(allScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct);
+      .legalForCartesianProduct(allowedScalarsAndVectors)
+      .legalIf(ExtendedScalarsAndVectorsProduct)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
+
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .lowerIf(typeOfLongVectors(0, IsLongVecs))
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .lower();
 
   getActionDefinitionsBuilder(G_PHI)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
       .legalFor(allPtrsScalarsAndVectors)
-      .legalIf(extendedPtrsScalarsAndVectors);
+      .legalIf(ExtendedPtrsScalarsAndVectors)
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),
@@ -354,6 +425,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor({s1, s128})
       .legalFor(allFloatAndIntScalarsAndPtrs)
       .legalFor(allowedVectorTypes)
+      .legalIf([](const LegalityQuery &Query) {
+        return Query.Types[0].isPointerVector();
+      })
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -364,15 +439,41 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
-          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT DstTy = Query.Types[0];
+        const LLT SrcTy = Query.Types[1];
+        return DstTy.isPointerVector() && SrcTy.isVector() &&
+               !SrcTy.isPointer() &&
+               DstTy.getNumElements() == SrcTy.getNumElements();
+      });
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct(allIntScalars, allPtrs)
       .legalIf(
-          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)));
+          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT DstTy = Query.Types[0];
+        const LLT SrcTy = Query.Types[1];
+        return SrcTy.isPointerVector() && DstTy.isVector() &&
+               !DstTy.isPointer() &&
+               DstTy.getNumElements() == SrcTy.getNumElements();
+      });
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
           all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
+
+  getActionDefinitionsBuilder(G_PTRMASK)
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT PtrTy = Query.Types[0];
+        const LLT MaskTy = Query.Types[1];
+        return PtrTy.isPointerVector() && MaskTy.isVector() &&
+               !MaskTy.isPointer() &&
+               PtrTy.getNumElements() == MaskTy.getNumElements();
+      });
 
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().
@@ -380,12 +481,22 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           1, ElementCount::getFixed(MaxVectorSize)))
+      .legalIf([IsExtendedInts](const LegalityQuery &Query) {
+        const LLT Ty = Query.Types[1];
+        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+      })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
                     typeInSet(1, allPtrsScalarsAndVectors)));
 
-  getActionDefinitionsBuilder(G_FCMP).legalIf(
-      all(typeInSet(0, allBoolScalarsAndVectors),
-          typeInSet(1, allFloatScalarsAndVectors)));
+  getActionDefinitionsBuilder(G_FCMP)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           1, ElementCount::getFixed(MaxVectorSize)))
+      .legalIf(all(typeInSet(0, allBoolScalarsAndVectors),
+                   typeInSet(1, allFloatScalarsAndVectors)));
 
   getActionDefinitionsBuilder({G_ATOMICRMW_OR, G_ATOMICRMW_ADD, G_ATOMICRMW_AND,
                                G_ATOMICRMW_MAX, G_ATOMICRMW_MIN,
@@ -404,10 +515,19 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG).alwaysLegal();
+  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
 
-  getActionDefinitionsBuilder(
-      {G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO})
+  getActionDefinitionsBuilder({G_UADDO, G_USUBO, G_UMULO, G_SMULO})
       .alwaysLegal();
+
+  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
+
+  // Lowering widens s64 to s128, which needs
+  // SPV_ALTERA_arbitrary_precision_integers. Mark s64 unsupported otherwise.
+  auto &MulFix = getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX});
+  if (!HasArbitraryPrecisionInts)
+    MulFix.unsupportedFor({s64});
+  MulFix.lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
@@ -423,6 +543,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor(allPtrs);
 
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
   getActionDefinitionsBuilder(G_FFREXP).legalForCartesianProduct(
@@ -432,11 +553,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
+  // clang-format off
   getActionDefinitionsBuilder({G_STRICT_FSQRT,
                                G_FPOW,
                                G_FEXP,
                                G_FMODF,
+                               G_FSINCOS,
                                G_FEXP2,
+                               G_FEXP10,
                                G_FLOG,
                                G_FLOG2,
                                G_FLOG10,
@@ -463,7 +587,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMINIMUM,
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
-      .legalFor(allFloatScalarsAndVectors);
+      .legalFor(allFloatScalars)
+      .legalFor(allowedFloatVectorTypes)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                   0, ElementCount::getFixed(MaxVectorSize)))
+        .moreElementsToNextPow2(0);
+  // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
@@ -474,7 +604,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     getActionDefinitionsBuilder(
-        {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
+        {G_CTTZ, G_CTTZ_ZERO_POISON, G_CTLZ, G_CTLZ_ZERO_POISON})
         .legalForCartesianProduct(allIntScalarsAndVectors,
                                   allIntScalarsAndVectors);
 
@@ -484,12 +614,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).custom();
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_CONVERGENT,
+                               G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   verify(*ST.getInstrInfo());
 }
 
-static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                     SPIRVGlobalRegistry *GR) {
+static bool legalizeExtractVectorElt(LegalizerHelper &Helper,
+                                     MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -503,8 +638,7 @@ static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
-static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                    SPIRVGlobalRegistry *GR) {
+static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -520,7 +654,7 @@ static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
-static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
+static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVTypeInst SpvType,
                                 LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI,
                                 SPIRVGlobalRegistry *GR) {
@@ -531,6 +665,115 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
       .addDef(ConvReg)
       .addUse(Reg);
   return ConvReg;
+}
+
+static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
+  if (!Ty.isVector() ||
+      ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+    return false;
+  unsigned NumElements = Ty.getNumElements();
+  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
+  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
+         NumElements > MaxVectorSize;
+}
+
+static bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI,
+                         SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!DstTy.isVector())
+    return true;
+
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+  if (!needsVectorLegalization(DstTy, ST))
+    return true;
+
+  SmallVector<Register, 8> SplitRegs;
+  LLT EltTy = DstTy.getElementType();
+  unsigned NumElts = DstTy.getNumElements();
+
+  LLT PtrTy = MRI.getType(PtrReg);
+  auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    auto Idx = MIRBuilder.buildConstant(LLT::scalar(32), i);
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(PtrReg)
+        .addUse(Zero.getReg(0))
+        .addUse(Idx.getReg(0));
+
+    MachinePointerInfo EltPtrInfo;
+    Align EltAlign = Align(1);
+    if (!MI.memoperands_empty()) {
+      MachineMemOperand *MMO = *MI.memoperands_begin();
+      EltPtrInfo =
+          MMO->getPointerInfo().getWithOffset(i * EltTy.getSizeInBytes());
+      EltAlign = commonAlignment(MMO->getAlign(), i * EltTy.getSizeInBytes());
+    }
+
+    Register EltReg = MRI.createGenericVirtualRegister(EltTy);
+    MIRBuilder.buildLoad(EltReg, EltPtr, EltPtrInfo, EltAlign);
+    SplitRegs.push_back(EltReg);
+  }
+
+  MIRBuilder.buildBuildVector(DstReg, SplitRegs);
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
+                          SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register ValReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  LLT ValTy = MRI.getType(ValReg);
+
+  assert(ValTy.isVector() && "Expected vector store");
+
+  SmallVector<Register, 8> SplitRegs;
+  LLT EltTy = ValTy.getElementType();
+  unsigned NumElts = ValTy.getNumElements();
+
+  for (unsigned i = 0; i < NumElts; ++i)
+    SplitRegs.push_back(MRI.createGenericVirtualRegister(EltTy));
+
+  MIRBuilder.buildUnmerge(SplitRegs, ValReg);
+
+  LLT PtrTy = MRI.getType(PtrReg);
+  auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    auto Idx = MIRBuilder.buildConstant(LLT::scalar(32), i);
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(PtrReg)
+        .addUse(Zero.getReg(0))
+        .addUse(Idx.getReg(0));
+
+    MachinePointerInfo EltPtrInfo;
+    Align EltAlign = Align(1);
+    if (!MI.memoperands_empty()) {
+      MachineMemOperand *MMO = *MI.memoperands_begin();
+      EltPtrInfo =
+          MMO->getPointerInfo().getWithOffset(i * EltTy.getSizeInBytes());
+      EltAlign = commonAlignment(MMO->getAlign(), i * EltTy.getSizeInBytes());
+    }
+
+    MIRBuilder.buildStore(SplitRegs[i], EltPtr, EltPtrInfo, EltAlign);
+  }
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool SPIRVLegalizerInfo::legalizeCustom(
@@ -544,16 +787,15 @@ bool SPIRVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-    return legalizeExtractVectorElt(Helper, MI, GR);
+    return legalizeExtractVectorElt(Helper, MI);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectorElt(Helper, MI, GR);
+    return legalizeInsertVectorElt(Helper, MI);
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return legalizeIntrinsic(Helper, MI);
   case TargetOpcode::G_IS_FPCLASS:
     return legalizeIsFPClass(Helper, MI, LocObserver);
   case TargetOpcode::G_ICMP: {
-    assert(GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
     auto &Op0 = MI.getOperand(2);
     auto &Op1 = MI.getOperand(3);
     Register Reg0 = Op0.getReg();
@@ -566,73 +808,247 @@ bool SPIRVLegalizerInfo::legalizeCustom(
       LLT ConvT = LLT::scalar(ST->getPointerSize());
       Type *LLVMTy = IntegerType::get(MI.getMF()->getFunction().getContext(),
                                       ST->getPointerSize());
-      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(
+      SPIRVTypeInst SpirvTy = GR->getOrCreateSPIRVType(
           LLVMTy, Helper.MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
       Op0.setReg(convertPtrToInt(Reg0, ConvT, SpirvTy, Helper, MRI, GR));
       Op1.setReg(convertPtrToInt(Reg1, ConvT, SpirvTy, Helper, MRI, GR));
     }
     return true;
   }
+  case TargetOpcode::G_LOAD:
+    return legalizeLoad(Helper, MI, GR);
+  case TargetOpcode::G_STORE:
+    return legalizeStore(Helper, MI, GR);
   }
 }
 
-static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
-  if (!Ty.isVector())
-    return false;
-  unsigned NumElements = Ty.getNumElements();
-  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
-  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
-         NumElements > MaxVectorSize;
+static MachineInstrBuilder
+createStackTemporaryForVector(LegalizerHelper &Helper, SPIRVGlobalRegistry *GR,
+                              Register SrcReg, LLT SrcTy,
+                              MachinePointerInfo &PtrInfo, Align &VecAlign) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  VecAlign = Helper.getStackTemporaryAlignment(SrcTy);
+  auto StackTemp = Helper.createStackTemporary(
+      TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
+
+  // Set the type of StackTemp to a pointer to an array of the element type.
+  SPIRVTypeInst SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
+  SPIRVTypeInst EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
+  const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
+  const Type *LLVMArrTy =
+      ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
+  SPIRVTypeInst ArrSpvTy = GR->getOrCreateSPIRVType(
+      LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  SPIRVTypeInst PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
+      ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
+
+  Register StackReg = StackTemp.getReg(0);
+  MRI.setRegClass(StackReg, GR->getRegClass(PtrToArrSpvTy));
+  GR->assignSPIRVTypeToVReg(PtrToArrSpvTy, StackReg, MIRBuilder.getMF());
+
+  return StackTemp;
+}
+
+static bool legalizeSpvBitcast(LegalizerHelper &Helper, MachineInstr &MI,
+                               SPIRVGlobalRegistry *GR) {
+  LLVM_DEBUG(dbgs() << "Found a bitcast instruction\n");
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  // If an spv_bitcast needs to be legalized, we convert it to G_BITCAST to
+  // allow using the generic legalization rules.
+  if (needsVectorLegalization(DstTy, ST) ||
+      needsVectorLegalization(SrcTy, ST)) {
+    LLVM_DEBUG(dbgs() << "Replacing with a G_BITCAST\n");
+    MIRBuilder.buildBitcast(DstReg, SrcReg);
+    MI.eraseFromParent();
+  }
+  return true;
+}
+
+static bool legalizeSpvInsertElt(LegalizerHelper &Helper, MachineInstr &MI,
+                                 SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (needsVectorLegalization(DstTy, ST)) {
+    Register SrcReg = MI.getOperand(2).getReg();
+    Register ValReg = MI.getOperand(3).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    MachineOperand &IdxOperand = MI.getOperand(4);
+
+    if (getImm(IdxOperand, &MRI)) {
+      uint64_t IdxVal = foldImm(IdxOperand, &MRI);
+      if (IdxVal < SrcTy.getNumElements()) {
+        SmallVector<Register, 8> Regs;
+        SPIRVTypeInst ElementType =
+            GR->getScalarOrVectorComponentType(GR->getSPIRVTypeForVReg(DstReg));
+        LLT ElementLLTTy = GR->getRegType(ElementType);
+        for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
+          Register Reg = MRI.createGenericVirtualRegister(ElementLLTTy);
+          MRI.setRegClass(Reg, GR->getRegClass(ElementType));
+          GR->assignSPIRVTypeToVReg(ElementType, Reg, *MI.getMF());
+          Regs.push_back(Reg);
+        }
+        MIRBuilder.buildUnmerge(Regs, SrcReg);
+        Regs[IdxVal] = ValReg;
+        MIRBuilder.buildBuildVector(DstReg, Regs);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+
+    LLT EltTy = SrcTy.getElementType();
+    Align VecAlign;
+    MachinePointerInfo PtrInfo;
+    auto StackTemp = createStackTemporaryForVector(Helper, GR, SrcReg, SrcTy,
+                                                   PtrInfo, VecAlign);
+
+    MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
+
+    Register IdxReg = IdxOperand.getReg();
+    LLT PtrTy = MRI.getType(StackTemp.getReg(0));
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+    auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(StackTemp.getReg(0))
+        .addUse(Zero.getReg(0))
+        .addUse(IdxReg);
+
+    MachinePointerInfo EltPtrInfo = MachinePointerInfo(PtrTy.getAddressSpace());
+    Align EltAlign = Helper.getStackTemporaryAlignment(EltTy);
+    MIRBuilder.buildStore(ValReg, EltPtr, EltPtrInfo, EltAlign);
+
+    MIRBuilder.buildLoad(DstReg, StackTemp, PtrInfo, VecAlign);
+    MI.eraseFromParent();
+    return true;
+  }
+  return true;
+}
+
+static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
+                                  SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register SrcReg = MI.getOperand(2).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  if (needsVectorLegalization(SrcTy, ST)) {
+    Register DstReg = MI.getOperand(0).getReg();
+    MachineOperand &IdxOperand = MI.getOperand(3);
+
+    if (getImm(IdxOperand, &MRI)) {
+      uint64_t IdxVal = foldImm(IdxOperand, &MRI);
+      if (IdxVal < SrcTy.getNumElements()) {
+        LLT DstTy = MRI.getType(DstReg);
+        SmallVector<Register, 8> Regs;
+        SPIRVTypeInst DstSpvTy = GR->getSPIRVTypeForVReg(DstReg);
+        for (unsigned I = 0, E = SrcTy.getNumElements(); I < E; ++I) {
+          if (I == IdxVal) {
+            Regs.push_back(DstReg);
+          } else {
+            Register Reg = MRI.createGenericVirtualRegister(DstTy);
+            MRI.setRegClass(Reg, GR->getRegClass(DstSpvTy));
+            GR->assignSPIRVTypeToVReg(DstSpvTy, Reg, *MI.getMF());
+            Regs.push_back(Reg);
+          }
+        }
+        MIRBuilder.buildUnmerge(Regs, SrcReg);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+
+    LLT EltTy = SrcTy.getElementType();
+    Align VecAlign;
+    MachinePointerInfo PtrInfo;
+    auto StackTemp = createStackTemporaryForVector(Helper, GR, SrcReg, SrcTy,
+                                                   PtrInfo, VecAlign);
+
+    MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
+
+    Register IdxReg = IdxOperand.getReg();
+    LLT PtrTy = MRI.getType(StackTemp.getReg(0));
+    Register EltPtr = MRI.createGenericVirtualRegister(PtrTy);
+    auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+
+    MIRBuilder.buildIntrinsic(Intrinsic::spv_gep, ArrayRef<Register>{EltPtr})
+        .addImm(1) // InBounds
+        .addUse(StackTemp.getReg(0))
+        .addUse(Zero.getReg(0))
+        .addUse(IdxReg);
+
+    MachinePointerInfo EltPtrInfo = MachinePointerInfo(PtrTy.getAddressSpace());
+    Align EltAlign = Helper.getStackTemporaryAlignment(EltTy);
+    MIRBuilder.buildLoad(DstReg, EltPtr, EltPtrInfo, EltAlign);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  return true;
+}
+
+static bool legalizeSpvConstComposite(LegalizerHelper &Helper, MachineInstr &MI,
+                                      SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!needsVectorLegalization(DstTy, ST))
+    return true;
+
+  SmallVector<Register, 8> SrcRegs;
+  if (MI.getNumOperands() == 2) {
+    // The "null" case: no values are attached.
+    LLT EltTy = DstTy.getElementType();
+    auto Zero = MIRBuilder.buildConstant(EltTy, 0);
+    SPIRVTypeInst SpvDstTy = GR->getSPIRVTypeForVReg(DstReg);
+    SPIRVTypeInst SpvEltTy = GR->getScalarOrVectorComponentType(SpvDstTy);
+    GR->assignSPIRVTypeToVReg(SpvEltTy, Zero.getReg(0), MIRBuilder.getMF());
+    for (unsigned i = 0; i < DstTy.getNumElements(); ++i)
+      SrcRegs.push_back(Zero.getReg(0));
+  } else {
+    for (unsigned i = 2; i < MI.getNumOperands(); ++i) {
+      SrcRegs.push_back(MI.getOperand(i).getReg());
+    }
+  }
+  MIRBuilder.buildBuildVector(DstReg, SrcRegs);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   LLVM_DEBUG(dbgs() << "legalizeIntrinsic: " << MI);
-
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
-
   auto IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
-  if (IntrinsicID == Intrinsic::spv_bitcast) {
-    LLVM_DEBUG(dbgs() << "Found a bitcast instruction\n");
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = MI.getOperand(2).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-    LLT SrcTy = MRI.getType(SrcReg);
-
-    // If an spv_bitcast needs to be legalized, we convert it to G_BITCAST to
-    // allow using the generic legalization rules.
-    if (needsVectorLegalization(DstTy, ST) ||
-        needsVectorLegalization(SrcTy, ST)) {
-      LLVM_DEBUG(dbgs() << "Replacing with a G_BITCAST\n");
-      MIRBuilder.buildBitcast(DstReg, SrcReg);
-      MI.eraseFromParent();
-    }
-    return true;
-  } else if (IntrinsicID == Intrinsic::spv_insertelt) {
-    Register DstReg = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-
-    if (needsVectorLegalization(DstTy, ST)) {
-      Register SrcReg = MI.getOperand(2).getReg();
-      Register ValReg = MI.getOperand(3).getReg();
-      Register IdxReg = MI.getOperand(4).getReg();
-      MIRBuilder.buildInsertVectorElement(DstReg, SrcReg, ValReg, IdxReg);
-      MI.eraseFromParent();
-    }
-    return true;
-  } else if (IntrinsicID == Intrinsic::spv_extractelt) {
-    Register SrcReg = MI.getOperand(2).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-
-    if (needsVectorLegalization(SrcTy, ST)) {
-      Register DstReg = MI.getOperand(0).getReg();
-      Register IdxReg = MI.getOperand(3).getReg();
-      MIRBuilder.buildExtractVectorElement(DstReg, SrcReg, IdxReg);
-      MI.eraseFromParent();
-    }
-    return true;
+  switch (IntrinsicID) {
+  case Intrinsic::spv_bitcast:
+    return legalizeSpvBitcast(Helper, MI, GR);
+  case Intrinsic::spv_insertelt:
+    return legalizeSpvInsertElt(Helper, MI, GR);
+  case Intrinsic::spv_extractelt:
+    return legalizeSpvExtractElt(Helper, MI, GR);
+  case Intrinsic::spv_const_composite:
+    return legalizeSpvConstComposite(Helper, MI, GR);
   }
   return true;
 }
@@ -669,7 +1085,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
       IntegerType::get(MIRBuilder.getContext(), DstTy.getScalarSizeInBits());
   if (DstTy.isVector())
     LLVMDstTy = VectorType::get(LLVMDstTy, DstTy.getElementCount());
-  SPIRVType *SPIRVDstTy = GR->getOrCreateSPIRVType(
+  SPIRVTypeInst SPIRVDstTy = GR->getOrCreateSPIRVType(
       LLVMDstTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
       /*EmitIR*/ true);
 
@@ -682,7 +1098,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     IntTy = LLT::vector(SrcTy.getElementCount(), IntTy);
     LLVMIntTy = VectorType::get(LLVMIntTy, SrcTy.getElementCount());
   }
-  SPIRVType *SPIRVIntTy = GR->getOrCreateSPIRVType(
+  SPIRVTypeInst SPIRVIntTy = GR->getOrCreateSPIRVType(
       LLVMIntTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
       /*EmitIR*/ true);
 
@@ -695,7 +1111,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     LLT MITy = MRI.getType(MI.getReg(0));
     assert((MITy == IntTy || MITy == DstTyCopy) &&
            "Unexpected LLT type while lowering G_IS_FPCLASS");
-    auto *SPVTy = MITy == IntTy ? SPIRVIntTy : SPIRVDstTy;
+    SPIRVTypeInst SPVTy = MITy == IntTy ? SPIRVIntTy : SPIRVDstTy;
     GR->assignSPIRVTypeToVReg(SPVTy, MI.getReg(0), MF);
     return MI;
   };
@@ -707,7 +1123,7 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
     auto ScalarC = MIRBuilder.buildConstant(Ty.getScalarType(), C);
     assert((Ty == IntTy || Ty == DstTyCopy) &&
            "Unexpected LLT type while lowering constant for G_IS_FPCLASS");
-    SPIRVType *VecEltTy = GR->getOrCreateSPIRVType(
+    SPIRVTypeInst VecEltTy = GR->getOrCreateSPIRVType(
         (Ty == IntTy ? LLVMIntTy : LLVMDstTy)->getScalarType(), MIRBuilder,
         SPIRV::AccessQualifier::ReadWrite,
         /*EmitIR*/ true);

@@ -1,5 +1,5 @@
 ; RUN: opt < %s -O2 -S
-; RUN: opt -S -hoist-common-insts -hoist-common-insts -passes=simplifycfg < %s | FileCheck %s --check-prefixes=CHECK
+; RUN: opt -S -hoist-common-insts -hoist-common-insts -passes=simplifycfg < %s | FileCheck %s
 target datalayout = "p:64:64:64"
 %swift.async_func_pointer = type <{ i32, i32 }>
 %swift.context = type { ptr, ptr }

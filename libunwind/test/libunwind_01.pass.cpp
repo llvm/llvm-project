@@ -79,7 +79,14 @@ void test_no_info() {
     abort();
 
   // Set the IP to an address clearly outside any function.
-  unw_set_reg(&cursor, UNW_REG_IP, (unw_word_t)0);
+  void *ip = 0;
+#if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
+  unw_word_t sp;
+  if (unw_get_reg(&cursor, UNW_REG_SP, &sp) != UNW_ESUCCESS)
+    abort();
+  ip = ptrauth_sign_unauthenticated(ip, ptrauth_key_return_address, (void *)sp);
+#endif
+  unw_set_reg(&cursor, UNW_REG_IP, (unw_word_t)ip);
 
   ret = unw_get_proc_info(&cursor, &info);
   if (ret != UNW_ENOINFO)

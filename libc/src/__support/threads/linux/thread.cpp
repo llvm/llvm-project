@@ -11,6 +11,16 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -22,23 +32,16 @@
 #include <arm_acle.h>
 #endif
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
+#include "hdr/sched_macros.h" // For CLONE_* flags.
 #include "hdr/stdint_proxy.h"
+#include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
-#include <linux/sched.h> // For CLONE_* flags.
-#include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
-
-#ifdef SYS_mmap2
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
-#elif defined(SYS_mmap)
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
-#else
-#error "mmap or mmap2 syscalls not available."
-#endif
 
 static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator
 static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
@@ -92,29 +95,27 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
 
   // TODO: Maybe add MAP_STACK? Currently unimplemented on linux but helps
   // future-proof.
-  long mmap_result = LIBC_NAMESPACE::syscall_impl<long>(
-      MMAP_SYSCALL_NUMBER,
-      0, // No special address
-      size, prot,
-      MAP_ANONYMOUS | MAP_PRIVATE, // Process private.
-      -1,                          // Not backed by any file
-      0                            // No offset
-  );
-  if (!linux_utils::is_valid_mmap(mmap_result))
-    return Error{int(-mmap_result)};
+  ErrorOr<void *> mmap_result =
+      linux_syscalls::mmap(nullptr, size, prot,
+                           MAP_ANONYMOUS | MAP_PRIVATE, // Process private.
+                           -1, // Not backed by any file
+                           0   // No offset
+      );
+  if (!mmap_result.has_value())
+    return mmap_result;
+
+  char *stack = static_cast<char *>(mmap_result.value()) + guardsize;
 
   if (guardsize) {
     // Give read/write permissions to actual stack.
     // TODO: We are assuming stack growsdown here.
-    long result = LIBC_NAMESPACE::syscall_impl<long>(
-        SYS_mprotect, mmap_result + guardsize, stacksize,
-        PROT_READ | PROT_WRITE);
+    auto result =
+        linux_syscalls::mprotect(stack, stacksize, PROT_READ | PROT_WRITE);
 
-    if (result != 0)
-      return Error{int(-result)};
+    if (!result)
+      return Error{result.error()};
   }
-  mmap_result += guardsize;
-  return reinterpret_cast<void *>(mmap_result);
+  return stack;
 }
 
 // This must always be inlined as we may be freeing the calling threads stack in
@@ -125,7 +126,7 @@ free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, stack, stacksize + guardsize);
+  linux_syscalls::munmap(stack, stacksize + guardsize);
 }
 
 struct Thread;
@@ -179,8 +180,8 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 [[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
-  self.attrib = attrib;
-  self.attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
+  internal::self.attrib = attrib;
+  attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
 
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
@@ -282,6 +283,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->owned_stack = owned_stack;
   attrib->tls = tls.addr;
   attrib->tls_size = tls.size;
+  attrib->joiner = nullptr;
 
   start_args->thread_attrib = attrib;
   start_args->runner = runner;
@@ -340,6 +342,27 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 }
 
 int Thread::join(ThreadReturnValue &retval) {
+  if (current_thread().attrib) {
+    // Reject self join.
+    if (current_thread().attrib == attrib)
+      return EDEADLK;
+
+    // Do a best-effort check of concurrent/repeated join.
+    // This cmpxchg establishes exclusive joiner role by setting the joiner
+    // field iff there is no previous joiner
+    ThreadAttributes *expected = nullptr;
+    if (!attrib->joiner.compare_exchange_strong(
+            expected, current_thread().attrib, cpp::MemoryOrder::ACQ_REL))
+      return EINVAL;
+
+    // Reject mutual join.
+    if (current_thread().attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) ==
+        attrib) {
+      attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
+      return EDEADLK;
+    }
+  }
+
   wait();
 
   if (attrib->style == ThreadStyle::POSIX)
@@ -401,7 +424,7 @@ int Thread::set_name(const cpp::string_view &name) {
   if (name.size() >= NAME_SIZE_MAX)
     return ERANGE;
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are setting the name of the current thread, then we can
     // use the syscall to set the name.
     int retval =
@@ -415,23 +438,17 @@ int Thread::set_name(const cpp::string_view &name) {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDWR);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDWR, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd, name.data(),
-                                                 name.size());
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+  auto write_result =
+      linux_syscalls::write(fd.value(), name.data(), name.size());
+  linux_syscalls::close(fd.value());
 
-  if (retval < 0)
-    return -retval;
-  else if (retval != int(name.size()))
+  if (!write_result)
+    return write_result.error();
+  else if (write_result.value() != static_cast<ssize_t>(name.size()))
     return EIO;
   else
     return 0;
@@ -443,7 +460,7 @@ int Thread::get_name(cpp::StringStream &name) const {
 
   char name_buffer[NAME_SIZE_MAX];
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are getting the name of the current thread, then we can
     // use the syscall to get the name.
     int retval =
@@ -457,21 +474,16 @@ int Thread::get_name(cpp::StringStream &name) const {
   char path_name_buffer[THREAD_NAME_PATH_SIZE];
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                             path_name_buffer, O_RDONLY);
-#endif
-  if (fd < 0)
-    return -fd;
+  ErrorOr<int> fd = linux_syscalls::open(path_name_buffer, O_RDONLY, 0);
+  if (!fd)
+    return fd.error();
 
-  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd, name_buffer,
-                                                 NAME_SIZE_MAX);
-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
-  if (retval < 0)
-    return -retval;
+  auto read_result =
+      linux_syscalls::read(fd.value(), name_buffer, NAME_SIZE_MAX);
+  linux_syscalls::close(fd.value());
+  if (!read_result)
+    return read_result.error();
+  int retval = static_cast<int>(read_result.value());
   if (retval == NAME_SIZE_MAX)
     return ERANGE;
   if (name_buffer[retval - 1] == '\n')
@@ -482,8 +494,29 @@ int Thread::get_name(cpp::StringStream &name) const {
   return 0;
 }
 
+int Thread::setschedparam(SchedParameters params) {
+  auto result = linux_syscalls::sched_setscheduler(attrib->tid, params.policy,
+                                                   &params.param);
+  if (!result.has_value())
+    return result.error();
+  return 0;
+}
+
+ErrorOr<SchedParameters> Thread::getschedparam() const {
+  auto pol_result = linux_syscalls::sched_getscheduler(attrib->tid);
+  if (!pol_result.has_value())
+    return Error(pol_result.error());
+
+  struct sched_param param;
+  auto param_result = linux_syscalls::sched_getparam(attrib->tid, &param);
+  if (!param_result.has_value())
+    return Error(param_result.error());
+
+  return SchedParameters{pol_result.value(), param};
+}
+
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
-  auto attrib = self.attrib;
+  auto attrib = current_thread().attrib;
 
   // The very first thing we do is to call the thread's atexit callbacks.
   // These callbacks could be the ones registered by the language runtimes,

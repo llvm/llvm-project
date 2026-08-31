@@ -57,7 +57,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -101,7 +100,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -309,7 +307,7 @@ public:
   // Leader functions
   Value *getLeader() const { return RepLeader.first; }
   void setLeader(std::pair<Value *, unsigned int> Leader) {
-    RepLeader = Leader;
+    RepLeader = std::move(Leader);
   }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
@@ -318,10 +316,10 @@ public:
   bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
     if (LeaderPair.second < RepLeader.second) {
       NextLeader = RepLeader;
-      RepLeader = LeaderPair;
+      RepLeader = std::move(LeaderPair);
       return true;
     } else if (LeaderPair.second < NextLeader.second) {
-      NextLeader = LeaderPair;
+      NextLeader = std::move(LeaderPair);
     }
     return false;
   }
@@ -442,18 +440,6 @@ struct ExactEqualsExpression {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<const Expression *> {
-  static const Expression *getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
-  static const Expression *getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(~1U);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
   static unsigned getHashValue(const Expression *E) {
     return E->getComputedHash();
   }
@@ -463,17 +449,12 @@ template <> struct llvm::DenseMapInfo<const Expression *> {
   }
 
   static bool isEqual(const ExactEqualsExpression &LHS, const Expression *RHS) {
-    if (RHS == getTombstoneKey() || RHS == getEmptyKey())
-      return false;
     return LHS == *RHS;
   }
 
   static bool isEqual(const Expression *LHS, const Expression *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getTombstoneKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     // Compare hashes before equality.  This is *not* what the hashtable does,
     // since it is computing it modulo the number of buckets, whereas we are
     // using the full hash keyspace.  Since the hashes are precomputed, this
@@ -1213,7 +1194,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), Q);
+                                    E->getOperand(2), FastMathFlags(), Q);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }
@@ -1804,7 +1785,7 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
+  if (llvm::all_of(Filtered, equal_to(AllSameValue))) {
     // Can't fold phi(undef, X) -> X unless X can't be poison (thus X is undef
     // in the worst case).
     if (HasUndef && !isGuaranteedNotToBePoison(AllSameValue, AC, nullptr, DT))
@@ -2098,7 +2079,8 @@ void NewGVN::addAdditionalUsers(ExprResult &Res, Instruction *User) const {
   if (Res.PredDep) {
     if (const auto *PBranch = dyn_cast<PredicateBranch>(Res.PredDep))
       PredicateToUsers[PBranch->Condition].insert(User);
-    else if (const auto *PAssume = dyn_cast<PredicateAssume>(Res.PredDep))
+    else if (const auto *PAssume =
+                 dyn_cast<PredicateConditionAssume>(Res.PredDep))
       PredicateToUsers[PAssume->Condition].insert(User);
   }
   Res.PredDep = nullptr;
@@ -3457,33 +3439,15 @@ bool NewGVN::runGVN() {
   unsigned ICount = 1;
   // Add an empty instruction to account for the fact that we start at 1
   DFSToInstr.emplace_back(nullptr);
-  // Note: We want ideal RPO traversal of the blocks, which is not quite the
-  // same as dominator tree order, particularly with regard whether backedges
-  // get visited first or second, given a block with multiple successors.
-  // If we visit in the wrong order, we will end up performing N times as many
+  // Note: Number the blocks in RPO to put every definition before its uses,
+  // except for a PHI operand arriving along a back edge. A wrong order costs
   // iterations.
-  // The dominator tree does guarantee that, for a given dom tree node, it's
-  // parent must occur before it in the RPO ordering. Thus, we only need to sort
-  // the siblings.
   ReversePostOrderTraversal<Function *> RPOT(&F);
   unsigned Counter = 0;
-  for (auto &B : RPOT) {
+  for (BasicBlock *B : RPOT) {
     auto *Node = DT->getNode(B);
     assert(Node && "RPO and Dominator tree should have same reachability");
     RPOOrdering[Node] = ++Counter;
-  }
-  // Sort dominator tree children arrays into RPO.
-  for (auto &B : RPOT) {
-    auto *Node = DT->getNode(B);
-    if (Node->getNumChildren() > 1)
-      llvm::sort(*Node, [&](const DomTreeNode *A, const DomTreeNode *B) {
-        return RPOOrdering[A] < RPOOrdering[B];
-      });
-  }
-
-  // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  for (auto *DTN : depth_first(DT->getRootNode())) {
-    BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
     ICount += BlockRange.second - BlockRange.first;

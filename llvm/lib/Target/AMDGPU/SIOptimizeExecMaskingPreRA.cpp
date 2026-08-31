@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -54,10 +53,7 @@ class SIOptimizeExecMaskingPreRALegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingPreRALegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

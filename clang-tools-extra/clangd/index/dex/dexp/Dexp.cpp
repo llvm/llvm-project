@@ -107,7 +107,7 @@ public:
     bool Ok = llvm::cl::ParseCommandLineOptions(Argv.size(), Argv.data(),
                                                 Overview, &OS);
     // must do this before opts are destroyed
-    auto Cleanup = llvm::make_scope_exit(llvm::cl::ResetCommandLineParser);
+    llvm::scope_exit Cleanup(llvm::cl::ResetCommandLineParser);
     if (Help.getNumOccurrences() > 0) {
       // Avoid printing parse errors in this case.
       // (Well, in theory. A bunch get printed to llvm::errs() regardless!)

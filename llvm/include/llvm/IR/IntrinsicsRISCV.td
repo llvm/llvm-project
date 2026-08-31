@@ -78,7 +78,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_orc_b : RISCVBitManipGPRIntrinsics;
 
   // Zbc or Zbkc
-  def int_riscv_clmul  : RISCVBitManipGPRGPRIntrinsics;
   def int_riscv_clmulh : RISCVBitManipGPRGPRIntrinsics;
 
   // Zbc
@@ -357,13 +356,32 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
-  // For destination vector type is the same as first and second source vector.
+  // For mask logical operations without passthru operand.
   // Input: (vector_in, vector_in, vl)
-  class RISCVBinaryAAAUnMasked
+  class RISCVMaskLogical
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
+  }
+  // For destination vector type is the same as first and second source vector.
+  // Input: (passthru, vector_in, vector_in, vl)
+  class RISCVBinaryAAAUnMasked
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMMatchType<0>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 3;
+  }
+  // For destination vector type is the same as first and second source vector (with mask).
+  // Input: (passthru, vector_in, vector_in, mask, vl, policy)
+  class RISCVBinaryAAAMasked
+       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                    LLVMMatchType<1>],
+                   [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 4;
   }
   // For destination vector type is the same as first and second source vector.
   // Input: (passthru, vector_in, int_vector_in, vl)
@@ -818,6 +836,35 @@ let TargetPrefix = "riscv" in {
     let ScalarOperand = 1;
     let VLOperand = 4;
   }
+  // UnMasked ternary operations whose first vector source precedes the
+  // vector/scalar source. The first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, vl, policy)
+  class RISCVTernaryVS2FirstUnMasked<
+      LLVMType VS2Type = LLVMMatchType<0>, int VLTypeIndex = 2,
+      bit HasVV = 1>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, VS2Type,
+                      !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                      llvm_anyint_ty, LLVMMatchType<VLTypeIndex>],
+                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // Masked ternary operations whose first vector source precedes the
+  // vector/scalar source. The first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, mask, vl, policy)
+  class RISCVTernaryVS2FirstMasked<
+      LLVMType VS2Type = LLVMMatchType<0>, int VLTypeIndex = 2,
+      bit HasVV = 1>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, VS2Type,
+                      !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                      llvm_anyint_ty, LLVMMatchType<VLTypeIndex>],
+                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
   // UnMasked Widening Vector Multiply-Add operations, its first operand can not be undef.
   // Input: (vector_in, vector_in/scalar, vector_in, frm, vl, policy)
   class RISCVTernaryWideUnMaskedRoundingMode
@@ -1204,6 +1251,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVBinaryAAXUnMaskedRoundingMode;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMaskedRoundingMode;
   }
+  multiclass RISCVBinaryAAA {
+    def "int_riscv_" # NAME : RISCVBinaryAAAUnMasked;
+    def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAAMasked;
+  }
   // Like RISCVBinaryAAX, but the second operand is used a shift amount so it
   // must be a vector or an XLen scalar.
   multiclass RISCVBinaryAAShift {
@@ -1286,6 +1337,12 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVTernaryWide {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryWideMasked;
+  }
+  multiclass RISCVTernaryWideVS2First {
+    def "int_riscv_" # NAME :
+        RISCVTernaryVS2FirstUnMasked<llvm_anyvector_ty, 3>;
+    def "int_riscv_" # NAME # "_mask" :
+        RISCVTernaryVS2FirstMasked<llvm_anyvector_ty, 3>;
   }
   multiclass RISCVTernaryWideRoundingMode {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMaskedRoundingMode;
@@ -1611,14 +1668,14 @@ let TargetPrefix = "riscv" in {
     defm vfwredosum : RISCVReductionRoundingMode;
   }
 
-  def int_riscv_vmand: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmnand: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmandn: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmxor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmnor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmorn: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmxnor: RISCVBinaryAAAUnMasked;
+  def int_riscv_vmand: RISCVMaskLogical;
+  def int_riscv_vmnand: RISCVMaskLogical;
+  def int_riscv_vmandn: RISCVMaskLogical;
+  def int_riscv_vmxor: RISCVMaskLogical;
+  def int_riscv_vmor: RISCVMaskLogical;
+  def int_riscv_vmnor: RISCVMaskLogical;
+  def int_riscv_vmorn: RISCVMaskLogical;
+  def int_riscv_vmxnor: RISCVMaskLogical;
   def int_riscv_vmclr : RISCVNullaryIntrinsic;
   def int_riscv_vmset : RISCVNullaryIntrinsic;
 
@@ -1908,8 +1965,70 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
 
+// Zvabd - Vector Absolute Difference
 //===----------------------------------------------------------------------===//
-// Zvqdotq - Vector quad widening 4D Dot Product
+let TargetPrefix = "riscv" in {
+  defm vabd    : RISCVBinaryAAX;
+  defm vabdu   : RISCVBinaryAAX;
+  defm vwabda  : RISCVTernaryWideVS2First;
+  defm vwabdau : RISCVTernaryWideVS2First;
+} // TargetPrefix = "riscv"
+
+// Zvzip - Reordering Structured Data in Vector Registers
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+  multiclass RISCVZip {
+    // Input: (passthru, vector_in, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>, llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+
+    // Input: (maskedoff, vector_in, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMMatchType<1>,
+                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 4;
+    }
+  }
+
+  multiclass RISCVUnzip {
+    // Input: (passthru, vector_in, vl)
+    def "int_riscv_" # NAME :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             llvm_anyint_ty],
+                            [IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 2;
+    }
+
+    // Input: (maskedoff, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
+  }
+
+  defm vzip    : RISCVZip;
+  defm vunzipe : RISCVUnzip;
+  defm vunzipo : RISCVUnzip;
+  defm vpaire  : RISCVBinaryAAA;
+  defm vpairo  : RISCVBinaryAAA;
+}
+
+//===----------------------------------------------------------------------===//
+// Zvdot4a8i - Vector 4-element Dot Product of packed 8-bit Integers
 //
 // 8-bit Integer dot-product instructions performing the dot product between two
 // 4-element vectors of 8-bit integer elements and accumulating it into a 32-bit
@@ -1917,39 +2036,16 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in {
   // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
   // purpose but only EEW=32 is defined for now
-  // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
-  class RISCVVQDOTUnMasked<bit HasVV>
-        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, llvm_anyvector_ty,
-                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
-                                 llvm_anyint_ty, LLVMMatchType<3>],
-                                [ImmArg<ArgIndex<4>>, IntrNoMem]>,
-                                RISCVVIntrinsic {
-    let ScalarOperand = 2;
-    let VLOperand = 3;
-  }
-  // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVVQDOTMasked<bit HasVV>
-        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, llvm_anyvector_ty,
-                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
-                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                 llvm_anyint_ty, LLVMMatchType<3>],
-                                [ImmArg<ArgIndex<5>>, IntrNoMem]>,
-                                RISCVVIntrinsic {
-    let ScalarOperand = 2;
-    let VLOperand = 4;
+  multiclass RISCVVDOT4A<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVTernaryVS2FirstUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" :
+        RISCVTernaryVS2FirstMasked<HasVV=HasVV>;
   }
 
-  multiclass RISCVVQDOT<bit HasVV = 1> {
-    def "int_riscv_" # NAME : RISCVVQDOTUnMasked<HasVV=HasVV>;
-    def "int_riscv_" # NAME # "_mask" : RISCVVQDOTMasked<HasVV=HasVV>;
-  }
-
-  defm vqdot   : RISCVVQDOT;
-  defm vqdotu  : RISCVVQDOT;
-  defm vqdotsu : RISCVVQDOT;
-  defm vqdotus : RISCVVQDOT<HasVV=0>;
+  defm vdot4a   : RISCVVDOT4A;
+  defm vdot4au  : RISCVVDOT4A;
+  defm vdot4asu : RISCVVDOT4A;
+  defm vdot4aus : RISCVVDOT4A<HasVV=0>;
 } // TargetPrefix = "riscv"
 
 
@@ -1958,6 +2054,164 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// Packed SIMD extensions
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+class RVPBinaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Averaging Addition and Subtraction.
+  def int_riscv_paadd : RVPBinaryIntrinsic;
+  def int_riscv_paaddu : RVPBinaryIntrinsic;
+  def int_riscv_pasub : RVPBinaryIntrinsic;
+  def int_riscv_pasubu : RVPBinaryIntrinsic;
+
+  // Packed Absolute Value and Absolute Difference
+  def int_riscv_pabd  : RVPBinaryIntrinsic;
+  def int_riscv_pabdu : RVPBinaryIntrinsic;
+
+  // Packed "Q-format" Multiplication.
+  def int_riscv_pmulq  : RVPBinaryIntrinsic;
+  def int_riscv_pmulqr : RVPBinaryIntrinsic;
+
+  // Packed Saturating and Rounding Shifts.
+  class RVPShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pssha  : RVPShiftIntrinsic;
+  def int_riscv_psshar : RVPShiftIntrinsic;
+  def int_riscv_psshl  : RVPShiftIntrinsic;
+  def int_riscv_psshlr : RVPShiftIntrinsic;
+
+  // Packed Exchanged Addition and Subtraction.
+  def int_riscv_pas  : RVPBinaryIntrinsic;
+  def int_riscv_psa  : RVPBinaryIntrinsic;
+  def int_riscv_psas : RVPBinaryIntrinsic;
+  def int_riscv_pssa : RVPBinaryIntrinsic;
+  def int_riscv_paas : RVPBinaryIntrinsic;
+  def int_riscv_pasa : RVPBinaryIntrinsic;
+
+  // Packed Reduction Sum.
+  class RVPReductionIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_predsum  : RVPReductionIntrinsic;
+  def int_riscv_predsumu : RVPReductionIntrinsic;
+
+  // Packed Merge
+  class RVPTernaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Sign and Zero Extend.
+  class RVPExtIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psext_b : RVPExtIntrinsic;
+  def int_riscv_psext_h : RVPExtIntrinsic;
+  def int_riscv_pzext_b : RVPExtIntrinsic;
+  def int_riscv_pzext_h : RVPExtIntrinsic;
+
+  // Packed Multiply High.
+  def int_riscv_pmulh    : RVPBinaryIntrinsic;
+  def int_riscv_pmulhr   : RVPBinaryIntrinsic;
+  def int_riscv_pmulhu   : RVPBinaryIntrinsic;
+  def int_riscv_pmulhru  : RVPBinaryIntrinsic;
+  def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
+  def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
+
+  // Packed Multiply High Accumulate.
+  def int_riscv_pmhacc    : RVPTernaryIntrinsic;
+  def int_riscv_pmhracc   : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccu   : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
+  // Packed Multiply Parts. The packed forms multiply the selected element of
+  // every pair, so the operands are the result with each element split in two.
+  class RVPPackedMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMSubdivide2VectorType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmul_00   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_01   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_11   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_00  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_01  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_11  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_00 : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_11 : RVPPackedMulPartsIntrinsic;
+
+  // The scalar forms select one element from each packed operand and keep that
+  // single product: <2 x i16> pairs with i32 and <2 x i32> with i64.
+  class RVPScalarMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mul_00   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_01   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_11   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_00  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_01  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_11  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_00 : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_11 : RVPScalarMulPartsIntrinsic;
+
+  // Packed Absolute Difference Sum.
+  def int_riscv_pabdsumu
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pabdsumau
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
+
+  // Packed Narrowing Clip Pair
+  class RVPNarrowingClipIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_any_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnclipp  : RVPNarrowingClipIntrinsic;
+  def int_riscv_pnclipup : RVPNarrowingClipIntrinsic;
+
+  // Packed "Q-format" Multiply Parts Accumulate.
+  class RVPQFormatAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_any_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mqacc_00  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_01  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_11  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_00 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_01 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_11 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h00  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h01  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h11  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h00 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h01 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h11 : RVPQFormatAccIntrinsic;
+} // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
 // Zvfofp8min - OFP8 conversion extension

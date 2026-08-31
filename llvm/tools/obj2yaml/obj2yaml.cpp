@@ -45,6 +45,9 @@ static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   if (Obj.isELF())
     return elf2yaml(OS, Obj);
 
+  if (Obj.isGOFF())
+    return goff2yaml(OS, cast<GOFFObjectFile>(Obj));
+
   if (Obj.isWasm())
     return errorCodeToError(wasm2yaml(OS, cast<WasmObjectFile>(Obj)));
 
@@ -94,7 +97,6 @@ static void reportError(StringRef Input, Error Err) {
   std::string ErrMsg;
   raw_string_ostream OS(ErrMsg);
   logAllUnhandledErrors(std::move(Err), OS);
-  OS.flush();
   errs() << "Error reading file: " << Input << ": " << ErrMsg;
   errs().flush();
 }

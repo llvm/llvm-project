@@ -10,6 +10,7 @@
 #define LLDB_HOST_LZMA_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 class Error;

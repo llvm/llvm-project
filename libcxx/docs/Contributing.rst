@@ -41,6 +41,12 @@ Coding Guidelines
 
 libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
+Procedures for recurring tasks
+==============================
+
+* :ref:`After a WG21 meeting <PostMeetingProcedure>`
+* :ref:`Around a LLVM release <ReleaseProcedure>`
+* :ref:`When a new Standard is introduced <NewStandardProcedure>`
 
 Resources
 =========
@@ -165,7 +171,7 @@ Look for the failed build and select the ``artifacts`` tab. There, download the
 abilist for the platform, e.g.:
 
 * C++<version>.
-* MacOS X86_64 and MacOS arm64 for the Apple platform.
+* macOS X86_64 and macOS arm64 for the Apple platform.
 
 
 Pre-commit CI
@@ -237,7 +243,7 @@ Below is a short description of the most interesting CI builds [#]_:
 * ``Santitizers`` tests libc++ using the Clang sanitizers.
 * ``Parts disabled`` tests libc++ with certain libc++ features disabled.
 * ``Windows`` tests libc++ using MinGW and clang-cl.
-* ``Apple`` tests libc++ on MacOS.
+* ``Apple`` tests libc++ on macOS.
 * ``ARM`` tests libc++ on various Linux ARM platforms.
 * ``AIX`` tests libc++ on AIX.
 
@@ -272,7 +278,7 @@ The libcxx linux premerge testing can run on one of three sets of runner
 groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
 ``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
 The runner set currently in use is controlled by the contents of
-https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
+https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-pr-conformance-tests.yaml.
 By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
 other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
 the yaml file with the desired runner set.

@@ -1,3 +1,4 @@
+// XFAIL: powerpc64-aix
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_multc3
 

@@ -322,14 +322,18 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   if (Args.hasArg(OPT_verbose))
     AssemblerArgs.push_back("-v");
   if (Args.hasArg(OPT_g)) {
-    if (Args.hasArg(OPT_O))
+    if (Args.getLastArgValue(OPT_O, "3") != "0")
       WithColor::warning(errs(), Executable)
           << "Optimized debugging not supported, overriding to '-O0'\n";
     AssemblerArgs.push_back("-O0");
-  } else
+    AssemblerArgs.push_back("-g");
+  } else {
     AssemblerArgs.push_back(
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
+  }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
+  for (const Arg *A : Args.filtered(OPT_Xptxas))
+    AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
   if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
@@ -378,7 +382,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.DefaultTriple = Triple.getTriple();
 
   Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
-  Conf.PassPlugins = PassPlugins;
+  Conf.PassPluginFilenames = PassPlugins;
   Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;

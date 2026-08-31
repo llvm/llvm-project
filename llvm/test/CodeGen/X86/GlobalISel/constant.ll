@@ -42,6 +42,15 @@ define i64 @const_i64_u32() {
   ret i64 1879048192
 }
 
+;i64 value fits into u32 but not i32
+define i64 @const_i64_u32_max() {
+; CHECK-LABEL: const_i64_u32_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; CHECK-NEXT:    retq
+  ret i64 4294967295
+}
+
 ;i64 value fit into i32
 define i64 @const_i64_i32() {
 ; CHECK-LABEL: const_i64_i32:
@@ -54,7 +63,7 @@ define i64 @const_i64_i32() {
 define void @main(ptr %data) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq $0, %rax
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
   store ptr null, ptr %data, align 8

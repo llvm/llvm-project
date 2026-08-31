@@ -95,8 +95,8 @@ int main(int, char**)
         support::make_test_thread(func1, std::move(p)).detach();
         try
         {
-            f.get();
-            assert(false);
+          (void)f.get();
+          assert(false);
         }
         catch (const A& e)
         {

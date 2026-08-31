@@ -10,7 +10,6 @@
 /// This pass creates a unified init and fini kernel with the required metadata
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXCtorDtorLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
@@ -24,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -51,8 +51,8 @@ static std::string getHash(StringRef Str) {
 }
 
 static void addKernelAttrs(Function *F) {
-  F->addFnAttr("nvvm.maxclusterrank", "1");
-  F->addFnAttr("nvvm.maxntid", "1");
+  F->addFnAttr(NVVMAttr::MaxClusterRank, "1");
+  F->addFnAttr(NVVMAttr::MaxNTID, "1");
   F->setCallingConv(CallingConv::PTX_Kernel);
 }
 
@@ -138,20 +138,13 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Value *BeginVal = IRB.CreateLoad(Begin->getType(), Begin, "begin");
   Value *EndVal = IRB.CreateLoad(Begin->getType(), End, "stop");
   if (!IsCtor) {
-    auto *BeginInt = IRB.CreatePtrToInt(BeginVal, IntegerType::getInt64Ty(C));
-    auto *EndInt = IRB.CreatePtrToInt(EndVal, IntegerType::getInt64Ty(C));
-    auto *SubInst = IRB.CreateSub(EndInt, BeginInt);
-    auto *Offset = IRB.CreateAShr(
-        SubInst, ConstantInt::get(IntegerType::getInt64Ty(C), 3), "offset",
-        /*IsExact=*/true);
-    auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
-                                   ArrayRef<Value *>({Offset}));
-    EndVal = BeginVal;
+    Value *OldBeginVal = BeginVal;
     BeginVal =
-        IRB.CreateInBoundsGEP(PointerType::get(C, 0), ValuePtr,
+        IRB.CreateInBoundsGEP(PointerType::get(C, 0), EndVal,
                               ArrayRef<Value *>(ConstantInt::getAllOnesValue(
                                   IntegerType::getInt64Ty(C))),
                               "start");
+    EndVal = OldBeginVal;
   }
   IRB.CreateCondBr(
       IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,
@@ -251,7 +244,7 @@ public:
 } // End anonymous namespace
 
 PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+                                                 ModuleAnalysisManager &MAM) {
   return lowerCtorsAndDtors(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

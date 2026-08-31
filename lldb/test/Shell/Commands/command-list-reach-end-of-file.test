@@ -4,7 +4,7 @@
 # RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
 
 list
-# CHECK: note: No source available 
+# CHECK: note: no source available
 
 b main
 # CHECK: Breakpoint 1:
@@ -21,8 +21,8 @@ list
 list
 # CHECK: return 0;
 
-list 
+list
 # CHECK: note: Reached end of the file, no more to page
 
-list 
+list
 # CHECK: note: Reached end of the file, no more to page

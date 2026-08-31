@@ -17,22 +17,12 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_count    = [](auto first, auto last, auto const& value) { return std::count(first, last, value); };
   auto std_count_if = [](auto first, auto last, auto const& value) {
-    return std::count_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
-  };
-
-  auto ranges_count = [](auto first, auto last, auto const& value) { return std::ranges::count(first, last, value); };
-  auto ranges_count_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::count_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::count_if(first, last, [&](auto element) { return element == value; });
   };
 
   // Benchmark {std,ranges}::{count,count_if} on a sequence where every other element is counted.
@@ -40,7 +30,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto count) {
       benchmark::RegisterBenchmark(
           name,
-          [count](auto& st) {
+          [count](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -67,17 +57,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::count(vector<int>) (every other)", std_count);
     bm.operator()<std::deque<int>>("std::count(deque<int>) (every other)", std_count);
     bm.operator()<std::list<int>>("std::count(list<int>) (every other)", std_count);
-    bm.operator()<std::vector<int>>("rng::count(vector<int>) (every other)", ranges_count);
-    bm.operator()<std::deque<int>>("rng::count(deque<int>) (every other)", ranges_count);
-    bm.operator()<std::list<int>>("rng::count(list<int>) (every other)", ranges_count);
 
     // count_if
     bm.operator()<std::vector<int>>("std::count_if(vector<int>) (every other)", std_count_if);
     bm.operator()<std::deque<int>>("std::count_if(deque<int>) (every other)", std_count_if);
     bm.operator()<std::list<int>>("std::count_if(list<int>) (every other)", std_count_if);
-    bm.operator()<std::vector<int>>("rng::count_if(vector<int>) (every other)", ranges_count_if);
-    bm.operator()<std::deque<int>>("rng::count_if(deque<int>) (every other)", ranges_count_if);
-    bm.operator()<std::list<int>>("rng::count_if(list<int>) (every other)", ranges_count_if);
   }
 
   // Benchmark {std,ranges}::count(vector<bool>)
@@ -85,7 +69,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto count) {
       benchmark::RegisterBenchmark(
           name,
-          [count](auto& st) {
+          [count](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<bool> c(size, false);
 
@@ -101,7 +85,6 @@ int main(int argc, char** argv) {
           ->Arg(1 << 20);
     };
     bm.operator()("std::count(vector<bool>)", std_count);
-    bm.operator()("rng::count(vector<bool>)", ranges_count);
   }
 
   benchmark::Initialize(&argc, argv);

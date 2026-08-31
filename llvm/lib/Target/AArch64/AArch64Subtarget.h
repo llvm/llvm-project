@@ -59,7 +59,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -71,6 +71,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  unsigned FixedLoadLatency = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -88,6 +89,7 @@ protected:
   std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
+  bool EnableSRLTSubregToRegMitigation;
   unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
@@ -128,7 +130,8 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
+                   bool HasMinSize = false,
+                   bool EnableSRLTSubregToRegMitigation = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -261,8 +264,20 @@ public:
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
-           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
+           hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
   }
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions.
+  bool fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                       unsigned SecondOpc, unsigned SecondShift) const;
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  bool fusesMOVImmPair(const MachineInstr *FirstMI,
+                       const MachineInstr &SecondMI) const;
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
@@ -295,6 +310,8 @@ public:
   unsigned getMinimumJumpTableEntries() const {
     return MinimumJumpTableEntries;
   }
+
+  unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
@@ -442,6 +459,12 @@ public:
     return 0;
   }
 
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
+  }
+
   bool useSVEForFixedLengthVectors() const {
     if (!isSVEorStreamingSVEAvailable())
       return false;
@@ -466,6 +489,10 @@ public:
   /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
   /// add + cnt instructions.
   bool useScalarIncVL() const;
+
+  bool enableSRLTSubregToRegMitigation() const {
+    return EnableSRLTSubregToRegMitigation;
+  }
 
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod

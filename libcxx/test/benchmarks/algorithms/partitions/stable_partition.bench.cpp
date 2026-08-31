@@ -18,6 +18,7 @@
 
 #include "count_new.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 auto compute_median(auto first, auto last) {
@@ -36,7 +37,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -71,11 +72,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::stable_partition(vector<int>) (dense)", std_stable_partition);
     bm.operator()<std::deque<int>>("std::stable_partition(deque<int>) (dense)", std_stable_partition);
     bm.operator()<std::list<int>>("std::stable_partition(list<int>) (dense)", std_stable_partition);
-
-    // ranges::stable_partition
-    bm.operator()<std::vector<int>>("rng::stable_partition(vector<int>) (dense)", std::ranges::stable_partition);
-    bm.operator()<std::deque<int>>("rng::stable_partition(deque<int>) (dense)", std::ranges::stable_partition);
-    bm.operator()<std::list<int>>("rng::stable_partition(list<int>) (dense)", std::ranges::stable_partition);
   }
 
   // Benchmark {std,ranges}::stable_partition on a mostly partitioned sequence, i.e. only 10% of the elements
@@ -84,7 +80,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -119,11 +115,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::stable_partition(vector<int>) (sparse)", std_stable_partition);
     bm.operator()<std::deque<int>>("std::stable_partition(deque<int>) (sparse)", std_stable_partition);
     bm.operator()<std::list<int>>("std::stable_partition(list<int>) (sparse)", std_stable_partition);
-
-    // ranges::stable_partition
-    bm.operator()<std::vector<int>>("rng::stable_partition(vector<int>) (sparse)", std::ranges::stable_partition);
-    bm.operator()<std::deque<int>>("rng::stable_partition(deque<int>) (sparse)", std::ranges::stable_partition);
-    bm.operator()<std::list<int>>("rng::stable_partition(list<int>) (sparse)", std::ranges::stable_partition);
   }
 
   // Benchmark {std,ranges}::stable_partition when memory allocation fails. The algorithm must fall back to
@@ -132,7 +123,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -169,11 +160,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::stable_partition(vector<int>) (alloc fails)", std_stable_partition);
     bm.operator()<std::deque<int>>("std::stable_partition(deque<int>) (alloc fails)", std_stable_partition);
     bm.operator()<std::list<int>>("std::stable_partition(list<int>) (alloc fails)", std_stable_partition);
-
-    // ranges::stable_partition
-    bm.operator()<std::vector<int>>("rng::stable_partition(vector<int>) (alloc fails)", std::ranges::stable_partition);
-    bm.operator()<std::deque<int>>("rng::stable_partition(deque<int>) (alloc fails)", std::ranges::stable_partition);
-    bm.operator()<std::list<int>>("rng::stable_partition(list<int>) (alloc fails)", std::ranges::stable_partition);
   }
 
   benchmark::Initialize(&argc, argv);

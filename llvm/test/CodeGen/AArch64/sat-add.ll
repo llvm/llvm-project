@@ -420,9 +420,9 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ; CHECK-LABEL: unsigned_sat_constant_v4i32_using_min:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvni v1.4s, #42
+; CHECK-NEXT:    movi v2.4s, #42
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #42
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
   %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>
   %s = select <4 x i1> %c, <4 x i32> %x, <4 x i32> <i32 -43, i32 -43, i32 -43, i32 -43>

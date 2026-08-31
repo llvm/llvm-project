@@ -1,0 +1,23 @@
+# A templated forward declaration `Foo<T>` nested under DW_TAG_module M
+# with no definition anywhere. The forward decl must be kept along with
+# its DW_TAG_template_type_parameter child; otherwise the template
+# parameter is dropped and `Foo<T>` becomes a bare `Foo` with
+# DW_AT_declaration. Regression test for the parallel linker recursing
+# through the children of preserved module forward decls.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/1.o %p/../Inputs/keep-module-fwd-decl-template/input.ll
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/keep-module-fwd-decl-template/debug-map.map \
+RUN:     -oso-prepend-path %t -o - 2>/dev/null \
+RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s
+
+CHECK:      DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK:      DW_TAG_class_type
+CHECK-NEXT:   DW_AT_name {{.*}}"Foo<T>"
+CHECK-NEXT:   DW_AT_declaration
+CHECK:        DW_TAG_template_type_parameter
+CHECK-NEXT:     DW_AT_type {{.*}}"int"
+CHECK-NEXT:     DW_AT_name {{.*}}"T"

@@ -83,6 +83,16 @@ public:
   /// function should not be called on a writable buffer.
   virtual void dontNeedIfMmap() {}
 
+  /// Mark the buffer as to-be-used in a near future. This shall trigger OS
+  /// prefetching from the storage device and into memory, if possible.
+  /// This should be use purely as an read optimization.
+  virtual void willNeedIfMmap() {}
+
+  /// For read-only MemoryBuffer_MMap, advise the kernel that accesses will be
+  /// random, disabling readahead. This calls madvise(MADV_RANDOM) on *NIX.
+  /// This function should not be called on a writable buffer.
+  virtual void randomAccessIfMmap() {}
+
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
   /// if successful, otherwise returning null.
   ///

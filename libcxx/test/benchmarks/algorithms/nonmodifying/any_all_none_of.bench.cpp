@@ -18,6 +18,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_any_of = [](auto first, auto last, auto pred) { return std::any_of(first, last, pred); };
@@ -30,22 +31,13 @@ int main(int argc, char** argv) {
     return !std::none_of(first, last, pred);
   };
 
-  auto ranges_all_of = [](auto first, auto last, auto pred) {
-    // match semantics of any_of
-    return !std::ranges::all_of(first, last, [pred](auto x) { return !pred(x); });
-  };
-  auto ranges_none_of = [](auto first, auto last, auto pred) {
-    // match semantics of any_of
-    return !std::ranges::none_of(first, last, pred);
-  };
-
   // Benchmark {std,ranges}::{any_of,all_of,none_of} where we process the whole sequence,
   // which is the worst case.
   {
     auto bm = []<class Container>(std::string name, auto any_of) {
       benchmark::RegisterBenchmark(
           name,
-          [any_of](auto& st) {
+          [any_of](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -54,10 +46,7 @@ int main(int argc, char** argv) {
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = any_of(c.begin(), c.end(), [&](auto element) {
-                benchmark::DoNotOptimize(element);
-                return element == y;
-              });
+              auto result = any_of(c.begin(), c.end(), [&](auto element) { return element == y; });
               benchmark::DoNotOptimize(result);
             }
           })
@@ -72,25 +61,16 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::any_of(vector<int>) (process all)", std_any_of);
     bm.operator()<std::deque<int>>("std::any_of(deque<int>) (process all)", std_any_of);
     bm.operator()<std::list<int>>("std::any_of(list<int>) (process all)", std_any_of);
-    bm.operator()<std::vector<int>>("rng::any_of(vector<int>) (process all)", std::ranges::any_of);
-    bm.operator()<std::deque<int>>("rng::any_of(deque<int>) (process all)", std::ranges::any_of);
-    bm.operator()<std::list<int>>("rng::any_of(list<int>) (process all)", std::ranges::any_of);
 
     // all_of
     bm.operator()<std::vector<int>>("std::all_of(vector<int>) (process all)", std_all_of);
     bm.operator()<std::deque<int>>("std::all_of(deque<int>) (process all)", std_all_of);
     bm.operator()<std::list<int>>("std::all_of(list<int>) (process all)", std_all_of);
-    bm.operator()<std::vector<int>>("rng::all_of(vector<int>) (process all)", ranges_all_of);
-    bm.operator()<std::deque<int>>("rng::all_of(deque<int>) (process all)", ranges_all_of);
-    bm.operator()<std::list<int>>("rng::all_of(list<int>) (process all)", ranges_all_of);
 
     // none_of
     bm.operator()<std::vector<int>>("std::none_of(vector<int>) (process all)", std_none_of);
     bm.operator()<std::deque<int>>("std::none_of(deque<int>) (process all)", std_none_of);
     bm.operator()<std::list<int>>("std::none_of(list<int>) (process all)", std_none_of);
-    bm.operator()<std::vector<int>>("rng::none_of(vector<int>) (process all)", ranges_none_of);
-    bm.operator()<std::deque<int>>("rng::none_of(deque<int>) (process all)", ranges_none_of);
-    bm.operator()<std::list<int>>("rng::none_of(list<int>) (process all)", ranges_none_of);
   }
 
   benchmark::Initialize(&argc, argv);

@@ -84,6 +84,5 @@ __attribute__((target_clones("sve2;priority=4", "aes+sve2;priority=3", "lse;prio
 // CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone vscale_range(1,16) "fmv-features" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR4]] = { disable_sanitizer_instrumentation }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -1,3 +1,5 @@
+REQUIRES: python
+
 RUN: %lldb -b %p/Inputs/section-overflow-binary \
 RUN:   -o 'script dwarf = lldb.target.module[0].sections[0]' \
 RUN:   -o 'script section = dwarf.GetSubSectionAtIndex(0)' \

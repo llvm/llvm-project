@@ -17,7 +17,7 @@ define internal spir_func void @main() #0 {
 
 ; CHECK:   %[[#entry:]] = OpLabel
 ; CHECK:      %[[#idx]] = OpVariable %[[#]] Function
-; ACHECK:                 OpStore %[[#idx]] %[[#int_0]] Aligned 4
+; ACHECK:                 OpStore %[[#idx]] %[[#int_0]]
 ; CHECK:                  OpBranch %[[#while_cond:]]
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
@@ -26,7 +26,7 @@ entry:
   br label %while.cond
 
 ; CHECK:   %[[#while_cond]] = OpLabel
-; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
+; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]]
 ; CHECK:         %[[#cmp:]] = OpINotEqual %[[#bool_ty]] %[[#tmp]] %[[#int_10]]
 ; CHECK:                      OpLoopMerge %[[#new_end:]] %[[#if_end:]] None
 ; CHECK:                      OpBranchConditional %[[#cmp]] %[[#while_body:]] %[[#new_end]]
@@ -38,9 +38,9 @@ while.cond:
   br i1 %cmp, label %while.body, label %while.end
 
 ; CHECK: %[[#while_body]] = OpLabel
-; CHECK:       %[[#tmp:]] = OpLoad %[[#]] %[[#builtin]] Aligned 1
-; CHECK:                    OpStore %[[#idx]] %[[#tmp]] Aligned 4
-; CHECK:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
+; CHECK:       %[[#tmp:]] = OpLoad %[[#]] %[[#builtin]]
+; CHECK:                    OpStore %[[#idx]] %[[#tmp]]
+; CHECK:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]]
 ; CHECK:      %[[#cmp1:]] = OpIEqual %[[#bool_ty]] %[[#tmp]] %[[#int_0]]
 ; CHECK:                    OpBranchConditional %[[#cmp1]] %[[#new_end]] %[[#if_end]]
 while.body:

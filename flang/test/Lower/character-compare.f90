@@ -1,10 +1,9 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: compare
 subroutine compare(x, c1, c2)
   character(len=4) c1, c2
   logical x
-  ! CHECK: %[[RES:.*]] = fir.call @_FortranACharacterCompareScalar1
-  ! CHECK: cmpi slt, %[[RES]],
+  ! CHECK: hlfir.cmpchar slt
   x = c1 < c2
 end subroutine compare

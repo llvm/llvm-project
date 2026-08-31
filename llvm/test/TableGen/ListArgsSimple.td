@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s
-// XFAIL: vg_leak
 
 class B<int v> {
   int val = v;

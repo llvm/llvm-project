@@ -153,56 +153,11 @@ llvm::TypeSize divideCeil(llvm::TypeSize numerator, uint64_t denominator);
 } // namespace mlir
 
 #include "mlir/Interfaces/DataLayoutAttrInterface.h.inc"
+#include "mlir/Interfaces/DataLayoutDialectInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutOpInterface.h.inc"
 #include "mlir/Interfaces/DataLayoutTypeInterface.h.inc"
 
 namespace mlir {
-
-//===----------------------------------------------------------------------===//
-// DataLayoutDialectInterface
-//===----------------------------------------------------------------------===//
-
-/// An interface to be implemented by dialects that can have identifiers in the
-/// data layout specification entries. Provides hooks for verifying the entry
-/// validity and combining two entries.
-class DataLayoutDialectInterface
-    : public DialectInterface::Base<DataLayoutDialectInterface> {
-public:
-  DataLayoutDialectInterface(Dialect *dialect) : Base(dialect) {}
-
-  /// Checks whether the given data layout entry is valid and reports any errors
-  /// at the provided location. Derived classes should override this.
-  virtual LogicalResult verifyEntry(DataLayoutEntryInterface entry,
-                                    Location loc) const {
-    return success();
-  }
-
-  /// Checks whether the given data layout entry is valid and reports any errors
-  /// at the provided location. Derived classes should override this.
-  virtual LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
-                                    Location loc) const {
-    return success();
-  }
-
-  /// Default implementation of entry combination that combines identical
-  /// entries and returns null otherwise.
-  static DataLayoutEntryInterface
-  defaultCombine(DataLayoutEntryInterface outer,
-                 DataLayoutEntryInterface inner) {
-    if (!outer || outer == inner)
-      return inner;
-    return {};
-  }
-
-  /// Combines two entries with identifiers that belong to this dialect. Returns
-  /// the combined entry or null if the entries are not compatible. Derived
-  /// classes likely need to reimplement this.
-  virtual DataLayoutEntryInterface
-  combine(DataLayoutEntryInterface outer,
-          DataLayoutEntryInterface inner) const {
-    return defaultCombine(outer, inner);
-  }
-};
 
 //===----------------------------------------------------------------------===//
 // DataLayout

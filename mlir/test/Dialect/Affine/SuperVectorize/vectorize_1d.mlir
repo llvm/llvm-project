@@ -22,7 +22,7 @@ func.func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = ub.poison : f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i0 = 0 to %M { // vectorized due to scalar -> vector
      %a0 = affine.load %A[%c0, %c0] : memref<?x?xf32>
    }
@@ -171,7 +171,7 @@ func.func @vec_block_arg(%A : memref<32x512xi32>) {
   // CHECK-NEXT:   affine.for %[[IV1:[0-9a-zA-Z_]+]] = 0 to 32 {
   // CHECK-NEXT:     %[[BROADCAST:.*]] = vector.broadcast %[[IV1]] : index to vector<128xindex>
   // CHECK-NEXT:     %[[CAST:.*]] = arith.index_cast %[[BROADCAST]] : vector<128xindex> to vector<128xi32>
-  // CHECK-NEXT:     vector.transfer_write %[[CAST]], {{.*}}[%[[IV1]], %[[IV0]]] : vector<128xi32>, memref<32x512xi32>
+  // CHECK-NEXT:     vector.transfer_write %[[CAST]], {{.*}}[%[[IV1]], %[[IV0]]] {in_bounds = [true]} : vector<128xi32>, memref<32x512xi32>
   affine.for %i = 0 to 512 {  // vectorized
     affine.for %j = 0 to 32 {
       %idx = arith.index_cast %j : index to i32
@@ -425,7 +425,7 @@ func.func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = ub.poison : f32
-// CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %{{.*}} in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector
        %a18 = affine.load %A[%c0, %c0] : memref<?x?xf32>
@@ -459,7 +459,7 @@ func.func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:      %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = ub.poison : f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %i18 in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector
        %a18 = affine.load %A[%c0, %c0] : memref<?x?xf32>
@@ -700,3 +700,25 @@ func.func @vec_non_scalar_type() {
 
 // CHECK-LABEL: @vec_non_scalar_type
 // CHECK-NOT: vector
+
+// -----
+
+// Regression test: an arith.constant of index type defined inside the loop
+// body must have a scalar replacement registered so that it can be used as
+// a scalar index in the vectorized memory transfer op. Without the fix,
+// affine-super-vectorize crashes with "operation destroyed but still has uses".
+
+// CHECK-LABEL: @index_const_inside_loop
+// CHECK:       affine.for %[[IV:.*]] = 0 to 8 step 128 {
+// CHECK-DAG:     %[[CST_VEC:.*]] = arith.constant dense<0> : vector<128xi32>
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         vector.transfer_write %[[CST_VEC]], %{{.*}}[%[[C0]], %[[IV]]] : vector<128xi32>, memref<1x8xi32>
+// CHECK:       }
+func.func @index_const_inside_loop(%mem: memref<1x8xi32>) {
+  affine.for %arg0 = 0 to 8 {
+    %c0_i32 = arith.constant 0 : i32
+    %c0 = arith.constant 0 : index
+    affine.store %c0_i32, %mem[%c0, %arg0] : memref<1x8xi32>
+  }
+  return
+}

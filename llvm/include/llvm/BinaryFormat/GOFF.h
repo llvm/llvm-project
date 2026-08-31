@@ -187,12 +187,6 @@ enum ENDEntryPointRequest : uint8_t {
   END_EPR_Reserved = 3,
 };
 
-// \brief Subsections of the primary C_CODE section in the object file.
-enum SubsectionKind : uint8_t {
-  SK_PPA1 = 2,
-  SK_PPA2 = 4,
-};
-
 // The standard System/390 convention is to name the high-order (leftmost) bit
 // in a byte as bit zero. The Flags type helps to set bits in byte according
 // to this numeration order.

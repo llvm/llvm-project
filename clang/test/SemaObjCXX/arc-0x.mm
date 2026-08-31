@@ -195,8 +195,8 @@ namespace test_union {
   };
 
   static union { // expected-error {{call to implicitly-deleted default constructor of}}
-    union { // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union)::(anonymous union at {{.*}})' has a deleted default constructor}}
-      union { // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because field 'test_union::(anonymous union)::(anonymous union)::(anonymous union at {{.*}})' has a deleted default constructor}}
+    union { // expected-note-re {{default constructor of '(unnamed union at {{.*}}' is implicitly deleted because field 'test_union::(unnamed union)::(anonymous union at {{.*}})' has a deleted default constructor}}
+      union { // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because field 'test_union::(unnamed union)::(anonymous union)::(anonymous union at {{.*}})' has a deleted default constructor}}
         __weak id g1; // expected-note-re {{default constructor of '(anonymous union at {{.*}}' is implicitly deleted because variant field 'g1' is an ObjC pointer}}
         int g2;
       };

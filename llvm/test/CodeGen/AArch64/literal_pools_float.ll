@@ -56,24 +56,83 @@ define dso_local void @floating_lits() optsize {
 
 define dso_local float @float_ret_optnone() optnone noinline {
 ; CHECK-LABEL: float_ret_optnone:
-
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    movk w8, #15820, lsl #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ret
+;
+; CHECK-LARGE-LABEL: float_ret_optnone:
+; CHECK-LARGE:       // %bb.0:
+; CHECK-LARGE-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-LARGE-NEXT:    movk w8, #15820, lsl #16
+; CHECK-LARGE-NEXT:    fmov s0, w8
+; CHECK-LARGE-NEXT:    ret
+;
+; CHECK-TINY-LABEL: float_ret_optnone:
+; CHECK-TINY:       // %bb.0:
+; CHECK-TINY-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-TINY-NEXT:    movk w8, #15820, lsl #16
+; CHECK-TINY-NEXT:    fmov s0, w8
+; CHECK-TINY-NEXT:    ret
+;
+; CHECK-NOFP-LABEL: float_ret_optnone:
+; CHECK-NOFP:       // %bb.0:
+; CHECK-NOFP-NEXT:    mov w0, #52429 // =0xcccd
+; CHECK-NOFP-NEXT:    movk w0, #15820, lsl #16
+; CHECK-NOFP-NEXT:    ret
+;
+; CHECK-NOFP-LARGE-LABEL: float_ret_optnone:
+; CHECK-NOFP-LARGE:       // %bb.0:
+; CHECK-NOFP-LARGE-NEXT:    mov w0, #52429 // =0xcccd
+; CHECK-NOFP-LARGE-NEXT:    movk w0, #15820, lsl #16
+; CHECK-NOFP-LARGE-NEXT:    ret
+;
+; CHECK-NOFP-TINY-LABEL: float_ret_optnone:
+; CHECK-NOFP-TINY:       // %bb.0:
+; CHECK-NOFP-TINY-NEXT:    mov w0, #52429 // =0xcccd
+; CHECK-NOFP-TINY-NEXT:    movk w0, #15820, lsl #16
+; CHECK-NOFP-TINY-NEXT:    ret
   ret float 0x3FB99999A0000000
-; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
-
-; In the large code model, FastISel cannot load from the constant pool.
-; CHECK-LARGE-NOT: adrp
-; CHECK-LARGE-NOT: ldr
 }
 
 define dso_local double @double_ret_optnone() optnone noinline {
 ; CHECK-LABEL: double_ret_optnone:
-
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    ret
+;
+; CHECK-LARGE-LABEL: double_ret_optnone:
+; CHECK-LARGE:       // %bb.0:
+; CHECK-LARGE-NEXT:    adrp x8, .LCPI2_0
+; CHECK-LARGE-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
+; CHECK-LARGE-NEXT:    ret
+;
+; CHECK-TINY-LABEL: double_ret_optnone:
+; CHECK-TINY:       // %bb.0:
+; CHECK-TINY-NEXT:    ldr d0, .LCPI2_0
+; CHECK-TINY-NEXT:    ret
+;
+; CHECK-NOFP-LABEL: double_ret_optnone:
+; CHECK-NOFP:       // %bb.0:
+; CHECK-NOFP-NEXT:    mov x0, #-7378697629483820647 // =0x9999999999999999
+; CHECK-NOFP-NEXT:    movk x0, #39322
+; CHECK-NOFP-NEXT:    movk x0, #16313, lsl #48
+; CHECK-NOFP-NEXT:    ret
+;
+; CHECK-NOFP-LARGE-LABEL: double_ret_optnone:
+; CHECK-NOFP-LARGE:       // %bb.0:
+; CHECK-NOFP-LARGE-NEXT:    mov x0, #-7378697629483820647 // =0x9999999999999999
+; CHECK-NOFP-LARGE-NEXT:    movk x0, #39322
+; CHECK-NOFP-LARGE-NEXT:    movk x0, #16313, lsl #48
+; CHECK-NOFP-LARGE-NEXT:    ret
+;
+; CHECK-NOFP-TINY-LABEL: double_ret_optnone:
+; CHECK-NOFP-TINY:       // %bb.0:
+; CHECK-NOFP-TINY-NEXT:    mov x0, #-7378697629483820647 // =0x9999999999999999
+; CHECK-NOFP-TINY-NEXT:    movk x0, #39322
+; CHECK-NOFP-TINY-NEXT:    movk x0, #16313, lsl #48
+; CHECK-NOFP-TINY-NEXT:    ret
   ret double 0.1
-; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK: ldr [[LIT128:d[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
-
-; In the large code model, FastISel cannot load from the constant pool.
-; CHECK-LARGE-NOT: adrp
-; CHECK-LARGE-NOT: ldr
 }

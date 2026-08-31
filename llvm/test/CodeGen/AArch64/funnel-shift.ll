@@ -149,7 +149,7 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-GI-NEXT:    mov w8, #37 // =0x25
 ; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
 ; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    msub x8, x10, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    ubfx x10, x1, #1, #36
 ; CHECK-GI-NEXT:    sub x9, x9, x8
@@ -256,6 +256,34 @@ define i8 @fshl_i8_const_fold() {
   ret i8 %f
 }
 
+define i32 @fshl_scalar_undef_shift() {
+; CHECK-SD-LABEL: fshl_scalar_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, #1 // =0x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_scalar_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w0, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call i32 @llvm.fshl.i32(i32 1, i32 2, i32 undef)
+  ret i32 %1
+}
+
+define <2 x i32> @fshl_vector_undef_shift() {
+; CHECK-SD-LABEL: fshl_vector_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2s, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_vector_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>, <2 x i32> undef)
+  ret <2 x i32> %1
+}
+
 ; Repeat everything for funnel shift right.
 
 ; General case - all operands can be variables.
@@ -336,7 +364,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
 ; CHECK-GI-NEXT:    and x11, x1, #0x1fffffffff
 ; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    msub x8, x10, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    lsl x10, x0, #1
 ; CHECK-GI-NEXT:    sub x9, x9, x8
@@ -448,6 +476,34 @@ define i8 @fshr_i8_const_fold() {
   ret i8 %f
 }
 
+define i32 @fshr_scalar_undef_shift() {
+; CHECK-SD-LABEL: fshr_scalar_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, #2 // =0x2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshr_scalar_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w0, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call i32 @llvm.fshr.i32(i32 1, i32 2, i32 undef)
+  ret i32 %1
+}
+
+define <2 x i32> @fshr_vector_undef_shift() {
+; CHECK-SD-LABEL: fshr_vector_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2s, #2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshr_vector_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>, <2 x i32> undef)
+  ret <2 x i32> %1
+}
+
 define i32 @fshl_i32_shift_by_bitwidth(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_i32_shift_by_bitwidth:
 ; CHECK:       // %bb.0:
@@ -485,14 +541,12 @@ define <4 x i32> @fshr_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) {
 define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_shl_fshl:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsr w9, w1, #1
-; CHECK-SD-NEXT:    lsl w10, w1, w2
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w8, w0, w8
-; CHECK-SD-NEXT:    lsr w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w8, w10
-; CHECK-SD-NEXT:    orr w0, w8, w9
+; CHECK-SD-NEXT:    lsr w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w0, w1
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsl w9, w9, w2
+; CHECK-SD-NEXT:    lsr w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_shl_fshl:
@@ -530,14 +584,12 @@ define i32 @or_shl_rotl(i32 %x, i32 %y, i32 %s) {
 define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_shl_fshl_commute:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsr w9, w1, #1
-; CHECK-SD-NEXT:    lsl w10, w1, w2
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w8, w0, w8
-; CHECK-SD-NEXT:    lsr w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w10, w8
-; CHECK-SD-NEXT:    orr w0, w8, w9
+; CHECK-SD-NEXT:    lsr w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w0, w1
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsl w9, w9, w2
+; CHECK-SD-NEXT:    lsr w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_shl_fshl_commute:
@@ -575,14 +627,12 @@ define i32 @or_shl_rotl_commute(i32 %x, i32 %y, i32 %s) {
 define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_lshr_fshr:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsl w9, w1, #1
-; CHECK-SD-NEXT:    lsr w10, w1, w2
-; CHECK-SD-NEXT:    lsr w8, w0, w8
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w8, w10
-; CHECK-SD-NEXT:    orr w0, w9, w8
+; CHECK-SD-NEXT:    lsl w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w1, w0
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsr w9, w9, w2
+; CHECK-SD-NEXT:    lsl w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_lshr_fshr:
@@ -619,13 +669,11 @@ define i32 @or_lshr_rotr(i32 %x, i32 %y, i32 %s) {
 define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_lshr_fshr_commute:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsl w9, w1, #1
-; CHECK-SD-NEXT:    lsr w10, w1, w2
-; CHECK-SD-NEXT:    lsr w8, w0, w8
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w10, w8
+; CHECK-SD-NEXT:    lsl w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w1, w0
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsr w9, w9, w2
+; CHECK-SD-NEXT:    lsl w8, w8, w10
 ; CHECK-SD-NEXT:    orr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;

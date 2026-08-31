@@ -2,9 +2,9 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 ; Given:
-;   add (add (xor %x, -1), %y), 1
+;   add (add (xor %x, -1), %y), C
 ; Transform it to:
-;   sub %y, %x
+;   add (sub %y, %x), C-1
 
 ;------------------------------------------------------------------------------;
 ; Scalar tests
@@ -19,6 +19,44 @@ define i32 @t0(i32 %x, i32 %y) {
   %t1 = add i32 %t0, %y
   %t2 = add i32 %t1, 1
   ret i32 %t2
+}
+
+define i32 @t12(i32 %x, i32 %y) {
+; CHECK-LABEL: @t12(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  %t1 = add i32 %t0, %y
+  %t2 = add i32 %t1, 2
+  ret i32 %t2
+}
+
+define i32 @add_not_add_m1(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -1
+  %r = add i32 %add, %not
+  ret i32 %r
+}
+
+; Unfortunately not matched, because add converted to xor earlier
+define i32 @add_not_add_intmin(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_intmin(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = xor i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[ADD]], [[NOT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -2147483648
+  %r = add i32 %add, %not
+  ret i32 %r
 }
 
 ;------------------------------------------------------------------------------;
@@ -67,6 +105,30 @@ define <4 x i32> @t4_vec_poison2(<4 x i32> %x, <4 x i32> %y) {
   %t1 = add <4 x i32> %t0, %y
   %t2 = add <4 x i32> %t1, <i32 1, i32 1, i32 poison, i32 1>
   ret <4 x i32> %t2
+}
+
+define <2 x i32> @add_not_add_m1_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @add_not_add_m1_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 -2)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not = xor <2 x i32> %b, splat (i32 -1)
+  %add = add <2 x i32> %a, splat (i32 -1)
+  %r = add <2 x i32> %add, %not
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @add_not_add_m1_vec_poison(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @add_not_add_m1_vec_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 -2)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %not = xor <2 x i32> %b, splat (i32 -1)
+  %add = add <2 x i32> %a, <i32 -1, i32 poison>
+  %r = add <2 x i32> %add, %not
+  ret <2 x i32> %r
 }
 
 ;------------------------------------------------------------------------------;
@@ -118,6 +180,145 @@ define i32 @t7(i32 %x, i32 %y) {
   %t1 = add i32 %t0, %y
   call void @use32(i32 %t1)
   %t2 = add i32 %t1, 1
+  ret i32 %t2
+}
+
+define i32 @t5_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t5_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  call void @use32(i32 %t0)
+  %t1 = add i32 %t0, %y
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
+define i32 @t6_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t6_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], 5
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  %t1 = add i32 %t0, %y
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
+define i32 @t7_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t7_5(
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], 5
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = xor i32 %x, -1
+  call void @use32(i32 %t0)
+  %t1 = add i32 %t0, %y
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t1, 5
+  ret i32 %t2
+}
+
+define i32 @t13(i32 %x, i32 %y) {
+; CHECK-LABEL: @t13(
+; CHECK-NEXT:    [[T0:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t0 = add i32 %y, 1
+  call void @use32(i32 %t0)
+  %t1 = xor i32 %x, -1
+  %t2 = add i32 %t0, %t1
+  ret i32 %t2
+}
+
+define i32 @t13_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t13_5(
+; CHECK-NEXT:    [[T0:%.*]] = add i32 [[Y:%.*]], 5
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T0]], [[T1]]
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = add i32 %y, 5
+  call void @use32(i32 %t0)
+  %t1 = xor i32 %x, -1
+  %t2 = add i32 %t0, %t1
+  ret i32 %t2
+}
+
+define i32 @t14(i32 %x, i32 %y) {
+; CHECK-LABEL: @t14(
+; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t0 = add i32 %y, 1
+  %t1 = xor i32 %x, -1
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t0, %t1
+  ret i32 %t2
+}
+
+define i32 @t14_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t14_5(
+; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = add i32 %y, 5
+  %t1 = xor i32 %x, -1
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t0, %t1
+  ret i32 %t2
+}
+
+define i32 @t15(i32 %x, i32 %y) {
+; CHECK-LABEL: @t15(
+; CHECK-NEXT:    [[T0:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %t0 = add i32 %y, 1
+  call void @use32(i32 %t0)
+  %t1 = xor i32 %x, -1
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t0, %t1
+  ret i32 %t2
+}
+
+define i32 @t15_5(i32 %x, i32 %y) {
+; CHECK-LABEL: @t15_5(
+; CHECK-NEXT:    [[T0:%.*]] = add i32 [[Y:%.*]], 5
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T0]], [[T1]]
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %t0 = add i32 %y, 5
+  call void @use32(i32 %t0)
+  %t1 = xor i32 %x, -1
+  call void @use32(i32 %t1)
+  %t2 = add i32 %t0, %t1
   ret i32 %t2
 }
 
@@ -182,6 +383,30 @@ define i32 @t10_commutative2(i32 %x) {
   ret i32 %t2
 }
 
+define i32 @add_not_add_m1_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %a, -1
+  %r = add i32 %not, %add
+  ret i32 %r
+}
+
+define i32 @add_not_add_m1_assoc(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_not_add_m1_assoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -2
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %not = xor i32 %b, -1
+  %add = add i32 %not, %a
+  %r = add i32 %add, -1
+  ret i32 %r
+}
+
 ;------------------------------------------------------------------------------;
 ; Basic negative tests
 ;------------------------------------------------------------------------------;
@@ -196,18 +421,5 @@ define i32 @n11(i32 %x, i32 %y) {
   %t0 = xor i32 %x, 2147483647 ; not -1
   %t1 = add i32 %t0, %y
   %t2 = add i32 %t1, 1
-  ret i32 %t2
-}
-
-define i32 @n12(i32 %x, i32 %y) {
-; CHECK-LABEL: @n12(
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[T1:%.*]] = add i32 [[Y:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[T1]], 2
-; CHECK-NEXT:    ret i32 [[T2]]
-;
-  %t0 = xor i32 %x, -1
-  %t1 = add i32 %t0, %y
-  %t2 = add i32 %t1, 2 ; not +1
   ret i32 %t2
 }

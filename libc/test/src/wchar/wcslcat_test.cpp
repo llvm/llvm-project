@@ -55,3 +55,15 @@ TEST(LlvmLibcWCSLCatTest, SmallerNoOverwriteAfter0) {
   ASSERT_TRUE(dst[7] == L'\0');
   ASSERT_EQ(res, size_t(4));
 }
+
+TEST(LlvmLibcWCSLCatTest, DstsizeLessThanDstlen) {
+  const wchar_t *src = L"d";
+  wchar_t dst[4]{L"abc"};
+  // Should return src length + dst size
+  size_t res = LIBC_NAMESPACE::wcslcat(dst, src, 2);
+  ASSERT_TRUE(dst[0] == L'a');
+  ASSERT_TRUE(dst[1] == L'b');
+  ASSERT_TRUE(dst[2] == L'c');
+  ASSERT_TRUE(dst[3] == L'\0');
+  ASSERT_EQ(res, size_t(3));
+}

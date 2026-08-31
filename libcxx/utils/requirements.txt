@@ -1,7 +1,7 @@
-GitPython
+-r ci/lnt/requirements.txt
+click
 numpy
 pandas
 plotly
-statsmodels
+scipy
 tabulate
-tqdm

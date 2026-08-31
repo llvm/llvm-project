@@ -335,6 +335,11 @@ def testAffineIfWithElse():
         return
 
 
+@constructAndPrintInModule
+def test_double_AtomicRMWKindAttr_registration():
+    from mlir.dialects import _affine_enum_gen
+
+
 # CHECK-LABEL: TEST: testAffineIfOpInsertionPoint
 @constructAndPrintInModule
 def testAffineIfOpInsertionPoint():

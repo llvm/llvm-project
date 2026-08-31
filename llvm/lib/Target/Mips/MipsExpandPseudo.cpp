@@ -882,6 +882,33 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   assert((OldVal != Ptr) && "Clobbered the wrong ptr reg!");
   assert((OldVal != Incr) && "Clobbered the wrong reg!");
   if (IsMin || IsMax) {
+    // Remove trailing kill/dead register operands added by
+    // MachineInstr::addRegisterKilled. These are super-register markers that
+    // must correspond to one of the physical registers in operands 1-4.
+    // The kill/dead markers may also appear on preceding subregs.
+    const TargetRegisterInfo *TRI = STI->getRegisterInfo();
+    while (I->getNumOperands() > 5) {
+      auto &Op = I->getOperand(I->getNumOperands() - 1);
+      // Check if this register overlaps with any physical register in
+      // operands 1-4 that has kill/dead marker (i.e., it's a super-register
+      // marker for subregs).
+      bool HasOverlapWithKill = false;
+      for (unsigned i = 1; i <= 4; ++i) {
+        auto &RefOp = I->getOperand(i);
+        if (RefOp.isReg() && RefOp.getReg().isPhysical() &&
+            TRI->regsOverlap(Op.getReg(), RefOp.getReg()) &&
+            (RefOp.isKill() || RefOp.isDead())) {
+          HasOverlapWithKill = true;
+          break;
+        }
+      }
+      // Remove if HasOverlapWithKill is true or Op has kill/dead marker.
+      bool HasKillOrDead = Op.isReg() && Op.getReg().isPhysical() &&
+                           (Op.isKill() || Op.isDead());
+      if (!HasOverlapWithKill && !HasKillOrDead)
+        break;
+      I->removeOperand(I->getNumOperands() - 1);
+    }
 
     assert(I->getNumOperands() == 5 &&
            "Atomics min|max|umin|umax use an additional register");

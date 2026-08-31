@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = entry
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
-// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -march=aarch64 -mattr=+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=i32 \
 // DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
@@ -10,7 +10,7 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 
 // VLA memcopy in streaming mode.
-func.func @streaming_kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) attributes {arm_streaming} {
+func.func @streaming_kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) attributes {llvm.arm_streaming} {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %vscale = vector.vscale

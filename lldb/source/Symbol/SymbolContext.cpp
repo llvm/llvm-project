@@ -89,7 +89,7 @@ bool SymbolContext::DumpStopContext(
     SymbolContext inline_parent_sc;
     Address inline_parent_addr;
     if (!show_function_name) {
-      s->Printf("<");
+      s->PutCString("<");
       dumped_something = true;
     } else {
       ConstString name;
@@ -168,7 +168,7 @@ bool SymbolContext::DumpStopContext(
     }
   } else if (symbol != nullptr) {
     if (!show_function_name) {
-      s->Printf("<");
+      s->PutCString("<");
       dumped_something = true;
     } else if (symbol->GetName()) {
       dumped_something = true;
@@ -530,7 +530,7 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-llvm::StringRef SymbolContext::GetInstanceVariableName() {
+llvm::StringRef SymbolContext::GetInstanceName() {
   LanguageType lang_type = eLanguageTypeUnknown;
 
   if (Block *function_block = GetFunctionBlock())
@@ -541,7 +541,7 @@ llvm::StringRef SymbolContext::GetInstanceVariableName() {
     lang_type = GetLanguage();
 
   if (auto *lang = Language::FindPlugin(lang_type))
-    return lang->GetInstanceVariableName();
+    return lang->GetInstanceName();
 
   return {};
 }
@@ -675,7 +675,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   }
 
   if (function) {
-    if (function->GetAddress().CalculateSymbolContextLineEntry(line_entry))
+    if (function->GetStartLineTableEntry(line_entry))
       return line_entry;
   }
   return LineEntry();
@@ -685,7 +685,7 @@ llvm::Error
 SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                 AddressRange &range) {
   if (!line_entry.IsValid()) {
-    return llvm::createStringError("Symbol context has no line table.");
+    return llvm::createStringError("symbol context has no line table");
   }
 
   range = line_entry.range;
@@ -840,7 +840,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
 
     if (external_symbols.size() > 1) {
       StreamString ss;
-      ss.Printf("Multiple external symbols found for '%s'\n", name.AsCString());
+      ss.Format("Multiple external symbols found for '{0}'\n", name);
       for (const Symbol *symbol : external_symbols) {
         symbol->GetDescription(&ss, eDescriptionLevelFull, &target);
       }
@@ -851,7 +851,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
       return external_symbols[0];
     } else if (internal_symbols.size() > 1) {
       StreamString ss;
-      ss.Printf("Multiple internal symbols found for '%s'\n", name.AsCString());
+      ss.Format("Multiple internal symbols found for '{0}'\n", name);
       for (const Symbol *symbol : internal_symbols) {
         symbol->GetDescription(&ss, eDescriptionLevelVerbose, &target);
         ss.PutChar('\n');
@@ -922,7 +922,7 @@ Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
 
   // Sometimes an inline frame may not have mangling information,
   // but does have a valid name.
-  return Mangled{inline_info->GetName().AsCString()};
+  return Mangled{inline_info->GetName()};
 }
 
 //
@@ -1082,7 +1082,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(const SymbolContext &sc) {
     // First check the current block, and if it is inlined, get the inlined
     // function name:
     bool was_inlined = false;
-    ConstString func_name(m_function_spec.c_str());
+    ConstString func_name(m_function_spec);
 
     if (sc.block != nullptr) {
       const InlineFunctionInfo *inline_info =
@@ -1113,7 +1113,7 @@ bool SymbolContextSpecifier::AddressMatches(lldb::addr_t addr) {
   if (m_type & eAddressRangeSpecified) {
 
   } else {
-    Address match_address(addr, nullptr);
+    Address match_address(addr);
     SymbolContext sc;
     m_target_sp->GetImages().ResolveSymbolContextForAddress(
         match_address, eSymbolContextEverything, sc);
@@ -1127,7 +1127,7 @@ void SymbolContextSpecifier::GetDescription(
   char path_str[PATH_MAX + 1];
 
   if (m_type == eNothingSpecified) {
-    s->Printf("Nothing specified.\n");
+    s->PutCString("Nothing specified.\n");
   }
 
   if (m_type == eModuleSpecified) {
@@ -1148,11 +1148,11 @@ void SymbolContextSpecifier::GetDescription(
       if (m_type == eLineEndSpecified)
         s->Printf("to line %" PRIu64 "", (uint64_t)m_end_line);
       else
-        s->Printf("to end");
+        s->PutCString("to end");
     } else if (m_type == eLineEndSpecified) {
       s->Printf(" from start to line %" PRIu64 "", (uint64_t)m_end_line);
     }
-    s->Printf(".\n");
+    s->PutCString(".\n");
   }
 
   if (m_type == eLineStartSpecified) {
@@ -1161,8 +1161,8 @@ void SymbolContextSpecifier::GetDescription(
     if (m_type == eLineEndSpecified)
       s->Printf("to line %" PRIu64 "", (uint64_t)m_end_line);
     else
-      s->Printf("to end");
-    s->Printf(".\n");
+      s->PutCString("to end");
+    s->PutCString(".\n");
   } else if (m_type == eLineEndSpecified) {
     s->Printf("From start to line %" PRIu64 ".\n", (uint64_t)m_end_line);
   }
@@ -1196,21 +1196,19 @@ SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 SymbolContextList::~SymbolContextList() = default;
 
 void SymbolContextList::Append(const SymbolContext &sc) {
-  m_symbol_contexts.push_back(sc);
+  m_symbol_contexts.insert(sc);
 }
 
 void SymbolContextList::Append(const SymbolContextList &sc_list) {
-  collection::const_iterator pos, end = sc_list.m_symbol_contexts.end();
-  for (pos = sc_list.m_symbol_contexts.begin(); pos != end; ++pos)
-    m_symbol_contexts.push_back(*pos);
+  for (const auto &sc : sc_list.m_symbol_contexts)
+    m_symbol_contexts.insert(sc);
 }
 
 uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
                                            bool merge_symbol_into_function) {
   uint32_t unique_sc_add_count = 0;
-  collection::const_iterator pos, end = sc_list.m_symbol_contexts.end();
-  for (pos = sc_list.m_symbol_contexts.begin(); pos != end; ++pos) {
-    if (AppendIfUnique(*pos, merge_symbol_into_function))
+  for (const auto &sc : sc_list.m_symbol_contexts) {
+    if (AppendIfUnique(sc, merge_symbol_into_function))
       ++unique_sc_add_count;
   }
   return unique_sc_add_count;
@@ -1218,30 +1216,28 @@ uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
 
 bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
                                        bool merge_symbol_into_function) {
-  collection::iterator pos, end = m_symbol_contexts.end();
-  for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
-    // Because symbol contexts might first be built without the symbol,
-    // which is then appended later on, compare the symbol contexts taking into
-    // accout that one (or either) of them might not have a symbol yet.
-    if (SymbolContext::CompareConsideringPossiblyNullSymbol(*pos, sc))
-      return false;
-  }
+  if (m_symbol_contexts.contains(sc))
+    return false;
+
+  // This path is only taken when sc is an "isolated symbol" (only symbol field
+  // is set), so it's not the hot path.
   if (merge_symbol_into_function && sc.symbol != nullptr &&
       sc.comp_unit == nullptr && sc.function == nullptr &&
       sc.block == nullptr && !sc.line_entry.IsValid()) {
     if (sc.symbol->ValueIsAddress()) {
-      for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
+      for (size_t i = 0, e = m_symbol_contexts.size(); i != e; ++i) {
+        const auto &pos = m_symbol_contexts[i];
         // Don't merge symbols into inlined function symbol contexts
-        if (pos->block && pos->block->GetContainingInlinedBlock())
+        if (pos.block && pos.block->GetContainingInlinedBlock())
           continue;
 
-        if (pos->function) {
-          if (pos->function->GetAddress() == sc.symbol->GetAddressRef()) {
+        if (pos.function) {
+          if (pos.function->GetAddress() == sc.symbol->GetAddressRef()) {
             // Do we already have a function with this symbol?
-            if (pos->symbol == sc.symbol)
+            if (pos.symbol == sc.symbol)
               return false;
-            if (pos->symbol == nullptr) {
-              pos->symbol = sc.symbol;
+            if (pos.symbol == nullptr) {
+              SetSymbolAtIndex(i, sc.symbol);
               return false;
             }
           }
@@ -1249,7 +1245,8 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
       }
     }
   }
-  m_symbol_contexts.push_back(sc);
+
+  m_symbol_contexts.insert(sc);
   return true;
 }
 
@@ -1263,10 +1260,8 @@ void SymbolContextList::Dump(Stream *s, Target *target) const {
   s->EOL();
   s->IndentMore();
 
-  collection::const_iterator pos, end = m_symbol_contexts.end();
-  for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
-    // pos->Dump(s, target);
-    pos->GetDescription(s, eDescriptionLevelVerbose, target);
+  for (const auto &sc : m_symbol_contexts) {
+    sc.GetDescription(s, eDescriptionLevelVerbose, target);
   }
   s->IndentLess();
 }

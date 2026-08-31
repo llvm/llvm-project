@@ -11,9 +11,11 @@
 #include "TestingSupport/TestUtilities.h"
 #include "llvm/Testing/Support/Error.h"
 #include <gtest/gtest.h>
+#include <optional>
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
+using namespace lldb_dap;
 using lldb_private::PrettyPrint;
 using llvm::json::parse;
 
@@ -85,7 +87,7 @@ TEST(ProtocolRequestsTest, EvaluateArguments) {
 TEST(ProtocolRequestsTest, EvaluateResponseBody) {
   EvaluateResponseBody body;
   body.result = "hello world";
-  body.variablesReference = 7;
+  body.variablesReference = var_ref_t(7);
 
   // Check required keys.
   Expected<json::Value> expected = parse(R"({
@@ -99,7 +101,7 @@ TEST(ProtocolRequestsTest, EvaluateResponseBody) {
   // Check optional keys.
   body.result = "'abc'";
   body.type = "string";
-  body.variablesReference = 42;
+  body.variablesReference = var_ref_t(42);
   body.namedVariables = 1;
   body.indexedVariables = 2;
   body.memoryReference = "0x123";
@@ -343,4 +345,118 @@ TEST(ProtocolRequestsTest, RestartArguments) {
       std::get_if<AttachRequestArguments>(&expected->arguments);
   EXPECT_NE(attach_args, nullptr);
   EXPECT_EQ(attach_args->pid, 123U);
+}
+
+TEST(ProtocolRequestsTest, StackTraceArguments) {
+  llvm::Expected<StackTraceArguments> expected = parse<StackTraceArguments>(R"({
+    "threadId": 42,
+    "startFrame": 1,
+    "levels": 10,
+    "format": {
+      "parameters": true,
+      "line": true
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->threadId, 42U);
+  EXPECT_EQ(expected->startFrame, 1U);
+  EXPECT_EQ(expected->levels, 10U);
+  EXPECT_EQ(expected->format->parameters, true);
+  EXPECT_EQ(expected->format->line, true);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<StackTraceArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).threadId"));
+}
+
+TEST(ProtocolRequestsTest, StackTraceResponseBody) {
+  StackFrame frame1;
+  frame1.id = 1;
+  frame1.name = "main";
+  frame1.source = Source{};
+  frame1.source->name = "main.cpp";
+  frame1.source->sourceReference = 123;
+  frame1.line = 23;
+  frame1.column = 1;
+  StackFrame frame2;
+  frame2.id = 2;
+  frame2.name = "test";
+  frame2.presentationHint = StackFrame::ePresentationHintLabel;
+
+  StackTraceResponseBody body;
+  body.stackFrames = {frame1, frame2};
+  body.totalFrames = 2;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({
+    "stackFrames": [
+      {
+        "id": 1,
+        "name": "main",
+        "source": {
+          "name": "main.cpp",
+          "sourceReference": 123
+        },
+        "line": 23,
+        "column": 1
+      },
+      {
+        "id": 2,
+        "name": "test",
+        "line": 0,
+        "column": 0,
+        "presentationHint": "label"
+      }
+    ],
+    "totalFrames": 2
+  })");
+
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
+
+TEST(ProtocolRequestsTest, SetVariableArguments) {
+  llvm::Expected<SetVariableArguments> expected =
+      parse<SetVariableArguments>(R"({
+    "variablesReference": 42,
+    "name": "test",
+    "value": "12345"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->variablesReference.AsUInt32(), 42U);
+  EXPECT_EQ(expected->name, "test");
+  EXPECT_EQ(expected->value, "12345");
+  EXPECT_EQ(expected->format, std::nullopt);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(
+      parse<SetVariableArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).variablesReference"));
+}
+
+TEST(ProtocolRequestsTest, CancelRequestArguments) {
+  llvm::Expected<CancelArguments> expected = parse<CancelArguments>(R"({
+    "requestId": 42,
+    "progressId": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 42U);
+  EXPECT_EQ(expected->progressId, "abc");
+
+  expected = parse<CancelArguments>(R"({
+    "requestId": 42
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 42U);
+  EXPECT_TRUE(expected->progressId.empty());
+
+  expected = parse<CancelArguments>(R"({
+    "progressId": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 0u);
+  EXPECT_EQ(expected->progressId, "abc");
+
+  // Check an empty message, all keys are optional.
+  EXPECT_THAT_EXPECTED(parse<CancelArguments>(R"({})"), Succeeded());
 }

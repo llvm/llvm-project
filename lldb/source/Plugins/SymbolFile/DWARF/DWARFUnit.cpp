@@ -134,12 +134,14 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   else if (dwo_symbol_file->GetDWARFContext()
                .getOrLoadRngListsData()
                .GetByteSize() > 0)
-    dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetRangesBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   if (GetVersion() >= 5 &&
       dwo_symbol_file->GetDWARFContext().getOrLoadLocListsData().GetByteSize() >
           0)
-    dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetLoclistsBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
@@ -521,7 +523,8 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
   }
   m_loclists_base = loclists_base;
 
-  uint64_t header_size = llvm::DWARFListTableHeader::getHeaderSize(DWARF32);
+  uint64_t header_size =
+      llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format);
   if (loclists_base < header_size)
     return;
 
@@ -591,7 +594,8 @@ DWARFUnit::GetRnglistTable() {
     m_rnglist_table_done = true;
     if (auto table_or_error =
             ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base, DWARF32))
+                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base,
+                GetFormParams().Format))
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -711,8 +715,8 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   return llvm::StringRef();
 }
 
-llvm::Expected<std::pair<uint64_t, bool>>
-DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
+llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
+DWARFUnit::GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const {
   // Retrieve the type DIE that the value is being converted to. This
   // offset is compile unit relative so we need to fix it up.
   const uint64_t abs_die_offset = relative_die_offset + GetOffset();
@@ -720,27 +724,27 @@ DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
   DWARFDIE die = const_cast<DWARFUnit *>(this)->GetDIE(abs_die_offset);
   if (!die)
     return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+  if (die.Tag() != DW_TAG_base_type)
+    return llvm::createStringError(
+        "DW_OP_convert type DIE is not a DW_TAG_base_type");
   uint64_t encoding =
       die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
-  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
   if (!bit_size)
-    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
   if (!bit_size)
     return llvm::createStringError("unsupported type size");
-  bool sign;
   switch (encoding) {
   case DW_ATE_signed:
   case DW_ATE_signed_char:
-    sign = true;
-    break;
   case DW_ATE_unsigned:
   case DW_ATE_unsigned_char:
-    sign = false;
+  case DW_ATE_float:
     break;
   default:
     return llvm::createStringError("unsupported encoding");
   }
-  return std::pair{bit_size, sign};
+  return std::pair{bit_size, static_cast<TypeKind>(encoding)};
 }
 
 lldb::offset_t
@@ -750,7 +754,8 @@ DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
   return GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
-bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op,
+                                       const llvm::DataExtractor &opcodes,
                                        lldb::offset_t &offset,
                                        RegisterContext *reg_ctx,
                                        lldb::RegisterKind reg_kind,
@@ -853,8 +858,8 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static const RegularExpression g_swiftlang_version_regex(
-      llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_swiftlang_version_regex(llvm::StringRef(
+      R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
 

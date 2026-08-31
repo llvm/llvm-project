@@ -7,7 +7,7 @@ target triple = "aarch64"
 
 define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, i32 noundef %s_p2) #0 {
 ; CHECK-O3-LABEL: define dso_local i32 @test(
-; CHECK-O3-SAME: ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-O3-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr nofree noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-O3-NEXT:  [[ENTRY:.*:]]
 ; CHECK-O3-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[S_P2]] to i64
 ; CHECK-O3-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[S_P1]] to i64
@@ -29,7 +29,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    [[TMP13:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP12]], i1 false)
 ; CHECK-O3-NEXT:    [[TMP14:%.*]] = zext <16 x i16> [[TMP13]] to <16 x i32>
 ; CHECK-O3-NEXT:    [[TMP15:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP14]])
-; CHECK-O3-NEXT:    [[OP_RDX_1:%.*]] = add i32 [[TMP15]], [[TMP7]]
+; CHECK-O3-NEXT:    [[OP_RDX_1:%.*]] = add nuw nsw i32 [[TMP15]], [[TMP7]]
 ; CHECK-O3-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
 ; CHECK-O3-NEXT:    [[ADD_PTR9_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9]], i64 [[IDX_EXT8]]
 ; CHECK-O3-NEXT:    [[TMP16:%.*]] = load <16 x i8>, ptr [[ADD_PTR_1]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -40,7 +40,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    [[TMP21:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP20]], i1 false)
 ; CHECK-O3-NEXT:    [[TMP22:%.*]] = zext <16 x i16> [[TMP21]] to <16 x i32>
 ; CHECK-O3-NEXT:    [[TMP23:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP22]])
-; CHECK-O3-NEXT:    [[OP_RDX_2:%.*]] = add i32 [[TMP23]], [[OP_RDX_1]]
+; CHECK-O3-NEXT:    [[OP_RDX_2:%.*]] = add nuw nsw i32 [[TMP23]], [[OP_RDX_1]]
 ; CHECK-O3-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_1]], i64 [[IDX_EXT]]
 ; CHECK-O3-NEXT:    [[ADD_PTR9_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_1]], i64 [[IDX_EXT8]]
 ; CHECK-O3-NEXT:    [[TMP24:%.*]] = load <16 x i8>, ptr [[ADD_PTR_2]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -51,7 +51,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    [[TMP29:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP28]], i1 false)
 ; CHECK-O3-NEXT:    [[TMP30:%.*]] = zext <16 x i16> [[TMP29]] to <16 x i32>
 ; CHECK-O3-NEXT:    [[TMP31:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP30]])
-; CHECK-O3-NEXT:    [[OP_RDX_3:%.*]] = add i32 [[TMP31]], [[OP_RDX_2]]
+; CHECK-O3-NEXT:    [[OP_RDX_3:%.*]] = add nuw nsw i32 [[TMP31]], [[OP_RDX_2]]
 ; CHECK-O3-NEXT:    [[ADD_PTR_3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_2]], i64 [[IDX_EXT]]
 ; CHECK-O3-NEXT:    [[ADD_PTR9_3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_2]], i64 [[IDX_EXT8]]
 ; CHECK-O3-NEXT:    [[TMP32:%.*]] = load <16 x i8>, ptr [[ADD_PTR_3]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -62,7 +62,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    [[TMP37:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP36]], i1 false)
 ; CHECK-O3-NEXT:    [[TMP38:%.*]] = zext <16 x i16> [[TMP37]] to <16 x i32>
 ; CHECK-O3-NEXT:    [[TMP39:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP38]])
-; CHECK-O3-NEXT:    [[OP_RDX_4:%.*]] = add i32 [[TMP39]], [[OP_RDX_3]]
+; CHECK-O3-NEXT:    [[OP_RDX_4:%.*]] = add nuw nsw i32 [[TMP39]], [[OP_RDX_3]]
 ; CHECK-O3-NEXT:    [[ADD_PTR_4:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_3]], i64 [[IDX_EXT]]
 ; CHECK-O3-NEXT:    [[ADD_PTR9_4:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_3]], i64 [[IDX_EXT8]]
 ; CHECK-O3-NEXT:    [[TMP40:%.*]] = load <16 x i8>, ptr [[ADD_PTR_4]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -73,7 +73,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    [[TMP45:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP44]], i1 false)
 ; CHECK-O3-NEXT:    [[TMP46:%.*]] = zext <16 x i16> [[TMP45]] to <16 x i32>
 ; CHECK-O3-NEXT:    [[TMP47:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP46]])
-; CHECK-O3-NEXT:    [[OP_RDX_5:%.*]] = add i32 [[TMP47]], [[OP_RDX_4]]
+; CHECK-O3-NEXT:    [[OP_RDX_5:%.*]] = add nuw nsw i32 [[TMP47]], [[OP_RDX_4]]
 ; CHECK-O3-NEXT:    [[ADD_PTR_5:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_4]], i64 [[IDX_EXT]]
 ; CHECK-O3-NEXT:    [[ADD_PTR9_5:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_4]], i64 [[IDX_EXT8]]
 ; CHECK-O3-NEXT:    [[TMP48:%.*]] = load <16 x i8>, ptr [[ADD_PTR_5]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -187,7 +187,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-O3-NEXT:    ret i32 [[OP_RDX_15]]
 ;
 ; CHECK-LTO-LABEL: define dso_local i32 @test(
-; CHECK-LTO-SAME: ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-LTO-SAME: ptr nofree noundef readonly captures(none) [[P1:%.*]], i32 noundef [[S_P1:%.*]], ptr nofree noundef readonly captures(none) [[P2:%.*]], i32 noundef [[S_P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-LTO-NEXT:  [[ENTRY:.*:]]
 ; CHECK-LTO-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[S_P2]] to i64
 ; CHECK-LTO-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[S_P1]] to i64
@@ -209,7 +209,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-LTO-NEXT:    [[TMP11:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP10]], i1 true)
 ; CHECK-LTO-NEXT:    [[TMP52:%.*]] = zext nneg <16 x i16> [[TMP11]] to <16 x i32>
 ; CHECK-LTO-NEXT:    [[TMP60:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP52]])
-; CHECK-LTO-NEXT:    [[OP_RDX_1:%.*]] = add i32 [[TMP60]], [[TMP44]]
+; CHECK-LTO-NEXT:    [[OP_RDX_1:%.*]] = add nuw nsw i32 [[TMP60]], [[TMP44]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR9_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9]], i64 [[IDX_EXT8]]
 ; CHECK-LTO-NEXT:    [[TMP12:%.*]] = load <16 x i8>, ptr [[ADD_PTR_1]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -220,7 +220,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-LTO-NEXT:    [[TMP17:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP16]], i1 true)
 ; CHECK-LTO-NEXT:    [[TMP68:%.*]] = zext nneg <16 x i16> [[TMP17]] to <16 x i32>
 ; CHECK-LTO-NEXT:    [[TMP76:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP68]])
-; CHECK-LTO-NEXT:    [[OP_RDX_2:%.*]] = add i32 [[OP_RDX_1]], [[TMP76]]
+; CHECK-LTO-NEXT:    [[OP_RDX_2:%.*]] = add nuw nsw i32 [[OP_RDX_1]], [[TMP76]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_1]], i64 [[IDX_EXT]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR9_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_1]], i64 [[IDX_EXT8]]
 ; CHECK-LTO-NEXT:    [[TMP18:%.*]] = load <16 x i8>, ptr [[ADD_PTR_2]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -231,7 +231,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-LTO-NEXT:    [[TMP23:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP22]], i1 true)
 ; CHECK-LTO-NEXT:    [[TMP84:%.*]] = zext nneg <16 x i16> [[TMP23]] to <16 x i32>
 ; CHECK-LTO-NEXT:    [[TMP92:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP84]])
-; CHECK-LTO-NEXT:    [[OP_RDX_3:%.*]] = add i32 [[OP_RDX_2]], [[TMP92]]
+; CHECK-LTO-NEXT:    [[OP_RDX_3:%.*]] = add nuw nsw i32 [[OP_RDX_2]], [[TMP92]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR_3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_2]], i64 [[IDX_EXT]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR9_3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_2]], i64 [[IDX_EXT8]]
 ; CHECK-LTO-NEXT:    [[TMP24:%.*]] = load <16 x i8>, ptr [[ADD_PTR_3]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -242,7 +242,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-LTO-NEXT:    [[TMP29:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP28]], i1 true)
 ; CHECK-LTO-NEXT:    [[TMP100:%.*]] = zext nneg <16 x i16> [[TMP29]] to <16 x i32>
 ; CHECK-LTO-NEXT:    [[TMP108:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP100]])
-; CHECK-LTO-NEXT:    [[OP_RDX_4:%.*]] = add i32 [[OP_RDX_3]], [[TMP108]]
+; CHECK-LTO-NEXT:    [[OP_RDX_4:%.*]] = add nuw nsw i32 [[OP_RDX_3]], [[TMP108]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR_4:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_3]], i64 [[IDX_EXT]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR9_4:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_3]], i64 [[IDX_EXT8]]
 ; CHECK-LTO-NEXT:    [[TMP30:%.*]] = load <16 x i8>, ptr [[ADD_PTR_4]], align 1, !tbaa [[CHAR_TBAA0]]
@@ -253,7 +253,7 @@ define dso_local i32 @test(ptr noundef %p1, i32 noundef %s_p1, ptr noundef %p2, 
 ; CHECK-LTO-NEXT:    [[TMP35:%.*]] = tail call <16 x i16> @llvm.abs.v16i16(<16 x i16> [[TMP34]], i1 true)
 ; CHECK-LTO-NEXT:    [[TMP116:%.*]] = zext nneg <16 x i16> [[TMP35]] to <16 x i32>
 ; CHECK-LTO-NEXT:    [[TMP117:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP116]])
-; CHECK-LTO-NEXT:    [[OP_RDX_5:%.*]] = add i32 [[OP_RDX_4]], [[TMP117]]
+; CHECK-LTO-NEXT:    [[OP_RDX_5:%.*]] = add nuw nsw i32 [[OP_RDX_4]], [[TMP117]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR_5:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_4]], i64 [[IDX_EXT]]
 ; CHECK-LTO-NEXT:    [[ADD_PTR9_5:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR9_4]], i64 [[IDX_EXT8]]
 ; CHECK-LTO-NEXT:    [[TMP37:%.*]] = load <16 x i8>, ptr [[ADD_PTR_5]], align 1, !tbaa [[CHAR_TBAA0]]

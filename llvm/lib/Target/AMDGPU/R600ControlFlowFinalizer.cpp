@@ -17,7 +17,6 @@
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include <set>
 
 using namespace llvm;
 
@@ -68,7 +67,7 @@ bool CFStack::requiresWorkAroundForInst(unsigned Opcode) {
       getLoopDepth() > 1)
     return true;
 
-  if (!ST->hasCFAluBug())
+  if (!ST->hasCFALUBug())
     return false;
 
   switch(Opcode) {

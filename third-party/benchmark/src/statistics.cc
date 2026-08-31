@@ -26,17 +26,21 @@
 
 namespace benchmark {
 
-auto StatisticsSum = [](const std::vector<double>& v) {
+const auto StatisticsSum = [](const std::vector<double>& v) {
   return std::accumulate(v.begin(), v.end(), 0.0);
 };
 
 double StatisticsMean(const std::vector<double>& v) {
-  if (v.empty()) return 0.0;
+  if (v.empty()) {
+    return 0.0;
+  }
   return StatisticsSum(v) * (1.0 / static_cast<double>(v.size()));
 }
 
 double StatisticsMedian(const std::vector<double>& v) {
-  if (v.size() < 3) return StatisticsMean(v);
+  if (v.size() < 3) {
+    return StatisticsMean(v);
+  }
   std::vector<double> copy(v);
 
   auto center = copy.begin() + v.size() / 2;
@@ -47,29 +51,37 @@ double StatisticsMedian(const std::vector<double>& v) {
   // before.  Instead of resorting, we just look for the max value before it,
   // which is not necessarily the element immediately preceding `center` Since
   // `copy` is only partially sorted by `nth_element`.
-  if (v.size() % 2 == 1) return *center;
+  if (v.size() % 2 == 1) {
+    return *center;
+  }
   auto center2 = std::max_element(copy.begin(), center);
   return (*center + *center2) / 2.0;
 }
 
 // Return the sum of the squares of this sample set
-auto SumSquares = [](const std::vector<double>& v) {
+const auto SumSquares = [](const std::vector<double>& v) {
   return std::inner_product(v.begin(), v.end(), v.begin(), 0.0);
 };
 
-auto Sqr = [](const double dat) { return dat * dat; };
-auto Sqrt = [](const double dat) {
+const auto Sqr = [](const double dat) { return dat * dat; };
+const auto Sqrt = [](const double dat) {
   // Avoid NaN due to imprecision in the calculations
-  if (dat < 0.0) return 0.0;
+  if (dat < 0.0) {
+    return 0.0;
+  }
   return std::sqrt(dat);
 };
 
 double StatisticsStdDev(const std::vector<double>& v) {
   const auto mean = StatisticsMean(v);
-  if (v.empty()) return mean;
+  if (v.empty()) {
+    return mean;
+  }
 
   // Sample standard deviation is undefined for n = 1
-  if (v.size() == 1) return 0.0;
+  if (v.size() == 1) {
+    return 0.0;
+  }
 
   const double avg_squares =
       SumSquares(v) * (1.0 / static_cast<double>(v.size()));
@@ -79,12 +91,16 @@ double StatisticsStdDev(const std::vector<double>& v) {
 }
 
 double StatisticsCV(const std::vector<double>& v) {
-  if (v.size() < 2) return 0.0;
+  if (v.size() < 2) {
+    return 0.0;
+  }
 
   const auto stddev = StatisticsStdDev(v);
   const auto mean = StatisticsMean(v);
 
-  if (std::fpclassify(mean) == FP_ZERO) return 0.0;
+  if (std::fpclassify(mean) == FP_ZERO) {
+    return 0.0;
+  }
 
   return stddev / mean;
 }
@@ -97,7 +113,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   auto error_count = std::count_if(reports.begin(), reports.end(),
                                    [](Run const& run) { return run.skipped; });
 
-  if (reports.size() - error_count < 2) {
+  if (reports.size() - static_cast<size_t>(error_count) < 2) {
     // We don't report aggregated data if there was a single run.
     return results;
   }
@@ -137,7 +153,9 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   for (Run const& run : reports) {
     BM_CHECK_EQ(reports[0].benchmark_name(), run.benchmark_name());
     BM_CHECK_EQ(run_iterations, run.iterations);
-    if (run.skipped) continue;
+    if (run.skipped != 0u) {
+      continue;
+    }
     real_accumulated_time_stat.emplace_back(run.real_accumulated_time);
     cpu_accumulated_time_stat.emplace_back(run.cpu_accumulated_time);
     // user counters
@@ -158,7 +176,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   }
 
   const double iteration_rescale_factor =
-      double(reports.size()) / double(run_iterations);
+      static_cast<double>(reports.size()) / static_cast<double>(run_iterations);
 
   for (const auto& Stat : *reports[0].statistics) {
     // Get the data from the accumulator to BenchmarkReporter::Run's.
@@ -179,7 +197,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     // Similarly, if there are N repetitions with 1 iterations each,
     // an aggregate will be computed over N measurements, not 1.
     // Thus it is best to simply use the count of separate reports.
-    data.iterations = reports.size();
+    data.iterations = static_cast<IterationCount>(reports.size());
 
     data.real_accumulated_time = Stat.compute_(real_accumulated_time_stat);
     data.cpu_accumulated_time = Stat.compute_(cpu_accumulated_time_stat);

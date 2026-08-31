@@ -6,7 +6,6 @@ define void @test_nvvm_fence_proxy_async_generic_acquire_sync_restrict() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async_generic_acquire_sync_restrict(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async::generic.acquire.sync_restrict::shared::cluster.cluster;
 ; CHECK-NEXT:    ret;
@@ -17,7 +16,6 @@ define void @test_nvvm_fence_proxy_async_generic_acquire_sync_restrict() {
 define void @test_nvvm_fence_proxy_async_generic_release_sync_restrict() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async_generic_release_sync_restrict(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async::generic.release.sync_restrict::shared::cta.cluster;

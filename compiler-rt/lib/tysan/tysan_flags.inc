@@ -18,3 +18,5 @@
 
 TYSAN_FLAG(bool, print_stacktrace, false,
            "Include full stacktrace into an error report")
+TYSAN_FLAG(bool, halt_on_error, false,
+           "Crash the program after printing the first error report.")

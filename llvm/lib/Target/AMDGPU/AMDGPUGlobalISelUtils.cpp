@@ -11,7 +11,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -56,16 +55,24 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      ValueTracking->maskedValueIsZero(Base,
-                                       APInt(32, Offset, /*isSigned=*/true)))
+  if (mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      (Def->getFlag(MachineInstr::Disjoint) ||
+       (ValueTracking && ValueTracking->maskedValueIsZero(
+                             Base, APInt(32, Offset, /*isSigned=*/true)))))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
     MachineInstr *Base;
-    if (mi_match(Def->getOperand(1).getReg(), MRI,
-                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+    Register PtrAdd = Def->getOperand(1).getReg();
+    uint32_t Flags;
+    if (mi_match(PtrAdd, MRI,
+                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset), m_MIFlags(Flags)))) {
+      // Same check as for G_ADD; nuw comes from getelementptr inbounds.
+      if (CheckNUW && !(Flags & MachineInstr::NoUWrap)) {
+        assert(MRI.getType(Reg).getScalarSizeInBits() == 32);
+        return std::pair(Reg, 0);
+      }
       // If Base was int converted to pointer, simply return int and offset.
       if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
         return std::pair(Base->getOperand(1).getReg(), Offset);
@@ -114,7 +121,7 @@ static LLT getReadAnyLaneSplitTy(LLT Ty) {
   }
 
   // Large scalars and 64-bit pointers
-  return LLT::scalar(32);
+  return LLT::integer(32);
 }
 
 template <typename ReadLaneFnTy>

@@ -231,15 +231,17 @@ Prefix2Prefix2|
   verifyScopedPrinter(ExpectedOut, PrintFunc);
 }
 
-TEST_F(ScopedPrinterTest, PrintEnum) {
+TEST_F(ScopedPrinterTest, PrintEnumTable) {
   auto PrintFunc = [](ScopedPrinter &W) {
-    const EnumEntry<int> EnumList[] = {{"Name1", "AltName1", 1},
-                                       {"Name2", "AltName2", 2},
-                                       {"Name3", "AltName3", 3},
-                                       {"Name4", "AltName4", 2}};
-    EnumEntry<int> OtherEnum{"Name5", "AltName5", 5};
-    W.printEnum("Exists", EnumList[1].Value, ArrayRef(EnumList));
-    W.printEnum("DoesNotExist", OtherEnum.Value, ArrayRef(EnumList));
+    constexpr EnumStringDef<int, 2> EnumListDef[] = {
+        {{"Name1", "AltName1"}, 1},
+        {{"Name2", "AltName2"}, 2},
+        {{"Name3", "AltName3"}, 3},
+        {{"Name4", "AltName4"}, 2},
+    };
+    constexpr auto EnumList = BUILD_ENUM_STRINGS(EnumListDef);
+    W.printEnum("Exists", EnumListDef[1].Value, EnumStrings(EnumList));
+    W.printEnum("DoesNotExist", 5, EnumStrings(EnumList));
   };
 
   const char *ExpectedOut = R"(Exists: Name2 (0x2)
@@ -256,53 +258,64 @@ DoesNotExist: 0x5
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
-TEST_F(ScopedPrinterTest, PrintFlag) {
+TEST_F(ScopedPrinterTest, PrintEnumFlag) {
   auto PrintFunc = [](ScopedPrinter &W) {
-    const EnumEntry<uint16_t> SingleBitFlags[] = {
-        {"Name0", "AltName0", 0},
-        {"Name1", "AltName1", 1},
-        {"Name2", "AltName2", 1 << 1},
-        {"Name3", "AltName3", 1 << 2}};
-    const EnumEntry<uint16_t> UnsortedFlags[] = {
-        {"C", "c", 1}, {"B", "b", 1 << 1}, {"A", "a", 1 << 2}};
-    const EnumEntry<uint16_t> EnumFlags[] = {
-        {"FirstByte1", "First1", 0x1u},    {"FirstByte2", "First2", 0x2u},
-        {"FirstByte3", "First3", 0x3u},    {"SecondByte1", "Second1", 0x10u},
-        {"SecondByte2", "Second2", 0x20u}, {"SecondByte3", "Second3", 0x30u},
-        {"ThirdByte1", "Third1", 0x100u},  {"ThirdByte2", "Third2", 0x200u},
-        {"ThirdByte3", "Third3", 0x300u}};
+    constexpr EnumStringDef<uint16_t, 2> SingleBitFlagDefs[] = {
+        {{"Name0", "AltName0"}, 0},
+        {{"Name1", "AltName1"}, 1},
+        {{"Name2", "AltName2"}, 1 << 1},
+        {{"Name3", "AltName3"}, 1 << 2}};
+    constexpr auto SingleBitFlags = BUILD_ENUM_STRINGS(SingleBitFlagDefs);
+    constexpr EnumStringDef<uint16_t, 2> UnsortedFlagDefs[] = {
+        {{"C", "c"}, 1}, {{"B", "b"}, 1 << 1}, {{"A", "a"}, 1 << 2}};
+    constexpr auto UnsortedFlags = BUILD_ENUM_STRINGS(UnsortedFlagDefs);
+    constexpr EnumStringDef<uint16_t, 2> EnumFlagDefs[] = {
+        {{"FirstByte1", "First1"}, 0x1u},
+        {{"FirstByte2", "First2"}, 0x2u},
+        {{"FirstByte3", "First3"}, 0x3u},
+        {{"SecondByte1", "Second1"}, 0x10u},
+        {{"SecondByte2", "Second2"}, 0x20u},
+        {{"SecondByte3", "Second3"}, 0x30u},
+        {{"ThirdByte1", "Third1"}, 0x100u},
+        {{"ThirdByte2", "Third2"}, 0x200u},
+        {{"ThirdByte3", "Third3"}, 0x300u}};
+    constexpr auto EnumFlags = BUILD_ENUM_STRINGS(EnumFlagDefs);
 
-    const EnumEntry<BitmaskEnum> ScopedFlags[] = {
-        {"F1", "AltF1", BitmaskEnum::F1},
-        {"F2", "AltF2", BitmaskEnum::F2},
+    constexpr EnumStringDef<BitmaskEnum, 2> ScopedFlagDefs[] = {
+        {{"F1", "AltF1"}, BitmaskEnum::F1},
+        {{"F2", "AltF2"}, BitmaskEnum::F2},
     };
+    constexpr auto ScopedFlags = BUILD_ENUM_STRINGS(ScopedFlagDefs);
 
-    W.printFlags("ZeroFlag", 0, ArrayRef(SingleBitFlags));
-    W.printFlags("NoFlag", 1 << 3, ArrayRef(SingleBitFlags));
-    W.printFlags("Flag1", SingleBitFlags[1].Value, ArrayRef(SingleBitFlags));
-    W.printFlags("Flag1&3", (1 << 2) + 1, ArrayRef(SingleBitFlags));
+    W.printFlags("ZeroFlag", 0, EnumStrings(SingleBitFlags));
+    W.printFlags("NoFlag", 1 << 3, EnumStrings(SingleBitFlags));
+    W.printFlags("Flag1", SingleBitFlagDefs[1].Value,
+                 EnumStrings(SingleBitFlags));
+    W.printFlags("Flag1&3", (1 << 2) + 1, EnumStrings(SingleBitFlags));
 
     W.printFlags("ZeroFlagRaw", 0);
     W.printFlags("NoFlagRaw", 1 << 3);
-    W.printFlags("Flag1Raw", SingleBitFlags[1].Value);
+    W.printFlags("Flag1Raw", SingleBitFlagDefs[1].Value);
     W.printFlags("Flag1&3Raw", (1 << 2) + 1);
 
     W.printFlags("FlagSorted", (1 << 2) + (1 << 1) + 1,
-                 ArrayRef(UnsortedFlags));
+                 EnumStrings(UnsortedFlags));
 
     uint16_t NoBitMask = 0;
     uint16_t FirstByteMask = 0xFu;
     uint16_t SecondByteMask = 0xF0u;
     uint16_t ThirdByteMask = 0xF00u;
-    W.printFlags("NoBitMask", 0xFFFu, ArrayRef(EnumFlags), NoBitMask);
-    W.printFlags("FirstByteMask", 0x3u, ArrayRef(EnumFlags), FirstByteMask);
-    W.printFlags("SecondByteMask", 0x30u, ArrayRef(EnumFlags), SecondByteMask);
-    W.printFlags("ValueOutsideMask", 0x1u, ArrayRef(EnumFlags), SecondByteMask);
-    W.printFlags("FirstSecondByteMask", 0xFFu, ArrayRef(EnumFlags),
+    W.printFlags("NoBitMask", 0xFFFu, EnumStrings(EnumFlags), NoBitMask);
+    W.printFlags("FirstByteMask", 0x3u, EnumStrings(EnumFlags), FirstByteMask);
+    W.printFlags("SecondByteMask", 0x30u, EnumStrings(EnumFlags),
+                 SecondByteMask);
+    W.printFlags("ValueOutsideMask", 0x1u, EnumStrings(EnumFlags),
+                 SecondByteMask);
+    W.printFlags("FirstSecondByteMask", 0xFFu, EnumStrings(EnumFlags),
                  FirstByteMask, SecondByteMask);
-    W.printFlags("FirstSecondThirdByteMask", 0x333u, ArrayRef(EnumFlags),
+    W.printFlags("FirstSecondThirdByteMask", 0x333u, EnumStrings(EnumFlags),
                  FirstByteMask, SecondByteMask, ThirdByteMask);
-    W.printFlags("BitmaskEnum::F1", BitmaskEnum::F1, ArrayRef(ScopedFlags));
+    W.printFlags("BitmaskEnum::F1", BitmaskEnum::F1, EnumStrings(ScopedFlags));
   };
 
   const char *ExpectedOut = R"(ZeroFlag [ (0x0)

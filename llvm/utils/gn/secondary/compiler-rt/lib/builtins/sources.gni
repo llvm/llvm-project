@@ -317,11 +317,13 @@ if (current_cpu == "arm") {
       "divsi3.c",
       "fp_mode.c",
       "modsi3.c",
+      "subdf3.c",
       "udivmodsi4.c",
       "udivsi3.c",
       "umodsi3.c",
     ]
     builtins_sources += [
+      "arm/adddf3.S",
       "arm/aeabi_cdcmp.S",
       "arm/aeabi_cdcmpeq_check_nan.c",
       "arm/aeabi_cfcmp.S",
@@ -339,6 +341,10 @@ if (current_cpu == "arm") {
       "arm/aeabi_memset.S",
       "arm/aeabi_uidivmod.S",
       "arm/aeabi_uldivmod.S",
+      "arm/aeabi_uread4.S",
+      "arm/aeabi_uread8.S",
+      "arm/aeabi_uwrite4.S",
+      "arm/aeabi_uwrite8.S",
       "arm/bswapdi2.S",
       "arm/bswapsi2.S",
       "arm/clzdi2.S",
@@ -504,6 +510,9 @@ if (current_cpu == "ppc64") {
     "ppc/gcc_qsub.c",
     "ppc/multc3.c",
   ]
+  if (current_os == "aix") {
+    builtins_sources += [ "ppc/init_ifuncs.c" ]
+  }
 }
 
 if (current_cpu == "riscv" || current_cpu == "riscv64") {
@@ -526,13 +535,6 @@ if (current_cpu == "ve") {
   builtins_sources += [
     "ve/grow_stack.S",
     "ve/grow_stack_align.S",
-  ]
-}
-
-if (current_cpu == "wasm") {
-  builtins_sources += [
-    "wasm/__c_longjmp.S",
-    "wasm/__cpp_exception.S",
   ]
 }
 

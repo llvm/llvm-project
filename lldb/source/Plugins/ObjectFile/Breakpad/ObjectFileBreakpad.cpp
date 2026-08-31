@@ -70,24 +70,29 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(const ModuleSP &module_sp,
     extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
-  auto text = toStringRef(extractor_sp->GetSharedDataBuffer()->GetData());
+  // If this is operating on a VirtualDataExtractor, it can have
+  // gaps between valid bytes in the DataBuffer. We extract an
+  // ArrayRef of the raw bytes, and can segfault.
+  DataExtractorSP contiguous_extractor_sp =
+      extractor_sp->GetContiguousDataExtractorSP();
+  auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (extractor_sp->GetByteSize() < length) {
+  if (contiguous_extractor_sp->GetByteSize() < length) {
     DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
-    extractor_sp = std::make_shared<DataExtractor>(data_sp);
+    contiguous_extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  return new ObjectFileBreakpad(module_sp, extractor_sp, data_offset, file,
-                                file_offset, length, std::move(header->arch),
-                                std::move(header->uuid));
+  return new ObjectFileBreakpad(
+      module_sp, contiguous_extractor_sp, data_offset, file, file_offset,
+      length, std::move(header->arch), std::move(header->uuid));
 }
 
 ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
@@ -96,17 +101,25 @@ ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileBreakpad::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  auto text = toStringRef(data_sp->GetData());
+ModuleSpecList ObjectFileBreakpad::GetModuleSpecifications(
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t file_offset,
+    offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return {};
+  // If this is opearting on a VirtualDataExtractor, it can have
+  // gaps between valid bytes in the DataBuffer. We extract an
+  // ArrayRef of the raw bytes, and can segfault.
+  DataExtractorSP contiguous_extractor_sp =
+      extractor_sp->GetContiguousDataExtractorSP();
+  auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
-    return 0;
+    return {};
   ModuleSpec spec(file, std::move(header->arch));
   spec.GetUUID() = std::move(header->uuid);
+  ModuleSpecList specs;
   specs.Append(spec);
-  return 1;
+  return specs;
 }
 
 ObjectFileBreakpad::ObjectFileBreakpad(const ModuleSP &module_sp,

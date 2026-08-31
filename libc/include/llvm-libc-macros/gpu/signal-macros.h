@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
 
-#include "__llvm-libc-common.h"
+#include "../../__llvm-libc-common.h"
 
 #define SIGINT 2
 #define SIGILL 4

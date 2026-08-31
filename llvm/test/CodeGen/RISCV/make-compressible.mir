@@ -294,7 +294,7 @@
     ret { double, double } %3
   }
 
-  attributes #0 = { minsize }
+  attributes #0 = { optsize }
 
 ...
 ---

@@ -37,5 +37,5 @@ declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 !0 = !{i64 0, !"type1"}
 !1 = !{i64 0, !"type2"}
 
-; X64: define private void @[[JT]]() #{{.*}} align {{.*}} {
+; X64: define private void @[[JT]]() #{{.*}} prefalign({{.*}}) {{.*}} {
 ; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @foo1)

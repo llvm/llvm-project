@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+
+import argparse
+import re
+import sys
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='parse-time-output',
+        description='Parse the output of /usr/bin/time and output it in LNT-compatible format.')
+    parser.add_argument('input_file', type=argparse.FileType('r'), default='-',
+        help='Path of the file to extract results from. By default, stdin.')
+    parser.add_argument('--benchmark', type=str, required=True,
+        help='The name of the benchmark to use in the resulting LNT output.')
+    parser.add_argument('--extract', type=str, choices=['instructions', 'max_rss', 'cycles', 'peak_memory'], nargs='+',
+        help='The name of the metrics to extract from the time output.')
+    args = parser.parse_args(argv)
+
+    # Mapping from metric names to field names in the time output.
+    field_mapping = {
+        'instructions': 'instructions retired',
+        'max_rss': 'maximum resident set size',
+        'cycles': 'cycles elapsed',
+        'peak_memory': 'peak memory footprint',
+    }
+    to_extract = [field_mapping[e] for e in args.extract]
+
+    metrics = {}
+    for line in args.input_file:
+        match = re.match(r'\s*(\d+)\s+(\w+.*)', line)
+        if match is not None:
+            time_desc = match.group(2)
+            for metric, desc in field_mapping.items():
+                if time_desc == desc:
+                    metrics[metric] = int(match.group(1))
+                    break
+
+    for metric, value in metrics.items():
+        print(f'{args.benchmark}.{metric} {value}')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

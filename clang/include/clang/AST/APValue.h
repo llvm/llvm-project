@@ -136,6 +136,7 @@ public:
     ComplexFloat,
     LValue,
     Vector,
+    Matrix,
     Array,
     Struct,
     Union,
@@ -275,6 +276,15 @@ private:
     Vec &operator=(const Vec &) = delete;
     ~Vec() { delete[] Elts; }
   };
+  struct Mat {
+    APValue *Elts = nullptr;
+    unsigned NumRows = 0;
+    unsigned NumCols = 0;
+    Mat() = default;
+    Mat(const Mat &) = delete;
+    Mat &operator=(const Mat &) = delete;
+    ~Mat() { delete[] Elts; }
+  };
   struct Arr {
     APValue *Elts;
     unsigned NumElts, ArrSize;
@@ -287,7 +297,8 @@ private:
     APValue *Elts;
     unsigned NumBases;
     unsigned NumFields;
-    StructData(unsigned NumBases, unsigned NumFields);
+    unsigned NumVirtualBases;
+    StructData(unsigned NumBases, unsigned NumFields, unsigned NumVirtualBases);
     StructData(const StructData &) = delete;
     StructData &operator=(const StructData &) = delete;
     ~StructData();
@@ -308,8 +319,9 @@ private:
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
   typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
-                                      ComplexAPFloat, Vec, Arr, StructData,
-                                      UnionData, AddrLabelDiffData> DataType;
+                                      ComplexAPFloat, Vec, Mat, Arr, StructData,
+                                      UnionData, AddrLabelDiffData>
+      DataType;
   static const size_t DataSize = sizeof(DataType);
 
   DataType Data;
@@ -325,11 +337,11 @@ public:
   APValue() : Kind(None), AllowConstexprUnknown(false) {}
   /// Creates an integer APValue holding the given value.
   explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
-    MakeInt(); setInt(std::move(I));
+    MakeInt(std::move(I));
   }
   /// Creates a float APValue holding the given value.
   explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
-    MakeFloat(); setFloat(std::move(F));
+    MakeFloat(std::move(F));
   }
   /// Creates a fixed-point APValue holding the given value.
   explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
@@ -340,6 +352,13 @@ public:
   explicit APValue(const APValue *E, unsigned N)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeVector(); setVector(E, N);
+  }
+  /// Creates a matrix APValue with given dimensions. The elements
+  /// are read from \p E and assumed to be in row-major order.
+  explicit APValue(const APValue *E, unsigned NumRows, unsigned NumCols)
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeMatrix();
+    setMatrix(E, NumRows, NumCols);
   }
   /// Creates an integer complex APValue with the given real and imaginary
   /// values.
@@ -400,9 +419,11 @@ public:
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
   /// \param NumMembers Number of members.
-  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+  /// \param NumVirtualBases Number of virtual bases.
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers,
+          unsigned NumVirtualBases = 0)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeStruct(NumBases, NumMembers);
+    MakeStruct(NumBases, NumMembers, NumVirtualBases);
   }
   /// Creates a new union APValue.
   /// \param ActiveDecl The FieldDecl of the active union member.
@@ -471,6 +492,7 @@ public:
   bool isComplexFloat() const { return Kind == ComplexFloat; }
   bool isLValue() const { return Kind == LValue; }
   bool isVector() const { return Kind == Vector; }
+  bool isMatrix() const { return Kind == Matrix; }
   bool isArray() const { return Kind == Array; }
   bool isStruct() const { return Kind == Struct; }
   bool isUnion() const { return Kind == Union; }
@@ -573,6 +595,37 @@ public:
     return ((const Vec *)(const void *)&Data)->NumElts;
   }
 
+  unsigned getMatrixNumRows() const {
+    assert(isMatrix() && "Invalid accessor");
+    return ((const Mat *)(const void *)&Data)->NumRows;
+  }
+  unsigned getMatrixNumColumns() const {
+    assert(isMatrix() && "Invalid accessor");
+    return ((const Mat *)(const void *)&Data)->NumCols;
+  }
+  unsigned getMatrixNumElements() const {
+    return getMatrixNumRows() * getMatrixNumColumns();
+  }
+  APValue &getMatrixElt(unsigned Idx) {
+    assert(isMatrix() && "Invalid accessor");
+    assert(Idx < getMatrixNumElements() && "Index out of range");
+    return ((Mat *)(char *)&Data)->Elts[Idx];
+  }
+  const APValue &getMatrixElt(unsigned Idx) const {
+    return const_cast<APValue *>(this)->getMatrixElt(Idx);
+  }
+  APValue &getMatrixElt(unsigned Row, unsigned Col) {
+    assert(isMatrix() && "Invalid accessor");
+    assert(Row < getMatrixNumRows() && "Row index out of range");
+    assert(Col < getMatrixNumColumns() && "Column index out of range");
+    // Matrix elements are stored in row-major order.
+    unsigned I = Row * getMatrixNumColumns() + Col;
+    return getMatrixElt(I);
+  }
+  const APValue &getMatrixElt(unsigned Row, unsigned Col) const {
+    return const_cast<APValue *>(this)->getMatrixElt(Row, Col);
+  }
+
   APValue &getArrayInitializedElt(unsigned I) {
     assert(isArray() && "Invalid accessor");
     assert(I < getArrayInitializedElts() && "Index out of range");
@@ -609,6 +662,10 @@ public:
     assert(isStruct() && "Invalid accessor");
     return ((const StructData *)(const char *)&Data)->NumFields;
   }
+  unsigned getStructNumVirtualBases() const {
+    assert(isStruct() && "Invalid accessor");
+    return ((const StructData *)(const char *)&Data)->NumVirtualBases;
+  }
   APValue &getStructBase(unsigned i) {
     assert(isStruct() && "Invalid accessor");
     assert(i < getStructNumBases() && "base class index OOB");
@@ -619,11 +676,20 @@ public:
     assert(i < getStructNumFields() && "field index OOB");
     return ((StructData *)(char *)&Data)->Elts[getStructNumBases() + i];
   }
+  APValue &getStructVirtualBase(unsigned i) {
+    assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumVirtualBases() && "virtual base class index OOB");
+    return ((StructData *)(char *)&Data)
+        ->Elts[getStructNumBases() + getStructNumFields() + i];
+  }
   const APValue &getStructBase(unsigned i) const {
     return const_cast<APValue*>(this)->getStructBase(i);
   }
   const APValue &getStructField(unsigned i) const {
     return const_cast<APValue*>(this)->getStructField(i);
+  }
+  const APValue &getStructVirtualBase(unsigned i) const {
+    return const_cast<APValue *>(this)->getStructVirtualBase(i);
   }
 
   const FieldDecl *getUnionField() const {
@@ -668,6 +734,11 @@ public:
     for (unsigned i = 0; i != N; ++i)
       InternalElts[i] = E[i];
   }
+  void setMatrix(const APValue *E, unsigned NumRows, unsigned NumCols) {
+    MutableArrayRef<APValue> InternalElts = setMatrixUninit(NumRows, NumCols);
+    for (unsigned i = 0; i != NumRows * NumCols; ++i)
+      InternalElts[i] = E[i];
+  }
   void setComplexInt(APSInt R, APSInt I) {
     assert(R.getBitWidth() == I.getBitWidth() &&
            "Invalid complex int (type mismatch).");
@@ -696,14 +767,24 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeInt() {
+  void MakeInt(const APSInt &I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)&Data) APSInt(1);
+    new ((void *)&Data) APSInt(std::move(I));
     Kind = Int;
   }
-  void MakeFloat() {
+  void MakeInt(APSInt &&I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) APFloat(0.0);
+    new ((void *)&Data) APSInt(std::move(I));
+    Kind = Int;
+  }
+  void MakeFloat(const APFloat &F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(F);
+    Kind = Float;
+  }
+  void MakeFloat(APFloat &&F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(std::move(F));
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {
@@ -715,6 +796,11 @@ private:
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) Vec();
     Kind = Vector;
+  }
+  void MakeMatrix() {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) Mat();
+    Kind = Matrix;
   }
   void MakeComplexInt() {
     assert(isAbsent() && "Bad state change");
@@ -728,9 +814,9 @@ private:
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
-  void MakeStruct(unsigned B, unsigned M) {
+  void MakeStruct(unsigned B, unsigned M, unsigned V) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) StructData(B, M);
+    new ((void *)(char *)&Data) StructData(B, M, V);
     Kind = Struct;
   }
   void MakeUnion() {
@@ -757,6 +843,15 @@ private:
     V->NumElts = N;
     return {V->Elts, V->NumElts};
   }
+  MutableArrayRef<APValue> setMatrixUninit(unsigned NumRows, unsigned NumCols) {
+    assert(isMatrix() && "Invalid accessor");
+    Mat *M = ((Mat *)(char *)&Data);
+    unsigned NumElts = NumRows * NumCols;
+    M->Elts = new APValue[NumElts];
+    M->NumRows = NumRows;
+    M->NumCols = NumCols;
+    return {M->Elts, NumElts};
+  }
   MutableArrayRef<LValuePathEntry>
   setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
                   bool OnePastTheEnd, bool IsNullPtr);
@@ -769,8 +864,6 @@ private:
 
 namespace llvm {
 template<> struct DenseMapInfo<clang::APValue::LValueBase> {
-  static clang::APValue::LValueBase getEmptyKey();
-  static clang::APValue::LValueBase getTombstoneKey();
   static unsigned getHashValue(const clang::APValue::LValueBase &Base);
   static bool isEqual(const clang::APValue::LValueBase &LHS,
                       const clang::APValue::LValueBase &RHS);

@@ -16,7 +16,6 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 
 // This is throw-away code used to mark areas of the code that have not yet been
 // developed.

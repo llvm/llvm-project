@@ -11,7 +11,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %0 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %0 = load i32, ptr @A, align 4
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -96,7 +96,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %1:gpr64common = ADRP target-flags(aarch64-page) @A
-    %2:gpr32 = LDRWui %1:gpr64common, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %2:gpr32 = LDRWui %1:gpr64common, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], ptr @A, i64 0, i64 0)`)
     %3:gpr32all = COPY %2:gpr32
     %4:gpr32sp = COPY %0:gpr32common
     %5:gpr32 = COPY %0:gpr32common

@@ -67,7 +67,7 @@ enum class ConstantMaskKind { AllFalse = 0, AllTrue };
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 
-/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// Models whether `srcType` can be broadcast to `dstVectorType` under the
 /// semantics of the `vector.broadcast` op.
 enum class BroadcastableToResult {
   Success = 0,

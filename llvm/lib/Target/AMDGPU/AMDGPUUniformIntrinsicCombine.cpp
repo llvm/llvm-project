@@ -19,8 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "GCNSubtarget.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -28,7 +26,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -49,7 +46,7 @@ isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
   Value *V = U.get();
   if (auto It = Tracker.find(V); It != Tracker.end())
     return !It->second; // divergent if marked false
-  return UI.isDivergentUse(U);
+  return UI.isDivergentAtUse(U);
 }
 
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.
@@ -107,6 +104,28 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       II.eraseFromParent();
     return Changed;
   }
+  case Intrinsic::amdgcn_wave_shuffle: {
+    Use &Val = II.getOperandUse(0);
+    Use &Idx = II.getOperandUse(1);
+
+    // Like with readlane, if Value is uniform then just propagate it
+    if (!isDivergentUseWithNew(Val, UI, Tracker)) {
+      II.replaceAllUsesWith(Val);
+      II.eraseFromParent();
+      return true;
+    }
+
+    // Otherwise, when Index is uniform, this is just a readlane operation
+    if (isDivergentUseWithNew(Idx, UI, Tracker))
+      return false;
+
+    // The readlane intrinsic we want to call has the exact same function
+    // signature, so we can quickly modify the instruction in-place
+    Module *Mod = II.getModule();
+    II.setCalledFunction(Intrinsic::getOrInsertDeclaration(
+        Mod, Intrinsic::amdgcn_readlane, II.getType()));
+    return true;
+  }
   default:
     return false;
   }
@@ -143,10 +162,7 @@ namespace {
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
-    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {}
 
 private:
   bool runOnFunction(Function &F) override;

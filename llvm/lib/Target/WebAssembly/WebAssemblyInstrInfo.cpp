@@ -47,7 +47,7 @@ bool WebAssemblyInstrInfo::isReMaterializableImpl(
   case WebAssembly::CONST_F32:
   case WebAssembly::CONST_F64:
     // TargetInstrInfo::isReMaterializableImpl misses these
-    // because of the ARGUMENTS implicit def, so we manualy override it here.
+    // because of the ARGUMENTS implicit def, so we manually override it here.
     return true;
   default:
     return TargetInstrInfo::isReMaterializableImpl(MI);
@@ -71,7 +71,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned CopyOpcode = WebAssembly::getCopyOpcodeForRegClass(RC);
 
   BuildMI(MBB, I, DL, get(CopyOpcode), DestReg)
-      .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 MachineInstr *WebAssemblyInstrInfo::commuteInstructionImpl(

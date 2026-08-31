@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
 
 
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemote_qMemoryRegion(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_qMemoryRegionInfo_is_supported(self):
         self.build()

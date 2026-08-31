@@ -47,7 +47,7 @@ public:
     return Register::StackSlotZero <= Reg && Reg < Register::VirtualRegFlag;
   }
 
-  /// Convert a non-negative frame index to a stack slot register value.
+  /// Convert a frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
     assert(isInt<MaxFrameIndexBitwidth>(FI) &&
            "Frame index must be at most 30 bits.");
@@ -163,12 +163,6 @@ public:
 
 // Provide DenseMapInfo for Register
 template <> struct DenseMapInfo<Register> {
-  static inline Register getEmptyKey() {
-    return DenseMapInfo<unsigned>::getEmptyKey();
-  }
-  static inline Register getTombstoneKey() {
-    return DenseMapInfo<unsigned>::getTombstoneKey();
-  }
   static unsigned getHashValue(const Register &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }

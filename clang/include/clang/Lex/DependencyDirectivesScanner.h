@@ -135,6 +135,37 @@ void printDependencyDirectivesAsSource(
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
 
+/// Scan an input source buffer for C++20 named module usage.
+///
+/// \param Source The input source buffer.
+///
+/// \returns true if any C++20 named modules related directive was found.
+bool scanInputForCXX20ModulesUsage(StringRef Source);
+
+/// Describes how a source input starts a C++20 module unit.
+enum class ModuleUnitKind {
+  NotModuleUnit,
+  HasGlobalModuleFragment,
+  NamedModuleWithoutGlobalModuleFragment,
+};
+
+/// Scan an input source buffer to determine whether it starts a C++20 module
+/// unit, and whether that module unit has a global module fragment.
+///
+/// \param Source The input source buffer.
+///
+/// \returns the kind of C++20 module unit found in the input.
+ModuleUnitKind scanInputForCXX20ModuleUnit(StringRef Source);
+
+/// Scan an input source buffer, and check whether the input source is a
+/// preprocessed output.
+///
+/// \param Source The input source buffer.
+///
+/// \returns true if any '__preprocessed_module' or '__preprocessed_import'
+/// directive was found.
+bool isPreprocessedModuleFile(StringRef Source);
+
 /// Functor that returns the dependency directives for a given file.
 class DependencyDirectivesGetter {
 public:

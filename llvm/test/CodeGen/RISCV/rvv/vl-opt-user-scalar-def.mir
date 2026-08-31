@@ -8,8 +8,8 @@ isSSA:           true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vec_instr_with_scalar_def
-    ; CHECK: [[PseudoVMNAND_MM_B8_:%[0-9]+]]:vr = PseudoVMNAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
-    ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 killed [[PseudoVMNAND_MM_B8_]], -1, 0 /* e8 */
+    ; CHECK: [[PseudoVMNAND_MM_B8_:%[0-9]+]]:vr = PseudoVMNAND_MM_B8 $noreg, $noreg, -1 /* vl=VLMAX */, 0 /* e8 */
+    ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 killed [[PseudoVMNAND_MM_B8_]], -1 /* vl=VLMAX */, 0 /* e8 */
     %1:vr = PseudoVMNAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
     %2:gpr = PseudoVCPOP_M_B1 killed %1, -1, 0 /* e8 */
 ...

@@ -163,7 +163,7 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     // If we were called by __libunwind_seh_personality(), indicate that
     // a handler was found; otherwise, initiate phase 2 by unwinding.
     if (ours && ms_exc->NumberParameters > 1)
-      return 4 /* ExceptionExecuteHandler in mingw */;
+      return static_cast<EXCEPTION_DISPOSITION>(4);
     // This should never happen in phase 2.
     if (IS_UNWINDING(ms_exc->ExceptionFlags))
       _LIBUNWIND_ABORT("Personality indicated exception handler in phase 2!");
@@ -182,7 +182,7 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     // a handler was found; otherwise, it's time to initiate a collided
     // unwind to the target.
     if (ours && !IS_UNWINDING(ms_exc->ExceptionFlags) && ms_exc->NumberParameters > 1)
-      return 4 /* ExceptionExecuteHandler in mingw */;
+      return static_cast<EXCEPTION_DISPOSITION>(4);
     // This should never happen in phase 1.
     if (!IS_UNWINDING(ms_exc->ExceptionFlags))
       _LIBUNWIND_ABORT("Personality installed context during phase 1!");
@@ -259,13 +259,12 @@ __libunwind_seh_personality(int version, _Unwind_Action state,
                              (void *)disp_ctx->LanguageHandler, (void *)&ms_exc,
                              (void *)disp_ctx->EstablisherFrame,
                              (void *)disp_ctx->ContextRecord, (void *)disp_ctx);
-  EXCEPTION_DISPOSITION ms_act = disp_ctx->LanguageHandler(&ms_exc,
-                                                           (PVOID)disp_ctx->EstablisherFrame,
-                                                           disp_ctx->ContextRecord,
-                                                           disp_ctx);
+  int ms_act = static_cast<int>(
+      disp_ctx->LanguageHandler(&ms_exc, (PVOID)disp_ctx->EstablisherFrame,
+                                disp_ctx->ContextRecord, disp_ctx));
   _LIBUNWIND_TRACE_UNWINDING("__libunwind_seh_personality() LanguageHandler "
                              "returned %d",
-                             (int)ms_act);
+                             ms_act);
   switch (ms_act) {
   case ExceptionContinueExecution: return _URC_END_OF_STACK;
   case ExceptionContinueSearch: return _URC_CONTINUE_UNWIND;

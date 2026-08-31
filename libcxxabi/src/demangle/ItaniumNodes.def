@@ -100,5 +100,5 @@ NODE(ExprRequirement)
 NODE(TypeRequirement)
 NODE(NestedRequirement)
 NODE(ExplicitObjectParameter)
-
+NODE(PackIndexing)
 #undef NODE

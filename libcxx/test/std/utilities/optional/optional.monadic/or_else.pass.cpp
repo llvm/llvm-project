@@ -15,6 +15,7 @@
 #include "MoveOnly.h"
 
 #include <cassert>
+#include <concepts>
 #include <optional>
 
 struct NonMovable {
@@ -75,6 +76,13 @@ constexpr bool test() {
     });
     assert(opt == j);
   }
+
+  {
+    int i = 2;
+    const std::optional<int&> opt;
+    assert(opt.or_else([&] { return std::optional<int&>{i}; }) == i);
+  }
+
   {
     int i = 2;
     std::optional<int&> opt;
@@ -87,6 +95,24 @@ constexpr bool test() {
     });
     assert(opt == j);
   }
+
+  {
+    int i                         = 2;
+    const std::optional<int&> opt = i;
+    assert(std::move(opt).or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    }) == i);
+  }
+
+  {
+    int j = 2;
+    std::optional<int&> opt;
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.or_else([&] { return std::optional<int&>(j); });
+    assert(o == j);
+    assert(&(*o) == &j);
+  }
+
 #endif
 
   return true;

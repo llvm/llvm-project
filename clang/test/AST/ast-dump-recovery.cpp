@@ -301,3 +301,24 @@ void foo() {
   U g{};
 }
 } // namespace GH112560
+
+// CHECK:     VarDecl {{.*}} invalid x 'auto *' cinit
+// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+// CHECK-NEXT:   `-CallExpr {{.*}} 'int'
+// DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
+void brokenDeducedVarDecl() {
+   auto* x = some_func(nullptr);
+}
+
+// CHECK:     FunctionDecl {{.*}} test_stmt_recovery
+// CHECK-NEXT:|-ParmVarDecl {{.*}} a
+// CHECK-NEXT:`-CompoundStmt
+// CHECK-NEXT:  |-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:  | `-DeclRefExpr {{.*}} 'a'
+// CHECK-NEXT:  `-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:    `-DeclRefExpr {{.*}} 'a'
+// DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
+void test_stmt_recovery(int a) {
+  a = unresolved;
+  a < unresolved;
+}

@@ -45,6 +45,6 @@ entry:
 body:
   %add = add i32 %param, 1
   %sub = sub i32 %add, 1
-  store i32 %sub, i32* %localVar
+  store i32 %sub, ptr %localVar
   ret void
 }

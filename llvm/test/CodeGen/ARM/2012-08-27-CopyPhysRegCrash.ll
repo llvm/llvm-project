@@ -68,7 +68,8 @@ define void @findEdges(ptr) nounwind ssp {
   %53 = bitcast <4 x i16> %52 to <1 x i64>
   %54 = shufflevector <1 x i64> %53, <1 x i64> undef, <2 x i32> <i32 0, i32 1>
   %55 = bitcast <2 x i64> %54 to <8 x i16>
-  %56 = tail call <8 x i8> @llvm.arm.neon.vshiftn.v8i8(<8 x i16> %55, <8 x i16> <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>)
+  %shr1 = lshr <8 x i16> %55, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %56 = trunc <8 x i16> %shr1 to <8 x i8>
   %57 = shufflevector <2 x i64> %20, <2 x i64> undef, <1 x i32> <i32 1>
   %58 = bitcast <1 x i64> %57 to <8 x i8>
   %59 = zext <8 x i8> %58 to <8 x i16>
@@ -106,7 +107,8 @@ define void @findEdges(ptr) nounwind ssp {
   %91 = bitcast <4 x i16> %90 to <1 x i64>
   %92 = shufflevector <1 x i64> undef, <1 x i64> %91, <2 x i32> <i32 0, i32 1>
   %93 = bitcast <2 x i64> %92 to <8 x i16>
-  %94 = tail call <8 x i8> @llvm.arm.neon.vshiftn.v8i8(<8 x i16> %93, <8 x i16> <i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8, i16 -8>)
+  %shr2 = lshr <8 x i16> %93, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %94 = trunc <8 x i16> %shr2 to <8 x i8>
   %95 = bitcast <8 x i8> %56 to <1 x i64>
   %96 = bitcast <8 x i8> %94 to <1 x i64>
   %97 = shufflevector <1 x i64> %95, <1 x i64> %96, <2 x i32> <i32 0, i32 1>
@@ -117,8 +119,6 @@ define void @findEdges(ptr) nounwind ssp {
 }
 
 declare <4 x i16> @llvm.arm.neon.vqshiftnu.v4i16(<4 x i32>, <4 x i32>) nounwind readnone
-
-declare <8 x i8> @llvm.arm.neon.vshiftn.v8i8(<8 x i16>, <8 x i16>) nounwind readnone
 
 declare <4 x i16> @llvm.arm.neon.vqrshiftnu.v4i16(<4 x i32>, <4 x i32>) nounwind readnone
 

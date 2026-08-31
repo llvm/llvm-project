@@ -83,10 +83,14 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
                /*IsRefCountINF=*/true))
            .first->HDTT;
-  ODBG(ODT_Mapping) << "Creating new map entry: HstBase=" << NewEntry.HstPtrBase
-                    << ", HstBegin=" << NewEntry.HstPtrBegin
-                    << ", HstEnd=" << NewEntry.HstPtrEnd
-                    << ", TgtBegin=" << NewEntry.TgtPtrBegin
+  ODBG(ODT_Mapping) << "Creating new map entry: HstBase="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrBase)
+                    << ", HstBegin="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrBegin)
+                    << ", HstEnd="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrEnd)
+                    << ", TgtBegin="
+                    << reinterpret_cast<void *>(NewEntry.TgtPtrBegin)
                     << ", DynRefCount=" << NewEntry.dynRefCountToStr()
                     << ", HoldRefCount=" << NewEntry.holdRefCountToStr();
   (void)NewEntry;
@@ -205,7 +209,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName, bool HasFlagTo,
     bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
     bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
-    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR, bool ReleaseHDTTMap) {
+    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR, bool ReleaseHDTTMap,
+    StateInfoTy *StateInfo) {
 
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size, OwnedTPR);
   LR.TPR.Flags.IsPresent = true;
@@ -324,10 +329,36 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   if (ReleaseHDTTMap)
     HDTTMap.destroy();
 
-  // If the target pointer is valid, and we need to transfer data, issue the
-  // data transfer.
+  // Lambda to check if this pointer was newly allocated on the current region.
+  // This is needed to handle cases when the TO entry is encountered after an
+  // alloc entry for the same pointer. In such cases, the ref-count is already
+  // non-zero when TO is encountered, but we still need to do a transfer. e.g.
+  //
+  // struct S {
+  //   int *p;
+  // };
+  // #pragma omp declare mapper(id : S s) map(to: s.p, s.p[0 : 10])
+  //
+  // S s1;
+  // ...
+  // #pragma omp target map(alloc : s1.p[0 : 10]) map(mapper(id), to : s1)
+  auto WasNewlyAllocatedForCurrentRegion = [&]() {
+    if (!StateInfo)
+      return false;
+    bool WasNewlyAllocated =
+        StateInfo->wasNewlyAllocated(HstPtrBegin).has_value();
+    if (WasNewlyAllocated)
+      ODBG(ODT_Mapping) << "HstPtrBegin " << HstPtrBegin
+                        << " was newly allocated for the current region";
+    return WasNewlyAllocated;
+  };
+
+  // Even if this isn't a new entry, we still need to do a data-transfer if
+  // the pointer was newly allocated on the current target region.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
-      (LR.TPR.Flags.IsNewEntry || HasFlagAlways) && Size != 0) {
+      (LR.TPR.Flags.IsNewEntry || HasFlagAlways ||
+       WasNewlyAllocatedForCurrentRegion()) &&
+      Size != 0) {
 
     // If we have something like:
     //   #pragma omp target map(to: s.myarr[0:10]) map(to: s.myarr[0:10])
@@ -502,9 +533,11 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
                                          int64_t Size) {
   assert(Entry && "Trying to deallocate a null entry.");
 
-  ODBG(ODT_Mapping) << "Deleting tgt data " << Entry->TgtPtrBegin << " of size "
-                    << Size << " by freeing allocation "
-                    << "starting at " << Entry->TgtAllocBegin;
+  ODBG(ODT_Mapping) << "Deleting tgt data "
+                    << reinterpret_cast<void *>(Entry->TgtPtrBegin)
+                    << " of size " << Size << " by freeing allocation "
+                    << "starting at "
+                    << reinterpret_cast<void *>(Entry->TgtAllocBegin);
 
   void *Event = Entry->getEvent();
   if (Event && Device.destroyEvent(Event) != OFFLOAD_SUCCESS) {

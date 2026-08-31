@@ -1,30 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --extra-arg -std=c++20 --output=%t --doxygen --format=json --executor=standalone %S/../Inputs/compound-constraints.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
-
-template<typename T> concept Incrementable = requires (T a) {
-  a++;
-};
-
-template<typename T> concept Decrementable = requires (T a) {
-  a--;
-};
-
-template<typename T> concept PreIncrementable = requires (T a) {
-  ++a;
-};
-
-template<typename T> concept PreDecrementable = requires (T a) {
-  --a;
-};
-
-template<typename T> requires Incrementable<T> && Decrementable<T> void One();
-
-template<typename T> requires (Incrementable<T> && Decrementable<T>) void Two();
-
-template<typename T> requires (Incrementable<T> && Decrementable<T>) || (PreIncrementable<T> && PreDecrementable<T>) void Three();
-
-template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncrementable<T> void Four();
 
 // CHECK:         "Name": "One",
 // CHECK:         "Template": {

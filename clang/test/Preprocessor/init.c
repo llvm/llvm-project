@@ -15,6 +15,15 @@
 // BLOCKS:#define __BLOCKS__ 1
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2d -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX29 %s
+//
+// CXX29:#define __GNUG__ 4
+// CXX29:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX29:#define __GXX_RTTI 1
+// CXX29:#define __GXX_WEAK__ 1
+// CXX29:#define __cplusplus 202700L
+// CXX29:#define __private_extern__ extern
+//
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
 //
@@ -213,6 +222,13 @@
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
+//
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2d -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX29 %s
+//
+// GXX29:#define __GNUG__ 4
+// GXX29:#define __GXX_WEAK__ 1
+// GXX29:#define __cplusplus 202700L
+// GXX29:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s
@@ -981,7 +997,7 @@
 // NVPTX64:#define __WINT_WIDTH__ 32
 //
 
-// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgcn < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
+// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgpu < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=r600 -target-cpu caicos < /dev/null | FileCheck -match-full-lines --check-prefix AMDGPU %s
 //
 // AMDGPU:#define __ENDIAN_LITTLE__ 1
@@ -1656,12 +1672,24 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-emscripten \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,EMSCRIPTEN %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasi \
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasip1 \
 // RUN:   < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WEBASSEMBLY-WASI %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasi \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WASI,WASIP1 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasip1 \
 // RUN:   < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WEBASSEMBLY-WASI %s
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WASI,WASIP1 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasip2 \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WASI,WASIP2 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasip2 \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WASI,WASIP2 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasip3 \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WASI,WASIP3 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasip3 \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WASI,WASIP3 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown -x c++ \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX %s
@@ -1921,8 +1949,12 @@
 // WEBASSEMBLY-NEXT:#define __SHRT_MAX__ 32767
 // WEBASSEMBLY-NEXT:#define __SHRT_WIDTH__ 16
 // WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_MAX__ 2147483647L
+// WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_TYPE__ long int
 // WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_MAX__ 9223372036854775807L
+// WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_TYPE__ long int
 // WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_WIDTH__ 64
 // WEBASSEMBLY-NEXT:#define __SIZEOF_DOUBLE__ 8
 // WEBASSEMBLY-NEXT:#define __SIZEOF_FLOAT__ 4
@@ -2064,10 +2096,12 @@
 // WEBASSEMBLY-NEXT:#define __USER_LABEL_PREFIX__
 // WEBASSEMBLY-NEXT:#define __VERSION__ "{{.*}}"
 // WEBASSEMBLY-NEXT:#define __WCHAR_MAX__ 2147483647
+// WEBASSEMBLY-NEXT:#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
 // WEBASSEMBLY-NEXT:#define __WCHAR_TYPE__ int
 // WEBASSEMBLY-NOT:#define __WCHAR_UNSIGNED__
 // WEBASSEMBLY-NEXT:#define __WCHAR_WIDTH__ 32
 // WEBASSEMBLY-NEXT:#define __WINT_MAX__ 2147483647
+// WEBASSEMBLY-NEXT:#define __WINT_MIN__ (-__WINT_MAX__ - 1)
 // WEBASSEMBLY-NEXT:#define __WINT_TYPE__ int
 // WEBASSEMBLY-NOT:#define __WINT_UNSIGNED__
 // WEBASSEMBLY-NEXT:#define __WINT_WIDTH__ 32
@@ -2079,11 +2113,14 @@
 // WEBASSEMBLY-NEXT:#define __clang_version__ "{{.*}}"
 // WEBASSEMBLY-NEXT:#define __clang_wide_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __llvm__ 1
-// WEBASSEMBLY-WASI-NOT:#define __unix
-// WEBASSEMBLY-WASI-NOT:#define __unix__
+// WASI-NOT:#define __unix
+// WASI-NOT:#define __unix__
 // EMSCRIPTEN-NEXT:#define __unix 1
 // EMSCRIPTEN-NEXT:#define __unix__ 1
-// WEBASSEMBLY-WASI-NEXT:#define __wasi__ 1
+// WASI-NEXT:#define __wasi__ 1
+// WASIP1-NEXT:#define __wasip1__ 1
+// WASIP2-NEXT:#define __wasip2__ 1
+// WASIP3-NEXT:#define __wasip3__ 1
 // WEBASSEMBLY-NOT:#define __wasm_simd128__
 // WEBASSEMBLY-NOT:#define __wasm_simd256__
 // WEBASSEMBLY-NOT:#define __wasm_simd512__
@@ -2098,7 +2135,7 @@
 // WEBASSEMBLY64-NEXT:#define __wasm64__ 1
 // WEBASSEMBLY-NEXT:#define __wasm__ 1
 // EMSCRIPTEN:#define unix 1
-// WEBASSEMBLY-WASI-NOT:#define unix 1
+// WASI-NOT:#define unix 1
 // WEBASSEMBLY-CXX-NOT:_REENTRANT
 // WEBASSEMBLY-CXX-NOT:__STDCPP_THREADS__
 // WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
@@ -2391,6 +2428,8 @@
 // ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ int
 // ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ long unsigned int
 
+// ARM-DARWIN-BAREMETAL-64: #define __GCC_CONSTRUCTIVE_SIZE 64
+// ARM-DARWIN-BAREMETAL-64: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARM-DARWIN-BAREMETAL-64: #define __INTPTR_TYPE__ long int
 // ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ long int
 // ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ long unsigned int

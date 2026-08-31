@@ -11,10 +11,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   -O0 --data-sections < %s | FileCheck %s --check-prefix BE-LINUX-P8
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix --code-model=small \
 ; RUN:   -mcpu=pwr7 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   -O0 --data-sections < %s | FileCheck %s --check-prefix AIX64-P7
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix --code-model=small \
 ; RUN:   -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   -O0 --data-sections < %s | FileCheck %s --check-prefix AIX64-P8
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-ibm-aix \

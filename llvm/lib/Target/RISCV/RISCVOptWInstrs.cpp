@@ -60,18 +60,25 @@ static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
 
 namespace {
 
-class RISCVOptWInstrs : public MachineFunctionPass {
+class RISCVOptWInstrsImpl {
 public:
-  static char ID;
+  bool run(MachineFunction &MF);
 
-  RISCVOptWInstrs() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+private:
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
                          const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool canonicalizeWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                              const RISCVSubtarget &ST,
                              MachineRegisterInfo &MRI);
+};
+
+class RISCVOptWInstrsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVOptWInstrsLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -83,17 +90,16 @@ public:
 
 } // end anonymous namespace
 
-char RISCVOptWInstrs::ID = 0;
-INITIALIZE_PASS(RISCVOptWInstrs, DEBUG_TYPE, RISCV_OPT_W_INSTRS_NAME, false,
-                false)
+char RISCVOptWInstrsLegacy::ID = 0;
+INITIALIZE_PASS(RISCVOptWInstrsLegacy, DEBUG_TYPE, RISCV_OPT_W_INSTRS_NAME,
+                false, false)
 
-FunctionPass *llvm::createRISCVOptWInstrsPass() {
-  return new RISCVOptWInstrs();
+FunctionPass *llvm::createRISCVOptWInstrsLegacyPass() {
+  return new RISCVOptWInstrsLegacy();
 }
 
-static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
+static bool vectorPseudoHasAllNBitUsers(const MachineInstr &MI, unsigned OpIdx,
                                         unsigned Bits) {
-  const MachineInstr &MI = *UserOp.getParent();
   unsigned MCOpcode = RISCV::getRVVMCOpcode(MI.getOpcode());
 
   if (!MCOpcode)
@@ -106,7 +112,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
   assert(RISCVII::hasVLOp(TSFlags));
   const unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
 
-  if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
+  if (OpIdx == RISCVII::getVLOpNum(MCID))
     return false;
 
   auto NumDemandedBits =
@@ -148,7 +154,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       switch (UserMI->getOpcode()) {
       default:
-        if (vectorPseudoHasAllNBitUsers(UserOp, Bits))
+        if (vectorPseudoHasAllNBitUsers(*UserMI, OpIdx, Bits))
           break;
         return false;
 
@@ -168,6 +174,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::ROLW:
       case RISCV::RORW:
       case RISCV::RORIW:
+      case RISCV::CLSW:
       case RISCV::CLZW:
       case RISCV::CTZW:
       case RISCV::CPOPW:
@@ -341,10 +348,10 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       case RISCV::PseudoCCMOVGPR:
       case RISCV::PseudoCCMOVGPRNoX0:
-        // Either operand 4 or operand 5 is returned by this instruction. If
+        // Either operand 1 or operand 2 is returned by this instruction. If
         // only the lower word of the result is used, then only the lower word
-        // of operand 4 and 5 is used.
-        if (OpIdx != 4 && OpIdx != 5)
+        // of operand 1 and 2 is used.
+        if (OpIdx != 1 && OpIdx != 2)
           return false;
         Worklist.emplace_back(UserMI, Bits);
         break;
@@ -428,6 +435,14 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     unsigned Lsb = MI.getOperand(3).getImm();
     return Msb >= Lsb && (Msb - Lsb + 1) < 32;
   }
+  case RISCV::SATI_RV64:
+    // Saturates to signed range [-2^(imm-1), 2^(imm-1)-1].
+    // If imm <= 32, result fits in 32-bit signed range, thus sign-extended.
+    return MI.getOperand(2).getImm() <= 32;
+  case RISCV::USATI_RV64:
+    // Saturates to unsigned range [0, 2^imm-1].
+    // If imm < 32, result has bit 31 clear, thus sign-extended.
+    return MI.getOperand(2).getImm() < 32;
   }
 
   return false;
@@ -556,9 +571,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCSLLIW:
     case RISCV::PseudoCCSRLIW:
     case RISCV::PseudoCCSRAIW:
-      // Returns operand 4 or an ADDW/SUBW/etc. of operands 5 and 6. We only
-      // need to check if operand 4 is sign extended.
-      if (!AddRegToWorkList(MI->getOperand(4).getReg()))
+      // Returns operand 1 or an ADDW/SUBW/etc. of operands 2 and 3. We only
+      // need to check if operand 1 is sign extended.
+      if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
       break;
     case RISCV::REMU:
@@ -580,13 +595,17 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCANDN:
     case RISCV::PseudoCCORN:
     case RISCV::PseudoCCXNOR:
-    case RISCV::PHI: {
+    case RISCV::PHI:
+    case RISCV::MERGE:
+    case RISCV::MVM:
+    case RISCV::MVMN: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
-      // MIN, MAX, or PHI is also sign-extended.
+      // MIN, MAX, PHI, or bitwise merge instructions is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
-      // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
-      // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
+      // The input registers for PseudoCCMOVGPR(NoX0) are 1 and 2.
+      // The input registers for PseudoCCAND/OR/XOR are 1, 2, and 3.
+      // The input registers for MERGE/MVM/MVMN are 1, 2, and 3.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
       switch (MI->getOpcode()) {
@@ -596,8 +615,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         break;
       case RISCV::PseudoCCMOVGPR:
       case RISCV::PseudoCCMOVGPRNoX0:
-        B = 4;
-        E = 6;
+        B = 1;
+        E = 3;
         break;
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
@@ -605,10 +624,16 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCANDN:
       case RISCV::PseudoCCORN:
       case RISCV::PseudoCCXNOR:
-        B = 4;
-        E = 7;
+        B = 1;
+        E = 4;
         break;
-       }
+      case RISCV::MERGE:
+      case RISCV::MVM:
+      case RISCV::MVMN:
+        B = 1;
+        E = 4;
+        break;
+      }
 
       for (unsigned I = B; I != E; I += D) {
         if (!MI->getOperand(I).isReg())
@@ -652,6 +677,16 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       return false;
     }
 
+    case RISCV::LD:
+    case RISCV::LXD: {
+      if (MI->hasOneMemOperand() && !(*MI->memoperands_begin())->isVolatile() &&
+          hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
+
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
     case RISCV::SLLI:
@@ -660,8 +695,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       [[fallthrough]];
     case RISCV::ADD:
-    case RISCV::LD:
     case RISCV::LWU:
+    case RISCV::LXWU:
     case RISCV::MUL:
     case RISCV::SUB:
       if (hasAllWUsers(*MI, ST, MRI)) {
@@ -686,6 +721,9 @@ static unsigned getWOp(unsigned Opcode) {
   case RISCV::LD:
   case RISCV::LWU:
     return RISCV::LW;
+  case RISCV::LXD:
+  case RISCV::LXWU:
+    return RISCV::LXW;
   case RISCV::MUL:
     return RISCV::MULW;
   case RISCV::SLLI:
@@ -697,10 +735,10 @@ static unsigned getWOp(unsigned Opcode) {
   }
 }
 
-bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
-                                        const RISCVInstrInfo &TII,
-                                        const RISCVSubtarget &ST,
-                                        MachineRegisterInfo &MRI) {
+bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
+                                            const RISCVInstrInfo &TII,
+                                            const RISCVSubtarget &ST,
+                                            MachineRegisterInfo &MRI) {
   if (DisableSExtWRemoval)
     return false;
 
@@ -751,10 +789,10 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
 
 // Strips or adds W suffixes to eligible instructions depending on the
 // subtarget preferences.
-bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
-                                            const RISCVInstrInfo &TII,
-                                            const RISCVSubtarget &ST,
-                                            MachineRegisterInfo &MRI) {
+bool RISCVOptWInstrsImpl::canonicalizeWSuffixes(MachineFunction &MF,
+                                                const RISCVInstrInfo &TII,
+                                                const RISCVSubtarget &ST,
+                                                MachineRegisterInfo &MRI) {
   bool ShouldStripW = !(DisableStripWSuffix || ST.preferWInst());
   bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
@@ -801,8 +839,20 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
         WOpc = RISCV::SLLIW;
         break;
       case RISCV::LD:
+        if (!MI.hasOneMemOperand() || (*MI.memoperands_begin())->isVolatile())
+          continue;
+        WOpc = RISCV::LW;
+        break;
       case RISCV::LWU:
         WOpc = RISCV::LW;
+        break;
+      case RISCV::LXD:
+        if (!MI.hasOneMemOperand() || (*MI.memoperands_begin())->isVolatile())
+          continue;
+        WOpc = RISCV::LXW;
+        break;
+      case RISCV::LXWU:
+        WOpc = RISCV::LXW;
         break;
       }
 
@@ -833,10 +883,7 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
-bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVOptWInstrsImpl::run(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *ST.getInstrInfo();
@@ -848,4 +895,22 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
   MadeChange |= canonicalizeWSuffixes(MF, TII, ST, MRI);
   return MadeChange;
+}
+
+bool RISCVOptWInstrsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return RISCVOptWInstrsImpl().run(MF);
+}
+
+PreservedAnalyses
+RISCVOptWInstrsPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVOptWInstrsImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

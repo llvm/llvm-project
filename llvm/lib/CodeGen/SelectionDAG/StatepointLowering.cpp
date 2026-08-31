@@ -1145,6 +1145,8 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
     const CallBase *Call, SDValue Callee, const BasicBlock *EHPadBB,
     bool VarArgDisallowed, bool ForceVoidReturnTy) {
   StatepointLoweringInfo SI(DAG);
+  SI.CLI.CB = Call;
+
   unsigned ArgBeginIndex = Call->arg_begin() - Call->op_begin();
   populateCallLoweringInfo(
       SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,
@@ -1305,9 +1307,18 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
 void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
   const auto &TLI = DAG.getTargetLoweringInfo();
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(RTLIB::DEOPTIMIZE),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
 
+  RTLIB::LibcallImpl DeoptImpl =
+      DAG.getLibcalls().getLibcallImpl(RTLIB::DEOPTIMIZE);
+  if (DeoptImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError("no deoptimize libcall available");
+    return;
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(DeoptImpl, TLI.getPointerTy(DAG.getDataLayout()));
+
+  // FIXME: Should pass in the calling convention for the LibcallImpl.
   // We don't lower calls to __llvm_deoptimize as varargs, but as a regular
   // call.  We also do not lower the return value to any virtual register, and
   // change the immediately following return to a trap instruction.

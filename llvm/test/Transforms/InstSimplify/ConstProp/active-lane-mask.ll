@@ -297,9 +297,7 @@ entry:
 define <4 x float> @poisonc(<4 x float> %a, i32 %n) {
 ; CHECK-LABEL: @poisonc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAR27:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 1024)
-; CHECK-NEXT:    [[VAR33:%.*]] = select <4 x i1> [[VAR27]], <4 x float> [[A:%.*]], <4 x float> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[VAR33]]
+; CHECK-NEXT:    ret <4 x float> poison
 ;
 entry:
   %new0 = shl i1 0, 1
@@ -372,6 +370,21 @@ entry:
   ret <vscale x 16 x i1> %mask
 }
 
+define <16 x i1> @base_overflow() {
+; CHECK-LABEL: @base_overflow(
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>
+;
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 -3, i64 -1)
+  ret <16 x i1> %mask
+}
+
+define <16 x i1> @int_overflow() {
+; CHECK-LABEL: @int_overflow(
+; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>
+;
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i128(i128 -3, i128 -1)
+  ret <16 x i1> %mask
+}
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_for_each = [](auto first, auto last, auto f) { return std::for_each(first, last, f); };
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
       using ElemType = typename Container::value_type;
       benchmark::RegisterBenchmark(
           name,
-          [for_each](auto& st) {
+          [for_each](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             Container c(size, 1);
             auto first = c.begin();
@@ -50,9 +51,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::for_each(vector<int>)", std_for_each);
     bm.operator()<std::deque<int>>("std::for_each(deque<int>)", std_for_each);
     bm.operator()<std::list<int>>("std::for_each(list<int>)", std_for_each);
-    bm.operator()<std::vector<int>>("rng::for_each(vector<int>)", std::ranges::for_each);
-    bm.operator()<std::deque<int>>("rng::for_each(deque<int>)", std::ranges::for_each);
-    bm.operator()<std::list<int>>("rng::for_each(list<int>)", std::ranges::for_each);
   }
 
   // std::{,range::}for_each for associative containers
@@ -61,7 +59,7 @@ int main(int argc, char** argv) {
                            std::type_identity<Container>, std::bool_constant<IsMapLike>, std::string name) {
       benchmark::RegisterBenchmark(
           name,
-          [](auto& st) {
+          [](auto& st) TEST_ALIGN_BENCHMARK {
             Container c;
             for (std::int64_t i = 0; i != st.range(0); ++i) {
               if constexpr (IsMapLike)
@@ -80,17 +78,17 @@ int main(int argc, char** argv) {
           ->Arg(50) // non power-of-two
           ->Arg(8192);
     };
-    iterator_bm(std::type_identity<std::set<int>>{}, std::false_type{}, "rng::for_each(set<int>::iterator)");
-    iterator_bm(std::type_identity<std::multiset<int>>{}, std::false_type{}, "rng::for_each(multiset<int>::iterator)");
-    iterator_bm(std::type_identity<std::map<int, int>>{}, std::true_type{}, "rng::for_each(map<int>::iterator)");
+    iterator_bm(std::type_identity<std::set<int>>{}, std::false_type{}, "std::for_each(set<int>::iterator)");
+    iterator_bm(std::type_identity<std::multiset<int>>{}, std::false_type{}, "std::for_each(multiset<int>::iterator)");
+    iterator_bm(std::type_identity<std::map<int, int>>{}, std::true_type{}, "std::for_each(map<int>::iterator)");
     iterator_bm(
-        std::type_identity<std::multimap<int, int>>{}, std::true_type{}, "rng::for_each(multimap<int>::iterator)");
+        std::type_identity<std::multimap<int, int>>{}, std::true_type{}, "std::for_each(multimap<int>::iterator)");
 
     auto container_bm = []<class Container, bool IsMapLike>(
                             std::type_identity<Container>, std::bool_constant<IsMapLike>, std::string name) {
       benchmark::RegisterBenchmark(
           name,
-          [](auto& st) {
+          [](auto& st) TEST_ALIGN_BENCHMARK {
             Container c;
             const std::size_t size = st.range(0);
 
@@ -125,7 +123,7 @@ int main(int argc, char** argv) {
 
       benchmark::RegisterBenchmark(
           name,
-          [for_each](auto& st) {
+          [for_each](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const seg_size = 256;
             std::size_t const segments = (size + seg_size - 1) / seg_size;
@@ -150,7 +148,6 @@ int main(int argc, char** argv) {
           ->Arg(8192);
     };
     bm.operator()<std::vector<std::vector<int>>>("std::for_each(join_view(vector<vector<int>>))", std_for_each);
-    bm.operator()<std::vector<std::vector<int>>>("rng::for_each(join_view(vector<vector<int>>)", std::ranges::for_each);
   }
 
   benchmark::Initialize(&argc, argv);

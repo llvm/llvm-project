@@ -265,3 +265,32 @@ TEST(NamedDeclPrinter, NestedNameSpecifierTemplateArgs) {
   ASSERT_TRUE(
       PrintedNestedNameSpecifierMatches(Code, "method", "vector<int>::"));
 }
+
+TEST(NamedDeclPrinter, NestedNameSpecifierLambda) {
+  const char *Code =
+      R"(
+        auto l = [] {
+          struct Foo {
+            void method();
+          };
+        };
+)";
+  ASSERT_TRUE(PrintedNestedNameSpecifierMatches(
+      Code, "method", "(lambda)::operator()()::Foo::"));
+}
+
+TEST(NamedDeclPrinter, NestedNameSpecifierAnonymousTags) {
+  const char *Code =
+      R"(
+        struct Foo {
+          class {
+            public:
+            struct {
+              void method();
+            } i;
+          };
+        };
+)";
+  ASSERT_TRUE(PrintedNestedNameSpecifierMatches(
+      Code, "method", "Foo::(anonymous class)::(unnamed struct)::"));
+}

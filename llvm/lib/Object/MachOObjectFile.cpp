@@ -883,6 +883,48 @@ parseBuildVersionCommand(const MachOObjectFile &Obj,
   return Error::success();
 }
 
+static Error
+checkTargetTripleCommand(const MachOObjectFile &Obj,
+                         const MachOObjectFile::LoadCommandInfo &Load,
+                         uint32_t LoadCommandIndex) {
+  // Check the command size is big enough for the command struct.
+  if (Load.C.cmdsize < sizeof(MachO::target_triple_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE cmdsize too small");
+
+  auto TTOrErr = getStructOrErr<MachO::target_triple_command>(Obj, Load.Ptr);
+  if (!TTOrErr)
+    return TTOrErr.takeError();
+  MachO::target_triple_command TT = TTOrErr.get();
+
+  // Check the triple offset is after the command struct.
+  if (TT.triple < sizeof(MachO::target_triple_command))
+    return malformedError(
+        "load command " + Twine(LoadCommandIndex) +
+        " LC_TARGET_TRIPLE triple.offset field too small, not past the end of "
+        "the target_triple_command struct");
+
+  // Check the triple offset is before the end of the command.
+  if (TT.triple >= TT.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE triple.offset field extends past "
+                          "the end of the load command");
+
+  // Check there is a NUL between the starting offset of the triple and the end
+  // of the command.
+  uint32_t i;
+  const char *P = (const char *)Load.Ptr;
+  for (i = TT.triple; i < TT.cmdsize; i++)
+    if (P[i] == '\0')
+      break;
+  if (i >= TT.cmdsize)
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_TARGET_TRIPLE triple name extends past the end "
+                          "of the load command");
+
+  return Error::success();
+}
+
 static Error checkRpathCommand(const MachOObjectFile &Obj,
                                const MachOObjectFile::LoadCommandInfo &Load,
                                uint32_t LoadCommandIndex) {
@@ -1474,6 +1516,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
     } else if (Load.C.cmd == MachO::LC_BUILD_VERSION) {
       if ((Err = parseBuildVersionCommand(*this, Load, BuildTools, I)))
+        return;
+    } else if (Load.C.cmd == MachO::LC_TARGET_TRIPLE) {
+      if ((Err = checkTargetTripleCommand(*this, Load, I)))
         return;
     } else if (Load.C.cmd == MachO::LC_RPATH) {
       if ((Err = checkRpathCommand(*this, Load, I)))
@@ -2398,6 +2443,30 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
+    case Triple::riscv32: {
+      static const char *const Table[] = {
+          "RISCV_RELOC_UNSIGNED", "RISCV_RELOC_SUBTRACTOR",
+          "RISCV_RELOC_BRANCH21", "RISCV_RELOC_HI20",
+          "RISCV_RELOC_LO12",     "RISCV_RELOC_GOT_HI20",
+          "RISCV_RELOC_GOT_LO12", "RISCV_RELOC_POINTER_TO_GOT",
+          "RISCV_RELOC_ADDEND",
+      };
+
+      if (RType >= std::size(Table))
+        res = "Unknown";
+      else
+        res = Table[RType];
+      Result.append(res.begin(), res.end());
+      if ((RType == MachO::RISCV_RELOC_HI20 ||
+           RType == MachO::RISCV_RELOC_GOT_HI20 ||
+           RType == MachO::RISCV_RELOC_LO12 ||
+           RType == MachO::RISCV_RELOC_GOT_LO12) &&
+          getAnyRelocationPCRel(getRelocation(Rel))) {
+        StringRef PCRel("(pcrel)");
+        Result.append(PCRel.begin(), PCRel.end());
+      }
+      return;
+    }
     case Triple::UnknownArch:
       res = "Unknown";
       break;
@@ -2690,6 +2759,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
+    case MachO::CPU_TYPE_RISCV:
+      return "Mach-O 32-bit RISC-V";
     default:
       return "Mach-O 32-bit unknown";
     }
@@ -2723,6 +2794,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType)
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
     return Triple::ppc64;
+  case MachO::CPU_TYPE_RISCV:
+    return Triple::riscv32;
   default:
     return Triple::UnknownArch;
   }
@@ -2811,6 +2884,24 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "armv7s";
       return Triple("armv7s-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m23";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.base";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m33";
+      if (ArchFlag)
+        *ArchFlag = "armv8m.main";
+      return Triple("thumbv8m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m52";
+      if (ArchFlag)
+        *ArchFlag = "armv8.1m.main";
+      return Triple("thumbv8m-apple-darwin");
     default:
       return Triple();
     }
@@ -2860,6 +2951,15 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     default:
       return Triple();
     }
+  case MachO::CPU_TYPE_RISCV:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_RISCV_ALL:
+      if (ArchFlag)
+        *ArchFlag = "riscv32";
+      return Triple("riscv32-apple-macho");
+    default:
+      return Triple();
+    }
   default:
     return Triple();
   }
@@ -2875,24 +2975,11 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
-  static const std::array<StringRef, 18> ValidArchs = {{
-      "i386",
-      "x86_64",
-      "x86_64h",
-      "armv4t",
-      "arm",
-      "armv5e",
-      "armv6",
-      "armv6m",
-      "armv7",
-      "armv7em",
-      "armv7k",
-      "armv7m",
-      "armv7s",
-      "arm64",
-      "arm64e",
-      "arm64_32",
-      "ppc",
+  static const std::array<StringRef, 21> ValidArchs = {{
+      "i386",          "x86_64", "x86_64h", "armv4t",      "arm",
+      "armv5e",        "armv6",  "armv6m",  "armv7",       "armv7em",
+      "armv7k",        "armv7m", "armv7s",  "armv8m.base", "armv8m.main",
+      "armv8.1m.main", "arm64",  "arm64e",  "arm64_32",    "ppc",
       "ppc64",
   }};
 
@@ -4708,6 +4795,11 @@ MachOObjectFile::getBuildVersionLoadCommand(const LoadCommandInfo &L) const {
   return getStruct<MachO::build_version_command>(*this, L.Ptr);
 }
 
+MachO::target_triple_command
+MachOObjectFile::getTargetTripleLoadCommand(const LoadCommandInfo &L) const {
+  return getStruct<MachO::target_triple_command>(*this, L.Ptr);
+}
+
 MachO::build_tool_version
 MachOObjectFile::getBuildToolVersion(unsigned index) const {
   return getStruct<MachO::build_tool_version>(*this, BuildTools[index]);
@@ -5318,7 +5410,7 @@ bool MachOObjectFile::is64Bit() const {
 
 void MachOObjectFile::ReadULEB128s(uint64_t Index,
                                    SmallVectorImpl<uint64_t> &Out) const {
-  DataExtractor extractor(ObjectFile::getData(), true, 0);
+  DataExtractor extractor(ObjectFile::getData(), true);
 
   uint64_t offset = Index;
   uint64_t data = 0;

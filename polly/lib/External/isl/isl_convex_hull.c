@@ -178,7 +178,7 @@ error:
 
 /* Given a union of basic sets, construct the constraints for wrapping
  * a facet around one of its ridges.
- * In particular, if each of n the d-dimensional basic sets i in "set"
+ * In particular, if each of the n d-dimensional basic sets i in "set"
  * contains the origin, satisfies the constraints x_1 >= 0 and x_2 >= 0
  * and is defined by the constraints
  *				    [ 1 ]
@@ -2618,6 +2618,8 @@ __isl_give isl_basic_map *isl_basic_map_plain_unshifted_simple_hull(
 
 	bmap1 = isl_basic_map_drop_constraints_involving_unknown_divs(bmap1);
 	bmap2 = isl_basic_map_drop_constraints_involving_unknown_divs(bmap2);
+	bmap1 = isl_basic_map_remove_unknown_divs(bmap1);
+	bmap2 = isl_basic_map_remove_unknown_divs(bmap2);
 	bmap1 = isl_basic_map_order_divs(bmap1);
 	bmap2 = isl_basic_map_align_divs(bmap2, bmap1);
 	bmap1 = isl_basic_map_align_divs(bmap1, bmap2);
@@ -3101,8 +3103,8 @@ __isl_give isl_basic_set *isl_set_bounded_simple_hull(__isl_take isl_set *set)
 		for (j = 0; j < hull->n_eq; ++j) {
 			if (isl_int_is_zero(hull->eq[j][1 + nparam + i]))
 				continue;
-			if (isl_seq_first_non_zero(hull->eq[j]+1+nparam+i+1,
-						    left) == -1)
+			if (!isl_seq_any_non_zero(hull->eq[j]+1+nparam+i+1,
+						    left))
 				break;
 		}
 		if (j < hull->n_eq)
@@ -3111,10 +3113,10 @@ __isl_give isl_basic_set *isl_set_bounded_simple_hull(__isl_take isl_set *set)
 		for (j = 0; j < hull->n_ineq; ++j) {
 			if (isl_int_is_zero(hull->ineq[j][1 + nparam + i]))
 				continue;
-			if (isl_seq_first_non_zero(hull->ineq[j]+1+nparam+i+1,
-						    left) != -1 ||
-			    isl_seq_first_non_zero(hull->ineq[j]+1+nparam,
-						    i) != -1)
+			if (isl_seq_any_non_zero(hull->ineq[j]+1+nparam+i+1,
+						    left) ||
+			    isl_seq_any_non_zero(hull->ineq[j]+1+nparam,
+						    i))
 				continue;
 			if (isl_int_is_pos(hull->ineq[j][1 + nparam + i]))
 				lower = 1;

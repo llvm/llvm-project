@@ -285,7 +285,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 ::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    OpaqueProperties properties, ::mlir::RegionRange regions,
+    PropertyRef properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
   return ::mlir::success();
@@ -456,7 +456,8 @@ void PolyForOp::print(OpAsmPrinter &p) {
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
-  auto arrayAttr = getOperation()->getAttrOfType<ArrayAttr>("arg_names");
+  auto arrayAttr =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>("arg_names");
   if (!arrayAttr)
     return;
   auto args = getRegion().front().getArguments();

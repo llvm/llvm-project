@@ -355,4 +355,14 @@ void typedef_context() {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: narrowing conversion from 'myint64_t' (aka 'long long') to signed type 'int' is implementation-defined [bugprone-narrowing-conversions]
 }
 
+void testBoolToSignedType() {
+  bool b = true;
+  auto c = char{b};
+  auto sc = (signed char){b};
+  auto s = short{b};
+  auto i = int{b};
+  auto c1 = static_cast<char>(b);
+  auto c2 = (char)b;
+}
+
 } // namespace floats

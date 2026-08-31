@@ -37,16 +37,16 @@
 ; CHECK-SPIRV:     %[[#]] = OpAtomicCompareExchange %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#RELAXED]] %[[#VAL]] %[[#CMP]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicCompareExchange %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#RELAXED]] %[[#VAL]] %[[#CMP]]
 
-define dso_local spir_kernel void @test_atomic_cmpxchg(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val) local_unnamed_addr {
+define dso_local spir_kernel void @test_atomic_cmpxchg(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val) local_unnamed_addr {
 entry:
-  %call = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val)
-  %call1 = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val)
+  %call = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val)
+  %call1 = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val)
   ret void
 }
 
-declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(i32 addrspace(1)* noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(ptr addrspace(1) noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(i32 addrspace(1)* noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(ptr addrspace(1) noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
 ;; References:
 ;; [1]: https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/atomic_cmpxchg.html

@@ -62,16 +62,21 @@ ensure the rest of the commands in this tutorial work.
 ### Testing changes during development
 
 During development, it is recommended to run both the in-tree tests (under
-[bolt/test](./test)) and the out-of-tree tests, which use binaries hosted in an
-[external](https://github.com/rafaelauler/bolt-tests) repository.
+[bolt/test](./test)) and the out-of-tree tests, which are currently hosted in
+the following repositories:
+- [rafaelauler/bolt-tests](https://github.com/rafaelauler/bolt-tests): covers both X86 and AArch64 binaries tests
+- [arm/large-bolt-tests](https://github.com/arm/large-bolt-tests): additional AArch64 binaries
 
-Below are sample instructions to run both test suites. You may need to define
+
+Below are sample instructions to run all test suites. You may need to define
 additional CMake variables. The [docker-tests/Dockerfile ](./utils/docker-tests/Dockerfile)
 is provided which is another route to get a known good testing environment.
 
 ```bash
 git clone https://github.com/llvm/llvm-project.git
 git clone https://github.com/rafaelauler/bolt-tests
+git clone https://github.com/arm/large-bolt-tests.git
+
 mkdir build
 cmake -G Ninja -S llvm-project/llvm -B build \
        -DLLVM_TARGETS_TO_BUILD="AArch64;X86" \
@@ -82,10 +87,12 @@ cmake -G Ninja -S llvm-project/llvm -B build \
        -DLLVM_ENABLE_PROJECTS="clang;bolt;lld" \
        -DLLVM_USE_LINKER=lld \
        -DLLVM_CCACHE_BUILD=ON \
-       -DLLVM_EXTERNAL_PROJECTS="bolttests" \
+       -DLLVM_EXTERNAL_PROJECTS="bolttests;bolttests-arm" \
        -DLLVM_EXTERNAL_BOLTTESTS_SOURCE_DIR="$(pwd)/bolt-tests"
+       -DLLVM_EXTERNAL_BOLTTESTS_ARM_SOURCE_DIR="$(pwd)/large-bolt-tests"
 
-ninja -C build check-bolt check-large-bolt
+
+ninja -C build check-bolt check-large-bolt check-large-bolt-arm
 ```
 
 ## Optimizing BOLT's Performance

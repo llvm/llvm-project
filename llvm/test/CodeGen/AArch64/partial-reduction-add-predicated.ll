@@ -23,9 +23,8 @@ define <4 x i32> @predicate_dot_by_C_fixed_length(<4 x i32> %acc, <16 x i1> %p, 
 ; CHECK-LABEL: predicate_dot_by_C_fixed_length:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    movi v3.16b, #127
 ; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
-; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and z1.b, z1.b, #0x7f
 ; CHECK-NEXT:    sdot v0.4s, v2.16b, v1.16b
 ; CHECK-NEXT:    ret
  %ext.1 = sext <16 x i8> %a to <16 x i32>
@@ -66,8 +65,8 @@ define <vscale x 4 x i32> @predicate_dot_by_C_scalable(<vscale x 4 x i32> %acc, 
 define <4 x i32> @predicate_ext_mul_fixed_length(<4 x i32> %acc, <16 x i1> %p, <16 x i8> %a) #0 {
 ; CHECK-LABEL: predicate_ext_mul_fixed_length:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v3.16b, #1
-; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    and z1.b, z1.b, #0x1
 ; CHECK-NEXT:    sdot v0.4s, v2.16b, v1.16b
 ; CHECK-NEXT:    ret
  %ext = sext <16 x i8> %a to <16 x i32>

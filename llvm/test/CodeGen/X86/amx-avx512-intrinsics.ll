@@ -15,7 +15,7 @@ define <16 x float> @test_tcvtrowd2psi() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowd2ps $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x07,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <16 x float> @llvm.x86.tcvtrowd2ps(i8 1, i32 127)
+  %ret = call <16 x float> @llvm.x86.tcvtrowd2psi(i8 1, i32 127)
   ret <16 x float> %ret
 }
 declare <16 x float> @llvm.x86.tcvtrowd2ps(i8 %A, i32 %B)
@@ -34,7 +34,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16hi() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16h $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x07,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 1, i32 127)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16hi(i8 1, i32 127)
   ret <32 x bfloat> %ret
 }
 declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 %A, i32 %B)
@@ -53,7 +53,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16li() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16l $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x77,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 1, i32 127)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16li(i8 1, i32 127)
   ret <32 x bfloat> %ret
 }
 declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 %A, i32 %B)
@@ -72,7 +72,7 @@ define <32 x half> @test_tcvtrowps2phhi() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phh $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7c,0x48,0x07,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x half> @llvm.x86.tcvtrowps2phh(i8 1, i32 127)
+  %ret = call <32 x half> @llvm.x86.tcvtrowps2phhi(i8 1, i32 127)
   ret <32 x half> %ret
 }
 declare <32 x half> @llvm.x86.tcvtrowps2phh(i8 %A, i32 %B)
@@ -91,7 +91,7 @@ define <32 x half> @test_tcvtrowps2phli() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phl $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x77,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x half> @llvm.x86.tcvtrowps2phl(i8 1, i32 127)
+  %ret = call <32 x half> @llvm.x86.tcvtrowps2phli(i8 1, i32 127)
   ret <32 x half> %ret
 }
 declare <32 x half> @llvm.x86.tcvtrowps2phl(i8 %A, i32 %B)
@@ -110,7 +110,7 @@ define <16 x i32> @test_tilemovrowi() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tilemovrow $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7d,0x48,0x07,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <16 x i32> @llvm.x86.tilemovrow(i8 1, i32 127)
+  %ret = call <16 x i32> @llvm.x86.tilemovrowi(i8 1, i32 127)
   ret <16 x i32> %ret
 }
 declare <16 x i32> @llvm.x86.tilemovrow(i8 %A, i32 %B)

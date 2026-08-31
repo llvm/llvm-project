@@ -202,11 +202,8 @@ public:
                          StringRef Asm, StringRef Default = "");
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                          char Asm);
+
 protected:
-  void printAbs(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printClamp(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
   void printOModSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printLiteral(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -235,6 +232,8 @@ protected:
                    raw_ostream &O);
   void printSendMsg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printWaitEvent(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printSwizzle(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printSWaitCnt(const MCInst *MI, unsigned OpNo,

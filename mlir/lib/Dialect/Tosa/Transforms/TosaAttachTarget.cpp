@@ -63,7 +63,11 @@ public:
     MLIRContext *ctx = &getContext();
     const auto targetEnvAttr = TargetEnvAttr::get(
         ctx, specificationVersion, level, selectedProfiles, selectedExtensions);
-    mod->setAttr(TargetEnvAttr::name, targetEnvAttr);
+
+    if (failed(TargetEnv::verifyTargetInformation(targetEnvAttr, mod.getLoc())))
+      return signalPassFailure();
+
+    mod->setDiscardableAttr(TargetEnvAttr::name, targetEnvAttr);
   }
 
 private:

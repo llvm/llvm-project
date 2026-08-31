@@ -83,11 +83,11 @@ void CapturingThisInMemberVariableCheck::storeOptions(
 }
 
 void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsStdFunctionField =
+  const auto IsStdFunctionField =
       fieldDecl(hasType(cxxRecordDecl(
-                    matchers::matchesAnyListedName(FunctionWrapperTypes))))
+                    matchers::matchesAnyListedRegexName(FunctionWrapperTypes))))
           .bind("field");
-  auto CaptureThis = lambdaCapture(anyOf(
+  const auto CaptureThis = lambdaCapture(anyOf(
       // [this]
       capturesThis(),
       // [self = this]
@@ -96,13 +96,13 @@ void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
       lambdaExpr(hasAnyCapture(CaptureThis)).bind("lambda");
 
   auto IsBindCapturingThis =
-      callExpr(
-          callee(functionDecl(matchers::matchesAnyListedName(BindFunctions))
-                     .bind("callee")),
-          hasAnyArgument(cxxThisExpr()))
+      callExpr(callee(functionDecl(
+                          matchers::matchesAnyListedRegexName(BindFunctions))
+                          .bind("callee")),
+               hasAnyArgument(cxxThisExpr()))
           .bind("bind");
 
-  auto IsInitWithLambdaOrBind =
+  const auto IsInitWithLambdaOrBind =
       anyOf(IsLambdaCapturingThis, IsBindCapturingThis,
             cxxConstructExpr(hasArgument(
                 0, anyOf(IsLambdaCapturingThis, IsBindCapturingThis))));

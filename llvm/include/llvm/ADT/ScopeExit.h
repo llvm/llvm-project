@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the make_scope_exit function, which executes user-defined
+/// This file defines the scope_exit class, which executes user-defined
 /// cleanup logic at scope exit.
 ///
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-template <typename Callable> class scope_exit {
+template <typename Callable> class [[nodiscard]] scope_exit {
   Callable ExitFunction;
   bool Engaged = true; // False once moved-from or release()d.
 
@@ -44,15 +44,6 @@ public:
 };
 
 template <typename Callable> scope_exit(Callable) -> scope_exit<Callable>;
-
-// Keeps the callable object that is passed in, and execute it at the
-// destruction of the returned object (usually at the scope exit where the
-// returned object is kept).
-//
-// Interface is specified by p0052r2.
-template <typename Callable> [[nodiscard]] auto make_scope_exit(Callable &&F) {
-  return scope_exit(std::forward<Callable>(F));
-}
 
 } // end namespace llvm
 

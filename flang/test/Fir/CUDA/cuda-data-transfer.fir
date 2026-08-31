@@ -1,4 +1,4 @@
-// RUN: fir-opt --cuf-convert %s | FileCheck %s
+// RUN: fir-opt --cuf-convert --cuf-allocation-convert --cuf-convert-late %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
 
@@ -723,6 +723,22 @@ func.func @_QQmain() attributes {fir.bindc_name = "T"} {
 }
 
 // CHECK-LABEL: func.func @_QQmain() 
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc
+
+func.func @_QPdesc_block_arg(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {cuf.data_attr = #cuf.cuda<device>}, %arg1: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {cuf.data_attr = #cuf.cuda<device>}, %arg2: !fir.heap<!fir.array<?xf64>>, %arg3: index, %arg4: i1) {
+  cf.cond_br %arg4, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+^bb2:
+  cf.br ^bb3(%arg1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+^bb3(%0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>):
+  %1 = fir.shape %arg3 : (index) -> !fir.shape<1>
+  %2 = fir.embox %arg2(%1) : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf64>>
+  cuf.data_transfer %0 to %2 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QPdesc_block_arg
 // CHECK: fir.call @_FortranACUFDataTransferDescDesc
 
 } // end of module

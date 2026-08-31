@@ -20,6 +20,13 @@
 #define __opencl_subgroup_builtins 1
 #endif
 
+#if defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||         \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+// Internal feature macro to provide depth image builtins.
+#define __opencl_depth_image_builtins 1
+#endif // defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||
+       // (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+
 // built-in scalar data types:
 
 /**
@@ -178,7 +185,16 @@ typedef double double16 __attribute__((ext_vector_type(16)));
 #define NAN as_float(INT_MAX)
 
 #define FP_ILOGB0    INT_MIN
+
+/**
+ * The OpenCL C spec allows the implementation to choose the value of the
+ * FP_ILOGBNAN macro between INT_MIN and INT_MAX.
+ */
+#ifdef __OPENCL_FP_ILOGBNAN_MIN
+#define FP_ILOGBNAN  INT_MIN
+#else
 #define FP_ILOGBNAN  INT_MAX
+#endif
 
 #define FLT_DIG 6
 #define FLT_MANT_DIG 24

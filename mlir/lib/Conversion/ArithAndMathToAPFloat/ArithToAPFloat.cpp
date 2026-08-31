@@ -46,73 +46,6 @@ lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                               {i32Type, i64Type, i64Type}, symbolTables);
 }
 
-/// Given two operands of vector type and vector result type (with the same
-/// shape), call the given function for each pair of scalar operands and
-/// package the result into a vector. If the given operands and result type are
-/// not vectors, call the function directly. The second operand is optional.
-template <typename Fn, typename... Values>
-static Value forEachScalarValue(RewriterBase &rewriter, Location loc,
-                                Value operand1, Value operand2, Type resultType,
-                                Fn fn) {
-  auto vecTy1 = dyn_cast<VectorType>(operand1.getType());
-  if (operand2) {
-    // Sanity check: Operand types must match.
-    assert(vecTy1 == dyn_cast<VectorType>(operand2.getType()) &&
-           "expected same vector types");
-  }
-  if (!vecTy1) {
-    // Not a vector. Call the function directly.
-    return fn(operand1, operand2, resultType);
-  }
-
-  // Prepare scalar operands.
-  ResultRange sclars1 =
-      vector::ToElementsOp::create(rewriter, loc, operand1)->getResults();
-  SmallVector<Value> scalars2;
-  if (!operand2) {
-    // No second operand. Create a vector of empty values.
-    scalars2.assign(vecTy1.getNumElements(), Value());
-  } else {
-    llvm::append_range(
-        scalars2,
-        vector::ToElementsOp::create(rewriter, loc, operand2)->getResults());
-  }
-
-  // Call the function for each pair of scalar operands.
-  auto resultVecType = cast<VectorType>(resultType);
-  SmallVector<Value> results;
-  for (auto [scalar1, scalar2] : llvm::zip_equal(sclars1, scalars2)) {
-    Value result = fn(scalar1, scalar2, resultVecType.getElementType());
-    results.push_back(result);
-  }
-
-  // Package the results into a vector.
-  return vector::FromElementsOp::create(
-      rewriter, loc,
-      vecTy1.cloneWith(/*shape=*/std::nullopt, results.front().getType()),
-      results);
-}
-
-/// Check preconditions for the conversion:
-/// 1. All operands / results must be integers or floats (or vectors thereof).
-/// 2. The bitwidth of the operands / results must be <= 64.
-static LogicalResult checkPreconditions(RewriterBase &rewriter, Operation *op) {
-  for (Value value : llvm::concat<Value>(op->getOperands(), op->getResults())) {
-    Type type = value.getType();
-    if (auto vecTy = dyn_cast<VectorType>(type)) {
-      type = vecTy.getElementType();
-    }
-    if (!type.isIntOrFloat()) {
-      return rewriter.notifyMatchFailure(
-          op, "only integers and floats (or vectors thereof) are supported");
-    }
-    if (type.getIntOrFloatBitWidth() > 64)
-      return rewriter.notifyMatchFailure(op,
-                                         "bitwidth > 64 bits is not supported");
-  }
-  return success();
-}
-
 /// Rewrite a binary arithmetic operation to an APFloat function call.
 template <typename OpTy>
 struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
@@ -514,12 +447,17 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
   SymbolOpInterface symTable;
 };
 
-struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
-  NegFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
-                            PatternBenefit benefit = 1)
-      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable) {}
+/// Rewrite a unary floating-point op (same input/output float type) to an
+/// APFloat runtime call of the form `(i32 semantics, i64 bits) -> i64 bits`.
+template <typename OpTy>
+struct UnaryFloatOpToAPFloatConversion final : OpRewritePattern<OpTy> {
+  UnaryFloatOpToAPFloatConversion(MLIRContext *context, const char *APFloatName,
+                                  SymbolOpInterface symTable,
+                                  PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        APFloatName(APFloatName) {}
 
-  LogicalResult matchAndRewrite(arith::NegFOp op,
+  LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     if (failed(checkPreconditions(rewriter, op)))
       return failure();
@@ -527,8 +465,9 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
-    FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
-        rewriter, symTable, "_mlir_apfloat_neg", {i32Type, i64Type});
+    std::string funcName = (llvm::Twine("_mlir_apfloat_") + APFloatName).str();
+    FailureOr<FuncOp> fn =
+        lookupOrCreateFnDecl(rewriter, symTable, funcName, {i32Type, i64Type});
     if (failed(fn))
       return fn;
 
@@ -548,14 +487,14 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
           // Call APFloat function.
           Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
           SmallVector<Value> params = {semValue, operandBits};
-          Value negatedBits =
+          Value resultBits =
               func::CallOp::create(rewriter, loc, TypeRange(i64Type),
                                    SymbolRefAttr::get(*fn), params)
                   ->getResult(0);
 
           // Truncate result to the original width.
           Value truncatedBits =
-              arith::TruncIOp::create(rewriter, loc, intWType, negatedBits);
+              arith::TruncIOp::create(rewriter, loc, intWType, resultBits);
           return arith::BitcastOp::create(rewriter, loc, floatTy,
                                           truncatedBits);
         });
@@ -564,6 +503,7 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
   }
 
   SymbolOpInterface symTable;
+  const char *APFloatName;
 };
 
 namespace {
@@ -595,10 +535,13 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "minimum", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::MaximumFOp>>(
       context, "maximum", getOperation());
-  patterns
-      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>,
-           CmpFOpToAPFloatConversion, NegFOpToAPFloatConversion>(
-          context, getOperation());
+  patterns.add<FpToFpConversion<arith::ExtFOp>,
+               FpToFpConversion<arith::TruncFOp>, CmpFOpToAPFloatConversion>(
+      context, getOperation());
+  patterns.add<UnaryFloatOpToAPFloatConversion<arith::NegFOp>>(context, "neg",
+                                                               getOperation());
+  patterns.add<UnaryFloatOpToAPFloatConversion<arith::FlushDenormalsOp>>(
+      context, "flush_denormals", getOperation());
   patterns.add<FpToIntConversion<arith::FPToSIOp>>(context, getOperation(),
                                                    /*isUnsigned=*/false);
   patterns.add<FpToIntConversion<arith::FPToUIOp>>(context, getOperation(),
