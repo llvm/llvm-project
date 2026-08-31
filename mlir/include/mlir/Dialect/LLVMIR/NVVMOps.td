@@ -5556,7 +5556,8 @@ def Tcgen05WaitKindAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
     The `tcgen05.alloc` Op allocates tensor core memory for
@@ -5582,21 +5583,10 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMf<[100, 101, 1
     $addr `,` $nCols (`,` `group` `=` $group^)?
     (`exclusive` `=` $isExclusive^)? attr-dict `:` type(operands)
   }];
-
-  let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
-  }];
-  string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
-  }];
 }
 
-def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05DeallocOp : NVVM_VoidIntrinsicOp<"tcgen05.dealloc",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 dealloc operation";
   let description = [{
     The `tcgen05.dealloc` Op de-allocates the tensor core memory
@@ -5618,18 +5608,6 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMf<[100, 10
   let assemblyFormat = [{
     $taddr `,` $nCols (`,` `group` `=` $group^)?
     (`exclusive` `=` $isExclusive^)? attr-dict `:` type(operands)
-  }];
-
-  let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
-  }];
-  string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
   }];
 }
 
