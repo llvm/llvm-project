@@ -44,10 +44,16 @@ void entry() {
   // CHECK: DeclStmt {{.*}}
   // CHECK-NEXT: VarDecl {{.*}} Vec3 'vector<double, 3>' cinit
 
-  // Verify that the implicit arguments generate the correct type.
-  vector<> ImpVec4 = {1.0, 2.0, 3.0, 4.0};
+  // Verify that the default arguments generate the correct type.
+  vector<> DefVec4 = {1.0, 2.0, 3.0, 4.0};
 
   // CHECK: DeclStmt
-  // CHECK-NEXT: VarDecl {{.*}} ImpVec4 'vector<>':'vector<float, 4>' cinit
+  // CHECK-NEXT: VarDecl {{.*}} DefVec4 'vector<>':'vector<float, 4>' cinit
+
+  // Verify that the implicit arguments generate the correct type.
+  vector ImpVec4 = {1.0, 2.0, 3.0, 4.0};
+
+  // CHECK: DeclStmt
+  // CHECK-NEXT: VarDecl {{.*}} ImpVec4 'hlsl::vector<float, 4>':'vector<float, 4>' cinit
   return;
 }
