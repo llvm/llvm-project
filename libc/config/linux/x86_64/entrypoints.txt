@@ -734,6 +734,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl
@@ -1548,6 +1549,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timespec_get
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
 
     # locale.h entrypoints
     libc.src.locale.localeconv
@@ -1608,6 +1611,9 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # fnmatch.h entrypoints
+      libc.src.fnmatch.fnmatch
+
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex
