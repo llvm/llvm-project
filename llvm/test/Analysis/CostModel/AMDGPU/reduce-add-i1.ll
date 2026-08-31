@@ -6,13 +6,16 @@
 ; RUN: opt < %s -mtriple=amdgpu12.01-unknown-amdhsa -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=ALL-SIZE %s
 ; END.
 
-; The cost is the packed form of the mask, which is what SLP emits. It takes 4
-; instructions per element on every generation from GFX9 to GFX12.
+; InstCombine turns this reduction into a bit count over the packed mask at
+; every element count. The packing takes 4 instructions per element on every
+; generation from GFX9 to GFX12.
 
 define void @reduce_add_i1() {
 ; ALL-LABEL: 'reduce_add_i1'
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2 = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4 = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8 = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> poison)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16 = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> poison)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %V64 = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> poison)
@@ -20,40 +23,37 @@ define void @reduce_add_i1() {
 ;
 ; ALL-SIZE-LABEL: 'reduce_add_i1'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2 = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4 = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8 = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16 = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %V64 = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V2 = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> poison)
+  %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
   %V4 = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> poison)
+  %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
   %V8 = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> poison)
   %V16 = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> poison)
   %V64 = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> poison)
   ret void
 }
 
-; One element needs no packing. A count that is not a power of two never reaches
-; the packed form, and a scalable vector keeps the generic cost.
+; One element needs no packing, and a scalable vector keeps the generic cost.
 define void @unchanged(<vscale x 8 x i1> %s) {
 ; ALL-LABEL: 'unchanged'
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> poison)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
 ; ALL-NEXT:  Cost Model: Invalid cost for instruction: %S = call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %s)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'unchanged'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> poison)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Invalid cost for instruction: %S = call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %s)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> poison)
-  %V3 = call i1 @llvm.vector.reduce.add.v3i1(<3 x i1> poison)
-  %V6 = call i1 @llvm.vector.reduce.add.v6i1(<6 x i1> poison)
   %S = call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %s)
   ret void
 }
