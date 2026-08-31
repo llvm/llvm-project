@@ -53808,12 +53808,12 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 	if (!Applicable)
 		return SDValue();
 
+	LLVM_DEBUG(dbgs() << "The optimization is applicable.\n");
+
 	uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount;
 	SDValue ShVal = DAG.getShiftAmountConstant(InvShAmt, VT, DL);
 	SDValue SHLVal = DAG.getNode(ISD::SHL, DL, VT, X, ShVal);
-	SDValue fin = DAG.getNode(ISD::FSHR, DL, VT, Y, SHLVal, ShVal);
-
-	return fin;
+	return DAG.getNode(ISD::FSHR, DL, VT, Y, SHLVal, ShVal);
 }
 
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
