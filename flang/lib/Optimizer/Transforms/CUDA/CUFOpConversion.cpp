@@ -329,10 +329,12 @@ struct CUFDataTransferOpConversion
         }
       }
       if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
-        // A scalar CUDA constant is designated by its host shadow, which lives
-        // in host memory and cannot take part in a device to device copy. Route
-        // the transfer through the shadow instead. There are three cases,
-        // depending on which side is a scalar constant.
+        // The device symbol of a scalar CUDA constant is registered and could
+        // be copied to directly, but such a variable is designated by its host
+        // shadow instead (see isScalarCudaConstantGlobal), so the address at
+        // hand is a host address and cannot be an operand of a device to
+        // device copy. Route the transfer through the shadow. There are three
+        // cases, depending on which side is a scalar constant.
         fir::AddrOfOp srcShadow = getShadowAddrOf(src);
         fir::AddrOfOp dstShadow = getShadowAddrOf(dst);
         if (srcShadow || dstShadow) {
