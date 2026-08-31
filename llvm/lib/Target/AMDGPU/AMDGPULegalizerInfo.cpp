@@ -18,7 +18,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
