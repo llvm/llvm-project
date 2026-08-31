@@ -172,10 +172,9 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
-    llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+    llvm::function_ref<bool(unsigned, Stmt *, Stmt *)> Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
-        OnTransformationCallback,
-    bool UnwrapIntraTileHint) {
+        OnTransformationCallback) {
   CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
@@ -206,10 +205,11 @@ bool OMPLoopBasedDirective::doForAllLoops(
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
-    // Keep the wrapper while walking so a caller that asked not to unwrap can
-    // read the hint; look through it to reach the loop body.
+    // Always hand the real loop to the callback and pass the hint wrapper
+    // separately so the callee can read it.
     Stmt *LoopStmt = ignoreIntraTileHint(CurStmt);
-    if (Callback(Cnt, UnwrapIntraTileHint ? LoopStmt : CurStmt))
+    Stmt *HintWrapper = LoopStmt != CurStmt ? CurStmt : nullptr;
+    if (Callback(Cnt, LoopStmt, HintWrapper))
       return false;
     // Move on to the next nested for loop, or to the loop body.
     // OpenMP [2.8.1, simd construct, Restrictions]

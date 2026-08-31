@@ -908,17 +908,31 @@ public:
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
   ///
-  /// By default the callback receives a ForStmt or CXXForRangeStmt. Pass
-  /// \p UnwrapIntraTileHint as false to leave an intra-tile
-  /// OMPInvariantPredicateBoundAttr wrapper in place so the caller can read
-  /// the hint itself (see checkOpenMPIterationSpace).
+  /// \p Loop is always a ForStmt or CXXForRangeStmt. \p HintWrapper is the
+  /// intra-tile OMPInvariantPredicateBoundAttr wrapper around that loop, or
+  /// nullptr if the loop has no such hint. Callers that need the hint (see
+  /// checkOpenMPIterationSpace) can peel \p HintWrapper themselves; everyone
+  /// else can ignore it.
+  static bool
+  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                unsigned NumLoops,
+                llvm::function_ref<bool(unsigned /*Cnt*/, Stmt * /*Loop*/,
+                                        Stmt * /*HintWrapper*/)>
+                    Callback,
+                llvm::function_ref<void(OMPLoopTransformationDirective *)>
+                    OnTransformationCallback);
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback,
-                bool UnwrapIntraTileHint = true);
+                    OnTransformationCallback) {
+    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop, Stmt *) {
+      return Callback(Cnt, Loop);
+    };
+    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
+                         NewCallback, OnTransformationCallback);
+  }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,

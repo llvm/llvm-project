@@ -8019,11 +8019,6 @@ struct LoopIterationSpace final {
   /// check that the number of iterations for this particular counter must be
   /// finished.
   Expr *FinalCondition = nullptr;
-  /// True if this is a reinterpreted intra-tile loop whose lower bound is a
-  /// live floor dependence.
-  bool ReinterpretTileLB = false;
-  /// Location of the reinterpreted intra-tile loop, for diagnostics.
-  SourceLocation ReinterpretTileLoc;
 };
 
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
@@ -9745,24 +9740,51 @@ static bool checkOpenMPIterationSpace(
            ResultIterSpaces[CurrentNestedLoopCount].MaxValue) =
       ISC.buildMinMaxValues(DSA.getCurScope(), Captures);
   if (TileRectCond) {
-    // The body guard is the overshoot predicate, which is absent when the tile
-    // can never be partial. Lower bound is the live .floor.iv; wire as a floor
-    // dependence for collapse
-    // (see design note in ActOnOpenMPTileDirective).
+    // Floor is not a registered loop-control variable, so this helper is null.
+    // Use the overshoot guard only (null when N % T == 0).
+    assert(!ISC.buildFinalCondition(DSA.getCurScope()) &&
+           "intra-tile floor is not a registered loop-control variable");
     ResultIterSpaces[CurrentNestedLoopCount].FinalCondition = TileBodyPredicate;
-    ResultIterSpaces[CurrentNestedLoopCount].ReinterpretTileLB = true;
-    ResultIterSpaces[CurrentNestedLoopCount].ReinterpretTileLoc =
-        ISC.getInitSrcRange().getBegin();
+
+    // Re-read .floor.iv each outer trip. Match it to an outer collapsed
+    // counter.
+    bool FoundFloor = false;
+    if (Expr *InitExpr = ResultIterSpaces[CurrentNestedLoopCount].CounterInit) {
+      if (const auto *LBRef =
+              dyn_cast<DeclRefExpr>(InitExpr->IgnoreParenImpCasts())) {
+        const Decl *FloorDecl = LBRef->getDecl()->getCanonicalDecl();
+        for (unsigned K = 0; K < CurrentNestedLoopCount; ++K) {
+          const auto *CV =
+              dyn_cast_or_null<DeclRefExpr>(ResultIterSpaces[K].CounterVar);
+          if (CV && CV->getDecl()->getCanonicalDecl() == FloorDecl) {
+            ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularLB = true;
+            ResultIterSpaces[CurrentNestedLoopCount].LoopDependentIdx = K + 1;
+            FoundFloor = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!FoundFloor) {
+      // The floor this intra-tile loop starts from is not one of the
+      // collapsed counters: it is assigned in the body of an enclosing
+      // transformed loop, so the collapsed nest would read a stale value
+      // instead of recomputing it per iteration. Diagnose to avoid silently
+      // producing the wrong iteration space.
+      SemaRef.Diag(ISC.getInitSrcRange().getBegin(),
+                   diag::err_omp_collapse_stacked_tile);
+      return true;
+    }
   } else {
     ResultIterSpaces[CurrentNestedLoopCount].FinalCondition =
         ISC.buildFinalCondition(DSA.getCurScope());
+    ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularLB =
+        ISC.doesInitDependOnLC();
+    ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularUB =
+        ISC.doesCondDependOnLC();
+    ResultIterSpaces[CurrentNestedLoopCount].LoopDependentIdx =
+        ISC.getLoopDependentIdx();
   }
-  ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularLB =
-      ISC.doesInitDependOnLC();
-  ResultIterSpaces[CurrentNestedLoopCount].IsNonRectangularUB =
-      ISC.doesCondDependOnLC();
-  ResultIterSpaces[CurrentNestedLoopCount].LoopDependentIdx =
-      ISC.getLoopDependentIdx();
 
   HasErrors |=
       (ResultIterSpaces[CurrentNestedLoopCount].PreCond == nullptr ||
@@ -10154,7 +10176,9 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           [DKind, &SemaRef, &DSA, NumLoops, NestedLoopCount,
            CollapseLoopCountExpr, OrderedLoopCountExpr, &VarsWithImplicitDSA,
            &IterSpaces, &Captures, &CollapsedLoopVarDecls,
-           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *CurStmt) {
+           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *Loop,
+                                        Stmt *HintWrapper) {
+            Stmt *CurStmt = HintWrapper ? HintWrapper : Loop;
             if (checkOpenMPIterationSpace(
                     DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
                     NumLoops, CollapseLoopCountExpr, OrderedLoopCountExpr,
@@ -10192,8 +10216,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 }
               }
             }
-          },
-          /*UnwrapIntraTileHint=*/false))
+          }))
     return 0;
 
   Built.clear(/*size=*/NestedLoopCount);
@@ -10681,36 +10704,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       LoopIterationSpace &IS = IterSpaces[Cnt];
       SourceLocation UpdLoc = IS.IncSrcRange.getBegin();
       ExprResult Iter;
-
-      // Wire the reinterpreted lower bound to its floor dependence (see design
-      // note in ActOnOpenMPTileDirective).
-      if (IS.ReinterpretTileLB && IS.CounterInit) {
-        bool FoundFloor = false;
-        if (const auto *LBRef =
-                dyn_cast<DeclRefExpr>(IS.CounterInit->IgnoreParenImpCasts())) {
-          const Decl *FloorDecl = LBRef->getDecl()->getCanonicalDecl();
-          for (unsigned K = 0; K < Cnt; ++K) {
-            const auto *CV = dyn_cast_or_null<DeclRefExpr>(Built.Counters[K]);
-            if (CV && CV->getDecl()->getCanonicalDecl() == FloorDecl) {
-              IS.IsNonRectangularLB = true;
-              IS.LoopDependentIdx = K + 1;
-              FoundFloor = true;
-              break;
-            }
-          }
-        }
-        if (!FoundFloor) {
-          // The floor this intra-tile loop starts from is not one of the
-          // collapsed counters: it is assigned in the body of an enclosing
-          // transformed loop, so the collapsed nest would read a stale value
-          // instead of recomputing it per iteration. Diagnose to avoid silently
-          // producing the wrong iteration space.
-          SemaRef.Diag(IS.ReinterpretTileLoc,
-                       diag::err_omp_collapse_stacked_tile);
-          HasErrors = true;
-          break;
-        }
-      }
 
       // Compute prod
       ExprResult Prod = SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get();
@@ -15276,11 +15269,12 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   //               applied as a body guard instead of shortening the trip count;
   //               omitted when N is known to be a multiple of T, as there is
   //               then no partial tile to guard against
-  // Because the reinterpreted lower bound is still `.floor.iv`, checkOpenMPLoop
-  // wires it as a live dependence on the matching floor counter, so a
-  // collapsed `.tile.iv` re-reads the floor's current value instead of a
-  // stale preheader snapshot. Collapsing through stacked tiles (tile-of-tile)
-  // is not supported: the inner floor is not itself a collapsed counter.
+  // Because the reinterpreted lower bound is still `.floor.iv`,
+  // checkOpenMPIterationSpace sets IsNonRectangularLB on the matching floor
+  // counter, so a collapsed `.tile.iv` re-reads the floor's current value
+  // instead of a stale preheader snapshot. Collapsing through stacked tiles
+  // (tile-of-tile) is not supported: the inner floor is not itself a collapsed
+  // counter.
   for (int I = NumLoops - 1; I >= 0; --I) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     Expr *NumIterations = LoopHelper.NumIterations;

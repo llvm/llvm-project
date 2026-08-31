@@ -4878,6 +4878,11 @@ def OMPAssume : InheritableAttr {
 }
 
 def OMPInvariantPredicateBound : StmtAttr {
+  // Internal droppable hint on an `#pragma omp tile` intra-tile loop.
+  // RectCond: rectangular bound (`t < floor + T`) used instead of the stored
+  //           `min(floor + T, N)` condition.
+  // TileSize: constant intra-tile trip count T.
+  // Predicate: optional overshoot guard (`t < N`); omitted when N % T == 0.
   let Spellings = [];
   let SemaHandler = 0;
   let Subjects = SubjectList<[Stmt], ErrorDiag>;

@@ -1,9 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++17 -fopenmp -fsyntax-only -Wuninitialized -verify %s
 
-// A collapsed intra-tile loop keeps a live dependence on its floor counter, so
-// that floor must itself be one of the collapsed loops. Inside another loop
-// transformation it is assigned in an enclosing loop's body and the nest would
-// read a stale value, which is diagnosed rather than silently miscomputed.
+// A collapsed intra-tile loop starts from the floor counter of an outer loop
+// in the same nest, so that floor must itself be one of the collapsed loops.
+// Inside another loop transformation it is assigned in an enclosing loop's
+// body and the nest would read a stale value, which is diagnosed rather than
+// silently miscomputed.
 
 extern void body(int);
 
@@ -38,7 +39,7 @@ void collapse_into_stacked_tiles() {
 #pragma omp for collapse(3)
 #pragma omp tile sizes(2)
 #pragma omp tile sizes(4)
-  // expected-error@+1 {{cannot collapse the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive}}
+  // expected-error@+1 {{cannot collapse the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
   for (int i = 0; i < 6; ++i)
     body(i);
 }
