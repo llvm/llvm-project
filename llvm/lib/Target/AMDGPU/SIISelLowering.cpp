@@ -7619,8 +7619,6 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   EVT VT = Op.getValueType();
   assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
-  // Freeze: a poison scalar operand 0 could resolve differently at each
-  // duplicated use.
   SDValue Op0 = Op.getOperand(0);
   SDValue Lo0, Hi0;
   if (Op0.getValueType().isVector())
