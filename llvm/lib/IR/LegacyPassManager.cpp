@@ -634,12 +634,12 @@ AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
     AUFoldingSetNode* Node = nullptr;
     FoldingSetNodeID ID;
     AUFoldingSetNode::Profile(ID, AU);
-    void *IP = nullptr;
-    if (auto *N = UniqueAnalysisUsages.FindNodeOrInsertPos(ID, IP))
+    FoldingSetInsertToken Token;
+    if (auto *N = UniqueAnalysisUsages.lookup(ID, Token))
       Node = N;
     else {
       Node = new (AUFoldingSetNodeAllocator.Allocate()) AUFoldingSetNode(AU);
-      UniqueAnalysisUsages.InsertNode(Node, IP);
+      UniqueAnalysisUsages.insert(Node, Token);
     }
     assert(Node && "cached analysis usage must be non null");
 

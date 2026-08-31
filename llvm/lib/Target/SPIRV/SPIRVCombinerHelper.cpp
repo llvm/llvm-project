@@ -59,6 +59,55 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 }
 
 /// This match is part of a combine that
+/// rewrites X / length(X) to normalize(X)
+///   (vXf32 (g_fdiv
+///             (vXf32 X)
+///             (vXf32 splat
+///                    (f32 (g_intrinsic length (vXf32 X))))))
+/// ->
+///   (vXf32 (g_intrinsic normalize (vXf32 X)))
+///
+bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register DivisorReg = MI.getOperand(2).getReg();
+
+  // Match the divisor as a splat of length, inserted into lane 0.
+  MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
+  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+    return false;
+  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
+              [](int M) { return M == 0; }))
+    return false;
+
+  MachineInstr *InsertInstr =
+      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
+  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return false;
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
+    return false;
+
+  MachineInstr *LengthInstr =
+      MRI.getVRegDef(InsertInstr->getOperand(3).getReg());
+  if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
+    return false;
+
+  // Check that length's argument is the same as the numerator.
+  return LengthInstr->getOperand(2).getReg() == NumeratorReg;
+}
+
+void SPIRVCombinerHelper::applySPIRVNormalize(MachineInstr &MI) const {
+  // Extract the operand for X from the match criteria.
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_normalize, ResultReg)
+      .addUse(NumeratorReg);
+
+  MI.eraseFromParent();
+}
+
+/// This match is part of a combine that
 /// rewrites select(fcmp(dot(I, Ng), 0), N, -N) to faceforward(N, I, Ng)
 ///   (vXf32 (g_select
 ///             (g_fcmp

@@ -313,6 +313,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTemplateParmPacks;
   mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
       DeducedTemplates;
+  mutable llvm::ContextualFoldingSet<PackIndexingTemplateStorage, ASTContext &>
+      PackIndexingTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -1955,7 +1957,7 @@ public:
 private:
   UnresolvedUsingType *getUnresolvedUsingTypeInternal(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
-      const UnresolvedUsingTypenameDecl *D, void *InsertPos,
+      const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
       const Type *CanonicalType) const;
 
   TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
@@ -2676,6 +2678,11 @@ public:
                                                 Decl *AssociatedDecl,
                                                 unsigned Index,
                                                 bool Final) const;
+
+  TemplateName
+  getPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                              bool FullySubstituted = false,
+                              ArrayRef<TemplateName> Expansions = {}) const;
 
   /// Represents a TemplateName which had some of its default arguments
   /// deduced. This both represents this default argument deduction as sugar,
@@ -4062,7 +4069,7 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
 
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
 
   static bool isEqual(const FoldingSetNodeID &LHS,
@@ -4072,13 +4079,13 @@ template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
 };
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
   static unsigned getHashValue(FoldingSetNodeIDRef Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
   static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
   }
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
   static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
