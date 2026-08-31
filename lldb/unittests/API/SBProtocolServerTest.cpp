@@ -9,6 +9,7 @@
 // Use the umbrella header for -Wdocumentation.
 #include "lldb/API/LLDB.h"
 
+#include "SBTestingSupport/SBTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
@@ -68,6 +69,9 @@ TEST_F(SBProtocolServerTest, CreateEmptyProtocol) {
 }
 
 TEST_F(SBProtocolServerTest, StartAndStop) {
+  if (!HostSupportsListeningSockets())
+    GTEST_SKIP() << "TCP sockets unavailable";
+
   SBError error;
   SBProtocolServer server = SBProtocolServer::Create("MCP", error);
   ASSERT_TRUE(server.IsValid());
