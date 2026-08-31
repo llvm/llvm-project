@@ -537,7 +537,7 @@ int main_platform(int argc, char *argv[]) {
     if (gdbserver_port) {
       socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
     } else {
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
       llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
           DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
       if (!domain_socket) {

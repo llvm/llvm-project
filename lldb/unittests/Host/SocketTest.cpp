@@ -93,6 +93,11 @@ TEST_F(SocketTest, CreatePair) {
     functional_protocols.push_back(Socket::ProtocolUnixDomain);
     functional_protocols.push_back(Socket::ProtocolUnixAbstract);
   }
+#elif defined(_WIN32)
+  // Windows supports AF_UNIX domain sockets (Windows 10 1803+) but not the
+  // Linux abstract-namespace variant.
+  if (HostSupportsDomainSockets())
+    functional_protocols.push_back(Socket::ProtocolUnixDomain);
 #endif
 
   for (auto p : functional_protocols) {
@@ -111,7 +116,7 @@ TEST_F(SocketTest, CreatePair) {
 
   std::vector<Socket::SocketProtocol> erroring_protocols = {
 #if !LLDB_ENABLE_POSIX
-      Socket::ProtocolUnixDomain,
+      // Windows has AF_UNIX domain sockets but no abstract-namespace sockets.
       Socket::ProtocolUnixAbstract,
 #endif
   };
@@ -121,7 +126,7 @@ TEST_F(SocketTest, CreatePair) {
   }
 }
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 TEST_F(SocketTest, DomainListenConnectAccept) {
   if (!HostSupportsDomainSockets())
     GTEST_SKIP() << "Domain sockets unavailable";
@@ -401,6 +406,7 @@ TEST_F(SocketTest, DomainGetConnectURI) {
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
+#endif
 
 TEST_F(SocketTest, DomainSocketPathURIConversion) {
   // Paths that are already valid URI paths (no drive letter) are unchanged.
@@ -425,6 +431,7 @@ TEST_F(SocketTest, DomainSocketPathURIConversion) {
             "\\\\server\\share\\sock");
 }
 
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
   if (!HostSupportsDomainSockets())
     GTEST_SKIP() << "Domain sockets unavailable";

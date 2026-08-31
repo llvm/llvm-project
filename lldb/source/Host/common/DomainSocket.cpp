@@ -16,14 +16,17 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <memory>
 
 #ifdef _WIN32
 #include <afunix.h>
 #else
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #endif
