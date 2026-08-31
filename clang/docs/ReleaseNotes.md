@@ -551,6 +551,11 @@ features cannot lower the translation-unit ABI level;
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
 
+- Fixed an assertion when a type-trait keyword that had already been made
+  available as an identifier (e.g. `struct __make_unsigned`) was seen again
+  in a token that was lexed and cached before the first occurrence was parsed.
+  (#GH214128)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
