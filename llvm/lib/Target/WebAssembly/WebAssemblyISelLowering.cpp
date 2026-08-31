@@ -1054,6 +1054,11 @@ bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
 }
 
+bool WebAssemblyTargetLowering::shouldFoldSelectOfLoads(
+    unsigned AddressSpace) const {
+  return !WebAssembly::isWasmVarAddressSpace(AddressSpace);
+}
+
 bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // Wasm doesn't support function addresses with offsets
