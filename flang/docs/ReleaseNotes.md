@@ -33,6 +33,11 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- Added support for the OpenMP implementation-defined extension sentinels
+  (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
+  and `!$ompx` in free source form. These sentinels are recognized like their
+  `omp` counterparts when OpenMP is enabled.
+  
 - Change source path in -Rpass remarks (e.g., -Rpass=loop-vectorize) from a
   (mostly) full path to clang's behavior which is to use the source filename
   as specified on the command line (except that ./foo.f90 removes the ./

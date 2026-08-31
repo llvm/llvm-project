@@ -444,6 +444,41 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_unroll) {
+    CheckUnrollFullTripCount(x);
+  }
+}
+
+// A loop that is fully unrolled must have a trip count that is known at compile
+// time, so its bounds and step have to be constant expressions.
+void OmpStructureChecker::CheckUnrollFullTripCount(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpClause *full{
+      parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_full)};
+  if (!full) {
+    return;
+  }
+
+  const parser::DoConstruct *doConstruct{x.GetNestedLoop()};
+  if (!doConstruct) {
+    return;
+  }
+  const auto &control{doConstruct->GetLoopControl()};
+  if (!control) {
+    return;
+  }
+  const auto *bounds{std::get_if<parser::LoopControl::Bounds>(&control->u)};
+  if (!bounds) {
+    return;
+  }
+  bool isConstant{GetIntValue(bounds->Lower()).has_value() &&
+      GetIntValue(bounds->Upper()).has_value() &&
+      (!bounds->Step() || GetIntValue(*bounds->Step()).has_value())};
+  if (!isConstant) {
+    context_.Say(full->source,
+        "The loop associated with an UNROLL directive with a FULL clause must have a constant trip count"_err_en_US);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -741,7 +776,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
       auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
-          symbol->name(), desc.name.str());
+          symbol->name(), desc.getName().str());
     }
   }};
 
@@ -767,7 +802,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           if (dir != llvm::omp::Directive::OMPD_declare_simd) {
             context_.Say(modSource,
                 "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-                desc.name.str(), parser::omp::GetUpperName(dir, version));
+                desc.getName().str(), parser::omp::GetUpperName(dir, version));
             valid = false;
           }
         }
@@ -787,7 +822,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
                 !IsPolymorphic(*symbol)) {
               context_.Say(source,
                   "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                  symbol->name(), desc.name.str());
+                  symbol->name(), desc.getName().str());
             }
           }
           if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
@@ -795,7 +830,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
             if (!IsDummy(*symbol) || IsValue(*symbol)) {
               context_.Say(source,
                   "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                  desc.name.str(), symbol->name());
+                  desc.getName().str(), symbol->name());
             }
           }
         } // for (symbol, source)

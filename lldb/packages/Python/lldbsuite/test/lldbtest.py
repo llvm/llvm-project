@@ -8,14 +8,14 @@ common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 entire of part of the test suite .  Example:
 
 # Exercises the test suite in the types directory....
-/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py types
 ...
 
 Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-Command invoked: python ./dotest.py -A x86_64 types
+Command invoked: python ./dotest.py types
 compilers=['clang']
 
-Configuration: arch=x86_64 compiler=clang
+Configuration: compiler=clang
 ----------------------------------------------------------------------
 Collected 72 tests
 
@@ -63,6 +63,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.skip_reason import UnsupportedReason
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -302,12 +303,13 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
 class ValueCheck:
     def __init__(
         self,
-        name=None,
-        value=None,
-        type=None,
-        summary=None,
-        children=None,
-        dereference=None,
+        name: str = None,
+        value: str = None,
+        type: str = None,
+        summary: str = None,
+        children: [ValueCheck] = None,
+        dereference: bool = None,
+        valobj: lldb.SBValue = None,
     ):
         """
         :param name: The name that the SBValue should have. None if the summary
@@ -325,13 +327,33 @@ class ValueCheck:
                          children.
         :param dereference: A ValueCheck for the SBValue returned by the
                             `Dereference` function.
+        :param valobj: If supplied, ignore the other arguments and build a
+                       ValueCheck that matches valobj except for the name
+                       of the toplevel valobj.
         """
-        self.expect_name = name
-        self.expect_value = value
-        self.expect_type = type
-        self.expect_summary = summary
-        self.children = children
-        self.dereference = dereference
+        if valobj:
+            # SBValues so we don't need to dereference
+            self.dereference = None
+            # We don't want to compare the top-level VO
+            # name as the reference object may come from
+            # a different source.  So we pass that in in
+            # the recursive part by hand below.
+
+            self.expect_name = name
+            # Copy everything else from the incoming valobj:
+            self.expect_summary = valobj.GetSummary()
+            self.expect_type = valobj.GetDisplayTypeName()
+            self.expect_value = valobj.GetValue()
+            self.children: [ValueCheck] = []
+            for child in valobj.children:
+                self.children.append(ValueCheck(valobj=child, name=child.name))
+        else:
+            self.expect_name = name
+            self.expect_value = value
+            self.expect_type = type
+            self.expect_summary = summary
+            self.children = children
+            self.dereference = dereference
 
     def check_value(self, test_base, val, error_msg=""):
         """
@@ -1288,6 +1310,15 @@ class Base(unittest.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("expected failure", file=sbuf)
 
+    def skipTest(self, reason):
+        """Skip the test, reporting an `UnsupportedReason` as UNSUPPORTED.
+
+        `unittest` records a raised `SkipTest` as `str(exception)`, so the reason
+        type never reaches the result; remember the distinction on the test."""
+        if isinstance(reason, UnsupportedReason):
+            self._skipped_as_unsupported = True
+        super().skipTest(reason)
+
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""
         self.__skipped__ = True
@@ -1586,18 +1617,6 @@ class Base(unittest.TestCase):
                 return True
 
         return False
-
-    def getRunOptions(self):
-        """Command line option for -A and -C to run this test again, called from
-        self.dumpSessionInfo()."""
-        arch = self.getArchitecture()
-        comp = self.getCompiler()
-        option_str = ""
-        if arch:
-            option_str = "-A " + arch
-        if comp:
-            option_str += " -C " + comp
-        return option_str
 
     def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)

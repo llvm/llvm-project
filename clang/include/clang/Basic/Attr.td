@@ -1653,10 +1653,7 @@ def CUDALaunchBounds : InheritableAttr {
               ExprArgument<"MaxBlocks", 1>];
   let LangOpts = [CUDA];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
-  // An AST node is created for this attribute, but is not used by other parts
-  // of the compiler. However, this node needs to exist in the AST because
-  // non-LLVM backends may be relying on the attribute's presence.
-  let Documentation = [Undocumented];
+  let Documentation = [LaunchBoundsDocs];
 }
 
 def CUDAShared : InheritableAttr {
@@ -2422,6 +2419,8 @@ def NoInline : DeclOrStmtAttr {
                              "functions and statements">;
   let SimpleHandler = 1;
 }
+
+def : MutualExclusions<[AlwaysInline, NoInline]>;
 
 def NoOutline : DeclOrStmtAttr {
   let Spellings = [Clang<"no_outline">];

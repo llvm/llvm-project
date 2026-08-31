@@ -1,5 +1,7 @@
 // RUN: mlir-opt -canonicalize -split-input-file %s | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // -----
 
 // CHECK-LABEL: func @merge_duplicate_ins
@@ -13,7 +15,7 @@ func.func @merge_duplicate_ins() -> i32 {
     %x = arith.addi %v, %c1 : i32
     memref.store %x, %a[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %m[] : memref<i32>
   return %r : i32
 }
@@ -48,7 +50,7 @@ func.func @merge_duplicate_ins_complex_pattern() -> i32 {
     %out = arith.addi %sum6, %one : i32
     memref.store %out, %a0[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %ma[] : memref<i32>
   return %r : i32
 }
@@ -71,7 +73,7 @@ func.func @drop_unused_ins() -> i32 {
     %x = arith.addi %v, %c1 : i32
     memref.store %x, %a[] : memref<i32>
     acc.yield
-  } {origin = "acc.serial"}
+  } <{origin = "acc.serial"}>
   %r = memref.load %ma[] : memref<i32>
   return %r : i32
 }

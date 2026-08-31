@@ -82,10 +82,11 @@ static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
                                                     PatternRewriter &rewriter,
                                                     size_t numInput) {
   const size_t numLaunch = op.getLaunchArgs().size();
-  op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
-              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
-                                             static_cast<int32_t>(numInput),
-                                             op.getStream() ? 1 : 0}));
+  op->setInherentAttr(
+      rewriter.getStringAttr(ComputeRegionOp::getOperandSegmentSizeAttr()),
+      rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                     static_cast<int32_t>(numInput),
+                                     op.getStream() ? 1 : 0}));
 }
 
 struct ComputeRegionRemoveDuplicateArgs
@@ -734,8 +735,9 @@ void ComputeRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << " ";
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/getOperandSegmentSizeAttr());
+  ComputeRegionOp::printProperties(getContext(), p, getProperties(),
+                                   /*elidedProps=*/getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
@@ -790,11 +792,9 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   assert(numLaunchOperands + numInputOperands == regionArgs.size() &&
          "compute region args mismatch");
 
-  result.addAttribute(
-      ComputeRegionOp::getOperandSegmentSizeAttr(),
-      builder.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunchOperands),
-                                    static_cast<int32_t>(numInputOperands),
-                                    hasStream ? 1 : 0}));
+  DenseI32ArrayAttr operandSegmentSizes = builder.getDenseI32ArrayAttr(
+      {static_cast<int32_t>(numLaunchOperands),
+       static_cast<int32_t>(numInputOperands), hasStream ? 1 : 0});
 
   for (size_t i = 0; i < numLaunchOperands; ++i) {
     if (parser.resolveOperand(launchOperands[i], types[i], result.operands))
@@ -812,8 +812,39 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
       return failure();
   }
 
+  Attribute parsedProperties;
+  if (ComputeRegionOp::genericParseProperties(parser, parsedProperties))
+    return failure();
+  auto propertyDictionary = dyn_cast_or_null<DictionaryAttr>(parsedProperties);
+  if (parsedProperties && !propertyDictionary)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected properties dictionary");
+
+  NamedAttrList properties(propertyDictionary ? propertyDictionary
+                                              : builder.getDictionaryAttr({}));
+  properties.set(ComputeRegionOp::getOperandSegmentSizeAttr(),
+                 operandSegmentSizes);
+  propertyDictionary = properties.getDictionary(builder.getContext());
+  auto emitError = [&]() {
+    return mlir::emitError(result.location, "invalid properties ")
+           << propertyDictionary << " for op " << result.name.getStringRef()
+           << ": ";
+  };
+  if (failed(ComputeRegionOp::setPropertiesFromParsedAttr(
+          result.getOrAddProperties<Properties>(), propertyDictionary,
+          emitError)))
+    return failure();
+
+  auto attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
+  for (StringRef attrName : ComputeRegionOp::getAttributeNames()) {
+    if (result.attributes.get(attrName))
+      return parser.emitError(attrsLoc)
+             << "inherent attribute '" << attrName
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled";
+  }
 
   return success();
 }
