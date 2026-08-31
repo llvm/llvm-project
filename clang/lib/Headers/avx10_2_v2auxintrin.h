@@ -1552,7 +1552,8 @@ _mm256_maskz_cvthf8_ps(__mmask8 __U, __m128i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing BF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted BF6 values.
+///    A 128-bit vector containing 16 converted packed BF6 values in the
+///    lower bits.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf6(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf6s_128((__v16qi)__A);
 }
@@ -1568,7 +1569,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf6(__m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing BF8 values.
 /// \returns
-///    A 256-bit vector of [32 x i8] containing the converted BF6 values.
+///    A 256-bit vector containing 32 converted packed BF6 values in the
+///    lower bits.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvts_bf8_bf6(__m256i __A) {
   return (__m256i)__builtin_ia32_vcvtbf82bf6s_256((__v32qi)__A);
@@ -1585,7 +1587,8 @@ _mm256_cvts_bf8_bf6(__m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing HF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted HF6 values.
+///    A 128-bit vector containing 16 converted packed HF6 values in the
+///    lower bits.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_hf6(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvthf82hf6s_128((__v16qi)__A);
 }
@@ -1601,7 +1604,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_hf6(__m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing HF8 values.
 /// \returns
-///    A 256-bit vector of [32 x i8] containing the converted HF6 values.
+///    A 256-bit vector containing 32 converted packed HF6 values in the
+///    lower bits.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvts_hf8_hf6(__m256i __A) {
   return (__m256i)__builtin_ia32_vcvthf82hf6s_256((__v32qi)__A);
@@ -1618,8 +1622,8 @@ _mm256_cvts_hf8_hf6(__m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing BF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted BF4 values
-///    (lower 8 bytes used).
+///    A 128-bit vector containing 16 converted packed BF4 values in the
+///    lower bits.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf4(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf4s_128((__v16qi)__A);
 }
@@ -1635,7 +1639,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf4(__m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing BF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted BF4 values.
+///    A 128-bit vector containing 32 converted packed BF4 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_bf8_bf4(__m256i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf4s_256((__v32qi)__A);
@@ -1652,8 +1656,8 @@ _mm256_cvts_bf8_bf4(__m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing HF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted BF4 values
-///    (lower 8 bytes used).
+///    A 128-bit vector containing 16 converted packed BF4 values in the
+///    lower bits.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_bf4(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvthf82bf4s_128((__v16qi)__A);
 }
@@ -1669,82 +1673,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_bf4(__m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing HF8 values.
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted BF4 values.
+///    A 128-bit vector containing 32 converted packed BF4 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_hf8_bf4(__m256i __A) {
   return (__m128i)__builtin_ia32_vcvthf82bf4s_256((__v32qi)__A);
-}
-
-/// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
-///    BF4 (4-bit) floating-point elements with saturation, and store the
-///    results to memory at \a __P.
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVTBF82BF4S instruction.
-///
-/// \param __P
-///    A pointer to a 64-bit memory location. The address does not need to be
-///    aligned.
-/// \param __A
-///    A 128-bit vector of [16 x i8] containing BF8 values.
-static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_cvts_bf8_bf4_storeu(void *__P, __m128i __A) {
-  __builtin_ia32_vcvtbf82bf4s_128_mem(__P, (__v16qi)__A);
-}
-
-/// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
-///    BF4 (4-bit) floating-point elements with saturation, and store the
-///    results to memory at \a __P.
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVTBF82BF4S instruction.
-///
-/// \param __P
-///    A pointer to a 128-bit memory location. The address does not need to be
-///    aligned.
-/// \param __A
-///    A 256-bit vector of [32 x i8] containing BF8 values.
-static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_cvts_bf8_bf4_storeu(void *__P, __m256i __A) {
-  __builtin_ia32_vcvtbf82bf4s_256_mem(__P, (__v32qi)__A);
-}
-
-/// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
-///    BF4 (4-bit) floating-point elements with saturation, and store the
-///    results to memory at \a __P.
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVTHF82BF4S instruction.
-///
-/// \param __P
-///    A pointer to a 64-bit memory location. The address does not need to be
-///    aligned.
-/// \param __A
-///    A 128-bit vector of [16 x i8] containing HF8 values.
-static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_cvts_hf8_bf4_storeu(void *__P, __m128i __A) {
-  __builtin_ia32_vcvthf82bf4s_128_mem(__P, (__v16qi)__A);
-}
-
-/// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
-///    BF4 (4-bit) floating-point elements with saturation, and store the
-///    results to memory at \a __P.
-///
-/// \headerfile <immintrin.h>
-///
-/// This intrinsic corresponds to the \c VCVTHF82BF4S instruction.
-///
-/// \param __P
-///    A pointer to a 128-bit memory location. The address does not need to be
-///    aligned.
-/// \param __A
-///    A 256-bit vector of [32 x i8] containing HF8 values.
-static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_cvts_hf8_bf4_storeu(void *__P, __m256i __A) {
-  __builtin_ia32_vcvthf82bf4s_256_mem(__P, (__v32qi)__A);
 }
 
 /// Convert packed BF4 (4-bit) floating-point elements in \a __A to packed
@@ -1756,7 +1688,7 @@ _mm256_cvts_hf8_bf4_storeu(void *__P, __m256i __A) {
 /// This intrinsic corresponds to the \c VCVTBF42HF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 16 packed BF4 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf4_hf8(__m128i __A) {
@@ -1776,7 +1708,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf4_hf8(__m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 16 packed BF4 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1796,7 +1728,7 @@ _mm_mask_cvtbf4_hf8(__m128i __W, __mmask16 __U, __m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 16 packed BF4 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1814,7 +1746,7 @@ _mm_maskz_cvtbf4_hf8(__mmask16 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTBF42HF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 32 packed BF4 values.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvtbf4_hf8(__m128i __A) {
@@ -1834,7 +1766,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvtbf4_hf8(__m128i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 32 packed BF4 values.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1854,7 +1786,7 @@ _mm256_mask_cvtbf4_hf8(__m256i __W, __mmask32 __U, __m128i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF4 values.
+///    A 128-bit vector containing 32 packed BF4 values.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1872,7 +1804,7 @@ _mm256_maskz_cvtbf4_hf8(__mmask32 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTBF62HF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF6 values.
+///    A 128-bit vector containing 16 packed BF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf6_hf8(__m128i __A) {
@@ -1892,7 +1824,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf6_hf8(__m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF6 values.
+///    A 128-bit vector containing 16 packed BF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1912,7 +1844,7 @@ _mm_mask_cvtbf6_hf8(__m128i __W, __mmask16 __U, __m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing BF6 values.
+///    A 128-bit vector containing 16 packed BF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1930,7 +1862,7 @@ _mm_maskz_cvtbf6_hf8(__mmask16 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTBF62HF8 instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing BF6 values.
+///    A 256-bit vector containing 32 packed BF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvtbf6_hf8(__m256i __A) {
@@ -1950,7 +1882,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvtbf6_hf8(__m256i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing BF6 values.
+///    A 256-bit vector containing 32 packed BF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1970,7 +1902,7 @@ _mm256_mask_cvtbf6_hf8(__m256i __W, __mmask32 __U, __m256i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing BF6 values.
+///    A 256-bit vector containing 32 packed BF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1988,7 +1920,7 @@ _mm256_maskz_cvtbf6_hf8(__mmask32 __U, __m256i __A) {
 /// This intrinsic corresponds to the \c VCVTHF62HF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing HF6 values.
+///    A 128-bit vector containing 16 packed HF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf6_hf8(__m128i __A) {
@@ -2008,7 +1940,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf6_hf8(__m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing HF6 values.
+///    A 128-bit vector containing 16 packed HF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2028,7 +1960,7 @@ _mm_mask_cvthf6_hf8(__m128i __W, __mmask16 __U, __m128i __A) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing HF6 values.
+///    A 128-bit vector containing 16 packed HF6 values in the lower bits.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF8 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2046,7 +1978,7 @@ _mm_maskz_cvthf6_hf8(__mmask16 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTHF62HF8 instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing HF6 values.
+///    A 256-bit vector containing 32 packed HF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvthf6_hf8(__m256i __A) {
@@ -2066,7 +1998,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_cvthf6_hf8(__m256i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing HF6 values.
+///    A 256-bit vector containing 32 packed HF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -2086,7 +2018,7 @@ _mm256_mask_cvthf6_hf8(__m256i __W, __mmask32 __U, __m256i __A) {
 /// \param __U
 ///    A 32-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing HF6 values.
+///    A 256-bit vector containing 32 packed HF6 values in the lower bits.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF8 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -2255,7 +2187,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtssepi32_epi8(__m128i __A) {
+_mm_cvtss_epi32_epi8(__m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
@@ -2276,7 +2208,7 @@ _mm_cvtssepi32_epi8(__m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
+_mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask((__v4si)__A, (__v16qi)__W,
                                                    __U);
 }
@@ -2295,7 +2227,7 @@ _mm_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtssepi32_epi8(__mmask8 __U, __m128i __A) {
+_mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
@@ -2314,7 +2246,7 @@ _mm_maskz_cvtssepi32_epi8(__mmask8 __U, __m128i __A) {
 ///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtssepi32_epi8(__m256i __A) {
+_mm256_cvtss_epi32_epi8(__m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
@@ -2335,7 +2267,7 @@ _mm256_cvtssepi32_epi8(__m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
+_mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask((__v8si)__A, (__v16qi)__W,
                                                    __U);
 }
@@ -2354,7 +2286,7 @@ _mm256_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtssepi32_epi8(__mmask8 __U, __m256i __A) {
+_mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
@@ -2374,7 +2306,7 @@ _mm256_maskz_cvtssepi32_epi8(__mmask8 __U, __m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_mask_cvtssepi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
+_mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
   __builtin_ia32_vpmovssdb128mem_mask((__v16qi *)__P, (__v4si)__A, __M);
 }
 
@@ -2393,7 +2325,7 @@ _mm_mask_cvtssepi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtssepi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
+_mm256_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
   __builtin_ia32_vpmovssdb256mem_mask((__v16qi *)__P, (__v8si)__A, __M);
 }
 

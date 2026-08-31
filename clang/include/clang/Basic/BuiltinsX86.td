@@ -5328,19 +5328,6 @@ let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in
   def vcvtbf82bf4s_512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
 }
 
-// VCVTBF82BF4S memory store
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf82bf4s_128_mem : X86Builtin<"void(void *, _Vector<16, char>)">;
-}
-
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf82bf4s_256_mem : X86Builtin<"void(void *, _Vector<32, char>)">;
-}
-
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf82bf4s_512_mem : X86Builtin<"void(void *, _Vector<64, char>)">;
-}
-
 // VCVTHF82BF4S
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def vcvthf82bf4s_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
@@ -5352,19 +5339,6 @@ let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def vcvthf82bf4s_512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
-}
-
-// VCVTHF82BF4S memory store
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf82bf4s_128_mem : X86Builtin<"void(void *, _Vector<16, char>)">;
-}
-
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf82bf4s_256_mem : X86Builtin<"void(void *, _Vector<32, char>)">;
-}
-
-let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf82bf4s_512_mem : X86Builtin<"void(void *, _Vector<64, char>)">;
 }
 
 // Unpack to Byte

@@ -256,12 +256,9 @@ multiclass avx10_v2aux_cvt_trunc_base<bits<8> opc, string OpcodeStr,
                Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VH>;
   }
 
-  def : Pat<(_dest.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size)
+  def : Pat<(_dest.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#_src.Size)
                        (_src.VT _src.RC:$src))),
             (!cast<Instruction>(NAME # "rr") _src.RC:$src)>;
-  def : Pat<(!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size#"_mem")
-             addr:$dst, (_src.VT _src.RC:$src)),
-            (!cast<Instruction>(NAME # "mr") addr:$dst, _src.RC:$src)>;
 }
 
 multiclass avx10_v2aux_cvt_trunc_b<bits<8> opc, string OpcodeStr> {
@@ -287,14 +284,14 @@ multiclass avx10_v2aux_cvt_expand_masked_base<bits<8> opc, string OpcodeStr,
     defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                               (ins _src.RC:$src),
                               OpcodeStr, "$src", "$src",
-                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#_.Size)
                                      (_src.VT _src.RC:$src)))>,
                               Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VH>;
     let mayLoad = 1 in
       defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                                 (ins x86memop:$src),
                                 OpcodeStr, "$src", "$src",
-                                (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#_.Size)
                                        (_src.VT ld_dag)))>,
                                 Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VH>;
   }
@@ -323,7 +320,7 @@ multiclass avx10_v2aux_cvt_widen_masked_base<bits<8> opc, string OpcodeStr,
     defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                               (ins _.RC:$src),
                               OpcodeStr, "$src", "$src",
-                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#_.Size)
                                      (_.VT _.RC:$src)))>,
                               Sched<[sched]>, EVEX;
   }
@@ -442,6 +439,34 @@ let Predicates = [HasAVX10_V2_AUX] in {
                       T_MAP5, XS, REX_W;
   defm VCVTHF82BF4S : avx10_v2aux_cvt_trunc_b<0x3D, "vcvthf82bf4s">,
                       T_MAP5, XS;
+
+  def : Pat<(store (int_x86_avx10_vcvtbf82bf4s512 VR512:$src), addr:$dst),
+            (VCVTBF82BF4SZmr addr:$dst, VR512:$src)>;
+  def : Pat<(store (int_x86_avx10_vcvtbf82bf4s256 VR256X:$src), addr:$dst),
+            (VCVTBF82BF4SZ256mr addr:$dst, VR256X:$src)>;
+  // The 128-bit form writes only the low 8 bytes of its destination.
+  def : Pat<(store (i64 (extractelt
+                         (bc_v2i64 (int_x86_avx10_vcvtbf82bf4s128 VR128X:$src)),
+                         (iPTR 0))), addr:$dst),
+            (VCVTBF82BF4SZ128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(store (f64 (extractelt
+                         (bc_v2f64 (int_x86_avx10_vcvtbf82bf4s128 VR128X:$src)),
+                         (iPTR 0))), addr:$dst),
+            (VCVTBF82BF4SZ128mr addr:$dst, VR128X:$src)>;
+
+  def : Pat<(store (int_x86_avx10_vcvthf82bf4s512 VR512:$src), addr:$dst),
+            (VCVTHF82BF4SZmr addr:$dst, VR512:$src)>;
+  def : Pat<(store (int_x86_avx10_vcvthf82bf4s256 VR256X:$src), addr:$dst),
+            (VCVTHF82BF4SZ256mr addr:$dst, VR256X:$src)>;
+  // The 128-bit form writes only the low 8 bytes of its destination.
+  def : Pat<(store (i64 (extractelt
+                         (bc_v2i64 (int_x86_avx10_vcvthf82bf4s128 VR128X:$src)),
+                         (iPTR 0))), addr:$dst),
+            (VCVTHF82BF4SZ128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(store (f64 (extractelt
+                         (bc_v2f64 (int_x86_avx10_vcvthf82bf4s128 VR128X:$src)),
+                         (iPTR 0))), addr:$dst),
+            (VCVTHF82BF4SZ128mr addr:$dst, VR128X:$src)>;
 }
 
 //-------------------------------------------------
@@ -456,7 +481,7 @@ multiclass avx10_v2aux_cvt_narrow_base<bits<8> opc, string OpcodeStr,
              (ins _.RC:$src),
              OpcodeStr # "\t{$src, $dst|$dst, $src}",
              [(set _.RC:$dst,
-               (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+               (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#_.Size)
                        (_.VT _.RC:$src))))]>,
            EVEX, Sched<[sched]>;
 }
@@ -488,7 +513,7 @@ let Predicates = [HasAVX10_V2_AUX] in {
                      T_MAP5, PS;
 
   // Pattern match vcvtbf42hf8 of a scalar i64 load.
-  def : Pat<(v16i8 (int_x86_avx10_vcvtbf42hf8_128 (v16i8 (bitconvert
+  def : Pat<(v16i8 (int_x86_avx10_vcvtbf42hf8128 (v16i8 (bitconvert
               (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
             (VCVTBF42HF8Z128rm addr:$src)>;
 }

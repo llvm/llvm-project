@@ -20,6 +20,18 @@
 # ATT:   vcvtps2bf8 %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtps2bf8 xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7e,0xc9,0x39,0xc1
+
+# ATT:   vcvtps2bf8 (%edi){1to16}, %xmm0
+# INTEL: vcvtps2bf8 xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7e,0x58,0x39,0x07
+
+# ATT:   vcvtps2bf8 (%edi){1to8}, %xmm0
+# INTEL: vcvtps2bf8 xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7e,0x38,0x39,0x07
+
+# ATT:   vcvtps2bf8 (%edi){1to4}, %xmm0
+# INTEL: vcvtps2bf8 xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7e,0x18,0x39,0x07
 # ATT:   vcvtps2bf8s %zmm1, %xmm0
 # INTEL: vcvtps2bf8s xmm0, zmm1
 0x62,0xf5,0x7e,0x48,0x3b,0xc1
@@ -39,6 +51,18 @@
 # ATT:   vcvtps2bf8s %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtps2bf8s xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7e,0xc9,0x3b,0xc1
+
+# ATT:   vcvtps2bf8s (%edi){1to16}, %xmm0
+# INTEL: vcvtps2bf8s xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7e,0x58,0x3b,0x07
+
+# ATT:   vcvtps2bf8s (%edi){1to8}, %xmm0
+# INTEL: vcvtps2bf8s xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7e,0x38,0x3b,0x07
+
+# ATT:   vcvtps2bf8s (%edi){1to4}, %xmm0
+# INTEL: vcvtps2bf8s xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7e,0x18,0x3b,0x07
 # ATT:   vcvtps2hf8 %zmm1, %xmm0
 # INTEL: vcvtps2hf8 xmm0, zmm1
 0x62,0xf5,0x7e,0x48,0x38,0xc1
@@ -58,6 +82,18 @@
 # ATT:   vcvtps2hf8 %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtps2hf8 xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7e,0xc9,0x38,0xc1
+
+# ATT:   vcvtps2hf8 (%edi){1to16}, %xmm0
+# INTEL: vcvtps2hf8 xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7e,0x58,0x38,0x07
+
+# ATT:   vcvtps2hf8 (%edi){1to8}, %xmm0
+# INTEL: vcvtps2hf8 xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7e,0x38,0x38,0x07
+
+# ATT:   vcvtps2hf8 (%edi){1to4}, %xmm0
+# INTEL: vcvtps2hf8 xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7e,0x18,0x38,0x07
 # ATT:   vcvtps2hf8s %zmm1, %xmm0
 # INTEL: vcvtps2hf8s xmm0, zmm1
 0x62,0xf5,0x7e,0x48,0x3a,0xc1
@@ -77,6 +113,18 @@
 # ATT:   vcvtps2hf8s %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtps2hf8s xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7e,0xc9,0x3a,0xc1
+
+# ATT:   vcvtps2hf8s (%edi){1to16}, %xmm0
+# INTEL: vcvtps2hf8s xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7e,0x58,0x3a,0x07
+
+# ATT:   vcvtps2hf8s (%edi){1to8}, %xmm0
+# INTEL: vcvtps2hf8s xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7e,0x38,0x3a,0x07
+
+# ATT:   vcvtps2hf8s (%edi){1to4}, %xmm0
+# INTEL: vcvtps2hf8s xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7e,0x18,0x3a,0x07
 # ATT:   vcvtrops2hf8 %zmm1, %xmm0
 # INTEL: vcvtrops2hf8 xmm0, zmm1
 0x62,0xf5,0x7d,0x48,0x38,0xc1
@@ -96,6 +144,18 @@
 # ATT:   vcvtrops2hf8 %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtrops2hf8 xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7d,0xc9,0x38,0xc1
+
+# ATT:   vcvtrops2hf8 (%edi){1to16}, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7d,0x58,0x38,0x07
+
+# ATT:   vcvtrops2hf8 (%edi){1to8}, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7d,0x38,0x38,0x07
+
+# ATT:   vcvtrops2hf8 (%edi){1to4}, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7d,0x18,0x38,0x07
 # ATT:   vcvtrops2hf8s %zmm1, %xmm0
 # INTEL: vcvtrops2hf8s xmm0, zmm1
 0x62,0xf5,0x7d,0x48,0x3a,0xc1
@@ -116,6 +176,18 @@
 # INTEL: vcvtrops2hf8s xmm0 {k1} {z}, zmm1
 0x62,0xf5,0x7d,0xc9,0x3a,0xc1
 
+# ATT:   vcvtrops2hf8s (%edi){1to16}, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, dword ptr [edi]{1to16}
+0x62,0xf5,0x7d,0x58,0x3a,0x07
+
+# ATT:   vcvtrops2hf8s (%edi){1to8}, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, dword ptr [edi]{1to8}
+0x62,0xf5,0x7d,0x38,0x3a,0x07
+
+# ATT:   vcvtrops2hf8s (%edi){1to4}, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, dword ptr [edi]{1to4}
+0x62,0xf5,0x7d,0x18,0x3a,0x07
+
 # ATT:   vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0
 # INTEL: vcvtbiasps2bf8 xmm0, zmm1, zmm2
 0x62,0xf5,0x74,0x48,0x39,0xc2
@@ -135,6 +207,18 @@
 # ATT:   vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtbiasps2bf8 xmm0 {k1} {z}, zmm1, zmm2
 0x62,0xf5,0x74,0xc9,0x39,0xc2
+
+# ATT:   vcvtbiasps2bf8 (%edi){1to16}, %zmm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, zmm1, dword ptr [edi]{1to16}
+0x62,0xf5,0x74,0x58,0x39,0x07
+
+# ATT:   vcvtbiasps2bf8 (%edi){1to8}, %ymm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, ymm1, dword ptr [edi]{1to8}
+0x62,0xf5,0x74,0x38,0x39,0x07
+
+# ATT:   vcvtbiasps2bf8 (%edi){1to4}, %xmm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, xmm1, dword ptr [edi]{1to4}
+0x62,0xf5,0x74,0x18,0x39,0x07
 # ATT:   vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0
 # INTEL: vcvtbiasps2bf8s xmm0, zmm1, zmm2
 0x62,0xf5,0x74,0x48,0x3b,0xc2
@@ -154,6 +238,18 @@
 # ATT:   vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtbiasps2bf8s xmm0 {k1} {z}, zmm1, zmm2
 0x62,0xf5,0x74,0xc9,0x3b,0xc2
+
+# ATT:   vcvtbiasps2bf8s (%edi){1to16}, %zmm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, zmm1, dword ptr [edi]{1to16}
+0x62,0xf5,0x74,0x58,0x3b,0x07
+
+# ATT:   vcvtbiasps2bf8s (%edi){1to8}, %ymm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, ymm1, dword ptr [edi]{1to8}
+0x62,0xf5,0x74,0x38,0x3b,0x07
+
+# ATT:   vcvtbiasps2bf8s (%edi){1to4}, %xmm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, xmm1, dword ptr [edi]{1to4}
+0x62,0xf5,0x74,0x18,0x3b,0x07
 # ATT:   vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0
 # INTEL: vcvtbiasps2hf8 xmm0, zmm1, zmm2
 0x62,0xf5,0x74,0x48,0x38,0xc2
@@ -173,6 +269,18 @@
 # ATT:   vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtbiasps2hf8 xmm0 {k1} {z}, zmm1, zmm2
 0x62,0xf5,0x74,0xc9,0x38,0xc2
+
+# ATT:   vcvtbiasps2hf8 (%edi){1to16}, %zmm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, zmm1, dword ptr [edi]{1to16}
+0x62,0xf5,0x74,0x58,0x38,0x07
+
+# ATT:   vcvtbiasps2hf8 (%edi){1to8}, %ymm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, ymm1, dword ptr [edi]{1to8}
+0x62,0xf5,0x74,0x38,0x38,0x07
+
+# ATT:   vcvtbiasps2hf8 (%edi){1to4}, %xmm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, xmm1, dword ptr [edi]{1to4}
+0x62,0xf5,0x74,0x18,0x38,0x07
 # ATT:   vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0
 # INTEL: vcvtbiasps2hf8s xmm0, zmm1, zmm2
 0x62,0xf5,0x74,0x48,0x3a,0xc2
@@ -192,6 +300,18 @@
 # ATT:   vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
 # INTEL: vcvtbiasps2hf8s xmm0 {k1} {z}, zmm1, zmm2
 0x62,0xf5,0x74,0xc9,0x3a,0xc2
+
+# ATT:   vcvtbiasps2hf8s (%edi){1to16}, %zmm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, zmm1, dword ptr [edi]{1to16}
+0x62,0xf5,0x74,0x58,0x3a,0x07
+
+# ATT:   vcvtbiasps2hf8s (%edi){1to8}, %ymm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, ymm1, dword ptr [edi]{1to8}
+0x62,0xf5,0x74,0x38,0x3a,0x07
+
+# ATT:   vcvtbiasps2hf8s (%edi){1to4}, %xmm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, xmm1, dword ptr [edi]{1to4}
+0x62,0xf5,0x74,0x18,0x3a,0x07
 
 # ATT:   vcvtbf82ps %xmm1, %zmm0
 # INTEL: vcvtbf82ps zmm0, xmm1
