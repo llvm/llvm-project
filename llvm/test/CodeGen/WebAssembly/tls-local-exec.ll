@@ -3,7 +3,9 @@
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -mtriple=wasm32-wasip3 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS-LIBCALL %s
 
-; Also, run the same tests without a specified TLS mode--this should still emit `localexec` code on non-Emscripten targtes which don't currently support dynamic linking.
+; Also, run the same tests without a specified TLS mode--this should still emit
+; `localexec` code on non-Emscripten targets which don't currently support
+; dynamic linking.
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics - | FileCheck --check-prefixes=CHECK,TLS %s
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS %s
 ; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -mtriple=wasm32-wasip3 -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=bulk-memory,atomics -fast-isel - | FileCheck --check-prefixes=CHECK,TLS-LIBCALL %s

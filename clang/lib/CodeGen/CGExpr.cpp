@@ -4307,8 +4307,8 @@ void CodeGenFunction::EmitCheck(
         CGM.getDataLayout().getDefaultGlobalsAddressSpace());
     InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-    Args.push_back(InfoPtr);
-    ArgTypes.push_back(Args.back()->getType());
+    Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
+    ArgTypes.push_back(CGM.VoidPtrTy);
   }
 
   for (llvm::Value *DynamicArg : DynamicArgs) {

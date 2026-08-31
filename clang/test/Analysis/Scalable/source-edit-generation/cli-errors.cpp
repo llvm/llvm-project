@@ -1,12 +1,18 @@
 // CLI errors for the source-edit-generation pipeline. Every misuse of the
-// four `--ssaf-{source-transformation,global-scope-analysis-result,
-// src-edit-file,transformation-report-file}=` options emits a default-error
-// diagnostic under `-Wscalable-static-analysis-framework`. The runner
-// produces no edit/report files and the rest of the compile pipeline is
-// untouched.
+// six `--ssaf-{source-transformation,global-scope-analysis-result,
+// src-edit-file,transformation-report-file,compilation-unit-id,
+// link-unit-id}=` options emits a default-error diagnostic under
+// `-Wscalable-static-analysis-framework`. The runner produces no edit/report
+// files and the rest of the compile pipeline is untouched.
 
 // DEFINE: %{filecheck} = FileCheck %s --match-full-lines --check-prefix
 // DEFINE: %{base} = --ssaf-source-transformation=does-not-exist \
+// DEFINE:   --ssaf-global-scope-analysis-result=%S/Inputs/empty-suite.json \
+// DEFINE:   --ssaf-src-edit-file=%t/edits.yaml \
+// DEFINE:   --ssaf-transformation-report-file=%t/report.sarif \
+// DEFINE:   --ssaf-compilation-unit-id=cu \
+// DEFINE:   --ssaf-link-unit-id=lu
+// DEFINE: %{base-no-link-unit-id} = --ssaf-source-transformation=does-not-exist \
 // DEFINE:   --ssaf-global-scope-analysis-result=%S/Inputs/empty-suite.json \
 // DEFINE:   --ssaf-src-edit-file=%t/edits.yaml \
 // DEFINE:   --ssaf-transformation-report-file=%t/report.sarif \
@@ -33,6 +39,7 @@
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-src-edit-file=' to be set [-Wscalable-static-analysis-framework]
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-transformation-report-file=' to be set [-Wscalable-static-analysis-framework]
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-compilation-unit-id=' to be set [-Wscalable-static-analysis-framework]
+// ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-link-unit-id=' to be set [-Wscalable-static-analysis-framework]
 
 // =============================================================================
 // 3. Reverse orphans: edit/report file set without transformation option.
@@ -47,5 +54,23 @@
 // RUN: not %clang -c %s -o %t/test.o --ssaf-transformation-report-file=%t/r.sarif 2>&1 | %{filecheck}=ORPHAN-REPORT
 // ORPHAN-REPORT: error: option '--ssaf-transformation-report-file=' is ignored without '--ssaf-source-transformation=' [-Wscalable-static-analysis-framework]
 // RUN: not test -e %t/r.sarif
+
+// =============================================================================
+// 4. Missing or empty --ssaf-link-unit-id= alone (all other companions set).
+// =============================================================================
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: not %clang     -c %s -o %t/test.o %{base-no-link-unit-id} 2>&1 | %{filecheck}=MISSING-LINK-UNIT-ID
+// RUN: not %clang_cc1    %s              %{base-no-link-unit-id} 2>&1 | %{filecheck}=MISSING-LINK-UNIT-ID
+// RUN: not test -e %t/edits.yaml
+// RUN: not test -e %t/report.sarif
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: not %clang     -c %s -o %t/test.o %{base-no-link-unit-id} --ssaf-link-unit-id= 2>&1 | %{filecheck}=MISSING-LINK-UNIT-ID
+// RUN: not %clang_cc1    %s              %{base-no-link-unit-id} --ssaf-link-unit-id= 2>&1 | %{filecheck}=MISSING-LINK-UNIT-ID
+// RUN: not test -e %t/edits.yaml
+// RUN: not test -e %t/report.sarif
+
+// MISSING-LINK-UNIT-ID: error: option '--ssaf-source-transformation=' requires '--ssaf-link-unit-id=' to be set [-Wscalable-static-analysis-framework]
 
 void foo() {}

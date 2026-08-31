@@ -35,6 +35,28 @@ static void defineAddr(JITDylib &JD, StringRef Name, ExecutorAddr Addr) {
 
 } // namespace
 
+// An empty PrepareFns list trivially succeeds, even with an empty
+// SearchOrder: there's nothing to look up, so no ExecutionSession is needed.
+TEST(LookupAndApplyTest, EmptyPrepareFnsTriviallySucceeds) {
+  EXPECT_THAT_ERROR(lookupAndApply(LookupKind::Static, {}, {}), Succeeded());
+}
+
+// An empty SearchOrder fails outright, even for a symbol that is only weakly
+// referenced (which would otherwise resolve to null rather than failing the
+// lookup, see RecordAddrWeaklyReferencedAbsent below): there is no
+// ExecutionSession to intern the symbol's name with, so the prepare function
+// is never run, and so the lookup never gets far enough to see that the
+// symbol was only weakly referenced.
+TEST(LookupAndApplyTest, EmptySearchOrderFailsEvenForWeakReference) {
+  ExecutorAddr A(AddrAValue);
+  EXPECT_THAT_ERROR(
+      lookupAndApply(LookupKind::Static, {},
+                     {recordAddr("addr_a", &A,
+                                 SymbolLookupFlags::WeaklyReferencedSymbol)}),
+      Failed());
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+}
+
 // recordAddr writes the resolved address of a required symbol.
 TEST(LookupAndApplyTest, RecordAddr) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
