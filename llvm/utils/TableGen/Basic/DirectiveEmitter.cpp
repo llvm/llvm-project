@@ -280,6 +280,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include \"llvm/ADT/Sequence.h\"\n";
   OS << "#include \"llvm/ADT/STLExtras.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   if (DirLang.getName() == "OpenMP")
     OS << "#include \"llvm/Frontend/OpenMP/OMPVersion.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
