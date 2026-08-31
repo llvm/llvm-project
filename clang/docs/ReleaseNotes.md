@@ -427,6 +427,11 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Added `-Wcounter-extension` as a diagnostic group under `-Wc2y-extensions` to
+  control `__COUNTER__` being diagnosed as an extension. This allows `-pedantic`
+  users to disable the diagnostic with `-Wno-counter-extension` without having
+  to disable all pedantic diagnostics. (#GH196557)
+
 - Clang now diagnoses more details when a constraint evaluates to false.
 
 ### Improvements to Clang's time-trace
