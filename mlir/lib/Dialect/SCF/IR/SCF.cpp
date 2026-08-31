@@ -3493,12 +3493,14 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
                                   ifOp.thenYield()->getOperand(ifOpIdx));
 
     // Any remaining use of an ifOp result is on the false path, i.e. a result
-    // of the while op; collapse each one to its else value exactly once.
-    llvm::SmallDenseSet<size_t> collapsedIfResults;
+    // of the while op, so it becomes the else value. `ifOp` is
+    // `conditionOp->getPrevNode()` and the assertion above establishes that
+    // `conditionOp` is its only user, so replacing all uses is safe here.
+    // Repeating a replacement for a result forwarded more than once is a no-op
+    // because the first one leaves it without uses.
     for (auto [idx, ifOpIdx] : conditionToIfResult)
-      if (collapsedIfResults.insert(ifOpIdx).second)
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx],
-                                    ifOp.elseYield()->getOperand(ifOpIdx));
+      rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx],
+                                  ifOp.elseYield()->getOperand(ifOpIdx));
 
     // Collect additional used values from before region.
     SetVector<Value> additionalUsedValuesSet;
