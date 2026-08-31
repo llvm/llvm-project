@@ -243,6 +243,10 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- The `cannot overload a member function` diagnostic now describes the previous
+  declaration first, matching the order in which the declarations appear in the
+  source. (#GH219803)
+
 - More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
@@ -405,12 +409,6 @@ features cannot lower the translation-unit ABI level;
 
 - Improved how Unicode characters are displayed in diagnostic messages.
 
-- Clang no longer retains source comments in the AST when nothing will read them
-  back. Comments are now collected only when they may be consumed (e.g. with
-  ``-fparse-all-comments``, when ``-Wdocumentation`` is enabled, when emitting a
-  PCH/module, or during code completion), reducing memory overhead for typical
-  compilations.
-
 - `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
   diagnose a reference to a function (e.g. of type `void (&)()`) compared
   against or converted to a null pointer, the same as a bare function name.
@@ -553,9 +551,19 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Allow redeclaration lookup to consider conversion function templates, allowing
+  Clang to match an in-class specialization such as `template<> operator int()`
+  against a prior conversion function template `template<class T> operator T()`.
+  (#GH218261)
+
 - Fixed an assertion when an ill-formed qualified member function definition
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
+
+- Fixed an assertion when a type-trait keyword that had already been made
+  available as an identifier (e.g. `struct __make_unsigned`) was seen again
+  in a token that was lexed and cached before the first occurrence was parsed.
+  (#GH214128)
 
 #### Bug Fixes to AST Handling
 

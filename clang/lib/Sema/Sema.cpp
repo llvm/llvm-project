@@ -2749,39 +2749,10 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
-bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) const {
-  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
-      SourceMgr.isInSystemHeader(Loc))
-    return false;
-
-  if (LangOpts.CommentOpts.ParseAllComments)
-    return true;
-
-  if (LangOpts.CommentOpts.RetainComments)
-    return true;
-
-  // When building a PCH the comments are serialized into the AST file
-  // so downstream consumers like clangd) can retrieve documentation, and the
-  // incremental/REPL front end may query them interactively.
-  if (TUKind != TU_Complete)
-    return true;
-
-  if (PP.isCodeCompletionEnabled())
-    return true;
-
-  // Keep the comment if any of the -Wdocumentation warnings is enabled at
-  // its location (checking the location handles warnings turned on by
-  // `#pragma clang diagnostic`). -Wdocumentation-pedantic is checked
-  // separately because it is not a subgroup of -Wdocumentation.
-  if (!Diags.areAllIgnored("documentation", Loc) ||
-      !Diags.areAllIgnored("documentation-pedantic", Loc))
-    return true;
-
-  return false;
-}
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!shouldRetainCommentsInAST(Comment.getBegin()))
+  if (!LangOpts.RetainCommentsFromSystemHeaders &&
+      SourceMgr.isInSystemHeader(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
   if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {

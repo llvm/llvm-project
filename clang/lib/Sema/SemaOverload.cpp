@@ -1528,7 +1528,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if (!UseMemberUsingDeclRules && (OldMethod->getRefQualifier() == RQ_None ||
                                      NewMethod->getRefQualifier() == RQ_None)) {
       SemaRef.Diag(NewMethod->getLocation(), diag::err_ref_qualifier_overload)
-          << NewMethod->getRefQualifier() << OldMethod->getRefQualifier();
+          << OldMethod->getRefQualifier() << NewMethod->getRefQualifier();
       SemaRef.Diag(OldMethod->getLocation(), diag::note_previous_declaration);
       return true;
     }

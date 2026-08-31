@@ -1945,8 +1945,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
   Opts.InterchangeLoops =
-      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, true);
   Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,
                                 OPT_fno_experimental_loop_fusion, false);
   Opts.BinutilsVersion =
@@ -5296,7 +5298,6 @@ std::string CompilerInvocation::computeContextHash() const {
 
   HBuilder.add(getLangOpts().ObjCRuntime);
   HBuilder.addRange(getLangOpts().CommentOpts.BlockCommandNames);
-  HBuilder.add(getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders);
 
   // Extend the signature with the target options.
   HBuilder.add(getTargetOpts().Triple, getTargetOpts().CPU,
