@@ -14,6 +14,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -398,9 +399,8 @@ static bool isCrossCompiling(const llvm::Triple &T, bool RequireArchMatch) {
 
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
 static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
-                           std::string &Ver,
-                           toolchains::Generic_GCC::GCCVersion &Version) {
-  Version = toolchains::Generic_GCC::GCCVersion::Parse("0.0.0");
+                           std::string &Ver) {
+  auto Version = toolchains::Generic_GCC::GCCVersion::Parse("0.0.0");
   std::error_code EC;
   for (llvm::sys::fs::directory_iterator LI(LibDir, EC), LE; !EC && LI != LE;
        LI = LI.increment(EC)) {
@@ -444,7 +444,7 @@ void toolchains::MinGW::findGccLibDir(const llvm::Triple &LiteralTriple) {
     for (StringRef CandidateSysroot : SubdirNames) {
       llvm::SmallString<1024> LibDir(Base);
       llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateSysroot);
-      if (findGccVersion(LibDir, GccLibDir, Ver, GccVer)) {
+      if (findGccVersion(LibDir, GccLibDir, Ver)) {
         SubdirName = std::string(CandidateSysroot);
         return;
       }
@@ -562,8 +562,9 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       (Base + SubdirName + llvm::sys::path::get_separator() + "lib").str());
 
   // Gentoo
-  getFilePaths().push_back(
-      (Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib").str());
+  tools::addPathIfExists(
+      D, Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib",
+      getFilePaths());
 
   // Only include <base>/lib if we're not cross compiling (not even for
   // windows->windows to a different arch), or if the sysroot has been set
@@ -749,9 +750,11 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                    Base + SubdirName + llvm::sys::path::get_separator() +
                        "include");
 
-  // Gentoo
-  addSystemInclude(DriverArgs, CC1Args,
-                   Base + SubdirName + llvm::sys::path::get_separator() + "usr/include");
+  std::string GentooInclude =
+      (Base + SubdirName + llvm::sys::path::get_separator() + "usr/include")
+          .str();
+  if (getVFS().exists(GentooInclude))
+    addSystemInclude(DriverArgs, CC1Args, GentooInclude);
 
   // Only include <base>/include if we're not cross compiling (but do allow it
   // if we're on Windows and building for Windows on another architecture),
@@ -837,8 +840,18 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     break;
   }
 
-  case ToolChain::CST_Libstdcxx:
-    llvm::SmallVector<llvm::SmallString<1024>, 7> CppIncludeBases;
+  case ToolChain::CST_Libstdcxx: {
+    auto AddIncludeBase = [&](StringRef Dir) {
+      addSystemInclude(DriverArgs, CC1Args, Dir);
+      addSystemInclude(DriverArgs, CC1Args, Dir + Slash + TripleDirName);
+      addSystemInclude(DriverArgs, CC1Args, Dir + Slash + "backward");
+    };
+    auto IsIncludeDir = [&](const Twine &Dir) {
+      auto Status = getVFS().status(Dir);
+      return Status && Status->isDirectory();
+    };
+
+    llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;
     CppIncludeBases.emplace_back(Base);
     llvm::sys::path::append(CppIncludeBases[0], SubdirName, "include", "c++");
     CppIncludeBases.emplace_back(Base);
@@ -848,22 +861,25 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
     llvm::sys::path::append(CppIncludeBases[2], "include", "c++", Ver);
     CppIncludeBases.emplace_back(GccLibDir);
     llvm::sys::path::append(CppIncludeBases[3], "include", "c++");
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[4], "include",
-                            "g++-v" + GccVer.Text);
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[5], "include",
-                            "g++-v" + GccVer.MajorStr + "." + GccVer.MinorStr);
-    CppIncludeBases.emplace_back(GccLibDir);
-    llvm::sys::path::append(CppIncludeBases[6], "include",
-                            "g++-v" + GccVer.MajorStr);
-    for (auto &CppIncludeBase : CppIncludeBases) {
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase);
-      CppIncludeBase += Slash;
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + TripleDirName);
-      addSystemInclude(DriverArgs, CC1Args, CppIncludeBase + "backward");
+    for (const auto &CppIncludeBase : CppIncludeBases)
+      AddIncludeBase(CppIncludeBase);
+
+    if (GccLibDir.empty() || llvm::any_of(CppIncludeBases, IsIncludeDir))
+      break;
+
+    const auto Version = Generic_GCC::GCCVersion::Parse(Ver);
+    const std::string Suffixes[] = {
+        Ver, Version.MajorStr + "." + Version.MinorStr, Version.MajorStr};
+    for (const std::string &Suffix : Suffixes) {
+      SmallString<1024> Dir(GccLibDir);
+      llvm::sys::path::append(Dir, "include", "g++-v" + Suffix);
+      if (IsIncludeDir(Dir)) {
+        AddIncludeBase(Dir);
+        break;
+      }
     }
     break;
+  }
   }
 }
 
