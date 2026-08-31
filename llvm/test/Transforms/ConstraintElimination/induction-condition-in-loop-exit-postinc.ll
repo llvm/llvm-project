@@ -132,10 +132,9 @@ define i1 @postinc_sadd_with_overflow_header_ne(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -173,10 +172,9 @@ define i1 @postinc_uadd_with_overflow_header_ne(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -216,8 +214,7 @@ define i1 @postinc_sadd_with_overflow_header_eq_exit_fact(i1 %c) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -257,8 +254,7 @@ define i1 @postinc_uadd_with_overflow_header_eq_exit_fact(i1 %c) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -295,10 +291,9 @@ define i1 @postinc_sadd_with_overflow_step_2(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -336,10 +331,9 @@ define i1 @postinc_uadd_with_overflow_step_2(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp ne i64 [[IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -557,10 +551,9 @@ define i1 @postdec_sadd_with_overflow_negative_step(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -598,10 +591,9 @@ define i1 @postdec_uadd_with_overflow_negative_step(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
