@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This register allocator allocates registers to a basic block at a
-/// time, attempting to keep values in registers and reusing registers as
-/// appropriate.
+/// \file A block-local register allocator. No virtual register stays in a
+/// register across a block boundary: a value live across one gets a stack slot,
+/// spilled at its def and reloaded where used. There is no liveness analysis,
+/// live range splitting, interference graph or coalescer, only a copy hint that
+/// folds a COPY whose ends land in one register.
+///
+/// Blocks are walked backwards: a use is the first reference reached and
+/// acquires a register, a def is the last and releases one.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1120,6 +1125,7 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   }
 
   MCRegister PhysReg = LRI->PhysReg;
+  // Both mean the stack slot has a reader, and only this def can write it.
   if (LRI->Reloaded || LRI->LiveOut) {
     if (!MI.isImplicitDef()) {
       MachineBasicBlock::iterator SpillBefore =
@@ -1147,6 +1153,7 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
 
       LRI->LastUse = nullptr;
     }
+    // Another def (if present) above doesn't need to spill.
     LRI->LiveOut = false;
     LRI->Reloaded = false;
   }
@@ -1692,7 +1699,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     }
   }
 
-  // Free early clobbers.
+  // Free early clobbers. Last, because they may not share a register with any
+  // use.
   if (HasEarlyClobber) {
     for (MachineOperand &MO : reverse(MI.all_defs())) {
       if (!MO.isEarlyClobber())

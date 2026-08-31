@@ -24,12 +24,6 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeIDRef Implementation
 
-bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
-  if (Size != RHS.Size)
-    return false;
-  return memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
-}
-
 bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size)
     return Size < RHS.Size;
@@ -105,14 +99,6 @@ void FoldingSetNodeID::AddString(StringRef String) {
 
 void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
-}
-
-bool FoldingSetNodeID::operator==(const FoldingSetNodeID &RHS) const {
-  return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-}
-
-bool FoldingSetNodeID::operator==(FoldingSetNodeIDRef RHS) const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
 }
 
 bool FoldingSetNodeID::operator<(const FoldingSetNodeID &RHS) const {
@@ -213,7 +199,7 @@ void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
   N->setFoldingSetHash(Hash);
 }
 
-bool FoldingSetBase::RemoveNode(Node *N) {
+bool FoldingSetBase::erase(Node *N) {
   uint32_t Hash = N->getFoldingSetHash();
   if (Hash == FoldingSetNodeIDRef::NotAHash)
     return false; // Never inserted.
