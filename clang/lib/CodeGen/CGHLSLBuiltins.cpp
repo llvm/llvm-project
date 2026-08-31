@@ -665,6 +665,27 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     CI->setCallingConv(IntrFn->getCallingConv());
     return CI;
   }
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
+    const Expr *ValueExpr = E->getArg(0);
+    if (hasAggregateEvaluationKind(ValueExpr->getType())) {
+      EmitAnyExprToMem(ValueExpr, ReturnValue.getAddress(),
+                       ValueExpr->getType().getQualifiers(), /*IsInit=*/true);
+      return ReturnValue.getAddress().getBasePointer();
+    }
+
+    Value *ValueOp = EmitScalarExpr(ValueExpr);
+    const auto *MatTy = ValueExpr->getType()->getAs<ConstantMatrixType>();
+    if (!MatTy || !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
+      return ValueOp;
+
+    bool IsLoad =
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getBoolValue();
+    unsigned Rows = MatTy->getNumRows();
+    unsigned Columns = MatTy->getNumColumns();
+    llvm::MatrixBuilder MB(Builder);
+    return IsLoad ? MB.CreateMatrixTranspose(ValueOp, Columns, Rows)
+                  : MB.CreateMatrixTranspose(ValueOp, Rows, Columns);
+  }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
@@ -1154,17 +1175,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/ConvertType(E->getType()),
         CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.firstbitlow");
-  }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "normalize operand must have a float representation");
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(),
-        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
-        nullptr, "hlsl.normalize");
   }
   case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
     return handleElementwiseF16ToF32(*this, E);

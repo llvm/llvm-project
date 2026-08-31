@@ -115,6 +115,11 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 ///
 /// If AndCst is non-null, then the loaded value is masked with that constant
 /// before doing the comparison. This handles cases like "A[i]&4 == 0".
+///
+/// We allow multi-use cases in this fold, even though it can increase
+/// instruction count, because it appears to be mostly beneficial in practice.
+/// Even if there are multiple uses, they can often be sunk into the block
+/// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, CmpInst &ICI, ConstantInt *AndCst) {
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
@@ -4427,8 +4432,6 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
       return nullptr;
 
     Value *X = II->getArgOperand(0);
-    bool IsIntMinPoison =
-        cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
 
     // If C >= 0:
     // abs(X) u> C --> X + C u> 2 * C
@@ -4438,13 +4441,12 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                           ConstantInt::get(Ty, 2 * C));
     }
 
-    // If abs(INT_MIN) is poison and C >= 1:
+    // If C >= 1:
     // abs(X) u< C --> X + (C - 1) u<= 2 * (C - 1)
-    if (IsIntMinPoison && Pred == CmpInst::ICMP_ULT && C.sge(1)) {
+    if (Pred == CmpInst::ICMP_ULT && C.sge(1))
       return new ICmpInst(ICmpInst::ICMP_ULE,
                           Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
                           ConstantInt::get(Ty, 2 * (C - 1)));
-    }
 
     break;
   }

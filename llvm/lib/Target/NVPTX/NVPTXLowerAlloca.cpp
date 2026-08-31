@@ -57,7 +57,6 @@ static bool lowerAllocas(Function &F) {
     auto *LocalAlloca = new AllocaInst(AI->getAllocatedType(),
                                        ADDRESS_SPACE_LOCAL, AI->getArraySize(),
                                        AI->getAlign(), "", AI->getIterator());
-    LocalAlloca->setDebugLoc(AI->getDebugLoc());
     LocalAlloca->copyMetadata(*AI);
     LocalAlloca->setUsedWithInAlloca(AI->isUsedWithInAlloca());
     LocalAlloca->setSwiftError(AI->isSwiftError());

@@ -1,5 +1,16 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | FileCheck %s -DTEXTURE=Texture2D
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | FileCheck %s -DTEXTURE=Texture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o \
+// RUN:   - %s \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture2DArray -o - %s \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
 
 // CHECK: VarDecl {{.*}} t1 'hlsl::[[TEXTURE]]<vector<float, 4>>':'hlsl::[[TEXTURE]]<>'
 TEXTURE t1;

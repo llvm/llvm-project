@@ -5668,8 +5668,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performFAbsCombine(N, DCI);
   case AMDGPUISD::BFE_I32:
   case AMDGPUISD::BFE_U32: {
-    assert(!N->getValueType(0).isVector() &&
-           "Vector handling of BFE not implemented");
+    assert(N->getValueType(0) == MVT::i32 &&
+           "BFE_I32/BFE_U32 is a 32-bit operation");
     ConstantSDNode *Width = dyn_cast<ConstantSDNode>(N->getOperand(2));
     if (!Width)
       break;
