@@ -9,7 +9,8 @@
 // This file implements an allocation order for virtual registers.
 //
 // The preferred allocation order for a virtual register depends on allocation
-// hints and target hooks. The AllocationOrder class encapsulates all of that.
+// hints, anti-hints, and target hooks. The AllocationOrder class encapsulates
+// all of that.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,21 +32,53 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
                                         const LiveRegMatrix *Matrix) {
   const MachineFunction &MF = VRM.getMachineFunction();
   const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
-  SmallVector<MCPhysReg, 16> Hints;
-  bool HardHints =
-      TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix);
+
+  // HintsAndCustomOrder holds Hints first followed by the shuffled order if the
+  // anti-hints shuffle it.
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
+
+  // Get hints
+  bool HardHints = TRI->getRegAllocationHints(
+      VirtReg, Order, HintsAndCustomOrder, MF, &VRM, Matrix);
+  const int NumHints = static_cast<int>(HintsAndCustomOrder.size());
 
   LLVM_DEBUG({
-    if (!Hints.empty()) {
+    if (NumHints) {
       dbgs() << "hints:";
-      for (MCPhysReg Hint : Hints)
+      for (MCPhysReg Hint : HintsAndCustomOrder)
         dbgs() << ' ' << printReg(Hint, TRI);
       dbgs() << '\n';
     }
   });
-  assert(all_of(Hints,
-                [&](MCPhysReg Hint) { return is_contained(Order, Hint); }) &&
+
+  // Get anti-hints
+  SmallVector<MCPhysReg, 16> AntiHintedPhysRegs;
+  MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, VRM);
+
+  LLVM_DEBUG({
+    if (!AntiHintedPhysRegs.empty()) {
+      dbgs() << "anti-hints:";
+      for (MCPhysReg AntiHint : AntiHintedPhysRegs)
+        dbgs() << ' ' << printReg(AntiHint, TRI);
+      dbgs() << '\n';
+    }
+  });
+
+  if (!AntiHintedPhysRegs.empty()) {
+    HintsAndCustomOrder.reserve(NumHints + Order.size());
+    TRI->applyRegAllocationAntiHints(VirtReg, Order, HintsAndCustomOrder,
+                                     NumHints, AntiHintedPhysRegs, MF, &VRM,
+                                     Matrix);
+  }
+
+  // Create allocation order object
+  AllocationOrder AO(std::move(HintsAndCustomOrder), NumHints, Order,
+                     HardHints);
+
+  assert(all_of(AO.hints(),
+                [&](MCPhysReg Hint) { return is_contained(AO.Order, Hint); }) &&
          "Target hint is outside allocation order.");
-  return AllocationOrder(std::move(Hints), Order, HardHints);
+  return AO;
 }

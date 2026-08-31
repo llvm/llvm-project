@@ -852,6 +852,14 @@ public:
     // Do nothing.
   }
 
+  /// Apply anti-hints to the allocation order.
+  virtual void applyRegAllocationAntiHints(
+      Register VirtReg, ArrayRef<MCPhysReg> Order,
+      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+      SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
+      const VirtRegMap *VRM = nullptr,
+      const LiveRegMatrix *Matrix = nullptr) const;
+
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
   /// many registers, this could reduce regalloc compile time by a large
