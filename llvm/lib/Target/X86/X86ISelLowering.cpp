@@ -3761,9 +3761,7 @@ bool X86TargetLowering::isCtlzFast() const {
   return Subtarget.hasFastLZCNT();
 }
 
-bool X86TargetLowering::preferZeroCompareBranch() const {
-  return true;
-}
+bool X86TargetLowering::preferZeroCompareBranch() const { return true; }
 
 bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
