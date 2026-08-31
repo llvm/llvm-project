@@ -68,48 +68,102 @@ static_assert(sizeof(CFICheckFailLocPrefix) <= sizeof(CFICheckFailData),
 const void *Host(uptr Dev) { return GetHsa().HostAddr(Dev); }
 
 // The associated SourceLocation is a C-string located in the device executable.
-void PatchLoc(void *S, uptr Off) {
+bool PatchLoc(void *S, uptr Off) {
   SourceLocation Loc;
   internal_memcpy(&Loc, static_cast<char *>(S) + Off, sizeof(Loc));
   if (Loc.isInvalid())
-    return;
+    return true;
   const void *Filename = Host(reinterpret_cast<uptr>(Loc.getFilename()));
   if (!Filename)
-    return;
+    return false;
   SourceLocation R(static_cast<const char *>(Filename), Loc.getLine(),
                    Loc.getColumn());
   internal_memcpy(static_cast<char *>(S) + Off, &R, sizeof(R));
+  return true;
 }
 
 // TypeDescriptor lives in the device image.
-void PatchType(void *S, uptr Off) {
+bool PatchType(void *S, uptr Off) {
   uptr P = 0;
   internal_memcpy(&P, static_cast<char *>(S) + Off, sizeof(P));
   const void *H = Host(P);
   if (!H)
-    return;
+    return false;
   P = reinterpret_cast<uptr>(H);
   internal_memcpy(static_cast<char *>(S) + Off, &P, sizeof(P));
+  return true;
 }
 
 // Report data contains type and source location information, try to extract it.
-void Relocate(void *S, uptr LocOff, unsigned NLoc, unsigned NType) {
+bool Relocate(void *S, uptr LocOff, unsigned NLoc, unsigned NType) {
   for (unsigned I = 0; I < NLoc; ++I)
-    PatchLoc(S, LocOff + I * sizeof(SourceLocation));
+    if (!PatchLoc(S, LocOff + I * sizeof(SourceLocation)))
+      return false;
   for (unsigned I = 0; I < NType; ++I) {
     uptr Off = LocOff + NLoc * sizeof(SourceLocation) + I * sizeof(uptr);
-    PatchType(S, Off);
+    if (!PatchType(S, Off))
+      return false;
+  }
+  return true;
+}
+
+// Values wider than a register are passed by pointer into device memory.
+bool ByPointer(const TypeDescriptor *T) {
+  if (!T)
+    return false;
+  if (T->isIntegerTy())
+    return T->getIntegerBitWidth() > sizeof(ValueHandle) * 8;
+  if (T->isFloatTy())
+    return T->getFloatBitWidth() > sizeof(ValueHandle) * 8;
+  return false;
+}
+
+const TypeDescriptor *TypeAt(void *S, uptr LocOff, unsigned NLoc,
+                             unsigned TypeIdx) {
+  uptr Off = LocOff + NLoc * sizeof(SourceLocation) + TypeIdx * sizeof(uptr);
+  uptr P = 0;
+  internal_memcpy(&P, static_cast<char *>(S) + Off, sizeof(P));
+  return reinterpret_cast<const TypeDescriptor *>(P);
+}
+
+// TODO: Copy wide values into the report packet instead of dropping the report.
+bool InlineValues(unsigned Kind, void *S, uptr LocOff, unsigned NLoc) {
+  auto Ok = [&](unsigned TypeIdx) {
+    return !ByPointer(TypeAt(S, LocOff, NLoc, TypeIdx));
+  };
+  switch (Kind) {
+  case UBSAN_DEVICE_add_overflow:
+  case UBSAN_DEVICE_sub_overflow:
+  case UBSAN_DEVICE_mul_overflow:
+  case UBSAN_DEVICE_divrem_overflow:
+  case UBSAN_DEVICE_negate_overflow:
+  case UBSAN_DEVICE_vla_bound_not_positive:
+  case UBSAN_DEVICE_load_invalid_value:
+  case UBSAN_DEVICE_float_cast_overflow:
+    return Ok(0);
+  case UBSAN_DEVICE_shift_out_of_bounds:
+  case UBSAN_DEVICE_implicit_conversion:
+    return Ok(0) && Ok(1);
+  case UBSAN_DEVICE_out_of_bounds:
+    return Ok(1);
+  default:
+    return true;
   }
 }
 
 // Try to determine if this is a float V1 format emitted by the instrumentation.
-bool LooksLikeFloatV1(void *S) {
+bool LooksLikeFloatV1(void *S, bool *Ok) {
+  *Ok = true;
   uptr P = 0;
   internal_memcpy(&P, S, sizeof(P));
+  if (!P)
+    return false;
   const u8 *B = static_cast<const u8 *>(Host(P));
-  if (!B)
-    B = reinterpret_cast<const u8 *>(P);
-  return B && looksLikeFloatCastOverflowDataV1Bytes(B);
+  if (!B) {
+    *Ok = false;
+    return false;
+  }
+  return looksLikeFloatCastOverflowDataV1Bytes(B);
 }
 
 // Gathers the data associated with the device report packet to recreate the
@@ -133,15 +187,25 @@ bool Materialize(const __ubsan_device_report &R, void **Data, ValueHandle *V0,
     return false;
   *Data = Live;
 
-  if (L.Flags & KL_FloatCast)
-    Relocate(Live, 0, LooksLikeFloatV1(Live) ? 0 : 1, 2);
-  else
-    Relocate(Live, L.LocOff, L.NLoc, L.NType);
+  // Attempt to decode the arguments, failure skips the report.
+  // TODO: Need to support by-pointer arguments for f128 / i128 arguments.
+  unsigned NLoc = L.NLoc;
+  unsigned NType = L.NType;
+  if (L.Flags & KL_FloatCast) {
+    bool Ok = false;
+    NLoc = LooksLikeFloatV1(Live, &Ok) ? 0 : 1;
+    if (!Ok)
+      return false;
+  }
+  if (!Relocate(Live, L.LocOff, NLoc, NType))
+    return false;
+  if (!InlineValues(R.kind, Live, L.LocOff, NLoc))
+    return false;
+
   if (L.Flags & KL_ExtraLoc) {
     void *Extra = const_cast<void *>(Host(static_cast<uptr>(R.val0)));
-    if (!Extra)
+    if (!Extra || !PatchLoc(Extra, 0))
       return false;
-    PatchLoc(Extra, 0);
     *V0 = reinterpret_cast<ValueHandle>(Extra);
   }
   return true;

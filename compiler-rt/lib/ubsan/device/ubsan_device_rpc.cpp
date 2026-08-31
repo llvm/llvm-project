@@ -192,13 +192,21 @@ void StartRpc(hsa_executable_t Exec) {
     u64 Addr = 0;
     if (!executableNeedsRPC(Exec, Runtime.Devices[I], &Addr))
       continue;
-    if (!initDevice(I, Runtime.Devices[I]) || !startThread())
-      continue;
+    if (!initDevice(I, Runtime.Devices[I]) || !startThread()) {
+      Report("ERROR: %s: failed to start device UBSan RPC\n",
+             SanitizerToolName);
+      Die();
+    }
 
     // Copies the RPC channel to the corresponding client symbol on the device.
     DeviceRpc &D = Devices[I];
     rpc::Client Client(D.Ports, D.Buffer);
-    Runtime.Copy(reinterpret_cast<void *>(Addr), &Client, sizeof(Client));
+    if (!Runtime.Copy(reinterpret_cast<void *>(Addr), &Client,
+                      sizeof(Client))) {
+      Report("ERROR: %s: failed to install device UBSan RPC client\n",
+             SanitizerToolName);
+      Die();
+    }
   }
 }
 

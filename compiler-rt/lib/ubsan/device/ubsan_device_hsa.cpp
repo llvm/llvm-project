@@ -297,7 +297,11 @@ bool Hsa::AllocFineGrained(uptr Bytes, void **Out) {
           HSA_STATUS_SUCCESS ||
       !P)
     return false;
-  Api.hsa_amd_agents_allow_access(Agents.size(), Agents.data(), nullptr, P);
+  if (Api.hsa_amd_agents_allow_access(Agents.size(), Agents.data(), nullptr,
+                                      P) != HSA_STATUS_SUCCESS) {
+    Api.hsa_amd_memory_pool_free(P);
+    return false;
+  }
   *Out = P;
   return true;
 }
