@@ -1,5 +1,5 @@
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx950" | FileCheck %s
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx1100" | FileCheck %s --check-prefix=CHECK-GFX1100
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="triple=amdgpu9.50-amd-amdhsa" | FileCheck %s
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="triple=amdgpu11.00-amd-amdhsa" | FileCheck %s --check-prefix=CHECK-GFX1100
 
 // CHECK-LABEL: @conversion_f8_fallback
 // CHECK-DAG:     %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<2x2xf8E5M2>

@@ -14,7 +14,6 @@
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
@@ -108,21 +107,21 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
   amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  // The verifier has already rejected anything unparseable.
+  FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+      getTriple(), getChip().value_or(""), getFeatures().value_or(""));
+  assert(llvm::succeeded(targetInfo) && "verifier accepted this target");
   populateGpuToROCDLConversionPatterns(
-      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *targetInfo);
 }
 
 LogicalResult
 transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
     transform::TypeConverterBuilderOpInterface builder) {
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  if (failed(maybeChipset)) {
-    return emitOpError("Invalid chipset name: " + getChipset());
-  }
+  if (failed(ROCDL::TargetInfo::get(getTriple(), getChip().value_or(""),
+                                    getFeatures().value_or(""),
+                                    [&] { return emitOpError(); })))
+    return failure();
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
@@ -138,16 +137,34 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  std::optional<StringRef> chipsetName = getChipset();
-  std::optional<amdgpu::Chipset> maybeChipset;
-  if (chipsetName) {
-    FailureOr<amdgpu::Chipset> parsedChipset =
-        amdgpu::Chipset::parse(*chipsetName);
-    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
-    maybeChipset = parsedChipset;
+  std::optional<StringRef> tripleName = getTriple();
+  std::optional<ROCDL::TargetInfo> targetInfo;
+  if (tripleName) {
+    // The verifier has already rejected anything unparseable.
+    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(
+        *tripleName, getChip().value_or(""), getFeatures().value_or(""));
+    assert(llvm::succeeded(parsed) && "verifier accepted this target");
+    targetInfo = *parsed;
   }
 
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, targetInfo);
+}
+
+LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
+  std::optional<StringRef> tripleName = getTriple();
+  if (!tripleName) {
+    // Without a target there is nothing for these to modify, and silently
+    // ignoring them would hide a typo'd or half-migrated script.
+    if (getChip() || getFeatures())
+      return emitOpError("'chip' and 'features' require a 'triple'");
+    return success();
+  }
+
+  if (failed(ROCDL::TargetInfo::get(*tripleName, getChip().value_or(""),
+                                    getFeatures().value_or(""),
+                                    [&] { return emitOpError(); })))
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="allow-packed-f16-round-to-zero=true" | FileCheck %s
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="triple=amdgpu9.42-amd-amdhsa allow-packed-f16-round-to-zero=true" | FileCheck %s
 
 // CHECK-LABEL: @scalar_trunc
 // CHECK-SAME: (%[[value:.*]]: f32)

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx942 --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa --split-input-file --verify-diagnostics
 
 func.func @packed_trunc_ocp_type_requires_ocp_chipset(%arg0: f32) {
   // expected-error@below {{'amdgpu.packed_trunc_2xfp8' op no truncation to result type available on given chipset}}

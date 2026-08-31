@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx950 | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func.func @packed_scaled_trunc_f8e4m3_f32
 // CHECK-DAG:   [[ZERO:%.+]] = llvm.mlir.zero : vector<2xi16>

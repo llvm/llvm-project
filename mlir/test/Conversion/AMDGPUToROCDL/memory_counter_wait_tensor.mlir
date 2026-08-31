@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func @memory_counter_wait_tensor
 func.func @memory_counter_wait_tensor() {

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx1250' --mlir-print-local-scope | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu12.50-amd-amdhsa' --mlir-print-local-scope | FileCheck %s
 
 gpu.module @test_module {
 

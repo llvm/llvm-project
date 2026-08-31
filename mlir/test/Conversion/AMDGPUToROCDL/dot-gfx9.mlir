@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx906 | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu9.06-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: @dot_fdot2
 func.func @dot_fdot2(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {

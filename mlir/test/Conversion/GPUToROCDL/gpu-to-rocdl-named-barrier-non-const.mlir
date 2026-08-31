@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx1250' -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu12.50-amd-amdhsa' -split-input-file -verify-diagnostics
 
 gpu.module @test_module {
   func.func @non_constant_member_count(%count : i32) {
