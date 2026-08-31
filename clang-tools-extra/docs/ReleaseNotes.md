@@ -82,6 +82,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
 
 #### Cross-references
