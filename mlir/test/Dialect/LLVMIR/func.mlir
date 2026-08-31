@@ -508,6 +508,13 @@ module {
 // -----
 
 module {
+  // expected-error@+1 {{external functions cannot have "function_entry_count" attribute}}
+  llvm.func @external_func() attributes {function_entry_count = #llvm.function_entry_count<entry_count = 1>}
+}
+
+// -----
+
+module {
   // expected-error@+1 {{functions cannot have 'common' linkage}}
   llvm.func common @common_linkage_func()
 }

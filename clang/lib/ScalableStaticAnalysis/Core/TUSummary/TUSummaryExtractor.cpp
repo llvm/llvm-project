@@ -19,47 +19,6 @@
 using namespace clang;
 using namespace ssaf;
 
-static EntityLinkageType getLinkageForDecl(const Decl *D) {
-  const auto *ND = dyn_cast<NamedDecl>(D);
-  if (!ND)
-    return EntityLinkageType::None;
-
-  // Parameters have no linkage in C++, but SSAF needs them to inherit
-  // the external linkage from their parent functions.
-  // Here is why:
-  //   SSAF treats parameters as entities and may not always associate them back
-  //   to their parent functions. Therefore, it needs to identify parameters of
-  //   functions with external linkage across different TUs. Treating them as
-  //   having no linkage (as in C++) causes the same parameter in different TUs
-  //   to be assigned different EntityIDs. As a result, the behavior of the
-  //   parameter across multiple TUs cannot be correlated.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    if (const auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(
-            PVD->getParentFunctionOrMethod())) {
-      return getLinkageForDecl(FD);
-    }
-  }
-
-  switch (ND->getFormalLinkage()) {
-  case Linkage::Invalid: {
-    llvm_unreachable("Shouldn't be invalid");
-  }
-  case Linkage::None:
-    return EntityLinkageType::None;
-  case Linkage::Internal:
-    return EntityLinkageType::Internal;
-  case Linkage::UniqueExternal:
-    return EntityLinkageType::Internal;
-  case Linkage::VisibleNone:
-    return EntityLinkageType::Internal;
-  case Linkage::Module:
-    return EntityLinkageType::External;
-  case Linkage::External:
-    return EntityLinkageType::External;
-  }
-  llvm_unreachable("Unhandled clang::Linkage kind");
-}
-
 std::optional<EntityId> TUSummaryExtractor::addEntity(const NamedDecl *D) {
   auto Name = getEntityName(D);
   if (!Name)

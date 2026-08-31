@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 
 namespace llvm::orc::sps {
 
@@ -17,20 +19,20 @@ createEPCGenericMemoryAccess(JITDylib &JD) {
   auto &ES = JD.getExecutionSession();
   EPCGenericMemoryAccess::Funcs Fns;
   // The proxies resolve to the specs' default controller-interface names.
-  if (auto Err =
-          buildProxies(JD, proxyInit<MemWriteUInt8sProxySpec>(&Fns.WriteUInt8s),
-                       proxyInit<MemWriteUInt16sProxySpec>(&Fns.WriteUInt16s),
-                       proxyInit<MemWriteUInt32sProxySpec>(&Fns.WriteUInt32s),
-                       proxyInit<MemWriteUInt64sProxySpec>(&Fns.WriteUInt64s),
-                       proxyInit<MemWritePointersProxySpec>(&Fns.WritePointers),
-                       proxyInit<MemWriteBuffersProxySpec>(&Fns.WriteBuffers),
-                       proxyInit<MemReadUInt8sProxySpec>(&Fns.ReadUInt8s),
-                       proxyInit<MemReadUInt16sProxySpec>(&Fns.ReadUInt16s),
-                       proxyInit<MemReadUInt32sProxySpec>(&Fns.ReadUInt32s),
-                       proxyInit<MemReadUInt64sProxySpec>(&Fns.ReadUInt64s),
-                       proxyInit<MemReadPointersProxySpec>(&Fns.ReadPointers),
-                       proxyInit<MemReadBuffersProxySpec>(&Fns.ReadBuffers),
-                       proxyInit<MemReadStringsProxySpec>(&Fns.ReadStrings)))
+  if (auto Err = lookupAndApply(
+          JD, {recordProxy<MemWriteUInt8sProxySpec>(&Fns.WriteUInt8s),
+               recordProxy<MemWriteUInt16sProxySpec>(&Fns.WriteUInt16s),
+               recordProxy<MemWriteUInt32sProxySpec>(&Fns.WriteUInt32s),
+               recordProxy<MemWriteUInt64sProxySpec>(&Fns.WriteUInt64s),
+               recordProxy<MemWritePointersProxySpec>(&Fns.WritePointers),
+               recordProxy<MemWriteBuffersProxySpec>(&Fns.WriteBuffers),
+               recordProxy<MemReadUInt8sProxySpec>(&Fns.ReadUInt8s),
+               recordProxy<MemReadUInt16sProxySpec>(&Fns.ReadUInt16s),
+               recordProxy<MemReadUInt32sProxySpec>(&Fns.ReadUInt32s),
+               recordProxy<MemReadUInt64sProxySpec>(&Fns.ReadUInt64s),
+               recordProxy<MemReadPointersProxySpec>(&Fns.ReadPointers),
+               recordProxy<MemReadBuffersProxySpec>(&Fns.ReadBuffers),
+               recordProxy<MemReadStringsProxySpec>(&Fns.ReadStrings)}))
     return std::move(Err);
   return std::make_unique<EPCGenericMemoryAccess>(ES, std::move(Fns));
 }

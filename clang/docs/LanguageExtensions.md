@@ -1787,6 +1787,7 @@ More information can be found [here](https://clang.llvm.org/docs/Modules.html).
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
+| Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -2059,6 +2060,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
+- `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`, 
+  and `std::strong_ordering::equal` if they are the same type.
 
 In addition, the following expression traits are supported:
 

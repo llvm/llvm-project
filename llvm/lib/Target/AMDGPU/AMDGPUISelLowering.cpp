@@ -648,14 +648,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setMaxLargeFPConvertBitWidthSupported(64);
 }
 
-bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  const auto Flags = Op.getNode()->getFlags();
-  if (Flags.hasNoSignedZeros())
-    return true;
-
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // Target Information
 //===----------------------------------------------------------------------===//
@@ -5230,7 +5222,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5278,7 +5270,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -5676,8 +5668,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performFAbsCombine(N, DCI);
   case AMDGPUISD::BFE_I32:
   case AMDGPUISD::BFE_U32: {
-    assert(!N->getValueType(0).isVector() &&
-           "Vector handling of BFE not implemented");
+    assert(N->getValueType(0) == MVT::i32 &&
+           "BFE_I32/BFE_U32 is a 32-bit operation");
     ConstantSDNode *Width = dyn_cast<ConstantSDNode>(N->getOperand(2));
     if (!Width)
       break;
@@ -6285,14 +6277,9 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY: {
-    if (SNaN)
-      return true;
-
-    // TODO: Can check no nans on one of the operands for each one, but which
-    // one?
-    return false;
-  }
+  case AMDGPUISD::FMAX_LEGACY:
+    return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::CVT_PKRTZ_F16_F32: {
     if (SNaN)
