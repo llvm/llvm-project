@@ -78,10 +78,9 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
           return llvm::Error(std::move(E));
         });
 
-    if (Err) {
+    if (Err)
       // Err is still here, so it was not ErrorCode::UNSUPPORTED
       return Err;
-    }
 
     // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
@@ -91,14 +90,14 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   auto Res = zeKernelSetGroupSize(Kernel, GroupSizes.groupSizeX,
                                   GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
   if (Res != ZE_RESULT_SUCCESS)
-    return error::createOffloadError(ErrorCode::UNKNOWN,
+    return error::createOffloadError(ErrorCode::UNSUPPORTED,
                                      "Could not set group size!");
 
   auto &KernelProperties = KEnv.KernelPR;
 
   for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
        KernelArg++) {
-    uint32_t ArgSize = KernelProperties.ArgSizes[KernelArg];
+    uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
 
     Res = zeKernelSetArgumentValue(Kernel, KernelArg, ArgSize,
                                    KEnv.ArgPtrs[KernelArg]);
