@@ -3900,21 +3900,6 @@ SIRegisterInfo::getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const {
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getAlignedEquivalentRC(const TargetRegisterClass *RC) const {
-  assert(RC->isAllocatable() &&
-         "expected an allocatable register class; non-allocatable VS_* operand "
-         "classes cannot be a register's class");
-  unsigned Width = getRegSizeInBits(*RC);
-  if (isVGPRClass(RC))
-    return getVGPRClassForBitWidth(Width);
-  if (isAGPRClass(RC))
-    return getAGPRClassForBitWidth(Width);
-  if (isVectorSuperClass(RC))
-    return getVectorSuperClassForBitWidth(Width);
-  return nullptr;
-}
-
-const TargetRegisterClass *
 SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 16 || BitWidth == 32)
     return &AMDGPU::SReg_32RegClass;

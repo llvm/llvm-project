@@ -1575,6 +1575,11 @@ unsigned getRegBitWidth(unsigned RCID);
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
+/// Return the register class equivalent to the even-aligned VGPR/AGPR/AV tuple
+/// register class \p RCID with the alignment requirement relaxed, or -1 if
+/// \p RCID has no such equivalent.
+int getUnalignedEquivalentRC(unsigned RCID);
+
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   switch (OpInfo.OperandType) {

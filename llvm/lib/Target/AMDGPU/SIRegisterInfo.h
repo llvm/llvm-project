@@ -226,16 +226,6 @@ public:
   const TargetRegisterClass *
   getDefaultVectorSuperClassForBitWidth(unsigned BitWidth) const;
 
-  /// \returns the even-aligned register class with the same register bank and
-  /// width as \p RC (its aligned "canonical" class), or null if \p RC has no
-  /// vector registers. Only meaningful on subtargets that require aligned
-  /// VGPRs, where the per-bitwidth getters return the aligned variant. \p RC
-  /// must be an allocatable register's class; the non-allocatable VS_* operand
-  /// classes are intentionally not handled.
-  LLVM_READONLY
-  const TargetRegisterClass *
-  getAlignedEquivalentRC(const TargetRegisterClass *RC) const;
-
   LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
 

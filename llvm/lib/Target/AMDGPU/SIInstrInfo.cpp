@@ -5481,13 +5481,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
           RegRC = RI.getSubRegisterClass(RegRC, MO.getSubReg());
         }
         // Flag an alignment-only mismatch: the register does not satisfy the
-        // operand's class, but its even-aligned same-bank/width equivalent
-        // would. A bank or size mismatch fails even when aligned, so it is left
-        // to the illegal-register / sub-register checks.
+        // operand's class, but does satisfy it with the alignment requirement
+        // relaxed (the operand class's unaligned equivalent). A bank or size
+        // mismatch fails even when relaxed, so it is left to the
+        // illegal-register / sub-register checks.
         if (RegRC && !OpRC->hasSubClassEq(RegRC)) {
-          const TargetRegisterClass *AlignedRegRC =
-              RI.getAlignedEquivalentRC(RegRC);
-          if (AlignedRegRC && OpRC->hasSubClassEq(AlignedRegRC)) {
+          int UnalignedRC = AMDGPU::getUnalignedEquivalentRC(RegClass);
+          if (UnalignedRC >= 0 &&
+              RI.getRegClass(UnalignedRC)->hasSubClassEq(RegRC)) {
             ErrInfo = "Subtarget requires even aligned vector registers";
             return false;
           }
