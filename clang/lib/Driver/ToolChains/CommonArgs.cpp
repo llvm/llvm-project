@@ -3620,9 +3620,10 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  if (Args.hasFlag(options::OPT_floop_interchange,
-                   options::OPT_fno_loop_interchange, false))
-    CmdArgs.push_back("-floop-interchange");
+  // Forward the user's explicit choice; the frontend applies the -O3
+  // default when neither flag is present.
+  Args.AddLastArg(CmdArgs, options::OPT_floop_interchange,
+                  options::OPT_fno_loop_interchange);
 }
 
 std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
