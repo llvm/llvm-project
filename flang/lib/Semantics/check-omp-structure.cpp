@@ -6707,7 +6707,23 @@ void OmpStructureChecker::Leave(const parser::OpenMPMisplacedEndDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPInvalidDirective &x) {
-  context_.Say(x.source, "Invalid OpenMP directive"_err_en_US);
+  if (x.isExtensionSentinel) {
+    // A directive following an implementation-defined extension sentinel
+    // (!$omx / !$ompx, OpenMP 5.2 section 3.1) that is not recognized is
+    // ignored with a warning, so that programs using vendor extensions remain
+    // portable to implementations that do not support them.  Use Say() rather
+    // than Warn() here because the latter resolves the enclosing scope of the
+    // source location, which may not exist for a directive that appears before
+    // the first statement of an otherwise empty program unit.
+    if (context_.ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+      context_
+          .Say(x.source,
+              "Unrecognized OpenMP extension directive was ignored"_warn_en_US)
+          .set_usageWarning(common::UsageWarning::IgnoredDirective);
+    }
+  } else {
+    context_.Say(x.source, "Invalid OpenMP directive"_err_en_US);
+  }
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_unknown);
 }
 

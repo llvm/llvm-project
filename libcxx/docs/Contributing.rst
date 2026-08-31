@@ -41,6 +41,12 @@ Coding Guidelines
 
 libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
+Procedures for recurring tasks
+==============================
+
+* :ref:`After a WG21 meeting <PostMeetingProcedure>`
+* :ref:`Around a LLVM release <ReleaseProcedure>`
+* :ref:`When a new Standard is introduced <NewStandardProcedure>`
 
 Resources
 =========

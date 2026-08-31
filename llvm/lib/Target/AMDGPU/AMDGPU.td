@@ -1587,6 +1587,11 @@ defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
   /*GenPredicate=*/0
 >;
 
+defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
+  "Needs 2addr LDS instructions to be aligned to payload size",
+  /*GenPredicate=*/1
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2451,6 +2456,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNeedsAligned2addrDS,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -3133,6 +3139,8 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
 
+def NotNeedsAligned2addrDS : Predicate<"!Subtarget->hasNeedsAligned2addrDS()">;
+
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
                               FeatureAssemblerPermissiveWavesize)>;
@@ -3192,7 +3200,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
-  FeatureFP8E5M3Insts, FeatureFP8Insts, FeatureFlatGlobalInsts,
+  FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
   FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
