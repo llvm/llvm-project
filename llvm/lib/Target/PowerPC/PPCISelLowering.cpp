@@ -11993,7 +11993,7 @@ SDValue PPCTargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                                             const SDLoc &Dl,
                                             SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  FPClassTest NotNan = static_cast<FPClassTest>(fcAllFlags & ~fcNan);
+  FPClassTest NotNan = static_cast<FPClassTest>(~fcNan);
 
   // Only intercept fcNan / ~fcNan on scalar f32/f64 for non-P9 targets.
   if ((VT != MVT::f32 && VT != MVT::f64) || (Test != fcNan && Test != NotNan))
@@ -12002,7 +12002,8 @@ SDValue PPCTargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // SelectCC(Op, Op, 1, 0, SETUO) -> 1 if NaN,     0 otherwise  (fcNan)
   // SelectCC(Op, Op, 1, 0, SETO)  -> 1 if not NaN, 0 otherwise  (~fcNan)
   // This is pre-legalization: ResultVT (i1 or i32) will be type-legalized
-  // normally, so no need to branch on useCRBits() here.
+  // normally, so no need to branch on useCRBits() here. P9 targets also go here
+  // when useCRBits() is false, as custom lowering is disabled.
   ISD::CondCode CC = (Test == fcNan) ? ISD::SETUO : ISD::SETO;
   return DAG.getSelectCC(Dl, Op, Op, DAG.getConstant(1, Dl, ResultVT),
                          DAG.getConstant(0, Dl, ResultVT), CC);
