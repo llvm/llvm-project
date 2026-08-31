@@ -77,7 +77,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    if (Ty.isInteger()) {
+    if (Ty.isInteger() || (Ty.isPointer() && Ty.getAddressSpace() == 0)) {
       if (OpSize[Idx] == 32) {
         OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
       } else if (OpSize[Idx] == 64) {
