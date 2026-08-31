@@ -13,7 +13,6 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
-#include "NVPTXAsmPrinter.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"

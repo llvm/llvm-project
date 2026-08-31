@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
