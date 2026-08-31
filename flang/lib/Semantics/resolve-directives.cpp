@@ -2780,7 +2780,6 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       //   variables that are not referenced in the construct
       //   (OpenMP 6.0 - 7.5.1 default Clause), but current implementation
       //   allows the DSA to be implicitly set by a non-leaf directive.
-      // TODO Treat implied-DO variables in I/O lists as private.
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
