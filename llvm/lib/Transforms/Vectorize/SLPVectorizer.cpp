@@ -32280,9 +32280,9 @@ private:
               auto *RdxOp = cast<Instruction>(U);
               if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 if (RdxKind == RecurKind::FAdd) {
-                  InstructionCost FMACost =
-                      canConvertToFMA(RdxOp, getSameOpcode(RdxOp, TLI), DT, DL,
-                                      *TTI, TLI, CostKind, /*FMulOpIdx=*/0);
+                  InstructionCost FMACost = canConvertToFMA(
+                      RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI,
+                      CostKind, RdxOp->getOperand(1) == RdxVal ? 1 : 0);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -32397,18 +32397,27 @@ private:
             SmallVector<Value *> Ops;
             FastMathFlags FMF;
             FMF.set();
-            for (Value *RdxVal : ReducedVals) {
+            unsigned FMulOpIdx = 0;
+            for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
               if (!RdxVal->hasOneUse()) {
+                Ops.clear();
+                break;
+              }
+              User *U = RdxVal->user_back();
+              unsigned OpIdx = U->getOperand(1) == RdxVal ? 1 : 0;
+              if (Idx == 0)
+                FMulOpIdx = OpIdx;
+              else if (FMulOpIdx != OpIdx) {
                 Ops.clear();
                 break;
               }
               if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
                 FMF &= FPCI->getFastMathFlags();
-              Ops.push_back(RdxVal->user_back());
+              Ops.push_back(U);
             }
             if (!Ops.empty()) {
               FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                        *TTI, TLI, CostKind, /*FMulOpIdx=*/0);
+                                        *TTI, TLI, CostKind, FMulOpIdx);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
