@@ -41,7 +41,7 @@ TEST(FoldingSetTest, UnalignedStringTest) {
   std::string str2 = ">" + str1;
   b.AddString(str2.c_str() + 1);
 
-  EXPECT_EQ(a.ComputeHash(), b.ComputeHash());
+  EXPECT_EQ(a.computeHash(), b.computeHash());
 }
 
 TEST(FoldingSetTest, LongLongComparison) {
