@@ -9894,7 +9894,7 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (LPred == ICmpInst::ICMP_UGE && L0 == R0 && ICmpInst::isEquality(RPred) &&
       match(R1, m_Zero()) &&
       match(L0, m_c_Add(m_Specific(L1), m_Value(Addend))) &&
-      isKnownNonZero(Addend, SQ))
+      isKnownNonZero(Addend, SQ, MaxAnalysisRecursionDepth - 1))
     return RPred.dropSameSign() == ICmpInst::ICMP_NE;
 
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
@@ -10027,18 +10027,24 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
   if (match(LHS, m_Not(m_Value(LHS))))
     LHSIsTrue = !LHSIsTrue;
 
-  // umin(X, Y) with Y != 0 is zero iff X is zero, so for an equality against
-  // zero it is enough to look at X. Fall through with the original operands
-  // otherwise, e.g. when LHS is about the umin itself.
+  // A umin with an operand known non-zero is zero iff the other operand is,
+  // so for an equality against zero it is enough to look at that operand.
+  // Fall through with the original operands otherwise, e.g. when LHS is
+  // about the umin itself.
   const Value *X, *Y;
   if (ICmpInst::isEquality(RHSPred) && match(RHSOp1, m_Zero()) &&
       match(RHSOp0, m_UMin(m_Value(X), m_Value(Y)))) {
     SimplifyQuery SQ(DL);
-    if (isKnownNonZero(X, SQ))
-      std::swap(X, Y);
-    if (isKnownNonZero(Y, SQ))
+    // Test Y before X, as a constant operand is canonicalized to the right
+    // hand side, and test each operand at most once.
+    const Value *DecidingOp = nullptr;
+    if (isKnownNonZero(Y, SQ, MaxAnalysisRecursionDepth - 1))
+      DecidingOp = X;
+    else if (isKnownNonZero(X, SQ, MaxAnalysisRecursionDepth - 1))
+      DecidingOp = Y;
+    if (DecidingOp)
       if (std::optional<bool> Res = isImpliedCondition(
-              LHS, RHSPred, X, RHSOp1, DL, LHSIsTrue, Depth + 1))
+              LHS, RHSPred, DecidingOp, RHSOp1, DL, LHSIsTrue, Depth + 1))
         return Res;
   }
 
