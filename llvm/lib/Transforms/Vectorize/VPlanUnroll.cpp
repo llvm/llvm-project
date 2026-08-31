@@ -570,11 +570,10 @@ static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
   // TODO: Retrieve the flags from Steps unconditionally.
   VPIRFlags Flags;
   if (BaseIVTy->isFloatingPointTy()) {
-    int SignedLane = static_cast<int>(Lane);
-    if (!OldStartIndex && Steps->getInductionOpcode() == Instruction::FSub)
-      SignedLane = -SignedLane;
-    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
-    AddOpcode = Steps->getInductionOpcode();
+    // The start index counts upwards, so accumulate with FAdd regardless of the
+    // induction opcode; see VPScalarIVStepsRecipe.
+    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, Lane));
+    AddOpcode = Instruction::FAdd;
     Flags = VPIRFlags(FastMathFlags());
   } else {
     unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();

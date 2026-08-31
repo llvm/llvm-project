@@ -9,7 +9,6 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

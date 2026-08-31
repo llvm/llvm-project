@@ -22901,8 +22901,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         SmallVector<int> CommonMask = E->getCommonMask();
         SmallVector<Value *> Expanded(E->getVectorFactor());
         for (unsigned I : seq<unsigned>(E->getVectorFactor()))
-          Expanded[I] =
-              CommonMask.empty() ? E->Scalars[I] : E->Scalars[CommonMask[I]];
+          Expanded[I] = CommonMask.empty() ? E->Scalars[I]
+                        : CommonMask[I] == PoisonMaskElem
+                            ? PoisonValue::get(OrigScalarTy)
+                            : E->Scalars[CommonMask[I]];
         return FrontTE->isSame(Expanded);
       };
       if (GatherShuffles.size() == 1 &&

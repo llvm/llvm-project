@@ -3727,8 +3727,8 @@ Error ASTNodeImporter::ImportTemplateInformation(
 
     TemplateSpecializationKind TSK = FTSInfo->getTemplateSpecializationKind();
     ToFD->setFunctionTemplateSpecialization(
-        std::get<0>(*FunctionAndArgsOrErr), ToTAList, /* InsertPos= */ nullptr,
-        TSK, FromTAArgsAsWritten ? &ToTAInfo : nullptr, *POIOrErr);
+        std::get<0>(*FunctionAndArgsOrErr), ToTAList, /*InsertToken=*/{}, TSK,
+        FromTAArgsAsWritten ? &ToTAInfo : nullptr, *POIOrErr);
     return Error::success();
   }
 
@@ -3769,8 +3769,8 @@ ASTNodeImporter::FindFunctionTemplateSpecialization(FunctionDecl *FromFD) {
   FunctionTemplateDecl *Template;
   TemplateArgsTy ToTemplArgs;
   std::tie(Template, ToTemplArgs) = *FunctionAndArgsOrErr;
-  void *InsertPos = nullptr;
-  auto *FoundSpec = Template->findSpecialization(ToTemplArgs, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *FoundSpec = Template->findSpecialization(ToTemplArgs, InsertToken);
   return FoundSpec;
 }
 
@@ -6368,7 +6368,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     return std::move(Err);
   // Try to find an existing specialization with these template arguments and
   // template parameter list.
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   ClassTemplateSpecializationDecl *PrevDecl = nullptr;
   ClassTemplatePartialSpecializationDecl *PartialSpec =
             dyn_cast<ClassTemplatePartialSpecializationDecl>(D);
@@ -6381,11 +6381,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     if (!ToTPListOrErr)
       return ToTPListOrErr.takeError();
     ToTPList = *ToTPListOrErr;
-    PrevDecl = ClassTemplate->findPartialSpecialization(TemplateArgs,
-                                                        *ToTPListOrErr,
-                                                        InsertPos);
+    PrevDecl = ClassTemplate->findPartialSpecialization(
+        TemplateArgs, *ToTPListOrErr, InsertToken);
   } else
-    PrevDecl = ClassTemplate->findSpecialization(TemplateArgs, InsertPos);
+    PrevDecl = ClassTemplate->findSpecialization(TemplateArgs, InsertToken);
 
   if (PrevDecl) {
     if (IsStructuralMatch(D, PrevDecl)) {
@@ -6446,13 +6445,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
 
-    // Update InsertPos, because preceding import calls may have invalidated
+    // Update InsertToken, because preceding import calls may have invalidated
     // it by adding new specializations.
     auto *PartSpec2 = cast<ClassTemplatePartialSpecializationDecl>(D2);
     if (!ClassTemplate->findPartialSpecialization(TemplateArgs, ToTPList,
-                                                  InsertPos))
+                                                  InsertToken))
       // Add this partial specialization to the class template.
-      ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
+      ClassTemplate->AddPartialSpecialization(PartSpec2, InsertToken);
     if (Expected<ClassTemplatePartialSpecializationDecl *> ToInstOrErr =
             import(PartialSpec->getInstantiatedFromMember()))
       PartSpec2->setInstantiatedFromMember(*ToInstOrErr);
@@ -6467,11 +6466,11 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                 PrevDecl))
       return D2;
 
-    // Update InsertPos, because preceding import calls may have invalidated
+    // Update InsertToken, because preceding import calls may have invalidated
     // it by adding new specializations.
-    if (!ClassTemplate->findSpecialization(TemplateArgs, InsertPos))
+    if (!ClassTemplate->findSpecialization(TemplateArgs, InsertToken))
       // Add this specialization to the class template.
-      ClassTemplate->AddSpecialization(D2, InsertPos);
+      ClassTemplate->AddSpecialization(D2, InsertToken);
   }
 
   D2->setSpecializationKind(D->getSpecializationKind());
@@ -6698,9 +6697,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     return std::move(Err);
 
   // Try to find an existing specialization with these template arguments.
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
   VarTemplateSpecializationDecl *FoundSpecialization =
-      VarTemplate->findSpecialization(TemplateArgs, InsertPos);
+      VarTemplate->findSpecialization(TemplateArgs, InsertToken);
   if (FoundSpecialization) {
     if (IsStructuralMatch(D, FoundSpecialization)) {
       VarDecl *FoundDef = FoundSpecialization->getDefinition();
@@ -6770,10 +6769,10 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
-  // Update InsertPos, because preceding import calls may have invalidated
+  // Update InsertToken, because preceding import calls may have invalidated
   // it by adding new specializations.
-  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
-    VarTemplate->AddSpecialization(D2, InsertPos);
+  if (!VarTemplate->findSpecialization(TemplateArgs, InsertToken))
+    VarTemplate->AddSpecialization(D2, InsertToken);
 
   QualType T;
   if (Error Err = importInto(T, D->getType()))

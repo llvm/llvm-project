@@ -167,6 +167,16 @@ defm ApertureRegs : AMDGPUSubtargetFeature<"aperture-regs",
   /*GenPredicate=*/0
 >;
 
+defm GetDoorbellID : AMDGPUSubtargetFeature<"get-doorbell-id",
+  "Supports reading the doorbell ID through S_GETREG",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/false, [], InlineIgnore
+>;
+
+defm AGPRAlloc : AMDGPUSubtargetFeature<"agpr-alloc",
+  "Supports allocation of AGPRs",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/false, [], InlineIgnore
+>;
+
 defm MadMixInsts : AMDGPUSubtargetFeature<"mad-mix-insts",
   "Has v_mad_mix_f32, v_mad_mixlo_f16, v_mad_mixhi_f16 instructions"
 >;
@@ -1666,7 +1676,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureWavefrontSize64, FeatureSupportsWave64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
+   FeatureApertureRegs, FeatureGetDoorbellID,
+   FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
    FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
    FeatureIntClamp, FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1693,7 +1704,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureFlatAddressSpace,
    FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts, FeatureGFX10Insts, FeatureVOP3PInsts,
+   FeatureApertureRegs, FeatureGetDoorbellID,
+   FeatureGFX9Insts, FeatureGFX10Insts, FeatureVOP3PInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1724,7 +1736,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureBVHRayTracingInsts, FeatureMSAALoadInsts,
    FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
@@ -1756,7 +1768,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3PInsts, FeatureVOPDInsts,
@@ -1786,7 +1798,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
   [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
-   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureMSAALoadInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3PInsts,
@@ -1968,6 +1980,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
+     FeatureAGPRAlloc,
      FeatureTgSplitSupport,
      FeatureRequiresAlignedVGPRs,
      FeatureFmacF64Inst,
@@ -1993,6 +2006,7 @@ def FeatureISAVersion9_0_C : FeatureSet<
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
+   FeatureAGPRAlloc,
    FeatureTgSplitSupport,
    FeatureGFX940Insts,
    FeatureRequiresAlignedVGPRs,
@@ -3219,7 +3233,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
-  FeatureSGPRInitBug
+  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureAGPRAlloc
   ];
 }
 

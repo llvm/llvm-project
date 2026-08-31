@@ -182,9 +182,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateProgram)
-      .WillByDefault([](ol_device_handle_t Device, const void *ProgData,
-                        size_t ProgDataSize,
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        const void *ProgData, size_t ProgDataSize,
                         ol_program_handle_t *Program) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);

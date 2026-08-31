@@ -150,10 +150,7 @@ protected:
       ADD_FAILURE_AT(__FILE__, Line) << llvm::toString(ROrErr.takeError());
       return std::nullopt;
     }
-    EntityPointerLevelSet Result;
-    for (const auto &[Id, EPLs] : ROrErr->Reachables)
-      Result.insert(EPLs.begin(), EPLs.end());
-    return Result;
+    return ROrErr->Reachables;
   }
 
   using Node = std::pair<char, unsigned>;
@@ -532,16 +529,14 @@ protected:
     }
 
     std::set<Node> Result;
-    for (const auto &[Id, EPLs] : ROrErr->Reachables) {
-      for (const EntityPointerLevel &EPL : EPLs) {
-        auto NameIt = IdToParamName.find(EPL.getEntity());
-        if (NameIt == IdToParamName.end()) {
-          ADD_FAILURE_AT(__FILE__, Line)
-              << "reachable entity has no known source-level name";
-          continue;
-        }
-        Result.insert({NameIt->second, EPL.getPointerLevel()});
+    for (const EntityPointerLevel &EPL : ROrErr->Reachables) {
+      auto NameIt = IdToParamName.find(EPL.getEntity());
+      if (NameIt == IdToParamName.end()) {
+        ADD_FAILURE_AT(__FILE__, Line)
+            << "reachable entity has no known source-level name";
+        continue;
       }
+      Result.insert({NameIt->second, EPL.getPointerLevel()});
     }
     return Result;
   }

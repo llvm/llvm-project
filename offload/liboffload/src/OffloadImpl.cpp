@@ -133,9 +133,10 @@ struct ol_event_impl_t {
 };
 
 struct ol_program_impl_t {
-  ol_program_impl_t(plugin::DeviceImageTy *Image,
+  ol_program_impl_t(ol_context_handle_t Context, plugin::DeviceImageTy *Image,
                     llvm::MemoryBufferRef DeviceImage)
-      : Image(Image), DeviceImage(DeviceImage) {}
+      : Context(Context), Image(Image), DeviceImage(DeviceImage) {}
+  ol_context_handle_t Context;
   plugin::DeviceImageTy *Image;
   std::mutex SymbolListMutex;
   llvm::MemoryBufferRef DeviceImage;
@@ -1166,16 +1167,21 @@ Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
                                              Queue->AsyncInfo);
 }
 
-Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
+Error olCreateProgram_impl(ol_context_handle_t Context,
+                           ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
+  if (!Context->contains(Device))
+    return createOffloadError(ErrorCode::INVALID_DEVICE,
+                              "device does not belong to the given context");
+
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  Expected<plugin::DeviceImageTy *> Res =
-      Device->Device->loadBinary(Device->Device->Plugin, Buffer);
+  Expected<plugin::DeviceImageTy *> Res = Device->Device->loadBinary(
+      Device->Device->Plugin, Buffer, Context->PluginCtx.get());
   if (!Res)
     return Res.takeError();
   assert(*Res && "loadBinary returned nullptr");
 
-  *Program = new ol_program_impl_t(*Res, (*Res)->getMemoryBuffer());
+  *Program = new ol_program_impl_t(Context, *Res, (*Res)->getMemoryBuffer());
   return Error::success();
 }
 

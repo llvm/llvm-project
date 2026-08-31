@@ -514,10 +514,7 @@ public:
 
   friend bool operator==(const StringMapIterBase &LHS,
                          const StringMapIterBase &RHS) {
-    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
-           "handle not in sync!");
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 

@@ -3211,8 +3211,11 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
     if (isVector) {
       const uint64_t numElements =
           mlir::cast<cir::VectorType>(op.getType()).getSize();
-      SmallVector<int32_t> values(numElements, -1);
-      mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
+      const unsigned eltWidth =
+          mlir::cast<cir::IntType>(elementType).getWidth();
+      SmallVector<APInt> values(numElements, APInt::getAllOnes(eltWidth));
+      mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmType), values);
       minusOne =
           mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
     } else {

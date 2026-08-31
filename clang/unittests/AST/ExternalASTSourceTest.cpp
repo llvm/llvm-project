@@ -151,7 +151,7 @@ struct LazyTemplatePatterns : TestExternalASTSource {
         ASTTemplateArgumentListInfo::Create(Ctx, ArgsInfo));
 
     TU->addDecl(Partial);
-    Template->AddPartialSpecialization(Partial, nullptr);
+    Template->AddPartialSpecialization(Partial, {});
   }
 
   void CompleteType(TagDecl *Tag) override {

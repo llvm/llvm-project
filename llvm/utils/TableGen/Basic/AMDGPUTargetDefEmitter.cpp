@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -112,7 +113,9 @@ static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
 }
 
-// Emit the canonical GPU name for a variant (empty for a non-variant GPU).
+// Emit the canonical GPU name for a variant (empty for a non-variant GPU). The
+// stepping is the trailing single hex character of the device name (validated
+// by emitIsaVersion).
 static void emitBaseName(raw_ostream &OS, const Record *Rec) {
   if (!getSubArchSpelling(Rec))
     return;
@@ -133,20 +136,30 @@ static void emitIsaVersion(raw_ostream &OS, const Record *Rec, char Open,
                         "IsaVersion");
   }
 
-  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
-}
+  // Each component is stored in a uint8_t field, and the stepping is
+  // additionally spelled as a single lowercase hex digit in the device and
+  // subarch names. Reject out-of-range values.
+  for (int64_t Component : V) {
+    if (!isUInt<8>(Component)) {
+      PrintFatalError(Rec->getLoc(),
+                      "GPU '" + Rec->getValueAsString("Name") +
+                          "' IsaVersion components must each fit in a byte");
+    }
+  }
 
-// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
-// "amdgpu9.0c" (stepping is a single lowercase hex digit).
-static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
-  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
-
-  // Assuming emitIsaVersion validated the number of elements.
-  if (V[2] < 0 || V[2] > 15) {
+  if (!isUInt<4>(V[2])) {
     PrintFatalError(Rec->getLoc(), "GPU '" + Rec->getValueAsString("Name") +
                                        "' stepping must be a single hex digit");
   }
 
+  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
+}
+
+// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
+// "amdgpu9.0c". The stepping is spelled as a single lowercase hex digit
+// (validated by emitIsaVersion).
+static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
   OS << "amdgpu" << V[0] << '.' << V[1] << hexdigit(V[2], /*LowerCase=*/true);
 }
 

@@ -198,9 +198,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: ^[[BB2]]
 ^bb2:
 // CHECK: %{{.*}} = llvm.mlir.undef : !llvm.struct<(i32, f64, i32)>
-// CHECK: %{{.*}} = llvm.mlir.constant(42 : i64) : i47
+// CHECK: %{{.*}} = llvm.mlir.constant(42 : i47) : i47
   %22 = llvm.mlir.undef : !llvm.struct<(i32, f64, i32)>
-  %23 = llvm.mlir.constant(42) : i47
+  %23 = llvm.mlir.constant(42 : i47) : i47
   // CHECK:      llvm.switch %0 : i32, ^[[BB3]] [
   // CHECK-NEXT:   1: ^[[BB4:.*]],
   // CHECK-NEXT:   2: ^[[BB5:.*]],
@@ -318,25 +318,25 @@ llvm.func @vararg_foo(i32, ...) -> !llvm.struct<(i32, f64, i32)>
 // An larger self-contained function.
 // CHECK-LABEL: llvm.func @foo(%{{.*}}: i32) -> !llvm.struct<(i32, f64, i32)> {
 llvm.func @foo(%arg0: i32) -> !llvm.struct<(i32, f64, i32)> {
-// CHECK:  %[[V0:.*]] = llvm.mlir.constant(3 : i64) : i32
-// CHECK:  %[[V1:.*]] = llvm.mlir.constant(3 : i64) : i32
+// CHECK:  %[[V0:.*]] = llvm.mlir.constant(3 : i32) : i32
+// CHECK:  %[[V1:.*]] = llvm.mlir.constant(3 : i32) : i32
 // CHECK:  %[[V2:.*]] = llvm.mlir.constant(4.200000e+01 : f64) : f64
 // CHECK:  %[[V3:.*]] = llvm.mlir.constant(4.200000e+01 : f64) : f64
 // CHECK:  %[[V4:.*]] = llvm.add %[[V0]], %[[V1]] : i32
 // CHECK:  %[[V5:.*]] = llvm.mul %[[V4]], %[[V1]] : i32
 // CHECK:  %[[V6:.*]] = llvm.fadd %[[V2]], %[[V3]] : f64
 // CHECK:  %[[V7:.*]] = llvm.fsub %[[V3]], %[[V6]] : f64
-// CHECK:  %[[V8:.*]] = llvm.mlir.constant(1 : i64) : i1
+// CHECK:  %[[V8:.*]] = llvm.mlir.constant(true) : i1
 // CHECK:  llvm.cond_br %[[V8]], ^[[BB1:.*]](%[[V4]] : i32), ^[[BB2:.*]](%[[V4]] : i32)
-  %0 = llvm.mlir.constant(3) : i32
-  %1 = llvm.mlir.constant(3) : i32
+  %0 = llvm.mlir.constant(3 : i32) : i32
+  %1 = llvm.mlir.constant(3 : i32) : i32
   %2 = llvm.mlir.constant(4.200000e+01) : f64
   %3 = llvm.mlir.constant(4.200000e+01) : f64
   %4 = llvm.add %0, %1 : i32
   %5 = llvm.mul %4, %1 : i32
   %6 = llvm.fadd %2, %3 : f64
   %7 = llvm.fsub %3, %6 : f64
-  %8 = llvm.mlir.constant(1) : i1
+  %8 = llvm.mlir.constant(true) : i1
   llvm.cond_br %8, ^bb1(%4 : i32), ^bb2(%4 : i32)
 
 // CHECK:^[[BB1]](%[[V9:.*]]: i32):
@@ -1049,7 +1049,7 @@ llvm.func @test_invoke_with_opbundle() attributes { personality = @__gxx_persona
 
 // CHECK-LABEL: @test_call_intrin_with_opbundle
 llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
-  %0 = llvm.mlir.constant(1 : i1) : i1
+  %0 = llvm.mlir.constant(true) : i1
   %1 = llvm.mlir.constant(16 : i32) : i32
   // CHECK: llvm.call_intrinsic "llvm.assume"(%{{.+}}) ["align"(%{{.+}}, %{{.+}} : !llvm.ptr, i32)] : (i1) -> ()
   llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
@@ -1058,7 +1058,7 @@ llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 
 // CHECK-LABEL: @test_assume_intr_no_opbundle
 llvm.func @test_assume_intr_no_opbundle(%arg0 : !llvm.ptr) {
-  %0 = llvm.mlir.constant(1 : i1) : i1
+  %0 = llvm.mlir.constant(true) : i1
   // CHECK: llvm.intr.assume %0 : i1
   llvm.intr.assume %0 : i1
   llvm.return
@@ -1066,7 +1066,7 @@ llvm.func @test_assume_intr_no_opbundle(%arg0 : !llvm.ptr) {
 
 // CHECK-LABEL: @test_assume_intr_empty_opbundle
 llvm.func @test_assume_intr_empty_opbundle(%arg0 : !llvm.ptr) {
-  %0 = llvm.mlir.constant(1 : i1) : i1
+  %0 = llvm.mlir.constant(true) : i1
   // CHECK: llvm.intr.assume %0 : i1
   llvm.intr.assume %0 [] : i1
   llvm.return
@@ -1074,7 +1074,7 @@ llvm.func @test_assume_intr_empty_opbundle(%arg0 : !llvm.ptr) {
 
 // CHECK-LABEL: @test_assume_intr_with_opbundles
 llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
-  %0 = llvm.mlir.constant(1 : i1) : i1
+  %0 = llvm.mlir.constant(true) : i1
   %1 = llvm.mlir.constant(2 : i32) : i32
   %2 = llvm.mlir.constant(3 : i32) : i32
   %3 = llvm.mlir.constant(4 : i32) : i32

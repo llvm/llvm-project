@@ -52,6 +52,11 @@ page](https://llvm.org/releases/).
   compressing DWARF debug info in ELF object files using zlib or zstd,
   reducing debug information size in compiled binaries.
 
+- The FIR loop invariant code motion pass (`flang-licm`) is now enabled by
+  default at optimization levels above `-O0`. It can be turned off with
+  `-mmlir -disable-fir-licm`. The `-mmlir -enable-fir-licm` option that
+  previously opted into the pass has been removed.
+
 ## New Compiler Flags
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
   floating-point exception halting mode of the main program. It takes a

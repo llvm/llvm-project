@@ -138,3 +138,29 @@ VoidTagReturnValue test11(bool b) {
   if (b)
     co_return 42;
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
+
+namespace dependent_void_coreturn {
+struct coro {
+  struct promise_type {
+    coro get_return_object();
+    suspend_never initial_suspend();
+    suspend_never final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+  };
+};
+
+struct Ctx {
+  template <typename T>
+  T &get();
+  void f(int);
+};
+
+template <typename T>
+coro f(Ctx &ctx) {
+  auto &v = ctx.get<T>();
+  co_return ctx.f(v);
+}
+
+void use(Ctx &ctx) { f<int>(ctx); }
+}

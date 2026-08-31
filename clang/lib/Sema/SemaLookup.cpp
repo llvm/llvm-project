@@ -1158,7 +1158,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
   //   name lookup. Instead, any conversion function templates visible in the
   //   context of the use are considered. [...]
   const CXXRecordDecl *Record = cast<CXXRecordDecl>(DC);
-  if (!Record->isCompleteDefinition())
+  if (!Record->isCompleteDefinition() && !R.isForRedeclaration())
     return Found;
 
   // For conversion operators, 'operator auto' should only match
@@ -3411,9 +3411,9 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   ID.AddInteger(ConstThis);
   ID.AddInteger(VolatileThis);
 
-  void *InsertPoint;
+  llvm::FoldingSetInsertToken Token;
   SpecialMemberOverloadResultEntry *Result =
-    SpecialMemberCache.FindNodeOrInsertPos(ID, InsertPoint);
+      SpecialMemberCache.lookup(ID, Token);
 
   // This was already cached
   if (Result)
@@ -3421,7 +3421,7 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
 
   Result = BumpAlloc.Allocate<SpecialMemberOverloadResultEntry>();
   Result = new (Result) SpecialMemberOverloadResultEntry(ID);
-  SpecialMemberCache.InsertNode(Result, InsertPoint);
+  SpecialMemberCache.insert(Result, Token);
 
   if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {

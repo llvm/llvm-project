@@ -1849,11 +1849,20 @@ SourceLocation Parser::getEndOfPreviousToken() const {
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  // A token lexed and cached before an earlier fallback reverted this keyword
+  // still carries the stale keyword kind; it is already an identifier.
+  if (II->getTokenID() == tok::identifier) {
+    Tok.setKind(tok::identifier);
+    return true;
+  }
+
   Diag(Tok, diag::ext_keyword_as_ident)
     << PP.getSpelling(Tok)
     << DisableKeyword;
   if (DisableKeyword)
-    Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+    II->revertTokenIDToIdentifier();
   Tok.setKind(tok::identifier);
   return true;
 }

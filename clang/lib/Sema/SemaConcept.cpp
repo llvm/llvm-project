@@ -1341,8 +1341,8 @@ bool Sema::CheckConstraintSatisfaction(
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Owner, FlattenedArgs);
-  void *InsertPos;
-  if (auto *Cached = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Cached = SatisfactionCache.lookup(ID, Token)) {
     OutSatisfaction = *Cached;
     return false;
   }
@@ -1356,7 +1356,7 @@ bool Sema::CheckConstraintSatisfaction(
     return true;
   }
 
-  if (auto *Cached = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos)) {
+  if (auto *Cached = SatisfactionCache.lookup(ID, Token)) {
     // The evaluation of this constraint resulted in us trying to re-evaluate it
     // recursively. This isn't really possible, except we try to form a
     // RecoveryExpr as a part of the evaluation.  If this is the case, just
@@ -1371,10 +1371,8 @@ bool Sema::CheckConstraintSatisfaction(
 
   // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
-  // We cannot use InsertPos here because CheckConstraintSatisfaction might have
-  // invalidated it.
   // Note that entries of SatisfactionCache are deleted in Sema's destructor.
-  SatisfactionCache.InsertNode(Satisfaction.release());
+  SatisfactionCache.insert(Satisfaction.release());
   return false;
 }
 

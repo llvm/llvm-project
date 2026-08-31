@@ -5395,6 +5395,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
              (CmpInst::isUnsigned(Pred) && HasNUW) ||
              (CmpInst::isSigned(Pred) && HasNSW);
     } else if (BO.getOpcode() == Instruction::Or) {
+      // The invariant here is that we are handling m_AddLike instructions,
+      // which can only be a or disjoint, which is equivalent to an add nuw nsw.
       HasNUW = true;
       HasNSW = true;
       return true;
@@ -5474,9 +5476,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return isMultipleOf(X, C, Q) && isMultipleOf(Y, C, Q);
     };
 
-    // TODO: The subtraction-related identities shown below also hold, but
-    // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
-    // wouldn't happen even if they were implemented.
+    // The subtraction-related identities (A -nuw B) shown below require that
+    // the subtraction does not wrap unsigned (i.e., A >=u B). Canonicalization
+    // from (A -nuw 1) to (A + -1) means that such combinations ought to never
+    // occur, as sub nuw ops should have been canonicalized to add ones. It may
+    // however appear in the form of a or disjoint. Though, or disjoint A, -B
+    // requires proving A <u B, for which the nowrap precondition can never be
+    // satisfied. These are therefore skipped.
     //
     // icmp ult (A - 1), Op1 -> icmp ule A, Op1
     // icmp uge (A - 1), Op1 -> icmp ugt A, Op1
@@ -5489,9 +5495,10 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
     // icmp ule (A + 1), Op0 -> icmp ult A, Op1
     // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
-    if (A && NoOp0WrapProblem &&
-        ShareCommonDivisor(A, Op1, B,
-                           ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred)))
+    bool IsNegative = ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred);
+    bool IsAddOrSignedPred = !IsNegative || ICmpInst::isSigned(Pred);
+    if (A && NoOp0WrapProblem && IsAddOrSignedPred &&
+        ShareCommonDivisor(A, Op1, B, IsNegative))
       return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
                           Op1);
 
