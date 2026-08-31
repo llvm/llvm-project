@@ -211,12 +211,12 @@ using ReturnLevels = std::map<const FunctionDecl *, Levels>;
 /// Reverse index from the whole-program reachability result onto entity names,
 /// so a declaration in this TU can look up its reachable pointer levels.
 class ReachabilityMap {
-  const std::map<EntityId, EntityPointerLevelSet> &Reachables;
+  const EntityPointerLevelSet &Reachables;
   std::map<EntityName, EntityId> NameToId;
 
 public:
   ReachabilityMap(const WPASuite &Suite,
-                  const std::map<EntityId, EntityPointerLevelSet> &Reachables)
+                  const EntityPointerLevelSet &Reachables)
       : Reachables(Reachables) {
     Suite.getIdTable().forEach([this](const EntityName &Name, EntityId Id) {
       NameToId.emplace(Name, Id);
@@ -230,10 +230,8 @@ public:
     auto NameIt = NameToId.find(*Name);
     if (NameIt == NameToId.end())
       return Levels;
-    auto ReachIt = Reachables.find(NameIt->second);
-    if (ReachIt == Reachables.end())
-      return Levels;
-    for (const EntityPointerLevel &EPL : ReachIt->second)
+    auto [Begin, End] = Reachables.equal_range(NameIt->second);
+    for (const EntityPointerLevel &EPL : llvm::make_range(Begin, End))
       Levels.insert(EPL.getPointerLevel());
     return Levels;
   }
