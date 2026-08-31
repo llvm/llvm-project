@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
@@ -394,6 +396,7 @@ public:
   Instruction *visitStoreInst(StoreInst &I);
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  Instruction *visitAtomicRMWInst(AtomicRMWInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
 
@@ -2641,6 +2644,62 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
+  auto Op = I.getOperation();
+  if (Op != AtomicRMWInst::UIncWrap && Op != AtomicRMWInst::UDecWrap)
+    return &I;
+
+  // No SPIR-V opcode exists for these, so lowering to an imported helper is an
+  // AMD extension. Other targets keep the generic expansion.
+  if (TM.getTargetTriple().getVendor() != Triple::AMD)
+    return &I;
+
+  Module *M = I.getModule();
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
+  uint32_t MemSem = getMemSemanticsWithStorageClass(
+      TM.getTargetTriple(),
+      static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
+
+  SmallString<64> FuncName(Op == AtomicRMWInst::UIncWrap
+                               ? "__translate_spirv_atomic_uinc_wrap"
+                               : "__translate_spirv_atomic_udec_wrap");
+
+  Type *ValTy = I.getValOperand()->getType();
+  Type *PtrTy = I.getPointerOperand()->getType();
+  // Encode the address space and value type in the name for overload.
+  raw_svector_ostream OS(FuncName);
+  OS << "_p" << AS << "_";
+  if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
+    OS << "v" << VecTy->getNumElements();
+  OS << "i" << ValTy->getScalarSizeInBits();
+
+  Type *Int32Ty = B.getInt32Ty();
+  SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
+  FunctionType *FT = FunctionType::get(ValTy, ArgTys, false);
+  FunctionCallee FC = M->getOrInsertFunction(FuncName, FT);
+  cast<Function>(FC.getCallee())->setCallingConv(CallingConv::SPIR_FUNC);
+
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt32(Scope),
+                                  B.getInt32(MemSem), I.getValOperand()};
+  CallInst *CI = B.CreateCall(FC, Args);
+  CI->setCallingConv(CallingConv::SPIR_FUNC);
+  // SPIRVCallLowering reads alias.scope/noalias off the call to build the
+  // aliasing decorations and runs after this pass, so preserve the metadata.
+  CI->copyMetadata(I);
+
+  replaceAllUsesWithAndErase(B, &I, CI);
+  return CI;
 }
 
 static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
