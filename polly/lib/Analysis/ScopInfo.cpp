@@ -1686,9 +1686,26 @@ void Scop::removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
 void Scop::removeStmtNotInDomainMap() {
   removeStmts([this](ScopStmt &Stmt) -> bool {
     isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
-    if (Domain.is_null())
-      return true;
-    return Domain.is_empty();
+    if (!Domain.is_null() && !Domain.is_empty())
+      return false;
+
+    // This ScopStmt is being removed. For all the MAs belonging to this
+    // ScopStmt if it is 1) a scalar (MemoryKind::Value) 2) escaping 3) a
+    // must-write access 4) empty domain ScopStmt,  must therefore be preserved
+    // via SAI registration. This allows code generation to create the required
+    // merge PHIs and repair use sites after versioning has pruned the defining
+    // statement from optimized copy (due to its null/empty domain). Without
+    // this, Polly may generate invalid IR with broken dominance.
+    for (MemoryAccess *MA : Stmt) {
+      if (!MA->isMustWrite() || !MA->isOriginalValueKind())
+        continue;
+      auto *Inst = dyn_cast_or_null<Instruction>(MA->getAccessValue());
+      if (!Inst || !contains(Inst) || !isEscaping(Inst))
+        continue;
+      getOrCreateScopArrayInfo(Inst, Inst->getType(), {}, MemoryKind::Value);
+    }
+
+    return true;
   });
 }
 
