@@ -71,7 +71,7 @@ ArrayRef<Token> Preprocessor::GetAndCommitBacktrackedTokens() {
 
   // Get range of tokens cached since EnableBacktrackAtThisPos.
   ArrayRef<Token> CachedRange(CachedTokens.begin() + LastPos,
-                               CachedTokens.begin() + CachedLexPos);
+                              CachedTokens.begin() + CachedLexPos);
 
   // Commit backtrack to keep stream advanced.
   CommitBacktrackedTokens();
