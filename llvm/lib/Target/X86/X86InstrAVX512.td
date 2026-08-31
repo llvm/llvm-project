@@ -4887,7 +4887,7 @@ multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPADD : avx512_binop_rm_vl_all<0xFC, 0xFD, 0xFE, 0xD4, "vpadd", addlike,
+defm VPADD : avx512_binop_rm_vl_all<0xFC, 0xFD, 0xFE, 0xD4, "vpadd", add_like,
                                     SchedWriteVecALU, 1>;
 defm VPSUB : avx512_binop_rm_vl_all<0xF8, 0xF9, 0xFA, 0xFB, "vpsub", sub,
                                     SchedWriteVecALU, 0>;
