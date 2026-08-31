@@ -2,8 +2,9 @@
 ; RUN: opt -S --passes=slp-vectorizer -mtriple=x86_64-unknown-linux-gnu -mcpu=znver4 < %s | FileCheck %s
 
 ; An fadd reduction over an fsub/fneg chain is flattened with per-operand
-; signs, so subtracted leaves are vectorized and subtracted in the final
-; combine, forming per-lane fma.
+; signs, so subtracted leaves can be vectorized and subtracted in the final
+; combine, forming per-lane fma. Where the leaves are one-use fmuls the
+; operand aware fma pricing may keep the chain scalar instead.
 
 define double @fsub_fmul_2(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fsub_fmul_2(

@@ -7,6 +7,10 @@
 ; Reduced from a real-world molecular docking kernel where independent
 ; scalar fcmps are combined with a loop-invariant scalar condition via
 ; logical select, feeding into float selects stored to consecutive memory.
+;
+; FIXME: The operand aware fma pricing keeps the one-use fmuls scalar and the
+; rest of the tree with them, so nothing is vectorized right now. Recover the
+; vectorization without breaking the scalar fma pricing.
 
 define void @select_logical_or_i1(ptr %dst,
 ; CHECK-LABEL: define void @select_logical_or_i1(
