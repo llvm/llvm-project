@@ -50,14 +50,21 @@ public:
   static void dispatch(unique_function<void(ErrorRetT)> OnComplete,
                        ExecutionSession &ES, ExecutorAddr CalleeAddr,
                        const ArgTs &...Args) {
+    auto Caller = [&ES, CalleeAddr](auto &&SendResult, const char *ArgData,
+                                    size_t ArgSize) {
+      ES.callWrapperAsync(CalleeAddr,
+                          std::forward<decltype(SendResult)>(SendResult),
+                          ArrayRef<char>(ArgData, ArgSize));
+    };
+
     if constexpr (std::is_void_v<CalleeRetT>) {
       // Void result: the executor-side function produces no value, so the only
       // thing to report is the dispatch error (success if the call ran).
-      ES.callSPSWrapperAsync<SPSSigT>(CalleeAddr, std::move(OnComplete),
-                                      Args...);
+      shared::WrapperFunction<SPSSigT>::callAsync(Caller, std::move(OnComplete),
+                                                  Args...);
     } else {
-      ES.callSPSWrapperAsync<SPSSigT>(
-          CalleeAddr,
+      shared::WrapperFunction<SPSSigT>::callAsync(
+          Caller,
           [OnComplete = std::move(OnComplete)](Error SerErr,
                                                CalleeRetT Result) mutable {
             if (SerErr) {

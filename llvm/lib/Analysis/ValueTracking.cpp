@@ -2285,6 +2285,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = getVScaleRange(II->getFunction(), BitWidth).toKnownBits();
         break;
       }
+      case Intrinsic::stepvector: {
+        auto *VecTy = cast<VectorType>(II->getType());
+        unsigned MinNumElts = VecTy->getElementCount().getKnownMinValue();
+        if (!isUIntN(BitWidth, MinNumElts))
+          break;
+
+        bool Overflow = false;
+        APInt MaxNumElts(BitWidth, MinNumElts);
+        if (VecTy->isScalableTy()) {
+          if (!II->getParent() || !II->getFunction())
+            break;
+          MaxNumElts = getVScaleRange(II->getFunction(), BitWidth)
+                           .getUnsignedMax()
+                           .umul_ov(MaxNumElts, Overflow);
+        }
+
+        // Give up if the lane count could wrap. Stepvector truncates lane
+        // indices that do not fit in the element type.
+        if (Overflow)
+          break;
+
+        Known.Zero.setHighBits((MaxNumElts - 1).countl_zero());
+        break;
+      }
       }
     }
     break;
@@ -6022,24 +6046,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                           Q, Depth + 1);
 
-    // Inf REM x and x REM 0 produce NaN.
-    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-        KnownLHS.isKnownNeverInfinity() &&
-        KnownRHS.isKnownNeverLogicalZero(Mode)) {
-      Known.knownNot(fcNan);
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (KnownLHS.cannotBeOrderedLessThanZero())
-      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-    if (KnownLHS.cannotBeOrderedGreaterThanZero())
-      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-
-    // See if we can be more aggressive about the sign of 0.
-    if (KnownLHS.isKnownNever(fcNegative))
-      Known.knownNot(fcNegative);
-    if (KnownLHS.isKnownNever(fcPositive))
-      Known.knownNot(fcPositive);
+    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
     break;
   }
