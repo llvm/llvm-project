@@ -1,5 +1,4 @@
-// RUN: mlir-opt --convert-amdgpu-to-rocdl=chipset=gfx950 --canonicalize %s | FileCheck %s
-// RUN: mlir-opt --convert-amdgpu-to-rocdl=chipset=gfx1200 --canonicalize %s | FileCheck %s
+// RUN: mlir-opt --convert-amdgpu-to-rocdl=arch=amdgpu9.50-amd-amdhsa --canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @test_permlane16_i32
 // CHECK-SAME: (%[[ARG0:.*]]: i32)
