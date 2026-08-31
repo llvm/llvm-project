@@ -12,8 +12,7 @@ define void @stride2_or_latch(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
@@ -59,8 +58,7 @@ define void @stride2_or_latch_operands_swapped(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
@@ -200,8 +198,7 @@ define void @sel_or_peel(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
@@ -247,8 +244,7 @@ define void @stride2_and_latch(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
@@ -294,8 +290,7 @@ define void @stride2_and_latch_operands_swapped(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
@@ -435,8 +430,7 @@ define void @sel_and_peel(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[N_MINUS_1:%.*]] = sub nuw i64 [[N]], 1
 ; CHECK-NEXT:    [[C_TIGHT:%.*]] = icmp ult i64 [[IV]], [[N_MINUS_1]]
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
