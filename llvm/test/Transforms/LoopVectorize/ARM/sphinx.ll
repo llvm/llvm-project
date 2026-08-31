@@ -39,7 +39,7 @@ define i32 @test(ptr nocapture readonly %x) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[T]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[T]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> zeroinitializer, double [[CONV114]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> zeroinitializer, double [[CONV114]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

@@ -802,14 +802,18 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    Operation *resultWriteOp =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
+    // Only the contract result's first consumer is needed, not the final
+    // store. This keeps the lowering independent of the epilogue ops (truncf,
+    // bias add, ReLU, ...) that sit between the contraction and the write.
+    Value resultChainEnd = contractionUsersAfterYield(contractOp.getResult());
 
-    if (!accReadOp || !resultWriteOp)
+    if (!accReadOp || !resultChainEnd)
       return rewriter.notifyMatchFailure(
           contractOp, "The ACC operand of the vector.contract should be a "
-                      "transfer_read or a load. And, the result should be "
-                      "stored using transfer_write or store.");
+                      "transfer_read or a load. And, the result should have a "
+                      "single-use chain to its consumer.");
+
+    Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
     Type opType = rewriter.getF32Type();
@@ -826,12 +830,12 @@ struct VectorContractToAMXDotProduct
       ipType = rewriter.getF8E5M2Type();
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() != contractOp->getBlock())
+        resultBlock != contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator store is in different block.");
 
     if (accReadOp->getBlock() != contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock())
+        resultBlock == contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator read is in different block.");
 
@@ -847,7 +851,7 @@ struct VectorContractToAMXDotProduct
     // Case 1: For just one VC rewrite. Where all accumulator read/write
     // within the same block.
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock()) {
+        resultBlock == contractOp->getBlock()) {
 
       if (!isReadSrcMemref(contractOp.getAcc()))
         return rewriter.notifyMatchFailure(contractOp,

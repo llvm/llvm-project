@@ -324,8 +324,8 @@ define void @PR30742(ptr %p) {
 ; CHECK-NEXT:    [[TMP04:%.*]] = add nsw i32 [[TMP03]], -7
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[TMP03]], -15
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 0)
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP03]], [[SMIN1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP9]], -8
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP03]], -8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP7]], [[SMIN1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK4:%.*]] = icmp ult i32 [[TMP4]], 2
@@ -361,8 +361,8 @@ define void @PR30742(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], -7
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP11]], -15
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP8]], i32 0)
-; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP11]], [[SMIN]]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP19]], -8
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP11]], -8
+; CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP18]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = lshr i32 [[TMP21]], 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i32 [[TMP20]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP14]], 2
@@ -1426,8 +1426,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[UMAX1]], 2
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; VEC:       [[VECTOR_SCEVCHECK]]:
-; VEC-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; VEC-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; VEC-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 0
 ; VEC-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:

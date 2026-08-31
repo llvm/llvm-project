@@ -43,8 +43,7 @@ define void @test(ptr %p) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 200, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       vector.body:
@@ -54,7 +53,7 @@ define void @test(ptr %p) {
 ; NO-VP-NEXT:    [[TMP7:%.*]] = add i64 [[IV]], 200
 ; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP7]]
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP8]], align 8
-; NO-VP-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; NO-VP-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
@@ -299,8 +298,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 200, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       vector.body:
@@ -310,7 +308,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; NO-VP-NEXT:    [[TMP7:%.*]] = add i64 [[IV]], 8192
 ; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP7]]
 ; NO-VP-NEXT:    store <vscale x 2 x i64> [[WIDE_LOAD]], ptr [[TMP8]], align 32
-; NO-VP-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; NO-VP-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       middle.block:

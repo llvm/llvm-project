@@ -44,7 +44,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include <atomic>
 #include <optional>
 
 using namespace llvm;
@@ -5476,7 +5475,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2.isPhysical())
     return false;
   MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
-  assert(SrcRegDef && "Must have a definition (SSA)");
+  if (!SrcRegDef)
+    return false;
 
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
@@ -8687,7 +8687,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true,
-                               CopyMI);
+                               CopyMI, VRM);
 }
 
 MachineInstr *

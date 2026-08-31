@@ -16,15 +16,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-
-#include <type_traits>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -2614,11 +2610,11 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && TII->isVMEM(MI))
+           MI.mayLoad() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && TII->isVMEM(MI))
+           MI.mayStore() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&

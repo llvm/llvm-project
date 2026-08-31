@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from contextlib import contextmanager
 from typing import Any, Mapping, Sequence
 
 import os
@@ -197,6 +198,21 @@ def _site_initialize():
                     "Registering translations from initializer %r", init_module
                 )
                 init_module.register_llvm_translations(self)
+
+        @contextmanager
+        def transient_scope(self):
+            """Context manager that begins a transient scope and ends it on exit.
+
+            All types, attributes, affine expressions, and unregistered operations
+            allocated within this scope will be rolled back upon exit. Any Python
+            objects referencing transient IR entities must not be accessed after
+            exiting this context manager.
+            """
+            self.begin_transient_scope()
+            try:
+                yield self
+            finally:
+                self.end_transient_scope()
 
     ir.Context = Context
 
