@@ -1244,9 +1244,11 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
   DenseMap<const Argument *, MDNode *> NewScopes;
   MDBuilder MDB(CalledFunc->getContext());
 
-  // Create a new scope domain for this function.
-  MDNode *NewDomain =
-    MDB.createAnonymousAliasScopeDomain(CalledFunc->getName());
+  // Create a new scope domain for this function. Its scopes are disjoint,
+  // since accesses based on one noalias argument don't alias accesses based on
+  // another one.
+  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(
+      CalledFunc->getName(), /*DisjointScopes=*/true);
   for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
     const Argument *A = NoAliasArgs[i];
 
@@ -1399,7 +1401,36 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       if (IsFuncCall && !IsArgMemOnlyCall)
         RequiresNoCaptureBefore = true;
 
-      // First, we want to figure out all of the sets with which we definitely
+      // First, we want to figure out all of the sets to which we might belong.
+      // We might belong to a set if the noalias argument is in the set of
+      // underlying objects. If there is some non-noalias argument in our list
+      // of underlying objects, then we cannot add a scope because the fact
+      // that some access does not alias with any set of our noalias arguments
+      // cannot itself guarantee that it does not alias with this access
+      // (because there is some pointer of unknown origin involved and the
+      // other access might also depend on this pointer). We also cannot add
+      // scopes to arbitrary functions unless we know they don't access any
+      // non-parameter pointer-values.
+      bool CanAddScopes = !UsesAliasingPtr;
+      if (CanAddScopes && IsFuncCall)
+        CanAddScopes = IsArgMemOnlyCall;
+
+      if (CanAddScopes)
+        for (const Argument *A : NoAliasArgs) {
+          if (ObjSet.count(A))
+            Scopes.push_back(NewScopes[A]);
+        }
+
+      if (!Scopes.empty()) {
+        NI->setMetadata(
+            LLVMContext::MD_alias_scope,
+            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
+                                MDNode::get(CalledFunc->getContext(), Scopes)));
+        // Being in these scopes already means being noalias with the rest.
+        continue;
+      }
+
+      // Next, we want to figure out all of the sets with which we definitely
       // don't alias. Iterate over all noalias set, and add those for which:
       //   1. The noalias argument is not in the set of objects from which we
       //      definitely derive.
@@ -1427,32 +1458,6 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
                         MDNode::concatenate(
                             NI->getMetadata(LLVMContext::MD_noalias),
                             MDNode::get(CalledFunc->getContext(), NoAliases)));
-
-      // Next, we want to figure out all of the sets to which we might belong.
-      // We might belong to a set if the noalias argument is in the set of
-      // underlying objects. If there is some non-noalias argument in our list
-      // of underlying objects, then we cannot add a scope because the fact
-      // that some access does not alias with any set of our noalias arguments
-      // cannot itself guarantee that it does not alias with this access
-      // (because there is some pointer of unknown origin involved and the
-      // other access might also depend on this pointer). We also cannot add
-      // scopes to arbitrary functions unless we know they don't access any
-      // non-parameter pointer-values.
-      bool CanAddScopes = !UsesAliasingPtr;
-      if (CanAddScopes && IsFuncCall)
-        CanAddScopes = IsArgMemOnlyCall;
-
-      if (CanAddScopes)
-        for (const Argument *A : NoAliasArgs) {
-          if (ObjSet.count(A))
-            Scopes.push_back(NewScopes[A]);
-        }
-
-      if (!Scopes.empty())
-        NI->setMetadata(
-            LLVMContext::MD_alias_scope,
-            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
-                                MDNode::get(CalledFunc->getContext(), Scopes)));
     }
   }
 }
