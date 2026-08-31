@@ -217,6 +217,22 @@ lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
 }
 
 template <>
+lldb::ThreadPlanSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadPlanSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBThreadPlan *sb_thread_plan = reinterpret_cast<lldb::SBThreadPlan *>(
+      python::LLDBSWIGPython_CastPyObjectToSBThreadPlan(p.get()));
+
+  if (!sb_thread_plan) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBThreadPlan to lldb::ThreadPlanSP.");
+    return {};
+  }
+
+  return ScriptInterpreterBridge::GetThreadPlan(*sb_thread_plan);
+}
+
+template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {

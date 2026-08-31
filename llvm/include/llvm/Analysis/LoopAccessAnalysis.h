@@ -55,6 +55,10 @@ struct VectorizerParams {
   LLVM_ABI static bool HoistRuntimeChecks;
 };
 
+/// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
+/// invariant, which collectStridedAccess checks before inserting.
+using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
+
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at
 /// which vectorization factor).
@@ -188,7 +192,7 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
-                   const DenseMap<Value *, const SCEV *> &SymbolicStrides,
+                   const SymbolicStrideMap &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits,
                    std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
@@ -323,7 +327,7 @@ private:
 
   /// Reference to map of pointer values to
   /// their stride symbols, if they have a symbolic stride.
-  const DenseMap<Value *, const SCEV *> &SymbolicStrides;
+  const SymbolicStrideMap &SymbolicStrides;
 
   /// Maps access locations (ptr, read/write) to program order.
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
@@ -754,7 +758,7 @@ public:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  const DenseMap<Value *, const SCEV *> &getSymbolicStrides() const {
+  const SymbolicStrideMap &getSymbolicStrides() const {
     return SymbolicStrides;
   }
 
@@ -862,7 +866,7 @@ private:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  DenseMap<Value *, const SCEV *> SymbolicStrides;
+  SymbolicStrideMap SymbolicStrides;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
@@ -876,8 +880,7 @@ private:
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
 LLVM_ABI const SCEV *
 replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                          const DenseMap<Value *, const SCEV *> &PtrToStride,
-                          Value *Ptr);
+                          const SymbolicStrideMap &PtrToStride, Value *Ptr);
 
 /// If \p AR is an affine AddRec for \p Lp with a constant step, return the
 /// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
@@ -905,8 +908,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap =
-                 DenseMap<Value *, const SCEV *>(),
+             const SymbolicStrideMap &StridesMap = SymbolicStrideMap(),
              bool ShouldCheckWrap = true,
              SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
@@ -916,7 +918,7 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
+             const SymbolicStrideMap &StridesMap, bool Assume,
              bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
