@@ -466,6 +466,11 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
       ISAInfo->Exts.erase(ExtName.str());
   }
 
+  // I and E are mutually exclusive. When E is requested, drop the default I
+  // (e.g. injected by the generic CPU) so the two do not conflict.
+  if (ISAInfo->Exts.count("e"))
+    ISAInfo->Exts.erase("i");
+
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
@@ -966,10 +971,10 @@ void RISCVISAInfo::updateImplication() {
   if (!HasE && !HasI) {
     auto Version = findDefaultVersion("i");
     Exts["i"] = *Version;
+  } else if (HasE && HasI) {
+    // Keep the 32-register i, of which e is a subset.
+    Exts.erase("e");
   }
-
-  if (HasE && HasI)
-    Exts.erase("i");
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
