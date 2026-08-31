@@ -18,10 +18,10 @@ void *mmap(void *, size_t, int, int, int, off_t);
 #define VM_MEMORY_APPLICATION_SPECIFIC_1 240
 
 void test_mmap_vm_make_tag(void) {
+  // darwin-no-warning: no bound restriction on fd parameter on Darwin
+  // linux-warning@+1 {{The 5th argument to 'mmap' is -268435456 but should be >= -1}}
   void *p = mmap(0, 4096, 0, MAP_ANON | MAP_PRIVATE,
                  VM_MAKE_TAG(VM_MEMORY_APPLICATION_SPECIFIC_1), 0);
-  // darwin-no-warning: no bound restriction on fd parameter on Darwin
-  // linux-warning@-3 {{The 5th argument to 'mmap' is -268435456 but should be >= -1}}
 }
 
 void test_mmap_size_constraint(void) {
