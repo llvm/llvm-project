@@ -2374,4 +2374,82 @@ TEST_F(ScalarEvolutionsTest, ExtendFoldCacheKeysUseFlags) {
     EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtPlain)->getOperand(), Mul);
   });
 }
+
+TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b, i32 %c) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Cc = SE.getSCEV(getArgByName(F, "c"));
+    Type *I32 = A->getType();
+
+    // The sum is built as-is, so the use carries the requested flags.
+    SCEVUse Sum = SE.getAddExpr(A, B, SCEV::FlagAnyWrap, 0, SCEV::FlagNUW);
+    EXPECT_TRUE(Sum.hasUseFlags());
+    EXPECT_EQ(Sum.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+
+    // Same as Sun, but without NUW use flags.
+    const SCEV *BareSum = SE.getAddExpr(A, B);
+    EXPECT_EQ(Sum.getPointer(), BareSum);
+    EXPECT_EQ(cast<SCEVAddExpr>(BareSum)->getNoWrapFlags(SCEV::FlagNUW),
+              SCEV::FlagAnyWrap);
+    EXPECT_EQ(Sum.getCanonical(), BareSum);
+    EXPECT_FALSE(SCEVUse(BareSum).hasUseFlags());
+
+    // Operands get sorted by complexity, so their order does not matter.
+    EXPECT_EQ(SE.getAddExpr(B, A, SCEV::FlagAnyWrap, 0, SCEV::FlagNUW), Sum);
+
+    // The same holds for sums of more than two operands.
+    SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
+    SCEVUse Sum3 = SE.getAddExpr(Ops, SCEV::FlagAnyWrap, 0, SCEV::FlagNSW);
+    EXPECT_EQ(Sum3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Sum3.getCanonical(), SE.getAddExpr(A, B, Cc));
+
+    // Flags the expression already carries add nothing to the use.
+    SCEVUse NUWSum = SE.getAddExpr(A, Cc, SCEV::FlagNUW, 0, SCEV::FlagNUW);
+    ASSERT_TRUE(cast<SCEVAddExpr>(NUWSum.getPointer())->hasNoUnsignedWrap());
+    EXPECT_FALSE(NUWSum.hasUseFlags());
+
+    // A folded-away operand, a flattened nested sum and a sum distributed into
+    // a product all describe a different computation than the requested sum,
+    // so none of them may carry its flags.
+    auto CheckNoUseFlags = [](SCEVUse U) {
+      EXPECT_FALSE(U.hasUseFlags());
+      EXPECT_EQ(U.getUseNoWrapFlags(), SCEV::FlagAnyWrap);
+    };
+    CheckNoUseFlags(SE.getAddExpr(SE.getConstant(APInt(32, 1)),
+                                  SE.getConstant(APInt(32, 2)),
+                                  SCEV::FlagAnyWrap, 0, SCEV::FlagNUW));
+    CheckNoUseFlags(
+        SE.getAddExpr(A, SE.getZero(I32), SCEV::FlagAnyWrap, 0, SCEV::FlagNUW));
+    CheckNoUseFlags(SE.getAddExpr(A, SE.getAddExpr(B, Cc), SCEV::FlagAnyWrap, 0,
+                                  SCEV::FlagNUW));
+    CheckNoUseFlags(SE.getAddExpr(A, A, SCEV::FlagAnyWrap, 0, SCEV::FlagNUW));
+
+    // Constants folding together still leave a sum, but not the requested one.
+    SmallVector<SCEVUse, 3> FoldedOps = {SE.getConstant(APInt(32, 1)),
+                                         SE.getConstant(APInt(32, 2)), A};
+    CheckNoUseFlags(
+        SE.getAddExpr(FoldedOps, SCEV::FlagAnyWrap, 0, SCEV::FlagNUW));
+
+#ifndef NDEBUG
+    EXPECT_DEATH((void)SE.getAddExpr(A, B, SCEV::FlagAnyWrap, 0, SCEV::FlagNW),
+                 "only nuw or nsw allowed");
+#endif
+  });
+}
 }  // end namespace llvm
