@@ -9,25 +9,22 @@ define i64 @add_lhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwin
 ; LA32-LABEL: add_lhs_true:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    add.w $a3, $a1, $a3
-; LA32-NEXT:    add.w $a2, $a0, $a2
-; LA32-NEXT:    sltu $a6, $a2, $a0
+; LA32-NEXT:    add.w $a6, $a0, $a2
+; LA32-NEXT:    sltu $a6, $a6, $a0
 ; LA32-NEXT:    add.w $a3, $a3, $a6
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
-; LA32-NEXT:    maskeqz $a2, $a3, $a4
+; LA32-NEXT:    maskeqz $a3, $a3, $a4
 ; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    maskeqz $a2, $a2, $a4
+; LA32-NEXT:    add.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_lhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    add.d $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, %b
@@ -41,24 +38,21 @@ define i64 @add_rhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwin
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    add.w $a6, $a0, $a2
-; LA32-NEXT:    sltu $a0, $a6, $a0
-; LA32-NEXT:    add.w $a1, $a1, $a0
+; LA32-NEXT:    sltu $a6, $a6, $a0
+; LA32-NEXT:    add.w $a1, $a1, $a6
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    maskeqz $a0, $a6, $a4
-; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    masknez $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    masknez $a3, $a3, $a4
+; LA32-NEXT:    or $a1, $a1, $a3
+; LA32-NEXT:    maskeqz $a0, $a0, $a4
+; LA32-NEXT:    add.w $a0, $a2, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_rhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, %b
@@ -71,25 +65,22 @@ define i64 @add_lhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwi
 ; LA32-LABEL: add_lhs_false:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    add.w $a3, $a1, $a3
-; LA32-NEXT:    add.w $a2, $a0, $a2
-; LA32-NEXT:    sltu $a6, $a2, $a0
+; LA32-NEXT:    add.w $a6, $a0, $a2
+; LA32-NEXT:    sltu $a6, $a6, $a0
 ; LA32-NEXT:    add.w $a3, $a3, $a6
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    maskeqz $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
-; LA32-NEXT:    masknez $a2, $a3, $a4
+; LA32-NEXT:    masknez $a3, $a3, $a4
 ; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    or $a1, $a1, $a3
+; LA32-NEXT:    masknez $a2, $a2, $a4
+; LA32-NEXT:    add.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_lhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    add.d $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, %b
@@ -103,24 +94,21 @@ define i64 @add_rhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwi
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    add.w $a6, $a0, $a2
-; LA32-NEXT:    sltu $a0, $a6, $a0
-; LA32-NEXT:    add.w $a1, $a1, $a0
+; LA32-NEXT:    sltu $a6, $a6, $a0
+; LA32-NEXT:    add.w $a1, $a1, $a6
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    masknez $a0, $a6, $a4
-; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
 ; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    maskeqz $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    maskeqz $a3, $a3, $a4
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    masknez $a0, $a0, $a4
+; LA32-NEXT:    add.w $a0, $a2, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_rhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, %b
@@ -134,24 +122,18 @@ entry:
 define i64 @or_lhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: or_lhs_true:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    or $a3, $a1, $a3
-; LA32-NEXT:    or $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
+; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    maskeqz $a2, $a3, $a4
-; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: or_lhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    or $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = or i64 %a, %b
@@ -163,24 +145,18 @@ entry:
 define i64 @or_rhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: or_rhs_true:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    or $a1, $a1, $a3
-; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    maskeqz $a0, $a0, $a4
-; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    or $a0, $a2, $a0
 ; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    masknez $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    or $a1, $a3, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: or_rhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = or i64 %a, %b
@@ -192,23 +168,17 @@ entry:
 define i64 @or_lhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: or_lhs_false:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    or $a3, $a1, $a3
-; LA32-NEXT:    or $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    maskeqz $a0, $a0, $a4
 ; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    masknez $a2, $a3, $a4
-; LA32-NEXT:    maskeqz $a1, $a1, $a4
 ; LA32-NEXT:    or $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: or_lhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    or $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    maskeqz $a0, $a0, $a2
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
@@ -221,23 +191,17 @@ entry:
 define i64 @or_rhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: or_rhs_false:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    or $a1, $a1, $a3
-; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    maskeqz $a2, $a2, $a4
 ; LA32-NEXT:    or $a0, $a2, $a0
 ; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    maskeqz $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a3, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: or_rhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    maskeqz $a1, $a1, $a2
 ; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
@@ -250,24 +214,18 @@ entry:
 define i64 @xor_lhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: xor_lhs_true:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xor $a3, $a1, $a3
-; LA32-NEXT:    xor $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
+; LA32-NEXT:    xor $a0, $a0, $a2
 ; LA32-NEXT:    maskeqz $a2, $a3, $a4
-; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    xor $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xor_lhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xor $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = xor i64 %a, %b
@@ -279,24 +237,18 @@ entry:
 define i64 @xor_rhs_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: xor_rhs_true:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xor $a1, $a1, $a3
-; LA32-NEXT:    xor $a0, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    maskeqz $a0, $a0, $a4
-; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    xor $a0, $a2, $a0
 ; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    masknez $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    xor $a1, $a3, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xor_rhs_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = xor i64 %a, %b
@@ -308,24 +260,18 @@ entry:
 define i64 @xor_lhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: xor_lhs_false:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xor $a3, $a1, $a3
-; LA32-NEXT:    xor $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    maskeqz $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    xor $a0, $a0, $a2
 ; LA32-NEXT:    masknez $a2, $a3, $a4
-; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    xor $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xor_lhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xor $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = xor i64 %a, %b
@@ -337,24 +283,18 @@ entry:
 define i64 @xor_rhs_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: xor_rhs_false:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xor $a1, $a1, $a3
-; LA32-NEXT:    xor $a0, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
 ; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
+; LA32-NEXT:    xor $a0, $a2, $a0
 ; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    maskeqz $a2, $a3, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    xor $a1, $a3, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: xor_rhs_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = xor i64 %a, %b
@@ -375,23 +315,19 @@ define i64 @sub_minuend_true(i64 %a, i64 %b, i32 signext %c, i32 signext %d) nou
 ; LA32-NEXT:    sltu $a6, $a0, $a2
 ; LA32-NEXT:    sub.w $a3, $a1, $a3
 ; LA32-NEXT:    sub.w $a3, $a3, $a6
-; LA32-NEXT:    sub.w $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    maskeqz $a2, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a2, $a0
-; LA32-NEXT:    maskeqz $a2, $a3, $a4
+; LA32-NEXT:    maskeqz $a3, $a3, $a4
 ; LA32-NEXT:    masknez $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a3, $a1
+; LA32-NEXT:    maskeqz $a2, $a2, $a4
+; LA32-NEXT:    sub.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_minuend_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    sub.d $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    maskeqz $a1, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = sub i64 %a, %b
@@ -406,23 +342,19 @@ define i64 @sub_minuend_false(i64 %a, i64 %b, i32 signext %c, i32 signext %d) no
 ; LA32-NEXT:    sltu $a6, $a0, $a2
 ; LA32-NEXT:    sub.w $a3, $a1, $a3
 ; LA32-NEXT:    sub.w $a3, $a3, $a6
-; LA32-NEXT:    sub.w $a2, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    masknez $a2, $a2, $a4
-; LA32-NEXT:    maskeqz $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a0, $a2
-; LA32-NEXT:    masknez $a2, $a3, $a4
+; LA32-NEXT:    masknez $a3, $a3, $a4
 ; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    or $a1, $a1, $a3
+; LA32-NEXT:    masknez $a2, $a2, $a4
+; LA32-NEXT:    sub.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_minuend_false:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    sub.d $a1, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
 ; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    maskeqz $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = sub i64 %a, %b
@@ -573,30 +505,28 @@ define i64 @add_lhs_true_multi_use(i64 %a, i64 %b, i32 signext %c, i32 signext %
 ; LA32-LABEL: add_lhs_true_multi_use:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    add.w $a3, $a1, $a3
-; LA32-NEXT:    add.w $a2, $a0, $a2
-; LA32-NEXT:    sltu $a6, $a2, $a0
-; LA32-NEXT:    add.w $a3, $a3, $a6
+; LA32-NEXT:    add.w $a6, $a0, $a2
+; LA32-NEXT:    sltu $a7, $a6, $a0
+; LA32-NEXT:    add.w $a3, $a3, $a7
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    maskeqz $a5, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a5, $a0
 ; LA32-NEXT:    maskeqz $a5, $a3, $a4
 ; LA32-NEXT:    masknez $a1, $a1, $a4
 ; LA32-NEXT:    or $a1, $a5, $a1
+; LA32-NEXT:    maskeqz $a2, $a2, $a4
+; LA32-NEXT:    add.w $a0, $a0, $a2
 ; LA32-NEXT:    add.w $a1, $a3, $a1
-; LA32-NEXT:    add.w $a0, $a2, $a0
-; LA32-NEXT:    sltu $a2, $a0, $a2
+; LA32-NEXT:    add.w $a0, $a6, $a0
+; LA32-NEXT:    sltu $a2, $a0, $a6
 ; LA32-NEXT:    add.w $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_lhs_true_multi_use:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    add.d $a1, $a0, $a1
+; LA64-NEXT:    add.d $a4, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
-; LA64-NEXT:    maskeqz $a3, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a3, $a0
-; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a1, $a1, $a2
+; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    add.d $a0, $a4, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, %b
@@ -612,28 +542,26 @@ define i64 @sub_minuend_true_multi_use(i64 %a, i64 %b, i32 signext %c, i32 signe
 ; LA32-NEXT:    sltu $a6, $a0, $a2
 ; LA32-NEXT:    sub.w $a3, $a1, $a3
 ; LA32-NEXT:    sub.w $a3, $a3, $a6
-; LA32-NEXT:    sub.w $a2, $a0, $a2
+; LA32-NEXT:    sub.w $a6, $a0, $a2
 ; LA32-NEXT:    slt $a4, $a4, $a5
-; LA32-NEXT:    maskeqz $a5, $a2, $a4
-; LA32-NEXT:    masknez $a0, $a0, $a4
-; LA32-NEXT:    or $a0, $a5, $a0
 ; LA32-NEXT:    maskeqz $a5, $a3, $a4
 ; LA32-NEXT:    masknez $a1, $a1, $a4
 ; LA32-NEXT:    or $a1, $a5, $a1
+; LA32-NEXT:    maskeqz $a2, $a2, $a4
+; LA32-NEXT:    sub.w $a0, $a0, $a2
 ; LA32-NEXT:    add.w $a1, $a3, $a1
-; LA32-NEXT:    add.w $a0, $a2, $a0
-; LA32-NEXT:    sltu $a2, $a0, $a2
+; LA32-NEXT:    add.w $a0, $a6, $a0
+; LA32-NEXT:    sltu $a2, $a0, $a6
 ; LA32-NEXT:    add.w $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_minuend_true_multi_use:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    sub.d $a1, $a0, $a1
+; LA64-NEXT:    sub.d $a4, $a0, $a1
 ; LA64-NEXT:    slt $a2, $a2, $a3
-; LA64-NEXT:    maskeqz $a3, $a1, $a2
-; LA64-NEXT:    masknez $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a3, $a0
-; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a1, $a1, $a2
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    add.d $a0, $a4, $a0
 ; LA64-NEXT:    ret
 entry:
   %0 = sub i64 %a, %b
@@ -689,24 +617,21 @@ define i64 @add_imm_true(i64 %a, i32 signext %c, i32 signext %d) nounwind {
 ; LA32-LABEL: add_imm_true:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $a4, $a0, 5
-; LA32-NEXT:    sltu $a5, $a4, $a0
-; LA32-NEXT:    add.w $a5, $a1, $a5
+; LA32-NEXT:    sltu $a4, $a4, $a0
 ; LA32-NEXT:    slt $a2, $a2, $a3
 ; LA32-NEXT:    masknez $a3, $a4, $a2
-; LA32-NEXT:    maskeqz $a0, $a0, $a2
-; LA32-NEXT:    or $a0, $a0, $a3
-; LA32-NEXT:    masknez $a3, $a5, $a2
-; LA32-NEXT:    maskeqz $a1, $a1, $a2
-; LA32-NEXT:    or $a1, $a1, $a3
+; LA32-NEXT:    add.w $a1, $a1, $a3
+; LA32-NEXT:    ori $a3, $zero, 5
+; LA32-NEXT:    masknez $a2, $a3, $a2
+; LA32-NEXT:    add.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_imm_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $a3, $a0, 5
 ; LA64-NEXT:    slt $a1, $a1, $a2
-; LA64-NEXT:    masknez $a2, $a3, $a1
-; LA64-NEXT:    maskeqz $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a0, $a2
+; LA64-NEXT:    ori $a2, $zero, 5
+; LA64-NEXT:    masknez $a1, $a2, $a1
+; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = add i64 %a, 5
@@ -720,25 +645,24 @@ define i64 @sub_imm_minuend_true(i64 %a, i32 signext %c, i32 signext %d) nounwin
 ; LA32-LABEL: sub_imm_minuend_true:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $a4, $a0, -5
-; LA32-NEXT:    sltu $a5, $a4, $a0
-; LA32-NEXT:    add.w $a5, $a1, $a5
-; LA32-NEXT:    addi.w $a5, $a5, -1
+; LA32-NEXT:    sltu $a4, $a4, $a0
+; LA32-NEXT:    add.w $a4, $a1, $a4
+; LA32-NEXT:    addi.w $a4, $a4, -1
 ; LA32-NEXT:    slt $a2, $a2, $a3
 ; LA32-NEXT:    masknez $a3, $a4, $a2
-; LA32-NEXT:    maskeqz $a0, $a0, $a2
-; LA32-NEXT:    or $a0, $a0, $a3
-; LA32-NEXT:    masknez $a3, $a5, $a2
 ; LA32-NEXT:    maskeqz $a1, $a1, $a2
 ; LA32-NEXT:    or $a1, $a1, $a3
+; LA32-NEXT:    addi.w $a3, $zero, -5
+; LA32-NEXT:    masknez $a2, $a3, $a2
+; LA32-NEXT:    add.w $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_imm_minuend_true:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $a3, $a0, -5
 ; LA64-NEXT:    slt $a1, $a1, $a2
-; LA64-NEXT:    masknez $a2, $a3, $a1
-; LA64-NEXT:    maskeqz $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a0, $a2
+; LA64-NEXT:    addi.w $a2, $zero, -5
+; LA64-NEXT:    masknez $a1, $a2, $a1
+; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %0 = sub i64 %a, 5
@@ -786,11 +710,9 @@ entry:
 define signext i32 @add_lhs_true_i32(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; CHECK-LABEL: add_lhs_true_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add.w $a1, $a0, $a1
 ; CHECK-NEXT:    slt $a2, $a2, $a3
 ; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    add.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
 entry:
   %0 = add i32 %a, %b
