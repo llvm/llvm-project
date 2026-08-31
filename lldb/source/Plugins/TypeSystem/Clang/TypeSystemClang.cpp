@@ -1450,7 +1450,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1673,11 +1673,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 

@@ -2552,6 +2552,23 @@ the configuration (without a prefix: `Auto`).
     according to `AfterControlStatement` flag.
     :::
 
+  - `bool AfterRequiresExpression` Wrap requires expression body.
+
+    ```c++
+    true:
+    template <typename T>
+    concept C = requires(T t)
+    {
+      foo(t);
+    };
+
+    false:
+    template <typename T>
+    concept C = requires(T t) {
+      foo(t);
+    };
+    ```
+
   - `bool AfterStruct` Wrap struct definitions.
 
     ```c++

@@ -651,3 +651,11 @@ func.func @test_resize_mxfp_types(
   %5 = tosa.resize %mxint8, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return
 }
+
+// -----
+
+// CHECK-LABEL: test_transpose_block_scaled_f6E3M2FN
+func.func @test_transpose_block_scaled_f6E3M2FN(%input: tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>> {
+  %transpose = tosa.transpose %input  { perms = array<i32: 2, 0, 1, 3> } : (tensor<29x12x13x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  return %transpose : tensor<13x29x12x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+}
