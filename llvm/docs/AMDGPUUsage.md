@@ -3241,6 +3241,17 @@ The field indicates how much data is fetched on a cache miss. It is only support
 on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
 support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
+(amdgpu_noclobber)=
+
+### '`amdgpu.noclobber`' Metadata
+
+If a `load` instruction marked as `!amdgpu.noclobber` may see any write
+other than the initialization of that location at kernel launch according to the
+{ref}`concurrent memory model<amdgpu-location-order>`, it returns `undef`.
+
+This metadata can allow the AMDGPU compiler backend to emit scalar instead of
+vector load instructions.
+
 ## LLVM IR Attributes
 
 The AMDGPU backend supports the following LLVM IR attributes.
