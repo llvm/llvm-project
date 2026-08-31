@@ -2609,8 +2609,7 @@ void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
 
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
-    const DenseMap<Value *, const SCEV *> &StridesMap,
-    const VPDominatorTree &VPDT) {
+    const SymbolicStrideMap &StridesMap, const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
   // blocks dominated by the vector header.
@@ -2627,8 +2626,8 @@ void VPlanTransforms::replaceSymbolicStrides(
     return VPDT.dominates(Header, R->getParent());
   };
   ValueToSCEVMapTy RewriteMap;
-  for (const SCEV *Stride : StridesMap.values()) {
-    Value *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+  for (const SCEVUnknown *Stride : StridesMap.values()) {
+    Value *StrideV = Stride->getValue();
     const APInt *StrideConst;
     const SCEV *StrideExpr = PSE.getSCEV(StrideV);
     if (!match(StrideExpr, m_scev_APInt(StrideConst)))
