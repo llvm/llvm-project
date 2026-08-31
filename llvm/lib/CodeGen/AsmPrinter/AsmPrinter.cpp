@@ -788,9 +788,7 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  MaybeAlign AlignmentGranule = std::nullopt;
-  if (!GV->hasSection())
-    AlignmentGranule = getRequiredGlobalAlignmentGranule(*GV);
+  MaybeAlign AlignmentGranule = getRequiredGlobalAlignmentGranule(*GV);
   emitGlobalVariable(GV, AlignmentGranule);
   if (AlignmentGranule)
     OutStreamer->emitValueToAlignment(*AlignmentGranule);
