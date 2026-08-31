@@ -1503,6 +1503,12 @@ return ::mlir::success();
 
 /// Generate the parser for the key-value spelling of `prop-dict`. The generic
 /// DictionaryAttr spelling remains supported as a compatibility path.
+static bool isPresenceOnlyUnitProp(const Property &property) {
+  StringRef propertyDefName = property.getBaseProperty().getPropertyDefName();
+  return (propertyDefName == "UnitProp" || propertyDefName == "UnitProperty") &&
+         property.getDefaultValue() == "false";
+}
+
 static void genKeyValuePropDictParser(OperationFormat &fmt, Operator &op,
                                       OpClass &opClass) {
   if (!fmt.hasPropDict || !fmt.useProperties)
@@ -1572,9 +1578,29 @@ if (succeeded(parser.parseOptionalLess())) {
   while (!reachedEnd) {
     ::llvm::SMLoc keyLoc = parser.getCurrentLocation();
     ::llvm::StringRef key;
-    if (parser.parseKeyword(&key) || parser.parseEqual())
+    if (parser.parseKeyword(&key))
       return ::mlir::failure();
 )decl";
+
+  SmallVector<StringRef> unitKeys;
+  for (const NamedProperty &property : op.getProperties())
+    if (shouldParseProperty(property) && isPresenceOnlyUnitProp(property.prop))
+      unitKeys.push_back(property.name);
+  for (const NamedAttribute &attribute : op.getAttributes())
+    if (shouldParseAttribute(attribute) &&
+        attribute.attr.getBaseAttr().getAttrDefName() == "UnitAttr")
+      unitKeys.push_back(attribute.name);
+
+  if (unitKeys.empty()) {
+    body << "    if (parser.parseEqual())\n";
+  } else {
+    body << "    bool isUnitKey = ";
+    for (auto [index, key] : llvm::enumerate(unitKeys))
+      body << (index == 0 ? "" : " || ") << "key == \"" << key << "\"";
+    body << ";\n"
+         << "    if (!isUnitKey && parser.parseEqual())\n";
+  }
+  body << "      return ::mlir::failure();\n";
 
   bool isFirst = true;
   FmtContext attrTypeCtx;
@@ -1616,10 +1642,19 @@ if (succeeded(parser.parseOptionalLess())) {
   for (const NamedProperty &property : op.getProperties()) {
     if (!shouldParseProperty(property))
       continue;
+    bool isUnitProp = isPresenceOnlyUnitProp(property.prop);
     body << (isFirst ? "    if" : "    else if") << " (!seen_" << property.name
          << " && key == \"" << property.name << "\") {\n"
          << "      seen_" << property.name << " = true;\n";
-    if (!property.prop.usesDefaultParser()) {
+    if (isUnitProp) {
+      PropertyVariable propertyVariable(&property);
+      body << "      if (succeeded(parser.parseOptionalEqual())) {\n";
+      genPropertyParser(&propertyVariable, body.indent().indent(),
+                        fmt.opCppClassName);
+      body.unindent() << "      } else {\n"
+                      << "        prop." << property.name << " = true;\n"
+                      << "      }\n";
+    } else if (!property.prop.usesDefaultParser()) {
       PropertyVariable propertyVariable(&property);
       genPropertyParser(&propertyVariable, body.indent(), fmt.opCppClassName);
     } else {
@@ -1651,15 +1686,30 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
   for (const NamedAttribute &attribute : op.getAttributes()) {
     if (!shouldParseAttribute(attribute))
       continue;
+    AttributeVariable attributeVariable(&attribute);
+    bool isUnitAttr =
+        attribute.attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     body << (isFirst ? "    if" : "    else if") << " (!seen_" << attribute.name
          << " && key == \"" << attribute.name << "\") {\n"
-         << "      seen_" << attribute.name << " = true;\n"
-         << "      " << attribute.attr.getStorageType() << " " << attribute.name
-         << "Attr;\n";
-    AttributeVariable attributeVariable(&attribute);
-    genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
-                  /*parseAsOptional=*/false, /*useProperties=*/true,
-                  fmt.opCppClassName);
+         << "      seen_" << attribute.name << " = true;\n";
+    if (isUnitAttr) {
+      body << "      if (succeeded(parser.parseOptionalEqual())) {\n"
+           << "        " << attribute.attr.getStorageType() << " "
+           << attribute.name << "Attr;\n";
+      genAttrParser(&attributeVariable, body.indent().indent(), attrTypeCtx,
+                    /*parseAsOptional=*/false, /*useProperties=*/true,
+                    fmt.opCppClassName);
+      body.unindent() << "      } else {\n"
+                      << "        prop." << attribute.name
+                      << " = parser.getBuilder().getUnitAttr();\n"
+                      << "      }\n";
+    } else {
+      body << "      " << attribute.attr.getStorageType() << " "
+           << attribute.name << "Attr;\n";
+      genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
+                    /*parseAsOptional=*/false, /*useProperties=*/true,
+                    fmt.opCppClassName);
+    }
     body.unindent() << "    }\n";
     isFirst = false;
   }
@@ -2431,8 +2481,10 @@ static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
 
   body << R"decl(
 bool first = true;
-auto printKey = [&](::llvm::StringRef name) {
-  _odsPrinter << (first ? " <" : ", ") << name << " = ";
+auto printKey = [&](::llvm::StringRef name, bool printValue) {
+  _odsPrinter << (first ? " <" : ", ") << name;
+  if (printValue)
+    _odsPrinter << " = ";
   first = false;
 };
 auto shouldPrint = [&](::llvm::StringRef name) {
@@ -2442,7 +2494,7 @@ auto shouldPrint = [&](::llvm::StringRef name) {
 
   auto genSegmentSizesPrinter = [&](StringRef name) {
     body << "if (shouldPrint(\"" << name << "\")) {\n"
-         << "  printKey(\"" << name << "\");\n"
+         << "  printKey(\"" << name << "\", /*printValue=*/true);\n"
          << "  _odsPrinter << \"[\";\n"
          << "  ::llvm::interleaveComma(prop." << name << ", _odsPrinter);\n"
          << "  _odsPrinter << \"]\";\n"
@@ -2457,13 +2509,17 @@ auto shouldPrint = [&](::llvm::StringRef name) {
 
   for (const NamedProperty &namedProperty : op.getProperties()) {
     const Property &property = namedProperty.prop;
+    bool isUnitProp = isPresenceOnlyUnitProp(property);
     body << "if (shouldPrint(\"" << namedProperty.name << "\")) {\n"
-         << "  printKey(\"" << namedProperty.name << "\");\n";
+         << "  printKey(\"" << namedProperty.name << "\", /*printValue=*/"
+         << (isUnitProp ? "false" : "true") << ");\n";
     FmtContext printerContext;
     printerContext.addSubst("_printer", "_odsPrinter");
     printerContext.addSubst("_ctxt", "_odsContext");
     printerContext.addSubst("_storage", "prop." + namedProperty.name);
-    if (property.usesDefaultParser()) {
+    if (isUnitProp) {
+      // Unit properties are represented by the presence of their key.
+    } else if (property.usesDefaultParser()) {
       body << "  if constexpr (::mlir::detail::HasKeyValueFieldParser<"
               "std::remove_cv_t<std::remove_reference_t<decltype(prop."
            << namedProperty.name << ")>>>::value) {\n"
@@ -2490,13 +2546,19 @@ auto shouldPrint = [&](::llvm::StringRef name) {
     if (namedAttr.attr.isDerivedAttr())
       continue;
     StringRef name = namedAttr.name;
+    AttributeVariable attrVariable(&namedAttr);
+    bool isUnitAttr =
+        namedAttr.attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     body << "if (shouldPrint(\"" << name << "\")";
     if (namedAttr.attr.isOptional() || namedAttr.attr.hasDefaultValue())
       body << " && prop." << name;
     body << ") {\n"
-         << "  printKey(\"" << name << "\");\n";
+         << "  printKey(\"" << name << "\", /*printValue=*/"
+         << (isUnitAttr ? "false" : "true") << ");\n";
 
-    if (canFormatEnumAttr(&namedAttr)) {
+    if (isUnitAttr) {
+      // Unit attributes are represented by the presence of their key.
+    } else if (canFormatEnumAttr(&namedAttr)) {
       FmtContext conversionContext;
       conversionContext.withSelf("prop." + name);
       std::string valueExpression = std::string(tgfmt(
@@ -2506,7 +2568,6 @@ auto shouldPrint = [&](::llvm::StringRef name) {
       body << "  _odsPrinter.printSymbolName(prop." << name
            << ".getValue());\n";
     } else {
-      AttributeVariable attrVariable(&namedAttr);
       if (attrVariable.getTypeBuilder())
         body << "  _odsPrinter.printAttributeWithoutType(prop." << name
              << ");\n";
