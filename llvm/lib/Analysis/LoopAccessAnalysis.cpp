@@ -236,17 +236,16 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
-  // symbolic stride replaced by one.
-  const SCEVUnknown *StrideSCEV = PtrToStride.lookup(Ptr);
-  if (!StrideSCEV)
+  // symbolic stride replaced by the speculated constant.
+  auto It = PtrToStride.find(Ptr);
+  if (It == PtrToStride.end())
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
 
+  const SymbolicStride &SS = It->second;
   ScalarEvolution *SE = PSE.getSE();
-  unsigned StrideValue =
-      getSpeculatedInterleaveStride(PSE.getLoop(), *SE, StrideSCEV).value_or(1);
-  const SCEV *CT = SE->getConstant(StrideSCEV->getType(), StrideValue);
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
+  const SCEV *CT = SE->getConstant(SS.Stride->getType(), SS.SpeculatedValue);
+  PSE.addPredicate(*SE->getEqualPredicate(SS.Stride, CT));
   const SCEV *Expr = PSE.getSCEV(Ptr);
 
   LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
@@ -3265,7 +3264,10 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     StrideBase = C->getOperand();
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  const auto *Stride = cast<SCEVUnknown>(StrideBase);
+  unsigned SpeculatedValue =
+      getSpeculatedInterleaveStride(*TheLoop, *SE, Stride).value_or(1);
+  SymbolicStrides[Ptr] = {Stride, SpeculatedValue};
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,

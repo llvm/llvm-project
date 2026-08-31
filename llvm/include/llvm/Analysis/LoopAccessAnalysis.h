@@ -55,9 +55,16 @@ struct VectorizerParams {
   LLVM_ABI static bool HoistRuntimeChecks;
 };
 
-/// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
-/// invariant, which collectStridedAccess checks before inserting.
-using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
+/// A symbolic (non-constant) stride together with the constant it is speculated
+/// to equal. The stride is loop invariant, which collectStridedAccess checks
+/// before inserting.
+struct SymbolicStride {
+  const SCEVUnknown *Stride = nullptr;
+  unsigned SpeculatedValue = 1;
+};
+
+/// Maps a pointer to its symbolic (non-constant) stride.
+using SymbolicStrideMap = DenseMap<Value *, SymbolicStride>;
 
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at
