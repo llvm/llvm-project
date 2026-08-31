@@ -2261,7 +2261,9 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
+  // -fopenmp-simd has no device compilation and ignores 'declare target', so
+  // there is nothing to defer for.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
     return LangOpts.OpenMPIsTargetDevice
                ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
