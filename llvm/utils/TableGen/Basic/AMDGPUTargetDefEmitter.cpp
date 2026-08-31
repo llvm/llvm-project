@@ -203,14 +203,20 @@ static void emitFeatureExpr(raw_ostream &OS, const Record *Rec,
     OS << NoneSpelling;
 }
 
-// The frontend-visible features, bit order matching the list. Empty for R600
-// (no AMDGPUFrontendVisibleFeatures def).
+// The frontend-visible features, ordered by name so that a bit's position also
+// orders it in the emitted name table, making that table binary searchable.
+// Empty for R600 (no AMDGPUFrontendVisibleFeatures def).
 static std::vector<const Record *>
 collectFrontendFeatures(const RecordKeeper &RK) {
   const Record *List = RK.getDef("AMDGPUFrontendVisibleFeatures");
   if (!List)
     return {};
-  return List->getValueAsListOfDefs("Features");
+
+  std::vector<const Record *> Features = List->getValueAsListOfDefs("Features");
+  sort(Features, [](const Record *A, const Record *B) {
+    return A->getValueAsString("Name") < B->getValueAsString("Name");
+  });
+  return Features;
 }
 
 // The transitive closure of a GPU's SubtargetFeatures, following the Implies
@@ -448,6 +454,8 @@ emitAMDGPUFeatureEnum(raw_ostream &OS, ArrayRef<const Record *> Features,
 }
 
 // Emit AMDGPUFeatureNames (GET_AMDGPU_FEATURE_NAME_TABLE): bit -> name offset.
+// The bits are in name order, so the strings this indexes are sorted and a
+// name lookup can binary search it.
 static void emitAMDGPUFeatureNames(raw_ostream &OS,
                                    ArrayRef<unsigned> Offsets) {
   if (Offsets.empty())
