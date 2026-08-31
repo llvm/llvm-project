@@ -157,6 +157,39 @@ void testIntToFloat(void) {
   clang_analyzer_dump((float)no);   // expected-warning{{Unknown}}
 }
 
+// _BitInt and 128-bit integers.
+void testWideAndBitIntConversions(void) {
+  clang_analyzer_dump((_BitInt(8))1.5f);            // expected-warning{{1 S8b}}
+  clang_analyzer_dump((unsigned _BitInt(8))200.0f); // expected-warning{{200 U8b}}
+  clang_analyzer_dump((__int128)1.5f);              // expected-warning{{1 S128b}}
+  clang_analyzer_dump((_BitInt(8))200.0f);          // expected-warning{{Unknown}}
+
+  clang_analyzer_dump((__int128)18446744073709551616.0f); // 2^64
+  // expected-warning@-1{{18446744073709551616 S128b}}
+  clang_analyzer_dump((unsigned long)18446744073709551616.0f);
+  // expected-warning@-1{{Unknown}}
+
+  clang_analyzer_dump((float)(_BitInt(8))3);      // expected-warning{{3 IEEEsingle}}
+  clang_analyzer_dump((float)(_BitInt(100))1);    // expected-warning{{1 IEEEsingle}}
+  clang_analyzer_dump((float)(__int128)16777216); // expected-warning{{16777216 IEEEsingle}}
+  clang_analyzer_dump((float)(__int128)16777217); // expected-warning{{Unknown}}
+
+  // Max value of 128-bit uint is too big for float.
+  constexpr unsigned _BitInt(128) upper = 0xFFFFFFFFFFFFFFFFULL;
+  constexpr unsigned _BitInt(128) lower = 0xFFFFFFFFFFFFFFFFULL;
+  unsigned _BitInt(128) total = (upper << 64) | lower;
+  float f = (float)total;
+  clang_analyzer_dump(total); // expected-warning{{340282366920938463463374607431768211455 U128b}}
+  clang_analyzer_dump(f);     // expected-warning{{Unknown}}
+
+  // Largest integer value of float.
+  constexpr unsigned _BitInt(128) upper2 = 0xFFFFFF0000000000ULL;
+  unsigned _BitInt(128) total2 = (upper2 << 64);
+  float f2 = (float)total2;
+  clang_analyzer_dump(total2);  // expected-warning{{340282346638528859811704183484516925440 U128b}}
+  clang_analyzer_dump(f2);      // expected-warning{{3.40282347E+38 IEEEsingle}}
+}
+
 // Complex floating-point types are not modeled.
 void testComplexIsUnmodeled(void) {
   _Complex float z = 1.5f;
