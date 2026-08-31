@@ -555,7 +555,7 @@ static std::string computeVEDataLayout(const Triple &T) {
 static std::string computeSuperHDataLayout(const Triple &T) {
 
   // Mixed-endian
-  std::string Ret = T.getArch() == Triple::sh_le ? "e" : "E";
+  std::string Ret = T.getArch() == Triple::shl ? "e" : "E";
 
   // ELF name manging
   Ret += "-m:e";
@@ -644,7 +644,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::systemz:
     return computeSystemZDataLayout(*this);
   case Triple::sh:
-  case Triple::sh_le:
+  case Triple::shl:
     return computeSuperHDataLayout(*this);
   case Triple::tce:
     return "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"
