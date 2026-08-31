@@ -23,6 +23,8 @@
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -337,6 +339,7 @@ private:
   bool adjustBranch();
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
+  bool addExitToEmptyBranchTargets();
   bool addExitAfterUnreachable();
 
 public:
@@ -349,6 +352,7 @@ public:
       Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
+    Changed |= addExitToEmptyBranchTargets();
     Changed |= addExitAfterUnreachable();
     return Changed;
   }
@@ -752,6 +756,59 @@ bool BPFMIPreEmitPeepholeImpl::removeMayGotoZero() {
     }
   }
 
+  return Changed;
+}
+
+static bool emitsBPFCode(const MachineInstr &MI) {
+  if (MI.isDebugInstr() || MI.isMetaInstruction())
+    return false;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR:
+  case TargetOpcode::MEMBARRIER:
+  case TargetOpcode::IMPLICIT_DEF:
+  case TargetOpcode::KILL:
+  case TargetOpcode::FAKE_USE:
+    return false;
+  default:
+    return true;
+  }
+}
+
+static bool isZeroInstructionMBB(const MachineBasicBlock &MBB) {
+  return !any_of(MBB.instrs(), emitsBPFCode);
+}
+
+static void
+collectCondBranchTargets(MachineFunction &MF,
+                         SmallPtrSet<MachineBasicBlock *, 8> &Targets) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &Term : MBB.terminators()) {
+      if (!Term.isConditionalBranch())
+        continue;
+      for (const MachineOperand &MO : Term.operands()) {
+        if (MO.isMBB())
+          Targets.insert(MO.getMBB());
+      }
+    }
+  }
+}
+
+// Empty MBBs still get labels (see AsmPrinter::shouldEmitLabelForBasicBlock)
+// but may emit no BPF bytes, so PC-relative branch fixups resolve to the wrong
+// address. Materialize exit in zero-instruction conditional branch targets.
+bool BPFMIPreEmitPeepholeImpl::addExitToEmptyBranchTargets() {
+  SmallPtrSet<MachineBasicBlock *, 8> CondTargets;
+  collectCondBranchTargets(*MF, CondTargets);
+
+  bool Changed = false;
+  for (MachineBasicBlock *MBB : CondTargets) {
+    if (!isZeroInstructionMBB(*MBB))
+      continue;
+    BuildMI(*MBB, MBB->begin(), MBB->findDebugLoc(MBB->begin()),
+            TII->get(BPF::RET));
+    Changed = true;
+  }
   return Changed;
 }
 
