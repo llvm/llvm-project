@@ -142,6 +142,9 @@ public:
     return true;
   }
 
+  uptr getMaxResidentBytesTestOnly() const { return 0; }
+  uptr getCurrentResidentBytesTestOnly() const { return 0; }
+
   void getStats(UNUSED ScopedString *Str) {
     Str->append("Secondary Cache Disabled\n");
   }
@@ -231,11 +234,12 @@ public:
     Str->append(
         "Stats: MapAllocatorCache: EntriesCount: %zu, "
         "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
-        "%zu, ReleaseToOsIntervalMs = %d, Unmapped due to eviction: %u, ",
+        "%zu, ReleaseToOsIntervalMs = %d, Unmapped due to eviction: %u, "
+        "MaxResidentBytes: %zu, CurrentResidentBytes: %zu\n",
         LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
         atomic_load_relaxed(&MaxEntrySize),
         atomic_load_relaxed(&ReleaseToOsSkips), Interval >= 0 ? Interval : -1,
-        EvictedCount);
+        EvictedCount, MaxResidentBytes, CurrentResidentBytes);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -565,6 +569,16 @@ public:
 
   void enable() NO_THREAD_SAFETY_ANALYSIS { Mutex.unlock(); }
 
+  uptr getMaxResidentBytesTestOnly() {
+    ScopedLock L(Mutex);
+    return MaxResidentBytes;
+  }
+
+  uptr getCurrentResidentBytesTestOnly() {
+    ScopedLock L(Mutex);
+    return CurrentResidentBytes;
+  }
+
   void unmapTestOnly() { empty(); }
 
   void releaseOlderThanTestOnly(u64 ReleaseTime) {
@@ -581,6 +595,11 @@ private:
     LRUEntries.push_front(AvailEntry);
     if (OldestPresentEntry == nullptr && AvailEntry->Time != 0)
       OldestPresentEntry = AvailEntry;
+    if (AvailEntry->Time != 0) {
+      CurrentResidentBytes += Entry.CommitSize;
+      if (CurrentResidentBytes > MaxResidentBytes)
+        MaxResidentBytes = CurrentResidentBytes;
+    }
   }
 
   void remove(CachedBlock *Entry) REQUIRES(Mutex) {
@@ -590,6 +609,8 @@ private:
       DCHECK(OldestPresentEntry == nullptr || OldestPresentEntry->Time != 0);
     }
     LRUEntries.remove(Entry);
+    if (Entry->Time != 0)
+      CurrentResidentBytes -= Entry->CommitSize;
     Entry->invalidate();
     AvailEntries.push_front(Entry);
   }
@@ -604,6 +625,7 @@ private:
         MapInfo[N++] = Entry.MemMap;
       LRUEntries.clear();
       OldestPresentEntry = nullptr;
+      CurrentResidentBytes = 0;
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
@@ -638,6 +660,7 @@ private:
 
       Entry->MemMap.releaseAndZeroPagesToOS(Entry->CommitBase,
                                             Entry->CommitSize);
+      CurrentResidentBytes -= Entry->CommitSize;
       Entry->Time = 0;
     }
     OldestPresentEntry = nullptr;
@@ -651,6 +674,8 @@ private:
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
   u32 EvictedCount GUARDED_BY(Mutex) = 0;
+  uptr CurrentResidentBytes GUARDED_BY(Mutex) = 0;
+  uptr MaxResidentBytes GUARDED_BY(Mutex) = 0;
   atomic_uptr ReleaseToOsSkips = {};
 
   CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
@@ -735,6 +760,14 @@ public:
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
 
   void unmapTestOnly() { Cache.unmapTestOnly(); }
+
+  uptr getMaxResidentBytesTestOnly() {
+    return Cache.getMaxResidentBytesTestOnly();
+  }
+
+  uptr getCurrentResidentBytesTestOnly() {
+    return Cache.getCurrentResidentBytesTestOnly();
+  }
 
   void getStats(ScopedString *Str);
 

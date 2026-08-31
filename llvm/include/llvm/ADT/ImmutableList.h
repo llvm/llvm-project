@@ -188,11 +188,11 @@ public:
   [[nodiscard]] ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
-    void* InsertPos;
+    FoldingSetInsertToken Token;
 
     const ListTy* TailImpl = Tail.getInternalPointer();
     ListTy::Profile(ID, Head, TailImpl);
-    ListTy* L = Cache.FindNodeOrInsertPos(ID, InsertPos);
+    ListTy* L = Cache.lookup(ID, Token);
 
     if (!L) {
       // The list does not exist in our cache.  Create it.
@@ -201,7 +201,7 @@ public:
       new (L) ListTy(std::forward<ElemT>(Head), TailImpl);
 
       // Insert the new list into the cache.
-      Cache.InsertNode(L, InsertPos);
+      Cache.insert(L, Token);
     }
 
     return L;

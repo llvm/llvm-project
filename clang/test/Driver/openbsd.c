@@ -104,6 +104,7 @@
 // CHECK-PIE: "{{.*}}crt0.o"
 // CHECK-PIE-NOT: "-nopie"
 // CHECK-PIE-FLAG: "-pie"
+// CHECK-STATIC-PIE: "-pie"
 // CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
 // CHECK-STATIC-PIE-NOT: "-nopie"
 // CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"
