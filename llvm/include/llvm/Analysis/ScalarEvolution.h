@@ -347,13 +347,9 @@ public:
 template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
 
-  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID, unsigned IDHash,
+  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID,
                      FoldingSetNodeID &TempID) {
     return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SCEV &X, FoldingSetNodeID &TempID) {
-    return X.FastID.ComputeHash();
   }
 };
 
@@ -431,13 +427,8 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
   }
 
   static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
+                     FoldingSetNodeID &TempID) {
     return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SCEVPredicate &X,
-                              FoldingSetNodeID &TempID) {
-    return X.FastID.ComputeHash();
   }
 };
 
@@ -1634,13 +1625,13 @@ public:
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   class FoldID {
-    const SCEV *Op = nullptr;
+    SCEVUse Op;
     const Type *Ty = nullptr;
     unsigned short C;
 
   public:
-    FoldID(SCEVTypes C, const SCEV *Op, const Type *Ty) : Op(Op), Ty(Ty), C(C) {
-      assert(Op);
+    FoldID(SCEVTypes C, SCEVUse Op, const Type *Ty) : Op(Op), Ty(Ty), C(C) {
+      assert(Op.getPointer());
       assert(Ty);
     }
 
@@ -1648,8 +1639,9 @@ public:
 
     unsigned computeHash() const {
       return detail::combineHashValue(
-          C, detail::combineHashValue(reinterpret_cast<uintptr_t>(Op),
-                                      reinterpret_cast<uintptr_t>(Ty)));
+          C, detail::combineHashValue(
+                 reinterpret_cast<uintptr_t>(Op.getOpaqueValue()),
+                 reinterpret_cast<uintptr_t>(Ty)));
     }
 
     bool operator==(const FoldID &RHS) const {

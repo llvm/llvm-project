@@ -1499,6 +1499,11 @@ bool tools::addLLVMOffloadingRuntime(const Compilation &C,
                     options::OPT_fno_offload_via_llvm, false))
     return false;
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fgpu_default_stream_EQ);
+      A && StringRef(A->getValue()) == "per-thread")
+    CmdArgs.push_back(Args.MakeArgString(
+        TC.GetFilePath("LLVMOffloadKernelPerThreadDefaultStream.o")));
+
   CmdArgs.push_back("-lLLVMOffloadKernel");
   return true;
 }
@@ -3615,9 +3620,10 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  if (Args.hasFlag(options::OPT_floop_interchange,
-                   options::OPT_fno_loop_interchange, false))
-    CmdArgs.push_back("-floop-interchange");
+  // Forward the user's explicit choice; the frontend applies the -O3
+  // default when neither flag is present.
+  Args.AddLastArg(CmdArgs, options::OPT_floop_interchange,
+                  options::OPT_fno_loop_interchange);
 }
 
 std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {

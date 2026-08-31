@@ -7282,9 +7282,9 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
     FunctionTemplateDecl *CallOpTemplate =
         LambdaCallOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     const FunctionDecl *CorrespondingCallOpSpecialization =
-        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
     assert(CorrespondingCallOpSpecialization);
     LambdaCallOp = CorrespondingCallOpSpecialization;
   } else {

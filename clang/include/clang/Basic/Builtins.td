@@ -5317,6 +5317,12 @@ def HLSLResourceGetPointerTyped : Builtin {
   let Prototype = "void(...)";
 }
 
+def HLSLMaybeTransposeMatrix : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_transpose_if_memory_is_row_major"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_with_status"];
   let Attributes = [NoThrow];
@@ -5721,12 +5727,6 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLMul : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mul"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def HLSLNormalize : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_normalize"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
