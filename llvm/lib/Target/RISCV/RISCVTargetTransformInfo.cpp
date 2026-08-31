@@ -3792,7 +3792,8 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       Value *AVL = II.getArgOperand(0);
       ConstantRange AVLRange = computeConstantRangeIncludingKnownBits(
-          AVL, false, IC.getSimplifyQuery().getWithInstruction(&II));
+          AVL, /*ForSigned=*/false,
+          IC.getSimplifyQuery().getWithInstruction(&II));
 
       // vl = AVL if AVL ≤ VLMAX
       if (AVLRange.icmp(CmpInst::ICMP_ULE, VLMAXRange))
