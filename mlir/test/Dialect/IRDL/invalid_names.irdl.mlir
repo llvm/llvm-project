@@ -1,30 +1,18 @@
 // RUN: mlir-irdl-to-cpp %s --verify-diagnostics --split-input-file
-// expected-error@+1 {{name of dialect should not contain leading or double underscores}}
+// expected-error@+1 {{name of dialect must start with a lowercase letter}}
 irdl.dialect @_no_leading_underscore {
 }
 
 // -----
 
-// expected-error@+1 {{name of dialect should not contain leading or double underscores}}
-irdl.dialect @no__double__underscores {
-}
-
-// -----
-
-// expected-error@+1 {{name of dialect should not contain uppercase letters}}
+// expected-error@+1 {{name of dialect must start with a lowercase letter}}
 irdl.dialect @NoUpperCase {
 }
 
 // -----
 
-// expected-error@+1 {{name of dialect must contain only lowercase letters, digits and underscores}}
-irdl.dialect @no_weird_symbol$ {
-}
-
-// -----
-
 irdl.dialect @test_dialect {
-  // expected-error@+1 {{name of operation should not contain leading or double underscores}}
+  // expected-error@+1 {{name of operation must start with a lowercase letter}}
   irdl.operation @_no_leading_underscore {
     %0 = irdl.any
     irdl.results(res: %0)
@@ -34,17 +22,14 @@ irdl.dialect @test_dialect {
 // -----
 
 irdl.dialect @test_dialect {
-  // expected-error@+1 {{name of operation should not contain leading or double underscores}}
-  irdl.operation @no__double__underscores {
-    %0 = irdl.any
-    irdl.results(res: %0)
-  }
+  // expected-error@+1 {{name of operation must contain only lowercase letters, digits, underscores, dollar signs or dots}}
+  irdl.operation @noUpperCase {}
 }
 
 // -----
 
 irdl.dialect @test_dialect {
-    // expected-error@+1 {{name of operation should not contain uppercase letters}}
+    // expected-error@+1 {{name of operation must start with a lowercase letter}}
     irdl.operation @NoUpperCase {
         %0 = irdl.any
         irdl.results(res: %0)
@@ -54,19 +39,9 @@ irdl.dialect @test_dialect {
 // -----
 
 irdl.dialect @test_dialect {
-  // expected-error@+1 {{name of operation must contain only lowercase letters, digits and underscores}}
-  irdl.operation @no_weird_symbol$ {
-    %0 = irdl.any
-    irdl.results(res: %0)
-  }
-}
-
-// -----
-
-irdl.dialect @test_dialect {
   irdl.operation @test_op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result #0 should not contain leading or double underscores}}
+    // expected-error@+1 {{name of result #0 must start with a lowercase letter}}
     irdl.results(_no_leading_underscore: %0)
   }
 }
@@ -76,17 +51,7 @@ irdl.dialect @test_dialect {
 irdl.dialect @test_dialect {
   irdl.operation @test_op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result #0 should not contain leading or double underscores}}
-    irdl.results(no__double__underscores: %0)
-  }
-}
-
-// -----
-
-irdl.dialect @test_dialect {
-  irdl.operation @test_op {
-    %0 = irdl.any
-    // expected-error@+1 {{name of result #0 should not contain uppercase letters}}
+    // expected-error@+1 {{name of result #0 must start with a lowercase letter}}
     irdl.results(NoUpperCase: %0)
   }
 }

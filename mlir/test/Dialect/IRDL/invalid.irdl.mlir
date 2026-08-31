@@ -25,8 +25,8 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.type @type {
     %0 = irdl.any
-    // expected-error@+1 {{name of parameter #0 must contain only lowercase letters, digits and underscores}}
-    irdl.parameters(test$test: %0)
+    // expected-error@+1 {{name of parameter #0 must contain only lowercase letters, digits, underscores, dollar signs or dots}}
+    irdl.parameters(testTest: %0)
   }
 }
 
@@ -35,8 +35,8 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result #0 must contain only lowercase letters, digits and underscores}}
-    irdl.results(test$test: %0)
+    // expected-error@+1 {{name of result #0 must contain only lowercase letters, digits, underscores, dollar signs or dots}}
+    irdl.results(testTest: %0)
   }
 }
 
@@ -45,8 +45,8 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of operand #0 must contain only lowercase letters, digits and underscores}}
-    irdl.operands(test$test: %0)
+    // expected-error@+1 {{name of operand #0 must contain only lowercase letters, digits, underscores, dollar signs or dots}}
+    irdl.operands(testTest: %0)
   }
 }
 

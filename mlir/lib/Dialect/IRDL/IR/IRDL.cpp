@@ -77,25 +77,23 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
   if (in.empty())
     return loc->emitError("name of ") << label << " is empty";
 
-  bool allowUnderscore = false;
-  for (auto &elem : in) {
-    if (elem == '_') {
-      if (!allowUnderscore)
-        return loc->emitError("name of ")
-               << label << " should not contain leading or double underscores";
-    } else {
-      if (!isalnum(elem))
-        return loc->emitError("name of ")
-               << label
-               << " must contain only lowercase letters, digits and "
-                  "underscores";
+  // The syntax of a name should follow `bare-id` defined in MLIR LangRef:
+  //   bare-id ::= (letter|[_]) (letter|digit|[_$.])*
+  // For easier handling in irdl-to-cpp, we impose two extra restrictions:
+  // - the first character must be a letter;
+  // - only lowercase letters are allowed.
 
-      if (llvm::isUpper(elem))
-        return loc->emitError("name of ")
-               << label << " should not contain uppercase letters";
-    }
+  if (!llvm::isLower(in.front()))
+    return loc->emitError("name of ")
+           << label << " must start with a lowercase letter";
 
-    allowUnderscore = elem != '_';
+  for (char c : in.drop_front()) {
+    if (!llvm::isLower(c) && !llvm::isDigit(c) && c != '_' && c != '$' &&
+        c != '.')
+      return loc->emitError("name of ")
+             << label
+             << " must contain only lowercase letters, digits, "
+                "underscores, dollar signs or dots";
   }
 
   return success();

@@ -11,6 +11,13 @@ irdl.dialect @test_irdl_to_cpp {
     // CHECK: class FooType
     irdl.type @foo
 
+    // CHECK: class NameWithDotsType
+    irdl.type @name.with.dots
+    // CHECK: class NameWithDollarsType
+    irdl.type @name$with$dollars
+    // CHECK: class NameWithUnderscoresType
+    irdl.type @name_with_underscores
+
     // CHECK: class BarOp
     // CHECK: ::mlir::Value getRes()
     irdl.operation @bar {
