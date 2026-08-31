@@ -1174,18 +1174,28 @@ public:
     return NewIndex;
   }
 
-  std::optional<llvm::APSInt>
-  ComputeExplicitObjectSizeArgument(unsigned Index) {
+  /// Evaluate the argument at Index as an integer constant while preserving
+  /// its signedness, or return std::nullopt if it cannot be evaluated.
+  std::optional<llvm::APSInt> EvaluateIntegerArgument(unsigned Index) {
     std::optional<unsigned> IndexOptional = TranslateIndex(Index);
     if (!IndexOptional)
       return std::nullopt;
-    unsigned NewIndex = *IndexOptional;
+
     Expr::EvalResult Result;
-    Expr *SizeArg = TheCall->getArg(NewIndex);
-    if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
+    Expr *Arg = TheCall->getArg(*IndexOptional);
+    if (!Arg->EvaluateAsInt(Result, S.getASTContext()))
       return std::nullopt;
-    llvm::APSInt Integer = Result.Val.getInt();
-    assert(Integer.isUnsigned() &&
+
+    return Result.Val.getInt();
+  }
+
+  std::optional<llvm::APSInt>
+  ComputeExplicitObjectSizeArgument(unsigned Index) {
+    std::optional<llvm::APSInt> Integer = EvaluateIntegerArgument(Index);
+    if (!Integer)
+      return std::nullopt;
+
+    assert(Integer->isUnsigned() &&
            "size arg should be unsigned after implicit conversion to size_t");
     return Integer;
   }
@@ -1231,9 +1241,6 @@ public:
 
     llvm::APSInt LE = L->extOrTrunc(W);
     llvm::APSInt RE = R->extOrTrunc(W);
-
-    LE.setIsUnsigned(true);
-    RE.setIsUnsigned(true);
 
     return LE * RE;
   };
@@ -1529,7 +1536,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
   case Builtin::BIfgets: {
     DiagID = diag::warn_fortify_source_size_mismatch;
-    SourceSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    SourceSize = Checker.EvaluateIntegerArgument(1);
     DestinationSize = Checker.ComputeSizeArgument(0);
     break;
   }

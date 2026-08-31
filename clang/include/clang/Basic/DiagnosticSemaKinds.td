@@ -1027,8 +1027,8 @@ def warn_fortify_scanf_overflow : Warning<
   InGroup<FortifySource>;
 
 def warn_fortify_source_overread : Warning<
-  "'%0' will always read past the source buffer; source buffer has "
-  "size %1, but size argument is %2">,
+  "'%0' will always read past the end of the source buffer; source buffer has "
+  "size %1, but the size is %2">,
   InGroup<FortifySource>;
 
 def err_function_start_invalid_type: Error<
