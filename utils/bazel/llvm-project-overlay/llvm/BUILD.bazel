@@ -601,6 +601,13 @@ cc_library(
 )
 
 cc_library(
+    name = "scalar_headers",
+    hdrs = glob(["include/llvm/Transforms/Scalar/*.h"]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
+cc_library(
     name = "BinaryFormatELF",
     srcs = [
         "include/llvm/TargetParser/Triple.h",
@@ -1786,6 +1793,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":config",
+        ":scalar_headers",
     ],
 )
 
