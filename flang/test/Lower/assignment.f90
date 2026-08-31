@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 %s -o "-" -emit-hlfir -cpp | FileCheck %s --check-prefixes=CHECK,%if flang-supports-f128-math %{F128%} %else %{F64%}%if target=x86_64-unknown-linux{{.*}} %{,CHECK-X86-64%}
+! RUN: %flang_fc1 %s -o "-" -emit-hlfir -cpp | FileCheck %s --check-prefixes=CHECK,%if flang-frontend-supports-f128 %{F128%} %else %{F64%}%if target=x86_64-unknown-linux{{.*}} %{,CHECK-X86-64%}
 
 subroutine sub1(a)
   integer :: a
