@@ -685,7 +685,7 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // Dropping the field leaves no member to mark, so its bytes read as
       // padding.  That is only sound when the field carries no ABI data, so
       // make sure we add a member for it. if it does.
-      if (!nonVirtualBaseType && !isEmptyFieldForABI(astContext, *field))
+      if (!isEmptyFieldForABI(astContext, *field))
         members.push_back(
             MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
                        MemberInfo::InfoKind::Field,
