@@ -3082,14 +3082,24 @@ class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                 list<LLVMType> param_types,
                 list<LLVMType> flags,
                 list<IntrinsicProperty> intr_properties,
-                string name = "">
+                string name = "",
+                list<DefaultValue> trailing_flag_defaults = []>
   : DefaultAttrsIntrinsic<
         ret_types,
         !listconcat(param_types, flags),
         !listconcat(intr_properties,
                     !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
+                        ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                               !if(!lt(i, !sub(!size(flags),
+                                              !size(trailing_flag_defaults))),
+                                   NoDefault,
+                                   trailing_flag_defaults[
+                                     !sub(i, !sub(!size(flags),
+                                                 !size(trailing_flag_defaults)))])>)),
+        name> {
+  assert !le(!size(trailing_flag_defaults), !size(flags)),
+         "number of trailing flag defaults exceeds number of flags";
+}
 
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
@@ -3723,7 +3733,7 @@ foreach sparse = [0, 1] in {
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
-                mma.intr_name>;
+                mma.intr_name, [DefaultValue<0>]>;
       } // ashift
     } // scale_d
   } // space
@@ -3767,7 +3777,8 @@ foreach sparse = [0, 1] in {
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
-                                  intrinsic_properties, mma.intr_name>;
+                                  intrinsic_properties, mma.intr_name,
+                                  [DefaultValue<0>]>;
         } // ashift
       } // scale_d
     } // cta_group
@@ -3802,7 +3813,7 @@ foreach sparse = [0, 1] in {
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
-            mma.intr_name>;
+            mma.intr_name, [DefaultValue<0>]>;
         }
       } // scale_vec_size
     } // kind
