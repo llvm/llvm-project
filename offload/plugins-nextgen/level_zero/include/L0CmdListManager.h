@@ -200,7 +200,10 @@ public:
                            "zeCommandListAppendHostFunction extension is not "
                            "available on this driver");
     std::lock_guard<std::mutex> Lock(Mtx);
-    CALL_ZE_RET_ERROR(Context.CommandListAppendHostFunction, CmdList,
+
+    // Alias for better error reporting
+    auto zeCommandListAppendHostFunction = Context.CommandListAppendHostFunction;
+    CALL_ZE_RET_ERROR(zeCommandListAppendHostFunction, CmdList,
                       reinterpret_cast<void *>(Callback), UserData,
                       /*pReserved*/ nullptr, SignalEvent, NumWaitEvents,
                       WaitEvents);
