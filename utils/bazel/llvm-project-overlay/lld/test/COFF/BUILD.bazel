@@ -6,7 +6,7 @@ licenses(["notice"])
     lit_test(
         name = "%s.test" % src,
         srcs = [src],
-        data = glob(["Inputs/**"]) + [
+        data = glob(["**/Inputs/**"]) + [
             "lit.local.cfg",
             "//lld/test:lit_data",
         ] + (["ignore4217.yaml"] if src == "ignore-many.test" else []),
