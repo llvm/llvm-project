@@ -31,8 +31,6 @@ entry:
   ret %pair %iv1
 }
 
-; The four i32 adds and the four-element insertvalue chain merge into one
-; <4 x i32> add stored through the vec2struct stack slot.
 define %quad @insertvalue_elt_size_i32x4(ptr %a, ptr %b) {
 ; CHECK-LABEL: define %quad @insertvalue_elt_size_i32x4(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
