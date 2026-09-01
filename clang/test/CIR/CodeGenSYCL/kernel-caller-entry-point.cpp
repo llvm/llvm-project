@@ -17,9 +17,11 @@
 
 // On AMDGPU and NVPTX, the kernel caller entry point uses the target's device
 // kernel calling convention.
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -emit-cir %s -o %t-amdgcn.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports byref (IndirectAliased) kernel arguments on AMDGPU.
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t-amdgcn.cir
 // RUN: FileCheck --input-file=%t-amdgcn.cir %s -check-prefix=CIR-AMDGCN
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -emit-llvm %s -o %t-amdgcn-cir.ll
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-amdgcn-cir.ll
 // RUN: FileCheck --input-file=%t-amdgcn-cir.ll %s -check-prefix=LLVM-OGCG-AMDGCN
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple amdgpu-amd-amdhsa -emit-llvm %s -o %t-amdgcn.ll
 // RUN: FileCheck --input-file=%t-amdgcn.ll %s -check-prefix=LLVM-OGCG-AMDGCN
