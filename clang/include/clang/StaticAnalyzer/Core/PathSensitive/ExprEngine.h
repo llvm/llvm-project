@@ -679,7 +679,7 @@ public:
 
   std::optional<std::pair<SVal, QualType>>
   resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
-                             ExplodedNode *Pred);
+                             ExplodedNode *Pred) const;
 
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const StackFrame *SF, QualType T,

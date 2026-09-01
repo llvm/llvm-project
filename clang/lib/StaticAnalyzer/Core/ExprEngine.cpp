@@ -3020,43 +3020,43 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
 
 std::optional<std::pair<SVal, QualType>>
 ExprEngine::resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
-                                       ExplodedNode *Pred) {
-  ProgramStateRef state = Pred->getState();
+                                       ExplodedNode *Pred) const {
+  ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
   const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
   const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-  if (AMgr.options.ShouldInlineLambdas && DeclRefEx &&
-      DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
-      MD->getParent()->isLambda()) {
-    // Lookup the field of the lambda.
-    const CXXRecordDecl *CXXRec = MD->getParent();
-    llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
-    FieldDecl *LambdaThisCaptureField;
-    CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
+  if (!(AMgr.options.ShouldInlineLambdas && DeclRefEx &&
+        DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
+        MD->getParent()->isLambda()))
+    return std::nullopt;
+  // Lookup the field of the lambda.
+  const CXXRecordDecl *CXXRec = MD->getParent();
+  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+  FieldDecl *LambdaThisCaptureField;
+  CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
 
-    // Sema follows a sequence of complex rules to determine whether the
-    // variable should be captured.
-    if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-      if (MD->isImplicitObjectMemberFunction()) {
-        Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
-        SVal CXXThisVal = state->getSVal(CXXThis);
-        return {{state->getLValue(FD, CXXThisVal), FD->getType()}};
+  // Sema follows a sequence of complex rules to determine whether the
+  // variable should be captured.
+  if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
+    if (MD->isImplicitObjectMemberFunction()) {
+      Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
+      SVal CXXThisVal = State->getSVal(CXXThis);
+      return {{State->getLValue(FD, CXXThisVal), FD->getType()}};
+    }
+    const ParmVarDecl *PVD = MD->getParamDecl(0);
+    if (const Expr *CallSite = SF->getCallSite()) {
+      const ParamVarRegion *PVR =
+          MRMgr.getParamVarRegion(CallSite, /*Index=*/0, SF);
+      const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
+      if (PVD->getType()->isReferenceType()) {
+        State =
+            State->bindLoc(loc::MemRegionVal(PVR),
+                           State->getSVal(SelfArgExpr, SF->getParent()), SF);
+        SVal ParamSVal = State->getSVal(loc::MemRegionVal(PVR));
+        return {{State->getLValue(FD, ParamSVal), FD->getType()}};
       }
-      const ParmVarDecl *PVD = MD->getParamDecl(0);
-      if (const Expr *CallSite = SF->getCallSite()) {
-        const ParamVarRegion *PVR =
-            MRMgr.getParamVarRegion(CallSite, /*Index=*/0, SF);
-        const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
-        if (PVD->getType()->isReferenceType()) {
-          state =
-              state->bindLoc(loc::MemRegionVal(PVR),
-                             state->getSVal(SelfArgExpr, SF->getParent()), SF);
-          SVal ParamSVal = state->getSVal(loc::MemRegionVal(PVR));
-          return {{state->getLValue(FD, ParamSVal), FD->getType()}};
-        }
-        return {{state->getLValue(FD, loc::MemRegionVal(PVR)), FD->getType()}};
-      }
+      return {{State->getLValue(FD, loc::MemRegionVal(PVR)), FD->getType()}};
     }
   }
   return std::nullopt;
