@@ -7,10 +7,7 @@
 // CHECK-NEXT:   GICXXPred_MI_Predicate_and_or_pat = GICXXPred_Invalid + 1,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_fadd_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan,
-// CHECK-NEXT:   GICXXPred_MI_Predicate_fma_contract,
-// CHECK-NEXT:   GICXXPred_MI_Predicate_fmad_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_fmul_contract,
-// CHECK-NEXT:   GICXXPred_MI_Predicate_fpround_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_fsub_contract,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_mul_pat,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
@@ -28,13 +25,7 @@
 // CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_ffloor_nnan: {
 // CHECK:      return MI.getFlag(MachineInstr::FmNoNans);
-// CHECK:    case GICXXPred_MI_Predicate_fma_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract);
-// CHECK:    case GICXXPred_MI_Predicate_fmad_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fmul_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract);
-// CHECK:    case GICXXPred_MI_Predicate_fpround_contract: {
 // CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fsub_contract: {
 // CHECK:      return MI.getFlag(MachineInstr::FmContract);

@@ -1367,18 +1367,6 @@ def fadd_contract : ContractablePatFrag<(ops node:$a, node:$b),
 def fsub_contract : ContractablePatFrag<(ops node:$a, node:$b),
                                         (fsub node:$a, node:$b)>;
 
-// An 'fma' node the target may contract
-def fma_contract : ContractablePatFrag<(ops node:$a, node:$b, node:$c),
-                                       (fma node:$a, node:$b, node:$c)>;
-
-// An 'fmad' node the target may contract
-def fmad_contract : ContractablePatFrag<(ops node:$a, node:$b, node:$c),
-                                        (fmad node:$a, node:$b, node:$c)>;
-
-// An 'fpround' node the target may contract
-def fpround_contract : ContractablePatFrag<(ops node:$src),
-                                           (fpround node:$src)>;
-
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
