@@ -1060,9 +1060,6 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     return Result;
   }
   case scAddRecExpr: {
-    // AddRecs that can be expanded from within VPlan are exclusively those in
-    // the Plan's entry. Those outside this scope must be expanded via
-    // VPExpandSCEV.
     auto *AR = cast<SCEVAddRecExpr>(S);
     VPlan &Plan = Builder.getPlan();
     [[maybe_unused]] BasicBlock *PH =
@@ -1070,11 +1067,9 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     assert(SE.DT.dominates(AR->getLoop()->getHeader(), PH) &&
            "can only expand AddRecs for loops outside VPlan's scope");
 
-    // We need a canonical IV to re-use in the Plan's entry: we cannot create
-    // a phi in the Plan's entry, which would be required in its absence or if
-    // AR is non-affine, because its predecessors are not modeled. A canonical
-    // IV has start 0, and step 1, and hence cannot be pointer type.
-    if (!AR->isAffine() || AR->getType()->isPointerTy())
+    // Try to expand AR by re-using an existing canonical IV in the Plan's
+    // entry. A canonical IV must be affine and integer typed.
+    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
     auto FoundCanIV =
         find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
