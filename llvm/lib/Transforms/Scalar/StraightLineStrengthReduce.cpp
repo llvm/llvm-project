@@ -127,6 +127,14 @@ static cl::opt<bool>
 static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
                                  cl::desc("Use TTI to compute RP for SLSR-RP"));
 
+// RPFilter targets one pathological shape: a block holding many distinct
+// bases. Each basis contributes one extended live range no matter how many
+// candidates are rewritten against it, so it is the number of distinct bases,
+// not the number of candidates, that tracks how many new concurrent live
+// ranges SLSR would create. Below this count no block in the function can
+// exhibit the pathology, and the liveness and pressure analyses are skipped.
+static constexpr unsigned MinDistinctBasesToFilter = 16;
+
 static cl::opt<bool> EnableRPFilter(
     "slsr-rp-filter", cl::init(true), cl::Hidden,
     cl::desc("SLSR: skip rewrites in blocks where they would push register "
@@ -1411,22 +1419,28 @@ public:
            const TargetTransformInfo *TTI)
       : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
 
-  // Candidates whose rewrite would push their block's register pressure past
-  // what the target can allocate are added to \p ToSkipRewrite.
-  void run(DenseSet<Instruction *> &ToSkipRewrite) {
-    buildBBToNumCandsAndBasises(PickedCandidateMap);
-    // TODO: 16 is an arbitrary threshold.
-    bool HaveLiveness = MaxNumBasisesInBB > 16;
-    if (HaveLiveness)
-      buildBBToLiveness(*F); // Do liveness analysis.
+  // Return the candidates whose rewrite would push their block's register
+  // pressure past what the target can allocate.
+  DenseSet<const Instruction *> run() {
+    DenseSet<const Instruction *> InstsToSkip;
+    if (!EnableRPFilter || PickedCandidateMap.empty())
+      return InstsToSkip;
 
-    // The pressure numbers below only mean anything once liveness has been
-    // computed, and without a budget there is nothing to compare them to.
-    std::optional<unsigned> Budget;
-    if (EnableRPFilter && HaveLiveness)
-      Budget = getRegisterBudget();
+    // Without a budget there is nothing to compare the pressure against, so
+    // check for one before paying for the liveness and pressure analyses.
+    std::optional<unsigned> Budget = getRegisterBudget();
+    if (!Budget)
+      return InstsToSkip;
+
+    buildBBToNumCandsAndBasises(PickedCandidateMap);
+    if (MaxNumBasisesInBB <= MinDistinctBasesToFilter)
+      return InstsToSkip;
+
+    // Compute live-in and live-out of each BB in CFG
+    buildBBToLiveness(*F);
 
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
+    SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
       const BlockLiveness &BL = getLiveness(&BB);
       auto [MaxRP, MaxRPWithSLSR] =
@@ -1434,9 +1448,24 @@ public:
       DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
                            << MaxRPWithSLSR << ")" << "\n");
 
-      if (Budget && rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
-        skipRewritesInBlock(BB, ToSkipRewrite);
-    }
+      if (!rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
+        continue;
+
+      DEBUG_SLSR_RP(dbgs() << "Skipping BB from SLSR: " << BB.getName()
+                           << "\n");
+      ++NumRPFilteredBlocks;
+      BBsToSkip.insert(&BB);
+    } // Done with BBs
+
+    // One pass over the candidates rather than over the instructions of every
+    // skipped block. A skipped block is one of the larger blocks in the
+    // function, while the candidate map is small by comparison.
+    for (const auto &It : PickedCandidateMap)
+      if (BBsToSkip.contains(It.first->getParent()) &&
+          InstsToSkip.insert(It.first).second)
+        ++NumRPFilteredCandidates;
+
+    return InstsToSkip;
   }
 
 private:
@@ -1494,20 +1523,6 @@ private:
     // Already over budget. SLSR can still lower pressure here, so only refuse
     // rewrites that make it meaningfully worse.
     return After > Before && After - Before > SLSRRPAbsDelta;
-  }
-
-  void skipRewritesInBlock(const BasicBlock &BB,
-                           DenseSet<Instruction *> &ToSkipRewrite) {
-    ++NumRPFilteredBlocks;
-    DEBUG_SLSR_RP(dbgs() << "RP filter: skipping rewrites in " << BB.getName()
-                         << "\n");
-    for (const Instruction &I : BB) {
-      auto It = PickedCandidateMap.find(&I);
-      if (It == PickedCandidateMap.end())
-        continue;
-      if (ToSkipRewrite.insert(It->first).second)
-        ++NumRPFilteredCandidates;
-    }
   }
 
   std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
@@ -1890,10 +1905,8 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // rewriteCandidate mutates it: rewriting inserts instructions and calls
   // replaceAllUsesWith, which would invalidate the liveness and pressure
   // analyses the filter relies on.
-  DenseSet<Instruction *> ToSkipRewrite;
-
   RPFilter RPFilter(&F, PickedCandidateMap, TTI);
-  RPFilter.run(ToSkipRewrite);
+  DenseSet<const Instruction *> ToSkipRewrite = RPFilter.run();
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
