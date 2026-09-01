@@ -212,8 +212,8 @@ exit:
   ret i32 %rdx.next
 }
 
-define i8 @dead_truncated_induction() {
-; CHECK-LABEL: define i8 @dead_truncated_induction() {
+define i8 @truncated_induction() {
+; CHECK-LABEL: define i8 @truncated_induction() {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
@@ -263,7 +263,7 @@ define i8 @dead_truncated_induction() {
 ; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[TRUNC]], %[[LOOP]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
-; CHECK-IL2-LABEL: define i8 @dead_truncated_induction() {
+; CHECK-IL2-LABEL: define i8 @truncated_induction() {
 ; CHECK-IL2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-IL2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-IL2:       [[VECTOR_PH]]:
