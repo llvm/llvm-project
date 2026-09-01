@@ -23,22 +23,15 @@
 
 using namespace llvm;
 
-PrintModulePass::PrintModulePass()
-    : OS(dbgs()), ShouldPreserveUseListOrder(false), EmitSummaryIndex(false),
-      ShouldRenumberMetadata(false) {}
+PrintModulePass::PrintModulePass() : OS(dbgs()) {}
 PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
                                  bool ShouldPreserveUseListOrder,
-                                 bool EmitSummaryIndex,
-                                 bool ShouldRenumberMetadata)
+                                 bool EmitSummaryIndex)
     : OS(OS), Banner(Banner),
       ShouldPreserveUseListOrder(ShouldPreserveUseListOrder),
-      EmitSummaryIndex(EmitSummaryIndex),
-      ShouldRenumberMetadata(ShouldRenumberMetadata) {}
+      EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (ShouldRenumberMetadata)
-    M.renumberMetadataForAssembly();
-
   if (llvm::isFunctionInPrintList("*")) {
     if (!Banner.empty())
       OS << Banner << "\n";
@@ -75,10 +68,9 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
   if (isFunctionInPrintList(F.getName())) {
-    if (forcePrintModuleIR()) {
-      OS << Banner << " (function: " << F.getName() << ")\n";
-      F.getParent()->print(OS, nullptr);
-    } else
+    if (forcePrintModuleIR())
+      OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();
+    else
       OS << Banner << '\n' << static_cast<Value &>(F);
   }
 
