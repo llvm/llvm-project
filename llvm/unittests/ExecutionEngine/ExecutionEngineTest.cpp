@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -22,22 +21,6 @@ using namespace llvm;
 
 namespace {
 
-class TestExecutionEngine : public ExecutionEngine {
-public:
-  TestExecutionEngine(std::unique_ptr<Module> M)
-      : ExecutionEngine(std::move(M)) {}
-
-  GenericValue runFunction(Function *F,
-                           ArrayRef<GenericValue> ArgValues) override {
-    return GenericValue();
-  }
-  void *getPointerToNamedFunction(StringRef Name,
-                                  bool AbortOnFailure = true) override {
-    return nullptr;
-  }
-  void *getPointerToFunction(Function *F) override { return nullptr; }
-};
-
 class ExecutionEngineTest : public testing::Test {
 private:
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
@@ -46,16 +29,20 @@ protected:
   ExecutionEngineTest() {
     auto Owner = std::make_unique<Module>("<main>", Context);
     M = Owner.get();
-    Engine = std::make_unique<TestExecutionEngine>(std::move(Owner));
+    Engine.reset(EngineBuilder(std::move(Owner)).setErrorStr(&Error).create());
   }
 
-  void SetUp() override { ASSERT_TRUE(Engine.get() != nullptr); }
+  void SetUp() override {
+    ASSERT_TRUE(Engine.get() != nullptr) << "EngineBuilder returned error: '"
+      << Error << "'";
+  }
 
   GlobalVariable *NewExtGlobal(Type *T, const Twine &Name) {
     return new GlobalVariable(*M, T, false,  // Not constant.
                               GlobalValue::ExternalLinkage, nullptr, Name);
   }
 
+  std::string Error;
   LLVMContext Context;
   Module *M;  // Owned by ExecutionEngine.
   std::unique_ptr<ExecutionEngine> Engine;
