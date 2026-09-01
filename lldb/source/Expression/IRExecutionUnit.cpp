@@ -277,8 +277,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   llvm::EngineBuilder builder(std::move(m_module_up));
   llvm::Triple triple(m_module->getTargetTriple());
 
-  builder.setEngineKind(llvm::EngineKind::JIT)
-      .setErrorStr(&error_string)
+  builder.setErrorStr(&error_string)
       .setRelocationModel(triple.isOSBinFormatMachO() ? llvm::Reloc::PIC_
                                                       : llvm::Reloc::Static)
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
