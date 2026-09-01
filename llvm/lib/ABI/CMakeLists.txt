@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMABI
   TargetInfo.cpp
   IRTypeMapper.cpp
   Targets/AArch64.cpp
+  Targets/AMDGPU.cpp
   Targets/BPF.cpp
   Targets/X86.cpp
 
