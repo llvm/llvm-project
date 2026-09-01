@@ -121,6 +121,45 @@ template struct S<1>; // expected-note {{in instantiation}}
 
 }
 
+namespace GH218323 {
+template <auto V> struct W {
+  static constexpr auto value = V;
+  template <class T> auto f(T) -> W<value(T::value)>; // #gh218323-f
+};
+template struct W<42>;
+
+template <auto V> struct WPtr {
+  static constexpr int arr[1] = {V};
+  static constexpr const int *p = arr;
+  template <class T> auto f(T) -> WPtr<p(T::value)>;
+};
+template struct WPtr<42>;
+
+struct HasValue { static constexpr int value = 1; };
+void use(W<42> w) {
+  w.f(HasValue{}); // expected-error {{no matching member function for call to 'f'}}
+                   // expected-note@#gh218323-f {{candidate template ignored: substitution failure [with T = HasValue]: called object type 'int' is not a function or function pointer}}
+}
+
+template <auto V>
+struct ConstantWrapper {
+  static constexpr auto value = V;
+  template <class... Ts>
+  constexpr auto operator()(Ts... args) const -> ConstantWrapper<value(Ts::value...)> {
+    return {};
+  }
+};
+
+struct Plus {
+  template <class T, class U>
+  constexpr auto operator()(T&& t, U&& u) const -> decltype(static_cast<T&&>(t) + static_cast<U&&>(u)) {
+    return static_cast<T&&>(t) + static_cast<U&&>(u);
+  }
+};
+
+constexpr auto cwv = ConstantWrapper<Plus{}>{}(ConstantWrapper<42>{}, ConstantWrapper<17>{});
+static_assert(cwv.value == 59, "");
+}
 
 #endif
 #if __cplusplus >= 201702L

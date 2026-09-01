@@ -614,6 +614,10 @@ features cannot lower the translation-unit ABI level;
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
 
+- Fixed a crash when classifying a dependent call whose callee has already
+  been substituted to a value of non-callable type, such as a call to a
+  non-type template parameter member in a trailing return type. (#GH218323)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
