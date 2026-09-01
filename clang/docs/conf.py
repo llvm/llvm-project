@@ -213,17 +213,7 @@ for name in os.listdir(command_guide_path):
     # Otherwise, automatically extract the description.
     file_subpath = os.path.join(command_guide_subpath, name)
     with open(os.path.join(command_guide_path, name)) as f:
-        title = f.readline().rstrip("\n")
-        header = f.readline().rstrip("\n")
-
-        if len(header) != len(title):
-            print(
-                (
-                    "error: invalid header in %r (does not match title)"
-                    % (file_subpath,)
-                ),
-                file=sys.stderr,
-            )
+        title = f.readline().removeprefix("# ").rstrip("\n")
         if " - " not in title:
             print(
                 (
