@@ -80,6 +80,26 @@ static bool isNullOrUndef(const Constant *C) {
   return true;
 }
 
+/// Return true if the constant contains any undef or poison sub-elements,
+/// recursively traversing aggregate types. PoisonValue is a subclass of
+/// UndefValue, so isa<UndefValue> catches both.
+///
+/// Such constants must not be placed in mergeable sections: the ELF linker
+/// merges constants in those sections by comparing byte content, but undef/
+/// poison bytes are emitted as zeros, making them byte-identical to a
+/// zeroinitializer constant. Allowing this merge would violate unnamed_addr
+/// semantics. See https://github.com/llvm/llvm-project/issues/220091.
+static bool containsUndefOrPoison(const Constant *C) {
+  if (isa<UndefValue>(C))
+    return true;
+  if (!isa<ConstantAggregate>(C))
+    return false;
+  for (const auto *Operand : C->operand_values())
+    if (containsUndefOrPoison(cast<Constant>(Operand)))
+      return true;
+  return false;
+}
+
 static bool isSuitableForBSS(const GlobalVariable *GV) {
   const Constant *C = GV->getInitializer();
 
@@ -314,6 +334,18 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // into a mergable section: just drop it into the general read-only
       // section instead.
       if (!GVar->hasGlobalUnnamedAddr())
+        return SectionKind::getReadOnly();
+
+      // Do not place constants whose initializer contains undef or poison
+      // sub-elements into mergeable sections. The ELF linker deduplicates
+      // constants in such sections by comparing raw byte content, but undef
+      // and poison bytes are both emitted as zeros. This would make a constant
+      // like `<{ [4 x i8] undef, [4 x i8] zeroinitializer }>` byte-identical
+      // to `zeroinitializer`, allowing the linker to merge them to the same
+      // address even though they are not semantically equivalent. Placing the
+      // constant in non-mergeable .rodata prevents this incorrect merge.
+      // See https://github.com/llvm/llvm-project/issues/220091.
+      if (containsUndefOrPoison(C))
         return SectionKind::getReadOnly();
 
       // If initializer is a null-terminated string, put it in a "cstring"
