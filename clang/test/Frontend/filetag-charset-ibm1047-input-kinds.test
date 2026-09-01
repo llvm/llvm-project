@@ -1,0 +1,22 @@
+// Test filetag-based charset conversion with various input source language
+// specifications. Whether character encoding conversion occurs depends on the
+// source language. Files are tagged with a CCSID via chtag so that conversion
+// is driven by the filetag.
+
+// Additional test design points:
+// - Use FileCheck instead of `-verify` in case `-verify` affects the behaviour.
+
+// REQUIRES: system-zos
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: cp %S/Inputs/InputCharsetIBM1047/warn.h %t/warn.h
+// RUN: chtag -tc 1047 %t/warn.h
+// RUN: cp %S/Inputs/InputCharsetIBM1047/static_assert.i %t/static_assert.i
+// RUN: chtag -tc 1047 %t/static_assert.i
+
+// Test assembler-with-cpp using `#warning`. Conversion is expected.
+// RUN: %clang_cc1 -E -o /dev/null -x assembler-with-cpp %t/warn.h 2>&1 | FileCheck --check-prefix=CHECK-HELLO %s
+// CHECK-HELLO: Hello, world!
+
+// Test cpp-output using `_Static_assert`. Conversion is expected.
+// RUN: not %clang_cc1 -fsyntax-only -x cpp-output %t/static_assert.i 2>&1 | FileCheck --check-prefix=CHECK-HELLO %s
