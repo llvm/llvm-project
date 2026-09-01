@@ -13,6 +13,8 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
+#include "llvm/Support/Format.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
@@ -36,6 +38,11 @@ StringLiteral LgkmcntName = "Lgkmcnt";
 
 StringLiteral LoadcntName = "Loadcnt";
 StringLiteral DscntName = "Dscnt";
+
+const char AsyncStageImmPrefix = '.';
+constexpr StringLiteral AsyncStageDelim(".");
+constexpr StringLiteral ReservedStagePrefix("RES");
+constexpr StringLiteral AllStages("AllStages");
 
 void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
@@ -109,10 +116,44 @@ void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(uint64_t Imm,
     OS << AllOff;
 }
 
+void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
+                                                raw_ostream &OS) const {
+  if (!AMDGPU::AsyncStages::isValidMask(Imm)) {
+    OS << Imm;
+    return;
+  }
+
+  OS << AsyncStageImmPrefix;
+  AMDGPU::AsyncStages Mask(Imm);
+  // The zero mask names every stage. Spell that out rather than printing an
+  // empty list. The saturated mask means the same thing but is a different
+  // immediate, so it keeps its spelled-out list to stay round-trippable.
+  if (Mask.none()) {
+    OS << AllStages;
+    return;
+  }
+
+  // Reserved stages have no meaningful name, collect them into a single
+  // hex bitmask instead.
+  ListSeparator Delim(AsyncStageDelim);
+  for (AMDGPU::AsyncStages S : Mask - AMDGPU::AsyncStages::RESERVED)
+    OS << Delim << S.getName();
+  if (AMDGPU::AsyncStages Reserved = Mask & AMDGPU::AsyncStages::RESERVED)
+    OS << Delim << ReservedStagePrefix
+       << format_hex_no_prefix(Reserved.value(), 1);
+}
+
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
 
   switch (MI.getOpcode()) {
+  case AMDGPU::ASYNCMARK:
+  case AMDGPU::WAIT_ASYNCMARK:
+    if (OpIdx == MI.getNumExplicitOperands() - 1u)
+      printAsyncStageMaskImm(Imm, OS);
+    else
+      MIRFormatter::printImm(OS, MI, OpIdx, Imm);
+    break;
   case AMDGPU::S_WAITCNT:
   case AMDGPU::S_WAITCNT_soft:
     printSWaitcntImm(Imm, OS);
@@ -151,6 +192,14 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
     return parseSWaitAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_DELAY_ALU:
     return parseSDelayAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+  case AMDGPU::ASYNCMARK:
+    if (OpIdx == 0)
+      return parseAsyncStageMaskImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+    break;
+  case AMDGPU::WAIT_ASYNCMARK:
+    if (OpIdx == 1)
+      return parseAsyncStageMaskImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+    break;
   default:
     break;
   }
@@ -485,6 +534,58 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     return ErrorCallback(Src.begin(), "Could not decode delay1");
 
   Imm = Imm | (Skip << 4) | (Delay1 << 7);
+  return false;
+}
+
+// Parse the async stage mask of asyncmark/wait_asyncmark. The mnemonic names
+// the stages the mask names.
+bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  if (!Src.consume_front(AsyncStageImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <StageName>");
+
+  if (Src == AllStages) {
+    Imm = 0;
+    return false;
+  }
+
+  AMDGPU::AsyncStages StageMask;
+  while (!Src.empty()) {
+    StringRef Name = Src.substr(0, Src.find(AsyncStageDelim));
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(AsyncStageDelim);
+
+    // The reserved stages arrive together as one hex bitmask.
+    StringRef Bits = Name;
+    if (Bits.consume_front(ReservedStagePrefix)) {
+      uint32_t Mask;
+      if (Bits.getAsInteger(16, Mask) || Bits.empty() || !Mask)
+        return ErrorCallback(NamePos, "invalid async stage mask");
+      if (!AMDGPU::AsyncStages::isValidMask(Mask))
+        return ErrorCallback(NamePos, "async stage mask out of range");
+      if (Mask & ~AMDGPU::AsyncStages::RESERVED)
+        return ErrorCallback(NamePos,
+                             "async stage mask names a non-reserved stage");
+      StageMask |= Mask;
+      continue;
+    }
+
+    auto Stages = AMDGPU::AsyncStages(AMDGPU::AsyncStages::ALL);
+    auto It = find_if(
+        Stages, [Name](AMDGPU::AsyncStages S) { return Name == S.getName(); });
+    if (It == Stages.end())
+      return ErrorCallback(NamePos, "invalid async stage name");
+    StageMask |= *It;
+  }
+
+  Imm = StageMask.value();
   return false;
 }
 
