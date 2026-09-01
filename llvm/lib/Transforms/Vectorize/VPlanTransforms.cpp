@@ -1633,21 +1633,29 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+  SetVector<VPRecipeBase *> Worklist;
+  PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
-      if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        if (VPValue *New = simplifyRecipe(Def)) {
-          if (New != Def) {
-            // Replace the recipe with a new one.
-            Def->replaceAllUsesWith(New);
-            Def->eraseFromParent();
-          } else if (vputils::isDeadRecipe(R)) {
-            // Recipe was modified - it may be dead now.
-            Def->eraseFromParent();
-          }
-        }
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT))
+    Worklist.insert_range(make_pointer_range(reverse(*VPBB)));
+
+  while (!Worklist.empty()) {
+    auto *Def = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
+    if (!Def)
+      continue;
+    if (VPValue *New = simplifyRecipe(Def)) {
+      if (New != Def) {
+        // Replace the recipe with a new one.
+        Def->replaceAllUsesWith(New);
+        Def->eraseFromParent();
+        if (VPRecipeBase *NewR = New->getDefiningRecipe())
+          Worklist.insert(NewR);
+        // TODO: Append users to the worklist.
+      } else if (vputils::isDeadRecipe(*Def)) {
+        // Recipe was modified - it may be dead now.
+        Def->eraseFromParent();
+      }
+    }
   }
 }
 
