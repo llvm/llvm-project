@@ -212,6 +212,24 @@ define <8 x i16> @vzip2_undef_012(<8 x i16> %A, <8 x i16> %B) nounwind {
   ret <8 x i16> %s
 }
 
+define <8 x i8> @vzip1_poison_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: vzip1_poison_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8b v0, v0, v0
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+  ret <8 x i8> %s
+}
+
+define <8 x i8> @vzip2_poison_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: vzip2_poison_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2.8b v0, v0, v0
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+  ret <8 x i8> %s
+}
+
 define <16 x i8> @combine_v16i8(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v16i8:
 ; CHECK:       // %bb.0:
@@ -391,9 +409,9 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip1:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    fcmgt.4s v0, v0, #0.0
-; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-GI-NEXT:    fmov.4s v2, #1.00000000
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI29_0]
 ; CHECK-GI-NEXT:    mov.s w9, v0[1]
 ; CHECK-GI-NEXT:    mov.s w10, v0[2]
 ; CHECK-GI-NEXT:    mov.s w11, v0[3]
@@ -448,8 +466,8 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    mov.s w10, v0[3]
 ; CHECK-GI-NEXT:    mov.b v0[1], w8
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI30_0]
 ; CHECK-GI-NEXT:    mov.b v0[2], w9
 ; CHECK-GI-NEXT:    mov.b v0[3], w10
 ; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
@@ -495,8 +513,8 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-GI-LABEL: shuffle_zip3:
 ; CHECK-GI:       // %bb.0: // %bb
 ; CHECK-GI-NEXT:    cmgt.4s v0, v0, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI31_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI31_0]
 ; CHECK-GI-NEXT:    mov.s w9, v0[1]
 ; CHECK-GI-NEXT:    mov.s w10, v0[2]
 ; CHECK-GI-NEXT:    mov.s w11, v0[3]
