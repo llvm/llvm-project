@@ -356,7 +356,7 @@ std::optional<std::unique_ptr<Module>> unwrapAndSaveClone(IRUnitRef IR) {
     return CloneModule(*OrigM);
   }
 
-  if (const auto *_ = dyn_cast<Module>(IR)) {
+  if (isa<Module>(IR)) {
     return CloneModule(*OrigM);
   }
 
@@ -378,11 +378,11 @@ std::optional<std::unique_ptr<Module>> unwrapAndSaveClone(IRUnitRef IR) {
     return cloneFunctionsIntoNewModule(FuncsToSave);
   }
 
-  if (const auto *_ = dyn_cast<Loop>(IR)) {
+  if (isa<Loop>(IR)) {
     return std::nullopt;
   }
 
-  if (const auto *_ = dyn_cast<MachineFunction>(IR)) {
+  if (isa<MachineFunction>(IR)) {
     return std::nullopt;
   }
 
@@ -2584,10 +2584,8 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
         // Cloning a Module is significantly faster than serializing to a string
         // in most situations.
-        auto ClonedModule = unwrapAndSaveClone(IR);
-
-        if (ClonedModule.has_value()) {
-          SavedModule = std::move(ClonedModule.value());
+        if (auto Module = unwrapAndSaveClone(IR)) {
+          SavedModule = std::move(*Module);
         } else {
           // We only rely on SavedString for MachineFunctions & Loops
           unwrapAndPrint(OS, IR);
