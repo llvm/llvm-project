@@ -69,9 +69,9 @@ public:
       return Result;
     }
 
-    if (!api_helper::canCall<Fn>()) {
+    if (!api_helper::canCall<Fn>())
       return static_cast<ReturnTy>(UnsupportedValue);
-    }
+
     auto Result = Fn(std::forward<Args>(ArgsList)...);
 
     return Result;

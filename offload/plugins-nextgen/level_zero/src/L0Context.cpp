@@ -86,11 +86,10 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  if (!CommandListAppendHostFunction.available()) {
+  if (!CommandListAppendHostFunction.available())
     // Try again with a name used in compute runtime 25.35 to 25.48
     CommandListAppendHostFunction.tryLoadingExperimental(
         zeDriver, "zexCommandListAppendHostFunction");
-  }
 
   DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
       Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
