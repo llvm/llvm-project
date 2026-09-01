@@ -640,7 +640,9 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
           << (New->getTemplateSpecializationKind() ==TSK_ExplicitSpecialization)
           << New->getDeclName()
           << NewParam->getDefaultArgRange();
-      } else if (New->getDeclContext()->isDependentContext()) {
+      } else if (New->getDeclContext()
+                     ->getEnclosingNonExpansionStatementContext()
+                     ->isDependentContext()) {
         // C++ [dcl.fct.default]p6 (DR217):
         //   Default arguments for a member function of a class template shall
         //   be specified on the initial declaration of the member function
@@ -2076,9 +2078,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   - using-enum-declaration
       continue;
 
-    case Decl::CXXExpansionStmt:
-      continue;
-
     case Decl::Typedef:
     case Decl::TypeAlias: {
       //   - typedef declarations and alias-declarations that do not define
@@ -2265,15 +2264,34 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     //   - null statements,
     return true;
 
-  case Stmt::DeclStmtClass:
+  case Stmt::DeclStmtClass: {
+    auto *DS = cast<DeclStmt>(S);
+
+    // Expansion statement 'declarations' have substatements, so we need to
+    // handle them separately.
+    if (DS->isSingleDecl()) {
+      if (auto *ESD = dyn_cast<CXXExpansionStmtDecl>(DS->getSingleDecl())) {
+        // Don't check unexpanded expansion statements.
+        if (!ESD->getInstantiations())
+          return true;
+        for (auto *BodyIt : ESD->getInstantiations()->getInstantiations()) {
+          if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
+                                          Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+            return false;
+        }
+        return true;
+      }
+    }
+
     //   - static_assert-declarations
     //   - using-declarations,
     //   - using-directives,
     //   - typedef declarations and alias-declarations that do not define
     //     classes or enumerations,
-    if (!CheckConstexprDeclStmt(SemaRef, Dcl, cast<DeclStmt>(S), Cxx1yLoc, Kind))
+    if (!CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind))
       return false;
     return true;
+  }
 
   case Stmt::ReturnStmtClass:
     //   - and exactly one return statement;

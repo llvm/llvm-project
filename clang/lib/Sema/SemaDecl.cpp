@@ -6385,6 +6385,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
   if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
+    Cur = Cur->getEnclosingNonExpansionStatementContext();
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -7513,7 +7514,7 @@ static bool hasParsedAttr(Scope *S, const Declarator &PD,
 }
 
 bool Sema::adjustContextForLocalExternDecl(DeclContext *&DC) {
-  if (!DC->getEnclosingNonExpansionStatementContext()->isFunctionOrMethod())
+  if (!DC->isFunctionOrMethod())
     return false;
 
   // If this is a local extern function or variable declared within a function
