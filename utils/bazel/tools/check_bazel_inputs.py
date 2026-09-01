@@ -12,7 +12,6 @@ from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
 from typing import Optional, Set
 
-
 BAZEL_REPOSITORY = "@llvm-project"
 SUBTREES = [
     # TODO: Add more directories as we support most of their files in bazel.
@@ -23,7 +22,7 @@ SUBTREES = [
 IGNORED_GLOBS = [
     "**/*.md",
     "**/*.txt",
-    "**/*.TXT", # Both cases are used
+    "**/*.TXT",  # Both cases are used
     "**/.clang-format",
     "**/.clang-tidy",
     "**/.gitignore",
@@ -32,8 +31,8 @@ IGNORED_GLOBS = [
     "**/docs/**",
     "**/utils/**",
     "clang/www/**",
-    "lld/test/Unit/lit.cfg.py", # cmake shims
-    "lld/test/Unit/lit.site.cfg.py.in", # cmake shims
+    "lld/test/Unit/lit.cfg.py",  # cmake shims
+    "lld/test/Unit/lit.site.cfg.py.in",  # cmake shims
 ]
 
 
@@ -46,9 +45,8 @@ def source_files(project_root: Path) -> Set[str]:
         for path in subtree_root.rglob("*"):
             relative_path = path.relative_to(project_root)
             source_path = relative_path.as_posix()
-            if (
-                path.is_file()
-                and not any(fnmatch(source_path, glob) for glob in IGNORED_GLOBS)
+            if path.is_file() and not any(
+                fnmatch(source_path, glob) for glob in IGNORED_GLOBS
             ):
                 files.add(source_path)
     return files
@@ -107,9 +105,7 @@ def main() -> int:
         return 1
 
     subtree_word = "subtree" if len(SUBTREES) == 1 else "subtrees"
-    print(
-        f"All {len(files)} files in {len(SUBTREES)} {subtree_word} are Bazel inputs."
-    )
+    print(f"All {len(files)} files in {len(SUBTREES)} {subtree_word} are Bazel inputs.")
     return 0
 
 
