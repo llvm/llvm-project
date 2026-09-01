@@ -2145,7 +2145,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // the min/max operation - comparing MinOrMaxPhiR with the operand of the
     // min/max operation, and be used only by the select of the FindLastIV
     // reduction cycle.
-    // There is an additional user if the loop was tailfolded:
+    // There is an additional user if the tail was folded:
     // 3) the select operation of the vector.latch block. This select uses the
     // the original MinOrMaxPhiR if the mask is zero.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
@@ -2158,13 +2158,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (!MinOrMaxBackedgeR)
       return false;
 
-    // If the loop is tailfolded then the backedge won't be the
+    // If the tail was folded then the backedge won't be the
     // reduction-intrinsic but the select in the vector.latch block that wraps
     // the reduction-intrinsic.
     auto *MinOrMaxOp = MinOrMaxBackedgeR;
     VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
-    if (VPValue *MinOrMaxTailfold;
-        HeaderMask &&
+    VPValue *MinOrMaxTailfold;
+    if (HeaderMask &&
         match(MinOrMaxBackedgeR,
               m_SelectLike(m_Specific(HeaderMask), m_VPValue(MinOrMaxTailfold),
                            m_Specific(MinOrMaxPhiR)))) {
@@ -2216,8 +2216,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // * Cmp (that's part of a FindLastIV chain).
     // Also an additional third user if it is tailfolded:
     // * Predicated HEADER-MASK select in the vector.latch block.
-    if ((!HeaderMask && MinOrMaxPhiR->getNumUsers() != 2) ||
-        (HeaderMask && MinOrMaxPhiR->getNumUsers() != 3))
+    if (MinOrMaxPhiR->getNumUsers() != (HeaderMask ? 3 : 2))
       return false;
 
     VPInstruction *MinOrMaxResult =
@@ -2228,8 +2227,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
     VPValue *IVOp, *FindIV;
-    if (!Sel || (HeaderMask && Sel->getNumUsers() != 1) ||
-        (!HeaderMask && Sel->getNumUsers() != 2) ||
+    if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
         !match(Sel,
                m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
       return false;
