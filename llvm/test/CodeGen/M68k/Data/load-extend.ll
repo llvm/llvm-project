@@ -7,8 +7,8 @@ define i32 @"test_zext_pcd_i8_to_i32"() {
 ; CHECK-LABEL: test_zext_pcd_i8_to_i32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (__unnamed_1+16,%pc), %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    rts
   %p = getelementptr inbounds i8, ptr @0, i32 16
   %val = load i8, ptr %p
@@ -20,8 +20,8 @@ define i16 @"test_zext_pcd_i8_to_i16"() {
 ; CHECK-LABEL: test_zext_pcd_i8_to_i16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    move.b (__unnamed_1+16,%pc), %d0
-; CHECK-NEXT:    and.w #255, %d0
 ; CHECK-NEXT:    rts
   %p = getelementptr inbounds i8, ptr @0, i32 16
   %val = load i8, ptr %p
@@ -33,8 +33,8 @@ define i32 @"test_zext_pcd_i16_to_i32"() {
 ; CHECK-LABEL: test_zext_pcd_i16_to_i32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.w (__unnamed_1+16,%pc), %d0
-; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    rts
   %p = getelementptr inbounds i16, ptr @0, i32 8
   %val = load i16, ptr %p
@@ -45,8 +45,8 @@ define i32 @"test_zext_pcd_i16_to_i32"() {
 define i16 @test_anyext_pcd_i8_to_i16() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i8_to_i16:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (__unnamed_1+4,%pc), %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    lsl.w #8, %d0
 ; CHECK-NEXT:    ; kill: def $wd0 killed $wd0 killed $d0
 ; CHECK-NEXT:    rts
@@ -60,8 +60,8 @@ define i32 @test_anyext_pcd_i8_to_i32() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i8_to_i32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    moveq #24, %d1
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b (__unnamed_1+4,%pc), %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    lsl.l %d1, %d0
 ; CHECK-NEXT:    rts
   %copyload = load i8, ptr getelementptr inbounds nuw (i8, ptr @0, i32 4)
@@ -73,10 +73,10 @@ define i32 @test_anyext_pcd_i8_to_i32() nounwind {
 define i32 @test_anyext_pcd_i16_to_i32() nounwind {
 ; CHECK-LABEL: test_anyext_pcd_i16_to_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    moveq #16, %d1
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.w (__unnamed_1+4,%pc), %d0
-; CHECK-NEXT:    and.l #65535, %d0
-; CHECK-NEXT:    lsl.l %d1, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    rts
   %copyload = load i16, ptr getelementptr inbounds nuw (i8, ptr @0, i32 4)
   %insert_ext = zext i16 %copyload to i32

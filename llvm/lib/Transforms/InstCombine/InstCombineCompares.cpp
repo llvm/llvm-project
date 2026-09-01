@@ -115,6 +115,11 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 ///
 /// If AndCst is non-null, then the loaded value is masked with that constant
 /// before doing the comparison. This handles cases like "A[i]&4 == 0".
+///
+/// We allow multi-use cases in this fold, even though it can increase
+/// instruction count, because it appears to be mostly beneficial in practice.
+/// Even if there are multiple uses, they can often be sunk into the block
+/// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, CmpInst &ICI, ConstantInt *AndCst) {
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
@@ -4427,8 +4432,6 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
       return nullptr;
 
     Value *X = II->getArgOperand(0);
-    bool IsIntMinPoison =
-        cast<ConstantInt>(II->getArgOperand(1))->getValue().isOne();
 
     // If C >= 0:
     // abs(X) u> C --> X + C u> 2 * C
@@ -4438,13 +4441,12 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                           ConstantInt::get(Ty, 2 * C));
     }
 
-    // If abs(INT_MIN) is poison and C >= 1:
+    // If C >= 1:
     // abs(X) u< C --> X + (C - 1) u<= 2 * (C - 1)
-    if (IsIntMinPoison && Pred == CmpInst::ICMP_ULT && C.sge(1)) {
+    if (Pred == CmpInst::ICMP_ULT && C.sge(1))
       return new ICmpInst(ICmpInst::ICMP_ULE,
                           Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
                           ConstantInt::get(Ty, 2 * (C - 1)));
-    }
 
     break;
   }
@@ -5393,6 +5395,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
              (CmpInst::isUnsigned(Pred) && HasNUW) ||
              (CmpInst::isSigned(Pred) && HasNSW);
     } else if (BO.getOpcode() == Instruction::Or) {
+      // The invariant here is that we are handling m_AddLike instructions,
+      // which can only be a or disjoint, which is equivalent to an add nuw nsw.
       HasNUW = true;
       HasNSW = true;
       return true;
@@ -5472,9 +5476,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return isMultipleOf(X, C, Q) && isMultipleOf(Y, C, Q);
     };
 
-    // TODO: The subtraction-related identities shown below also hold, but
-    // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
-    // wouldn't happen even if they were implemented.
+    // The subtraction-related identities (A -nuw B) shown below require that
+    // the subtraction does not wrap unsigned (i.e., A >=u B). Canonicalization
+    // from (A -nuw 1) to (A + -1) means that such combinations ought to never
+    // occur, as sub nuw ops should have been canonicalized to add ones. It may
+    // however appear in the form of a or disjoint. Though, or disjoint A, -B
+    // requires proving A <u B, for which the nowrap precondition can never be
+    // satisfied. These are therefore skipped.
     //
     // icmp ult (A - 1), Op1 -> icmp ule A, Op1
     // icmp uge (A - 1), Op1 -> icmp ugt A, Op1
@@ -5487,9 +5495,10 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
     // icmp ule (A + 1), Op0 -> icmp ult A, Op1
     // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
-    if (A && NoOp0WrapProblem &&
-        ShareCommonDivisor(A, Op1, B,
-                           ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred)))
+    bool IsNegative = ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred);
+    bool IsAddOrSignedPred = !IsNegative || ICmpInst::isSigned(Pred);
+    if (A && NoOp0WrapProblem && IsAddOrSignedPred &&
+        ShareCommonDivisor(A, Op1, B, IsNegative))
       return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
                           Op1);
 
@@ -7098,6 +7107,22 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
 
     if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, Q))
       return &I;
+  }
+
+  // If an unsigned samesign comparison is not poison, both operands have the
+  // same sign bit. Propagate a known sign bit between the temporary KnownBits
+  // values so the existing range folds can use that constraint.
+  if (I.hasSameSign() && I.isUnsigned()) {
+    auto PropagateSignBit = [](const KnownBits &From, KnownBits &To) {
+      if (To.isNegative() || To.isNonNegative())
+        return;
+      if (From.isNegative())
+        To.makeNegative();
+      else if (From.isNonNegative())
+        To.makeNonNegative();
+    };
+    PropagateSignBit(Op0Known, Op1Known);
+    PropagateSignBit(Op1Known, Op0Known);
   }
 
   if (!isa<Constant>(Op0) && Op0Known.isConstant())

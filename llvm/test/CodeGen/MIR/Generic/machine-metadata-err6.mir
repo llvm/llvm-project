@@ -12,4 +12,4 @@ name: t0
 machineMetadataNodes:
   - '!9 = distinct !{9, !7, !"Dst"}'
 ...
-# CHECK: [[@LINE-2]]:22: expected '!' here
+# CHECK: [[@LINE-2]]:22: expected metadata operand

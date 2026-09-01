@@ -75,5 +75,5 @@ end subroutine teams_workdistribute
 
 ! CHECK-O0-LABEL: func @_QPteams_workdistribute
 ! CHECK-O0: omp.wsloop
-! CHECK-O0: fir.call @_FortranAAssign({{.*}}%c50_i32)
+! CHECK-O0: fir.call @_FortranAAssignSimple({{.*}}%c50_i32)
 ! CHECK-O0: fir.call @_FortranAAssign({{.*}}%c58_i32)

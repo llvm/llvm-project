@@ -46,7 +46,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
@@ -439,9 +438,20 @@ public:
     Line->clearLineTable(stmtOffset);
   }
 
-  Expected<const DWARFDebugFrame *> getDebugFrame() override {
+  /// Return a cached frame section, decoding the CFI instruction programs it
+  /// was parsed without if this caller needs them.
+  static Expected<const DWARFDebugFrame *> useCached(const DWARFDebugFrame &DF,
+                                                     bool ParseCFIProgram) {
+    if (ParseCFIProgram)
+      if (Error E = DF.parseAllCFIPrograms())
+        return std::move(E);
+    return &DF;
+  }
+
+  Expected<const DWARFDebugFrame *>
+  getDebugFrame(bool ParseCFIProgram) override {
     if (DebugFrame)
-      return DebugFrame.get();
+      return useCached(*DebugFrame, ParseCFIProgram);
     const DWARFObject &DObj = D.getDWARFObj();
     const DWARFSection &DS = DObj.getFrameSection();
 
@@ -459,16 +469,16 @@ public:
     auto DF =
         std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/false,
                                           DS.Address);
-    if (Error E = DF->parse(Data))
+    if (Error E = DF->parse(Data, ParseCFIProgram))
       return std::move(E);
 
     DebugFrame.swap(DF);
     return DebugFrame.get();
   }
 
-  Expected<const DWARFDebugFrame *> getEHFrame() override {
+  Expected<const DWARFDebugFrame *> getEHFrame(bool ParseCFIProgram) override {
     if (EHFrame)
-      return EHFrame.get();
+      return useCached(*EHFrame, ParseCFIProgram);
     const DWARFObject &DObj = D.getDWARFObj();
 
     const DWARFSection &DS = DObj.getEHFrameSection();
@@ -477,7 +487,7 @@ public:
     auto DF =
         std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/true,
                                           DS.Address);
-    if (Error E = DF->parse(Data))
+    if (Error E = DF->parse(Data, ParseCFIProgram))
       return std::move(E);
     EHFrame.swap(DF);
     return EHFrame.get();
@@ -679,13 +689,14 @@ public:
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::clearLineTableForUnit(U);
   }
-  Expected<const DWARFDebugFrame *> getDebugFrame() override {
+  Expected<const DWARFDebugFrame *>
+  getDebugFrame(bool ParseCFIProgram) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::getDebugFrame();
+    return ThreadUnsafeDWARFContextState::getDebugFrame(ParseCFIProgram);
   }
-  Expected<const DWARFDebugFrame *> getEHFrame() override {
+  Expected<const DWARFDebugFrame *> getEHFrame(bool ParseCFIProgram) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::getEHFrame();
+    return ThreadUnsafeDWARFContextState::getEHFrame(ParseCFIProgram);
   }
   const DWARFDebugMacro *getDebugMacinfo() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
@@ -1021,8 +1032,12 @@ void DWARFContext::dump(
 
   auto dumpDebugInfo = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
-    if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
-      for (const auto &U : Units) {
+    std::optional<uint64_t> DumpOffset = DumpOffsets[DIDT_ID_DebugInfo];
+    for (const auto &U : Units) {
+      // For dumping of DWOs, remember if unit is already holding its context in
+      // memory
+      bool HadDWO = U->getDWO();
+      if (DumpOffset) {
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
         DWARFDie CUDie = U->getUnitDIE(false);
@@ -1032,10 +1047,18 @@ void DWARFContext::dump(
               ->getDIEForOffset(*DumpOffset)
               .dump(OS, 0, DumpOpts.noImplicitRecursion());
         }
-      }
-    else
-      for (const auto &U : Units)
+      } else {
         U->dump(OS, DumpOpts);
+      }
+      // If our dump caused a new context for the non-skeleton unit in a DWO to
+      // be freshly opened, release it now. We won't re-use it. This avoids
+      // holding a lot of unnecessary anon memory while streaming through
+      // multiple DWOs (OTOH DWP is shared ctx, so better not to drop it
+      // otherwise it will be immediately reopened by the next non-skeleton CU).
+      const DWARFUnit *DWO = U->getDWO();
+      if (!HadDWO && DWO && !DWO->getContext().isDWP())
+        U->clearDWO();
+    }
   };
   if ((DumpType & DIDT_DebugInfo)) {
     if (Explicit || getNumCompileUnits())
@@ -1104,7 +1127,11 @@ void DWARFContext::dump(
   if (const std::optional<uint64_t> *Off =
           shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                      DObj->getFrameSection().Data)) {
-    if (Expected<const DWARFDebugFrame *> DF = getDebugFrame())
+    // Dumping decodes the instructions of the entries it prints, and only
+    // those, so a corrupt program elsewhere in the section does not keep the
+    // rest of it from being dumped.
+    if (Expected<const DWARFDebugFrame *> DF =
+            getDebugFrame(/*ParseCFIProgram=*/false))
       (*DF)->dump(OS, DumpOpts, *Off);
     else
       RecoverableErrorHandler(DF.takeError());
@@ -1113,7 +1140,8 @@ void DWARFContext::dump(
   if (const std::optional<uint64_t> *Off =
           shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
                      DObj->getEHFrameSection().Data)) {
-    if (Expected<const DWARFDebugFrame *> DF = getEHFrame())
+    if (Expected<const DWARFDebugFrame *> DF =
+            getEHFrame(/*ParseCFIProgram=*/false))
       (*DF)->dump(OS, DumpOpts, *Off);
     else
       RecoverableErrorHandler(DF.takeError());
@@ -1447,12 +1475,14 @@ const DWARFDebugAranges *DWARFContext::getDebugAranges() {
   return State->getDebugAranges();
 }
 
-Expected<const DWARFDebugFrame *> DWARFContext::getDebugFrame() {
-  return State->getDebugFrame();
+Expected<const DWARFDebugFrame *>
+DWARFContext::getDebugFrame(bool ParseCFIProgram) {
+  return State->getDebugFrame(ParseCFIProgram);
 }
 
-Expected<const DWARFDebugFrame *> DWARFContext::getEHFrame() {
-  return State->getEHFrame();
+Expected<const DWARFDebugFrame *>
+DWARFContext::getEHFrame(bool ParseCFIProgram) {
+  return State->getEHFrame(ParseCFIProgram);
 }
 
 const DWARFDebugMacro *DWARFContext::getDebugMacro() {
