@@ -1,8 +1,10 @@
-; ACE v1 Basic Tile Operations Test
-; Tests basic ACE tile operations: tilezero, outer products
-; Note: ACE v1 uses TILEMOVROW to extract tile data (not TILESTORED)
-;
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx512f,+avx512bf16 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx10.1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+amx-tile -verify-machineinstrs | FileCheck %s
+
+; Test basic ACE tile operations: tilezero and outer products. ACE v1 alone, and
+; composed with AMX-TILE, must both work. ACE v1 extracts tile data with
+; TILEMOVROW rather than TILESTORED.
 
 define void @test_acev1_basic(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b) {
 ; CHECK-LABEL: test_acev1_basic:

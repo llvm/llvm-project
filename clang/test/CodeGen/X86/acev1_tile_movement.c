@@ -1,25 +1,26 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +acev1 -target-feature +avx512f \
+// RUN: -target-feature +acev1 -target-feature +avx10.1 \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s
 
-// Tests ACE v1 tile movement operations (ZMM <-> Tile row/col)
-// Note: ACE v1 does not have TILELOADD/TILESTORED - uses TILEMOVROW/TILEMOVCOL for data movement
+// Tests ACE v1 tile movement operations (ZMM <-> Tile row/col).
+// ACE v1 has no TILELOADD/TILESTORED, so it moves data with
+// TILEMOVROW/TILEMOVCOL.
 
 #include <immintrin.h>
 
 // Test tile setrow - write ZMM to tile row (ACE-specific)
 void test_tile_ace_setrow(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setrow
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
   __tile_ace_setrow(&dst, src, 0);
 }
 
 // Test tile setrow with different row indices
 void test_tile_ace_setrow_indices(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setrow_indices
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
   __tile_ace_setrow(&dst, src, 0);
   __tile_ace_setrow(&dst, src, 8);
   __tile_ace_setrow(&dst, src, 15);
@@ -28,15 +29,15 @@ void test_tile_ace_setrow_indices(__acetile dst, __m512i src) {
 // Test tile setcol - write ZMM to tile column (ACE-specific)
 void test_tile_ace_setcol(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setcol
-  // CHECK: call x86_amx @llvm.x86.tilesetcol.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovcol.set.internal
   __tile_ace_setcol(&dst, src, 0);
 }
 
 // Test tile setcol with different column indices
 void test_tile_ace_setcol_indices(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setcol_indices
-  // CHECK: call x86_amx @llvm.x86.tilesetcol.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetcol.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovcol.set.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovcol.set.internal
   __tile_ace_setcol(&dst, src, 0);
   __tile_ace_setcol(&dst, src, 8);
 }
@@ -63,7 +64,7 @@ void test_tile_ace_getrow_indices(__acetile src, __m512i *out) {
 void test_tile_init_via_setrow(void) {
   // CHECK-LABEL: @test_tile_init_via_setrow
   // CHECK: call x86_amx @llvm.x86.tilezero.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
   __acetile tile;
   __tile_ace_zero(&tile);
 
@@ -75,9 +76,9 @@ void test_tile_init_via_setrow(void) {
 void test_tile_movement_combined(void) {
   // CHECK-LABEL: @test_tile_movement_combined
   // CHECK: call x86_amx @llvm.x86.tilezero.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetcol.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovcol.set.internal
   __acetile tile;
   __tile_ace_zero(&tile);
 
@@ -96,7 +97,7 @@ void test_tile_movement_combined(void) {
 void test_ace_data_workflow(__m512i *input, __m512i *output) {
   // CHECK-LABEL: @test_ace_data_workflow
   // CHECK: call x86_amx @llvm.x86.tilezero.internal
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
   // CHECK: call x86_amx @llvm.x86.top4buud.internal
   // CHECK: call <16 x i32> @llvm.x86.tilemovrow.internal
   __acetile tile;
