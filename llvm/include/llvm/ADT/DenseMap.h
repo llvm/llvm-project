@@ -721,9 +721,10 @@ private:
 
   template <typename LookupKeyT>
   const BucketT *doFind(const LookupKeyT &Val) const {
-    auto [BucketsPtr, U, NumBuckets] = getRep();
-    if (NumBuckets == 0)
+    // Tighter than NumBuckets == 0: catches emptied and small-mode maps.
+    if (getNumEntries() == 0)
       return nullptr;
+    auto [BucketsPtr, U, NumBuckets] = getRep();
 
     const unsigned Mask = NumBuckets - 1;
     unsigned BucketNo = KeyInfoT::getHashValue(Val) & Mask;
