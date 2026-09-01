@@ -5534,10 +5534,19 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
+    // Use the loop's own index type (matching `Span`) so the buffer allocation
+    // works for both i32 and i64 (e.g. `integer(kind=8)`) induction variables.
+    Type *IndexTy = ScanRedInfo->Span->getType();
     Value *AllocSpan =
-        Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
+        Builder.CreateAdd(ScanRedInfo->Span, ConstantInt::get(IndexTy, 1));
+    // Compute the allocation size in the target's pointer-width integer type
+    // (size_t) rather than the loop index type. `CreateMalloc` multiplies the
+    // element size by the element count in this type, and performing that
+    // multiplication in a narrow index type (e.g. i32) could overflow before
+    // the call to malloc for large scans; the element count is instead
+    // zero-extended to this wider type.
+    Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
     for (size_t i = 0; i < ScanVars.size(); i++) {
-      Type *IntPtrTy = Builder.getInt32Ty();
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
       Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
       Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
@@ -5570,7 +5579,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
 }
 
 Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
-    ArrayRef<ReductionInfo> ReductionInfos, ScanInfo *ScanRedInfo) {
+    ArrayRef<ReductionInfo> ReductionInfos, ScanInfo *ScanRedInfo,
+    bool NoWait) {
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
@@ -5585,7 +5595,17 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
                                              "arrayOffset");
       Value *Src = Builder.CreateLoad(SrcTy, Val);
 
-      Builder.CreateStore(Src, OrigVar);
+      // For a zero-trip loop the buffer slot is uninitialized; keep the
+      // original variable's incoming value instead of storing garbage. The
+      // load above stays in bounds because the buffer was allocated with
+      // `Span + 1` elements, so index `Span` is always valid.
+      Value *Cur = Builder.CreateLoad(SrcTy, OrigVar);
+      Value *HasIters = Builder.CreateICmpUGT(
+          ScanRedInfo->Span,
+          llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 0));
+      Value *Final = Builder.CreateSelect(HasIters, Src, Cur);
+
+      Builder.CreateStore(Final, OrigVar);
       Builder.CreateFree(Buff);
     }
     return Error::success();
@@ -5599,27 +5619,45 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
   else
     Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish);
 
-  llvm::Value *FilterVal = Builder.getInt32(0);
+  // Synchronize before the masked region frees the shared scan buffer. The
+  // scan (second) loop loads each thread's prefix value from the buffer, so
+  // every thread must have finished that loop before the single masked thread
+  // frees it; otherwise a thread still executing the loop could load from
+  // freed memory. A `masked` region is not a barrier, so this synchronization
+  // is required for correctness and is emitted even under `nowait`.
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+      createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+
+  llvm::Value *FilterVal = Builder.getInt32(0);
+  AfterIP = createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
 
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
-  BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->hasTerminator())
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
-  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
-  if (!AfterIP)
-    return AfterIP.takeError();
-  Builder.restoreIP(*AfterIP);
+
+  // The barrier after the masked region provides the construct's
+  // end-of-construct synchronization and publishes the final reduction value
+  // stored into the original variable inside the masked region. Skip it when
+  // the construct has `nowait`, matching a normal worksharing loop.
+  if (!NoWait) {
+    BasicBlock *InputBB = Builder.GetInsertBlock();
+    if (InputBB->hasTerminator())
+      Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+    if (!AfterIP)
+      return AfterIP.takeError();
+    Builder.restoreIP(*AfterIP);
+  }
   return Error::success();
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     const LocationDescription &Loc,
     ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-    ScanInfo *ScanRedInfo) {
+    ScanInfo *ScanRedInfo, bool NoWait) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -5627,6 +5665,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
     Function *CurFn = Builder.GetInsertBlock()->getParent();
+    // Index/counter values that participate in buffer-offset arithmetic must
+    // use the loop's own index type (`Span`'s type) so scan works for both i32
+    // and i64 (e.g. `integer(kind=8)`) induction variables.
+    Type *IndexTy = ScanRedInfo->Span->getType();
     // for (int k = 0; k <= ceil(log2(n)); ++k)
     llvm::BasicBlock *LoopBB =
         BasicBlock::Create(CurFn->getContext(), "omp.outer.log.scan.body");
@@ -5648,17 +5690,67 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
     Builder.SetInsertPoint(InputBB);
-    Builder.CreateBr(LoopBB);
+    // Branch around the orig-val seed load and combine when the loop has zero
+    // logical iterations. When Span == 0 no scan-buffer entry is populated, so
+    // loading buffer[0] and feeding it to a (possibly input-sensitive
+    // user-defined) reduction combiner would be undefined behavior. In that
+    // case skip straight to the exit; the finals' zero-trip guard preserves
+    // orig-val as the result.
+    llvm::Value *HasElem = Builder.CreateICmpUGT(
+        ScanRedInfo->Span, llvm::ConstantInt::get(IndexTy, 0));
+    llvm::BasicBlock *SeedBB =
+        BasicBlock::Create(CurFn->getContext(), "omp.scan.seed", CurFn, ExitBB);
+    Builder.CreateCondBr(HasElem, SeedBB, ExitBB);
+    Builder.SetInsertPoint(SeedBB);
+    // Combine the original variable's incoming value (orig-val) into the first
+    // buffer element before computing the prefix sum. Per the OpenMP scan
+    // semantics orig-val is a single prefix element that must be reflected in
+    // every inclusive/exclusive scan result and in the final reduction value.
+    // Folding it in here lets the log-scan prefix computation propagate it into
+    // every element (and into the finals' read of `buffer[Span]`), regardless
+    // of whether an iteration's input phase accumulates into or overwrites the
+    // reduction variable. Span > 0 is guaranteed here, so buffer[1] is valid.
+    for (ReductionInfo RedInfo : ReductionInfos) {
+      Value *ReductionVal = RedInfo.PrivateVariable;
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+      Type *DestTy = RedInfo.ElementType;
+      Value *ElemPtr = Builder.CreateInBoundsGEP(
+          DestTy, Buff, llvm::ConstantInt::get(IndexTy, 1), "arrayOffset");
+      Value *OrigVal = Builder.CreateLoad(DestTy, RedInfo.Variable);
+      Value *Elem = Builder.CreateLoad(DestTy, ElemPtr);
+      llvm::Value *Combined;
+      // orig-val is the leftmost/earliest element of the prefix, so it must be
+      // the accumulator (`omp_out`, the combiner's first/lhs operand) while the
+      // first buffer element is the incoming value (`omp_in`). The combiner is
+      // associative but not necessarily commutative, so this order matters.
+      InsertPointOrErrorTy AfterIP =
+          RedInfo.ReductionGen(Builder.saveIP(), OrigVal, Elem, Combined);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+      Builder.CreateStore(Combined, ElemPtr);
+    }
+    // The log-scan prefix computation is only well-defined when there are at
+    // least two elements: `log2(Span)` is invalid for Span == 0 and the loop
+    // trip computation underflows/loops forever for Span <= 1. For Span == 1
+    // the buffer already holds the final (seeded) value, so skip straight to
+    // the exit.
+    llvm::Value *SpanGuard = Builder.CreateICmpUGT(
+        ScanRedInfo->Span,
+        llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
+    Builder.CreateCondBr(SpanGuard, LoopBB, ExitBB);
     emitBlock(LoopBB, CurFn);
     Builder.SetInsertPoint(LoopBB);
 
     PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     // size pow2k = 1;
-    PHINode *Pow2K = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    PHINode *Pow2K = Builder.CreatePHI(IndexTy, 2);
+    // The loop is now entered from the seed block (guarded by Span > 0), not
+    // directly from InputBB.
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
-                         InputBB);
-    Pow2K->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 1),
-                       InputBB);
+                         SeedBB);
+    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), SeedBB);
     // for (size i = n - 1; i >= 2 ^ k; --i)
     //   tmp[i] op= tmp[i-pow2k];
     llvm::BasicBlock *InnerLoopBB =
@@ -5669,14 +5761,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
     emitBlock(InnerLoopBB, CurFn);
     Builder.SetInsertPoint(InnerLoopBB);
-    PHINode *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    PHINode *IVal = Builder.CreatePHI(IndexTy, 2);
     IVal->addIncoming(NMin1, LoopBB);
     for (ReductionInfo RedInfo : ReductionInfos) {
       Value *ReductionVal = RedInfo.PrivateVariable;
       Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
       Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
       Type *DestTy = RedInfo.ElementType;
-      Value *IV = Builder.CreateAdd(IVal, Builder.getInt32(1));
+      Value *IV = Builder.CreateAdd(IVal, ConstantInt::get(IndexTy, 1));
       Value *LHSPtr =
           Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
       Value *OffsetIval = Builder.CreateNUWSub(IV, Pow2K);
@@ -5685,14 +5777,20 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
       Value *LHS = Builder.CreateLoad(DestTy, LHSPtr);
       Value *RHS = Builder.CreateLoad(DestTy, RHSPtr);
       llvm::Value *Result;
+      // buffer[IV-pow2k] holds the earlier partial prefix and buffer[IV] the
+      // later one. The earlier element must be the accumulator (`omp_out`, the
+      // combiner's first/lhs operand) and the later element the incoming value
+      // (`omp_in`); the combiner is associative but not necessarily
+      // commutative, so passing them in prefix order is required. The result
+      // is written back into the later slot (LHSPtr = buffer[IV]).
       InsertPointOrErrorTy AfterIP =
-          RedInfo.ReductionGen(Builder.saveIP(), LHS, RHS, Result);
+          RedInfo.ReductionGen(Builder.saveIP(), RHS, LHS, Result);
       if (!AfterIP)
         return AfterIP.takeError();
       Builder.CreateStore(Result, LHSPtr);
     }
-    llvm::Value *NextIVal = Builder.CreateNUWSub(
-        IVal, llvm::ConstantInt::get(Builder.getInt32Ty(), 1));
+    llvm::Value *NextIVal =
+        Builder.CreateNUWSub(IVal, llvm::ConstantInt::get(IndexTy, 1));
     IVal->addIncoming(NextIVal, Builder.GetInsertBlock());
     CmpI = Builder.CreateICmpUGE(NextIVal, Pow2K);
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
@@ -5725,7 +5823,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
-  Error Err = emitScanBasedDirectiveFinalsIR(ReductionInfos, ScanRedInfo);
+  Error Err =
+      emitScanBasedDirectiveFinalsIR(ReductionInfos, ScanRedInfo, NoWait);
   if (Err)
     return Err;
 
@@ -5916,7 +6015,6 @@ OpenMPIRBuilder::createCanonicalScanLoops(
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
-    ScanRedInfo->IV = IV;
     createScanBBs(ScanRedInfo);
     BasicBlock *InputBlock = Builder.GetInsertBlock();
     Instruction *Terminator = InputBlock->getTerminator();
@@ -5935,9 +6033,13 @@ OpenMPIRBuilder::createCanonicalScanLoops(
   };
 
   const auto &&InputLoopGen = [&]() -> Error {
+    // Pass an empty ComputeIP: the trip count must be (re)computed at the
+    // loop's own location. Reusing the outer ComputeIP is invalid here because
+    // it was invalidated by the `scan.init` split above and would emit the
+    // recomputed trip count after a block terminator for runtime bounds.
     Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
         Builder.saveIP(), BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
-        ComputeIP, Name, true, ScanRedInfo);
+        /*ComputeIP=*/InsertPointTy(), Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);
@@ -5945,9 +6047,9 @@ OpenMPIRBuilder::createCanonicalScanLoops(
     return Error::success();
   };
   const auto &&ScanLoopGen = [&](LocationDescription Loc) -> Error {
-    Expected<CanonicalLoopInfo *> LoopInfo =
-        createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
-                            InclusiveStop, ComputeIP, Name, true, ScanRedInfo);
+    Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
+        Loc, BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
+        /*ComputeIP=*/InsertPointTy(), Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);
@@ -6038,8 +6140,15 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
                                     /*HasNSW=*/Config.hasNoSignedWrap());
     Value *IndVar = Builder.CreateAdd(Span, Start, "", /*HasNUW=*/false,
                                       /*HasNSW=*/Config.hasNoSignedWrap());
-    if (InScan)
-      ScanRedInfo->IV = IndVar;
+    if (InScan) {
+      // The scan buffer is 1-indexed by iteration number (buffer[1..TripCount])
+      // rather than by the source induction variable. Using the source value
+      // would index out of bounds for loops that do not start at 1 or that use
+      // a non-unit stride. `IV` here is the 0-based canonical loop counter, so
+      // the 1-based buffer index is `IV + 1`.
+      ScanRedInfo->IV =
+          Builder.CreateAdd(IV, ConstantInt::get(IV->getType(), 1));
+    }
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
   LocationDescription LoopLoc =
