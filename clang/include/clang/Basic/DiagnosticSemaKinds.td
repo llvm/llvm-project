@@ -4365,13 +4365,15 @@ def err_attribute_argument_out_of_bounds_extra_info : Error<
   ":must be between 1 and %2}2">;
 
 // Thread Safety Analysis
-def warn_unlock_but_no_lock : Warning<"releasing %0 '%1' that was not held">,
+def warn_unlock_but_no_lock : Warning<
+  "releasing %0 '%1' that %select{was not|may not be}2 held">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_unlock_kind_mismatch : Warning<
   "releasing %0 '%1' using %select{shared|exclusive}2 access, expected "
   "%select{shared|exclusive}3 access">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
-def warn_double_lock : Warning<"acquiring %0 '%1' that is already held">,
+def warn_double_lock : Warning<
+  "acquiring %0 '%1' that %select{is already|may already be}2 held">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_no_unlock : Warning<
   "%0 '%1' is still held at the end of function">,
@@ -4406,7 +4408,7 @@ def warn_requires_any_of_locks : Warning<
   "at least one of %2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_fun_excludes_mutex : Warning<
-  "cannot call function '%1' while %0 '%2' is held">,
+  "cannot call function '%1' while %0 '%2' %select{is|may be}3 held">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_cannot_resolve_lock : Warning<
   "cannot resolve lock expression">,
