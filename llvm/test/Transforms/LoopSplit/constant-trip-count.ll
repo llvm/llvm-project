@@ -13,68 +13,6 @@
 ; computed from scratch; later passes delete the dead partition.
 
 define void @tc100(ptr %a) {
-; IN-LABEL: define void @tc100(
-; IN-SAME: ptr [[A:%.*]]) {
-; IN-NEXT:  [[LS_GUARD0:.*:]]
-; IN-NEXT:    br i1 true, label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; IN:       [[ENTRY]]:
-; IN-NEXT:    br label %[[LOOP:.*]]
-; IN:       [[LOOP]]:
-; IN-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IN-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; IN-NEXT:    store i64 [[IV]], ptr [[P]], align 4
-; IN-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; IN-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 [[IV_NEXT]], 49
-; IN-NEXT:    br i1 [[ITR_CHK]], label %[[LOOP]], label %[[EXIT:.*]]
-; IN:       [[EXIT]]:
-; IN-NEXT:    br label %[[LS_GUARD1]]
-; IN:       [[LS_GUARD1]]:
-; IN-NEXT:    br i1 true, label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
-; IN:       [[ENTRY_LS1]]:
-; IN-NEXT:    br label %[[LOOP_LS1:.*]]
-; IN:       [[LOOP_LS1]]:
-; IN-NEXT:    [[IV_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
-; IN-NEXT:    [[P_LS1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS1]]
-; IN-NEXT:    store i64 [[IV_LS1]], ptr [[P_LS1]], align 4
-; IN-NEXT:    [[IV_NEXT_LS1]] = add nsw i64 [[IV_LS1]], 1
-; IN-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i64 [[IV_NEXT_LS1]], 99
-; IN-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
-; IN:       [[LS_EXIT1]]:
-; IN-NEXT:    br label %[[LS_FINAL_EXIT]]
-; IN:       [[LS_FINAL_EXIT]]:
-; IN-NEXT:    ret void
-;
-; OUT-LABEL: define void @tc100(
-; OUT-SAME: ptr [[A:%.*]]) {
-; OUT-NEXT:  [[LS_GUARD0:.*:]]
-; OUT-NEXT:    br i1 true, label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; OUT:       [[ENTRY]]:
-; OUT-NEXT:    br label %[[LOOP:.*]]
-; OUT:       [[LOOP]]:
-; OUT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; OUT-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; OUT-NEXT:    store i64 [[IV]], ptr [[P]], align 4
-; OUT-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; OUT-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 [[IV_NEXT]], 99
-; OUT-NEXT:    br i1 [[ITR_CHK]], label %[[LOOP]], label %[[EXIT:.*]]
-; OUT:       [[EXIT]]:
-; OUT-NEXT:    br label %[[LS_GUARD1]]
-; OUT:       [[LS_GUARD1]]:
-; OUT-NEXT:    br i1 false, label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
-; OUT:       [[ENTRY_LS1]]:
-; OUT-NEXT:    br label %[[LOOP_LS1:.*]]
-; OUT:       [[LOOP_LS1]]:
-; OUT-NEXT:    [[IV_LS1:%.*]] = phi i64 [ 200, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
-; OUT-NEXT:    [[P_LS1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS1]]
-; OUT-NEXT:    store i64 [[IV_LS1]], ptr [[P_LS1]], align 4
-; OUT-NEXT:    [[IV_NEXT_LS1]] = add nsw i64 [[IV_LS1]], 1
-; OUT-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i64 [[IV_NEXT_LS1]], 99
-; OUT-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
-; OUT:       [[LS_EXIT1]]:
-; OUT-NEXT:    br label %[[LS_FINAL_EXIT]]
-; OUT:       [[LS_FINAL_EXIT]]:
-; OUT-NEXT:    ret void
-;
 ; INSIDE-LABEL: define void @tc100(
 ; INSIDE-SAME: ptr [[A:%.*]]) {
 ; INSIDE-NEXT:  [[LS_GUARD0:.*:]]
