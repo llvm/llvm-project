@@ -74,6 +74,26 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   return %0: i16
 }
 
+// The target does not support native i16 storage, so this load requires
+// bitwidth emulation even though the memref has rank zero.
+// CHECK-LABEL: @load_i16_rank0
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<i16, #spirv.storage_class<StorageBuffer>>)
+//       CHECK: %[[BASE:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<i16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
+//       CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+//       CHECK: %[[PTR:.+]] = spirv.AccessChain %[[BASE]][%[[ZERO]], %[[ZERO]]] : {{.+}} -> !spirv.ptr<i32, StorageBuffer>
+//       CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" %[[PTR]] : i32
+//       CHECK: %[[MASK:.+]] = spirv.Constant 65535 : i32
+//       CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[LOAD]], %[[MASK]] : i32
+//       CHECK: %[[SIXTEEN:.+]] = spirv.Constant 16 : i32
+//       CHECK: %[[T2:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[SIXTEEN]] : i32, i32
+//       CHECK: %[[T3:.+]] = spirv.ShiftRightArithmetic %[[T2]], %[[SIXTEEN]] : i32, i32
+//       CHECK: %[[RES:.+]] = builtin.unrealized_conversion_cast %[[T3]] : i32 to i16
+//       CHECK: return %[[RES]] : i16
+func.func @load_i16_rank0(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) -> i16 {
+  %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
+  return %0 : i16
+}
+
 // i64 is a native type with Int64; the access chain index is used as-is without
 // the SDiv/UMod adjustment that emulated sub-32-bit types require.
 // CHECK-LABEL: @load_i64

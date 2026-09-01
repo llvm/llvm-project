@@ -616,7 +616,7 @@ void WasmObjectWriter::recordRelocation(const MCFragment &F,
 // Compute a value to write into the code at the location covered
 // by RelEntry. This value isn't used by the static linker; it just serves
 // to make the object format more readable and more likely to be directly
-// useable.
+// usable.
 uint64_t
 WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
                                       const WasmRelocationEntry &RelEntry) {
@@ -1281,7 +1281,7 @@ void WasmObjectWriter::registerTagType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isTag());
 
   // TODO Currently we don't generate imported exceptions, but if we do, we
-  // should have a way of infering types of imported exceptions.
+  // should have a way of inferring types of imported exceptions.
   wasm::WasmSignature S;
   if (auto *Sig = Symbol.getSignature()) {
     S.Returns = Sig->Returns;

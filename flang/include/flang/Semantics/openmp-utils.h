@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 
 #include <memory>
 #include <optional>
@@ -69,8 +70,8 @@ struct SourcedActionStmt
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
 SourcedActionStmt GetActionStmt(const parser::Block &block);
 
-std::string ThisVersion(unsigned version);
-std::string TryVersion(unsigned version);
+std::string ThisVersion(llvm::omp::Version version);
+std::string TryVersion(llvm::omp::Version version);
 
 const Symbol *GetObjectSymbol(
     const parser::OmpObject &object, bool ultimate = false);
@@ -275,7 +276,7 @@ enum struct ListItemKind : uint32_t {
 };
 
 std::optional<ListItemKind> GetArgumentListItemKind(
-    llvm::omp::Clause clause, unsigned version);
+    llvm::omp::Clause clause, llvm::omp::Version version);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool HasDataEnvironment(llvm::omp::Directive dir);
@@ -297,7 +298,7 @@ struct OmpErrorArgs {
 /// MESSAGE clause values.
 OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
 
-inline bool IsDoConcurrentLegal(unsigned version) {
+inline bool IsDoConcurrentLegal(llvm::omp::Version version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
   // in OpenMP 6.0+.
   return version >= 60;
@@ -358,33 +359,33 @@ template <typename T> struct WithReason {
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx = nullptr);
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx = nullptr);
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Return the depth of the affected nest(s):
 ///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the depth of the generated nest(s):
 ///   {generated-depth, is-perfect-nest}
 std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the range of the affected nests in the sequence:
 ///   {first, count}.
 /// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 /// Return the depth in which all loops must be rectangular.
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Calculate the minimum length of a sequence that contains the specified
@@ -401,7 +402,7 @@ std::optional<int64_t> GetMinimumSequenceCount(
 /// Returns std::nullopt if `x` or code nested in `x` was malformed in a
 /// way that prevented the function from returning an accurate result.
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
-    const parser::OpenMPLoopConstruct &x, unsigned version,
+    const parser::OpenMPLoopConstruct &x, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Returns whether the loop nest associated with `x` is a doacross loop nest,
@@ -411,12 +412,13 @@ std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
 bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
 
 struct LoopSequence {
-  LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
-      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr);
+  LoopSequence(const parser::ExecutionPartConstruct &root,
+      llvm::omp::Version version, bool allowAllLoops = false,
+      SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
-  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false,
-      SemanticsContext *semaCtx = nullptr)
+  LoopSequence(const R &range, llvm::omp::Version version,
+      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr)
       : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
@@ -455,7 +457,7 @@ struct LoopSequence {
 private:
   using Construct = ExecutionPartIterator::Construct;
 
-  LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
+  LoopSequence(std::unique_ptr<Construct> entry, llvm::omp::Version version,
       bool allowAllLoops, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
@@ -504,7 +506,7 @@ private:
   WithReason<int64_t> height_;
 
   // The core structure of the class:
-  unsigned version_; // Needed for GetXyzWithReason
+  llvm::omp::Version version_; // Needed for GetXyzWithReason
   bool allowAllLoops_;
   std::unique_ptr<Construct> entry_;
   std::vector<LoopSequence> children_;

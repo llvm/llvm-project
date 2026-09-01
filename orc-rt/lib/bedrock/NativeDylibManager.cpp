@@ -11,13 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/NativeDylibManager.h"
+#include "orc-rt-internal/support/sys/DynamicLibrary.h"
 #include "orc-rt/bedrock/Session.h"
-
-#if defined(__APPLE__) || defined(__linux__)
-#include "Unix/NativeDylibAPIs.inc"
-#else
-#error "Target OS dylib APIs unsupported"
-#endif
 
 namespace orc_rt {
 
@@ -46,16 +41,16 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
   // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
   // mustn't be dlclose'd).
   if (Path.empty())
-    return OnComplete(hostOSGetGlobalLookupHandle());
+    return OnComplete(sys::globalLookupHandle());
 
-  auto H = hostOSLoadLibrary(Path);
+  auto H = sys::loadLibrary(Path);
   if (!H)
     return OnComplete(H.takeError());
 
   // Capture S by reference, rather than this, so that the callback remains
   // valid even if the NativeDylibManager is destroyed prior to shutdown.
   S.addOnShutdown([&S = this->S, Handle = *H]() {
-    if (auto Err = hostOSUnloadLibrary(Handle))
+    if (auto Err = sys::unloadLibrary(Handle))
       S.reportError(std::move(Err));
   });
   OnComplete(std::move(H));
@@ -68,9 +63,9 @@ void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
   for (auto &S : Symbols)
     Names.push_back(std::move(S.first));
 
-  auto Addrs = hostOSLibraryLookup(Handle, Names);
+  auto Addrs = sys::lookupLibrarySymbols(Handle, Names);
 
-  // Convert weak-missing entries (empty optional from hostOSLibraryLookup)
+  // Convert weak-missing entries (empty optional from lookupLibrarySymbols)
   // to a present zero address. This matches the resolve semantics of
   // llvm::orc::rt_bootstrap::SimpleExecutorDylibManager: an empty optional
   // in the result signals a missing required symbol, while a missing

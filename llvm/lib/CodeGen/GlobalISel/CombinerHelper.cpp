@@ -33,7 +33,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -6290,14 +6289,25 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
 
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-  return mi_match(Src, MRI,
-                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMin)),
-                          m_SpecificICstOrSplat(SignedMax))) ||
-         mi_match(Src, MRI,
-                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMax)),
-                          m_SpecificICstOrSplat(SignedMin)));
+  if (mi_match(
+          Src, MRI,
+          m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
+                  m_SpecificICstOrSplat(SignedMax))))
+    return true;
+  if (mi_match(
+          Src, MRI,
+          m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
+                  m_SpecificICstOrSplat(SignedMin))))
+    return true;
+
+  // CVP in the midend will often transform trunc(smin(smax(..)) into
+  // trunc nsw(smin(..)) as the smax against INT_MIN never saturates.
+  if (MI.getFlag(MachineInstr::MIFlag::NoSWrap) &&
+      mi_match(Src, MRI,
+               m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax))))
+    return true;
+
+  return false;
 }
 
 void CombinerHelper::applyTruncSSatS(MachineInstr &MI,

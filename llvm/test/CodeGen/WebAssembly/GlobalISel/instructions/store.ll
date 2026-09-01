@@ -181,7 +181,7 @@ define void @store_f32(ptr %x, float %y) {
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get $push1=, 0
 ; WASM32-NEXT:    local.get $push0=, 1
-; WASM32-NEXT:    i32.store 0($pop1), $pop0
+; WASM32-NEXT:    f32.store 0($pop1), $pop0
 ; WASM32-NEXT:    return
 ;
 ; WASM64-LABEL: store_f32:
@@ -189,7 +189,7 @@ define void @store_f32(ptr %x, float %y) {
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get $push1=, 0
 ; WASM64-NEXT:    local.get $push0=, 1
-; WASM64-NEXT:    i32.store 0($pop1), $pop0
+; WASM64-NEXT:    f32.store 0($pop1), $pop0
 ; WASM64-NEXT:    return
   store float %y, ptr %x
   ret void
@@ -201,7 +201,7 @@ define void @store_f64(ptr %x, double %y) {
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get $push1=, 0
 ; WASM32-NEXT:    local.get $push0=, 1
-; WASM32-NEXT:    i64.store 0($pop1), $pop0
+; WASM32-NEXT:    f64.store 0($pop1), $pop0
 ; WASM32-NEXT:    return
 ;
 ; WASM64-LABEL: store_f64:
@@ -209,7 +209,7 @@ define void @store_f64(ptr %x, double %y) {
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get $push1=, 0
 ; WASM64-NEXT:    local.get $push0=, 1
-; WASM64-NEXT:    i64.store 0($pop1), $pop0
+; WASM64-NEXT:    f64.store 0($pop1), $pop0
 ; WASM64-NEXT:    return
   store double %y, ptr %x
   ret void

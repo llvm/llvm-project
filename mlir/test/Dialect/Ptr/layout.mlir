@@ -147,3 +147,22 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     return
   }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/217170:
+// querying the ptr layout caused a crash when the default memory space was not
+// a `MemorySpaceAttrInterface` (e.g. a plain `i32` attr).
+module attributes { dlti.dl_spec = #dlti.dl_spec<"dlti.default_memory_space" = 7 : ui64>} {
+  // CHECK-LABEL: @non_memory_space_default
+  func.func @non_memory_space_default() {
+    // CHECK: alignment = 1
+    // CHECK: bitsize = 64
+    // CHECK: default_memory_space = 7 : ui64
+    // CHECK: index = 64
+    // CHECK: preferred = 1
+    // CHECK: size = 8
+    "test.data_layout_query"() : () -> !ptr.ptr<#test.const_memory_space<4>>
+    return
+  }
+}

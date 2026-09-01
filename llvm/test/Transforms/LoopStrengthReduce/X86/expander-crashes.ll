@@ -55,7 +55,7 @@ loop.2.ph:
 loop.2.header:
   %iv2 = phi ptr [ %iv2.next, %loop.2.latch ], [ %iv.next, %loop.2.ph ]
   %tmp7 = getelementptr inbounds %struct.hoge, ptr %iv2, i64 0, i32 3
-  %tmp8 = ptrtoint ptr %tmp7 to i64
+  %tmp8 = ptrtoaddr ptr %tmp7 to i64
   call void @use.i64(i64 %tmp8)
   %tmp9 = getelementptr inbounds %struct.hoge, ptr %iv2, i64 0, i32 2
   store i32 10, ptr %tmp9, align 8
@@ -67,7 +67,7 @@ loop.2.latch:
   br label %loop.2.header
 
 loop.2.exit:                                             ; preds = %bb6
-  %iv2.cast = ptrtoint ptr %iv2 to i64
+  %iv2.cast = ptrtoaddr ptr %iv2 to i64
   ret i64 %iv2.cast
 }
 

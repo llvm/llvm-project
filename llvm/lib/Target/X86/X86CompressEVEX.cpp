@@ -372,8 +372,8 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
 
   // Check if MaskReg is used in any other basic blocks
-  for (const MachineOperand &MO : MRI->use_operands(MaskReg))
-    if (MO.getParent()->getParent() != &MBB)
+  for (const MachineInstr &UseMI : MRI->use_instructions(MaskReg))
+    if (UseMI.getParent() != &MBB)
       return false;
 
   // Apply the transformation

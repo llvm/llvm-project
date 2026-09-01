@@ -125,7 +125,7 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
   state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
-        mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
+        getSymNameAttrName(state.name), builder.getStringAttr(*name)));
   }
 }
 
@@ -164,7 +164,7 @@ LogicalResult ModuleOp::verify() {
     if (!attr.getName().strref().contains('.') &&
         !llvm::is_contained(
             ArrayRef<StringRef>{
-                mlir::SymbolTable::getSymbolAttrName(),
+                getSymNameAttrName().getValue(),
                 mlir::SymbolOpInterface::getDefaultVisibilityAttrName()},
             attr.getName().strref()))
       return emitOpError() << "can only contain attributes with "
