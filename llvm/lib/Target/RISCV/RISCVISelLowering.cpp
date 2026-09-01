@@ -5628,6 +5628,69 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       DL, VT, convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget), 0);
 }
 
+// vector_shuffle v8:v8i8, v9:v8i8 <9, 10, 2, 3, 4, 5, 6, 7>
+// ->
+// vsetvli zero, 2, e8, mf2, tu, ma
+// vslidedown.vi v8, v9, 1
+static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    ArrayRef<std::pair<int, int>> SrcInfo, MVT ContainerVT,
+    const RISCVSubtarget &Subtarget, SelectionDAG &DAG) {
+  if (V1.isUndef() || V2.isUndef())
+    return SDValue();
+
+  const unsigned NumElts = VT.getVectorNumElements();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  int SlideAmt = SrcInfo[1].second;
+  // The first is not slide, the second is slidedown.
+  if (SrcInfo[0].second != 0 || SlideAmt >= 0)
+    return SDValue();
+
+  // Check whether the leading lanes are consecutive lanes
+  // from the second slide.
+  auto IsSecondSlideLane = [&](unsigned I) {
+    int M = Mask[I];
+    if (M < 0)
+      return false;
+
+    int Src = M >= (int)NumElts;
+    int Diff = (int)I - (M % NumElts);
+    return Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+  };
+
+  unsigned VL = 0;
+  bool IsFirst = false;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (!IsSecondSlideLane(I)) {
+      IsFirst = true;
+      continue;
+    }
+
+    if (IsFirst)
+      return SDValue();
+    ++VL;
+  }
+
+  unsigned SlideDownAmt = -SlideAmt;
+  if (VL == 0 || VL == NumElts || VL > NumElts - SlideDownAmt)
+    return SDValue();
+
+  SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
+  SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
+
+  unsigned Policy =
+      RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
+  auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
+  SDValue VLOp = DAG.getConstant(VL, DL, XLenVT);
+  Src1 = convertToScalableVector(ContainerVT, Src1, DAG, Subtarget);
+  Src2 = convertToScalableVector(ContainerVT, Src2, DAG, Subtarget);
+  SDValue Slidedown = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Src1, Src2,
+                                    DAG.getConstant(SlideDownAmt, DL, XLenVT),
+                                    TrueMask, VLOp, Policy);
+  return convertFromScalableVector(VT, Slidedown, DAG, Subtarget);
+}
+
 // Because vslideup leaves the destination elements at the start intact, we can
 // use it to perform shuffles that insert subvectors:
 //
@@ -5639,7 +5702,7 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
 // vector_shuffle v8:v8i8, v9:v8i8 <0, 1, 8, 9, 10, 5, 6, 7>
 // ->
 // vsetvli zero, 5, e8, mf2, tu, ma
-// vslideup.v1 v8, v9, 2
+// vslideup.vi v8, v9, 2
 static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
                                              SDValue V1, SDValue V2,
                                              ArrayRef<int> Mask,
@@ -7014,6 +7077,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
           return V;
     }
+
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
+            DL, VT, V1, V2, Mask, SrcInfo, ContainerVT, Subtarget, DAG))
+      return V;
 
     // Build the mask.  Note that vslideup unconditionally preserves elements
     // below the slide amount in the destination, and thus those elements are
