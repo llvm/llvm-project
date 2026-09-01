@@ -13,7 +13,7 @@ declare float @llvm.atan.f32(float)
 define float @ret_tan(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_tan
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float [[ARG]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tan.f32(float %arg)
@@ -23,7 +23,7 @@ define float @ret_tan(float %arg) {
 define float @ret_tan_noinf(float nofpclass(inf) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_tan_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float nofpclass(inf) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float nofpclass(inf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tan.f32(float %arg)
@@ -33,7 +33,7 @@ define float @ret_tan_noinf(float nofpclass(inf) %arg) {
 define float @ret_tan_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_tan_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tan.f32(float %arg)
@@ -44,7 +44,7 @@ define float @ret_tan_nonan(float nofpclass(nan) %arg) {
 define float @ret_tan_nonan_noinf(float nofpclass(nan inf) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_tan_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tan.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tan.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tan.f32(float %arg)
@@ -55,7 +55,27 @@ define float @ret_tan_nonan_noinf(float nofpclass(nan inf) %arg) {
 define float @ret_sinh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_sinh_nonneg
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.sinh.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.sinh.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.sinh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_sinh_negnormal_or_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_sinh_negnormal_or_negsubnormal_mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.sinh.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.sinh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_sinh_negnormal_or_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_sinh_negnormal_or_negsubnormal_mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.sinh.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sinh.f32(float %arg)
@@ -66,7 +86,7 @@ define float @ret_sinh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 define float @ret_cosh(float %arg) {
 ; CHECK-LABEL: define nofpclass(ninf zero sub nnorm) float @ret_cosh
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf zero sub nnorm) float @llvm.cosh.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf zero sub nnorm) float @llvm.cosh.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cosh.f32(float %arg)
@@ -76,7 +96,7 @@ define float @ret_cosh(float %arg) {
 define float @ret_cosh_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub nnorm) float @ret_cosh_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub nnorm) float @llvm.cosh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub nnorm) float @llvm.cosh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cosh.f32(float %arg)
@@ -87,7 +107,7 @@ define float @ret_cosh_nonan(float nofpclass(nan) %arg) {
 define float @ret_tanh(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_tanh
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tanh.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tanh.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tanh.f32(float %arg)
@@ -97,7 +117,7 @@ define float @ret_tanh(float %arg) {
 define float @ret_tanh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_tanh_nonneg
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.tanh.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.tanh.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tanh.f32(float %arg)
@@ -107,7 +127,27 @@ define float @ret_tanh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 define float @ret_tanh_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_tanh_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tanh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tanh.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_tanh_negnormal_or_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_tanh_negnormal_or_negsubnormal_mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tanh.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_tanh_negnormal_or_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_tanh_negnormal_or_negsubnormal_mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.tanh.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.tanh.f32(float %arg)
@@ -118,7 +158,7 @@ define float @ret_tanh_nonan(float nofpclass(nan) %arg) {
 define float @ret_asin(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_asin
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.asin.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.asin.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.asin.f32(float %arg)
@@ -128,7 +168,7 @@ define float @ret_asin(float %arg) {
 define float @ret_asin_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_asin_nonneg
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.asin.f32(float %arg)
@@ -138,7 +178,7 @@ define float @ret_asin_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 define float @ret_asin_nonnegfinite(float nofpclass(nzero nsub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_asin_nonnegfinite
 ; CHECK-SAME: (float nofpclass(nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.asin.f32(float %arg)
@@ -148,7 +188,27 @@ define float @ret_asin_nonnegfinite(float nofpclass(nzero nsub nnorm) %arg) {
 define float @ret_asin_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_asin_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.asin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.asin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.asin.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_asin_negnormal_or_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_asin_negnormal_or_negsubnormal_mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.asin.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.asin.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_asin_negnormal_or_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_asin_negnormal_or_negsubnormal_mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.asin.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.asin.f32(float %arg)
@@ -159,7 +219,7 @@ define float @ret_asin_nonan(float nofpclass(nan) %arg) {
 define float @ret_acos(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero sub nnorm) float @ret_acos
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
@@ -169,7 +229,7 @@ define float @ret_acos(float %arg) {
 define float @ret_acos_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_acos_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
@@ -180,7 +240,7 @@ define float @ret_acos_nonan(float nofpclass(nan) %arg) {
 define float @ret_acos_no_pos_normal(float nofpclass(pnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_acos_no_pos_normal
 ; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.acos.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.acos.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
@@ -190,7 +250,7 @@ define float @ret_acos_no_pos_normal(float nofpclass(pnorm) %arg) {
 define float @ret_acos_no_neg_normal(float nofpclass(nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero sub nnorm) float @ret_acos_no_neg_normal
 ; CHECK-SAME: (float nofpclass(nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
@@ -201,7 +261,7 @@ define float @ret_acos_no_neg_normal(float nofpclass(nnorm) %arg) {
 define float @ret_atan(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_atan
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.atan.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.atan.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.atan.f32(float %arg)
@@ -211,7 +271,7 @@ define float @ret_atan(float %arg) {
 define float @ret_atan_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_atan_nonneg
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.atan.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.atan.f32(float nofpclass(ninf nzero nsub nnorm) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.atan.f32(float %arg)
@@ -221,9 +281,32 @@ define float @ret_atan_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
 define float @ret_atan_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_atan_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.atan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.atan.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.atan.f32(float %arg)
   ret float %call
 }
+
+define float @ret_atan_negnormal_or_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_atan_negnormal_or_negsubnormal_mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.atan.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.atan.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_atan_negnormal_or_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_atan_negnormal_or_negsubnormal_mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.atan.f32(float nofpclass(nan inf zero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.atan.f32(float %arg)
+  ret float %call
+}
+
+attributes #0 = { denormal_fpenv(dynamic|dynamic) }
+attributes #1 = { denormal_fpenv(positivezero|positivezero) }
