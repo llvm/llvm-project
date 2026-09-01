@@ -630,6 +630,13 @@ public:
   ///     An error that describes anything that went wrong
   virtual Status StepOut(uint32_t frame_idx = 0);
 
+  /// Default implementation for stepping back one instruction.
+  ///
+  /// This function is designed to be used by commands where the
+  /// process is publicly stopped.
+  ///
+  virtual Status StepBackInstruction();
+
   /// Retrieves the per-thread data area.
   /// Most OSs maintain a per-thread pointer (e.g. the FS register on
   /// x64), which we return the value of here.
@@ -709,6 +716,9 @@ public:
   /// \param[in] step_over
   ///    \b true if we step over calls to functions, false if we step in.
   ///
+  /// \param[in] direction
+  ///    The direction in which a step will be taken.
+  ///
   /// \param[in] abort_other_plans
   ///    \b true if we discard the currently queued plans and replace them with
   ///    this one.
@@ -724,8 +734,8 @@ public:
   ///     A shared pointer to the newly queued thread plan, or nullptr if the
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepSingleInstruction(
-      bool step_over, bool abort_other_plans, bool stop_other_threads,
-      Status &status);
+      bool step_over, lldb::RunDirection direction, bool abort_other_plans,
+      bool stop_other_threads, Status &status);
 
   /// Queues the plan used to step through an address range, stepping  over
   /// function calls.
