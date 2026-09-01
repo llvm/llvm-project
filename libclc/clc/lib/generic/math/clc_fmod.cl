@@ -6,17 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_floor.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_ldexp.h>
-#include <clc/math/clc_trunc.h>
-#include <clc/math/math.h>
-#include <clc/shared/clc_max.h>
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_clz.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_floor.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_ldexp.h"
+#include "clc/math/clc_subnormal_config.h"
+#include "clc/math/clc_trunc.h"
+#include "clc/math/math.h"
+#include "clc/shared/clc_max.h"
 
-_CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
+// Core fmod reduction. Assumes x and y are finite, non-zero and normal (the
+// exponent field is reconstructed from ex/ey and the result is rescaled with
+// as_float(ey << 23), which is only correct for normal operands and would
+// flush a subnormal result to zero). Callers must normalize subnormal inputs
+// before calling and handle NaN/Inf/zero edge cases.
+_CLC_DEF _CLC_OVERLOAD float __clc_fmod_impl(float x, float y) {
   int ux = __clc_as_int(x);
   int ax = ux & EXSIGNBIT_SP32;
   float xa = __clc_as_float(ax);
@@ -54,10 +60,51 @@ _CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
   c = ax == ay;
   xr = c ? 0.0f : xr;
 
-  xr = __clc_as_float(sx ^ __clc_as_int(xr));
+  return __clc_as_float(sx ^ __clc_as_int(xr));
+}
 
-  c = ax > PINFBITPATT_SP32 | ay > PINFBITPATT_SP32 | ax == PINFBITPATT_SP32 |
-      ay == 0;
+_CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
+  int ux = __clc_as_int(x);
+  int ax = ux & EXSIGNBIT_SP32;
+  int uy = __clc_as_int(y);
+  int ay = uy & EXSIGNBIT_SP32;
+
+  float xr;
+
+  // The core reduction only handles normal operands and would flush a
+  // subnormal result to zero (as_float(ey << 23) == 0 when y is subnormal).
+  // When subnormals are supported, normalize a subnormal y by scaling both
+  // operands up by the same power of two: fmod(a*t, b*t) == t*fmod(a,b), so the
+  // core only sees a normal-sized modulus, then scale the result back down.
+  // Scaling by 2^25 turns the largest subnormal normal.
+  bool x_sub = ax != 0 && ax < PINFBITPATT_SP32 &&
+               __clc_as_float(ax) < 0x1.0p-126f;
+  bool y_sub = ay != 0 && ay < PINFBITPATT_SP32 &&
+               __clc_as_float(ay) < 0x1.0p-126f;
+
+  if (!__clc_denormals_are_zero_fp32() && y_sub) {
+    float ys = __clc_ldexp(y, 25);
+    if (x_sub) {
+      // Both subnormal: scaling both up cannot overflow.
+      xr = __clc_ldexp(__clc_fmod_impl(__clc_ldexp(x, 25), ys), -25);
+    } else {
+      // x normal, y subnormal: first reduce x modulo the scaled-up ys = y*2^25
+      // (a multiple of y) with the core; the residue r is in [0, |ys|), i.e.
+      // normal-sized, and satisfies fmod(x, y) == fmod(r, y). Then compute
+      // fmod(r, y) via the scaling identity fmod(r, y) == fmod(r*2^25, ys)/2^25
+      // so the core again only sees normal operands, and scale the result back.
+      float r = __clc_fmod_impl(x, ys);
+      xr = __clc_ldexp(__clc_fmod_impl(__clc_ldexp(r, 25), ys), -25);
+    }
+  } else {
+    // Normal operands, or x subnormal with y normal (the core takes the
+    // ex < ey path and uses the subnormal x directly, without the
+    // as_float(ey << 23) rescale that only applies to the larger operand).
+    xr = __clc_fmod_impl(x, y);
+  }
+
+  int c = ax > PINFBITPATT_SP32 | ay > PINFBITPATT_SP32 |
+          ax == PINFBITPATT_SP32 | ay == 0;
   xr = c ? __clc_as_float(QNANBITPATT_SP32) : xr;
 
   return xr;
