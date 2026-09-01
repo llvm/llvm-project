@@ -30,6 +30,7 @@ add_flang_library(FortranLower
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/LoopAnnotation.cpp
   Support/PrivateReductionUtils.cpp
   Support/ReductionProcessor.cpp
   Support/Utils.cpp

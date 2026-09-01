@@ -24,7 +24,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -297,6 +296,59 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(false);
 }
 
+/// Set up TextureCube and TextureCubeArray types: SRV cube textures. Locations
+/// are direction vectors into the cube rather than texel coordinates, so cube
+/// textures have no Load, no operator[] and no mips member. Their sampling and
+/// gather methods also have no offset overloads.
+static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl, Sema &S,
+                                                   bool IsArray) {
+  constexpr ResourceDimension Dim = ResourceDimension::Cube;
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false)
+      .addSampleMethods(Dim, IsArray)
+      .addSampleBiasMethods(Dim, IsArray)
+      .addSampleGradMethods(Dim, IsArray)
+      .addSampleLevelMethods(Dim, IsArray)
+      .addSampleCmpMethods(Dim, IsArray)
+      .addSampleCmpLevelZeroMethods(Dim, IsArray)
+      .addCalculateLodMethods(Dim)
+      .addGetDimensionsMethods(Dim)
+      .addGatherMethods(Dim, IsArray)
+      .addGatherCmpMethods(Dim, IsArray);
+}
+
+/// Set up Texture2DMS (multisampled) type: SRV texture with only operator[]
+/// and sample-indexed Load. It does not support sampling, gather, LOD, or mips.
+static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
+  assert(CTD && "multisampled texture must be a class template");
+
+  // Parameter 1 is the N in Texture2DMS<T, N>.
+  auto *NTTP =
+      cast<NonTypeTemplateParmDecl>(CTD->getTemplateParameters()->getParam(1));
+  Expr *SampleCountExpr =
+      S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
+
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim,
+                        SampleCountExpr)
+      .addTextureLoadMSMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);
+      // the generic addGetDimensionsMethods is mip-based and unsuitable here.
+      // https://github.com/llvm/wg-hlsl/issues/347
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
 // Add a partial specialization for a template. The `TextureTemplate` is
 // `Texture<element_type>`, and it will be specialized for vectors:
 // `Texture<vector<element_type, element_count>>`.
@@ -355,7 +407,7 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
 
   // Add the partial specialization to the namespace and the class template.
   HLSLNamespace->addDecl(PartialSpec);
-  TextureTemplate->AddPartialSpecialization(PartialSpec, nullptr);
+  TextureTemplate->AddPartialSpecialization(PartialSpec, {});
 
   return PartialSpec;
 }
@@ -767,6 +819,55 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                        ResourceDimension::Dim2D)
         .completeDefinition();
   });
+
+  // Texture2DMS — like Texture2D but multisampled, and the element type has no
+  // default argument.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DMS")
+             .addMSTextureTemplateParams("element_type", "sample_count",
+                                         TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupMSTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // TextureCube — SRV cube texture. Locations are float3 direction vectors.
+  // Cube textures do not support Load, operator[], mips or offsets.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCube")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecCube = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecCube, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
+        .completeDefinition();
+  });
+
+  // TextureCubeArray — same as TextureCube but IsArray=true, so locations gain
+  // an array slice and are float4.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCubeArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
+  });
+
+  auto *PartialSpecCubeArray = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecCubeArray, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
+  });
 }
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
@@ -841,6 +942,8 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
                             "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",
+                            "__builtin_hlsl_interlocked_min");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
@@ -856,31 +959,7 @@ void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (!isa<CXXRecordDecl>(Tag))
     return;
-  auto Record = cast<CXXRecordDecl>(Tag);
-
-  // If this is a specialization, we need to get the underlying templated
-  // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
-    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
-      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
-      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
-      Template->getPartialSpecializations(Partials);
-      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
-      for (auto *Partial : Partials) {
-        sema::TemplateDeductionInfo Info(TDecl->getLocation());
-        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
-                                             Info) ==
-            TemplateDeductionResult::Success) {
-          MatchedPartial = Partial;
-          break;
-        }
-      }
-      if (MatchedPartial)
-        Record = MatchedPartial;
-      else
-        Record = Template->getTemplatedDecl();
-    }
-  }
+  auto *Record = cast<CXXRecordDecl>(Tag);
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())
