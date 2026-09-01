@@ -133,9 +133,8 @@ def SuperHAsmParser : AsmParser {
 def SuperHAsmParserVariant : AsmParserVariant {
   let Variant = 0;
   let Name = "GCC";
-  let SeparatorCharacters = " \t,()@-+";
-  let TokenizingCharacters = "[]*!#";
-  let CommentDelimiter = ";";
+  let TokenizingCharacters = "()+-@";
+  let CommentDelimiter = "!";
 }
 
 //===----------------------------------------------------------------------===//
