@@ -24,7 +24,7 @@ add_library(omptarget SHARED
 if(LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
 else()
-  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object Offload)
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object)
 endif()
 target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_link_libraries(omptarget PRIVATE LLVMOffload)
