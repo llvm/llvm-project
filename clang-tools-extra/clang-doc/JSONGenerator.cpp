@@ -106,12 +106,6 @@ static void insertNonEmpty(StringRef Key, StringRef Value, Object &Obj) {
     Obj[Key] = Value;
 }
 
-static json::Value safeJSONString(StringRef S) {
-  if (LLVM_LIKELY(json::isUTF8(S)))
-    return S;
-  return json::fixUTF8(S);
-}
-
 static std::string infoTypeToString(InfoType IT) {
   switch (IT) {
   case InfoType::IT_default:
@@ -239,7 +233,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
     if (!I.Text.empty())
-      Obj.insert({commentKindToString(I.Kind), safeJSONString(I.Text)});
+      Obj.insert({commentKindToString(I.Kind), json::safeUTF8(I.Text)});
     return Obj;
   }
 
@@ -264,7 +258,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     auto &ARef = *ArgsArr.getAsArray();
     ARef.reserve(I.Args.size());
     for (const auto &Arg : I.Args)
-      ARef.emplace_back(safeJSONString(Arg));
+      ARef.emplace_back(json::safeUTF8(Arg));
     Child.insert({"Command", I.Name});
     Child.insert({"Args", ArgsArr});
     Child.insert({"Children", ChildArr});
@@ -298,7 +292,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 
   case CommentKind::CK_VerbatimBlockLineComment:
   case CommentKind::CK_VerbatimLineComment: {
-    Child.insert({"Text", safeJSONString(I.Text)});
+    Child.insert({"Text", json::safeUTF8(I.Text)});
     Child.insert({"Children", ChildArr});
     Obj.insert({commentKindToString(I.Kind), ChildVal});
     return Obj;
@@ -339,7 +333,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   }
 
   case CommentKind::CK_Unknown: {
-    Obj.insert({commentKindToString(I.Kind), safeJSONString(I.Text)});
+    Obj.insert({commentKindToString(I.Kind), json::safeUTF8(I.Text)});
     return Obj;
   }
   }
