@@ -4829,6 +4829,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     if (SemaRef.checkArgCount(TheCall, 0))
       return true;

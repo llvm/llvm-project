@@ -1272,6 +1272,16 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveReadLaneFirst : DXILOp<118, waveReadLaneFirst> {
+  let Doc = "returns the value from the first active lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane_first>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let Doc = "returns the result of the operation across waves";
   let intrinsics = [
