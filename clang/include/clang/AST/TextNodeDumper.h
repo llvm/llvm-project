@@ -208,7 +208,7 @@ public:
   void dumpType(QualType T);
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
-  void dumpFormalLinkage(const NamedDecl *ND);
+  void dumpLinkageAndVisibility(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
@@ -216,6 +216,7 @@ public:
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
+  void dumpBareConcept(TemplateName TN);
   void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});

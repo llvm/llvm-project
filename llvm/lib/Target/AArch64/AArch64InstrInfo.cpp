@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -1187,15 +1186,19 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       break;
     }
 
-    if (IsImm)
+    if (IsImm) {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
       BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addImm(Cond[4].getImm())
           .addImm(0);
-    else
+    } else {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
+      MRI.constrainRegClass(Cond[4].getReg(), getRegClass(get(SubsOpc), 2));
       BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addReg(Cond[4].getReg());
+    }
   } break;
   case 7: { // cb[b,h]
     // We must insert a cmp, that is a subs, but also zero- or sign-extensions
@@ -5743,37 +5746,33 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   return MIB.addReg(Reg, State, SubIdx);
 }
 
-static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
-                                        unsigned NumRegs) {
-  // We really want the positive remainder mod 32 here, that happens to be
-  // easily obtainable with a mask.
-  return ((DestReg - SrcReg) & 0x1f) < NumRegs;
-}
-
 void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         const DebugLoc &DL, MCRegister DestReg,
                                         MCRegister SrcReg, bool KillSrc,
-                                        unsigned Opcode,
                                         ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() && "Unexpected register copy without NEON");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned NumRegs = Indices.size();
+  MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[0]);
+  assert(!AArch64::PNRRegClass.contains(DestSubReg) &&
+         "Unexpected predicate tuple copy");
+  unsigned MaxRegs = AArch64::PPRRegClass.contains(DestSubReg) ? 15 : 31;
 
   int SubReg = 0, End = NumRegs, Incr = 1;
-  if (forwardCopyWillClobberTuple(DestEncoding, SrcEncoding, NumRegs)) {
+  // Copy in reverse if a forward copy will clobber the tuple
+  if (((DestEncoding - SrcEncoding) & MaxRegs) < NumRegs) {
     SubReg = NumRegs - 1;
     End = -1;
     Incr = -1;
   }
 
   for (; SubReg != End; SubReg += Incr) {
-    const MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opcode));
-    AddSubReg(MIB, DestReg, Indices[SubReg], RegState::Define, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], {}, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], getKillRegState(KillSrc), TRI);
+    DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
+    MCRegister SrcSubReg = TRI->getSubReg(SrcReg, Indices[SubReg]);
+    copyPhysRegImpl(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
   }
 }
 
@@ -5834,13 +5833,12 @@ static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
   return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
 }
 
-void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, bool KillSrc,
-                                   bool RenamableDest,
-                                   bool RenamableSrc) const {
-  ++NumCopyInstrs;
+void AArch64InstrInfo::copyPhysRegImpl(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       const DebugLoc &DL, Register DestReg,
+                                       Register SrcReg, bool KillSrc,
+                                       bool RenamableDest,
+                                       bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       AArch64::GPR32spRegClass.contains(SrcReg)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
@@ -5993,6 +5991,16 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Copy a predicate register pair by copying the individual sub-registers.
+  if (AArch64::PPR2RegClass.contains(DestReg) &&
+      AArch64::PPR2RegClass.contains(SrcReg)) {
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE predicate register.");
+    static const unsigned Indices[] = {AArch64::psub0, AArch64::psub1};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
+    return;
+  }
+
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
@@ -6012,8 +6020,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(Subtarget.isSVEorStreamingSVEAvailable() &&
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6024,8 +6031,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6038,8 +6044,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6048,8 +6053,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2, AArch64::dsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6058,8 +6062,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6067,8 +6070,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::DDRegClass.contains(DestReg) &&
       AArch64::DDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6077,8 +6079,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2, AArch64::qsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6087,8 +6088,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6096,8 +6096,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::QQRegClass.contains(DestReg) &&
       AArch64::QQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6361,6 +6360,18 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
+}
+
+void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
+  ++NumCopyInstrs;
+  copyPhysRegImpl(MBB, I, DL, DestReg, SrcReg, KillSrc, RenamableDest,
+                  RenamableSrc);
+  return;
 }
 
 static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
@@ -10102,9 +10113,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
       return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
-    if (!MRI->hasOneDef(CopyVReg))
-      return false;
     DefMI = MRI->getVRegDef(CopyVReg);
+    if (!DefMI)
+      return false;
   }
 
   switch (DefMI->getOpcode()) {
@@ -10131,7 +10142,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!NewReg.isVirtual())
       return false;
 
-    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+    if (!MRI->getVRegDef(NewReg))
+      return false;
 
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI.getOperand(1).getMBB();

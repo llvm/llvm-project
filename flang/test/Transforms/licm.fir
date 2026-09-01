@@ -2689,3 +2689,240 @@ func.func @test_hoist_hlfir_null(%arg0: !fir.ref<i64>) {
   }
   return
 }
+
+// -----
+// Test that a scalar load inside scf.if is hoisted in the default "cheap"
+// nested hoisting mode, along with the fir.convert chain depending on it.
+// CHECK-LABEL:   func.func @test_cheap_nested_scalar_load(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32>
+// CHECK:           %[[DECL:.*]] = fir.declare %[[ARG1]]
+// CHECK:           %[[CVT:.*]] = fir.convert %[[ARG0]]
+// CHECK:           %[[LOAD:.*]] = fir.load %[[DECL]]
+// CHECK:           %[[IDX:.*]] = fir.convert %[[LOAD]] : (i32) -> index
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load
+// CHECK:               memref.store %{{.*}}, %[[CVT]]{{\[}}%[[IDX]]{{\]}}
+func.func @test_cheap_nested_scalar_load(%arg0: !fir.ref<!fir.array<10xf32>>, %arg1: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %cvt = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      %val = fir.load %1 : !fir.ref<i32>
+      %idx = fir.convert %val : (i32) -> index
+      memref.store %cst, %cvt[%idx] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a load of a global scalar inside scf.if is hoisted in the default
+// "cheap" nested hoisting mode.
+// CHECK-LABEL:   func.func @test_cheap_nested_global_scalar_load(
+// CHECK:           %[[ADDR:.*]] = fir.address_of(@global_scalar)
+// CHECK:           %[[LOAD:.*]] = fir.load %[[ADDR]]
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load
+// CHECK:               fir.store %[[LOAD]]
+fir.global @global_scalar : f32
+
+func.func @test_cheap_nested_global_scalar_load(%arg0: !fir.ref<f32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %addr = fir.address_of(@global_scalar) : !fir.ref<f32>
+      %val = fir.load %addr : !fir.ref<f32>
+      fir.store %val to %arg0 : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a descriptor load inside scf.if is hoisted in the default "cheap"
+// nested hoisting mode. A descriptor load is a fixed-size copy. The element
+// load must stay inside the guard.
+// CHECK-LABEL:   func.func @test_cheap_nested_descriptor_load(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX:.*]] = fir.load %[[ARG0]]
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load %[[ARG0]]
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[BOX]]
+// CHECK:               %[[ELT:.*]] = fir.coordinate_of %[[ADDR]]
+// CHECK:               fir.load %[[ELT]]
+func.func @test_cheap_nested_descriptor_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %arg1: !fir.ref<f32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %box = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+      %addr = fir.box_addr %box : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+      %elt = fir.coordinate_of %addr, %c0 : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      %val = fir.load %elt : !fir.ref<f32>
+      fir.store %val to %arg1 : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a load of a derived type inside scf.if is NOT hoisted in the
+// default "cheap" nested hoisting mode, because it may be arbitrarily large.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_derived_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+func.func @test_cheap_nested_skips_derived_load(%arg0: !fir.ref<!fir.type<t{a:i32,b:i32}>>, %arg1: !fir.ref<!fir.type<t{a:i32,b:i32}>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.type<t{a:i32,b:i32}>>
+      fir.store %val to %arg1 : !fir.ref<!fir.type<t{a:i32,b:i32}>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a vector load inside scf.if is NOT hoisted in the default "cheap"
+// nested hoisting mode. Vector loads may be large and are excluded from cheap
+// mode.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_vector_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+// CHECK:               fir.store
+func.func @test_cheap_nested_skips_vector_load(%arg0: !fir.ref<!fir.vector<8:f64>>, %arg1: !fir.ref<!fir.vector<8:f64>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.vector<8:f64>>
+      fir.store %val to %arg1 : !fir.ref<!fir.vector<8:f64>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that an assumed-rank descriptor load inside scf.if is NOT hoisted in the
+// default "cheap" nested hoisting mode. The descriptor size depends on the rank,
+// which is only known at runtime, so the load lowers to a memcpy whose length is
+// computed from the descriptor.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_assumed_rank_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+// CHECK:               fir.store
+func.func @test_cheap_nested_skips_assumed_rank_load(%arg0: !fir.ref<!fir.box<!fir.array<*:f32>>>, %arg1: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+      fir.store %val to %arg1 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a volatile scalar load inside scf.if is NOT hoisted in the default
+// "cheap" nested hoisting mode. The cost model admits it as a trivial scalar;
+// the safety path rejects it.
+// CHECK-LABEL:   func.func @test_cheap_nested_volatile_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load{{.*}}volatile
+// CHECK:               fir.store
+func.func @test_cheap_nested_volatile_load(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  %2 = fir.declare %1 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_cheap_nested_volatile_loadEv"} : (!fir.ref<i32, volatile>, !fir.dscope) -> !fir.ref<i32, volatile>
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %2 : !fir.ref<i32, volatile>
+      fir.store %val to %arg1 : !fir.ref<i32>
+    }
+  }
+  return
+}
+
+// -----
+// Test the shape that motivates the change: a global scalar read under a guard
+// in a serial loop nested inside an OpenMP worksharing region. The load must
+// move out of the inner fir.do_loop but stay inside omp.loop_nest, since
+// omp.wsloop requires tight nesting.
+// CHECK-LABEL:   func.func @test_cheap_nested_omp_global_scalar(
+// CHECK:           omp.parallel
+// CHECK:             omp.wsloop
+// CHECK:               omp.loop_nest
+// CHECK:                 %[[ADDR:.*]] = fir.address_of(@omp_global_scalar)
+// CHECK:                 %[[LOAD:.*]] = fir.load %[[ADDR]]
+// CHECK:                 fir.do_loop
+// CHECK:                   scf.if
+// CHECK-NOT:                 fir.load
+// CHECK:                     fir.store %[[LOAD]]
+fir.global @omp_global_scalar : f64
+
+omp.private {type = private} @_QFtest_ompEi_private_i32 : i32
+
+func.func @test_cheap_nested_omp_global_scalar(%arg0: !fir.ref<f64>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_ompEi"}
+  %1 = fir.declare %0 {uniq_name = "_QFtest_ompEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel {
+    omp.wsloop private(@_QFtest_ompEi_private_i32 %1 -> %arg1 : !fir.ref<i32>) {
+      omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
+        fir.do_loop %k = %c1 to %c3 step %c1 {
+          %cond = arith.cmpi slt, %k, %c2 : index
+          scf.if %cond {
+            %addr = fir.address_of(@omp_global_scalar) : !fir.ref<f64>
+            %val = fir.load %addr : !fir.ref<f64>
+            fir.store %val to %arg0 : !fir.ref<f64>
+          }
+        }
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
