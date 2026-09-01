@@ -6,27 +6,23 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 
 licenses(["notice"])
 
-_REPOSITORY_NAME = repository_name().lstrip("@")
-
-_LLD_SRC_DIR = "../%s/lld" % _REPOSITORY_NAME if _REPOSITORY_NAME else "lld"
+genrule(
+    name = "as_lib_elf_srcdir",
+    srcs = ["AsLibELF/CMakeLists.txt"],
+    outs = ["llvm.srcdir.txt"],
+    cmd = "p=$(rootpath AsLibELF/CMakeLists.txt); echo $${p%/*} > $@",
+)
 
 cc_test(
     name = "LLDAsLibELFTests",
     size = "small",
-    srcs = [
-        "AsLibELF/OutputStream.cpp",
-        "AsLibELF/ROCm.cpp",
-        "AsLibELF/SomeDrivers.cpp",
-    ],
-    data = [
-        "AsLibELF/Inputs/kernel1.o",
-        "AsLibELF/Inputs/kernel2.o",
-    ],
-    env = {"LLD_SRC_DIR": _LLD_SRC_DIR},
+    srcs = glob(["AsLibELF/*.cpp"]),
+    data = glob(["AsLibELF/Inputs/*"]) + [":as_lib_elf_srcdir"],
     deps = [
         "//lld:Common",
         "//lld:ELF",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -36,7 +32,7 @@ cc_test(
 cc_test(
     name = "LLDAsLibAllTests",
     size = "small",
-    srcs = ["AsLibAll/AllDrivers.cpp"],
+    srcs = glob(["AsLibAll/*.cpp"]),
     deps = [
         "//lld:COFF",
         "//lld:Common",
