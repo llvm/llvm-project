@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"

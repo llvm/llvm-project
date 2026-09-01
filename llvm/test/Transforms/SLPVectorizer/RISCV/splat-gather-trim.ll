@@ -12,8 +12,8 @@ define void @splat_trim(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %F, ptr %S) 
 ; CHECK-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i64, ptr [[E]], align 8
 ; CHECK-NEXT:    [[F0:%.*]] = load i64, ptr [[F]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
 ; CHECK-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
+; CHECK-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
 ; CHECK-NEXT:    [[AS2:%.*]] = add i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS3:%.*]] = sub i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS1:%.*]] = add i64 [[V1]], [[V2]]
@@ -44,8 +44,8 @@ define void @splat_trim(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %F, ptr %S) 
 ; THRESH-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; THRESH-NEXT:    [[E0:%.*]] = load i64, ptr [[E]], align 8
 ; THRESH-NEXT:    [[F0:%.*]] = load i64, ptr [[F]], align 8
-; THRESH-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
 ; THRESH-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
+; THRESH-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
 ; THRESH-NEXT:    [[AS2:%.*]] = add i64 [[V1]], [[V2]]
 ; THRESH-NEXT:    [[AS3:%.*]] = sub i64 [[V1]], [[V2]]
 ; THRESH-NEXT:    [[AS1:%.*]] = add i64 [[V1]], [[V2]]
@@ -124,9 +124,9 @@ define void @splat_trim_partial(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %F, 
 ; CHECK-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i64, ptr [[E]], align 8
 ; CHECK-NEXT:    [[F0:%.*]] = load i64, ptr [[F]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
-; CHECK-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
 ; CHECK-NEXT:    [[V3:%.*]] = add i64 1, [[E0]]
+; CHECK-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
+; CHECK-NEXT:    [[V1:%.*]] = add i64 1, [[A0]]
 ; CHECK-NEXT:    [[AS0:%.*]] = add i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS3:%.*]] = sub i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS1:%.*]] = add i64 [[V1]], [[V2]]
@@ -159,9 +159,9 @@ define void @splat_trim_partial(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %F, 
 ; THRESH-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; THRESH-NEXT:    [[E0:%.*]] = load i64, ptr [[E]], align 8
 ; THRESH-NEXT:    [[F0:%.*]] = load i64, ptr [[F]], align 8
-; THRESH-NEXT:    [[TMP4:%.*]] = add i64 1, [[A0]]
-; THRESH-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
 ; THRESH-NEXT:    [[V3:%.*]] = add i64 1, [[E0]]
+; THRESH-NEXT:    [[V2:%.*]] = add i64 1, [[B0]]
+; THRESH-NEXT:    [[TMP4:%.*]] = add i64 1, [[A0]]
 ; THRESH-NEXT:    [[AS2:%.*]] = add i64 [[TMP4]], [[V2]]
 ; THRESH-NEXT:    [[AS3:%.*]] = sub i64 [[TMP4]], [[V2]]
 ; THRESH-NEXT:    [[AS1:%.*]] = add i64 [[TMP4]], [[V2]]
