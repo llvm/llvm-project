@@ -2,7 +2,10 @@
 # RUN:   -o - -verify-machineinstrs | FileCheck %s
 #
 # An invariant load always returns the same value, so the pass can reuse an
-# earlier one even when a store or a call comes in between.
+# earlier one even when a store or a call comes in between. That has to keep
+# working now that a spill-slot reload is tracked as well, because the stores
+# and calls which end the reuse of a reload must not end the reuse of an
+# invariant load.
 #
 # These tests use a 32-bit target on purpose. There a constant pool entry is
 # addressed absolutely, while on x86-64 the load goes through $rip. isCandidate()
@@ -86,7 +89,8 @@ body:             |
     RET32
 ...
 ---
-# A mutable frame object is not invariant, so the pass has to leave it alone.
+# A mutable frame object is neither invariant nor a spill slot, so the pass has
+# to leave it alone.
 name:            mutable_argument_load_is_not_reused
 tracksRegLiveness: true
 frameInfo:

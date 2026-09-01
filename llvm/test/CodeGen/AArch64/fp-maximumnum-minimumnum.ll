@@ -1236,7 +1236,6 @@ define fp128 @max_fp128(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:  // %bb.3: // %start
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:  .LBB32_4: // %start
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    bl __gttf2
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -1879,7 +1878,6 @@ define fp128 @min_fp128(fp128 %x, fp128 %y) {
 ; CHECK-NEXT:  // %bb.3: // %start
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:  .LBB49_4: // %start
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    bl __gttf2
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
