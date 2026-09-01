@@ -3,8 +3,38 @@
 
 %pair = type { i32, i32 }
 
-define i64 @load_same_type(i1 %cond, ptr %other) {
-; CHECK-LABEL: define i64 @load_same_type(
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1 immarg)
+
+define i64 @phi_load_same_type(i1 %cond, ptr %source, ptr %other) {
+; CHECK-LABEL: define i64 @phi_load_same_type(
+; CHECK-SAME: i1 [[COND:%.*]], ptr [[SOURCE:%.*]], ptr [[OTHER:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TEMPORARY_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[CONT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[VALUE_THEN_VAL:%.*]] = load i64, ptr [[OTHER]], align 8
+; CHECK-NEXT:    br label %[[CONT]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    [[VALUE_SROA_SPECULATED:%.*]] = phi i64 [ [[VALUE_THEN_VAL]], %[[THEN]] ], [ [[TEMPORARY_SROA_0_0_COPYLOAD]], %[[ENTRY]] ]
+; CHECK-NEXT:    ret i64 [[VALUE_SROA_SPECULATED]]
+;
+entry:
+  %temporary = alloca [2 x i32], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temporary, ptr align 8 %source,
+                                  i64 8, i1 false)
+  br i1 %cond, label %then, label %cont
+
+then:
+  br label %cont
+
+cont:
+  %address = phi ptr [ %other, %then ], [ %temporary, %entry ]
+  %value = load i64, ptr %address, align 8
+  ret i64 %value
+}
+
+define i64 @select_load_same_type(i1 %cond, ptr %other) {
+; CHECK-LABEL: define i64 @select_load_same_type(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[ENTRY_THEN:.*]], label %[[ENTRY_CONT:.*]]
@@ -23,8 +53,9 @@ entry:
   ret i64 %value
 }
 
-define i64 @store_same_type(i64 %initial, i64 %value, i1 %cond, ptr %other) {
-; CHECK-LABEL: define i64 @store_same_type(
+define i64 @select_store_same_type(i64 %initial, i64 %value, i1 %cond,
+                                   ptr %other) {
+; CHECK-LABEL: define i64 @select_store_same_type(
 ; CHECK-SAME: i64 [[INITIAL:%.*]], i64 [[VALUE:%.*]], i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[ENTRY_THEN:.*]], label %[[ENTRY_ELSE:.*]]
@@ -46,8 +77,8 @@ entry:
   ret i64 %result
 }
 
-define i64 @mixed_types(i1 %cond, ptr %other) {
-; CHECK-LABEL: define i64 @mixed_types(
+define i64 @select_mixed_types(i1 %cond, ptr %other) {
+; CHECK-LABEL: define i64 @select_mixed_types(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TEMPORARY:%.*]] = alloca [[PAIR:%.*]], align 8
@@ -68,8 +99,8 @@ entry:
   ret i64 %whole
 }
 
-define i64 @volatile_load_same_type(i1 %cond, ptr %other) {
-; CHECK-LABEL: define i64 @volatile_load_same_type(
+define i64 @select_volatile_load_same_type(i1 %cond, ptr %other) {
+; CHECK-LABEL: define i64 @select_volatile_load_same_type(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ZERO:%.*]] = alloca i64, align 8
