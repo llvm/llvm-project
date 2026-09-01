@@ -54,6 +54,13 @@ in a future version of Clang.
 
 ### C++ Specific Potentially Breaking Changes
 
+- Clang now rejects calls to consteval functions with non-constant arguments
+  inside member functions of a local class defined within a consteval function
+  or within the compound-statement of a `consteval if`. Such bodies were
+  previously treated as an immediate function context, which silently accepted
+  the ill-formed calls and crashed CodeGen when the member function was
+  emitted. (#GH220226)
+
 ### Objective-C Specific Potentially Breaking Changes
 
 - Fixed an issue where AST consumers based on `RecursiveASTVisitor` would bypass

@@ -659,3 +659,58 @@ scope_exit guard( // expected-note {{in instantiation of member function}}
 );
 
 }
+
+namespace GH220226 {
+// A function body is in an immediate function context only if the function
+// itself is an immediate function ([expr.const]p14); being lexically nested in
+// a consteval function or in the compound-statement of a consteval if does not
+// make the body of a local class member function an immediate function context.
+consteval int local_h(int x) { return x; }
+struct FnPtrHolder { int (*fp)(int); };
+
+consteval FnPtrHolder make_local() {
+  struct S {
+    static int g(int x) { // expected-note {{declared here}}
+      return local_h(x); // expected-error {{call to consteval function 'GH220226::local_h' is not a constant expression}} \
+                         // expected-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+    }
+  };
+  return FnPtrHolder{&S::g};
+}
+
+struct Outer {
+  consteval FnPtrHolder member() {
+    struct S {
+      static int g(int x) { // expected-note {{declared here}}
+        return local_h(x); // expected-error {{call to consteval function 'GH220226::local_h' is not a constant expression}} \
+                           // expected-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+      }
+    };
+    return FnPtrHolder{&S::g};
+  }
+};
+
+consteval int local_ok(int n) {
+  struct S {
+    static constexpr int g() { return local_h(3); }
+    consteval int k(int x) const { return local_h(x); }
+  };
+  return S::g() + S{}.k(n);
+}
+static_assert(local_ok(4) == 7);
+
+#if __cplusplus >= 202302L
+constexpr FnPtrHolder make_local_if_consteval() {
+  if consteval {
+    struct S {
+      static int g(int x) { // expected-note {{declared here}}
+        return local_h(x); // expected-error {{call to consteval function 'GH220226::local_h' is not a constant expression}} \
+                           // expected-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+      }
+    };
+    return FnPtrHolder{&S::g};
+  }
+  return FnPtrHolder{nullptr};
+}
+#endif
+}

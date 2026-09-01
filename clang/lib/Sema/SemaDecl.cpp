@@ -16450,9 +16450,17 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
-  if (!isLambdaCallOperator(FD))
-    PushExpressionEvaluationContextForFunction(ExprEvalContexts.back().Context,
-                                               FD);
+  if (!isLambdaCallOperator(FD)) {
+    // C++23 [expr.const]p14: a function body is in an immediate function
+    // context only if the function itself is an immediate function; it does
+    // not inherit that property from a lexically enclosing consteval function
+    // or consteval-if block (e.g. a member function of a local class).
+    // PushExpressionEvaluationContextForFunction handles consteval FDs.
+    ExpressionEvaluationContext Ctx = ExprEvalContexts.back().Context;
+    if (Ctx == ExpressionEvaluationContext::ImmediateFunctionContext)
+      Ctx = ExpressionEvaluationContext::PotentiallyEvaluated;
+    PushExpressionEvaluationContextForFunction(Ctx, FD);
+  }
 
   // Check for defining attributes before the check for redefinition.
   if (const auto *Attr = FD->getAttr<AliasAttr>()) {
