@@ -857,8 +857,8 @@ define i16 @disjoint_or_i16_lea(i16 %a) {
 ; X64-LABEL: disjoint_or_i16_lea:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    orw $16, %di
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal 16(%rdi), %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %or = or disjoint i16 %a, 16
   ret i16 %or

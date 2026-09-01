@@ -1636,7 +1636,8 @@ SDValue DAGCombiner::PromoteIntBinOp(SDValue Op) {
     SDLoc DL(Op);
 
     SDValue RV =
-        DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getNode(Opc, DL, PVT, NN0, NN1));
+        DAG.getNode(ISD::TRUNCATE, DL, VT,
+                    DAG.getNode(Opc, DL, PVT, NN0, NN1, Op->getFlags()));
 
     // We are always replacing N0/N1's use in N and only need additional
     // replacements if there are additional uses.
