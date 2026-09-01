@@ -85,7 +85,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
     : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
+      langOpts(astContext.getLangOpts()), atomicOpts(astContext.getLangOpts()),
+      codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {

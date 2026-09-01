@@ -28,6 +28,38 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+/// Compute the atomic options that apply for the extent of a clang::atomic
+/// attributed statement, starting from the enclosing options adjustments on top
+/// of them.
+static clang::AtomicOptions getAdjustedAtomicOptions(clang::AtomicOptions ao,
+                                                     const AtomicAttr *aa) {
+  if (!aa)
+    return ao;
+  for (auto option : aa->atomicOptions()) {
+    switch (option) {
+    case AtomicAttr::remote_memory:
+      ao.remote_memory = true;
+      break;
+    case AtomicAttr::no_remote_memory:
+      ao.remote_memory = false;
+      break;
+    case AtomicAttr::fine_grained_memory:
+      ao.fine_grained_memory = true;
+      break;
+    case AtomicAttr::no_fine_grained_memory:
+      ao.fine_grained_memory = false;
+      break;
+    case AtomicAttr::ignore_denormal_mode:
+      ao.ignore_denormal_mode = true;
+      break;
+    case AtomicAttr::no_ignore_denormal_mode:
+      ao.ignore_denormal_mode = false;
+      break;
+    }
+  }
+  return ao;
+}
+
 static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
                                               const Stmt *exprResult,
                                               AggValueSlot slot,
@@ -93,14 +125,17 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
   bool noinline = inNoInlineAttributedStmt;
   bool alwaysinline = inAlwaysInlineAttributedStmt;
   const CallExpr *musttail = mustTailCall;
+  const AtomicAttr *atomicAttr = nullptr;
 
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
       break;
+    case attr::Atomic:
+      atomicAttr = cast<AtomicAttr>(attr);
+      break;
     case attr::NoMerge:
     case attr::NoConvergent:
-    case attr::Atomic:
     case attr::AMDGPUAvailableVisible:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
@@ -141,7 +176,16 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+  // clang::atomic adjusts the atomic options for the extent of the statement it
+  // is attached to, so they are saved and restored around it.
+  clang::AtomicOptions savedAtomicOpts = cgm.getAtomicOpts();
+  cgm.setAtomicOpts(getAdjustedAtomicOptions(savedAtomicOpts, atomicAttr));
+
+  mlir::LogicalResult result =
+      emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+
+  cgm.setAtomicOpts(savedAtomicOpts);
+  return result;
 }
 
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
