@@ -795,6 +795,7 @@ static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
     // Variant 2.
   case EM_HEXAGON:
   case EM_S390:
+  case EM_SPARC:
   case EM_SPARCV9:
   case EM_386:
   case EM_X86_64:
