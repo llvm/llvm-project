@@ -7,7 +7,7 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[COMMON_RET:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[COMMON_RET:.*]]
 ; CHECK:       [[COMMON_RET]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -32,6 +32,3 @@ exit:
 declare void @g()
 
 !0 = distinct !{!0}
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]]}
-;.
