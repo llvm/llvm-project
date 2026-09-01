@@ -13400,10 +13400,10 @@ SDValue SITargetLowering::widenLoad(LoadSDNode *Ld,
 
   SDValue Ptr = Ld->getBasePtr();
 
-  // On GFX11+, the immediate byte offset for S_LOAD_B32/B64/B96/etc. must be
-  // dword aligned. Do not widen a sub-dword load if its constant offset does
+  // The immediate byte offset for S_LOAD_DWORD* must be dword aligned. Do not
+  // widen a constant-address-space sub-dword load if its constant offset does
   // not meet this requirement.
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS &&
       DAG.isBaseWithConstantOffset(Ptr)) {
     auto *Offset = dyn_cast<ConstantSDNode>(Ptr.getOperand(1));
     if (Offset && (Offset->getSExtValue() & 3) != 0)
