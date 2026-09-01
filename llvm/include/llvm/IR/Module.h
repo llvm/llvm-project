@@ -991,6 +991,11 @@ public:
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
 
+  /// Renumber the IDs stored in metadata nodes into canonical assembly order.
+  /// This mutates the IDs and should only be used immediately before final
+  /// assembly output.
+  void renumberMetadataForAssembly();
+
   /// Dump the module to stderr (for debugging).
   void dump() const;
 

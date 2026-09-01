@@ -518,6 +518,7 @@ int main(int argc, char **argv) {
   if (Verbose)
     errs() << "Writing bitcode...\n";
   if (OutputAssembly) {
+    Composite->renumberMetadataForAssembly();
     Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
     WriteBitcodeToFile(*Composite, Out.os(),
