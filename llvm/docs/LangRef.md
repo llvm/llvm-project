@@ -9214,6 +9214,38 @@ Example:
 This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
+#### '`sanitize.unpadded.size`' Metadata
+
+The '`sanitize.unpadded.size`' metadata is attached to a global variable
+whose storage a sanitizer has enlarged, and records the size in bytes of
+the object as it was declared, before any padding was added. It has a
+single operand, an `i64` constant.
+
+Sanitizers such as AddressSanitizer replace an instrumented global with a
+larger object that appends a redzone, and transfer the original name to the
+replacement. The declared size is not otherwise recoverable afterwards,
+because `getTypeAllocSize` and the emitted object file size both describe
+the enlarged object.
+
+Example:
+
+```llvm
+@g = global { i32, [28 x i8] } zeroinitializer, align 32, !sanitize.unpadded.size !0
+
+!0 = !{i64 4}
+```
+
+The global occupies 32 bytes, of which the first 4 belong to the declared
+`i32`.
+
+Absence of this metadata means the global was not padded, so its allocated
+size is also its declared size. Consumers must therefore treat the metadata
+as optional and fall back to the allocated size when it is missing; a
+sanitizer does not pad every global, and passes are permitted to drop
+metadata.
+
+The recorded size must not exceed the size of the global it is attached to.
+
 
 ## Module Flags Metadata
 

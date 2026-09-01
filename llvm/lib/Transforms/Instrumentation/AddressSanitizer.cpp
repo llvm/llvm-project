@@ -2738,6 +2738,12 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     G->replaceAllUsesWith(NewGlobal);
     NewGlobal->takeName(G);
+    // The redzone makes getTypeAllocSize() disagree with the declared size;
+    // record the latter for consumers that must report it back to the user.
+    NewGlobal->setMetadata(
+        LLVMContext::MD_sanitize_unpadded_size,
+        MDNode::get(*C, ConstantAsMetadata::get(ConstantInt::get(
+                            Type::getInt64Ty(*C), SizeInBytes))));
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
 
