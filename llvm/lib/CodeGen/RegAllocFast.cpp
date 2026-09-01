@@ -756,8 +756,9 @@ bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
   return displacedAny;
 }
 
-/// Displace whatever holds \p Reg and reserve it, so a virtual register def on
-/// the same instruction cannot take it. The free-def-operands step frees it.
+/// Displace whatever holds \p Reg and reserve it, so a virtual register def
+/// cannot land on a register this instruction already writes. Freed in the
+/// free-def-operands step, or after the uses for an early clobber.
 bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCRegister Reg) {
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
