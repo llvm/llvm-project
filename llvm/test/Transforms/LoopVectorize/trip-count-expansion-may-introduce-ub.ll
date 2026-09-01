@@ -1091,12 +1091,13 @@ define i64 @multi_exit_4_exit_count_with_sdiv_by_value_in_latch(ptr %dst, i64 %N
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_sdiv_by_value_in_latch(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 1, i64 [[N]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i64 42, [[TMP1]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP2]], i64 0)
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[SMAX1]])
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze i64 [[SMAX1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP7]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[UMIN]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

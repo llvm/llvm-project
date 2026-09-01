@@ -7475,11 +7475,8 @@ bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
 
 bool ScalarEvolution::isGuaranteedNotToCauseUB(const SCEV *Op) {
   return !SCEVExprContains(Op, [this](const SCEV *S) {
-    const SCEV *Op1;
-    bool M = match(S, m_scev_UDiv(m_SCEV(), m_SCEV(Op1)));
-    // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
-    // is a non-zero constant, we have to assume the UDiv may be UB.
-    return M && (!isKnownNonZero(Op1) || !isGuaranteedNotToBePoison(Op1));
+    auto *D = dyn_cast<SCEVDivExpr>(S);
+    return D && D->mayTriggerUB(*this);
   });
 }
 
