@@ -171,6 +171,10 @@ Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
 }
 
+Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
+  return getSubArch(parseArchAMDGCN(CPU));
+}
+
 StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
@@ -429,6 +433,22 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   if (Version.Major >= 8)
     return 16;
   return 8;
+}
+
+unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 8;
+  if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
+    return IsWave32 ? 24 : 12;
+  if (Features.test(FEAT_GFX10_3_INSTS))
+    return IsWave32 ? 16 : 8;
+  return IsWave32 ? 8 : 4;
+}
+
+unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                     bool IsWave32) {
+  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
 }
 
 unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
