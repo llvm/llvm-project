@@ -287,14 +287,31 @@ public:
     if (!diesWithDivision(numerator) && !diesWithDivision(denominator))
       return failure();
 
-    // Do not loosen the accuracy contract of the exponentials being replaced:
-    // the new one may only carry the flags that both of them carry.
-    arith::FastMathFlags expFmf =
-        numerator.getFastmath() & denominator.getFastmath();
+    // `nnan` and `ninf` are assumptions about the values an operation sees, and
+    // neither new operation sees the values its source did, so they cannot be
+    // carried over:
+    //  - the subtraction consumes the exponents instead of the exponentials.
+    //    `ninf` holds for `exp(-inf) / exp(0.0)`, i.e. `0.0 / 1.0`, while the
+    //    subtraction `-inf - 0.0` is infinite.
+    //  - the new exponential may overflow where neither of the old ones does.
+    //    For f32 `exp(80.0)` and `exp(-80.0)` are both finite while
+    //    `exp(80.0 - -80.0)` is not.
+    // All remaining flags only license *how* a value may be computed, so they
+    // stay. Derive them separately for the two new operations.
+    constexpr arith::FastMathFlags valueAssumptions =
+        arith::FastMathFlags::nnan | arith::FastMathFlags::ninf;
+
+    // The subtraction takes the place of the division.
+    arith::FastMathFlags subFmf = bitEnumClear(fmf, valueAssumptions);
+
+    // The new exponential may not be given a weaker accuracy contract than the
+    // ones it replaces, so it only keeps the flags common to both of them.
+    arith::FastMathFlags expFmf = bitEnumClear(
+        numerator.getFastmath() & denominator.getFastmath(), valueAssumptions);
 
     Value exponent =
         arith::SubFOp::create(rewriter, op.getLoc(), numerator.getOperand(),
-                              denominator.getOperand(), fmf);
+                              denominator.getOperand(), subFmf);
     rewriter.replaceOpWithNewOp<ExpOpTy>(op, exponent, expFmf);
     return success();
   }
