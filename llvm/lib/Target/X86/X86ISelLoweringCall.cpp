@@ -1960,7 +1960,11 @@ SDValue X86TargetLowering::LowerFormalArguments(
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
-  if (CallingConv::PreserveNone == CallConv)
+  if (CallingConv::PreserveNone == CallConv) {
+    if (isVarArg)
+      errorUnsupported(DAG, dl,
+                       "preserve_none calling convention does not support "
+                       "variadic functions");
     for (const ISD::InputArg &In : Ins) {
       if (In.Flags.isSwiftSelf() || In.Flags.isSwiftAsync() ||
           In.Flags.isSwiftError()) {
@@ -1969,6 +1973,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
         break;
       }
     }
+  }
 
   return Chain;
 }
@@ -2777,7 +2782,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InGlue = Chain.getValue(1);
   }
 
-  if (CallingConv::PreserveNone == CallConv)
+  if (CallingConv::PreserveNone == CallConv) {
+    if (isVarArg)
+      errorUnsupported(DAG, dl,
+                       "preserve_none calling convention does not support "
+                       "variadic functions");
     for (const ISD::OutputArg &Out : Outs) {
       if (Out.Flags.isSwiftSelf() || Out.Flags.isSwiftAsync() ||
           Out.Flags.isSwiftError()) {
@@ -2786,6 +2795,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         break;
       }
     }
+  }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

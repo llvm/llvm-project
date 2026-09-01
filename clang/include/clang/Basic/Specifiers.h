@@ -328,6 +328,7 @@ namespace clang {
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_M68kRTD:
+    case CC_PreserveNone:
       return false;
     default:
       return true;
