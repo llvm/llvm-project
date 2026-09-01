@@ -1,0 +1,52 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+licenses(["notice"])
+
+_REPOSITORY_NAME = repository_name().lstrip("@")
+
+_LLD_SRC_DIR = "../%s/lld" % _REPOSITORY_NAME if _REPOSITORY_NAME else "lld"
+
+cc_test(
+    name = "LLDAsLibELFTests",
+    size = "small",
+    srcs = [
+        "AsLibELF/OutputStream.cpp",
+        "AsLibELF/ROCm.cpp",
+        "AsLibELF/SomeDrivers.cpp",
+    ],
+    data = [
+        "AsLibELF/Inputs/kernel1.o",
+        "AsLibELF/Inputs/kernel2.o",
+    ],
+    env = {"LLD_SRC_DIR": _LLD_SRC_DIR},
+    deps = [
+        "//lld:Common",
+        "//lld:ELF",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LLDAsLibAllTests",
+    size = "small",
+    srcs = ["AsLibAll/AllDrivers.cpp"],
+    deps = [
+        "//lld:COFF",
+        "//lld:Common",
+        "//lld:ELF",
+        "//lld:MachO",
+        "//lld:MinGW",
+        "//lld:Wasm",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
