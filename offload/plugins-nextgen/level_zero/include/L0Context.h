@@ -39,7 +39,7 @@ public:
 // It provides two interfaces - by default it tries to call the function
 // directly - either through dlopen or directly linked (see L0DynWrapper.cpp).
 // It is also possible to call through an internal function pointer, which
-// can be populated using `tryLoadingExperimental` using
+// can be populated using `loadExperimental` using
 // `zeDriverGetExtensionFunctionAddress`.
 // `addFallbackFunction`. It was implemented in order to support different
 // versions of level zero software stack and different kinds of drivers.
@@ -70,14 +70,15 @@ public:
     return Fn(std::forward<Args>(ArgsList)...);
   }
 
-  bool tryLoadingExperimental(ze_driver_handle_t zeDriver,
+  bool loadExperimental(ze_driver_handle_t zeDriver,
                               const char *FuncName) {
-    if (api_helper::canCall<Fn>())
-      return true; // Function is already available, no need to load it using
-                   // experimental API.
+    assert(!api_helper::canCall<Fn>() &&
+           "ZeDispatcher::loadExperimental called without "
+           "ZeDispatcher::available check!");
 
-    auto Result = zeDriverGetExtensionFunctionAddress(
-        zeDriver, FuncName, reinterpret_cast<void **>(&FuncPtr));
+    ze_result_t Result = ZE_RESULT_SUCCESS;
+    CALL_ZE_RET(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
+                reinterpret_cast<void **>(&FuncPtr));
 
     if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
       return false;

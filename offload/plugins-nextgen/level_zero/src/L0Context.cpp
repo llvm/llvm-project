@@ -67,14 +67,25 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  LaunchKernelWithArguments.tryLoadingExperimental(
-      zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
-  KernelGetArgumentSize.tryLoadingExperimental(zeDriver,
-                                               "zexKernelGetArgumentSize");
-  CommandListAppendHostFunction.tryLoadingExperimental(
-      zeDriver, "zeCommandListAppendHostFunction");
-  DriverGetDefaultContext.tryLoadingExperimental(zeDriver,
-                                                 "zeDriverGetDefaultContext");
+  if (!LaunchKernelWithArguments)
+    LaunchKernelWithArguments.loadExperimental(
+        zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
+
+  if (!KernelGetArgumentSize)
+    KernelGetArgumentSize.loadExperimental(zeDriver,
+                                           "zexKernelGetArgumentSize");
+
+  if (!CommandListAppendHostFunction)
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zeCommandListAppendHostFunction");
+  if (!CommandListAppendHostFunction)
+    // Try again with a name used in compute runtime 25.35 to 25.48
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zexCommandListAppendHostFunction");
+
+  if (!DriverGetDefaultContext)
+    DriverGetDefaultContext.loadExperimental(zeDriver,
+                                             "zeDriverGetDefaultContext");
 
   ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
@@ -85,11 +96,6 @@ Error L0ContextTy::init() {
                   << (CommandListAppendHostFunction.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
-
-  if (!CommandListAppendHostFunction.available())
-    // Try again with a name used in compute runtime 25.35 to 25.48
-    CommandListAppendHostFunction.tryLoadingExperimental(
-        zeDriver, "zexCommandListAppendHostFunction");
 
   DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
       Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
