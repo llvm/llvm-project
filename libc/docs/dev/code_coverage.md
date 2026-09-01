@@ -72,7 +72,7 @@ In LLVM-libc, `libc-unit-tests` builds and executes tests in a single invocation
 Scans the build tree for all generated `.profraw` files and indexes them into a unified, sparse `.profdata` archive using `llvm-profdata`:
 
 ```bash
-find . -name "libc_cov_*.profraw" > profraw_list.txt
+find build-cov/ -name "libc_cov_*.profraw" > profraw_list.txt
 llvm-profdata merge -sparse -f profraw_list.txt -o libc_full.profdata
 ```
 
@@ -153,7 +153,7 @@ ninja -k 0 -C build-cov-mcdc libc-unit-tests
 Indexes and merges all MC/DC `.profraw` files into a unified `libc_mcdc.profdata` archive for report generation:
 
 ```bash
-find . -name "libc_cov_*.profraw" > profraw_list.txt
+find build-cov-mcdc/ -name "libc_cov_*.profraw" > profraw_list.txt
 llvm-profdata merge -sparse -f profraw_list.txt -o libc_mcdc.profdata
 ```
 
@@ -229,7 +229,7 @@ ninja -C build-cov-mcdc libc.test.src.ctype.isalpha_test
 Merges the single test's raw profile into an indexed database for targeted inspection:
 
 ```bash
-find . -name "libc_cov_*.profraw" > profraw_list.txt
+find build-cov/ -name "libc_cov_*.profraw" > profraw_list.txt
 llvm-profdata merge -sparse -f profraw_list.txt -o libc_single.profdata
 ```
 
