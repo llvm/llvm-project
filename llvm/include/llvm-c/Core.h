@@ -802,6 +802,8 @@ LLVM_C_ABI const char *LLVMGetStringAttributeValue(LLVMAttributeRef A,
 LLVM_C_ABI LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A);
 LLVM_C_ABI LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A);
 LLVM_C_ABI LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A);
+LLVM_C_ABI LLVMBool LLVMIsConstantRangeAttribute(LLVMAttributeRef A);
+LLVM_C_ABI LLVMBool LLVMIsConstantRangeListAttribute(LLVMAttributeRef A);
 
 /**
  * Obtain a Type from a context by its registered name.

@@ -259,6 +259,14 @@ LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A) {
   return unwrap(A).isTypeAttribute();
 }
 
+LLVMBool LLVMIsConstantRangeAttribute(LLVMAttributeRef A) {
+  return unwrap(A).isConstantRangeAttribute();
+}
+
+LLVMBool LLVMIsConstantRangeListAttribute(LLVMAttributeRef A) {
+  return unwrap(A).isConstantRangeListAttribute();
+}
+
 char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
   std::string MsgStorage;
   raw_string_ostream Stream(MsgStorage);
