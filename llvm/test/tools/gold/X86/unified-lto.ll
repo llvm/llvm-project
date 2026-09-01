@@ -2,7 +2,7 @@
 ; are compiled using unified LTO pipeline
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-as %p/Inputs/unified-lto-foo.ll -o %t-foo.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=unifiedlto \
 ; RUN:    -plugin-opt=save-temps \
@@ -12,7 +12,7 @@
 ; RUN: llvm-dis %t-out.0.5.precodegen.bc -o - | FileCheck %s
 
 ; Check thin LTO as well
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=unifiedlto \
 ; RUN:    -plugin-opt=thinlto \

@@ -62,11 +62,11 @@ func.func @global_load_store_tensor() -> tensor<4x75xf32> {
   // CHECK-DAG:     %[[GLOB:.*]] = memref.get_global @state_tensor
   // CHECK:         %[[VAL:.*]] = memref.load %[[GLOB]][%[[C0]], %[[C0]]]
   // CHECK:         %[[ADD:.*]] = arith.addf %[[VAL]], %[[CST]]
-  // CHECK:         %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64}
+  // CHECK:         %[[ALLOC1:.*]] = memref.alloc() alignment = 64
   // CHECK:         memref.copy %[[GLOB]], %[[ALLOC1]] 
   // CHECK:         memref.store %[[ADD]], %[[ALLOC1]][%[[C0]], %[[C0]]] 
   // CHECK:         %[[TENSOR:.*]] = bufferization.to_tensor %[[ALLOC1]] 
-  // CHECK:         %[[ALLOC2:.*]] = memref.alloc() {alignment = 64 : i64}
+  // CHECK:         %[[ALLOC2:.*]] = memref.alloc() alignment = 64
   // CHECK:         memref.copy %[[ALLOC1]], %[[ALLOC2]] 
   // CHECK:         %[[GLOB_REF:.*]] = memref.get_global @state_tensor 
   // CHECK:         memref.copy %[[ALLOC2]], %[[GLOB_REF]] 
