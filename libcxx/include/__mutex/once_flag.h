@@ -10,6 +10,7 @@
 #define _LIBCPP___MUTEX_ONCE_FLAG_H
 
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__memory/addressof.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/invoke.h>
@@ -82,14 +83,16 @@ private:
 template <class _Fp>
 class __call_once_param {
   _Fp& __f_;
+  void* __flag_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f, void* __flag) : __f_(__f), __flag_(__flag) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() {
     [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> void {
       std::__invoke(std::get<_Indices>(std::move(__f_))...);
     }(__make_index_sequence<tuple_size<_Fp>::value>());
+    std::__libcpp_tsan_release(__flag_);
   }
 };
 
@@ -98,11 +101,12 @@ public:
 template <class _Fp>
 class __call_once_param {
   _Fp& __f_;
+  void* __flag_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f, void* __flag) : __f_(__f), __flag_(__flag) {}
 
-  _LIBCPP_HIDE_FROM_ABI void operator()() { __f_(); }
+  _LIBCPP_HIDE_FROM_ABI void operator()() { __f_(); std::__libcpp_tsan_release(__flag_); }
 };
 
 #endif
@@ -133,7 +137,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     typedef tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
-    __call_once_param<_Gp> __p(__f);
+    __call_once_param<_Gp> __p(__f, std::addressof(__flag.__state_));
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Gp>));
   }
 }
@@ -143,7 +147,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
-    __call_once_param<_Callable> __p(__func);
+    __call_once_param<_Callable> __p(__func, std::addressof(__flag.__state_));
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
   }
 }
@@ -151,7 +155,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
-    __call_once_param<const _Callable> __p(__func);
+    __call_once_param<const _Callable> __p(__func, std::addressof(__flag.__state_));
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
   }
 }
