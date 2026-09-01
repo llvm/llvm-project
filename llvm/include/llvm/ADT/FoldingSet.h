@@ -759,10 +759,10 @@ public:
   }
 
   /// Remove \p N, returning whether it was present.
-  bool erase(T *N) { return FoldingSetBase::RemoveNode(N); }
+  bool erase(T *N) { return FoldingSetBase::erase(N); }
 
 private:
-  // Never NotAHash, for the reason FoldingSetNodeIDRef::ComputeHash gives.
+  // Never NotAHash, for the reason FoldingSetNodeIDRef::computeHash gives.
   static uint32_t hashKey(const KeyTy &Key) {
     uint32_t Hash = Info::getHashValue(Key);
     return Hash == FoldingSetNodeIDRef::NotAHash ? 1 : Hash;
