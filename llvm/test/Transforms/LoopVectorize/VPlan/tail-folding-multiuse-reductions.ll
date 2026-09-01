@@ -21,24 +21,24 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (smin) ir<%start>, vp<[[VP6:%[0-9]+]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx2> = phi (find-iv) ir<poison>, vp<[[VP7:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min> = phi (smin) ir<%start>, vp<[[VP6:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.loc> = phi (find-iv) ir<poison>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.split:
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds nuw ir<%arr>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>, vp<[[VP4]]>
-; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%0>, ir<%rdx>
-; CHECK-NEXT:      WIDEN ir<%select> = select ir<%cmp>, ir<%iv>, ir<%rdx2>
-; CHECK-NEXT:      WIDEN-INTRINSIC ir<%min> = call llvm.smin(ir<%0>, ir<%rdx>)
+; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%0>, ir<%min>
+; CHECK-NEXT:      WIDEN ir<%min.loc.next> = select ir<%cmp>, ir<%iv>, ir<%min.loc>
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%min.next> = call llvm.smin(ir<%0>, ir<%min>)
 ; CHECK-NEXT:      WIDEN ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6]]> = select vp<[[VP4]]>, ir<%min>, ir<%rdx>
-; CHECK-NEXT:      EMIT vp<[[VP7]]> = select vp<[[VP4]]>, ir<%select>, ir<%rdx2>
+; CHECK-NEXT:      EMIT vp<[[VP6]]> = select vp<[[VP4]]>, ir<%min.next>, ir<%min>
+; CHECK-NEXT:      EMIT vp<[[VP7]]> = select vp<[[VP4]]>, ir<%min.loc.next>, ir<%min.loc>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -69,7 +69,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.end>:
-; CHECK-NEXT:    IR   %select.lcssa = phi i64 [ %select, %for.body ] (extra operand: vp<[[VP14]]> from middle.block)
+; CHECK-NEXT:    IR   %min.loc.next.lcssa = phi i64 [ %min.loc.next, %for.body ] (extra operand: vp<[[VP14]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -80,13 +80,13 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:    IR   %rdx = phi i64 [ %start, %entry ], [ %min, %for.body ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
-; CHECK-NEXT:    IR   %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ] (extra operand: vp<%bc.merge.rdx>.1 from scalar.ph)
+; CHECK-NEXT:    IR   %min = phi i64 [ %start, %entry ], [ %min.next, %for.body ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %min.loc = phi i64 [ 0, %entry ], [ %min.loc.next, %for.body ] (extra operand: vp<%bc.merge.rdx>.1 from scalar.ph)
 ; CHECK-NEXT:    IR   %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
 ; CHECK-NEXT:    IR   %0 = load i64, ptr %arrayidx, align 4
-; CHECK-NEXT:    IR   %cmp = icmp slt i64 %0, %rdx
-; CHECK-NEXT:    IR   %select = select i1 %cmp, i64 %iv, i64 %rdx2
-; CHECK-NEXT:    IR   %min = tail call i64 @llvm.smin.i64(i64 %0, i64 %rdx)
+; CHECK-NEXT:    IR   %cmp = icmp slt i64 %0, %min
+; CHECK-NEXT:    IR   %min.loc.next = select i1 %cmp, i64 %iv, i64 %min.loc
+; CHECK-NEXT:    IR   %min.next = tail call i64 @llvm.smin.i64(i64 %0, i64 %min)
 ; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    IR   %exitcond.not = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT:  No successors
@@ -97,17 +97,17 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %rdx = phi i64 [ %start, %entry ], [ %min, %for.body ]
-  %rdx2 = phi i64 [ 0, %entry ], [ %select, %for.body ]
+  %min = phi i64 [ %start, %entry ], [ %min.next, %for.body ]
+  %min.loc = phi i64 [ 0, %entry ], [ %min.loc.next, %for.body ]
   %arrayidx = getelementptr inbounds nuw [8 x i8], ptr %arr, i64 %iv
   %0 = load i64, ptr %arrayidx
-  %cmp = icmp slt i64 %0, %rdx
-  %select = select i1 %cmp, i64 %iv, i64 %rdx2
-  %min = tail call i64 @llvm.smin.i64(i64 %0, i64 %rdx)
+  %cmp = icmp slt i64 %0, %min
+  %min.loc.next = select i1 %cmp, i64 %iv, i64 %min.loc
+  %min.next = tail call i64 @llvm.smin.i64(i64 %0, i64 %min)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:
-  ret i64 %select
+  ret i64 %min.loc.next
 }
