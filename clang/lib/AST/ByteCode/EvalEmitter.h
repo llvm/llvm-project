@@ -24,6 +24,7 @@ namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -61,7 +62,8 @@ public:
   SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);

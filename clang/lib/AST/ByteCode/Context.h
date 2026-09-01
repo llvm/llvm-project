@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_CONTEXT_H
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
+#include "FrameAllocator.h"
 #include "InterpStack.h"
 #include "clang/AST/ASTContext.h"
 
@@ -200,6 +201,8 @@ private:
   ASTContext &Ctx;
   /// Interpreter stack, shared across invocations.
   InterpStack Stk;
+  /// (Function) frame allocator, also shared.
+  FrameAllocator FrameAlloc;
   /// Constexpr program.
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.

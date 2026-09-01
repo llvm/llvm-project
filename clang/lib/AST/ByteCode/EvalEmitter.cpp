@@ -18,8 +18,8 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
