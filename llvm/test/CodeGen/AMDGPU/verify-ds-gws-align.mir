@@ -10,29 +10,21 @@ body:             |
   bb.0:
     ; A 32-bit sub-register does not fit the 64-bit AV_64_Align2 data0 operand.
     %0:areg_128_align2 = IMPLICIT_DEF
-    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub1:areg_128_align2
     ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
     ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub1:areg_128_align2
     ; GFX90A-ERR: AReg_128_Align2.sub1 cannot be used for AV_64_Align2 operands.
     DS_GWS_INIT killed %0.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %0:areg_128_align2 = IMPLICIT_DEF
-    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub3:areg_128_align2
     ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
     ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub3:areg_128_align2
     ; GFX90A-ERR: AReg_128_Align2.sub3 cannot be used for AV_64_Align2 operands.
     DS_GWS_INIT killed %0.sub3, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %1:vreg_64_align2 = IMPLICIT_DEF
-    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-    ; GFX90A-ERR: - instruction: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2
     ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
     ; GFX90A-ERR: - instruction: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2
     ; GFX90A-ERR: VReg_64_Align2.sub1 cannot be used for AV_64_Align2 operands.
     DS_GWS_SEMA_BR killed %1.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %2:vreg_64 = IMPLICIT_DEF
-    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-    ; GFX90A-ERR: - instruction: DS_GWS_BARRIER killed %2.sub0:vreg_64
     ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
     ; GFX90A-ERR: - instruction: DS_GWS_BARRIER killed %2.sub0:vreg_64
     ; GFX90A-ERR: VReg_64.sub0 cannot be used for AV_64_Align2 operands.
@@ -40,8 +32,6 @@ body:             |
 
     ; A whole 32-bit register is the wrong size for the 64-bit operand.
     %3:vgpr_32 = IMPLICIT_DEF
-    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %3:vgpr_32
     ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
     ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %3:vgpr_32
     ; GFX90A-ERR: Expected a AV_64_Align2 register, but got a VGPR_32 register

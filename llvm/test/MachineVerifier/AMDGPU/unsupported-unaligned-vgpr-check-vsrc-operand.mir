@@ -23,12 +23,10 @@ body:             |
     %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %2:vreg_64 = IMPLICIT_DEF
 
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     %3:areg_128_align2 = V_MFMA_F32_4X4X1F32_e64 %0, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
     %4:vreg_64 = IMPLICIT_DEF
 
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     %5:vreg_128_align2 = V_MFMA_F32_4X4X1F32_vgprcd_e64 %0, %1, %4, 0, 0, 0, implicit $mode, implicit $exec
 ...
