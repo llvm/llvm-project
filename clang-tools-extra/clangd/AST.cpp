@@ -531,7 +531,8 @@ public:
     if (CurLoc.isInvalid() && isa<CXXConversionDecl>(D))
       CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
     // Loc of "auto" in function with trailing return type (c++11).
-    if (CurLoc.isInvalid())
+    if (auto *FPT = D->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn())
       CurLoc = D->getSourceRange().getBegin();
     if (CurLoc != SearchedLocation)
       return true;

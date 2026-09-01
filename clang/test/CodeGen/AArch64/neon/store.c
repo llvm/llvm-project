@@ -1495,3 +1495,2343 @@ void test_vstrq_p128(poly128_t *ptr, poly128_t val) {
 // LLVM: ret void
   vstrq_p128(ptr, val);
 }
+
+// ALL-LABEL: @test_vst2_f16(
+void test_vst2_f16(float16_t *a, float16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst2_f32(
+void test_vst2_f32(float32_t *a, float32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst2_f64(
+void test_vst2_f64(float64_t *a, float64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst2_mf8(
+void test_vst2_mf8(mfloat8_t *a, mfloat8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst2_p16(
+void test_vst2_p16(poly16_t *a, poly16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst2_p64(
+void test_vst2_p64(poly64_t * ptr, poly64x1x2_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst2_p8(
+void test_vst2_p8(poly8_t *a, poly8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst2_s16(
+void test_vst2_s16(int16_t *a, int16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst2_s32(
+void test_vst2_s32(int32_t *a, int32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst2_s64(
+void test_vst2_s64(int64_t *a, int64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst2_s8(
+void test_vst2_s8(int8_t *a, int8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst2_u16(
+void test_vst2_u16(uint16_t *a, uint16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst2_u32(
+void test_vst2_u32(uint32_t *a, uint32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst2_u64(
+void test_vst2_u64(uint64_t *a, uint64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst2_u8(
+void test_vst2_u8(uint8_t *a, uint8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_f16(
+void test_vst2q_f16(float16_t *a, float16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_f32(
+void test_vst2q_f32(float32_t *a, float32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_f64(
+void test_vst2q_f64(float64_t *a, float64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_mf8(
+void test_vst2q_mf8(mfloat8_t *a, mfloat8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_p16(
+void test_vst2q_p16(poly16_t *a, poly16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_p64(
+void test_vst2q_p64(poly64_t * ptr, poly64x2x2_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst2q_p8(
+void test_vst2q_p8(poly8_t *a, poly8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_s16(
+void test_vst2q_s16(int16_t *a, int16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_s32(
+void test_vst2q_s32(int32_t *a, int32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_s64(
+void test_vst2q_s64(int64_t *a, int64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_s8(
+void test_vst2q_s8(int8_t *a, int8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_u16(
+void test_vst2q_u16(uint16_t *a, uint16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_u32(
+void test_vst2q_u32(uint32_t *a, uint32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_u64(
+void test_vst2q_u64(uint64_t *a, uint64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst2q_u8(
+void test_vst2q_u8(uint8_t *a, uint8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], ptr [[A]])
+// LLVM: ret void
+  vst2q_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst2_lane_f16(
+void test_vst2_lane_f16(float16_t  *a, float16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_f16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2_lane_f32(
+void test_vst2_lane_f32(float32_t  *a, float32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_f32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2_lane_f64(
+void test_vst2_lane_f64(float64_t  *a, float64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_f64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst2_lane_mf8(
+void test_vst2_lane_mf8(mfloat8_t *a, mfloat8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_mf8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2_lane_p16(
+void test_vst2_lane_p16(poly16_t  *a, poly16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_p16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2_lane_p64(
+void test_vst2_lane_p64(poly64_t  *a, poly64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst2_lane_p8(
+void test_vst2_lane_p8(poly8_t  *a, poly8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_p8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2_lane_s16(
+void test_vst2_lane_s16(int16_t  *a, int16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2_lane_s32(
+void test_vst2_lane_s32(int32_t  *a, int32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_s32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2_lane_s64(
+void test_vst2_lane_s64(int64_t  *a, int64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_s64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst2_lane_s8(
+void test_vst2_lane_s8(int8_t  *a, int8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_s8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2_lane_u16(
+void test_vst2_lane_u16(uint16_t  *a, uint16x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2_lane_u32(
+void test_vst2_lane_u32(uint32_t  *a, uint32x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_u32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2_lane_u64(
+void test_vst2_lane_u64(uint64_t  *a, uint64x1x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_u64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst2_lane_u8(
+void test_vst2_lane_u8(uint8_t  *a, uint8x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2_lane_u8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2q_lane_f16(
+void test_vst2q_lane_f16(float16_t  *a, float16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_f16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2q_lane_f32(
+void test_vst2q_lane_f32(float32_t  *a, float32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_f32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2q_lane_f64(
+void test_vst2q_lane_f64(float64_t  *a, float64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_f64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2q_lane_mf8(
+void test_vst2q_lane_mf8(mfloat8_t *a, mfloat8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_mf8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst2q_lane_p16(
+void test_vst2q_lane_p16(poly16_t  *a, poly16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_p16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2q_lane_p64(
+void test_vst2q_lane_p64(poly64_t  *a, poly64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_p64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2q_lane_p8(
+void test_vst2q_lane_p8(poly8_t  *a, poly8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_p8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst2q_lane_s16(
+void test_vst2q_lane_s16(int16_t  *a, int16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_s16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2q_lane_s32(
+void test_vst2q_lane_s32(int32_t  *a, int32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2q_lane_s64(
+void test_vst2q_lane_s64(int64_t  *a, int64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2q_lane_s8(
+void test_vst2q_lane_s8(int8_t  *a, int8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_s8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst2q_lane_u16(
+void test_vst2q_lane_u16(uint16_t  *a, uint16x8x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_u16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst2q_lane_u32(
+void test_vst2q_lane_u32(uint32_t  *a, uint32x4x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst2q_lane_u64(
+void test_vst2q_lane_u64(uint64_t  *a, uint64x2x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst2q_lane_u8(
+void test_vst2q_lane_u8(uint8_t  *a, uint8x16x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st2lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM: call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst2q_lane_u8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst3_f16(
+void test_vst3_f16(float16_t *a, float16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], <4 x half> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst3_f32(
+void test_vst3_f32(float32_t *a, float32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], <2 x float> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst3_f64(
+void test_vst3_f64(float64_t *a, float64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], <1 x double> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst3_mf8(
+void test_vst3_mf8(mfloat8_t *a, mfloat8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst3_p16(
+void test_vst3_p16(poly16_t *a, poly16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst3_p64(
+void test_vst3_p64(poly64_t * ptr, poly64x1x3_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst3_p8(
+void test_vst3_p8(poly8_t *a, poly8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst3_s16(
+void test_vst3_s16(int16_t *a, int16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst3_s32(
+void test_vst3_s32(int32_t *a, int32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst3_s64(
+void test_vst3_s64(int64_t *a, int64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst3_s8(
+void test_vst3_s8(int8_t *a, int8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst3_u16(
+void test_vst3_u16(uint16_t *a, uint16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst3_u32(
+void test_vst3_u32(uint32_t *a, uint32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst3_u64(
+void test_vst3_u64(uint64_t *a, uint64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst3_u8(
+void test_vst3_u8(uint8_t *a, uint8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_f16(
+void test_vst3q_f16(float16_t *a, float16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], <8 x half> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_f32(
+void test_vst3q_f32(float32_t *a, float32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], <4 x float> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_f64(
+void test_vst3q_f64(float64_t *a, float64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], <2 x double> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_mf8(
+void test_vst3q_mf8(mfloat8_t *a, mfloat8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_p16(
+void test_vst3q_p16(poly16_t *a, poly16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_p64(
+void test_vst3q_p64(poly64_t * ptr, poly64x2x3_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst3q_p8(
+void test_vst3q_p8(poly8_t *a, poly8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_s16(
+void test_vst3q_s16(int16_t *a, int16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_s32(
+void test_vst3q_s32(int32_t *a, int32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_s64(
+void test_vst3q_s64(int64_t *a, int64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_s8(
+void test_vst3q_s8(int8_t *a, int8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_u16(
+void test_vst3q_u16(uint16_t *a, uint16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_u32(
+void test_vst3q_u32(uint32_t *a, uint32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_u64(
+void test_vst3q_u64(uint64_t *a, uint64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst3q_u8(
+void test_vst3q_u8(uint8_t *a, uint8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], ptr [[A]])
+// LLVM: ret void
+  vst3q_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst3_lane_f16(
+void test_vst3_lane_f16(float16_t  *a, float16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], <4 x half> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_f16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3_lane_f32(
+void test_vst3_lane_f32(float32_t  *a, float32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], <2 x float> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_f32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3_lane_f64(
+void test_vst3_lane_f64(float64_t  *a, float64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], <1 x double> [[V2]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_f64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst3_lane_mf8(
+void test_vst3_lane_mf8(mfloat8_t *a, mfloat8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_mf8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3_lane_p16(
+void test_vst3_lane_p16(poly16_t  *a, poly16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_p16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3_lane_p64(
+void test_vst3_lane_p64(poly64_t  *a, poly64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst3_lane_p8(
+void test_vst3_lane_p8(poly8_t  *a, poly8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_p8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3_lane_s16(
+void test_vst3_lane_s16(int16_t  *a, int16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3_lane_s32(
+void test_vst3_lane_s32(int32_t  *a, int32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_s32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3_lane_s64(
+void test_vst3_lane_s64(int64_t  *a, int64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_s64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst3_lane_s8(
+void test_vst3_lane_s8(int8_t  *a, int8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_s8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3_lane_u16(
+void test_vst3_lane_u16(uint16_t  *a, uint16x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3_lane_u32(
+void test_vst3_lane_u32(uint32_t  *a, uint32x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_u32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3_lane_u64(
+void test_vst3_lane_u64(uint64_t  *a, uint64x1x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_u64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst3_lane_u8(
+void test_vst3_lane_u8(uint8_t  *a, uint8x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3_lane_u8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3q_lane_f16(
+void test_vst3q_lane_f16(float16_t  *a, float16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], <8 x half> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_f16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3q_lane_f32(
+void test_vst3q_lane_f32(float32_t  *a, float32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], <4 x float> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_f32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3q_lane_f64(
+void test_vst3q_lane_f64(float64_t  *a, float64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], <2 x double> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_f64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3q_lane_mf8(
+void test_vst3q_lane_mf8(mfloat8_t *a, mfloat8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_mf8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst3q_lane_p16(
+void test_vst3q_lane_p16(poly16_t  *a, poly16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_p16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3q_lane_p64(
+void test_vst3q_lane_p64(poly64_t  *a, poly64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_p64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3q_lane_p8(
+void test_vst3q_lane_p8(poly8_t  *a, poly8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_p8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst3q_lane_s16(
+void test_vst3q_lane_s16(int16_t  *a, int16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_s16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3q_lane_s32(
+void test_vst3q_lane_s32(int32_t  *a, int32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3q_lane_s64(
+void test_vst3q_lane_s64(int64_t  *a, int64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3q_lane_s8(
+void test_vst3q_lane_s8(int8_t  *a, int8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_s8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst3q_lane_u16(
+void test_vst3q_lane_u16(uint16_t  *a, uint16x8x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_u16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst3q_lane_u32(
+void test_vst3q_lane_u32(uint32_t  *a, uint32x4x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst3q_lane_u64(
+void test_vst3q_lane_u64(uint64_t  *a, uint64x2x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst3q_lane_u8(
+void test_vst3q_lane_u8(uint8_t  *a, uint8x16x3_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st3lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM: call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst3q_lane_u8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst4_f16(
+void test_vst4_f16(float16_t *a, float16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], <4 x half> [[V2]], <4 x half> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst4_f32(
+void test_vst4_f32(float32_t *a, float32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], <2 x float> [[V2]], <2 x float> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst4_f64(
+void test_vst4_f64(float64_t *a, float64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], <1 x double> [[V2]], <1 x double> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst4_mf8(
+void test_vst4_mf8(mfloat8_t *a, mfloat8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst4_p16(
+void test_vst4_p16(poly16_t *a, poly16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst4_p64(
+void test_vst4_p64(poly64_t * ptr, poly64x1x4_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst4_p8(
+void test_vst4_p8(poly8_t *a, poly8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst4_s16(
+void test_vst4_s16(int16_t *a, int16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst4_s32(
+void test_vst4_s32(int32_t *a, int32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], <2 x i32> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst4_s64(
+void test_vst4_s64(int64_t *a, int64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst4_s8(
+void test_vst4_s8(int8_t *a, int8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst4_u16(
+void test_vst4_u16(uint16_t *a, uint16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst4_u32(
+void test_vst4_u32(uint32_t *a, uint32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], <2 x i32> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst4_u64(
+void test_vst4_u64(uint64_t *a, uint64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst4_u8(
+void test_vst4_u8(uint8_t *a, uint8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_f16(
+void test_vst4q_f16(float16_t *a, float16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], <8 x half> [[V2]], <8 x half> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_f16(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_f32(
+void test_vst4q_f32(float32_t *a, float32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], <4 x float> [[V2]], <4 x float> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_f32(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_f64(
+void test_vst4q_f64(float64_t *a, float64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], <2 x double> [[V2]], <2 x double> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_f64(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_mf8(
+void test_vst4q_mf8(mfloat8_t *a, mfloat8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_mf8(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_p16(
+void test_vst4q_p16(poly16_t *a, poly16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_p16(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_p64(
+void test_vst4q_p64(poly64_t * ptr, poly64x2x4_t val) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_p64(ptr, val);
+}
+
+// ALL-LABEL: @test_vst4q_p8(
+void test_vst4q_p8(poly8_t *a, poly8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_p8(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_s16(
+void test_vst4q_s16(int16_t *a, int16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_s16(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_s32(
+void test_vst4q_s32(int32_t *a, int32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], <4 x i32> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_s32(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_s64(
+void test_vst4q_s64(int64_t *a, int64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_s64(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_s8(
+void test_vst4q_s8(int8_t *a, int8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_s8(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_u16(
+void test_vst4q_u16(uint16_t *a, uint16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_u16(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_u32(
+void test_vst4q_u32(uint32_t *a, uint32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], <4 x i32> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_u32(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_u64(
+void test_vst4q_u64(uint64_t *a, uint64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_u64(a, b);
+}
+
+// ALL-LABEL: @test_vst4q_u8(
+void test_vst4q_u8(uint8_t *a, uint8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], ptr [[A]])
+// LLVM: ret void
+  vst4q_u8(a, b);
+}
+
+// ALL-LABEL: @test_vst4_lane_f16(
+void test_vst4_lane_f16(float16_t  *a, float16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4f16.p0(<4 x half> [[V0]], <4 x half> [[V1]], <4 x half> [[V2]], <4 x half> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_f16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4_lane_f32(
+void test_vst4_lane_f32(float32_t  *a, float32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2f32.p0(<2 x float> [[V0]], <2 x float> [[V1]], <2 x float> [[V2]], <2 x float> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_f32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4_lane_f64(
+void test_vst4_lane_f64(float64_t  *a, float64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v1f64.p0(<1 x double> [[V0]], <1 x double> [[V1]], <1 x double> [[V2]], <1 x double> [[V3]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_f64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst4_lane_mf8(
+void test_vst4_lane_mf8(mfloat8_t *a, mfloat8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_mf8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4_lane_p16(
+void test_vst4_lane_p16(poly16_t  *a, poly16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_p16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4_lane_p64(
+void test_vst4_lane_p64(poly64_t  *a, poly64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_p64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst4_lane_p8(
+void test_vst4_lane_p8(poly8_t  *a, poly8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_p8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4_lane_s16(
+void test_vst4_lane_s16(int16_t  *a, int16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4_lane_s32(
+void test_vst4_lane_s32(int32_t  *a, int32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], <2 x i32> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_s32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4_lane_s64(
+void test_vst4_lane_s64(int64_t  *a, int64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_s64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst4_lane_s8(
+void test_vst4_lane_s8(int8_t  *a, int8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_s8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4_lane_u16(
+void test_vst4_lane_u16(uint16_t  *a, uint16x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16> [[V0]], <4 x i16> [[V1]], <4 x i16> [[V2]], <4 x i16> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4_lane_u32(
+void test_vst4_lane_u32(uint32_t  *a, uint32x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2i32.p0(<2 x i32> [[V0]], <2 x i32> [[V1]], <2 x i32> [[V2]], <2 x i32> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_u32(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4_lane_u64(
+void test_vst4_lane_u64(uint64_t  *a, uint64x1x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> [[V0]], <1 x i64> [[V1]], <1 x i64> [[V2]], <1 x i64> [[V3]], i64 0, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_u64(a, b, 0);
+}
+
+// ALL-LABEL: @test_vst4_lane_u8(
+void test_vst4_lane_u8(uint8_t  *a, uint8x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> [[V0]], <8 x i8> [[V1]], <8 x i8> [[V2]], <8 x i8> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4_lane_u8(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4q_lane_f16(
+void test_vst4q_lane_f16(float16_t  *a, float16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8f16.p0(<8 x half> [[V0]], <8 x half> [[V1]], <8 x half> [[V2]], <8 x half> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_f16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4q_lane_f32(
+void test_vst4q_lane_f32(float32_t  *a, float32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4f32.p0(<4 x float> [[V0]], <4 x float> [[V1]], <4 x float> [[V2]], <4 x float> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_f32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4q_lane_f64(
+void test_vst4q_lane_f64(float64_t  *a, float64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2f64.p0(<2 x double> [[V0]], <2 x double> [[V1]], <2 x double> [[V2]], <2 x double> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_f64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4q_lane_mf8(
+void test_vst4q_lane_mf8(mfloat8_t *a, mfloat8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_mf8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst4q_lane_p16(
+void test_vst4q_lane_p16(poly16_t  *a, poly16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_p16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4q_lane_p64(
+void test_vst4q_lane_p64(poly64_t  *a, poly64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_p64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4q_lane_p8(
+void test_vst4q_lane_p8(poly8_t  *a, poly8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_p8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst4q_lane_s16(
+void test_vst4q_lane_s16(int16_t  *a, int16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_s16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4q_lane_s32(
+void test_vst4q_lane_s32(int32_t  *a, int32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], <4 x i32> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4q_lane_s64(
+void test_vst4q_lane_s64(int64_t  *a, int64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4q_lane_s8(
+void test_vst4q_lane_s8(int8_t  *a, int8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_s8(a, b, 15);
+}
+
+// ALL-LABEL: @test_vst4q_lane_u16(
+void test_vst4q_lane_u16(uint16_t  *a, uint16x8x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> [[V0]], <8 x i16> [[V1]], <8 x i16> [[V2]], <8 x i16> [[V3]], i64 7, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_u16(a, b, 7);
+}
+
+// ALL-LABEL: @test_vst4q_lane_u32(
+void test_vst4q_lane_u32(uint32_t  *a, uint32x4x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32> [[V0]], <4 x i32> [[V1]], <4 x i32> [[V2]], <4 x i32> [[V3]], i64 3, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vst4q_lane_u64(
+void test_vst4q_lane_u64(uint64_t  *a, uint64x2x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> [[V0]], <2 x i64> [[V1]], <2 x i64> [[V2]], <2 x i64> [[V3]], i64 1, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vst4q_lane_u8(
+void test_vst4q_lane_u8(uint8_t  *a, uint8x16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.st4lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> !void
+
+// LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
+// LLVM-DAG: [[V0:%.*]] = extractvalue {{.*}} [[B:%[a-z0-9_.]+]],{{( 0,)?}} 0{{$}}
+// LLVM-DAG: [[V1:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 1{{$}}
+// LLVM-DAG: [[V2:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 2{{$}}
+// LLVM-DAG: [[V3:%.*]] = extractvalue {{.*}} [[B]],{{( 0,)?}} 3{{$}}
+// LLVM: call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> [[V0]], <16 x i8> [[V1]], <16 x i8> [[V2]], <16 x i8> [[V3]], i64 15, ptr [[A]])
+// LLVM: ret void
+  vst4q_lane_u8(a, b, 15);
+}

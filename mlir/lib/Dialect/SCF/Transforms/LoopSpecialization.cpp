@@ -136,6 +136,13 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   // Fast path: lb, ub and step are constants.
   if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
     return failure();
+
+  // Only the dynamic path computes the peeling bound with affine.apply, which
+  // accepts only index operands.
+  if ((!lbInt || !ubInt || !stepInt) &&
+      !forOp.getInductionVar().getType().isIndex())
+    return failure();
+
   // Slow path: Examine the ops that define lb, ub and step.
   AffineExpr sym0, sym1, sym2;
   bindSymbols(b.getContext(), sym0, sym1, sym2);
@@ -227,6 +234,13 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
 
   // Peeling is not needed if there is one or less iteration.
   if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
+    return failure();
+
+  // The peeling bound (%lb + %step) is computed with affine.apply, which
+  // accepts only index operands. %ub does not feed into this bound, so only
+  // %lb and %step need to be constant to guarantee the affine.apply (see below)
+  // folds away before its (non-index) operand types matter.
+  if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
     return failure();
 
   AffineExpr lbSymbol, stepSymbol;

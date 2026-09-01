@@ -14,7 +14,7 @@
 namespace llvm {
 
 class ExpandReductionsPass
-    : public OptionalPassInfoMixin<ExpandReductionsPass> {
+    : public RequiredPassInfoMixin<ExpandReductionsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

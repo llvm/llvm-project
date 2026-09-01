@@ -10,8 +10,8 @@
 
 // Formatting non-null-terminated character arrays.
 
-// REQUIRES: std-at-least-c++20, has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
+// REQUIRES: std-at-least-c++20
 
 #include <format>
 

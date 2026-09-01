@@ -99,52 +99,6 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
-class SDVTListNode : public FoldingSetNode {
-  friend struct FoldingSetTrait<SDVTListNode>;
-
-  /// A reference to an Interned FoldingSetNodeID for this node.
-  /// The Allocator in SelectionDAG holds the data.
-  /// SDVTList contains all types which are frequently accessed in SelectionDAG.
-  /// The size of this list is not expected to be big so it won't introduce
-  /// a memory penalty.
-  FoldingSetNodeIDRef FastID;
-  const EVT *VTs;
-  unsigned int NumVTs;
-  /// The hash value for SDVTList is fixed, so cache it to avoid
-  /// hash calculation.
-  unsigned HashValue;
-
-public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num) :
-      FastID(ID), VTs(VT), NumVTs(Num) {
-    HashValue = ID.ComputeHash();
-  }
-
-  SDVTList getSDVTList() {
-    SDVTList result = {VTs, NumVTs};
-    return result;
-  }
-};
-
-/// Specialize FoldingSetTrait for SDVTListNode
-/// to avoid computing temp FoldingSetNodeID and hash value.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
-  static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
-    ID = X.FastID;
-  }
-
-  static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
-    if (X.HashValue != IDHash)
-      return false;
-    return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SDVTListNode &X, FoldingSetNodeID &TempID) {
-    return X.HashValue;
-  }
-};
-
 template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
@@ -254,11 +208,21 @@ class SelectionDAG {
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
 
-  /// Extended EVTs used for single value VTLists.
-  std::set<EVT, EVT::compareRawBits> EVTs;
-
-  /// List of non-single value types.
-  FoldingSet<SDVTListNode> VTListMap;
+  /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
+  /// SDVTList points at, allocated from \p Allocator.
+  struct VTListInfo {
+    static unsigned getHashValue(ArrayRef<EVT> VTs) {
+      unsigned H = VTs.size();
+      for (EVT VT : VTs)
+        H = detail::combineHashValue(
+            H, DenseMapInfo<intptr_t>::getHashValue(VT.getRawBits()));
+      return H;
+    }
+    static bool isEqual(ArrayRef<EVT> LHS, ArrayRef<EVT> RHS) {
+      return LHS == RHS;
+    }
+  };
+  DenseSet<ArrayRef<EVT>, VTListInfo> VTLists;
 
   /// Pool allocation for misc. objects that are created once per SelectionDAG.
   BumpPtrAllocator Allocator;
@@ -509,6 +473,8 @@ public:
   MachineFunction &getMachineFunction() const { return *MF; }
   const Pass *getPass() const { return SDAGISelPass; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
+
+  bool hasSwiftErrorArg() const;
 
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
@@ -1090,11 +1056,6 @@ public:
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
-  /// Return the expression required to zero extend the Op
-  /// value assuming it was the smaller SrcTy value.
-  LLVM_ABI SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
-                                        const SDLoc &DL, EVT VT);
-
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
   /// appropriate extension for the pointer's semantics.
@@ -1119,26 +1080,6 @@ public:
 
   /// Create a logical NOT operation as (XOR Val, BooleanOne).
   LLVM_ABI SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
-
-  /// Create a vector-predicated logical NOT operation as (VP_XOR Val,
-  /// BooleanOne, Mask, EVL).
-  LLVM_ABI SDValue getVPLogicalNOT(const SDLoc &DL, SDValue Val, SDValue Mask,
-                                   SDValue EVL, EVT VT);
-
-  /// Convert a vector-predicated Op, which must be an integer vector, to the
-  /// vector-type VT, by performing either vector-predicated zext or truncating
-  /// it. The Op will be returned as-is if Op and VT are vectors containing
-  /// integer with same width.
-  LLVM_ABI SDValue getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                    SDValue Mask, SDValue EVL);
-
-  /// Convert a vector-predicated Op, which must be of integer type, to the
-  /// vector-type integer type VT, by either truncating it or performing either
-  /// vector-predicated zero or sign extension as appropriate extension for the
-  /// pointer's semantics. This function just redirects to getVPZExtOrTrunc
-  /// right now.
-  LLVM_ABI SDValue getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                      SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
@@ -1393,18 +1334,6 @@ public:
     return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
-  /// Helper function to make it easier to build VP_SETCCs if you just have an
-  /// ISD::CondCode instead of an SDValue.
-  SDValue getSetCCVP(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
-                     ISD::CondCode Cond, SDValue Mask, SDValue EVL) {
-    assert(LHS.getValueType().isVector() && RHS.getValueType().isVector() &&
-           "Cannot compare scalars");
-    assert(Cond != ISD::SETCC_INVALID &&
-           "Cannot create a setCC of an invalid node.");
-    return getNode(ISD::VP_SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Mask,
-                   EVL);
-  }
-
   /// Helper function to make it easier to build Select's if you just have
   /// operands and don't want to check for vector.
   SDValue getSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
@@ -1529,11 +1458,11 @@ public:
   ///
   /// This function will set the MOLoad flag on MMOFlags, but you can set it if
   /// you want.  The MOStore flag must not be set.
-  LLVM_ABI SDValue getLoad(
-      EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
-      MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
+  LLVM_ABI SDValue
+  getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
+          MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
                            MachineMemOperand *MMO);
   LLVM_ABI SDValue
@@ -1541,29 +1470,29 @@ public:
              SDValue Ptr, MachinePointerInfo PtrInfo, EVT MemVT,
              MaybeAlign Alignment = MaybeAlign(),
              MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-             const AAMDNodes &AAInfo = AAMDNodes());
+             const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT,
                               SDValue Chain, SDValue Ptr, EVT MemVT,
                               MachineMemOperand *MMO);
   LLVM_ABI SDValue getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                   SDValue Base, SDValue Offset,
                                   ISD::MemIndexedMode AM);
-  LLVM_ABI SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, Align Alignment,
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
-  inline SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr) {
+  LLVM_ABI SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT, Align Alignment,
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
+  inline SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT,
+          MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata()) {
     // Ensures that codegen never sees a None Alignment.
     return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, PtrInfo, MemVT,
-                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, AAInfo,
-                   Ranges);
+                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
                            EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
@@ -1578,15 +1507,15 @@ public:
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, Align Alignment,
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes());
+           const MMOMetadata &Metadata = MMOMetadata());
   inline SDValue
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes()) {
+           const MMOMetadata &Metadata = MMOMetadata()) {
     return getStore(Chain, dl, Val, Ptr, PtrInfo,
                     Alignment.value_or(getEVTAlign(Val.getValueType())),
-                    MMOFlags, AAInfo);
+                    MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
@@ -1597,12 +1526,12 @@ public:
       SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
       MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
       MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes());
+      const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes());
+                const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                  SDValue Ptr, SDValue Offset, EVT SVT,
                                  MachineMemOperand *MMO);
@@ -1612,10 +1541,10 @@ public:
                 MachinePointerInfo PtrInfo, EVT SVT,
                 MaybeAlign Alignment = MaybeAlign(),
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes()) {
+                const MMOMetadata &Metadata = MMOMetadata()) {
     return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
                          Alignment.value_or(getEVTAlign(SVT)), MMOFlags,
-                         AAInfo);
+                         Metadata);
   }
   LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                  SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
@@ -2815,11 +2744,12 @@ private:
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);
-  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op, void *&InsertPos);
+  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op,
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &loc);
 
   void DeleteNodeNotInCSEMaps(SDNode *N);
@@ -2827,17 +2757,18 @@ private:
 
   void allnodes_clear();
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  This
-  /// overload is for nodes other than Constant or ConstantFP, use the other one
-  /// for those.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. This overload is for nodes other than Constant or
+  /// ConstantFP, use the other one for those.
+  SDNode *lookupNode(const FoldingSetNodeID &ID,
+                     FoldingSetInsertToken &InsertToken);
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  Performs
-  /// additional processing for constant nodes.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
-                              void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. Performs additional processing for constant nodes.
+  SDNode *lookupNode(const FoldingSetNodeID &ID, const SDLoc &DL,
+                     FoldingSetInsertToken &InsertToken);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

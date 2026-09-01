@@ -1,6 +1,6 @@
 # RUN: llc -run-pass wasm-reg-stackify %s -o - | FileCheck %s
 
-# Tests for DBG_VALUE hanlding in RegStackify + DebugValueManager
+# Tests for DBG_VALUE handling in RegStackify + DebugValueManager
 
 --- |
   target triple = "wasm32-unknown-unknown"
@@ -54,7 +54,7 @@
   !llvm.module.flags = !{!2, !3, !4}
 
   ; Note the current mapping variable metadata and their names, which we will
-  ; use in all functions in ths file:
+  ; use in all functions in this file:
   ; - "var_a" / VAR_A: !5
   ; - "var_b" / VAR_B: !11
   ; - "var_c" / VAR_C: !12

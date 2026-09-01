@@ -575,6 +575,7 @@ public:
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerTruncSat(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBswap(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBitreverse(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerReadWriteRegister(MachineInstr &MI);

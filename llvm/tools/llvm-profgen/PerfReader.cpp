@@ -18,6 +18,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
@@ -466,7 +467,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   if (!PerfExecutable) {
     exitWithError("Perf not found.");
   }
-  std::string PerfPath = *PerfExecutable;
+  std::string PerfExecutablePath = *PerfExecutable;
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
@@ -477,12 +478,53 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
+  auto RunPerfScript = [&](ArrayRef<StringRef> Args) {
+    // ExecuteAndWait does not truncate redirected output files on Unix. Remove
+    // both files so a shorter invocation cannot retain output from the
+    // previous perf script invocation.
+    for (StringRef Path : {StringRef(PerfTraceFile), StringRef(ErrorFile)}) {
+      if (std::error_code EC = sys::fs::remove(Path))
+        exitWithError(EC, Path);
+    }
+
+    std::string ExecutionError;
+    bool ExecutionFailed = false;
+    int ExitCode =
+        sys::ExecuteAndWait(PerfExecutablePath, Args, std::nullopt, Redirects,
+                            /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                            &ExecutionError, &ExecutionFailed);
+    if (!ExecutionFailed && ExitCode == 0)
+      return;
+
+    std::string Message;
+    raw_string_ostream OS(Message);
+    if (ExecutionFailed || ExitCode == -1)
+      OS << "Failed to execute perf script";
+    else if (ExitCode == -2)
+      OS << "Perf script terminated abnormally";
+    else
+      OS << "Perf script failed with exit code " << ExitCode;
+    if (!ExecutionError.empty())
+      OS << ": " << ExecutionError;
+
+    if (auto ErrorBuffer = MemoryBuffer::getFile(ErrorFile)) {
+      StringRef Stderr = ErrorBuffer.get()->getBuffer().trim();
+      if (!Stderr.empty())
+        OS << "\n" << Stderr;
+    }
+    exitWithError(OS.str());
+  };
+
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                  "-F",     "comm,pid", "-i",
+    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
+                                  "script",
+                                  "--show-mmap-events",
+                                  "-F",
+                                  "comm,pid",
+                                  "-i",
                                   PerfData};
-    sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+    RunPerfScript(ScriptMMapArgs);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
@@ -509,7 +551,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   // Run perf script again to retrieve events for PIDs collected above
   SmallVector<StringRef, 8> ScriptSampleArgs;
-  ScriptSampleArgs.push_back(PerfPath);
+  ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
@@ -520,7 +562,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
-  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
+  RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};

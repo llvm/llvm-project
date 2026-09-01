@@ -131,14 +131,6 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   return SPIRV::AccessQualifier::ReadWrite;
 }
 
-static std::vector<SPIRV::Decoration::Decoration>
-getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
-  MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
-    return {SPIRV::Decoration::Volatile};
-  return {};
-}
-
 static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder &MIRBuilder,
@@ -180,7 +172,10 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    return GR->getOrCreateSPIRVPointerType(
+    // byval/byref/sret carry the aggregate layout in the pointee type, so keep
+    // a typed pointer here. An untyped one drops the type and breaks the
+    // argument ABI on the way back from SPIR-V.
+    return GR->getOrCreateSPIRVTypedPointerType(
         getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
@@ -328,13 +323,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
-      }
-
-      if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
-        std::vector<SPIRV::Decoration::Decoration> ArgTypeQualDecs =
-            getKernelArgTypeQual(F, i);
-        for (SPIRV::Decoration::Decoration Decoration : ArgTypeQualDecs)
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Decoration, {});
       }
 
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
@@ -615,7 +603,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   unsigned CallOp;
-  if (Info.CB->isIndirectCall()) {
+  if (Info.CB && Info.CB->isIndirectCall()) {
     if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
       report_fatal_error("An indirect call is encountered but SPIR-V without "
                          "extensions does not support it",
@@ -662,6 +650,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
+
+  if (Info.CB)
+    MIB.getInstr()->copyIRFlags(*Info.CB);
 
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     // Process aliasing metadata.

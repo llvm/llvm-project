@@ -132,6 +132,9 @@ config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 if config.default_sysroot:
     config.available_features.add("default_sysroot")
 
+if config.clang_default_unwindlib:
+    config.available_features.add(f"default-unwindlib={config.clang_default_unwindlib}")
+
 host_triple = config.host_triple.split("-")
 config.available_features.add(f"{host_triple[0]}-host")
 
@@ -217,6 +220,11 @@ tools = [
     ),
 ]
 
+# Some tests expect the command line to be verbatim what is specified on the
+# RUN: line.
+if not flang_extra_search_args:
+    config.available_features.add("flang-authentic-cmdline")
+
 # Flang has several unimplemented features. TODO messages are used to mark
 # and fail if these features are exercised. Some TODOs exit with a non-zero
 # exit code, but others abort the execution in assert builds.
@@ -271,3 +279,7 @@ if config.flang_runtime_f128_math_lib:
     )
 else:
     config.substitutions.append(("%f128-lib", "NONE"))
+
+# Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "64"

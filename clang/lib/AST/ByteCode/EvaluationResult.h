@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 #define LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 
+#include "DeclOrExpr.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -36,17 +37,15 @@ public:
     Valid,   // Result is valid and empty.
   };
 
-  using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
-
 private:
 #ifndef NDEBUG
   const Context *Ctx = nullptr;
 #endif
   APValue Value;
   ResultKind Kind = Empty;
-  DeclTy Source = nullptr;
+  DeclOrExpr Source = nullptr;
 
-  void setSource(DeclTy D) { Source = D; }
+  void setSource(DeclOrExpr D) { Source = D; }
 
   void takeValue(APValue &&V) {
     assert(empty());
@@ -81,14 +80,13 @@ public:
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
   /// Check that none of the blocks the given pointer (transitively) points
   /// to are dynamically allocated.
-  bool checkDynamicAllocations(InterpState &S, const Context &Ctx,
-                               const Pointer &Ptr, SourceInfo Info);
+  bool checkDynamicAllocations(InterpState &S, const Pointer &Ptr,
+                               SourceInfo Info);
 
   QualType getSourceType() const {
-    if (const auto *D =
-            dyn_cast_if_present<ValueDecl>(Source.dyn_cast<const Decl *>()))
+    if (const auto *D = Source.asValueDecl())
       return D->getType();
-    if (const auto *E = Source.dyn_cast<const Expr *>())
+    if (const auto *E = Source.asExpr())
       return E->getType();
     return QualType();
   }

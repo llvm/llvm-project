@@ -20,8 +20,8 @@
 // CHECK-NEXT:  [[ADD:%[0-9]+]] = arith.addi [[SUB]], [[STEP]] : index
 // CHECK-NEXT:  [[DIV:%[0-9]+]] = arith.divsi [[ADD]], [[STEP]] : index
 // CHECK:       scf.for %arg4 = %c0{{.*}} to [[DIV]] step %c1{{.*}}
-// CHECK-NEXT:    [[IVMUL:%[0-9]+]] = arith.muli %arg4, [[STEP]] : index
-// CHECK-NEXT:    [[IVADD:%[0-9]+]] = arith.addi [[LB]], [[IVMUL]] : index
+// CHECK-NEXT:    [[IVMUL:%[0-9]+]] = arith.muli %arg4, [[STEP]] overflow<nsw> : index
+// CHECK-NEXT:    [[IVADD:%[0-9]+]] = arith.addi [[LB]], [[IVMUL]] overflow<nsw> : index
 // CHECK-NEXT:    memref.store [[IVADD]], %arg3[]
 
 func.func @unknown_step_(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: memref<index>) {
@@ -52,8 +52,8 @@ func.func @unknown_step_(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: memref<index
 // CHECK-NEXT:  [[ADD:%[0-9]+]] = arith.addi [[SUB]], [[STEP]] : index
 // CHECK-NEXT:  [[DIV:%[0-9]+]] = arith.divsi [[ADD]], [[STEP]] : index
 // CHECK:       scf.for %arg1 = %c0{{.*}} to [[DIV]] step %c1{{.*}}
-// CHECK-NEXT:    [[IVMUL:%[0-9]+]] = arith.muli %arg1, [[STEP]] : index
-// CHECK-NEXT:    [[IVADD:%[0-9]+]] = arith.addi [[LB]], [[IVMUL]] : index
+// CHECK-NEXT:    [[IVMUL:%[0-9]+]] = arith.muli %arg1, [[STEP]] overflow<nsw> : index
+// CHECK-NEXT:    [[IVADD:%[0-9]+]] = arith.addi [[LB]], [[IVMUL]] overflow<nsw> : index
 // CHECK-NEXT:    memref.store [[IVADD]], %arg0[]
 
 func.func @negative_step_(%arg0: memref<index>) {

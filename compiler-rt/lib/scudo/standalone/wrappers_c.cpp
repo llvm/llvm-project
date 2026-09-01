@@ -73,6 +73,8 @@ static void reportReallocDeallocation(void *old_ptr) {
   }
 }
 
+static void enableInChildAfterFork() { Allocator.enable(/*IsChild*/ true); }
+
 extern "C" {
 
 INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
@@ -287,15 +289,12 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_iterate)(
 INTERFACE WEAK void SCUDO_PREFIX(malloc_enable)() {
   Allocator.enable(/*IsChild*/ false);
 }
-INTERFACE WEAK void SCUDO_PREFIX(malloc_enable_child)() {
-  Allocator.enable(/*IsChild*/ true);
-}
 INTERFACE WEAK void SCUDO_PREFIX(malloc_disable)() { Allocator.disable(); }
 
 void SCUDO_PREFIX(malloc_postinit)() {
   Allocator.initGwpAsan();
   pthread_atfork(SCUDO_PREFIX(malloc_disable), SCUDO_PREFIX(malloc_enable),
-                 SCUDO_PREFIX(malloc_enable_child));
+                 enableInChildAfterFork);
 }
 
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {

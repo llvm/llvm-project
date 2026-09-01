@@ -148,8 +148,6 @@ protected:
   std::optional<uint64_t> BaseAddress;
   bool IsSegment = false;
   bool Finalized = false;
-  bool Quiet;
-
 
   /// Get the first function start address.
   ///
@@ -314,10 +312,10 @@ protected:
   ///
   /// Used by createSegment() to create segment creators of the correct
   /// version type.
-  virtual std::unique_ptr<GsymCreator> createNew(bool Quiet) const = 0;
+  virtual std::unique_ptr<GsymCreator> createNew() const = 0;
 
 public:
-  LLVM_ABI GsymCreator(bool Quiet = false);
+  LLVM_ABI GsymCreator();
   virtual ~GsymCreator() = default;
 
   /// Get the size in bytes needed for encoding string offsets.
@@ -491,10 +489,6 @@ public:
   void setBaseAddress(uint64_t Addr) {
     BaseAddress = Addr;
   }
-
-  /// Whether the transformation should be quiet, i.e. not output warnings.
-  bool isQuiet() const { return Quiet; }
-
 
   /// Create a segmented GSYM creator starting with function info index
   /// \a FuncIdx.

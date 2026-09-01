@@ -47,6 +47,11 @@ void RTNAME(SetUnderflowMode)(bool flag);
 std::size_t RTNAME(GetModesTypeSize)(void);
 std::size_t RTNAME(GetStatusTypeSize)(void);
 
+// Enable trapping on the specified floating-point exceptions.
+// The excepts argument is a bitmask of IEEE_FLAG_TYPE values
+// (as used by MapException).
+void RTNAME(EnableFPETraps)(std::uint32_t excepts);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_EXCEPTIONS_H_

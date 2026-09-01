@@ -116,11 +116,11 @@ define void @s_3(i32 %start, ptr %cond) {
 ; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @s_3
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ((((-1 * (1 umin ((-1 * %start) + (10000 smax %start))))<nuw><nsw> + (-1 * %start) + (10000 smax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 smax %start))))
+; CHECK-NEXT:    exit count for loop: ((2 + (-1 * %start) + (10000 smax %start)) /u 3)
 ; CHECK-NEXT:    exit count for be: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 715831216
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %start) + (10000 smax %start))))<nuw><nsw> + (-1 * %start) + (10000 smax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 smax %start))))
-; CHECK-NEXT:    symbolic max exit count for loop: ((((-1 * (1 umin ((-1 * %start) + (10000 smax %start))))<nuw><nsw> + (-1 * %start) + (10000 smax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 smax %start))))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((2 + (-1 * %start) + (10000 smax %start)) /u 3)
+; CHECK-NEXT:    symbolic max exit count for loop: ((2 + (-1 * %start) + (10000 smax %start)) /u 3)
 ; CHECK-NEXT:    symbolic max exit count for be: ***COULDNOTCOMPUTE***
 ;
 entry:
@@ -288,11 +288,11 @@ define void @u_3(i32 %start, ptr %cond) {
 ; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @u_3
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ((((-1 * (1 umin ((-1 * %start) + (10000 umax %start))))<nuw><nsw> + (-1 * %start) + (10000 umax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 umax %start))))
+; CHECK-NEXT:    exit count for loop: ((2 + (-1 * %start) + (10000 umax %start)) /u 3)
 ; CHECK-NEXT:    exit count for be: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 3334
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %start) + (10000 umax %start))))<nuw><nsw> + (-1 * %start) + (10000 umax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 umax %start))))
-; CHECK-NEXT:    symbolic max exit count for loop: ((((-1 * (1 umin ((-1 * %start) + (10000 umax %start))))<nuw><nsw> + (-1 * %start) + (10000 umax %start)) /u 3) + (1 umin ((-1 * %start) + (10000 umax %start))))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((2 + (-1 * %start) + (10000 umax %start)) /u 3)
+; CHECK-NEXT:    symbolic max exit count for loop: ((2 + (-1 * %start) + (10000 umax %start)) /u 3)
 ; CHECK-NEXT:    symbolic max exit count for be: ***COULDNOTCOMPUTE***
 ;
 entry:

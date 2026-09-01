@@ -128,6 +128,11 @@ static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
     cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
 
+static cl::opt<uint32_t> MaxNumReachingBlocks(
+    "gvn-max-num-reaching-blocks", cl::Hidden, cl::init(200),
+    cl::desc("Max number of blocks scanned per load in the MemorySSA "
+             "reaching-value analysis (default = 200)"));
+
 // This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
 static cl::opt<uint32_t> MaxBBSpeculations(
     "gvn-max-block-speculations", cl::Hidden, cl::init(600),
@@ -500,6 +505,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
   // threads that is currently executing, and they might be in different basic
   // blocks.
   if (C->isConvergent()) {
+    ValueNumbering[C] = NextValueNumber;
+    return NextValueNumber++;
+  }
+
+  // Conservatively assign unique value numbers to calls with operand bundles.
+  // TODO: Bundle names could be included in the value numbering expression to
+  // allow combining calls with identical bundles.
+  if (C->hasOperandBundles()) {
     ValueNumbering[C] = NextValueNumber;
     return NextValueNumber++;
   }
@@ -2665,6 +2678,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   // Do a bottom-up DFS.
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
+    // Match MemDep's cutoff for expensive non-local queries.
+    if (Blocks.size() > MaxNumReachingBlocks)
+      return false;
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
@@ -3092,6 +3108,7 @@ bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
   SmallVector<std::pair<Value*, Value*>, 4> Worklist;
+  SmallDenseSet<std::pair<Value *, Value *>, 4> Visited;
   Worklist.push_back(std::make_pair(LHS, RHS));
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
@@ -3142,6 +3159,9 @@ bool GVNPass::propagateEquality(
         LVN = RVN;
       }
     }
+
+    if (!Visited.insert({LHS, RHS}).second)
+      continue;
 
     // If value numbering later sees that an instruction in the scope is equal
     // to 'LHS' then ensure it will be turned into 'RHS'.  In order to preserve
