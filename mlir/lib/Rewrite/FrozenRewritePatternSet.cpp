@@ -139,6 +139,9 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
       pdlModule, pdlPatterns.takeConfigs(), configMap,
       pdlPatterns.takeConstraintFunctions(),
       pdlPatterns.takeRewriteFunctions());
+  
+  // Set type converters for PDLL dialect conversion support
+  impl->pdlByteCode->setTypeConverters(pdlPatterns.getTypeConverters());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 }
 

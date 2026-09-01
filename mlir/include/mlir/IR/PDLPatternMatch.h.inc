@@ -914,6 +914,17 @@ public:
     return rewriteFunctions;
   }
 
+  /// Register a type converter for PDLL dialect conversion patterns
+  void registerTypeConverter(StringRef name, const TypeConverter *converter) {
+    typeConverters[name] = static_cast<const void *>(converter);
+  }
+
+  /// Return the set of registered type converters
+  const llvm::StringMap<const void *> &getTypeConverters() const {
+    return typeConverters;
+  }
+
+
   /// Return the set of the registered pattern configs.
   SmallVector<std::unique_ptr<PDLPatternConfigSet>> takeConfigs() {
     return std::move(configs);
@@ -944,6 +955,8 @@ private:
   /// The external functions referenced from within the PDL module.
   llvm::StringMap<PDLConstraintFunction> constraintFunctions;
   llvm::StringMap<PDLRewriteFunction> rewriteFunctions;
+  /// Type converters for PDLL dialect conversion
+  llvm::StringMap<const void *> typeConverters;
 };
 } // namespace mlir
 

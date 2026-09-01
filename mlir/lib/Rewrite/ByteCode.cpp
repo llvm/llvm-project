@@ -15,6 +15,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -1056,6 +1057,11 @@ PDLByteCode::PDLByteCode(
     llvm::StringMap<PDLConstraintFunction> constraintFns,
     llvm::StringMap<PDLRewriteFunction> rewriteFns)
     : configs(std::move(configs)) {
+  
+  // Register PDLL builtin functions before generating bytecode
+  rewriteFns[__pdll_convert_type__] = createConvertTypeBuiltin(this);
+  rewriteFns[__pdll_converted_operand__] = createConvertedOperandBuiltin();
+  
   Generator generator(module.getContext(), uniquedData, matcherByteCode,
                       rewriterByteCode, patterns, maxValueMemoryIndex,
                       maxOpRangeCount, maxTypeRangeCount, maxValueRangeCount,
@@ -2328,3 +2334,80 @@ LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,
   }
   return result;
 }
+
+//===----------------------------------------------------------------------===//
+// PDLL Type Conversion Support
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Create builtin function for __pdll_convert_type__
+/// Converts a type using a registered TypeConverter
+PDLRewriteFunction createConvertTypeBuiltin(const PDLByteCode *bytecode) {
+  return [bytecode](PatternRewriter &rewriter, PDLResultList &results,
+                    ArrayRef<PDLValue> args) -> LogicalResult {
+    if (args.size() != 2) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "convert_type expects 2 arguments");
+    }
+
+    // Extract arguments
+    Type sourceType = args[0].cast<Type>();
+    Attribute converterAttr = args[1].cast<Attribute>();
+    StringAttr converterNameAttr = dyn_cast<StringAttr>(converterAttr);
+
+    if (!converterNameAttr) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Converter name must be a StringAttr");
+    }
+
+    StringRef converterName = converterNameAttr.getValue();
+
+    // Look up type converter
+    const void *converterPtr = bytecode->getTypeConverter(converterName);
+    if (!converterPtr) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Type converter not registered: " + converterName);
+    }
+
+    // Cast and use the type converter
+    const auto *converter = static_cast<const TypeConverter *>(converterPtr);
+    Type convertedType = converter->convertType(sourceType);
+
+    if (!convertedType) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "Type conversion failed");
+    }
+
+    results.push_back(convertedType);
+    return success();
+  };
+}
+
+/// Create builtin function for __pdll_converted_operand__
+PDLRewriteFunction createConvertedOperandBuiltin() {
+  return [](PatternRewriter &rewriter, PDLResultList &results,
+            ArrayRef<PDLValue> args) -> LogicalResult {
+    if (args.size() != 2) {
+      return rewriter.notifyMatchFailure(
+          rewriter.getInsertionBlock()->getParentOp(),
+          "converted_operand expects 2 arguments");
+    }
+
+    Value operand = args[0].cast<Value>();
+
+    // Try to get remapped value if in conversion context
+    if (auto *convRewriter = dyn_cast<ConversionPatternRewriter>(&rewriter)) {
+      Value remapped = convRewriter->getRemappedValue(operand);
+      results.push_back(remapped ? remapped : operand);
+    } else {
+      results.push_back(operand);
+    }
+
+    return success();
+  };
+}
+} // namespace
