@@ -22,11 +22,20 @@ using namespace mlir;
 using namespace mlir::abi;
 using namespace cir;
 
+/// FIXME: Only the AMDGPU kernel convention is mapped. Every other convention
+/// is classified as C.
+llvm::CallingConv::ID cir::convertCallingConv(cir::CallingConv cc) {
+  if (cc == cir::CallingConv::AMDGPUKernel)
+    return llvm::CallingConv::AMDGPU_KERNEL;
+  return llvm::CallingConv::C;
+}
+
 std::optional<FunctionClassification>
 CIRABIClassifierCommon::classifyVariadicCall(cir::CIRCallOpInterface call,
                                              cir::FuncOp callee) {
   return classifyVariadicCall(call, callee.getFunctionType(),
-                              getTargetInfo(callee));
+                              getTargetInfo(callee),
+                              convertCallingConv(callee.getCallingConv()));
 }
 
 std::optional<FunctionClassification>
@@ -34,11 +43,13 @@ CIRABIClassifierCommon::classifyIndirectCall(cir::CIRCallOpInterface call) {
   cir::FuncType funcTy = getIndirectCalleeType(call);
   const llvm::abi::TargetInfo &targetInfo =
       getTargetInfo(call->getParentOfType<cir::FuncOp>());
+  // An indirect callee is an ordinary function pointer, so it uses the C
+  // convention.
   if (call.getNumArgOperands() > funcTy.getNumInputs())
-    return classifyVariadicCall(call, funcTy, targetInfo);
-  return classifySignature(funcTy.getReturnType(), funcTy.getInputs(),
-                           requiredArgs(funcTy), targetInfo,
-                           [&]() { return call->emitOpError(); });
+    return classifyVariadicCall(call, funcTy, targetInfo, llvm::CallingConv::C);
+  return classifySignature(
+      funcTy.getReturnType(), funcTy.getInputs(), requiredArgs(funcTy),
+      targetInfo, llvm::CallingConv::C, [&]() { return call->emitOpError(); });
 }
 
 namespace {
