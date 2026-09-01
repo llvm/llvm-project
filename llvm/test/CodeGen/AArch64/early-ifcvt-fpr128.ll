@@ -4,15 +4,15 @@
 define <4 x i32> @diamond_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %k, i1 %c) {
 ; CHECK-LABEL: diamond_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB0_2
-; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    sub v3.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    neg v0.4s, v0.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %else
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    neg v4.4s, v0.4s
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    mla v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    mla v4.4s, v1.4s, v2.4s
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    bif v0.16b, v4.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %then, label %else
@@ -62,16 +62,15 @@ join:
 define <4 x i32> @diamond_slt_cond_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %k, i32 %x, i32 %y) {
 ; CHECK-LABEL: diamond_slt_cond_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    b.ge .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    sub v3.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    neg v0.4s, v0.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: // %else
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    neg v4.4s, v0.4s
+; CHECK-NEXT:    csetm x8, ge
+; CHECK-NEXT:    mla v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    mla v4.4s, v1.4s, v2.4s
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    bif v0.16b, v4.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp slt i32 %x, %y
@@ -125,15 +124,15 @@ join:
 define <4 x i32> @diamond_streaming_fa64_converts(<4 x i32> %a, <4 x i32> %b, <4 x i32> %k, i1 %c) "aarch64_pstate_sm_enabled" "target-features"="+sme,+sme-fa64" {
 ; CHECK-LABEL: diamond_streaming_fa64_converts:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz w0, #0, .LBB4_2
-; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    sub v3.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    neg v0.4s, v0.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_2: // %else
-; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mla v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    neg v4.4s, v0.4s
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    mla v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    mla v4.4s, v1.4s, v2.4s
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    bif v0.16b, v4.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %then, label %else
