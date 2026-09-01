@@ -6919,13 +6919,16 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // See if ValueTracking can give us a useful range.
     const DataLayout &DL = getDataLayout();
-    KnownBits Known = computeKnownBits(V, DL, &AC, nullptr, &DT);
+    Instruction *CxtI = isa<Argument>(V) ? &*F.getEntryBlock().begin()
+                                         : dyn_cast<Instruction>(V);
+    KnownBits Known = computeKnownBits(
+        V, SimplifyQuery(DL, &DT, &AC, CxtI).allowEphemerals(true));
     if (Known.getBitWidth() != BitWidth)
       Known = Known.zextOrTrunc(BitWidth);
 
     // ValueTracking may be able to compute a tighter result for the number of
     // sign bits than for the value of those sign bits.
-    unsigned NS = ComputeNumSignBits(V, DL, &AC, nullptr, &DT);
+    unsigned NS = ComputeNumSignBits(V, DL, &AC, CxtI, &DT);
     if (U->getType()->isPointerTy()) {
       // If the pointer size is larger than the index size type, this can cause
       // NS to be larger than BitWidth. So compensate for this.
