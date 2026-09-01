@@ -132,26 +132,6 @@ template <> struct SqrtConfig<unsigned int> {
   using HalfType = unsigned short;
 };
 
-template <typename T> struct FXUnsigned;
-template <> struct FXUnsigned<short fract> {
-  using Type = unsigned short fract;
-};
-template <> struct FXUnsigned<fract> {
-  using Type = unsigned fract;
-};
-template <> struct FXUnsigned<long fract> {
-  using Type = unsigned long fract;
-};
-template <> struct FXUnsigned<short accum> {
-  using Type = unsigned short accum;
-};
-template <> struct FXUnsigned<accum> {
-  using Type = unsigned accum;
-};
-template <> struct FXUnsigned<long accum> {
-  using Type = unsigned long accum;
-};
-
 } // namespace internal
 
 // Core computation for sqrt with normalized inputs (0.25 <= x < 1).
@@ -199,65 +179,60 @@ sqrt_core(typename Config::Type x_frac) {
 
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T> sqrt(T x) {
-  if constexpr (FXRep<T>::SIGN_LEN > 0) {
-    return static_cast<T>(
-        sqrt(static_cast<typename internal::FXUnsigned<T>::Type>(x)));
+  using BitType = typename FXRep<T>::StorageType;
+  BitType x_bit = cpp::bit_cast<BitType>(x);
+
+  if (LIBC_UNLIKELY(x_bit == 0))
+    return FXRep<T>::ZERO();
+
+  int leading_zeros = cpp::countl_zero(x_bit);
+  constexpr int STORAGE_LENGTH = sizeof(BitType) * CHAR_BIT;
+  constexpr int EXP_ADJUSTMENT = STORAGE_LENGTH - FXRep<T>::FRACTION_LEN - 1;
+  // x_exp is the real exponent of the leading bit of x.
+  int x_exp = EXP_ADJUSTMENT - leading_zeros;
+  int shift = EXP_ADJUSTMENT - 1 - (x_exp & (~1));
+  // Normalize.
+  x_bit <<= shift;
+
+  if constexpr (STORAGE_LENGTH > 32) {
+    using SeedConfig = internal::SqrtConfig<unsigned long fract>;
+    using SeedType = SeedConfig::Type;
+    using SeedStorageType = typename FXRep<SeedType>::StorageType;
+    constexpr int SEED_LENGTH = sizeof(SeedStorageType) * CHAR_BIT;
+
+    static_assert(STORAGE_LENGTH <= 2 * SEED_LENGTH,
+                  "Output storage type has to be lesser than or equal to "
+                  "double the seed table's width for accurate results.");
+
+    // Seed from the widest available table using the top half of x, then
+    // widen to full precision. No native fract type exists at this storage
+    // width to build a table for directly.
+    SeedStorageType x_top_half =
+        static_cast<SeedStorageType>(x_bit >> SEED_LENGTH);
+    SeedType x_seed = cpp::bit_cast<SeedType>(x_top_half);
+    SeedType r_seed = sqrt_core<SeedConfig>(x_seed);
+
+    UInt128 r0 = static_cast<UInt128>(cpp::bit_cast<SeedStorageType>(r_seed))
+                 << SEED_LENGTH;
+
+    UInt128 x_wide = static_cast<UInt128>(x_bit) << STORAGE_LENGTH;
+    UInt128 r1 = (r0 + x_wide / r0) >> 1;
+
+    r1 >>= EXP_ADJUSTMENT - (x_exp >> 1);
+    BitType r_bits = static_cast<BitType>(r1);
+    return cpp::bit_cast<T>(r_bits);
   } else {
-    using BitType = typename FXRep<T>::StorageType;
-    BitType x_bit = cpp::bit_cast<BitType>(x);
+    using FracType = typename internal::SqrtConfig<T>::Type;
+    FracType x_frac = cpp::bit_cast<FracType>(x_bit);
 
-    if (LIBC_UNLIKELY(x_bit == 0))
-      return FXRep<T>::ZERO();
+    // Compute sqrt(x_frac) using Newton-method.
+    FracType r = sqrt_core<internal::SqrtConfig<T>>(x_frac);
 
-    int leading_zeros = cpp::countl_zero(x_bit);
-    constexpr int STORAGE_LENGTH = sizeof(BitType) * CHAR_BIT;
-    constexpr int EXP_ADJUSTMENT = STORAGE_LENGTH - FXRep<T>::FRACTION_LEN - 1;
-    // x_exp is the real exponent of the leading bit of x.
-    int x_exp = EXP_ADJUSTMENT - leading_zeros;
-    int shift = EXP_ADJUSTMENT - 1 - (x_exp & (~1));
-    // Normalize.
-    x_bit <<= shift;
+    // Re-scaling
+    r >>= EXP_ADJUSTMENT - (x_exp >> 1);
 
-    if constexpr (STORAGE_LENGTH > 32) {
-      using SeedConfig = internal::SqrtConfig<unsigned long fract>;
-      using SeedType = SeedConfig::Type;
-      using SeedStorageType = typename FXRep<SeedType>::StorageType;
-      constexpr int SEED_LENGTH = sizeof(SeedStorageType) * CHAR_BIT;
-
-      static_assert(STORAGE_LENGTH <= 2 * SEED_LENGTH,
-                    "Output storage type has to be lesser than or equal to "
-                    "double the seed table's width for accurate results.");
-
-      // Seed from the widest available table using the top half of x, then
-      // widen to full precision. No native fract type exists at this storage
-      // width to build a table for directly.
-      SeedStorageType x_top_half =
-          static_cast<SeedStorageType>(x_bit >> SEED_LENGTH);
-      SeedType x_seed = cpp::bit_cast<SeedType>(x_top_half);
-      SeedType r_seed = sqrt_core<SeedConfig>(x_seed);
-
-      UInt128 r0 = static_cast<UInt128>(cpp::bit_cast<SeedStorageType>(r_seed))
-                   << SEED_LENGTH;
-
-      UInt128 x_wide = static_cast<UInt128>(x_bit) << STORAGE_LENGTH;
-      UInt128 r1 = (r0 + x_wide / r0) >> 1;
-
-      r1 >>= EXP_ADJUSTMENT - (x_exp >> 1);
-      BitType r_bits = static_cast<BitType>(r1);
-      return cpp::bit_cast<T>(r_bits);
-    } else {
-      using FracType = typename internal::SqrtConfig<T>::Type;
-      FracType x_frac = cpp::bit_cast<FracType>(x_bit);
-
-      // Compute sqrt(x_frac) using Newton-method.
-      FracType r = sqrt_core<internal::SqrtConfig<T>>(x_frac);
-
-      // Re-scaling
-      r >>= EXP_ADJUSTMENT - (x_exp >> 1);
-
-      // Return result.
-      return cpp::bit_cast<T>(r);
-    }
+    // Return result.
+    return cpp::bit_cast<T>(r);
   }
 }
 

@@ -54,9 +54,7 @@ public:
 
     constexpr size_t COUNT = 255;
     constexpr InputStorageType MAX_MAGNITUDE =
-        (FXRep::SIGN_LEN > 0) ? static_cast<InputStorageType>(
-                                    InputStorageType(~InputStorageType(0)) >> 1)
-                              : InputStorageType(~InputStorageType(0));
+        InputStorageType(~InputStorageType(0));
     constexpr InputStorageType STEP =
         (MAX_MAGNITUDE < COUNT)
             ? 1

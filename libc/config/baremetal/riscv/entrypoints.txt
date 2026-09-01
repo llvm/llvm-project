@@ -926,12 +926,6 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtuhk
     libc.src.stdfix.sqrtuk
     libc.src.stdfix.sqrtulk
-    libc.src.stdfix.sqrthr
-    libc.src.stdfix.sqrtr
-    libc.src.stdfix.sqrtlr
-    libc.src.stdfix.sqrthk
-    libc.src.stdfix.sqrtk
-    libc.src.stdfix.sqrtlk
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
     libc.src.stdfix.hrbits
