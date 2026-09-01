@@ -241,7 +241,7 @@ Options:\n\
   --version         Print LLVM version.\n\
 Typical components:\n\
   all               All LLVM libraries (default).\n\
-  engine            Either a native JIT or a bitcode interpreter.\n";
+  engine            A native JIT.\n";
   if (ExitWithFailure)
     exit(1);
 }

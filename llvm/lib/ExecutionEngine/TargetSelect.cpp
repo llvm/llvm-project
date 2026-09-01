@@ -28,7 +28,7 @@ TargetMachine *EngineBuilder::selectTarget() {
 
   // MCJIT can generate code for remote targets, but the old JIT and Interpreter
   // must use the host architecture.
-  if (WhichEngine != EngineKind::Interpreter && M)
+  if (M)
     TT = M->getTargetTriple();
 
   return selectTarget(TT, MArch, MCPU, MAttrs);

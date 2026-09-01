@@ -469,8 +469,8 @@ int ExecutionEngine::runFunctionAsMain(Function *Fn,
 EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
-    : M(std::move(M)), WhichEngine(EngineKind::Either), ErrorStr(nullptr),
-      OptLevel(CodeGenOptLevel::Default), MemMgr(nullptr), Resolver(nullptr) {
+    : M(std::move(M)), ErrorStr(nullptr), OptLevel(CodeGenOptLevel::Default),
+      MemMgr(nullptr), Resolver(nullptr) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
@@ -510,22 +510,9 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr, ErrorStr))
     return nullptr;
 
-  // If the user specified a memory manager but didn't specify which engine to
-  // create, we assume they only want the JIT, and we fail if they only want
-  // the interpreter.
-  if (MemMgr) {
-    if (WhichEngine & EngineKind::JIT)
-      WhichEngine = EngineKind::JIT;
-    else {
-      if (ErrorStr)
-        *ErrorStr = "Cannot create an interpreter with a memory manager.";
-      return nullptr;
-    }
-  }
-
   // Unless the interpreter was explicitly selected or the JIT is not linked,
   // try making a JIT.
-  if ((WhichEngine & EngineKind::JIT) && TheTM) {
+  if (TheTM) {
     if (!TM->getTarget().hasJIT()) {
       errs() << "WARNING: This target JIT is not designed for the host"
              << " you are running.  If bad things happen, please choose"
@@ -543,17 +530,7 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
     }
   }
 
-  // If we can't make a JIT and we didn't request one specifically, try making
-  // an interpreter instead.
-  if (WhichEngine & EngineKind::Interpreter) {
-    if (ExecutionEngine::InterpCtor)
-      return ExecutionEngine::InterpCtor(std::move(M), ErrorStr);
-    if (ErrorStr)
-      *ErrorStr = "Interpreter has not been linked in.";
-    return nullptr;
-  }
-
-  if ((WhichEngine & EngineKind::JIT) && !ExecutionEngine::MCJITCtor) {
+  if (!ExecutionEngine::MCJITCtor) {
     if (ErrorStr)
       *ErrorStr = "JIT has not been linked in.";
   }

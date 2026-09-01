@@ -303,8 +303,7 @@ protected:
 
     EngineBuilder EB(std::move(M));
     std::string Error;
-    TheJIT.reset(EB.setEngineKind(EngineKind::JIT)
-                     .setMCJITMemoryManager(std::move(MM))
+    TheJIT.reset(EB.setMCJITMemoryManager(std::move(MM))
                      .setErrorStr(&Error)
                      .setOptLevel(CodeGenOptLevel::None)
                      .setMArch(MArch)

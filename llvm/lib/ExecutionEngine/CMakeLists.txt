@@ -33,7 +33,6 @@ if( LLVM_USE_INTEL_JITEVENTS )
   add_subdirectory(IntelJITEvents)
 endif( LLVM_USE_INTEL_JITEVENTS )
 
-add_subdirectory(Interpreter)
 add_subdirectory(JITLink)
 add_subdirectory(MCJIT)
 add_subdirectory(Orc)

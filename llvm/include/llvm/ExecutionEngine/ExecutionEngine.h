@@ -518,24 +518,12 @@ private:
   void Init(std::unique_ptr<Module> M);
 };
 
-namespace EngineKind {
-
-  // These are actually bitmasks that get or-ed together.
-  enum Kind {
-    JIT         = 0x1,
-    Interpreter = 0x2
-  };
-  const static Kind Either = (Kind)(JIT | Interpreter);
-
-} // end namespace EngineKind
-
 /// Builder class for ExecutionEngines. Use this by stack-allocating a builder,
 /// chaining the various set* methods, and terminating it with a .create()
 /// call.
 class EngineBuilder {
 private:
   std::unique_ptr<Module> M;
-  EngineKind::Kind WhichEngine;
   std::string *ErrorStr;
   CodeGenOptLevel OptLevel;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
@@ -558,13 +546,6 @@ public:
 
   // Out-of-line since we don't have the def'n of RTDyldMemoryManager here.
   LLVM_ABI ~EngineBuilder();
-
-  /// setEngineKind - Controls whether the user wants the interpreter, the JIT,
-  /// or whichever engine works.  This option defaults to EngineKind::Either.
-  EngineBuilder &setEngineKind(EngineKind::Kind w) {
-    WhichEngine = w;
-    return *this;
-  }
 
   /// setMCJITMemoryManager - Sets the MCJIT memory manager to use. This allows
   /// clients to customize their memory allocation policies for the MCJIT. This
