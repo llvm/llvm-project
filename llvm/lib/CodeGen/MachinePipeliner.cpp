@@ -1638,7 +1638,7 @@ private:
     }
   }
 
-  // Return true if \p VRegOrUnit is reserved one, for example, stack pointer
+  /// Return true if \p VRegOrUnit is reserved one, for example, stack pointer
   bool isReservedRegUnit(VirtRegOrUnit VRegOrUnit) const {
     return !VRegOrUnit.isVirtualReg() &&
            MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
@@ -1714,9 +1714,8 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(VirtRegOrUnit(Reg));
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
           UpdateTargetRegs(Use.VRegOrUnit);
-        }
       }
     }
 
@@ -1728,7 +1727,7 @@ private:
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
         VirtRegOrUnit Reg = Use.VRegOrUnit;
-        if (!TargetRegs.contains(Use.VRegOrUnit))
+        if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
         if (!Inserted) {
