@@ -1766,14 +1766,13 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
   Value *Start = HeaderPHI->getIncomingValueForBlock(Preheader);
   const SCEV *StartSCEV = SE.getSCEV(Start);
 
-  assert(StepSCEV->getType() == StepSCEV->getType());
-
   SCEV::NoWrapFlags NoWrapFlags = SCEV::FlagAnyWrap;
   if (auto *GEP = dyn_cast<GEPOperator>(StepInst)) {
-    if (GEP->hasNoUnsignedWrap())
+    // With NUSW, we can add NUW if the step is non-negative. We can't add NSW
+    // as the base address is unsigned.
+    if (GEP->hasNoUnsignedWrap() ||
+        (GEP->hasNoUnsignedSignedWrap() && SE.isKnownNonNegative(StepSCEV)))
       NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
-    if (GEP->hasNoUnsignedSignedWrap())
-      NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNSW);
   } else if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(StepInst)) {
     if (OBO->hasNoUnsignedWrap())
       NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNUW);
