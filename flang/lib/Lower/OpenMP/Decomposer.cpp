@@ -42,7 +42,9 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    llvm::omp::Version version(mlir::omp::getOpenMPVersionAttribute(modOp));
+    int64_t verAttr = mlir::omp::getOpenMPVersionAttribute(modOp);
+    // verAttr will be -1 if the module attribute is missing.
+    llvm::omp::Version version(std::max<int64_t>(verAttr, 0));
     tomp::ConstructDecompositionT decompose(version, *this, compound,
                                             llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
