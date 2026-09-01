@@ -4017,7 +4017,7 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
     // For BSRMOVH and BSRMOVL, detect set vs get by operand order
     if (Name == "bsrmovh" || Name == "bsrmovl") {
-      // Intel: BSR first = set (ZMM→BSR); ATT: non-BSR first = set
+      // Intel: BSR first = set (ZMM->BSR); ATT: non-BSR first = set
       bool IsLoad = isParsingIntelSyntax() ? (FirstBsrPos < FirstNonBsrPos)
                                            : (FirstNonBsrPos < FirstBsrPos);
       StringRef NewMnemonic =
