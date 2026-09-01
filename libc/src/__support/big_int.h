@@ -617,8 +617,19 @@ public:
   }
 
   LIBC_INLINE constexpr BigInt operator*(const BigInt &other) const {
-    // Perform full mul and truncate.
-    return BigInt(ful_mul(other));
+    if constexpr (!Signed && WORD_COUNT == 2) {
+      // Straight-line truncating multiply for the double-word case.
+      BigInt result{};
+      multiword::DoubleWide<word_type> lo_prod =
+          multiword::mul2(val[0], other.val[0]);
+      result.val[0] = multiword::lo(lo_prod);
+      result.val[1] = multiword::hi(lo_prod) + val[0] * other.val[1] +
+                      val[1] * other.val[0];
+      return result;
+    } else {
+      // Perform full mul and truncate.
+      return BigInt(ful_mul(other));
+    }
   }
 
   // Fast hi part of the full product.  The normal product `operator*` returns
