@@ -32,20 +32,20 @@ class ReachingDefOrUse
 
 public:
   ReachingDefOrUse(const RegAnalysis &RA, BinaryFunction &BF,
-                   std::optional<MCPhysReg> TrackingReg = std::nullopt,
+                   std::optional<MCRegister> TrackingReg = std::nullopt,
                    MCPlusBuilder::AllocatorIdTy AllocId = 0)
       : InstrsDataflowAnalysis<ReachingDefOrUse<Def>, !Def>(BF, AllocId),
         RA(RA), TrackingReg(TrackingReg) {}
   virtual ~ReachingDefOrUse() {}
 
-  bool isReachedBy(MCPhysReg Reg, ExprIterator Candidates) {
+  bool isReachedBy(MCRegister Reg, ExprIterator Candidates) {
     for (auto I = Candidates; I != this->expr_end(); ++I) {
       BitVector BV = BitVector(this->BC.MRI->getNumRegs(), false);
       if (Def)
         RA.getInstClobberList(**I, BV);
       else
         this->BC.MIB->getTouchedRegs(**I, BV);
-      if (BV[Reg])
+      if (BV[Reg.id()])
         return true;
     }
     return false;
@@ -63,7 +63,7 @@ protected:
 
   /// If set, limit the dataflow to only track instructions affecting this
   /// register. Otherwise the analysis can be too permissive.
-  std::optional<MCPhysReg> TrackingReg;
+  std::optional<MCRegister> TrackingReg;
 
   void preflight() {
     // Populate our universe of tracked expressions with all instructions

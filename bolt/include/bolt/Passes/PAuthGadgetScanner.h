@@ -36,8 +36,8 @@ namespace PAuthGadgetScanner {
 //   re-run to collect extra information to provide to the user. Which extra
 //   information can be requested depends on the particular analysis (for
 //   example, SrcSafetyAnalysis is able to compute the set of instructions
-//   clobbering the particular register, thus ReqT is MCPhysReg). At this stage,
-//   `FinalReport`s are created.
+//   clobbering the particular register, thus ReqT is MCRegister). At this
+//   stage, `FinalReport`s are created.
 //
 // Here, the subclasses of Diagnostic store the pieces of information which
 // are kept unchanged since they are collected on the first run of the analysis.
@@ -165,15 +165,15 @@ class FunctionAnalysisContext {
   /// Bitmask of detectors to run (only GS_PTRAUTH_* are allowed).
   opts::GadgetKindBitmask EnabledDetectors;
 
-  void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
-  void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
+  void findUnsafeUses(SmallVector<PartialReport<MCRegister>> &Reports);
+  void augmentUnsafeUseReports(ArrayRef<PartialReport<MCRegister>> Reports);
 
-  void findUnsafeDefs(SmallVector<PartialReport<MCPhysReg>> &Reports);
-  void augmentUnsafeDefReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
+  void findUnsafeDefs(SmallVector<PartialReport<MCRegister>> &Reports);
+  void augmentUnsafeDefReports(ArrayRef<PartialReport<MCRegister>> Reports);
 
   /// Process the reports which do not have to be augmented, and remove them
   /// from Reports.
-  void handleSimpleReports(SmallVector<PartialReport<MCPhysReg>> &Reports);
+  void handleSimpleReports(SmallVector<PartialReport<MCRegister>> &Reports);
 
 public:
   FunctionAnalysisContext(BinaryFunction &BF,

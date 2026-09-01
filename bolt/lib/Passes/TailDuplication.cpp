@@ -90,7 +90,8 @@ void TailDuplication::getCallerSavedRegs(const MCInst &Inst, BitVector &Regs,
   Regs |= CallRegs;
 }
 
-bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, unsigned Reg,
+bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst,
+                                               MCRegister Reg,
                                                BinaryContext &BC) const {
   BitVector WrittenRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getWrittenRegs(Inst, WrittenRegs);
@@ -102,18 +103,18 @@ bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, unsigned Reg,
 }
 
 bool TailDuplication::regIsDefinitelyOverwritten(const MCInst &Inst,
-                                                 unsigned Reg,
+                                                 MCRegister Reg,
                                                  BinaryContext &BC) const {
   BitVector WrittenRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getWrittenRegs(Inst, WrittenRegs);
   getCallerSavedRegs(Inst, WrittenRegs, BC);
   if (BC.MIB->isRep(Inst))
     BC.MIB->getRepRegs(WrittenRegs);
-  return (!regIsUsed(Inst, Reg, BC) && WrittenRegs.test(Reg) &&
+  return (!regIsUsed(Inst, Reg, BC) && WrittenRegs.test(Reg.id()) &&
           !BC.MIB->isConditionalMove(Inst));
 }
 
-bool TailDuplication::regIsUsed(const MCInst &Inst, unsigned Reg,
+bool TailDuplication::regIsUsed(const MCInst &Inst, MCRegister Reg,
                                 BinaryContext &BC) const {
   BitVector SrcRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getSrcRegs(Inst, SrcRegs);
@@ -122,7 +123,7 @@ bool TailDuplication::regIsUsed(const MCInst &Inst, unsigned Reg,
 }
 
 bool TailDuplication::isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB,
-                                              unsigned Reg) const {
+                                              MCRegister Reg) const {
   BinaryFunction *BF = StartBB.getFunction();
   BinaryContext &BC = BF->getBinaryContext();
   std::queue<BinaryBasicBlock *> Q;
@@ -187,7 +188,7 @@ void TailDuplication::constantAndCopyPropagate(
     // True if this is constant propagation and not copy propagation
     bool ConstantProp = BC.MII->get(OriginalInst.getOpcode()).isMoveImmediate();
     // The Register to replaced
-    unsigned Reg = OriginalInst.getOperand(0).getReg();
+    MCRegister Reg = OriginalInst.getOperand(0).getReg();
     // True if the register to replace was replaced everywhere it was used
     bool ReplacedEverywhere = true;
     // True if the register was definitely overwritten

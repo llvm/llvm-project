@@ -1872,7 +1872,7 @@ public:
     FrameInstructions[Offset] = std::move(CFIInst);
   }
 
-  void mutateCFIRegisterFor(const MCInst &Instr, MCPhysReg NewReg);
+  void mutateCFIRegisterFor(const MCInst &Instr, unsigned NewReg);
 
   const MCCFIInstruction *mutateCFIOffsetFor(const MCInst &Instr,
                                              int64_t NewOffset);

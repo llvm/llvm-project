@@ -713,7 +713,7 @@ void BinaryFunction::printRelocations(raw_ostream &OS, uint64_t Offset,
 }
 
 static std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
-                                                  MCPhysReg NewReg) {
+                                                  unsigned NewReg) {
   StringRef ExprBytes = Instr.getValues();
   assert(ExprBytes.size() > 1 && "DWARF expression CFI is too short");
   uint8_t Opcode = ExprBytes[0];
@@ -738,7 +738,7 @@ static std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
 }
 
 void BinaryFunction::mutateCFIRegisterFor(const MCInst &Instr,
-                                          MCPhysReg NewReg) {
+                                          unsigned NewReg) {
   const MCCFIInstruction *OldCFI = getCFIFor(Instr);
   assert(OldCFI && "invalid CFI instr");
   switch (OldCFI->getOperation()) {
@@ -821,7 +821,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // array of function pointers, or a jump table.
   uint64_t ArrayStart = 0;
 
-  unsigned BaseRegNum, IndexRegNum;
+  MCRegister BaseReg, IndexReg;
   int64_t DispValue;
   const MCExpr *DispExpr;
 
@@ -846,14 +846,14 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   }
 
   IndirectBranchType BranchType = BC.MIB->analyzeIndirectBranch(
-      Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
-      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
+      Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseReg,
+      IndexReg, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
 
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
 
   if (MemLocInstr != &Instruction)
-    IndexRegNum = BC.MIB->getNoRegister();
+    IndexReg = BC.MIB->getNoRegister();
 
   if (BC.isAArch64()) {
     const MCSymbol *Sym = BC.MIB->getTargetSymbol(*PCRelBaseInstr, 1);
@@ -901,7 +901,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // in processed instructions (but not in jump).
   if (DispExpr) {
     ArrayStart = getExprValue(DispExpr);
-    BaseRegNum = BC.MIB->getNoRegister();
+    BaseReg = BC.MIB->getNoRegister();
     if (BC.isAArch64()) {
       ArrayStart &= ~0xFFFULL;
       ArrayStart += DispValue & 0xFFFULL;
@@ -910,7 +910,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     ArrayStart = static_cast<uint64_t>(DispValue);
   }
 
-  if (BaseRegNum == BC.MRI->getProgramCounter())
+  if (BaseReg == BC.MRI->getProgramCounter())
     ArrayStart += getAddress() + Offset + Size;
 
   if (FixedEntryLoadInstr) {
@@ -1023,7 +1023,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // Convert the instruction into jump table branch.
   const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType);
   BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
-  BC.MIB->setJumpTable(Instruction, ArrayStart, IndexRegNum);
+  BC.MIB->setJumpTable(Instruction, ArrayStart, IndexReg);
 
   JTSites.emplace_back(Offset, ArrayStart);
 
@@ -2120,7 +2120,7 @@ bool BinaryFunction::postProcessIndirectBranches(
   MCInst *LastIndirectJump = nullptr;
   BinaryBasicBlock *LastIndirectJumpBB = nullptr;
   uint64_t LastJT = 0;
-  uint16_t LastJTIndexReg = BC.MIB->getNoRegister();
+  MCRegister LastJTIndexReg = BC.MIB->getNoRegister();
   for (BinaryBasicBlock &BB : blocks()) {
     for (BinaryBasicBlock::iterator II = BB.begin(); II != BB.end(); ++II) {
       MCInst &Instr = *II;
@@ -2146,15 +2146,14 @@ bool BinaryFunction::postProcessIndirectBranches(
       if (BC.MIB->isTailCall(Instr) || BC.MIB->getJumpTable(Instr)) {
         const unsigned PtrSize = BC.AsmInfo->getCodePointerSize();
         MCInst *MemLocInstr;
-        unsigned BaseRegNum, IndexRegNum;
+        MCRegister BaseReg, IndexReg;
         int64_t DispValue;
         const MCExpr *DispExpr;
         MCInst *PCRelBaseInstr;
         MCInst *FixedEntryLoadInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
-            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
-            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr,
-            FixedEntryLoadInstr);
+            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseReg, IndexReg,
+            DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 
@@ -4172,7 +4171,7 @@ void BinaryFunction::disambiguateJumpTables(
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT
-      MCPhysReg BaseReg1;
+      MCRegister BaseReg1;
       uint64_t Scale;
       const MCSymbol *Target;
       // In case we match if our first matcher, first instruction is the one to
@@ -4187,7 +4186,7 @@ void BinaryFunction::disambiguateJumpTables(
               *BC.MRI, *BC.MIB,
               MutableArrayRef<MCInst>(&*BB->begin(), &Inst + 1), -1) ||
           BaseReg1 != BC.MIB->getNoRegister() || Scale != 8) {
-        MCPhysReg BaseReg2;
+        MCRegister BaseReg2;
         uint64_t Offset;
         // Standard JT matching failed. Trying now:
         //     movq  "jt.2397/1"(,%rax,8), %rax

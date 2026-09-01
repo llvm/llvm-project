@@ -42,7 +42,7 @@ struct FrameIndexEntry {
   /// understand but we know it may write to a frame position.
   bool IsSimple;
 
-  uint16_t StackPtrReg;
+  MCRegister StackPtrReg;
 };
 
 /// Record an access to an argument in stack. This should be attached to

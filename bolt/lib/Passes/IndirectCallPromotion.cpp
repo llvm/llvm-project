@@ -384,7 +384,7 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   MCInst *MemLocInstr;
   MCInst *PCRelBaseOut;
   MCInst *FixedEntryLoadInstr;
-  unsigned BaseReg, IndexReg;
+  MCRegister BaseReg, IndexReg;
   int64_t DispValue;
   const MCExpr *DispExpr;
   MutableArrayRef<MCInst> Insts(&BB.front(), &CallInst);
@@ -514,7 +514,8 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
              << "Count = " << Target.first << "\n";
   });
 
-  BC.MIB->getOrCreateAnnotationAs<uint16_t>(CallInst, "JTIndexReg") = IndexReg;
+  BC.MIB->getOrCreateAnnotationAs<MCRegister>(CallInst, "JTIndexReg") =
+      IndexReg;
 
   TargetFetchInst = MemLocInstr;
 
@@ -640,7 +641,7 @@ IndirectCallPromotion::MethodInfoType IndirectCallPromotion::maybeGetVtableSyms(
   BinaryContext &BC = Function.getBinaryContext();
   std::vector<std::pair<MCSymbol *, uint64_t>> VtableSyms;
   std::vector<MCInst *> MethodFetchInsns;
-  unsigned VtableReg, MethodReg;
+  MCRegister VtableReg, MethodReg;
   uint64_t MethodOffset;
 
   assert(!Function.getJumpTable(Inst) &&
@@ -1312,7 +1313,7 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
         if (IsJumpTable) {
           ErrorOr<const BitVector &> State =
               Info.getLivenessAnalysis().getStateBefore(Inst);
-          if (!State || (State && (*State)[BC.MIB->getFlagsReg()])) {
+          if (!State || (State && (*State)[BC.MIB->getFlagsReg().id()])) {
             if (opts::Verbosity >= 1)
               BC.outs() << "BOLT-INFO: ICP failed in " << Function << " @ "
                         << InstIdx << " in " << BB->getName()
@@ -1376,7 +1377,7 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           MethodInfo.second.push_back(TargetFetchInst);
         }
 
-        MCPhysReg Reg = 0;
+        MCRegister Reg;
         if (BC.isAArch64()) {
           Reg = Info.getLivenessAnalysis().scavengeRegAfter(&Inst);
           LLVM_DEBUG({

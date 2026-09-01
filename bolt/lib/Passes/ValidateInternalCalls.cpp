@@ -228,7 +228,7 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
 
       FrameIndexEntry FIE;
       int32_t SrcImm = 0;
-      MCPhysReg Reg = 0;
+      MCRegister Reg;
       int64_t StackOffset = 0;
       bool IsIndexed = false;
       MCInst *TargetInst = ProgramPoint::getFirstPointAt(*Target).getInst();
@@ -265,12 +265,12 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
         MCInst &Use = **I;
         BitVector UsedRegs = BitVector(BC.MRI->getNumRegs(), false);
         BC.MIB->getTouchedRegs(Use, UsedRegs);
-        if (!UsedRegs[Reg])
+        if (!UsedRegs[Reg.id()])
           continue;
         UseDetected = true;
         int64_t Output;
-        std::pair<MCPhysReg, int64_t> Input1 = std::make_pair(Reg, 0);
-        std::pair<MCPhysReg, int64_t> Input2 = std::make_pair(0, 0);
+        std::pair<MCRegister, int64_t> Input1 = std::make_pair(Reg, 0);
+        std::pair<MCRegister, int64_t> Input2 = std::make_pair(MCRegister(), 0);
         if (!BC.MIB->evaluateStackOffsetExpr(Use, Output, Input1, Input2)) {
           LLVM_DEBUG(dbgs() << "Evaluate stack offset expr failed.\n");
           return false;

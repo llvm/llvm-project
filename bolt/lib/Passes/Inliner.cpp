@@ -175,7 +175,7 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
     if (BF.hasJumpTables())
       return INL_NONE;
 
-    const MCPhysReg SPReg = BC.MIB->getStackPointer();
+    const MCRegister SPReg = BC.MIB->getStackPointer();
     for (const BinaryBasicBlock &BB : BF) {
       for (const MCInst &Inst : BB) {
         // Tail calls are marked as implicitly using the stack pointer and they

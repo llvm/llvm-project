@@ -264,16 +264,16 @@ uint64_t MCPlusBuilder::getJumpTable(const MCInst &Inst) const {
   return *Value;
 }
 
-uint16_t MCPlusBuilder::getJumpTableIndexReg(const MCInst &Inst) const {
-  return getAnnotationAs<uint16_t>(Inst, "JTIndexReg");
+MCRegister MCPlusBuilder::getJumpTableIndexReg(const MCInst &Inst) const {
+  return getAnnotationAs<MCRegister>(Inst, "JTIndexReg");
 }
 
 bool MCPlusBuilder::setJumpTable(MCInst &Inst, uint64_t Value,
-                                 uint16_t IndexReg, AllocatorIdTy AllocId) {
+                                 MCRegister IndexReg, AllocatorIdTy AllocId) {
   if (!isIndirectBranch(Inst))
     return false;
   setAnnotationOpValue(Inst, MCAnnotation::kJumpTable, Value);
-  getOrCreateAnnotationAs<uint16_t>(Inst, "JTIndexReg", AllocId) = IndexReg;
+  getOrCreateAnnotationAs<MCRegister>(Inst, "JTIndexReg", AllocId) = IndexReg;
   return true;
 }
 
@@ -539,12 +539,12 @@ void MCPlusBuilder::getSrcRegs(const MCInst &Inst, BitVector &Regs) const {
       Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
 }
 
-bool MCPlusBuilder::hasDefOfPhysReg(const MCInst &MI, unsigned Reg) const {
+bool MCPlusBuilder::hasDefOfPhysReg(const MCInst &MI, MCRegister Reg) const {
   const MCInstrDesc &InstInfo = Info->get(MI.getOpcode());
   return InstInfo.hasDefOfPhysReg(MI, Reg, *RegInfo);
 }
 
-bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
+bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, MCRegister Reg) const {
   const MCInstrDesc &InstInfo = Info->get(MI.getOpcode());
   for (int I = InstInfo.NumDefs; I < InstInfo.NumOperands; ++I)
     if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() &&
@@ -557,11 +557,11 @@ bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
   return false;
 }
 
-const BitVector &MCPlusBuilder::getAliases(MCPhysReg Reg,
+const BitVector &MCPlusBuilder::getAliases(MCRegister Reg,
                                            bool OnlySmaller) const {
   if (OnlySmaller)
-    return SmallerAliasMap[Reg];
-  return AliasMap[Reg];
+    return SmallerAliasMap[Reg.id()];
+  return AliasMap[Reg.id()];
 }
 
 void MCPlusBuilder::initAliases() {
@@ -577,7 +577,7 @@ void MCPlusBuilder::initAliases() {
   // Cache all aliases for each register
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I != E; ++I) {
     for (MCRegAliasIterator AI(I, RegInfo, true); AI.isValid(); ++AI)
-      AliasMap[I].set(*AI);
+      AliasMap[I].set((*AI).id());
   }
 
   // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)

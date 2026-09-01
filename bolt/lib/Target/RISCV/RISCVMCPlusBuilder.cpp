@@ -199,12 +199,12 @@ public:
 
   IndirectBranchType analyzeIndirectBranch(
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
-      unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
+      const unsigned PtrSize, MCInst *&MemLocInstr, MCRegister &BaseReg,
+      MCRegister &IndexReg, int64_t &DispValue, const MCExpr *&DispExpr,
       MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
-    BaseRegNum = 0;
-    IndexRegNum = 0;
+    BaseReg = MCRegister();
+    IndexReg = MCRegister();
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
@@ -616,12 +616,12 @@ public:
                .addImm(imm);
   }
 
-  void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From,
+  void loadReg(MCInst &Inst, MCRegister To, MCRegister From,
                int64_t offset) const {
     Inst = MCInstBuilder(loadOpc()).addReg(To).addReg(From).addImm(offset);
   }
 
-  void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To,
+  void storeReg(MCInst &Inst, MCRegister From, MCRegister To,
                 int64_t offset) const {
     Inst = MCInstBuilder(storeOpc()).addReg(From).addReg(To).addImm(offset);
   }
@@ -652,19 +652,19 @@ public:
     createStackPointerDecrement(Insts.back(), Regs.size() * regSize());
   }
 
-  void atomicAdd(MCInst &Inst, MCPhysReg RegAtomic, MCPhysReg RegTo,
-                 MCPhysReg RegCnt) const {
+  void atomicAdd(MCInst &Inst, MCRegister RegAtomic, MCRegister RegTo,
+                 MCRegister RegCnt) const {
     Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
                .addReg(RegCnt)
                .addReg(RegTo);
   }
 
-  InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
+  InstructionListType createRegCmpJE(MCRegister Reg, const MCSymbol *Target,
                                      MCContext *Ctx) const {
     InstructionListType Insts;
     Insts.emplace_back(MCInstBuilder(RISCV::BEQ)
-                           .addReg(RegNo)
+                           .addReg(Reg)
                            .addReg(RISCV::X0)
                            .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Insts;
@@ -689,7 +689,7 @@ public:
     //  auipc   a5, hi20(Target)
     //  addi    a5, a5, low12(Target)
     //  jr x5 => jalr x0, x5, 0
-    MCPhysReg Reg = RISCV::X5;
+    MCRegister Reg = RISCV::X5;
     InstructionListType Insts = materializeAddress(Target, Ctx, Reg);
     Insts.emplace_back();
     MCInst &Inst = Insts.back();
@@ -710,8 +710,8 @@ public:
     return Insts;
   }
 
-  InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegCnt,
-                                      MCPhysReg RegAtomic) const {
+  InstructionListType createIncMemory(MCRegister RegTo, MCRegister RegCnt,
+                                      MCRegister RegAtomic) const {
     InstructionListType Insts;
     Insts.emplace_back();
     Insts.back() =
@@ -722,7 +722,7 @@ public:
   }
 
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
-                                         MCPhysReg RegName,
+                                         MCRegister RegName,
                                          int64_t Addend = 0) const override {
     // Get the symbol address by auipc + addi
     InstructionListType Insts(2);
@@ -782,7 +782,7 @@ public:
     }
   }
 
-  void createIndirectCallInst(MCInst &Inst, bool IsTailCall, MCPhysReg Reg,
+  void createIndirectCallInst(MCInst &Inst, bool IsTailCall, MCRegister Reg,
                               int64_t Disp) const {
     Inst.clear();
     Inst.setOpcode(RISCV::JALR);
@@ -884,7 +884,7 @@ public:
     return createGetter(Ctx, "__bolt_instr_num_funcs");
   }
 
-  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
+  void convertIndirectCallToLoad(MCInst &Inst, MCRegister Reg) override {
     bool IsTailCall = isTailCall(Inst);
     if (IsTailCall)
       removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
@@ -893,7 +893,7 @@ public:
     Inst.insert(Inst.begin() + 1, MCOperand::createReg(RISCV::X0));
   }
 
-  InstructionListType createLoadImmediate(const MCPhysReg Dest,
+  InstructionListType createLoadImmediate(const MCRegister Dest,
                                           uint64_t Imm) const override {
     InstructionListType Insts;
     // get IMM higher 32bit

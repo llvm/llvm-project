@@ -233,18 +233,18 @@ void StackLayoutModifier::checkFramePointerInitialization(MCInst &Point) {
 
   int SPVal, FPVal;
   std::tie(SPVal, FPVal) = *SPT.getStateBefore(Point);
-  std::pair<MCPhysReg, int64_t> FP;
+  std::pair<MCRegister, int64_t> FP;
 
   if (FPVal != SPT.EMPTY && FPVal != SPT.SUPERPOSITION)
     FP = std::make_pair(BC.MIB->getFramePointer(), FPVal);
   else
-    FP = std::make_pair(0, 0);
-  std::pair<MCPhysReg, int64_t> SP;
+    FP = std::make_pair(MCRegister(), 0);
+  std::pair<MCRegister, int64_t> SP;
 
   if (SPVal != SPT.EMPTY && SPVal != SPT.SUPERPOSITION)
     SP = std::make_pair(BC.MIB->getStackPointer(), SPVal);
   else
-    SP = std::make_pair(0, 0);
+    SP = std::make_pair(MCRegister(), 0);
 
   int64_t Output;
   if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
@@ -271,18 +271,18 @@ void StackLayoutModifier::checkStackPointerRestore(MCInst &Point) {
   // Setting up evaluation
   int SPVal, FPVal;
   std::tie(SPVal, FPVal) = *SPT.getStateBefore(Point);
-  std::pair<MCPhysReg, int64_t> FP;
+  std::pair<MCRegister, int64_t> FP;
 
   if (FPVal != SPT.EMPTY && FPVal != SPT.SUPERPOSITION)
     FP = std::make_pair(BC.MIB->getFramePointer(), FPVal);
   else
-    FP = std::make_pair(0, 0);
-  std::pair<MCPhysReg, int64_t> SP;
+    FP = std::make_pair(MCRegister(), 0);
+  std::pair<MCRegister, int64_t> SP;
 
   if (SPVal != SPT.EMPTY && SPVal != SPT.SUPERPOSITION)
     SP = std::make_pair(BC.MIB->getStackPointer(), SPVal);
   else
-    SP = std::make_pair(0, 0);
+    SP = std::make_pair(MCRegister(), 0);
 
   int64_t Output;
   if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
@@ -357,7 +357,7 @@ void StackLayoutModifier::classifyCFIs() {
   uint16_t CfaReg = 7;
 
   auto recordAccess = [&](MCInst *Inst, int64_t Offset) {
-    const uint16_t Reg = *BC.MRI->getLLVMRegNum(CfaReg, /*isEH=*/false);
+    const MCRegister Reg = *BC.MRI->getLLVMRegNum(CfaReg, /*isEH=*/false);
     if (Reg == BC.MIB->getStackPointer() || Reg == BC.MIB->getFramePointer()) {
       BC.MIB->addAnnotation(*Inst, getSlotTag(), Offset, AllocatorId);
       LLVM_DEBUG(dbgs() << "Recording CFI " << Offset << "\n");
@@ -656,8 +656,8 @@ void StackLayoutModifier::performChanges() {
         continue;
       }
       int32_t SrcImm = 0;
-      MCPhysReg Reg = 0;
-      MCPhysReg StackPtrReg = 0;
+      MCRegister Reg;
+      MCRegister StackPtrReg;
       int64_t StackOffset = 0;
       bool IsIndexed = false;
       bool IsLoad = false;
@@ -1524,8 +1524,8 @@ void ShrinkWrapping::insertUpdatedCFI(unsigned CSR, int SPValPush,
   for (BinaryBasicBlock &BB : BF) {
     for (MCInst &Inst : llvm::reverse(BB)) {
       int32_t SrcImm = 0;
-      MCPhysReg Reg = 0;
-      MCPhysReg StackPtrReg = 0;
+      MCRegister Reg;
+      MCRegister StackPtrReg;
       int64_t StackOffset = 0;
       bool IsIndexed = false;
       bool IsLoad = false;

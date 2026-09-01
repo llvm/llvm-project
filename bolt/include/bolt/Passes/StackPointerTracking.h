@@ -91,7 +91,7 @@ protected:
       return SPVal + Sz;
     }
 
-    MCPhysReg From, To;
+    MCRegister From, To;
     if (MIB->isRegToRegMove(Point, From, To) && To == MIB->getStackPointer() &&
         From == MIB->getFramePointer()) {
       if (FPVal == EMPTY || FPVal == SUPERPOSITION)
@@ -104,16 +104,16 @@ protected:
 
     if (this->BC.MII->get(Point.getOpcode())
             .hasDefOfPhysReg(Point, MIB->getStackPointer(), *this->BC.MRI)) {
-      std::pair<MCPhysReg, int64_t> SP;
+      std::pair<MCRegister, int64_t> SP;
       if (SPVal != EMPTY && SPVal != SUPERPOSITION)
         SP = std::make_pair(MIB->getStackPointer(), SPVal);
       else
-        SP = std::make_pair(0, 0);
-      std::pair<MCPhysReg, int64_t> FP;
+        SP = std::make_pair(MCRegister(), 0);
+      std::pair<MCRegister, int64_t> FP;
       if (FPVal != EMPTY && FPVal != SUPERPOSITION)
         FP = std::make_pair(MIB->getFramePointer(), FPVal);
       else
-        FP = std::make_pair(0, 0);
+        FP = std::make_pair(MCRegister(), 0);
       int64_t Output;
       if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP)) {
         if (SPVal == EMPTY && FPVal == EMPTY)
@@ -130,7 +130,7 @@ protected:
   int computeNextFP(const MCInst &Point, int SPVal, int FPVal) {
     const auto &MIB = this->BC.MIB;
 
-    MCPhysReg From, To;
+    MCRegister From, To;
     if (MIB->isRegToRegMove(Point, From, To) && To == MIB->getFramePointer() &&
         From == MIB->getStackPointer()) {
       HasFramePointer = true;
@@ -139,16 +139,16 @@ protected:
 
     if (this->BC.MII->get(Point.getOpcode())
             .hasDefOfPhysReg(Point, MIB->getFramePointer(), *this->BC.MRI)) {
-      std::pair<MCPhysReg, int64_t> FP;
+      std::pair<MCRegister, int64_t> FP;
       if (FPVal != EMPTY && FPVal != SUPERPOSITION)
         FP = std::make_pair(MIB->getFramePointer(), FPVal);
       else
-        FP = std::make_pair(0, 0);
-      std::pair<MCPhysReg, int64_t> SP;
+        FP = std::make_pair(MCRegister(), 0);
+      std::pair<MCRegister, int64_t> SP;
       if (SPVal != EMPTY && SPVal != SUPERPOSITION)
         SP = std::make_pair(MIB->getStackPointer(), SPVal);
       else
-        SP = std::make_pair(0, 0);
+        SP = std::make_pair(MCRegister(), 0);
       int64_t Output;
       if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP)) {
         if (SPVal == EMPTY && FPVal == EMPTY)

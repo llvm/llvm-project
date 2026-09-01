@@ -134,9 +134,9 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
 
       MCInst LoadCalleeAddrs;
       const IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
-      MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleImm,
-                     MemRef.IndexRegNum, MemRef.DispImm, MemRef.DispExpr,
-                     MemRef.SegRegNum, MIB.getX86R11(), 8);
+      MIB.createLoad(LoadCalleeAddrs, MemRef.BaseReg, MemRef.ScaleImm,
+                     MemRef.IndexReg, MemRef.DispImm, MemRef.DispExpr,
+                     MemRef.SegReg, MIB.getX86R11(), 8);
 
       BB2.addInstruction(LoadCalleeAddrs);
 
@@ -191,8 +191,8 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
 
   TagOS << "mem_";
 
-  if (MemRef.BaseRegNum != BC.MIB->getNoRegister())
-    BC.InstPrinter->printRegName(TagOS, MemRef.BaseRegNum);
+  if (MemRef.BaseReg != BC.MIB->getNoRegister())
+    BC.InstPrinter->printRegName(TagOS, MemRef.BaseReg);
 
   TagOS << "+";
   if (MemRef.DispExpr)
@@ -200,14 +200,14 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
   else
     TagOS << MemRef.DispImm;
 
-  if (MemRef.IndexRegNum != BC.MIB->getNoRegister()) {
+  if (MemRef.IndexReg != BC.MIB->getNoRegister()) {
     TagOS << "+" << MemRef.ScaleImm << "*";
-    BC.InstPrinter->printRegName(TagOS, MemRef.IndexRegNum);
+    BC.InstPrinter->printRegName(TagOS, MemRef.IndexReg);
   }
 
-  if (MemRef.SegRegNum != BC.MIB->getNoRegister()) {
+  if (MemRef.SegReg != BC.MIB->getNoRegister()) {
     TagOS << "_seg_";
-    BC.InstPrinter->printRegName(TagOS, MemRef.SegRegNum);
+    BC.InstPrinter->printRegName(TagOS, MemRef.SegReg);
   }
 
   return Tag;
@@ -235,9 +235,9 @@ void createBranchReplacement(BinaryContext &BC,
   if (BrInfo.isMem() && R11Available) {
     const IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
     MCInst LoadCalleeAddrs;
-    MIB.createLoad(LoadCalleeAddrs, MemRef.BaseRegNum, MemRef.ScaleImm,
-                   MemRef.IndexRegNum, MemRef.DispImm, MemRef.DispExpr,
-                   MemRef.SegRegNum, MIB.getX86R11(), 8);
+    MIB.createLoad(LoadCalleeAddrs, MemRef.BaseReg, MemRef.ScaleImm,
+                   MemRef.IndexReg, MemRef.DispImm, MemRef.DispExpr,
+                   MemRef.SegReg, MIB.getX86R11(), 8);
     Replacement.push_back(LoadCalleeAddrs);
   }
 
@@ -310,9 +310,9 @@ Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
         if (BrInfo.isMem() && !R11Available) {
           IndirectBranchInfo::MemOpInfo &MemRef = BrInfo.Memory;
           int Addend = (BrInfo.isJump() || BrInfo.isTailCall()) ? 8 : 16;
-          if (MemRef.BaseRegNum == MIB.getStackPointer())
+          if (MemRef.BaseReg == MIB.getStackPointer())
             MemRef.DispImm += Addend;
-          if (MemRef.IndexRegNum == MIB.getStackPointer())
+          if (MemRef.IndexReg == MIB.getStackPointer())
             MemRef.DispImm += Addend * MemRef.ScaleImm;
         }
 

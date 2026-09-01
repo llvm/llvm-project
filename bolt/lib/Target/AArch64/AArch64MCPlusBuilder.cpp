@@ -50,21 +50,22 @@ static cl::opt<bool> NoLSEAtomics(
 
 namespace {
 
-[[maybe_unused]] static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void getSystemFlag(MCInst &Inst, MCRegister RegName) {
   Inst.setOpcode(AArch64::MRS);
   Inst.clear();
   Inst.addOperand(MCOperand::createReg(RegName));
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
 }
 
-[[maybe_unused]] static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void setSystemFlag(MCInst &Inst, MCRegister RegName) {
   Inst.setOpcode(AArch64::MSR);
   Inst.clear();
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
   Inst.addOperand(MCOperand::createReg(RegName));
 }
 
-static void createPushRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
+static void createPushRegisters(MCInst &Inst, MCRegister Reg1,
+                                MCRegister Reg2) {
   Inst.clear();
   unsigned NewOpcode = AArch64::STPXpre;
   Inst.setOpcode(NewOpcode);
@@ -75,7 +76,7 @@ static void createPushRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
   Inst.addOperand(MCOperand::createImm(-2));
 }
 
-static void createPopRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
+static void createPopRegisters(MCInst &Inst, MCRegister Reg1, MCRegister Reg2) {
   Inst.clear();
   unsigned NewOpcode = AArch64::LDPXpost;
   Inst.setOpcode(NewOpcode);
@@ -86,7 +87,7 @@ static void createPopRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
   Inst.addOperand(MCOperand::createImm(2));
 }
 
-static void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From) {
+static void loadReg(MCInst &Inst, MCRegister To, MCRegister From) {
   Inst.setOpcode(AArch64::LDRXui);
   Inst.clear();
   if (From == AArch64::SP) {
@@ -102,7 +103,7 @@ static void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From) {
   }
 }
 
-static void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To) {
+static void storeReg(MCInst &Inst, MCRegister From, MCRegister To) {
   Inst.setOpcode(AArch64::STRXui);
   Inst.clear();
   if (To == AArch64::SP) {
@@ -118,7 +119,7 @@ static void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To) {
   }
 }
 
-static void atomicAdd(MCInst &Inst, MCPhysReg RegTo, MCPhysReg RegCnt) {
+static void atomicAdd(MCInst &Inst, MCRegister RegTo, MCRegister RegCnt) {
   assert(!opts::NoLSEAtomics && "Supports only ARM with LSE extension");
   Inst.setOpcode(AArch64::LDADDX);
   Inst.clear();
@@ -127,7 +128,7 @@ static void atomicAdd(MCInst &Inst, MCPhysReg RegTo, MCPhysReg RegCnt) {
   Inst.addOperand(MCOperand::createReg(RegTo));
 }
 
-static void createMovz(MCInst &Inst, MCPhysReg Reg, uint64_t Imm) {
+static void createMovz(MCInst &Inst, MCRegister Reg, uint64_t Imm) {
   assert(Imm <= UINT16_MAX && "Invalid Imm size");
   Inst.clear();
   Inst.setOpcode(AArch64::MOVZXi);
@@ -136,7 +137,8 @@ static void createMovz(MCInst &Inst, MCPhysReg Reg, uint64_t Imm) {
   Inst.addOperand(MCOperand::createImm(0));
 }
 
-static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
+static InstructionListType createIncMemory(MCRegister RegTo,
+                                           MCRegister RegTmp) {
   InstructionListType Insts;
   Insts.emplace_back();
   createMovz(Insts.back(), RegTmp, 1);
@@ -145,7 +147,7 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
   return Insts;
 }
 
-static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
+static InstructionListType createMOVImm(MCRegister DstReg, unsigned BitSize,
                                         uint64_t Imm) {
   SmallVector<AArch64_IMM::ImmInsnModel> Insn;
   AArch64_IMM::expandMOVImm(Imm, BitSize, Insn);
@@ -214,9 +216,9 @@ public:
     return std::make_unique<AArch64MCSymbolizer>(Function, CreateNewSymbols);
   }
 
-  MCPhysReg getStackPointer() const override { return AArch64::SP; }
-  MCPhysReg getFramePointer() const override { return AArch64::FP; }
-  MCPhysReg getFlagsReg() const override { return AArch64::NZCV; }
+  MCRegister getStackPointer() const override { return AArch64::SP; }
+  MCRegister getFramePointer() const override { return AArch64::FP; }
+  MCRegister getFlagsReg() const override { return AArch64::NZCV; }
 
   bool isBreakpoint(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::BRK;
@@ -310,11 +312,11 @@ public:
     return false;
   }
 
-  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+  SmallVector<MCRegister> getTrustedLiveInRegs() const override {
     return {AArch64::LR};
   }
 
-  std::optional<MCPhysReg>
+  std::optional<MCRegister>
   getWrittenAuthenticatedReg(const MCInst &Inst,
                              bool &IsChecked) const override {
     IsChecked = false;
@@ -354,14 +356,14 @@ public:
   }
 
   bool isPSignOnLR(const MCInst &Inst) const override {
-    std::optional<MCPhysReg> SignReg = getSignedReg(Inst);
+    std::optional<MCRegister> SignReg = getSignedReg(Inst);
     return SignReg && *SignReg == AArch64::LR;
   }
 
   bool isPAuthOnLR(const MCInst &Inst) const override {
     // LDR(A|B) should not be covered.
     bool IsChecked;
-    std::optional<MCPhysReg> AuthReg =
+    std::optional<MCRegister> AuthReg =
         getWrittenAuthenticatedReg(Inst, IsChecked);
     return !IsChecked && AuthReg && *AuthReg == AArch64::LR;
   }
@@ -402,7 +404,7 @@ public:
     }
   }
 
-  std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
+  std::optional<MCRegister> getSignedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::PACIA:
     case AArch64::PACIB:
@@ -432,7 +434,7 @@ public:
     }
   }
 
-  std::optional<MCPhysReg>
+  std::optional<MCRegister>
   getRegUsedAsRetDest(const MCInst &Inst,
                       bool &IsAuthenticatedInternally) const override {
     assert(isReturn(Inst));
@@ -456,14 +458,15 @@ public:
       // ELR_EL3, depending on the current Exception Level at run-time.
       //
       // Furthermore, these registers are not modelled by LLVM as a regular
-      // MCPhysReg, so there is no way to indicate that through the current API.
+      // MCRegister, so there is no way to indicate that through the current
+      // API.
       return std::nullopt;
     default:
       llvm_unreachable("Unhandled return instruction");
     }
   }
 
-  MCPhysReg getRegUsedAsIndirectBranchDest(
+  MCRegister getRegUsedAsIndirectBranchDest(
       const MCInst &Inst, bool &IsAuthenticatedInternally) const override {
     assert(isIndirectCall(Inst) || isIndirectBranch(Inst));
 
@@ -487,7 +490,7 @@ public:
     }
   }
 
-  std::optional<MCPhysReg>
+  std::optional<MCRegister>
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::ADR:
@@ -502,7 +505,7 @@ public:
     }
   }
 
-  std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  std::optional<std::pair<MCRegister, MCRegister>>
   analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     default:
@@ -524,7 +527,7 @@ public:
     }
   }
 
-  std::optional<std::pair<MCPhysReg, MCInst *>>
+  std::optional<std::pair<MCRegister, MCInst *>>
   getAuthCheckedReg(BinaryBasicBlock &BB) const override {
     // Match several possible hard-coded sequences of instructions which can be
     // emitted by LLVM backend to check that the authenticated pointer is
@@ -615,8 +618,8 @@ public:
     return std::nullopt;
   }
 
-  std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
-                                             bool MayOverwrite) const override {
+  std::optional<MCRegister>
+  getAuthCheckedReg(const MCInst &Inst, bool MayOverwrite) const override {
     // Cannot trivially reuse AArch64InstrInfo::getMemOperandWithOffsetWidth()
     // method as it accepts an instance of MachineInstr, not MCInst.
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
@@ -650,7 +653,7 @@ public:
     auto ClobbersBaseRegExceptWriteback = [&](unsigned BaseRegUseIndex) {
       // FIXME: Compute the indices of address operands (base reg and written-
       //        back result) in AArch64InstrInfo instead of this ad-hoc code.
-      MCPhysReg BaseReg = Inst.getOperand(BaseRegUseIndex).getReg();
+      MCRegister BaseReg = Inst.getOperand(BaseRegUseIndex).getReg();
       unsigned WrittenBackDefIndex = Desc.getOperandConstraint(
           BaseRegUseIndex, MCOI::OperandConstraint::TIED_TO);
 
@@ -721,7 +724,7 @@ public:
            OpCode == AArch64::LDRSWl;
   }
 
-  MCPhysReg getADRReg(const MCInst &Inst) const {
+  MCRegister getADRReg(const MCInst &Inst) const {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
            "No operands for ADR instruction");
@@ -734,7 +737,7 @@ public:
                                             MCContext *Ctx) const override {
     assert(isADR(ADRInst) && "ADR instruction expected");
 
-    const MCPhysReg Reg = getADRReg(ADRInst);
+    const MCRegister Reg = getADRReg(ADRInst);
     const MCSymbol *Target = getTargetSymbol(ADRInst);
     const uint64_t Addend = getTargetAddend(ADRInst);
     return materializeAddress(Target, Ctx, Reg, Addend);
@@ -746,13 +749,13 @@ public:
            "LDR (literal) or LDRSW (literal) expected");
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
-    const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
-    MCPhysReg AddrReg;
+    const MCRegister DataReg = LDRInst.getOperand(0).getReg();
+    MCRegister AddrReg;
     unsigned OpCode;
     uint32_t RelType;
     switch (LDRInst.getOpcode()) {
     case AArch64::LDRWl:
-      AddrReg = (MCPhysReg)RegInfo->getMatchingSuperReg(
+      AddrReg = RegInfo->getMatchingSuperReg(
           DataReg, AArch64::sub_32,
           &RegInfo->getRegClass(AArch64::GPR64RegClassID));
       OpCode = AArch64::LDRWui;
@@ -1143,15 +1146,15 @@ public:
     for (const MCOperand &Operand : useOperands(Inst)) {
       if (!Operand.isReg())
         continue;
-      unsigned Reg = Operand.getReg();
+      MCRegister Reg = Operand.getReg();
       if (Reg == AArch64::SP || Reg == AArch64::WSP)
         return true;
     }
     return false;
   }
 
-  bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
-                      MCPhysReg &To) const override {
+  bool isRegToRegMove(const MCInst &Inst, MCRegister &From,
+                      MCRegister &To) const override {
     if (Inst.getOpcode() == AArch64::FMOVDXr) {
       From = Inst.getOperand(1).getReg();
       To = Inst.getOperand(0).getReg();
@@ -1173,7 +1176,7 @@ public:
     return isIndirectCallOpcode(Inst.getOpcode());
   }
 
-  MCPhysReg getSpRegister(int Size) const {
+  MCRegister getSpRegister(int Size) const {
     switch (Size) {
     case 4:
       return AArch64::WSP;
@@ -1184,7 +1187,7 @@ public:
     }
   }
 
-  MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
+  MCRegister getIntArgRegister(unsigned ArgNo) const override {
     switch (ArgNo) {
     case 0:
       return AArch64::X0;
@@ -1681,7 +1684,7 @@ public:
     // Match ADD that calculates the JumpTable Base Address (not the offset)
     SmallVector<MCInst *, 4> &UsesLoad = UDChain[DefLoad];
     const MCInst *DefJTBaseAdd = UsesLoad[1];
-    MCPhysReg From, To;
+    MCRegister From, To;
     if (DefJTBaseAdd == nullptr || isLoadFromStack(*DefJTBaseAdd) ||
         isRegToRegMove(*DefJTBaseAdd, From, To)) {
       // Sometimes base address may have been defined in another basic block
@@ -1726,7 +1729,7 @@ public:
   DenseMap<const MCInst *, SmallVector<MCInst *, 4>>
   computeLocalUDChain(const MCInst *CurInstr, InstructionIterator Begin,
                       InstructionIterator End) const {
-    DenseMap<int, MCInst *> RegAliasTable;
+    DenseMap<MCRegister, MCInst *> RegAliasTable;
     DenseMap<const MCInst *, SmallVector<MCInst *, 4>> Uses;
 
     auto addInstrOperands = [&](const MCInst &Instr) {
@@ -1734,7 +1737,7 @@ public:
       for (const MCOperand &Operand : MCPlus::primeOperands(Instr)) {
         if (!Operand.isReg())
           continue;
-        unsigned Reg = Operand.getReg();
+        MCRegister Reg = Operand.getReg();
         MCInst *AliasInst = RegAliasTable[Reg];
         Uses[&Instr].push_back(AliasInst);
         LLVM_DEBUG({
@@ -1787,13 +1790,13 @@ public:
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
-                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        MCInst *&MemLocInstrOut, MCRegister &BaseRegOut,
+                        MCRegister &IndexRegOut, int64_t &DispValueOut,
                         const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
                         MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
-    BaseRegNumOut = AArch64::NoRegister;
-    IndexRegNumOut = AArch64::NoRegister;
+    BaseRegOut = MCRegister();
+    IndexRegOut = MCRegister();
     DispValueOut = 0;
     DispExprOut = nullptr;
     FixedEntryLoadInstr = nullptr;
@@ -2303,13 +2306,13 @@ public:
   // where cmp is an alias for subs, which results in the code below:
   // subs xzr, RegNo, #Imm
   // b.eq Target.
-  InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
+  InstructionListType createCmpJE(MCRegister Reg, int64_t Imm,
                                   const MCSymbol *Target,
                                   MCContext *Ctx) const override {
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
                           .addReg(AArch64::XZR)
-                          .addReg(RegNo)
+                          .addReg(Reg)
                           .addImm(Imm)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
@@ -2325,13 +2328,13 @@ public:
   // where cmp is an alias for subs, which results in the code below:
   // subs xzr, RegNo, #Imm
   // b.ne Target.
-  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+  InstructionListType createCmpJNE(MCRegister Reg, int64_t Imm,
                                    const MCSymbol *Target,
                                    MCContext *Ctx) const override {
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
                           .addReg(AArch64::XZR)
-                          .addReg(RegNo)
+                          .addReg(Reg)
                           .addImm(Imm)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
@@ -2342,7 +2345,7 @@ public:
 
   // This helper function creates the snippet of code that compares a register
   // Reg1 with a register Reg2, and jumps to Target if they are not equal.
-  InstructionListType createCmpJNEWithReg(MCPhysReg Reg1, MCPhysReg Reg2,
+  InstructionListType createCmpJNEWithReg(MCRegister Reg1, MCRegister Reg2,
                                           const MCSymbol *Target,
                                           MCContext *Ctx) const override {
     InstructionListType Code;
@@ -2689,7 +2692,7 @@ public:
       if (!Operand.isReg())
         continue;
 
-      unsigned Reg = Operand.getReg();
+      MCRegister Reg = Operand.getReg();
       if (Reg == AArch64::SP || Reg == AArch64::WSP)
         return true;
     }
@@ -2831,7 +2834,7 @@ public:
     //  adrp ip0, imm
     //  add ip0, ip0, imm
     //  br ip0
-    MCPhysReg Reg = AArch64::X16;
+    MCRegister Reg = AArch64::X16;
     InstructionListType Insts = materializeAddress(Target, Ctx, Reg);
     Insts.emplace_back();
     MCInst &Inst = Insts.back();
@@ -2972,10 +2975,10 @@ public:
 
     assert(Adrp.getOperand(0).isReg() &&
            "Unexpected operand in ADRP instruction");
-    MCPhysReg AdrpReg = Adrp.getOperand(0).getReg();
+    MCRegister AdrpReg = Adrp.getOperand(0).getReg();
     assert(Add.getOperand(1).isReg() &&
            "Unexpected operand in ADDXri instruction");
-    MCPhysReg AddReg = Add.getOperand(1).getReg();
+    MCRegister AddReg = Add.getOperand(1).getReg();
     return AdrpReg == AddReg;
   }
 
@@ -3090,7 +3093,7 @@ public:
     Inst.addOperand(MCOperand::createImm(0));
   }
 
-  void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
+  void createIndirectBranch(MCInst &Inst, MCRegister MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(AArch64::BR);
     Inst.clear();
@@ -3142,7 +3145,7 @@ public:
     return createGetter(Ctx, "__bolt_instr_num_funcs");
   }
 
-  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
+  void convertIndirectCallToLoad(MCInst &Inst, MCRegister Reg) override {
     bool IsTailCall = isTailCall(Inst);
     if (IsTailCall)
       removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
@@ -3156,7 +3159,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  InstructionListType createLoadImmediate(const MCPhysReg Dest,
+  InstructionListType createLoadImmediate(const MCRegister Dest,
                                           uint64_t Imm) const override {
     if (RegInfo->getRegClass(AArch64::GPR64RegClassID).contains(Dest))
       return createMOVImm(Dest, 64, Imm);
@@ -3166,7 +3169,7 @@ public:
   }
 
   void createIndirectCallInst(MCInst &Inst, bool IsTailCall,
-                              MCPhysReg Reg) const {
+                              MCRegister Reg) const {
     Inst.clear();
     Inst.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
     Inst.addOperand(MCOperand::createReg(Reg));
@@ -3408,7 +3411,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst, MCPhysReg Reg,
+      const MCInst &CallInst, MCRegister Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,
@@ -3428,7 +3431,7 @@ public:
     // MergeBlock remains null if CallInst is a tail call.
     MCSymbol *MergeBlock = nullptr;
 
-    MCPhysReg FuncAddrReg = Reg;
+    MCRegister FuncAddrReg = Reg;
 
     const bool LoadElim = !VtableSyms.empty();
     assert((!LoadElim || VtableSyms.size() == Targets.size()) &&
@@ -3443,7 +3446,7 @@ public:
 
     assert(CallInst.getOperand(0).isReg() &&
            "No register was found for indirect call.");
-    const MCPhysReg TargetReg = CallInst.getOperand(0).getReg();
+    const MCRegister TargetReg = CallInst.getOperand(0).getReg();
 
     const auto jumpToMergeBlock = [&](InstructionListType &NewCall) {
       assert(MergeBlock);
@@ -3585,7 +3588,7 @@ public:
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
-      MCPhysReg Reg = Call.getOperand(0).getReg();
+      MCRegister Reg = Call.getOperand(0).getReg();
       if (Reg == AArch64::X16 || Reg == AArch64::X17)
         return isBTILandingPad(Pad, BTIKind::C) ||
                isBTILandingPad(Pad, BTIKind::J) ||
@@ -3623,7 +3626,7 @@ public:
              "Indirect branch needs to have 1 operand.");
       assert(Call.getOperand(0).isReg() &&
              "Indirect branch does not have a register operand.");
-      MCPhysReg Reg = Call.getOperand(0).getReg();
+      MCRegister Reg = Call.getOperand(0).getReg();
       if (Reg == AArch64::X16 || Reg == AArch64::X17) {
         // Add a new BTI c
         MCInst BTIInst;
@@ -3644,7 +3647,7 @@ public:
   }
 
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
-                                         MCPhysReg RegName,
+                                         MCRegister RegName,
                                          int64_t Addend = 0) const override {
     // Get page-aligned address and add page offset
     InstructionListType Insts(2);
@@ -3722,12 +3725,13 @@ public:
   }
 
   std::optional<uint64_t>
-  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
+  extractMoveImmediate(const MCInst &Inst,
+                       MCRegister TargetReg) const override {
     // Match MOVZ instructions (both X and W register variants) with no shift.
     if ((Inst.getOpcode() == AArch64::MOVZXi ||
          Inst.getOpcode() == AArch64::MOVZWi) &&
         Inst.getOperand(2).getImm() == 0 &&
-        getAliases(TargetReg)[Inst.getOperand(0).getReg()])
+        getAliases(TargetReg)[Inst.getOperand(0).getReg().id()])
       return Inst.getOperand(1).getImm();
     return std::nullopt;
   }
@@ -3735,7 +3739,7 @@ public:
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
                         InstructionListType::iterator CallInst) const override {
-    MCPhysReg SizeReg = getIntArgRegister(2);
+    MCRegister SizeReg = getIntArgRegister(2);
     if (SizeReg == getNoRegister())
       return std::nullopt;
 

@@ -521,12 +521,12 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual void createPushRegister(MCInst &Inst, MCPhysReg Reg,
+  virtual void createPushRegister(MCInst &Inst, MCRegister Reg,
                                   unsigned Size) const {
     llvm_unreachable("not implemented");
   }
 
-  virtual void createPopRegister(MCInst &Inst, MCPhysReg Reg,
+  virtual void createPopRegister(MCInst &Inst, MCRegister Reg,
                                  unsigned Size) const {
     llvm_unreachable("not implemented");
   }
@@ -549,7 +549,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
+  virtual MCRegister getX86R11() const { llvm_unreachable("not implemented"); }
 
   virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
     llvm_unreachable("not implemented");
@@ -571,14 +571,14 @@ public:
 
   /// Return a register number that is guaranteed to not match with
   /// any real register on the underlying architecture.
-  MCPhysReg getNoRegister() const { return MCRegister::NoRegister; }
+  MCRegister getNoRegister() const { return MCRegister(); }
 
   /// Return a register corresponding to a function integer argument \p ArgNo
   /// if the argument is passed in a register. Or return the result of
   /// getNoRegister() otherwise. The enumeration starts at 0.
   ///
   /// Note: this should depend on a used calling convention.
-  virtual MCPhysReg getIntArgRegister(unsigned ArgNo) const {
+  virtual MCRegister getIntArgRegister(unsigned ArgNo) const {
     llvm_unreachable("not implemented");
   }
 
@@ -600,7 +600,7 @@ public:
   /// Each register should be treated as if a successfully authenticated
   /// pointer was written to it before entering the function (i.e. the
   /// pointer is safe to jump to as well as to be signed).
-  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
+  virtual SmallVector<MCRegister> getTrustedLiveInRegs() const {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -612,7 +612,7 @@ public:
   /// i.e. it either writes a successfully authenticated pointer or terminates
   /// the program abnormally (such as "ldra x0, [x1]!" on AArch64, which crashes
   /// on authentication failure even if FEAT_FPAC is not implemented).
-  virtual std::optional<MCPhysReg>
+  virtual std::optional<MCRegister>
   getWrittenAuthenticatedReg(const MCInst &Inst, bool &IsChecked) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
@@ -623,7 +623,7 @@ public:
   ///
   /// The returned register is assumed to be both input and output operand,
   /// as it is done on AArch64.
-  virtual std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const {
+  virtual std::optional<MCRegister> getSignedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
   }
@@ -657,7 +657,7 @@ public:
   /// pointer as its operand and authenticates it internally.
   ///
   /// Should only be called when isReturn(Inst) is true.
-  virtual std::optional<MCPhysReg>
+  virtual std::optional<MCRegister>
   getRegUsedAsRetDest(const MCInst &Inst,
                       bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
@@ -670,7 +670,7 @@ public:
   ///
   /// Should only be called if isIndirectCall(Inst) or isIndirectBranch(Inst)
   /// returns true.
-  virtual MCPhysReg
+  virtual MCRegister
   getRegUsedAsIndirectBranchDest(const MCInst &Inst,
                                  bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
@@ -691,7 +691,7 @@ public:
   ///
   /// The Pointer Authentication threat model assumes an attacker is able to
   /// modify any writable memory, but not executable code (due to W^X).
-  virtual std::optional<MCPhysReg>
+  virtual std::optional<MCRegister>
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
@@ -710,7 +710,7 @@ public:
   ///
   /// The instruction should not write any values derived from InReg anywhere,
   /// except for OutReg.
-  virtual std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  virtual std::optional<std::pair<MCRegister, MCRegister>>
   analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
@@ -741,7 +741,7 @@ public:
   ///
   /// Note that this function is not expected to repeat the results returned
   /// by getAuthCheckedReg(Inst, MayOverwrite) function below.
-  virtual std::optional<std::pair<MCPhysReg, MCInst *>>
+  virtual std::optional<std::pair<MCRegister, MCInst *>>
   getAuthCheckedReg(BinaryBasicBlock &BB) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
@@ -758,8 +758,8 @@ public:
   ///
   /// Use this function for simple, single-instruction patterns instead of
   /// its getAuthCheckedReg(BB) counterpart.
-  virtual std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
-                                                     bool MayOverwrite) const {
+  virtual std::optional<MCRegister> getAuthCheckedReg(const MCInst &Inst,
+                                                      bool MayOverwrite) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
   }
@@ -977,7 +977,7 @@ public:
       if (!Op.isReg())
         return true;
 
-      MCPhysReg Reg = Op.getReg();
+      MCRegister Reg = Op.getReg();
       while (next()) {
         const MCInstrDesc &InstrDesc = MIA.Info->get(CurInst->getOpcode());
         if (InstrDesc.hasDefOfPhysReg(*CurInst, Reg, MRI)) {
@@ -1062,8 +1062,8 @@ public:
 
   /// Matches operands that are registers
   struct RegMatcher : MCInstMatcher {
-    MCPhysReg &Reg;
-    RegMatcher(MCPhysReg &Reg) : Reg(Reg) {}
+    MCRegister &Reg;
+    RegMatcher(MCRegister &Reg) : Reg(Reg) {}
 
     bool match(const MCRegisterInfo &MRI, MCPlusBuilder &MIA,
                MutableArrayRef<MCInst> InInstrWindow, int OpNum) override {
@@ -1091,12 +1091,12 @@ public:
     return std::unique_ptr<MCInstMatcher>(new AnyOperandMatcher(Unused));
   }
 
-  std::unique_ptr<MCInstMatcher> matchReg(MCPhysReg &Reg) const {
+  std::unique_ptr<MCInstMatcher> matchReg(MCRegister &Reg) const {
     return std::unique_ptr<MCInstMatcher>(new RegMatcher(Reg));
   }
 
   std::unique_ptr<MCInstMatcher> matchReg() const {
-    static MCPhysReg Unused;
+    static MCRegister Unused;
     return std::unique_ptr<MCInstMatcher>(new RegMatcher(Unused));
   }
 
@@ -1181,11 +1181,11 @@ public:
   virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
   struct X86MemOperand {
-    unsigned BaseRegNum;
+    MCRegister BaseReg;
     int64_t ScaleImm;
-    unsigned IndexRegNum;
+    MCRegister IndexReg;
     int64_t DispImm;
-    unsigned SegRegNum;
+    MCRegister SegReg;
     const MCExpr *DispExpr = nullptr;
   };
 
@@ -1234,8 +1234,8 @@ public:
   /// companion functions "replaceMemOperandWithImm" or
   /// "replaceMemOperandWithReg".
   virtual bool isStackAccess(const MCInst &Inst, bool &IsLoad, bool &IsStore,
-                             bool &IsStoreFromReg, MCPhysReg &Reg,
-                             int32_t &SrcImm, uint16_t &StackPtrReg,
+                             bool &IsStoreFromReg, MCRegister &Reg,
+                             int32_t &SrcImm, MCRegister &StackPtrReg,
                              int64_t &StackOffset, uint8_t &Size,
                              bool &IsSimple, bool &IsIndexed) const {
     llvm_unreachable("not implemented");
@@ -1270,29 +1270,29 @@ public:
   /// offset) OP constant is not the same as x + (offset OP constant).
   virtual bool
   evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
-                          std::pair<MCPhysReg, int64_t> Input1,
-                          std::pair<MCPhysReg, int64_t> Input2) const {
+                          std::pair<MCRegister, int64_t> Input1,
+                          std::pair<MCRegister, int64_t> Input2) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
-                              MCPhysReg &To) const {
+  virtual bool isRegToRegMove(const MCInst &Inst, MCRegister &From,
+                              MCRegister &To) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual MCPhysReg getStackPointer() const {
+  virtual MCRegister getStackPointer() const {
     llvm_unreachable("not implemented");
     return 0;
   }
 
-  virtual MCPhysReg getFramePointer() const {
+  virtual MCRegister getFramePointer() const {
     llvm_unreachable("not implemented");
     return 0;
   }
 
-  virtual MCPhysReg getFlagsReg() const {
+  virtual MCRegister getFlagsReg() const {
     llvm_unreachable("not implemented");
     return 0;
   }
@@ -1323,15 +1323,15 @@ public:
   }
 
   // Replace Register in Inst with Imm. Returns true if successful
-  virtual bool replaceRegWithImm(MCInst &Inst, unsigned Register,
+  virtual bool replaceRegWithImm(MCInst &Inst, MCRegister Register,
                                  int64_t Imm) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
   // Replace ToReplace in Inst with ReplaceWith. Returns true if successful
-  virtual bool replaceRegWithReg(MCInst &Inst, unsigned ToReplace,
-                                 unsigned ReplaceWith) const {
+  virtual bool replaceRegWithReg(MCInst &Inst, MCRegister ToReplace,
+                                 MCRegister ReplaceWith) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1356,7 +1356,7 @@ public:
   }
 
   /// Same as replaceMemOperandWithImm, but for registers.
-  virtual bool replaceMemOperandWithReg(MCInst &Inst, MCPhysReg RegNum) const {
+  virtual bool replaceMemOperandWithReg(MCInst &Inst, MCRegister Reg) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1430,10 +1430,10 @@ public:
   uint64_t getJumpTable(const MCInst &Inst) const;
 
   /// Return index register for instruction that uses a jump table.
-  uint16_t getJumpTableIndexReg(const MCInst &Inst) const;
+  MCRegister getJumpTableIndexReg(const MCInst &Inst) const;
 
   /// Set jump table addressed by this instruction.
-  bool setJumpTable(MCInst &Inst, uint64_t Value, uint16_t IndexReg,
+  bool setJumpTable(MCInst &Inst, uint64_t Value, MCRegister IndexReg,
                     AllocatorIdTy AllocId = 0);
 
   /// Disassociate instruction with a jump table.
@@ -1561,7 +1561,7 @@ public:
 
   /// Return a BitVector marking all sub or super registers of \p Reg, including
   /// itself.
-  virtual const BitVector &getAliases(MCPhysReg Reg,
+  virtual const BitVector &getAliases(MCRegister Reg,
                                       bool OnlySmaller = false) const;
 
   /// Initialize aliases tables.
@@ -1616,18 +1616,18 @@ public:
   }
 
   /// Return the register width in bytes (1, 2, 4 or 8)
-  uint8_t getRegSize(MCPhysReg Reg) const { return SizeMap[Reg]; }
+  uint8_t getRegSize(MCRegister Reg) const { return SizeMap[Reg.id()]; }
 
   /// For aliased registers, return an alias of \p Reg that has the width of
   /// \p Size bytes
-  virtual MCPhysReg getAliasSized(MCPhysReg Reg, uint8_t Size) const {
+  virtual MCRegister getAliasSized(MCRegister Reg, uint8_t Size) const {
     llvm_unreachable("not implemented");
-    return 0;
+    return MCRegister();
   }
 
   /// For X86, return whether this register is an upper 8-bit register, such as
   /// AH, BH, etc.
-  virtual bool isUpper8BitReg(MCPhysReg Reg) const {
+  virtual bool isUpper8BitReg(MCRegister Reg) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1664,11 +1664,11 @@ public:
 
   /// Return true if this instruction defines the specified physical
   /// register either explicitly or implicitly.
-  virtual bool hasDefOfPhysReg(const MCInst &MI, unsigned Reg) const;
+  virtual bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg) const;
 
   /// Return true if this instruction uses the specified physical
   /// register either explicitly or implicitly.
-  virtual bool hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const;
+  virtual bool hasUseOfPhysReg(const MCInst &MI, MCRegister Reg) const;
 
   /// Replace displacement in compound memory operand with given \p Label.
   bool replaceMemOperandDisp(MCInst &Inst, const MCSymbol *Label,
@@ -1723,7 +1723,7 @@ public:
   }
 
   /// Morph an indirect call into a load where \p Reg holds the call target.
-  virtual void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) {
+  virtual void convertIndirectCallToLoad(MCInst &Inst, MCRegister Reg) {
     llvm_unreachable("not implemented");
   }
 
@@ -1776,8 +1776,8 @@ public:
   /// or may not be same as \p Instruction.
   virtual IndirectBranchType analyzeIndirectBranch(
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
-      unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
+      const unsigned PtrSize, MCInst *&MemLocInstr, MCRegister &BaseReg,
+      MCRegister &IndexReg, int64_t &DispValue, const MCExpr *&DispExpr,
       MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
@@ -1820,8 +1820,8 @@ public:
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,
-                                        unsigned &VtableRegNum,
-                                        unsigned &BaseRegNum,
+                                        MCRegister &VtableReg,
+                                        MCRegister &BaseReg,
                                         uint64_t &MethodOffset) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1952,7 +1952,7 @@ public:
   /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
-                                                 MCPhysReg RegName,
+                                                 MCRegister RegName,
                                                  int64_t Addend = 0) const {
     llvm_unreachable("not implemented");
     return {};
@@ -2015,21 +2015,19 @@ public:
 
   /// Create a store instruction using \p StackReg as the base register
   /// and \p Offset as the displacement.
-  virtual void createSaveToStack(MCInst &Inst, const MCPhysReg &StackReg,
-                                 int Offset, const MCPhysReg &SrcReg,
-                                 int Size) const {
+  virtual void createSaveToStack(MCInst &Inst, MCRegister StackReg, int Offset,
+                                 MCRegister SrcReg, int Size) const {
     llvm_unreachable("not implemented");
   }
 
-  virtual void createLoad(MCInst &Inst, const MCPhysReg &BaseReg, int64_t Scale,
-                          const MCPhysReg &IndexReg, int64_t Offset,
-                          const MCExpr *OffsetExpr,
-                          const MCPhysReg &AddrSegmentReg,
-                          const MCPhysReg &DstReg, int Size) const {
+  virtual void createLoad(MCInst &Inst, MCRegister BaseReg, int64_t Scale,
+                          MCRegister IndexReg, int64_t Offset,
+                          const MCExpr *OffsetExpr, MCRegister AddrSegmentReg,
+                          MCRegister DstReg, int Size) const {
     llvm_unreachable("not implemented");
   }
 
-  virtual InstructionListType createLoadImmediate(const MCPhysReg Dest,
+  virtual InstructionListType createLoadImmediate(const MCRegister Dest,
                                                   uint64_t Imm) const {
     llvm_unreachable("not implemented");
   }
@@ -2045,8 +2043,8 @@ public:
 
   /// Create a load instruction using \p StackReg as the base register
   /// and \p Offset as the displacement.
-  virtual void createRestoreFromStack(MCInst &Inst, const MCPhysReg &StackReg,
-                                      int Offset, const MCPhysReg &DstReg,
+  virtual void createRestoreFromStack(MCInst &Inst, MCRegister StackReg,
+                                      int Offset, MCRegister DstReg,
                                       int Size) const {
     llvm_unreachable("not implemented");
   }
@@ -2067,7 +2065,7 @@ public:
 
   /// Create a sequence of instructions to compare contents of a register
   /// \p RegNo to immediate \Imm and jump to \p Target if they are equal.
-  virtual InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
+  virtual InstructionListType createCmpJE(MCRegister RegNo, int64_t Imm,
                                           const MCSymbol *Target,
                                           MCContext *Ctx) const {
     llvm_unreachable("not implemented");
@@ -2076,7 +2074,7 @@ public:
 
   /// Create a sequence of instructions to compare contents of a register
   /// \p RegNo to immediate \Imm and jump to \p Target if they are different.
-  virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+  virtual InstructionListType createCmpJNE(MCRegister RegNo, int64_t Imm,
                                            const MCSymbol *Target,
                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
@@ -2085,8 +2083,8 @@ public:
 
   /// Create a sequence of instructions to compare contents of a register
   /// \p Reg1 to a register \p Reg2 and jump to \p Target if they are different.
-  virtual InstructionListType createCmpJNEWithReg(MCPhysReg Reg1,
-                                                  MCPhysReg Reg2,
+  virtual InstructionListType createCmpJNEWithReg(MCRegister Reg1,
+                                                  MCRegister Reg2,
                                                   const MCSymbol *Target,
                                                   MCContext *Ctx) const {
     llvm_unreachable("not implemented");
@@ -2121,7 +2119,7 @@ public:
   /// register. Returns the immediate value if the instruction is a
   /// move-immediate to TargetReg.
   virtual std::optional<uint64_t>
-  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+  extractMoveImmediate(const MCInst &Inst, MCRegister TargetReg) const {
     return std::nullopt;
   }
 
@@ -2521,7 +2519,7 @@ public:
   };
 
   virtual BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst, MCPhysReg Reg,
+      const MCInst &CallInst, MCRegister Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

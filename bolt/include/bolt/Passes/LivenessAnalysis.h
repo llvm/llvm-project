@@ -46,7 +46,7 @@ public:
     return *this->getStateBefore(Inst);
   }
 
-  bool isAlive(ProgramPoint PP, MCPhysReg Reg) const {
+  bool isAlive(ProgramPoint PP, MCRegister Reg) const {
     const BitVector &BV = *this->getStateAt(PP);
     const BitVector &RegAliases = BC.MIB->getAliases(Reg);
     return BV.anyCommon(RegAliases);
@@ -56,14 +56,14 @@ public:
 
   // Return a usable general-purpose reg after point P. Return 0 if no reg is
   // available.
-  MCPhysReg scavengeRegAfter(ProgramPoint P) const {
+  MCRegister scavengeRegAfter(ProgramPoint P) const {
     BitVector BV = *this->getStateAt(P);
     return scavengeRegFromState(BV);
   }
 
   // Return a usable general-purpose reg given a liveness state. Return 0 if
   // no reg is available.
-  MCPhysReg scavengeRegFromState(BitVector &LiveRegs) const {
+  MCRegister scavengeRegFromState(BitVector &LiveRegs) const {
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
     LiveRegs.flip();
@@ -92,7 +92,7 @@ protected:
         BC.MIB->getCalleeSavedRegs(State);
       } else {
         State.set();
-        State.reset(BC.MIB->getFlagsReg());
+        State.reset(BC.MIB->getFlagsReg().id());
       }
       return State;
     }
@@ -158,7 +158,7 @@ protected:
           (!BC.MIB->isTailCall(Point) || !BC.MIB->isConditionalBranch(Point))) {
         // Never gen FLAGS from a non-conditional call... this is overly
         // conservative
-        Used.reset(BC.MIB->getFlagsReg());
+        Used.reset(BC.MIB->getFlagsReg().id());
       }
       Next |= Used;
     }

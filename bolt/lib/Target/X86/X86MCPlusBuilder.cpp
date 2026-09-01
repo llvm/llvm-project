@@ -67,15 +67,14 @@ static InstructionListType createIncMemory(const MCSymbol *Target,
   Insts.emplace_back();
   Insts.back().setOpcode(X86::LOCK_INC64m);
   Insts.back().clear();
-  Insts.back().addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
-  Insts.back().addOperand(MCOperand::createImm(1));               // ScaleAmt
-  Insts.back().addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
+  Insts.back().addOperand(MCOperand::createReg(X86::RIP));     // BaseReg
+  Insts.back().addOperand(MCOperand::createImm(1));            // ScaleAmt
+  Insts.back().addOperand(MCOperand::createReg(MCRegister())); // IndexReg
 
   Insts.back().addOperand(
       MCOperand::createExpr(MCSymbolRefExpr::create(Target,
                                                     *Ctx))); // Displacement
-  Insts.back().addOperand(
-      MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+  Insts.back().addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
   return Insts;
 }
 
@@ -628,10 +627,8 @@ public:
         return false;
 
       if (CurInst->getOperand(1 + X86::AddrScaleAmt).getImm() != 1 ||
-          CurInst->getOperand(1 + X86::AddrIndexReg).getReg() !=
-              X86::NoRegister ||
-          (CurInst->getOperand(1 + X86::AddrBaseReg).getReg() !=
-               X86::NoRegister &&
+          CurInst->getOperand(1 + X86::AddrIndexReg).getReg() ||
+          (CurInst->getOperand(1 + X86::AddrBaseReg).getReg() &&
            CurInst->getOperand(1 + X86::AddrBaseReg).getReg() != X86::RIP))
         return false;
 
@@ -693,12 +690,12 @@ public:
       return std::nullopt;
 
     X86MemOperand MO;
-    MO.BaseRegNum = Base.getReg();
+    MO.BaseReg = Base.getReg();
     MO.ScaleImm = Scale.getImm();
-    MO.IndexRegNum = Index.getReg();
+    MO.IndexReg = Index.getReg();
     MO.DispImm = Disp.isImm() ? Disp.getImm() : 0;
     MO.DispExpr = Disp.isExpr() ? Disp.getExpr() : nullptr;
-    MO.SegRegNum = Segment.getReg();
+    MO.SegReg = Segment.getReg();
     return MO;
   }
 
@@ -710,13 +707,12 @@ public:
       return false;
 
     // Make sure it's a well-formed addressing we can statically evaluate.
-    if ((MO->BaseRegNum != X86::RIP && MO->BaseRegNum != X86::NoRegister) ||
-        MO->IndexRegNum != X86::NoRegister ||
-        MO->SegRegNum != X86::NoRegister || MO->DispExpr)
+    if ((MO->BaseReg != X86::RIP && MO->BaseReg) || MO->IndexReg ||
+        MO->SegReg || MO->DispExpr)
       return false;
 
     Target = MO->DispImm;
-    if (MO->BaseRegNum == X86::RIP) {
+    if (MO->BaseReg == X86::RIP) {
       assert(Size != 0 && "instruction size required in order to statically "
                           "evaluate RIP-relative address");
       Target += Address + Size;
@@ -847,14 +843,14 @@ public:
     Regs |= getAliases(X86::RCX);
   }
 
-  MCPhysReg getAliasSized(MCPhysReg Reg, uint8_t Size) const override {
+  MCRegister getAliasSized(MCRegister Reg, uint8_t Size) const override {
     Reg = getX86SubSuperRegister(Reg, Size * 8);
-    assert((Reg != X86::NoRegister) && "Invalid register");
+    assert(Reg && "Invalid register");
     return Reg;
   }
 
-  bool isUpper8BitReg(MCPhysReg Reg) const override {
-    switch (Reg) {
+  bool isUpper8BitReg(MCRegister Reg) const override {
+    switch (Reg.id()) {
     case X86::AH:
     case X86::BH:
     case X86::CH:
@@ -920,9 +916,10 @@ public:
   /// disable not only shrink wrapping but all frame analysis, it will fail it
   /// as "we don't understand this function and we give up on it".
   bool isStackAccess(const MCInst &Inst, bool &IsLoad, bool &IsStore,
-                     bool &IsStoreFromReg, MCPhysReg &Reg, int32_t &SrcImm,
-                     uint16_t &StackPtrReg, int64_t &StackOffset, uint8_t &Size,
-                     bool &IsSimple, bool &IsIndexed) const override {
+                     bool &IsStoreFromReg, MCRegister &Reg, int32_t &SrcImm,
+                     MCRegister &StackPtrReg, int64_t &StackOffset,
+                     uint8_t &Size, bool &IsSimple,
+                     bool &IsIndexed) const override {
     // Detect simple push/pop cases first
     if (int Sz = getPushSize(Inst)) {
       IsLoad = false;
@@ -1007,7 +1004,7 @@ public:
     }
 
     // Make sure it's a stack access
-    if (MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::RSP)
+    if (MO->BaseReg != X86::RBP && MO->BaseReg != X86::RSP)
       return false;
 
     IsLoad = I.IsLoad;
@@ -1015,10 +1012,9 @@ public:
     IsStoreFromReg = I.StoreFromReg;
     Size = I.DataSize;
     IsSimple = I.Simple;
-    StackPtrReg = MO->BaseRegNum;
+    StackPtrReg = MO->BaseReg;
     StackOffset = MO->DispImm;
-    IsIndexed =
-        MO->IndexRegNum != X86::NoRegister || MO->SegRegNum != X86::NoRegister;
+    IsIndexed = MO->IndexReg || MO->SegReg;
 
     if (!I.Simple)
       return true;
@@ -1076,7 +1072,7 @@ public:
       return;
     }
     // Make sure it's a stack access
-    if (MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::RSP) {
+    if (MO->BaseReg != X86::RBP && MO->BaseReg != X86::RSP) {
       llvm_unreachable("Not a stack access");
       return;
     }
@@ -1091,10 +1087,10 @@ public:
       default:
         llvm_unreachable("Unexpected size");
       }
-      unsigned RegOpndNum = Inst.getOperand(0).getReg();
+      MCRegister RegOpnd = Inst.getOperand(0).getReg();
       Inst.clear();
       Inst.setOpcode(NewOpcode);
-      Inst.addOperand(MCOperand::createReg(RegOpndNum));
+      Inst.addOperand(MCOperand::createReg(RegOpnd));
     } else {
       MCOperand SrcOpnd =
           Inst.getOperand(MemOpOffset + X86::AddrSegmentReg + 1);
@@ -1107,10 +1103,10 @@ public:
           llvm_unreachable("Unexpected size");
         }
         assert(SrcOpnd.isReg() && "Unexpected source operand");
-        unsigned RegOpndNum = SrcOpnd.getReg();
+        MCRegister RegOpnd = SrcOpnd.getReg();
         Inst.clear();
         Inst.setOpcode(NewOpcode);
-        Inst.addOperand(MCOperand::createReg(RegOpndNum));
+        Inst.addOperand(MCOperand::createReg(RegOpnd));
       } else {
         switch (I.DataSize) {
         case 2: NewOpcode = X86::PUSH16i8; break;
@@ -1145,12 +1141,12 @@ public:
     });
   }
 
-  bool
-  evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
-                          std::pair<MCPhysReg, int64_t> Input1,
-                          std::pair<MCPhysReg, int64_t> Input2) const override {
+  bool evaluateStackOffsetExpr(
+      const MCInst &Inst, int64_t &Output,
+      std::pair<MCRegister, int64_t> Input1,
+      std::pair<MCRegister, int64_t> Input2) const override {
 
-    auto getOperandVal = [&](MCPhysReg Reg) -> ErrorOr<int64_t> {
+    auto getOperandVal = [&](MCRegister Reg) -> ErrorOr<int64_t> {
       if (Reg == Input1.first)
         return Input1.second;
       if (Reg == Input2.first)
@@ -1196,12 +1192,10 @@ public:
       if (!MO)
         return false;
 
-      if (MO->BaseRegNum == X86::NoRegister ||
-          MO->IndexRegNum != X86::NoRegister ||
-          MO->SegRegNum != X86::NoRegister || MO->DispExpr)
+      if (!MO->BaseReg || MO->IndexReg || MO->SegReg || MO->DispExpr)
         return false;
 
-      if (ErrorOr<int64_t> InputVal = getOperandVal(MO->BaseRegNum))
+      if (ErrorOr<int64_t> InputVal = getOperandVal(MO->BaseReg))
         Output = *InputVal + MO->DispImm;
       else
         return false;
@@ -1212,8 +1206,8 @@ public:
     return true;
   }
 
-  bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
-                      MCPhysReg &To) const override {
+  bool isRegToRegMove(const MCInst &Inst, MCRegister &From,
+                      MCRegister &To) const override {
     switch (Inst.getOpcode()) {
     default:
       return false;
@@ -1229,9 +1223,9 @@ public:
     }
   }
 
-  MCPhysReg getStackPointer() const override { return X86::RSP; }
-  MCPhysReg getFramePointer() const override { return X86::RBP; }
-  MCPhysReg getFlagsReg() const override { return X86::EFLAGS; }
+  MCRegister getStackPointer() const override { return X86::RSP; }
+  MCRegister getFramePointer() const override { return X86::RBP; }
+  MCRegister getFlagsReg() const override { return X86::EFLAGS; }
 
   bool escapesVariable(const MCInst &Inst,
                        bool HasFramePointer) const override {
@@ -1263,11 +1257,13 @@ public:
         continue;
 
       const MCOperand &Operand = Inst.getOperand(I);
-      if (HasFramePointer && Operand.isReg() && SPBPAliases[Operand.getReg()]) {
+      if (HasFramePointer && Operand.isReg() &&
+          SPBPAliases[Operand.getReg().id()]) {
         DoesLeak = true;
         break;
       }
-      if (!HasFramePointer && Operand.isReg() && SPAliases[Operand.getReg()]) {
+      if (!HasFramePointer && Operand.isReg() &&
+          SPAliases[Operand.getReg().id()]) {
         DoesLeak = true;
         break;
       }
@@ -1277,8 +1273,8 @@ public:
     if (DoesLeak) {
       DoesLeak = !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
         assert(Operand.isReg());
-        MCPhysReg Reg = Operand.getReg();
-        return HasFramePointer ? SPBPAliases[Reg] : SPAliases[Reg];
+        MCRegister Reg = Operand.getReg();
+        return HasFramePointer ? SPBPAliases[Reg.id()] : SPAliases[Reg.id()];
       });
     }
     return DoesLeak;
@@ -1486,7 +1482,7 @@ public:
   /// TODO: this implementation currently works for the most common opcodes that
   /// load from memory. It can be extended to work with memory store opcodes as
   /// well as more memory load opcodes.
-  bool replaceMemOperandWithReg(MCInst &Inst, MCPhysReg RegNum) const override {
+  bool replaceMemOperandWithReg(MCInst &Inst, MCRegister Reg) const override {
     unsigned NewOpcode;
 
     switch (Inst.getOpcode()) {
@@ -1508,7 +1504,7 @@ public:
     }
 
     // Modify the instruction.
-    MCOperand RegOp = MCOperand::createReg(RegNum);
+    MCOperand RegOp = MCOperand::createReg(Reg);
     MCOperand TargetOp = Inst.getOperand(0);
     Inst.clear();
     Inst.setOpcode(NewOpcode);
@@ -1638,12 +1634,12 @@ public:
     // the instruction.
     Inst.erase(Inst.begin());
     Inst.insert(Inst.begin(),
-                MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+                MCOperand::createReg(MCRegister())); // AddrSegmentReg
     Inst.insert(Inst.begin(),
                 MCOperand::createExpr( // Displacement
                     MCSymbolRefExpr::create(TargetLocation, *Ctx)));
     Inst.insert(Inst.begin(),
-                MCOperand::createReg(X86::NoRegister)); // IndexReg
+                MCOperand::createReg(MCRegister())); // IndexReg
     Inst.insert(Inst.begin(),
                 MCOperand::createImm(1));               // ScaleAmt
     Inst.insert(Inst.begin(),
@@ -1653,7 +1649,7 @@ public:
     return Code;
   }
 
-  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
+  void convertIndirectCallToLoad(MCInst &Inst, MCRegister Reg) override {
     bool IsTailCall = isTailCall(Inst);
     if (IsTailCall)
       removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
@@ -1692,12 +1688,12 @@ public:
 
     // Check and remove EIZ/RIZ. These cases represent ambiguous cases where
     // SIB byte is present, but no index is used and modrm alone should have
-    // been enough. Converting to NoRegister effectively removes the SIB byte.
+    // been enough. Converting to MCRegister() effectively removes the SIB byte.
     if (MemOpNo >= 0) {
       MCOperand &IndexOp =
           Inst.getOperand(static_cast<unsigned>(MemOpNo) + X86::AddrIndexReg);
       if (IndexOp.getReg() == X86::EIZ || IndexOp.getReg() == X86::RIZ)
-        IndexOp = MCOperand::createReg(X86::NoRegister);
+        IndexOp = MCOperand::createReg(MCRegister());
     }
 
     if (isBranch(Inst)) {
@@ -1743,9 +1739,9 @@ public:
 
       // If stack memory operands are allowed, check if it's a load from stack
       bool IsLoad, IsStore, IsStoreFromReg, IsSimple, IsIndexed;
-      MCPhysReg Reg;
+      MCRegister Reg;
       int32_t SrcImm;
-      uint16_t StackPtrReg;
+      MCRegister StackPtrReg;
       int64_t StackOffset;
       uint8_t Size;
       bool IsStackAccess =
@@ -1875,7 +1871,7 @@ public:
   /// (POSSIBLE_PIC_FIXED_BRANCH case).
   template <typename Itr>
   std::tuple<IndirectBranchType, MCInst *, MCInst *>
-  analyzePICJumpTable(Itr II, Itr IE, MCPhysReg R1, MCPhysReg R2) const {
+  analyzePICJumpTable(Itr II, Itr IE, MCRegister R1, MCRegister R2) const {
     // Analyze PIC-style jump table code template:
     //
     //    lea PIC_JUMP_TABLE(%rip), {%r1|%r2}     <- MemLocInstr
@@ -1919,15 +1915,13 @@ public:
     auto isRIPRel = [&](X86MemOperand &MO) {
       // NB: DispExpr should be set
       return MO.DispExpr != nullptr &&
-             MO.BaseRegNum == RegInfo->getProgramCounter() &&
-             MO.IndexRegNum == X86::NoRegister &&
-             MO.SegRegNum == X86::NoRegister;
+             MO.BaseReg == RegInfo->getProgramCounter() && !MO.IndexReg &&
+             !MO.SegReg;
     };
-    auto isIndexed = [](X86MemOperand &MO, MCPhysReg R) {
-      // NB: IndexRegNum should be set.
-      return MO.IndexRegNum != X86::NoRegister && MO.BaseRegNum == R &&
-             MO.ScaleImm == 4 && MO.DispImm == 0 &&
-             MO.SegRegNum == X86::NoRegister;
+    auto isIndexed = [](X86MemOperand &MO, MCRegister R) {
+      // NB: IndexReg should be set.
+      return MO.IndexReg && MO.BaseReg == R && MO.ScaleImm == 4 &&
+             MO.DispImm == 0 && !MO.SegReg;
     };
     LLVM_DEBUG(dbgs() << "Checking for PIC jump table\n");
     MCInst *FirstInstr = nullptr;
@@ -1958,8 +1952,8 @@ public:
         // Check if the first instruction is setting %r1 or %r2. In canonical
         // form lea sets %r1 and mov sets %r2. If it's the opposite - rename so
         // we have to only check a single form.
-        unsigned DestReg = Instr.getOperand(0).getReg();
-        MCPhysReg &ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R2 : R1;
+        MCRegister DestReg = Instr.getOperand(0).getReg();
+        MCRegister &ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R2 : R1;
         if (DestReg != ExpectReg)
           std::swap(R1, R2);
         if (DestReg != ExpectReg)
@@ -1975,7 +1969,7 @@ public:
         else
           break;
       } else {
-        unsigned ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R1 : R2;
+        MCRegister ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R1 : R2;
         if (!InstrDesc.hasDefOfPhysReg(Instr, ExpectReg, *RegInfo))
           continue;
         if ((MatchingState == MATCH_JUMP_TABLE && !IsLEAInstr) ||
@@ -2011,8 +2005,8 @@ public:
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
-                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        MCInst *&MemLocInstrOut, MCRegister &BaseRegOut,
+                        MCRegister &IndexRegOut, int64_t &DispValueOut,
                         const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
                         MCInst *&FixedEntryLoadInst) const override {
     // Try to find a (base) memory location from where the address for
@@ -2037,8 +2031,8 @@ public:
     // We handle PIC-style jump tables separately.
     //
     MemLocInstrOut = nullptr;
-    BaseRegNumOut = X86::NoRegister;
-    IndexRegNumOut = X86::NoRegister;
+    BaseRegOut = MCRegister();
+    IndexRegOut = MCRegister();
     DispValueOut = 0;
     DispExprOut = nullptr;
     FixedEntryLoadInst = nullptr;
@@ -2057,7 +2051,7 @@ public:
       // If the indirect jump is on register - try to detect if the
       // register value is loaded from a memory location.
       assert(Instruction.getOperand(0).isReg() && "register operand expected");
-      const unsigned R1 = Instruction.getOperand(0).getReg();
+      const MCRegister R1 = Instruction.getOperand(0).getReg();
       // Check if one of the previous instructions defines the jump-on register.
       for (auto PrevII = II; PrevII != IE; ++PrevII) {
         MCInst &PrevInstr = *PrevII;
@@ -2071,7 +2065,7 @@ public:
           break;
         }
         if (isADD64rr(PrevInstr)) {
-          unsigned R2 = PrevInstr.getOperand(2).getReg();
+          MCRegister R2 = PrevInstr.getOperand(2).getReg();
           if (R1 == R2)
             return IndirectBranchType::UNKNOWN;
           std::tie(Type, MemLocInstr, FixedEntryLoadInst) =
@@ -2099,24 +2093,22 @@ public:
     if (!MO)
       return IndirectBranchType::UNKNOWN;
 
-    BaseRegNumOut = MO->BaseRegNum;
-    IndexRegNumOut = MO->IndexRegNum;
+    BaseRegOut = MO->BaseReg;
+    IndexRegOut = MO->IndexReg;
     DispValueOut = MO->DispImm;
     DispExprOut = MO->DispExpr;
 
-    if ((MO->BaseRegNum != X86::NoRegister && MO->BaseRegNum != RIPRegister) ||
-        MO->SegRegNum != X86::NoRegister)
+    if ((MO->BaseReg && MO->BaseReg != RIPRegister) || MO->SegReg)
       return IndirectBranchType::UNKNOWN;
 
-    if (MemLocInstr == &Instruction &&
-        (!MO->ScaleImm || MO->IndexRegNum == X86::NoRegister)) {
+    if (MemLocInstr == &Instruction && (!MO->ScaleImm || !MO->IndexReg)) {
       MemLocInstrOut = MemLocInstr;
       return IndirectBranchType::POSSIBLE_FIXED_BRANCH;
     }
 
     switch (Type) {
     case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
-      if (MO->ScaleImm != 1 || MO->BaseRegNum != RIPRegister)
+      if (MO->ScaleImm != 1 || MO->BaseReg != RIPRegister)
         return IndirectBranchType::UNKNOWN;
       break;
     case IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH:
@@ -2155,10 +2147,10 @@ public:
   bool analyzeVirtualMethodCall(InstructionIterator ForwardBegin,
                                 InstructionIterator ForwardEnd,
                                 std::vector<MCInst *> &MethodFetchInsns,
-                                unsigned &VtableRegNum, unsigned &MethodRegNum,
+                                MCRegister &VtableReg, MCRegister &MethodReg,
                                 uint64_t &MethodOffset) const override {
-    VtableRegNum = X86::NoRegister;
-    MethodRegNum = X86::NoRegister;
+    VtableReg = MCRegister();
+    MethodReg = MCRegister();
     MethodOffset = 0;
 
     std::reverse_iterator<InstructionIterator> Itr(ForwardEnd);
@@ -2169,12 +2161,11 @@ public:
 
     // The call can just be jmp offset(reg)
     if (std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(CallInst)) {
-      if (!MO->DispExpr && MO->BaseRegNum != X86::RIP &&
-          MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::NoRegister) {
-        MethodRegNum = MO->BaseRegNum;
-        if (MO->ScaleImm == 1 && MO->IndexRegNum == X86::NoRegister &&
-            MO->SegRegNum == X86::NoRegister) {
-          VtableRegNum = MethodRegNum;
+      if (!MO->DispExpr && MO->BaseReg != X86::RIP && MO->BaseReg != X86::RBP &&
+          MO->BaseReg) {
+        MethodReg = MO->BaseReg;
+        if (MO->ScaleImm == 1 && !MO->IndexReg && !MO->SegReg) {
+          VtableReg = MethodReg;
           MethodOffset = MO->DispImm;
           MethodFetchInsns.push_back(&CallInst);
           return true;
@@ -2183,13 +2174,13 @@ public:
       return false;
     }
     if (CallInst.getOperand(0).isReg())
-      MethodRegNum = CallInst.getOperand(0).getReg();
+      MethodReg = CallInst.getOperand(0).getReg();
     else
       return false;
 
-    if (MethodRegNum == X86::RIP || MethodRegNum == X86::RBP) {
-      VtableRegNum = X86::NoRegister;
-      MethodRegNum = X86::NoRegister;
+    if (MethodReg == X86::RIP || MethodReg == X86::RBP) {
+      VtableReg = MCRegister();
+      MethodReg = MCRegister();
       return false;
     }
 
@@ -2197,17 +2188,15 @@ public:
     while (Itr != End) {
       MCInst &CurInst = *Itr++;
       const MCInstrDesc &Desc = Info->get(CurInst.getOpcode());
-      if (Desc.hasDefOfPhysReg(CurInst, MethodRegNum, *RegInfo)) {
+      if (Desc.hasDefOfPhysReg(CurInst, MethodReg, *RegInfo)) {
         if (!mayLoad(CurInst))
           return false;
         if (std::optional<X86MemOperand> MO =
                 evaluateX86MemoryOperand(CurInst)) {
-          if (!MO->DispExpr && MO->ScaleImm == 1 &&
-              MO->BaseRegNum != X86::RIP && MO->BaseRegNum != X86::RBP &&
-              MO->BaseRegNum != X86::NoRegister &&
-              MO->IndexRegNum == X86::NoRegister &&
-              MO->SegRegNum == X86::NoRegister) {
-            VtableRegNum = MO->BaseRegNum;
+          if (!MO->DispExpr && MO->ScaleImm == 1 && MO->BaseReg != X86::RIP &&
+              MO->BaseReg != X86::RBP && MO->BaseReg && !MO->IndexReg &&
+              !MO->SegReg) {
+            VtableReg = MO->BaseReg;
             MethodOffset = MO->DispImm;
             MethodFetchInsns.push_back(&CurInst);
             if (MethodOffset != 0)
@@ -2219,14 +2208,14 @@ public:
       }
     }
 
-    if (!VtableRegNum)
+    if (!VtableReg)
       return false;
 
     // look for any adds affecting the method register.
     while (Itr != End) {
       MCInst &CurInst = *Itr++;
       const MCInstrDesc &Desc = Info->get(CurInst.getOpcode());
-      if (Desc.hasDefOfPhysReg(CurInst, VtableRegNum, *RegInfo)) {
+      if (Desc.hasDefOfPhysReg(CurInst, VtableReg, *RegInfo)) {
         if (isADDri(CurInst)) {
           assert(!MethodOffset);
           MethodOffset = CurInst.getOperand(2).getImm();
@@ -2245,11 +2234,11 @@ public:
       Inst.setOpcode(X86::LEA64r);
       Inst.clear();
       Inst.addOperand(MCOperand::createReg(X86::RSP));
-      Inst.addOperand(MCOperand::createReg(X86::RSP));        // BaseReg
-      Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-      Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-      Inst.addOperand(MCOperand::createImm(-Size));           // Displacement
-      Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+      Inst.addOperand(MCOperand::createReg(X86::RSP));     // BaseReg
+      Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+      Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
+      Inst.addOperand(MCOperand::createImm(-Size));        // Displacement
+      Inst.addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
       return;
     }
     Inst.setOpcode(X86::SUB64ri8);
@@ -2265,11 +2254,11 @@ public:
       Inst.setOpcode(X86::LEA64r);
       Inst.clear();
       Inst.addOperand(MCOperand::createReg(X86::RSP));
-      Inst.addOperand(MCOperand::createReg(X86::RSP));        // BaseReg
-      Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-      Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-      Inst.addOperand(MCOperand::createImm(Size));            // Displacement
-      Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+      Inst.addOperand(MCOperand::createReg(X86::RSP));     // BaseReg
+      Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+      Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
+      Inst.addOperand(MCOperand::createImm(Size));         // Displacement
+      Inst.addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
       return;
     }
     Inst.setOpcode(X86::ADD64ri8);
@@ -2279,8 +2268,8 @@ public:
     Inst.addOperand(MCOperand::createImm(Size));
   }
 
-  void createSaveToStack(MCInst &Inst, const MCPhysReg &StackReg, int Offset,
-                         const MCPhysReg &SrcReg, int Size) const override {
+  void createSaveToStack(MCInst &Inst, MCRegister StackReg, int Offset,
+                         MCRegister SrcReg, int Size) const override {
     unsigned NewOpcode;
     switch (Size) {
     default:
@@ -2293,26 +2282,25 @@ public:
     }
     Inst.setOpcode(NewOpcode);
     Inst.clear();
-    Inst.addOperand(MCOperand::createReg(StackReg));        // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-    Inst.addOperand(MCOperand::createImm(Offset));          // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+    Inst.addOperand(MCOperand::createReg(StackReg));     // BaseReg
+    Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
+    Inst.addOperand(MCOperand::createImm(Offset));       // Displacement
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
     Inst.addOperand(MCOperand::createReg(SrcReg));
   }
 
-  void createRestoreFromStack(MCInst &Inst, const MCPhysReg &StackReg,
-                              int Offset, const MCPhysReg &DstReg,
-                              int Size) const override {
-    return createLoad(Inst, StackReg, /*Scale=*/1, /*IndexReg=*/X86::NoRegister,
-                      Offset, nullptr, /*AddrSegmentReg=*/X86::NoRegister,
-                      DstReg, Size);
+  void createRestoreFromStack(MCInst &Inst, MCRegister StackReg, int Offset,
+                              MCRegister DstReg, int Size) const override {
+    return createLoad(Inst, StackReg, /*Scale=*/1, /*IndexReg=*/MCRegister(),
+                      Offset, nullptr, /*AddrSegmentReg=*/MCRegister(), DstReg,
+                      Size);
   }
 
-  void createLoad(MCInst &Inst, const MCPhysReg &BaseReg, int64_t Scale,
-                  const MCPhysReg &IndexReg, int64_t Offset,
-                  const MCExpr *OffsetExpr, const MCPhysReg &AddrSegmentReg,
-                  const MCPhysReg &DstReg, int Size) const override {
+  void createLoad(MCInst &Inst, MCRegister BaseReg, int64_t Scale,
+                  MCRegister IndexReg, int64_t Offset, const MCExpr *OffsetExpr,
+                  MCRegister AddrSegmentReg, MCRegister DstReg,
+                  int Size) const override {
     unsigned NewOpcode;
     switch (Size) {
     default:
@@ -2336,7 +2324,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AddrSegmentReg)); // AddrSegmentReg
   }
 
-  InstructionListType createLoadImmediate(const MCPhysReg Dest,
+  InstructionListType createLoadImmediate(const MCRegister Dest,
                                           uint64_t Imm) const override {
     InstructionListType Insts;
     Insts.emplace_back();
@@ -2367,7 +2355,7 @@ public:
     Load.addOperand(Scale);
     Load.addOperand(IndexReg);
     Load.addOperand(Offset);
-    Load.addOperand(MCOperand::createReg(X86::NoRegister));
+    Load.addOperand(MCOperand::createReg(MCRegister()));
 
     Insts.push_back(Load);
     Insts.push_back(IJmp);
@@ -2392,7 +2380,7 @@ public:
                             .addImm(1)
                             .addReg(X86::RDX)
                             .addImm(0)
-                            .addReg(X86::NoRegister));
+                            .addReg(MCRegister()));
     else
       Code.emplace_back(MCInstBuilder(X86::MOV64rr)
                             .addReg(X86::RAX)
@@ -2412,15 +2400,15 @@ public:
                           .addReg(X86::CL)
                           .addReg(X86::RSI)
                           .addImm(0)
-                          .addReg(X86::NoRegister)
+                          .addReg(MCRegister())
                           .addImm(0)
-                          .addReg(X86::NoRegister));
+                          .addReg(MCRegister()));
     Code.emplace_back(MCInstBuilder(X86::MOV8mr)
                           .addReg(X86::RDI)
                           .addImm(0)
-                          .addReg(X86::NoRegister)
+                          .addReg(MCRegister())
                           .addImm(0)
-                          .addReg(X86::NoRegister)
+                          .addReg(MCRegister())
                           .addReg(X86::CL));
     Code.emplace_back(MCInstBuilder(X86::MOV64rr)
                           .addReg(X86::RAX)
@@ -2428,7 +2416,7 @@ public:
     return Code;
   }
 
-  InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
+  InstructionListType createCmpJE(MCRegister RegNo, int64_t Imm,
                                   const MCSymbol *Target,
                                   MCContext *Ctx) const override {
     InstructionListType Code;
@@ -2441,7 +2429,7 @@ public:
     return Code;
   }
 
-  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+  InstructionListType createCmpJNE(MCRegister RegNo, int64_t Imm,
                                    const MCSymbol *Target,
                                    MCContext *Ctx) const override {
     InstructionListType Code;
@@ -2517,7 +2505,7 @@ public:
     return true;
   }
 
-  bool replaceRegWithImm(MCInst &Inst, unsigned Register,
+  bool replaceRegWithImm(MCInst &Inst, MCRegister Register,
                          int64_t Imm) const override {
 
     enum CheckSignExt : uint8_t {
@@ -2682,8 +2670,8 @@ public:
     return true;
   }
 
-  bool replaceRegWithReg(MCInst &Inst, unsigned ToReplace,
-                         unsigned ReplaceWith) const override {
+  bool replaceRegWithReg(MCInst &Inst, MCRegister ToReplace,
+                         MCRegister ReplaceWith) const override {
 
     // Get the HasLHS value so that iteration can be done
     bool HasLHS;
@@ -2735,10 +2723,10 @@ public:
          Index != E; ++Index) {
       BitVector RegAliases = getAliases(ToReplace, true);
       if (!Inst.getOperand(Index).isReg() ||
-          !RegAliases.test(Inst.getOperand(Index).getReg()))
+          !RegAliases.test(Inst.getOperand(Index).getReg().id()))
         continue;
       // Resize register if needed
-      unsigned SizedReplaceWith = getAliasSized(
+      MCRegister SizedReplaceWith = getAliasSized(
           ReplaceWith, getRegSize(Inst.getOperand(Index).getReg()));
       MCOperand NewOperand = MCOperand::createReg(SizedReplaceWith);
       Inst.getOperand(Index) = NewOperand;
@@ -2872,7 +2860,7 @@ public:
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
-  MCPhysReg getX86R11() const override { return X86::R11; }
+  MCRegister getX86R11() const override { return X86::R11; }
 
   unsigned getShortBranchOpcode(unsigned Opcode) const override {
     switch (Opcode) {
@@ -2889,7 +2877,7 @@ public:
     }
   }
 
-  MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
+  MCRegister getIntArgRegister(unsigned ArgNo) const override {
     // FIXME: this should depend on the calling convention.
     switch (ArgNo) {
     case 0:   return X86::RDI;
@@ -2958,7 +2946,7 @@ public:
     return false;
   }
 
-  void createPushRegister(MCInst &Inst, MCPhysReg Reg,
+  void createPushRegister(MCInst &Inst, MCRegister Reg,
                           unsigned Size) const override {
     Inst.clear();
     unsigned NewOpcode = 0;
@@ -2984,7 +2972,7 @@ public:
     Inst.addOperand(MCOperand::createReg(Reg));
   }
 
-  void createPopRegister(MCInst &Inst, MCPhysReg Reg,
+  void createPopRegister(MCInst &Inst, MCRegister Reg,
                          unsigned Size) const override {
     Inst.clear();
     unsigned NewOpcode = 0;
@@ -3018,7 +3006,7 @@ public:
     return createPopRegister(Inst, X86::EFLAGS, Size);
   }
 
-  void createAddRegImm(MCInst &Inst, MCPhysReg Reg, int64_t Value,
+  void createAddRegImm(MCInst &Inst, MCRegister Reg, int64_t Value,
                        unsigned Size) const {
     unsigned int Opcode;
     switch (Size) {
@@ -3035,7 +3023,7 @@ public:
     Inst.addOperand(MCOperand::createImm(Value));
   }
 
-  void createClearRegWithNoEFlagsUpdate(MCInst &Inst, MCPhysReg Reg,
+  void createClearRegWithNoEFlagsUpdate(MCInst &Inst, MCRegister Reg,
                                         unsigned Size) const {
     unsigned int Opcode;
     switch (Size) {
@@ -3057,7 +3045,7 @@ public:
     Inst.addOperand(MCOperand::createImm(0));
   }
 
-  void createX86SaveOVFlagToRegister(MCInst &Inst, MCPhysReg Reg) const {
+  void createX86SaveOVFlagToRegister(MCInst &Inst, MCRegister Reg) const {
     Inst.setOpcode(X86::SETCCr);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(Reg));
@@ -3112,28 +3100,28 @@ public:
     return Instrs;
   }
 
-  void createSwap(MCInst &Inst, MCPhysReg Source, MCPhysReg MemBaseReg,
+  void createSwap(MCInst &Inst, MCRegister Source, MCRegister MemBaseReg,
                   int64_t Disp) const {
     Inst.setOpcode(X86::XCHG64rm);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(Source));
     Inst.addOperand(MCOperand::createReg(Source));
-    Inst.addOperand(MCOperand::createReg(MemBaseReg));      // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-    Inst.addOperand(MCOperand::createImm(Disp));            // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+    Inst.addOperand(MCOperand::createReg(MemBaseReg));   // BaseReg
+    Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
+    Inst.addOperand(MCOperand::createImm(Disp));         // Displacement
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
   }
 
-  void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
+  void createIndirectBranch(MCInst &Inst, MCRegister MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(X86::JMP64m);
     Inst.clear();
-    Inst.addOperand(MCOperand::createReg(MemBaseReg));      // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-    Inst.addOperand(MCOperand::createImm(Disp));            // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+    Inst.addOperand(MCOperand::createReg(MemBaseReg));   // BaseReg
+    Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
+    Inst.addOperand(MCOperand::createImm(Disp));         // Displacement
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // AddrSegmentReg
   }
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
@@ -3144,11 +3132,11 @@ public:
     // uses the stack pointer, which we are going to clobber.
     static BitVector SPAliases(getAliases(X86::RSP));
     bool UsesSP = any_of(useOperands(CallInst), [&](const MCOperand &Op) {
-      return Op.isReg() && SPAliases[Op.getReg()];
+      return Op.isReg() && SPAliases[Op.getReg().id()];
     });
 
     InstructionListType Insts;
-    MCPhysReg TempReg = getIntArgRegister(0);
+    MCRegister TempReg = getIntArgRegister(0);
     // Code sequence used to enter indirect call instrumentation helper:
     //   push %rdi
     //   add $8, %rsp       ;; $rsp may be used in target, so fix it to prev val
@@ -3191,7 +3179,7 @@ public:
   }
 
   InstructionListType createInstrumentedIndCallHandlerExitBB() const override {
-    const MCPhysReg TempReg = getIntArgRegister(0);
+    const MCRegister TempReg = getIntArgRegister(0);
     // We just need to undo the sequence created for every ind call in
     // instrumentIndirectTarget(), which can be accomplished minimally with:
     //   popfq
@@ -3210,7 +3198,7 @@ public:
 
   InstructionListType
   createInstrumentedIndTailCallHandlerExitBB() const override {
-    const MCPhysReg TempReg = getIntArgRegister(0);
+    const MCRegister TempReg = getIntArgRegister(0);
     // Same thing as above, but for tail calls
     //   popfq
     //   add $16, %rsp
@@ -3228,7 +3216,7 @@ public:
   createInstrumentedIndCallHandlerEntryBB(const MCSymbol *InstrTrampoline,
                                           const MCSymbol *IndCallHandler,
                                           MCContext *Ctx) override {
-    const MCPhysReg TempReg = getIntArgRegister(0);
+    const MCRegister TempReg = getIntArgRegister(0);
     // Code sequence used to check whether InstrTampoline was initialized
     // and call it if so, returns via IndCallHandler.
     //   pushfq
@@ -3293,7 +3281,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst, MCPhysReg Reg,
+      const MCInst &CallInst, MCRegister Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,
@@ -3317,7 +3305,7 @@ public:
            "in the targets vector.");
 
     if (MinimizeCodeSize && !LoadElim) {
-      std::set<unsigned> UsedRegs;
+      std::set<MCRegister> UsedRegs;
 
       for (unsigned int I = 0; I < MCPlus::getNumPrimeOperands(CallInst); ++I) {
         const MCOperand &Op = CallInst.getOperand(I);
@@ -3585,32 +3573,32 @@ public:
   }
 
 private:
-  void createMove(MCInst &Inst, const MCSymbol *Src, unsigned Reg,
+  void createMove(MCInst &Inst, const MCSymbol *Src, MCRegister Reg,
                   MCContext *Ctx) const {
     Inst.setOpcode(X86::MOV64rm);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(Reg));
-    Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
+    Inst.addOperand(MCOperand::createReg(X86::RIP));     // BaseReg
+    Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
     Inst.addOperand(
         MCOperand::createExpr(MCSymbolRefExpr::create(Src,
                                                       *Ctx))); // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+    Inst.addOperand(MCOperand::createReg(MCRegister()));       // AddrSegmentReg
   }
 
-  void createLea(MCInst &Inst, const MCSymbol *Src, unsigned Reg,
+  void createLea(MCInst &Inst, const MCSymbol *Src, MCRegister Reg,
                  MCContext *Ctx) const {
     Inst.setOpcode(X86::LEA64r);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(Reg));
-    Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
+    Inst.addOperand(MCOperand::createReg(X86::RIP));     // BaseReg
+    Inst.addOperand(MCOperand::createImm(1));            // ScaleAmt
+    Inst.addOperand(MCOperand::createReg(MCRegister())); // IndexReg
     Inst.addOperand(
         MCOperand::createExpr(MCSymbolRefExpr::create(Src,
                                                       *Ctx))); // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+    Inst.addOperand(MCOperand::createReg(MCRegister()));       // AddrSegmentReg
   }
 };
 
