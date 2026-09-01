@@ -32457,10 +32457,12 @@ private:
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
               if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
-                if (RdxKind == RecurKind::FAdd) {
-                  InstructionCost FMACost = canConvertToFMA(
-                      RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI,
-                      CostKind, RdxOp->getOperand(1) == RdxVal ? 1 : 0);
+                auto *BO = dyn_cast<BinaryOperator>(RdxOp);
+                if (BO && RdxKind == RecurKind::FAdd) {
+                  unsigned OpIdx = BO->getOperand(1) == RdxVal ? 1 : 0;
+                  InstructionCost FMACost =
+                      canConvertToFMA(BO, getSameOpcode(BO, TLI), DT, DL, *TTI,
+                                      TLI, CostKind, OpIdx);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -32582,13 +32584,18 @@ private:
                 break;
               }
               User *U = RdxVal->user_back();
-              unsigned OpIdx = U->getOperand(1) == RdxVal ? 1 : 0;
-              if (Idx == 0)
-                FMulOpIdx = OpIdx;
-              else if (FMulOpIdx != OpIdx) {
+              auto *BO = dyn_cast<BinaryOperator>(U);
+              if (!BO) {
                 Ops.clear();
                 break;
               }
+              unsigned OpIdx = BO->getOperand(1) == RdxVal ? 1 : 0;
+              if (Idx != 0 && FMulOpIdx != OpIdx) {
+                Ops.clear();
+                break;
+              }
+              if (Idx == 0)
+                FMulOpIdx = OpIdx;
               if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
                 FMF &= FPCI->getFastMathFlags();
               Ops.push_back(U);

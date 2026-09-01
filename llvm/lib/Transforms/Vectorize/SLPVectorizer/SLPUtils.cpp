@@ -775,8 +775,8 @@ unsigned getFMulOperandIdx(const Instruction *I) {
   assert((I->getOpcode() == Instruction::FAdd ||
           I->getOpcode() == Instruction::FSub) &&
          "Expected an fadd/fsub-like instruction");
-  for (unsigned Idx : seq<unsigned>(I->getNumOperands()))
-    if (match(I->getOperand(Idx), m_OneUse(m_FMul(m_Value(), m_Value()))))
+  for (auto [Idx, Op] : enumerate(I->operand_values()))
+    if (match(Op, m_OneUse(m_FMul(m_Value(), m_Value()))))
       return Idx;
   return 0;
 }
