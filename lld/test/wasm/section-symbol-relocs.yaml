@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llc -filetype=obj  %S/Inputs/custom.ll -o %t2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %S/Inputs/custom.s -o %t2.o
 # RUN: wasm-ld --no-entry -o - %t2.o %t.o | obj2yaml | FileCheck %s
 # RUN: wasm-ld -r --no-entry -o - %t2.o %t.o | obj2yaml | FileCheck %s -check-prefix=RELOC
 

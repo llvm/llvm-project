@@ -20,7 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstring>
 #include <map>
 #include <set>
@@ -264,8 +263,6 @@ unsigned OptTable::internalFindNearest(
     StringRef Option, std::string &NearestString, unsigned MinimumLength,
     unsigned MaximumDistance,
     std::function<bool(const Info &)> ExcludeOption) const {
-  assert(!Option.empty());
-
   // Consider each [option prefix + option name] pair as a candidate, finding
   // the closest match.
   unsigned BestDistance =

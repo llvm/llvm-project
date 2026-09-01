@@ -1,4 +1,32 @@
-{"Version": "21.0.1", "CanonicalName": "driverkit21.0.1", "MaximumDeploymentTarget": "21.0.1.99",
- "SupportedTargets": {
-   "driverkit": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": ""}
-}}
+{
+  "CanonicalName": "driverkit21.0.1",
+  "Version": "21.0.1",
+  "IsBaseSDK": "YES",
+  "DisplayName": "DriverKit 21.0.1",
+  "MinimalDisplayName": "21.0.1",
+  "SupportedTargets": {
+    "driverkit": {
+      "PlatformFamilyName": "DriverKit",
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": "",
+      "BuildVersionPlatformID": "10",
+      "DefaultDeploymentTarget": "21.0.1",
+      "MinimumDeploymentTarget": "19.0", "MaximumDeploymentTarget": "21.0.1.99",
+      "ValidDeploymentTargets": ["19.0", "20.0", "20.1", "20.2", "20.3", "20.4", "21.0", "21.0.1"]
+    }
+  },
+  "FrameworkSearchPaths": [
+    "System/DriverKit/System/Library/Frameworks"
+  ],
+  "HeaderSearchPaths": [
+    "System/DriverKit/usr/include"
+  ],
+  "LibrarySearchPaths": [
+    "System/DriverKit/usr/lib"
+  ],
+  "DefaultDeploymentTarget": "21.0.1",
+  "MaximumDeploymentTarget": "21.0.1.99",
+  "Comments": [
+    "There was no DriverKit 21.0 SDK, this is the first DriverKit 21.x release, appearing in Xcode 13.1. Xcode 13.0",
+    "contained DriverKit 20.4. DriverKit 21.0.1 is also the first version which is a distinct platform from macOS.",
+  ]
+}

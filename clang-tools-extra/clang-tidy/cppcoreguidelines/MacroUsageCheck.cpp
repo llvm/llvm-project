@@ -82,14 +82,12 @@ void MacroUsageCheck::registerPPCallbacks(const SourceManager &SM,
 void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {
   const MacroInfo *Info = MD->getMacroInfo();
   StringRef Message;
-  bool MacroBodyExpressionLike;
+  bool MacroBodyExpressionLike = true;
   if (Info->getNumTokens() > 0) {
     const Token &Tok = Info->getReplacementToken(0);
     // Now notice that keywords like `__attribute` cannot be a leading
     // token in an expression.
     MacroBodyExpressionLike = !Tok.is(tok::kw___attribute);
-  } else {
-    MacroBodyExpressionLike = true;
   }
 
   if (llvm::all_of(Info->tokens(), std::mem_fn(&Token::isLiteral)))

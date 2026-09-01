@@ -1,12 +1,11 @@
 ; RUN: opt -S < %s -passes=loop-vectorize -force-vector-width=4 | FileCheck %s
 
-declare void @llvm.sideeffect()
 
 ; Vectorization across a @llvm.sideeffect.
 
 ; CHECK-LABEL: store_ones
 ; CHECK: store <4 x float>
-define void @store_ones(ptr %p, i64 %n) nounwind {
+define void @store_ones(ptr %p, i64 %n) {
 bb7.lr.ph:
   br label %bb7
 

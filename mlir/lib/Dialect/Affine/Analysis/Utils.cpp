@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1055,12 +1056,6 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
     LDBG() << "Unable to compute source's domain";
     return std::nullopt;
   }
-  // As the set difference utility currently cannot handle symbols in its
-  // operands, validity of the slice cannot be determined.
-  if (srcConstraints.getNumSymbolVars() > 0) {
-    LDBG() << "Cannot handle symbols in source domain";
-    return std::nullopt;
-  }
   // TODO: Handle local vars in the source domains while using the 'projectOut'
   // utility below. Currently, aligning is not done assuming that there will be
   // no local vars in the source domain.
@@ -1081,6 +1076,8 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   // domain completely in terms of source's IVs.
   sliceConstraints.projectOut(ivs.size(),
                               sliceConstraints.getNumVars() - ivs.size());
+  srcConstraints.projectOut(ivs.size(),
+                            srcConstraints.getNumVars() - ivs.size());
 
   LDBG() << "Domain of the source of the slice:\n"
          << "Source constraints:" << srcConstraints
@@ -1607,8 +1604,7 @@ unsigned mlir::affine::getInnermostCommonLoopDepth(
   unsigned loopDepthLimit = std::numeric_limits<unsigned>::max();
   for (unsigned i = 0; i < numOps; ++i) {
     getAffineForIVs(*ops[i], &loops[i]);
-    loopDepthLimit =
-        std::min(loopDepthLimit, static_cast<unsigned>(loops[i].size()));
+    loopDepthLimit = std::min(loopDepthLimit, (unsigned)loops[i].size());
   }
 
   unsigned loopDepth = 0;
@@ -1757,7 +1753,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   // Get slice bounds from slice union constraints 'sliceUnionCst'.
   sliceUnionCst.getSliceBounds(/*offset=*/0, numSliceLoopIVs,
                                opsA[0]->getContext(), &sliceUnion->lbs,
-                               &sliceUnion->ubs);
+                               &sliceUnion->ubs, /*closedUb=*/false,
+                               /*allowMultiResultUb=*/true);
 
   // Add slice bound operands of union.
   SmallVector<Value, 4> sliceBoundOperands;
@@ -1794,21 +1791,36 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   return SliceComputationResult::Success;
 }
 
-// TODO: extend this to handle multiple result maps.
+/// Returns the number of iterations the slice bounded below by `lbMap` and
+/// above by `ubMap` runs for, where that is a constant.
+///
+/// An upper bound of several results is the min of them, so each result taken
+/// against the lower bound bounds the count from above and the smallest of
+/// those that comes out constant is the tightest constant bound there is. A
+/// tiled loop clamped at the end of the data has exactly this shape --
+/// `min(%i * 64 + 64, 1000)` over `%i * 64` -- where the tile-relative result
+/// gives the 64 and the extent gives nothing constant at all.
 static std::optional<uint64_t> getConstDifference(AffineMap lbMap,
                                                   AffineMap ubMap) {
-  assert(lbMap.getNumResults() == 1 && "expected single result bound map");
-  assert(ubMap.getNumResults() == 1 && "expected single result bound map");
+  assert(lbMap.getNumResults() == 1 && "expected single result lower bound");
+  assert(ubMap.getNumResults() >= 1 && "expected at least one upper bound");
   assert(lbMap.getNumDims() == ubMap.getNumDims());
   assert(lbMap.getNumSymbols() == ubMap.getNumSymbols());
   AffineExpr lbExpr(lbMap.getResult(0));
-  AffineExpr ubExpr(ubMap.getResult(0));
-  auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
-                                         lbMap.getNumSymbols());
-  auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
-  if (!cExpr)
-    return std::nullopt;
-  return cExpr.getValue();
+  std::optional<uint64_t> tripCount;
+  for (AffineExpr ubExpr : ubMap.getResults()) {
+    AffineExpr loopSpanExpr = simplifyAffineExpr(
+        ubExpr - lbExpr, lbMap.getNumDims(), lbMap.getNumSymbols());
+    auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
+    if (!cExpr)
+      continue;
+    if (cExpr.getValue() < 0)
+      return 0;
+    tripCount =
+        std::min(tripCount.value_or(std::numeric_limits<uint64_t>::max()),
+                 (uint64_t)cExpr.getValue());
+  }
+  return tripCount;
 }
 
 // Builds a map 'tripCountMap' from AffineForOp to constant trip count for loop
@@ -1836,9 +1848,9 @@ bool mlir::affine::buildSliceTripCountMap(
             forOp.getConstantUpperBound() - forOp.getConstantLowerBound();
         continue;
       }
-      std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+      std::optional<APInt> maybeConstTripCount = forOp.getStaticTripCount();
       if (maybeConstTripCount.has_value()) {
-        (*tripCountMap)[op] = *maybeConstTripCount;
+        (*tripCountMap)[op] = maybeConstTripCount->getZExtValue();
         continue;
       }
       return false;
@@ -1902,7 +1914,8 @@ void mlir::affine::getComputationSliceState(
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
   sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
-                          &sliceState->lbs, &sliceState->ubs);
+                          &sliceState->lbs, &sliceState->ubs,
+                          /*closedUb=*/false, /*allowMultiResultUb=*/true);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;
@@ -2198,23 +2211,26 @@ void mlir::affine::getSequentialLoops(
 }
 
 IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
-  FlatAffineValueConstraints fac(set);
-  if (fac.isEmpty())
+  FailureOr<FlatAffineValueConstraints> fac =
+      FlatAffineValueConstraints::create(set);
+  // Semi-affine sets can't be flattened; return them as is.
+  if (failed(fac))
+    return set;
+  if (fac->isEmpty())
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
                                    set.getContext());
-  fac.removeTrivialRedundancy();
+  fac->removeTrivialRedundancy();
 
-  auto simplifiedSet = fac.getAsIntegerSet(set.getContext());
+  auto simplifiedSet = fac->getAsIntegerSet(set.getContext());
   assert(simplifiedSet && "guaranteed to succeed while roundtripping");
   return simplifiedSet;
 }
 
 static void unpackOptionalValues(ArrayRef<std::optional<Value>> source,
                                  SmallVector<Value> &target) {
-  target =
-      llvm::to_vector<4>(llvm::map_range(source, [](std::optional<Value> val) {
-        return val.has_value() ? *val : Value();
-      }));
+  target = llvm::map_to_vector<4>(source, [](std::optional<Value> val) {
+    return val.has_value() ? *val : Value();
+  });
 }
 
 /// Bound an identifier `pos` in a given FlatAffineValueConstraints with
@@ -2384,6 +2400,47 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
                               newMap.getNumDims(), newMap.getNumSymbols());
     }
   }
+
+  // Internal constraint variables (dimOp, dimOpBound, resultDimStart, etc.)
+  // have no associated SSA values (null Value()). Replace their corresponding
+  // dim/symbol positions in newMap with constant 0 and compact newOperands.
+  // These positions should be unreferenced in newMap (the bound was computed
+  // in terms of the original operands only), so replacing with 0 is safe.
+  // This prevents canonicalizeMapAndOperands from using null Values as
+  // DenseMap keys, which would cause undefined behavior.
+  {
+    unsigned numDims = newMap.getNumDims();
+    unsigned numSyms = newMap.getNumSymbols();
+    SmallVector<AffineExpr> dimReplacements(numDims), symReplacements(numSyms);
+    SmallVector<Value> filteredOperands;
+    filteredOperands.reserve(newOperands.size());
+    unsigned newDim = 0;
+    for (unsigned i = 0; i < numDims; ++i) {
+      if (newOperands[i]) {
+        dimReplacements[i] = getAffineDimExpr(newDim++, ctx);
+        filteredOperands.push_back(newOperands[i]);
+      } else {
+        assert(!newMap.isFunctionOfDim(i) &&
+               "null-valued dim operand referenced in bound map");
+        dimReplacements[i] = getAffineConstantExpr(0, ctx);
+      }
+    }
+    unsigned newSym = 0;
+    for (unsigned i = 0; i < numSyms; ++i) {
+      if (newOperands[numDims + i]) {
+        symReplacements[i] = getAffineSymbolExpr(newSym++, ctx);
+        filteredOperands.push_back(newOperands[numDims + i]);
+      } else {
+        assert(!newMap.isFunctionOfSymbol(i) &&
+               "null-valued symbol operand referenced in bound map");
+        symReplacements[i] = getAffineConstantExpr(0, ctx);
+      }
+    }
+    newMap = newMap.replaceDimsAndSymbols(dimReplacements, symReplacements,
+                                          newDim, newSym);
+    newOperands = std::move(filteredOperands);
+  }
+
   affine::canonicalizeMapAndOperands(&newMap, &newOperands);
   return AffineValueMap(newMap, newOperands);
 }

@@ -577,8 +577,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
-    Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
+    auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),
+                                           DL.getProgramAddressSpace());
+    Value *ReturnAddress = IRB.CreateIntrinsic(
+        Intrinsic::returnaddress, {ProgramAsPtrTy}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);

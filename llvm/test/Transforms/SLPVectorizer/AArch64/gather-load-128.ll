@@ -8,10 +8,10 @@ define void @gather_load_fp128(ptr %arg) #0 {
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load fp128, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load fp128, ptr null, align 1
 ; CHECK-NEXT:    [[LOAD3:%.*]] = load fp128, ptr null, align 1
-; CHECK-NEXT:    [[FCMP0:%.*]] = fcmp oeq fp128 [[LOAD0]], 0xL00000000000000000000000000000000
-; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp oeq fp128 [[LOAD1]], 0xL00000000000000000000000000000000
-; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp oeq fp128 [[LOAD2]], 0xL00000000000000000000000000000000
-; CHECK-NEXT:    [[FCMP3:%.*]] = fcmp oeq fp128 [[LOAD3]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[FCMP0:%.*]] = fcmp oeq fp128 [[LOAD0]], 0.000000e+00
+; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp oeq fp128 [[LOAD1]], 0.000000e+00
+; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp oeq fp128 [[LOAD2]], 0.000000e+00
+; CHECK-NEXT:    [[FCMP3:%.*]] = fcmp oeq fp128 [[LOAD3]], 0.000000e+00
 ; CHECK-NEXT:    ret void
 ;
   %gep = getelementptr i8, ptr %arg, i64 16

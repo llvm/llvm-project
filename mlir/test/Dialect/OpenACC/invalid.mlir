@@ -3,111 +3,111 @@
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop gang control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop worker control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop vector control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop gang worker control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop gang vector control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+acc.loop worker vector control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with seq}}
-acc.loop {
+acc.loop gang worker vector {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
+} seq
 
 // -----
 
 // expected-error@+1 {{expected non-empty body.}}
 acc.loop {
-} attributes {independent = [#acc.device_type<none>]}
+} independent
 
 // -----
 
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in gang attribute}}
-acc.loop {
+acc.loop gang([#acc.device_type<none>, #acc.device_type<none>]) {
   acc.yield
-} attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
+}
 
 // -----
 
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in worker attribute}}
-acc.loop {
-  acc.yield
-} attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
+"acc.loop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>, worker = [#acc.device_type<none>, #acc.device_type<none>]}> ({
+  "acc.yield"() : () -> ()
+}) : () -> ()
 
 // -----
 
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vector attribute}}
-acc.loop {
-  acc.yield
-} attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+"acc.loop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>, vector = [#acc.device_type<none>, #acc.device_type<none>]}> ({
+  "acc.yield"() : () -> ()
+}) : () -> ()
 
 // -----
 
 // expected-error@+1 {{'acc.loop' op duplicate device_type `nvidia` found in gang attribute}}
-acc.loop {
+acc.loop gang([#acc.device_type<nvidia>, #acc.device_type<nvidia>]) {
   acc.yield
-} attributes {gang = [#acc.device_type<nvidia>, #acc.device_type<nvidia>]}
+}
 
 // -----
 
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in collapseDeviceType attribute}}
 acc.loop {
   acc.yield
-} attributes {collapse = [1, 1], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+} collapse([1, 1]) collapseDeviceType([#acc.device_type<none>, #acc.device_type<none>]) independent
 
 // -----
 
@@ -115,7 +115,7 @@ acc.loop {
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in workerNumOperandsDeviceType attribute}}
 acc.loop worker(%i64value: i64, %i64value: i64) {
   acc.yield
-} attributes {workerNumOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+} independent
 
 // -----
 
@@ -123,7 +123,7 @@ acc.loop worker(%i64value: i64, %i64value: i64) {
 // expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vectorOperandsDeviceType attribute}}
 acc.loop vector(%i64value: i64, %i64value: i64) {
   acc.yield
-} attributes {vectorOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+} independent
 
 // -----
 
@@ -140,7 +140,7 @@ func.func @acc_routine_parallelism() -> () {
 // expected-error@+1 {{only one of auto, independent, seq can be present at the same time}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   acc.yield
-} attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+} auto_ seq inclusiveUpperbound(array<i1: true>)
 
 // -----
 
@@ -168,7 +168,7 @@ acc.update
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{asyncOnly attribute cannot appear with asyncOperand}}
-acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {asyncOnly = [#acc.device_type<none>]}
+"acc.update"(%cst, %0) <{operandSegmentSizes = array<i32: 0, 1, 0, 1>, asyncOperandsDeviceType = [#acc.device_type<none>], asyncOnly = [#acc.device_type<none>]}> : (index, memref<f32>) -> ()
 
 // -----
 
@@ -176,7 +176,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {asyncOn
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]}
+"acc.update"(%cst, %0) <{operandSegmentSizes = array<i32: 0, 0, 1, 1>, waitOperandsDeviceType = [#acc.device_type<none>], waitOperandsSegments = array<i32: 1>, hasWaitDevnum = [false], waitOnly = [#acc.device_type<none>]}> : (index, memref<f32>) -> ()
 
 // -----
 
@@ -188,7 +188,7 @@ acc.wait wait_devnum(%cst: index)
 
 %cst = arith.constant 1 : index
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.wait async(%cst: index) attributes {async}
+"acc.wait"(%cst) <{operandSegmentSizes = array<i32: 0, 1, 0, 0>, async}> : (index) -> ()
 
 // -----
 
@@ -206,7 +206,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+} inclusiveUpperbound(array<i1: true>) independent
 
 // -----
 
@@ -224,7 +224,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+} inclusiveUpperbound(array<i1: true>) independent
 
 // -----
 
@@ -236,12 +236,12 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
     acc.shutdown
   }) : () -> ()
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+} inclusiveUpperbound(array<i1: true>) independent
 
 // -----
 
 // expected-error@+1 {{at least one operand must be present in dataOperands on the exit data operation}}
-acc.exit_data attributes {async}
+acc.exit_data async
 
 // -----
 
@@ -249,7 +249,7 @@ acc.exit_data attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.exit_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+"acc.exit_data"(%cst, %0) <{operandSegmentSizes = array<i32: 0, 1, 0, 0, 1>, async}> : (index, memref<f32>) -> ()
 acc.delete accPtr(%0 : memref<f32>)
 
 // -----
@@ -264,7 +264,7 @@ acc.delete accPtr(%0 : memref<f32>)
 // -----
 
 // expected-error@+1 {{at least one operand must be present in dataOperands on the enter data operation}}
-acc.enter_data attributes {async}
+acc.enter_data async
 
 // -----
 
@@ -272,7 +272,7 @@ acc.enter_data attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.enter_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+"acc.enter_data"(%cst, %0) <{operandSegmentSizes = array<i32: 0, 1, 0, 0, 1>, async}> : (index, memref<f32>) -> ()
 
 // -----
 
@@ -280,7 +280,7 @@ acc.enter_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {asy
 %value = memref.alloc() : memref<f32>
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.enter_data wait(%cst: index) dataOperands(%0 : memref<f32>) attributes {wait}
+"acc.enter_data"(%cst, %0) <{operandSegmentSizes = array<i32: 0, 0, 0, 1, 1>, wait}> : (index, memref<f32>) -> ()
 
 // -----
 
@@ -526,7 +526,7 @@ acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 :
 // expected-error@+1 {{unstructured acc.loop must not have induction variables}}
 acc.loop control(%iv : i32) = (%i1 : i32) to (%i2 : i32) step (%i1 : i32) {
   acc.yield
-} attributes {independent = [#acc.device_type<none>], unstructured}
+} independent unstructured
 
 // -----
 
@@ -555,7 +555,7 @@ acc.parallel num_gangs({%i64value: i64, %i64value : i64, %i64value : i64, %i64va
 %i64value = arith.constant 1 : i64
 acc.parallel {
 // expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
-  acc.set attributes {device_type = #acc.device_type<nvidia>}
+  acc.set device_type(#acc.device_type<nvidia>)
   acc.yield
 }
 
@@ -835,7 +835,7 @@ func.func @acc_loop_container() {
         scf.yield
     }
     acc.yield
-  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  } collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent
   return
 }
 
@@ -854,7 +854,7 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  } collapse([3]) collapseDeviceType([#acc.device_type<none>]) independent
   return
 }
 
@@ -862,13 +862,13 @@ func.func @acc_loop_container() {
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{no data clause modifiers are allowed}}
-%0 = acc.private varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero>}
+%0 = acc.private varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier zero>}> -> memref<f32>
 
 // -----
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
-%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+%0 = acc.create varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}> -> memref<f32>
 
 // -----
 
@@ -966,5 +966,21 @@ func.func @verify_host_data_duplicate_use_device(%arg0 : memref<i32>) {
   acc.host_data dataOperands(%0, %1 : memref<i32>, memref<i32>) {
     acc.terminator
   }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/107027.
+// acc.parallel with async operands but no asyncOperandsDeviceType attribute
+// must produce a diagnostic instead of crashing in verifyDeviceTypeCountMatch.
+
+func.func @verify_parallel_async_missing_device_type(%arg0: i64) {
+// expected-error @below {{async operands count must match async device_type count}}
+  "acc.parallel"(%arg0) <{
+    operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>
+  }> ({
+    acc.yield
+  }) : (i64) -> ()
   return
 }

@@ -16,6 +16,7 @@ include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td"
 
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
@@ -53,12 +54,12 @@ def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<
   Example:
 
   ```mlir
-
   wasmssa.block {
 
     // instructions
 
   } > ^successor
+  ```
   }];
 }
 
@@ -72,10 +73,10 @@ def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<
   Example:
 
   ```mlir
-
   wasmssa.loop {
 
   } > ^successor
+  ```
   }];
 }
 
@@ -99,7 +100,7 @@ def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
     Example:
 
     ```mlir
-      wasmssa.block_return
+    wasmssa.block_return
     ```
   }];
   let assemblyFormat = "($inputs^ `:` type($inputs))? attr-dict";
@@ -149,6 +150,7 @@ def WasmSSA_ConstOp : WasmSSA_Op<"const", [
 
 def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     AffineScope, AutomaticAllocationScope,
+    SymbolName,
     DeclareOpInterfaceMethods<FunctionOpInterface, ["verifyBody"]>,
     IsolatedFromAbove,
     Symbol]> {
@@ -212,7 +214,15 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
 
   let builders = [
@@ -239,7 +249,7 @@ def WasmSSA_FuncCallOp : WasmSSA_Op<"call"> {
 }
 
 def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
-    Symbol,
+    SymbolName, Symbol,
     CallableOpInterface,
     ImportOpInterface]> {
   let summary = "Importing a function variable";
@@ -274,7 +284,12 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
 
     ::mlir::SymbolTable::Visibility getVisibility() {
       return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
   let builders = [
     OpBuilder<(ins "StringRef":$symbol,
@@ -282,12 +297,15 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
                    "StringRef":$importName,
                    "FunctionType": $type)>
   ];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name `:` $type "
+                       "(`arg_attrs` `=` $arg_attrs^)? "
+                       "(`res_attrs` `=` $res_attrs^)? attr-dict";
 }
 
 def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
   AffineScope, AutomaticAllocationScope,
-  IsolatedFromAbove, Symbol, ConstantExpressionInitializerOpTrait]> {
+  IsolatedFromAbove, SymbolName, Symbol,
+  ConstantExpressionInitializerOpTrait]> {
   let summary= "WebAssembly global value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_ValTypeAttr: $type,
@@ -318,20 +336,31 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
     }
     ```
   }];
-  let regions = (region AnyRegion: $initializer);
+  let regions = (region SizedRegion<1>: $initializer);
 
   let extraClassDeclaration = [{
     ::mlir::SymbolTable::Visibility getVisibility() {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
+
+    wasmssa::ReturnOp getInitTerminator();
   }];
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
-    Symbol,
+    SymbolName, Symbol,
     ImportOpInterface]> {
   let summary = "Importing a global variable";
   let description = [{
@@ -354,7 +383,12 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
 
     ::mlir::SymbolTable::Visibility getVisibility() {
       return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -376,6 +410,25 @@ def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<Sy
   let arguments = (ins FlatSymbolRefAttr: $global);
   let results = (outs WasmSSA_ValType: $global_val);
   let assemblyFormat = "$global attr-dict `:` type($global_val)";
+}
+
+def WasmSSA_GlobalSetOp : WasmSSA_Op<"global_set", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Sets the value of the mutable global passed as argument.";
+  let description = [{
+     Sets the value of the mutable global referenced by the symbol to the given
+     value.
+
+     Example:
+
+     ```mlir
+     // Sets the value of `@global_0` to `%v`.
+     wasmssa.global_set @global_0 to %v : i32
+     ```
+    }];
+  let arguments = (ins FlatSymbolRefAttr: $global,
+                       WasmSSA_ValType: $value);
+  let assemblyFormat = "$global `to` $value `:` type($value) attr-dict";
 }
 
 def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
@@ -497,7 +550,7 @@ def WasmSSA_LocalTeeOp : WasmSSA_Op<"local_tee", [
   let assemblyFormat = "$localVar `:` type($localVar) `to` $value `:` type($value) attr-dict";
 }
 
-def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
+def WasmSSA_MemOp : WasmSSA_Op<"memory", [SymbolName, Symbol]> {
   let summary= "WebAssembly memory definition";
   let description = [{
     Define a memory to be used by the program.
@@ -526,13 +579,22 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
 
   let assemblyFormat = "(`exported` $exported^)? $sym_name $limits attr-dict";
 }
 
-def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> {
+def WasmSSA_MemImportOp
+    : WasmSSA_Op<"import_mem", [SymbolName, Symbol, ImportOpInterface]> {
   let summary = "Importing a memory";
   let description = [{
     Import a memory from another module.
@@ -542,7 +604,7 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
      ```mlir
      // Import the memory `mem` from `my_module` as @mem_0
      wasmssa.import_mem "mem" from "my_module" as @mem_0 {limits = !wasmssa<limit[2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -552,12 +614,17 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
       bool isDeclaration() const { return true; }
       ::mlir::SymbolTable::Visibility getVisibility() {
        return ::mlir::SymbolTable::Visibility::Nested;
-      };
+      }
+
+      void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+        if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+          emitOpError("Wasm imports must have nested visibility");
+      }
    }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $limits attr-dict";
 }
 
-def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
+def WasmSSA_TableOp : WasmSSA_Op<"table", [SymbolName, Symbol]> {
   let summary= "WebAssembly table value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_TableTypeAttr: $type,
@@ -567,12 +634,21 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
       return getExported() ?
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility == ::mlir::SymbolTable::Visibility::Private) {
+        emitOpError("Wasm symbols do not support private visibility");
+        return;
+      }
+      setExported(visibility == ::mlir::SymbolTable::Visibility::Public);
+    }
   }];
   let assemblyFormat = "(`exported` $exported^)? $sym_name $type attr-dict";
 }
 
-def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterface]> {
+def WasmSSA_TableImportOp
+    : WasmSSA_Op<"import_table", [SymbolName, Symbol, ImportOpInterface]> {
   let summary = "Importing a table";
   let description = [{
     Import a table from another module.
@@ -582,7 +658,7 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
      ```mlir
      // Import the table `table` from `my_module` as @table_0
      wasmssa.import_table "table" from "my_module" as @table_0 {type = !wasmssa<tabletype !wasmssa.funcref [2:]>}
-    ```
+     ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -592,9 +668,14 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
     bool isDeclaration() const { return true; }
     ::mlir::SymbolTable::Visibility getVisibility() {
        return ::mlir::SymbolTable::Visibility::Nested;
-    };
+    }
+
+    void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+      if (visibility != ::mlir::SymbolTable::Visibility::Nested)
+        emitOpError("Wasm imports must have nested visibility");
+    }
   }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $type attr-dict";
 }
 
 def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
@@ -604,6 +685,29 @@ def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
   let builders = [
     OpBuilder<(ins)>
   ];
+}
+
+def WasmSSA_SelectOp : WasmSSA_Op<"select", [
+    AllTypesMatch<["true_value", "false_value", "result"]>,
+    Pure]> {
+  let summary = "Select between two values based on a condition.";
+  let description = [{
+     Returns `true_value` if `condition` is non-zero, `false_value` otherwise.
+     Both operands and the result must share the same Wasm value type.
+
+     Example:
+
+     ```mlir
+     // Returns %a if %cond is non-zero, otherwise %b.
+     %r = wasmssa.select %cond, %a, %b : i32
+     ```
+    }];
+  let arguments = (ins WasmSSA_ValType: $true_value,
+                       WasmSSA_ValType: $false_value,
+                       I32: $condition);
+  let results = (outs WasmSSA_ValType: $result);
+  let assemblyFormat =
+      "$condition `,` $true_value `,` $false_value attr-dict `:` type($result)";
 }
 
 // ---- Numeric ops
@@ -624,7 +728,7 @@ def WasmSSA_AddOp : WasmSSA_BinaryNumericalOp<"add",
 
      ```mlir
      %a = wasmssa.add %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -634,7 +738,7 @@ def WasmSSA_AndOp : WasmSSA_BinaryNumericalOp<"and",
 
      ```mlir
      %a = wasmssa.and %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -644,7 +748,7 @@ def WasmSSA_DivOp : WasmSSA_BinaryNumericalOp<"div",
 
      ```mlir
      %a = wasmssa.div %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -654,7 +758,7 @@ def WasmSSA_DivUIOp : WasmSSA_BinaryNumericalOp<"div_ui",
 
      ```mlir
      %a = wasmssa.div_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -664,7 +768,7 @@ def WasmSSA_DivSIOp : WasmSSA_BinaryNumericalOp<"div_si",
 
      ```mlir
      %a = wasmssa.div_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -674,7 +778,7 @@ def WasmSSA_MulOp : WasmSSA_BinaryNumericalOp<"mul",
 
      ```mlir
      %a = wasmssa.mul %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -684,7 +788,7 @@ def WasmSSA_OrOp : WasmSSA_BinaryNumericalOp<"or",
 
      ```mlir
      %a = wasmssa.or %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -694,7 +798,7 @@ def WasmSSA_SubOp : WasmSSA_BinaryNumericalOp<"sub",
 
      ```mlir
      %a = wasmssa.sub %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -704,7 +808,7 @@ def WasmSSA_RemUIOp : WasmSSA_BinaryNumericalOp<"rem_ui",
 
      ```mlir
      %a = wasmssa.rem_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -714,7 +818,7 @@ def WasmSSA_RemSIOp : WasmSSA_BinaryNumericalOp<"rem_si",
 
      ```mlir
      %a = wasmssa.rem_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -724,7 +828,7 @@ def WasmSSA_XOrOp : WasmSSA_BinaryNumericalOp<"xor",
 
      ```mlir
      %a = wasmssa.xor %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -734,7 +838,7 @@ def WasmSSA_MinOp : WasmSSA_BinaryNumericalOp<"min",
 
      ```mlir
      %a = wasmssa.min %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -744,7 +848,7 @@ def WasmSSA_MaxOp : WasmSSA_BinaryNumericalOp<"max",
 
      ```mlir
      %a = wasmssa.max %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -754,7 +858,7 @@ def WasmSSA_CopySignOp : WasmSSA_BinaryNumericalOp<"copysign",
 
      ```mlir
      %a = wasmssa.copysign %b %c : f32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -774,7 +878,7 @@ def WasmSSA_EqOp : WasmSSA_BinaryComparisonOp<"eq",
 
      ```mlir
      %a = wasmssa.eq %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -784,7 +888,7 @@ def WasmSSA_NeOp : WasmSSA_BinaryComparisonOp<"ne",
 
      ```mlir
      %a = wasmssa.ne %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_NumericType]>{}
 
@@ -794,7 +898,7 @@ def WasmSSA_LtSIOp : WasmSSA_BinaryComparisonOp<"lt_si",
 
      ```mlir
      %a = wasmssa.lt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -804,7 +908,7 @@ def WasmSSA_LtUIOp : WasmSSA_BinaryComparisonOp<"lt_ui",
 
      ```mlir
      %a = wasmssa.lt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -814,7 +918,7 @@ def WasmSSA_LeSIOp : WasmSSA_BinaryComparisonOp<"le_si",
 
      ```mlir
      %a = wasmssa.le_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -824,7 +928,7 @@ def WasmSSA_LeUIOp : WasmSSA_BinaryComparisonOp<"le_ui",
 
      ```mlir
      %a = wasmssa.le_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -834,7 +938,7 @@ def WasmSSA_GtSIOp : WasmSSA_BinaryComparisonOp<"gt_si",
 
      ```mlir
      %a = wasmssa.gt_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -844,7 +948,7 @@ def WasmSSA_GtUIOp : WasmSSA_BinaryComparisonOp<"gt_ui",
 
      ```mlir
      %a = wasmssa.gt_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -854,7 +958,7 @@ def WasmSSA_GeSIOp : WasmSSA_BinaryComparisonOp<"ge_si",
 
      ```mlir
      %a = wasmssa.ge_si %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -864,7 +968,7 @@ def WasmSSA_GeUIOp : WasmSSA_BinaryComparisonOp<"ge_ui",
 
      ```mlir
      %a = wasmssa.ge_ui %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_IntegerType]>{}
 
@@ -874,7 +978,7 @@ def WasmSSA_LtOp : WasmSSA_BinaryComparisonOp<"lt",
 
      ```mlir
      %a = wasmssa.lt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -884,7 +988,7 @@ def WasmSSA_LeOp : WasmSSA_BinaryComparisonOp<"le",
 
      ```mlir
      %a = wasmssa.le %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -894,7 +998,7 @@ def WasmSSA_GtOp : WasmSSA_BinaryComparisonOp<"gt",
 
      ```mlir
      %a = wasmssa.gt %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -904,7 +1008,7 @@ def WasmSSA_GeOp : WasmSSA_BinaryComparisonOp<"ge",
 
      ```mlir
      %a = wasmssa.ge %b %c : i32
-    ```
+     ```
     }],
     [WasmSSA_FPType]>{}
 
@@ -926,7 +1030,7 @@ def WasmSSA_ShLOp : WasmSSA_ShiftRotateOp<"shl",
 
      ```mlir
      %a = wasmssa.shl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -942,7 +1046,7 @@ def WasmSSA_ShRSOp : WasmSSA_ShiftRotateOp<"shr_s",
 
      ```mlir
      %a = wasmssa.shr_s %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -958,7 +1062,7 @@ def WasmSSA_ShRUOp : WasmSSA_ShiftRotateOp<"shr_u",
 
      ```mlir
      %a = wasmssa.shr_u %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -972,7 +1076,7 @@ def WasmSSA_RotlOp : WasmSSA_ShiftRotateOp<"rotl",
 
      ```mlir
      %a = wasmssa.rotl %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -986,7 +1090,7 @@ def WasmSSA_RotrOp : WasmSSA_ShiftRotateOp<"rotr",
 
      ```mlir
      %a = wasmssa.rotr %b by %c bits : i64
-    ```
+     ```
     }]
     >{}
 
@@ -1009,7 +1113,7 @@ def WasmSSA_ConvertUOp : WasmSSA_ConversionOp<"convert_u",
 
      ```mlir
      %a = wasmssa.convert_u %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
@@ -1022,10 +1126,68 @@ def WasmSSA_ConvertSOp : WasmSSA_ConversionOp<"convert_s",
 
      ```mlir
      %a = wasmssa.convert_s %b : i32 to f64
-    ```
+     ```
     }],
     [WasmSSA_IntegerType],
     [WasmSSA_FPType]>{}
+
+def WasmSSA_TruncSIOp : WasmSSA_ConversionOp<"trunc_si",
+    [{Truncate floating point value to signed integer.
+
+    Consume a floating point value and produces a signed integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
+    [{Truncate floating point value to unsigned integer.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Traps if the value is NaN, is infinity, is negative, or is outside the range of the target integer type.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncSatSIOp : WasmSSA_ConversionOp<"trunc_sat_si",
+    [{Truncate floating point value to signed integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    NaN is mapped to 0, infinities are mapped to minimal and maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncSatUIOp : WasmSSA_ConversionOp<"trunc_sat_ui",
+    [{Truncate floating point value to unsigned integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Negative infinity and NaN are mapped to 0, positive infinity is mapped to maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
 
 def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
     "Convert a f64 value to f32",
@@ -1033,7 +1195,7 @@ def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
 
      ```mlir
      %a = wasmssa.demote %b : f64 to f32
-    ```
+     ```
     }],
     [F64],
     [F32]>{}
@@ -1044,7 +1206,7 @@ def WasmSSA_ExtendSI32Op : WasmSSA_Op<"extend_i32_s">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);
@@ -1057,7 +1219,7 @@ def WasmSSA_ExtendUI32Op : WasmSSA_Op<"extend_i32_u">{
 
      ```mlir
      %a = wasmssa.extend_i32_s %b to i64
-    ```
+     ```
     }];
   let arguments = (ins I32:$input);
   let results = (outs I64:$result);
@@ -1194,6 +1356,16 @@ def WasmSSA_TruncOp : WasmSSA_UnaryNumericalOp<"trunc",
 
                                          ```mlir
                                          %a = wasmssa.trunc %b : f32
+                                         ```
+                                        }],
+                                       [WasmSSA_FPType]>{}
+
+def WasmSSA_NearestOp : WasmSSA_UnaryNumericalOp<"nearest",
+                                       "Round floating point value to the nearest integer, ties to even",
+                                        [{Example:
+
+                                         ```mlir
+                                         %a = wasmssa.nearest %b : f32
                                          ```
                                         }],
                                        [WasmSSA_FPType]>{}

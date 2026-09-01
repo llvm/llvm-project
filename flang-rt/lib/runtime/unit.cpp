@@ -31,6 +31,63 @@ RT_OFFLOAD_API_GROUP_BEGIN
 
 static inline RT_API_ATTRS void SwapEndianness(
     char *data, std::size_t bytes, std::size_t elementBytes) {
+#ifndef RT_DEVICE_COMPILATION
+  switch (elementBytes) {
+  case 2:
+    for (std::size_t j{0}; j + 2 <= bytes; j += 2) {
+      std::uint16_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_ushort(x);
+#else
+      x = __builtin_bswap16(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 4:
+    for (std::size_t j{0}; j + 4 <= bytes; j += 4) {
+      std::uint32_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_ulong(x);
+#else
+      x = __builtin_bswap32(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 8:
+    for (std::size_t j{0}; j + 8 <= bytes; j += 8) {
+      std::uint64_t x;
+      runtime::memcpy(&x, data + j, sizeof(x));
+#if defined(_MSC_VER)
+      x = _byteswap_uint64(x);
+#else
+      x = __builtin_bswap64(x);
+#endif
+      runtime::memcpy(data + j, &x, sizeof(x));
+    }
+    return;
+  case 16:
+    for (std::size_t j{0}; j + 16 <= bytes; j += 16) {
+      std::uint64_t hi, lo;
+      runtime::memcpy(&lo, data + j, sizeof(lo));
+      runtime::memcpy(&hi, data + j + 8, sizeof(hi));
+#if defined(_MSC_VER)
+      lo = _byteswap_uint64(lo);
+      hi = _byteswap_uint64(hi);
+#else
+      lo = __builtin_bswap64(lo);
+      hi = __builtin_bswap64(hi);
+#endif
+      runtime::memcpy(data + j + 8, &lo, sizeof(lo));
+      runtime::memcpy(data + j, &hi, sizeof(hi));
+    }
+    return;
+  default:;
+  }
+#endif
   if (elementBytes > 1) {
     auto half{elementBytes >> 1};
     for (std::size_t j{0}; j + elementBytes <= bytes; j += elementBytes) {
@@ -826,20 +883,23 @@ void ExternalFileUnit::HitEndOnRead(IoErrorHandler &handler) {
 }
 
 ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
-  OwningPtr<ChildIo> current{std::move(child_)};
+  ChildIo *current{child_};
   Terminator &terminator{parent.GetIoErrorHandler()};
-  OwningPtr<ChildIo> next{New<ChildIo>{terminator}(parent, std::move(current))};
-  child_.reset(next.release());
+  child_ = new (AllocateMemoryOrCrash(terminator, sizeof(ChildIo)))
+      ChildIo{parent, current};
   leftTabLimit = positionInRecord;
   return *child_;
 }
 
 void ExternalFileUnit::PopChildIo(ChildIo &child) {
-  if (child_.get() != &child) {
+  ChildIo *previous = child.AcquirePrevious();
+  if (child_ != &child) {
     child.parent().GetIoErrorHandler().Crash(
         "ChildIo being popped is not top of stack");
   }
-  child_.reset(child.AcquirePrevious().release()); // deletes top child
+  child_->~ChildIo(); // delete top child
+  FreeMemory(child_);
+  child_ = previous;
 }
 
 std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {

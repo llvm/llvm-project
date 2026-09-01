@@ -544,7 +544,10 @@ public:
   bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return true;
+  }
   bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;
@@ -653,14 +656,12 @@ public:
         .TraverseDecl(Ctx.getTranslationUnitDecl());
 
     // Collect macro definitions.
-    for (Preprocessor::macro_iterator M = PP.macro_begin(),
-                                      MEnd = PP.macro_end();
-         M != MEnd; ++M) {
-      Location Loc(SM, M->second.getLatest()->getLocation());
+    for (const auto &M : PP.macros()) {
+      Location Loc(SM, M.second.getLatest()->getLocation());
       if (!Loc)
         continue;
 
-      Entities.add(M->first->getName().str(), Entry::EK_Macro, Loc);
+      Entities.add(M.first->getName().str(), Entry::EK_Macro, Loc);
     }
 
     // Merge header contents.
@@ -729,7 +730,10 @@ public:
   bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return true;
+  }
   bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;

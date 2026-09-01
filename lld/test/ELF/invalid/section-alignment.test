@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
-# RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
-# RUN: ld.lld %t -o /dev/null --noinhibit-exec 2>&1 | FileCheck %s
+# RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: ld.lld %t -o /dev/null --noinhibit-exec 2>&1 | FileCheck %s --check-prefix=WARN
 
 ## In current lld implementation, we do not accept sh_addralign
 ## larger than UINT32_MAX.
@@ -18,4 +18,5 @@ Sections:
     Offset:          0x100
     Content:         "00000000"
 
-# CHECK: section sh_addralign is too large
+# ERROR: error: {{.*}}: section sh_addralign is too large
+# WARN: warning: {{.*}}: section sh_addralign is too large

@@ -10,7 +10,7 @@ add_integration_test(
   DEPENDS
     libc.src.__support.CPP.string_view
     libc.src.errno.errno
-    libc.src.stdlib.getenv
+    libc.src.sys.stat.stat
     libc.src.unistd.getcwd
 )
 
@@ -62,6 +62,18 @@ if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86})
 endif()
 
 add_executable(
+  libc_exec_test_signal_exit
+  EXCLUDE_FROM_ALL
+  exec_test_signal_exit.cpp
+)
+set_target_properties(
+  libc_exec_test_signal_exit
+  PROPERTIES
+    OUTPUT_NAME libc_exec_test_signal_exit
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_executable(
   libc_execv_test_normal_exit
   EXCLUDE_FROM_ALL
   execv_test_normal_exit.cpp
@@ -74,15 +86,32 @@ set_target_properties(
 )
 
 add_executable(
-  libc_execv_test_signal_exit
+  libc_execle_test_normal_exit
   EXCLUDE_FROM_ALL
-  execv_test_signal_exit.cpp
+  execle_test_normal_exit.cpp
 )
 set_target_properties(
-  libc_execv_test_signal_exit
+  libc_execle_test_normal_exit
   PROPERTIES
-    OUTPUT_NAME libc_execv_test_signal_exit
+    OUTPUT_NAME libc_execle_test_normal_exit
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_integration_test(
+  execle_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    execle_test.cpp
+  DEPENDS
+    libc_execle_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.src.errno.errno
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.execle
+    libc.src.unistd.fork
+  ENV
+    EXECLE_TEST=PASS
 )
 
 add_integration_test(
@@ -93,7 +122,7 @@ add_integration_test(
     execv_test.cpp
   DEPENDS
     libc_execv_test_normal_exit
-    libc_execv_test_signal_exit
+    libc_exec_test_signal_exit
     libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execv
@@ -110,7 +139,7 @@ add_integration_test(
     execve_test.cpp
   DEPENDS
     libc_execv_test_normal_exit
-    libc_execv_test_signal_exit
+    libc_exec_test_signal_exit
     libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execve

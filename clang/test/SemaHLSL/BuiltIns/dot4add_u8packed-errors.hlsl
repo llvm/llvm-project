@@ -24,5 +24,5 @@ struct S { float f; };
 
 int test_expr_struct_type_check(S p0, uint p1) {
   return __builtin_hlsl_dot4add_u8packed(p1, p1, p0);
-  // expected-error@-1 {{no viable conversion from 'S' to 'unsigned int'}}
+  // expected-error@-1 {{cannot initialize a parameter of type 'unsigned int' with an lvalue of type 'S'}}
 }

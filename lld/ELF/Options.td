@@ -148,7 +148,10 @@ def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArg
 defm irpgo_profile: EEq<"irpgo-profile",
   "Read a temporary profile file for use with --bp-startup-sort=">;
 def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
-  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together. Deprecated. Please use --bp-compression-sort-section">;
+def bp_compression_sort_section: JJ<"bp-compression-sort-section=">,
+  MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+  HelpText<"Reorder input sections whose name matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">;
 def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
   HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
 
@@ -844,14 +847,10 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
 
-// Hidden options, used by clang's -fsanitize=memtag-* options to emit an ELF
-// note to designate what kinds of memory (stack/heap) should be protected using
-// ARM's MTE on armv8.5+. A binary's desire for stack MTE can't be obtained
-// implicitly, so we have a specific bit in the note to signal to the loader to
-// remap the stack as PROT_MTE.
-defm android_memtag_stack: BB<"android-memtag-stack",
-    "Instruct the dynamic loader to prepare for MTE stack instrumentation", "">;
-defm android_memtag_heap: BB<"android-memtag-heap",
-    "Instruct the dynamic loader to enable MTE protection for the heap", "">;
-defm android_memtag_mode: EEq<"android-memtag-mode",
-    "Instruct the dynamic loader to start under MTE mode {async, sync, none}">;
+// Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
+// to designate what kinds of memory (stack/heap) should be protected using
+// ARM's MTE on armv8.5+. This note is Android-specific and it is used only in
+// older SDK versions.
+defm android_memtag_note
+    : BB<"android-memtag-note", "Emit the Android-specific legacy memtag note",
+         "">;

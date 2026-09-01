@@ -160,10 +160,9 @@ define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast" {
 ; CHECK-NEXT:  .LBB4_5: // %LJ.latch
 ; CHECK-NEXT:    // in Loop: Header=BB4_6 Depth=2
 ; CHECK-NEXT:    add x8, x21, #1
+; CHECK-NEXT:    cmp x21, x19
 ; CHECK-NEXT:    str w0, [x20, x21, lsl #2]
-; CHECK-NEXT:    sub x9, x8, #1
 ; CHECK-NEXT:    mov x21, x8
-; CHECK-NEXT:    cmp x9, x19
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_6: // %LJ
 ; CHECK-NEXT:    // Parent Loop BB4_3 Depth=1

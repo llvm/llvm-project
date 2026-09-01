@@ -288,3 +288,31 @@ define i32 @umin_of_umin_umax_wrong_operand2(i32 %x, i32 %y, i32 %z) {
   %r = select i1 %cmp3, i32 %min, i32 %max
   ret i32 %r
 }
+
+; Make sure that the range attribute is dropped.
+
+define i32 @umax_of_umax_umin_drop_range(i32 %x, i32 %y) {
+; CHECK-LABEL: @umax_of_umax_umin_drop_range(
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
+;
+  %cmp1 = icmp ugt i32 %x, %y
+  %min = select i1 %cmp1, i32 %y, i32 %x
+  %cmp2 = icmp ugt i32 %x, %y
+  %max = select i1 %cmp2, i32 %x, i32 %y
+  %r = call i32 @llvm.umax.i32(i32 range(i32 0, 4) %min, i32 range(i32 4, 8) %max)
+  ret i32 %r
+}
+
+; Make sure that the noundef attribute is dropped.
+
+define i32 @umax_of_symmetric_drop_noundef(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @umax_of_symmetric_drop_noundef(
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[MAX]]
+;
+  %sel1 = select i1 %cond, i32 %y, i32 %x
+  %sel2 = select i1 %cond, i32 %x, i32 %y
+  %r = call i32 @llvm.umax.i32(i32 noundef %sel1, i32 %sel2)
+  ret i32 %r
+}

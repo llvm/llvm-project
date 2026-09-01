@@ -74,3 +74,21 @@ define i64 @add_multiuse_const(i64 %x, i64 %y) {
   %xor = xor i64 %a, %b
   ret i64 %xor
 }
+
+
+define i64 @add_i64_min(i64 %x) {
+; NOZBS-LABEL: add_i64_min:
+; NOZBS:       # %bb.0:
+; NOZBS-NEXT:    li a1, -1
+; NOZBS-NEXT:    slli a1, a1, 63
+; NOZBS-NEXT:    add a0, a0, a1
+; NOZBS-NEXT:    ret
+;
+; ZBS-LABEL: add_i64_min:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    bseti a1, zero, 63
+; ZBS-NEXT:    add a0, a0, a1
+; ZBS-NEXT:    ret
+  %a = add i64 %x, -9223372036854775808
+  ret i64 %a
+}

@@ -17,8 +17,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
-#include <vector>
 
 namespace Fortran::semantics {
 
@@ -185,7 +183,8 @@ private:
   }
   bool CheckSubscriptExpr(
       const evaluate::Expr<evaluate::SubscriptInteger> &expr) const {
-    if (!evaluate::IsConstantExpr(expr)) { // C875,C881
+    if (!evaluate::IsConstantExpr(expr, /*context=*/
+            nullptr /* to accept unbound implied DO indices */)) { // C875,C881
       context_.Say(
           source_, "Data object must have constant subscripts"_err_en_US);
       return false;

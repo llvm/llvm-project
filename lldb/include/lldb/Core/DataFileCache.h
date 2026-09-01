@@ -99,13 +99,21 @@ private:
 
 /// A signature for a given file on disk.
 ///
-/// Any files that are cached in the LLDB index cached need some data that
-/// uniquely identifies a file on disk and this information should be written
-/// into each cache file so we can validate if the cache file still matches
-/// the file we are trying to load cached data for. Objects can fill out this
-/// signature and then encode and decode them to validate the signatures
-/// match. If they do not match, the cache file on disk should be removed as
-/// it is out of date.
+/// There are two hashes for each file in the LLDB Index Cache.  One
+/// hash uniquely identifies the binary, incorporating the name/filepath,
+/// triple, architecture -- things that do not change as the same binary
+/// is recompiled with update code.  ObjectFile::GetCacheHash() and
+/// Module::GetHash() provide these hashes.
+///
+/// The second hash, calculated in this class, is based on the mod date
+/// and UUID of the binary and does change on every recompile of the same
+/// binary.
+///
+/// The two hashes allow us to identify a file uniquely in the LLDB Index
+/// Cache and re-use the cache if the existing entry is a match for both.
+/// It also allows us to remove the entry for a previous build of a specific
+/// file, and save the new recompiled binary's symbol table in the LLDB Index
+/// Cache in its place.
 struct CacheSignature {
   /// UUID of object file or module.
   std::optional<UUID> m_uuid;

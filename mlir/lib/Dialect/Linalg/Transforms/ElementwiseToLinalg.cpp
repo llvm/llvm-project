@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALGPASS
@@ -137,14 +138,15 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
         /*iteratorTypes=*/iteratorTypes,
         /*bodyBuilder=*/
         [&](OpBuilder &builder, Location loc, ValueRange regionArgs) {
-          SmallVector<Type> resultEltTys = llvm::to_vector<6>(
-              llvm::map_range(op->getResultTypes(), [](Type type) {
+          SmallVector<Type> resultEltTys =
+              llvm::map_to_vector<6>(op->getResultTypes(), [](Type type) {
                 return cast<TensorType>(type).getElementType();
-              }));
-          Operation *scalarOp =
-              builder.create(loc, op->getName().getIdentifier(),
-                             regionArgs.take_front(op->getNumOperands()),
-                             resultEltTys, op->getAttrs());
+              });
+          Operation *scalarOp = builder.insert(Operation::create(
+              loc, op->getName(), resultEltTys,
+              regionArgs.take_front(op->getNumOperands()),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              /*successors=*/{}, /*numRegions=*/0));
           linalg::YieldOp::create(builder, loc, scalarOp->getResults());
         });
     return success();

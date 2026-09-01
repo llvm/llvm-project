@@ -15,9 +15,11 @@ float test_dot_no_second_arg(float2 p0) {
   // expected-error@-1 {{no matching function for call to 'dot'}}
 }
 
+// With implicit conversions, the float2 overload is selected and float3 is
+// truncated to float2 with a warning (no longer a type-mismatch error).
 float test_dot_vector_size_mismatch(float3 p0, float2 p1) {
   return dot(p0, p1);
-  // expected-error@-1 {{arguments are of different types ('vector<[...], 3>' vs 'vector<[...], 2>')}}
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
 float test_dot_builtin_vector_size_mismatch(float3 p0, float2 p1) {

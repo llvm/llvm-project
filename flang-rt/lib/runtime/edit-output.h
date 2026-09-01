@@ -77,7 +77,8 @@ private:
   RT_API_ATTRS bool IsZero() const { return x_.IsZero(); }
 
   RT_API_ATTRS decimal::ConversionToDecimalResult ConvertToDecimal(
-      int significantDigits, enum decimal::FortranRounding, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding,
+      int width = 3 /*len("Inf")*/, int flags = 0);
 
   struct ConvertToHexadecimalResult {
     const char *str;
@@ -85,7 +86,8 @@ private:
     int exponent;
   };
   RT_API_ATTRS ConvertToHexadecimalResult ConvertToHexadecimal(
-      int significantDigits, enum decimal::FortranRounding, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding, int width,
+      int flags);
 
   BinaryFloatingPoint x_;
   char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +

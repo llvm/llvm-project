@@ -1,0 +1,78 @@
+# A function the linker eliminated (dead-stripped, or inlined into all its
+# callers) keeps a DWARF subprogram DIE whose DW_AT_low_pc is a "(dead code)"
+# tombstone. Such a tombstone resolves to no section, meaning the DIE doesn't
+# describe real code, and hence shouldn't resolve to a breakpoint.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "breakpoint set --name dead_stripped" \
+# RUN:           -o "breakpoint set --name live" -o exit 2>&1 | FileCheck %s
+
+# CHECK: (lldb) breakpoint set --name dead_stripped
+# CHECK-NEXT: Breakpoint 1: no locations (pending).
+# CHECK: (lldb) breakpoint set --name live
+# CHECK-NEXT: Breakpoint 2: where = {{.*}}`live{{.*}}, address = 0x00000017
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x1
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            live
+        Kind:            FUNCTION
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+        Body:            23808080800041106B21012001200036020C200128020C4101740F0B
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110155170000022E01110112064018030E3A0B3B0B271949133F1900000305000218030E3A0B3B0B49130000042400030E3E0B0B0B000000
+  - Type:            CUSTOM
+    HeaderSecSizeEncodingLen: 2
+    Name:            .debug_info
+    Payload:         780000000400000000000401290000001D001E0000000000000006000000000000000000000002FFFFFFFF1F00000004ED00019F100000000101740000000302910C000000000101740000000002020000001F00000004ED00019F0B0000000102740000000302910C00000000010274000000000402000000050400
+  - Type:            CUSTOM
+    Name:            .debug_ranges
+    Payload:         FEFFFFFFFEFFFFFF02000000210000000000000000000000
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         7800696E74002F746D70006C69766500646561645F7374726970706564002F746D702F6D696E2E6300636C616E672076657273696F6E2032322E312E302D776173692D73646B202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420343433346461626236393931363835366238323466363861363462303239633637313735653533322900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         5500000004001D000000010101FB0E0D000101010100000001000001006D696E2E630000000000000502FFFFFFFF0105230A084A05250658051C3C02020001010005020200000013051A0A084A051C065805133C0202000101
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            live
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+...

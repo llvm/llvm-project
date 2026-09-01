@@ -17,13 +17,19 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "nvptx64-nvidia-cuda"
 
 define <2 x float> @test_ret_const() #0 {
-; CHECK-LABEL: test_ret_const(
-; CHECK:       {
-; CHECK-EMPTY:
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0f3F800000, 0f40000000};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_ret_const(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {0f3F800000, 0f40000000};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_ret_const(
+; CHECK-F32X2:       {
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {0f3F800000, 0f40000000};
+; CHECK-F32X2-NEXT:    ret;
   ret <2 x float> <float 1.0, float 2.0>
 }
 
@@ -43,9 +49,9 @@ define float @test_extract_0(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_extract_0_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_extract_0_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, _}, %rd1;
-; CHECK-F32X2-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-F32X2-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-F32X2-NEXT:    ret;
   %e = extractelement <2 x float> %a, i32 0
   ret float %e
@@ -67,9 +73,9 @@ define float @test_extract_1(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_extract_1_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_extract_1_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {_, %r1}, %rd1;
-; CHECK-F32X2-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-F32X2-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-F32X2-NEXT:    ret;
   %e = extractelement <2 x float> %a, i32 1
   ret float %e
@@ -105,12 +111,12 @@ define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_extract_i_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_extract_i_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_extract_i_param_0];
 ; CHECK-F32X2-NEXT:    setp.eq.b64 %p1, %rd2, 0;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
-; CHECK-F32X2-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-F32X2-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-F32X2-NEXT:    ret;
   %e = extractelement <2 x float> %a, i64 %idx
   ret float %e
@@ -134,10 +140,10 @@ define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fadd_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fadd_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_param_0];
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> %a, %b
   ret <2 x float> %r
@@ -161,12 +167,12 @@ define <2 x float> @test_fadd_imm_0(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_imm_0_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_imm_0_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40000000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd2, {%r2, %r1};
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> <float 1.0, float 2.0>, %a
   ret <2 x float> %r
@@ -190,12 +196,12 @@ define <2 x float> @test_fadd_imm_1(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_imm_1_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_imm_1_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40000000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd2, {%r2, %r1};
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> %a, <float 1.0, float 2.0>
   ret <2 x float> %r
@@ -221,11 +227,11 @@ define <4 x float> @test_fadd_v4(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_fadd_v4_param_1];
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_v4_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd3, %rd4}, [test_fadd_v4_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_v4_param_0];
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd5, %rd2, %rd4;
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd6, %rd1, %rd3;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> %a, %b
   ret <4 x float> %r
@@ -251,7 +257,7 @@ define <4 x float> @test_fadd_imm_0_v4(<4 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_imm_0_v4_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_imm_0_v4_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40800000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f40400000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r2, %r1};
@@ -260,7 +266,7 @@ define <4 x float> @test_fadd_imm_0_v4(<4 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    mov.b32 %r4, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd5, {%r4, %r3};
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd6, %rd1, %rd5;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd4};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd4};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %a
   ret <4 x float> %r
@@ -286,7 +292,7 @@ define <4 x float> @test_fadd_imm_1_v4(<4 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_imm_1_v4_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_imm_1_v4_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40800000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f40400000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r2, %r1};
@@ -295,7 +301,7 @@ define <4 x float> @test_fadd_imm_1_v4(<4 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    mov.b32 %r4, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd5, {%r4, %r3};
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd6, %rd1, %rd5;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd4};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd4};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> %a, <float 1.0, float 2.0, float 3.0, float 4.0>
   ret <4 x float> %r
@@ -319,10 +325,10 @@ define <2 x float> @test_fsub(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fsub_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fsub_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fsub_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fsub_param_0];
 ; CHECK-F32X2-NEXT:    sub.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fsub <2 x float> %a, %b
   ret <2 x float> %r
@@ -346,11 +352,11 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fneg_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fneg_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    neg.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    neg.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fneg <2 x float> %a
   ret <2 x float> %r
@@ -374,10 +380,10 @@ define <2 x float> @test_fmul(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fmul_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fmul_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fmul_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fmul_param_0];
 ; CHECK-F32X2-NEXT:    mul.rn.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fmul <2 x float> %a, %b
   ret <2 x float> %r
@@ -402,13 +408,13 @@ define <2 x float> @test_fdiv(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fdiv_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fdiv_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fdiv_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fdiv_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r5, %r4, %r2;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fdiv <2 x float> %a, %b
   ret <2 x float> %r
@@ -445,8 +451,8 @@ define <2 x float> @test_frem(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_frem_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_frem_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_frem_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_frem_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    div.rn.f32 %r5, %r4, %r2;
@@ -461,7 +467,7 @@ define <2 x float> @test_frem(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    fma.rn.f32 %r13, %r12, %r1, %r3;
 ; CHECK-F32X2-NEXT:    testp.infinite.f32 %p2, %r1;
 ; CHECK-F32X2-NEXT:    selp.f32 %r14, %r3, %r13, %p2;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r14, %r9};
 ; CHECK-F32X2-NEXT:    ret;
   %r = frem <2 x float> %a, %b
   ret <2 x float> %r
@@ -485,10 +491,10 @@ define <2 x float> @test_fadd_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fadd_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fadd_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_ftz_param_0];
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> %a, %b
   ret <2 x float> %r
@@ -512,12 +518,12 @@ define <2 x float> @test_fadd_imm_0_ftz(<2 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_imm_0_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_imm_0_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40000000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd2, {%r2, %r1};
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> <float 1.0, float 2.0>, %a
   ret <2 x float> %r
@@ -541,12 +547,12 @@ define <2 x float> @test_fadd_imm_1_ftz(<2 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fadd_imm_1_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fadd_imm_1_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40000000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd2, {%r2, %r1};
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <2 x float> %a, <float 1.0, float 2.0>
   ret <2 x float> %r
@@ -572,11 +578,11 @@ define <4 x float> @test_fadd_v4_ftz(<4 x float> %a, <4 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_fadd_v4_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_v4_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd3, %rd4}, [test_fadd_v4_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_v4_ftz_param_0];
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd5, %rd2, %rd4;
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd6, %rd1, %rd3;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> %a, %b
   ret <4 x float> %r
@@ -602,7 +608,7 @@ define <4 x float> @test_fadd_imm_0_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_imm_0_v4_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_imm_0_v4_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40800000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f40400000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r2, %r1};
@@ -611,7 +617,7 @@ define <4 x float> @test_fadd_imm_0_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    mov.b32 %r4, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd5, {%r4, %r3};
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd6, %rd1, %rd5;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd4};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd4};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, %a
   ret <4 x float> %r
@@ -637,7 +643,7 @@ define <4 x float> @test_fadd_imm_1_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fadd_imm_1_v4_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fadd_imm_1_v4_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b32 %r1, 0f40800000;
 ; CHECK-F32X2-NEXT:    mov.b32 %r2, 0f40400000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r2, %r1};
@@ -646,7 +652,7 @@ define <4 x float> @test_fadd_imm_1_v4_ftz(<4 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    mov.b32 %r4, 0f3F800000;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd5, {%r4, %r3};
 ; CHECK-F32X2-NEXT:    add.rn.ftz.f32x2 %rd6, %rd1, %rd5;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd4};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd6, %rd4};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fadd <4 x float> %a, <float 1.0, float 2.0, float 3.0, float 4.0>
   ret <4 x float> %r
@@ -670,10 +676,10 @@ define <2 x float> @test_fsub_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fsub_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fsub_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fsub_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fsub_ftz_param_0];
 ; CHECK-F32X2-NEXT:    sub.rn.ftz.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fsub <2 x float> %a, %b
   ret <2 x float> %r
@@ -697,11 +703,11 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fneg_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fneg_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    neg.ftz.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    neg.ftz.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fneg <2 x float> %a
   ret <2 x float> %r
@@ -725,10 +731,10 @@ define <2 x float> @test_fmul_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fmul_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fmul_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fmul_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fmul_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mul.rn.ftz.f32x2 %rd3, %rd1, %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fmul <2 x float> %a, %b
   ret <2 x float> %r
@@ -753,11 +759,11 @@ define <2 x float> @test_fma_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [test_fma_ftz_param_2];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fma_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fma_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [test_fma_ftz_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fma_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fma_ftz_param_0];
 ; CHECK-F32X2-NEXT:    fma.rn.ftz.f32x2 %rd4, %rd1, %rd2, %rd3;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.fma(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
@@ -782,13 +788,13 @@ define <2 x float> @test_fdiv_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fdiv_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fdiv_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fdiv_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fdiv_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r5, %r4, %r2;
 ; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fdiv <2 x float> %a, %b
   ret <2 x float> %r
@@ -825,8 +831,8 @@ define <2 x float> @test_frem_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_frem_ftz_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_frem_ftz_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_frem_ftz_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_frem_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r5, %r4, %r2;
@@ -841,7 +847,7 @@ define <2 x float> @test_frem_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-F32X2-NEXT:    fma.rn.ftz.f32 %r13, %r12, %r1, %r3;
 ; CHECK-F32X2-NEXT:    testp.infinite.f32 %p2, %r1;
 ; CHECK-F32X2-NEXT:    selp.f32 %r14, %r3, %r13, %p2;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r14, %r9};
 ; CHECK-F32X2-NEXT:    ret;
   %r = frem <2 x float> %a, %b
   ret <2 x float> %r
@@ -865,8 +871,8 @@ define void @test_ldst_v2f32(ptr %a, ptr %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2f32_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2f32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_ldst_v2f32_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v2f32_param_0];
 ; CHECK-F32X2-NEXT:    ld.b64 %rd3, [%rd1];
 ; CHECK-F32X2-NEXT:    st.b64 [%rd2], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
@@ -876,19 +882,33 @@ define void @test_ldst_v2f32(ptr %a, ptr %b) #0 {
 }
 
 define void @test_ldst_v3f32(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: test_ldst_v3f32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v3f32_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v3f32_param_0];
-; CHECK-NEXT:    ld.b64 %rd3, [%rd1];
-; CHECK-NEXT:    ld.b32 %r1, [%rd1+8];
-; CHECK-NEXT:    st.b32 [%rd2+8], %r1;
-; CHECK-NEXT:    st.b64 [%rd2], %rd3;
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_ldst_v3f32(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v3f32_param_1];
+; CHECK-NOF32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v3f32_param_0];
+; CHECK-NOF32X2-NEXT:    ld.b64 %rd3, [%rd1];
+; CHECK-NOF32X2-NEXT:    ld.b32 %r1, [%rd1+8];
+; CHECK-NOF32X2-NEXT:    st.b32 [%rd2+8], %r1;
+; CHECK-NOF32X2-NEXT:    st.b64 [%rd2], %rd3;
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_ldst_v3f32(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_ldst_v3f32_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v3f32_param_0];
+; CHECK-F32X2-NEXT:    ld.b64 %rd3, [%rd1];
+; CHECK-F32X2-NEXT:    ld.b32 %r1, [%rd1+8];
+; CHECK-F32X2-NEXT:    st.b32 [%rd2+8], %r1;
+; CHECK-F32X2-NEXT:    st.b64 [%rd2], %rd3;
+; CHECK-F32X2-NEXT:    ret;
   %t1 = load <3 x float>, ptr %a
   store <3 x float> %t1, ptr %b, align 32
   ret void
@@ -912,8 +932,8 @@ define void @test_ldst_v4f32(ptr %a, ptr %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v4f32_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v4f32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_ldst_v4f32_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v4f32_param_0];
 ; CHECK-F32X2-NEXT:    ld.v2.b64 {%rd3, %rd4}, [%rd1];
 ; CHECK-F32X2-NEXT:    st.v2.b64 [%rd2], {%rd3, %rd4};
 ; CHECK-F32X2-NEXT:    ret;
@@ -942,8 +962,8 @@ define void @test_ldst_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v8f32_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v8f32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_ldst_v8f32_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v8f32_param_0];
 ; CHECK-F32X2-NEXT:    ld.v2.b64 {%rd3, %rd4}, [%rd1];
 ; CHECK-F32X2-NEXT:    ld.v2.b64 {%rd5, %rd6}, [%rd1+16];
 ; CHECK-F32X2-NEXT:    st.v2.b64 [%rd2+16], {%rd5, %rd6};
@@ -981,18 +1001,18 @@ define <2 x float> @test_call(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_call_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_call_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_call_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_call_param_0];
 ; CHECK-F32X2-NEXT:    { // callseq 0, 0
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-F32X2-NEXT:    st.param.b64 [param1], %rd2;
-; CHECK-F32X2-NEXT:    st.param.b64 [param0], %rd1;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param1], %rd2;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param0], %rd1;
 ; CHECK-F32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-F32X2-NEXT:    } // callseq 0
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @test_callee(<2 x float> %a, <2 x float> %b)
   ret <2 x float> %r
@@ -1023,18 +1043,18 @@ define <2 x float> @test_call_flipped(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_call_flipped_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_call_flipped_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_call_flipped_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_call_flipped_param_0];
 ; CHECK-F32X2-NEXT:    { // callseq 1, 0
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-F32X2-NEXT:    st.param.b64 [param1], %rd1;
-; CHECK-F32X2-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param1], %rd1;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param0], %rd2;
 ; CHECK-F32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-F32X2-NEXT:    } // callseq 1
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @test_callee(<2 x float> %b, <2 x float> %a)
   ret <2 x float> %r
@@ -1065,18 +1085,18 @@ define <2 x float> @test_tailcall_flipped(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_tailcall_flipped_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_tailcall_flipped_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_tailcall_flipped_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_tailcall_flipped_param_0];
 ; CHECK-F32X2-NEXT:    { // callseq 2, 0
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-F32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-F32X2-NEXT:    st.param.b64 [param1], %rd1;
-; CHECK-F32X2-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param1], %rd1;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [param0], %rd2;
 ; CHECK-F32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-F32X2-NEXT:    } // callseq 2
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = tail call <2 x float> @test_callee(<2 x float> %b, <2 x float> %a)
   ret <2 x float> %r
@@ -1107,13 +1127,13 @@ define <2 x float> @test_select(<2 x float> %a, <2 x float> %b, i1 zeroext %c) #
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b8 %rs1, [test_select_param_2];
 ; CHECK-F32X2-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-F32X2-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_select_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_select_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_select_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_select_param_0];
 ; CHECK-F32X2-NEXT:    selp.b64 %rd3, %rd1, %rd2, %p1;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = select i1 %c, <2 x float> %a, <2 x float> %b
   ret <2 x float> %r
@@ -1144,10 +1164,10 @@ define <2 x float> @test_select_cc(<2 x float> %a, <2 x float> %b, <2 x float> %
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd4, [test_select_cc_param_3];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [test_select_cc_param_2];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_select_cc_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_select_cc_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd4, [test_select_cc_param_3];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [test_select_cc_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_select_cc_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_select_cc_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd4;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd3;
 ; CHECK-F32X2-NEXT:    setp.neu.f32 %p1, %r3, %r1;
@@ -1156,7 +1176,7 @@ define <2 x float> @test_select_cc(<2 x float> %a, <2 x float> %b, <2 x float> %
 ; CHECK-F32X2-NEXT:    mov.b64 {%r7, %r8}, %rd1;
 ; CHECK-F32X2-NEXT:    selp.f32 %r9, %r8, %r6, %p2;
 ; CHECK-F32X2-NEXT:    selp.f32 %r10, %r7, %r5, %p1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r10, %r9};
 ; CHECK-F32X2-NEXT:    ret;
   %cc = fcmp une <2 x float> %c, %d
   %r = select <2 x i1> %cc, <2 x float> %a, <2 x float> %b
@@ -1189,17 +1209,17 @@ define <2 x double> @test_select_cc_f64_f32(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<9>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_select_cc_f64_f32_param_1];
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_select_cc_f64_f32_param_0];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd6, [test_select_cc_f64_f32_param_3];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd5, [test_select_cc_f64_f32_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd3, %rd4}, [test_select_cc_f64_f32_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_select_cc_f64_f32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd6, [test_select_cc_f64_f32_param_3];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd5, [test_select_cc_f64_f32_param_2];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd6;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd5;
 ; CHECK-F32X2-NEXT:    setp.neu.f32 %p1, %r3, %r1;
 ; CHECK-F32X2-NEXT:    setp.neu.f32 %p2, %r4, %r2;
 ; CHECK-F32X2-NEXT:    selp.f64 %rd7, %rd2, %rd4, %p2;
 ; CHECK-F32X2-NEXT:    selp.f64 %rd8, %rd1, %rd3, %p1;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd8, %rd7};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd8, %rd7};
 ; CHECK-F32X2-NEXT:    ret;
   %cc = fcmp une <2 x float> %c, %d
   %r = select <2 x i1> %cc, <2 x double> %a, <2 x double> %b
@@ -1232,17 +1252,17 @@ define <2 x float> @test_select_cc_f32_f64(<2 x float> %a, <2 x float> %b, <2 x 
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd5, %rd6}, [test_select_cc_f32_f64_param_3];
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [test_select_cc_f32_f64_param_2];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_select_cc_f32_f64_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_select_cc_f32_f64_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd5, %rd6}, [test_select_cc_f32_f64_param_3];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd3, %rd4}, [test_select_cc_f32_f64_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_select_cc_f32_f64_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_select_cc_f32_f64_param_0];
 ; CHECK-F32X2-NEXT:    setp.neu.f64 %p1, %rd3, %rd5;
 ; CHECK-F32X2-NEXT:    setp.neu.f64 %p2, %rd4, %rd6;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    selp.f32 %r5, %r4, %r2, %p2;
 ; CHECK-F32X2-NEXT:    selp.f32 %r6, %r3, %r1, %p1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %cc = fcmp une <2 x double> %c, %d
   %r = select <2 x i1> %cc, <2 x float> %a, <2 x float> %b
@@ -1275,16 +1295,16 @@ define <2 x i1> @test_fcmp_une(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_une_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_une_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_une_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_une_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.neu.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.neu.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp une <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1316,16 +1336,16 @@ define <2 x i1> @test_fcmp_ueq(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ueq_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ueq_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ueq_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ueq_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.equ.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.equ.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ueq <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1357,16 +1377,16 @@ define <2 x i1> @test_fcmp_ugt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ugt_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ugt_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ugt_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ugt_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.gtu.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.gtu.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ugt <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1398,16 +1418,16 @@ define <2 x i1> @test_fcmp_uge(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_uge_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_uge_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_uge_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_uge_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.geu.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.geu.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp uge <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1439,16 +1459,16 @@ define <2 x i1> @test_fcmp_ult(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ult_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ult_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ult_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ult_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.ltu.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.ltu.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ult <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1480,16 +1500,16 @@ define <2 x i1> @test_fcmp_ule(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ule_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ule_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ule_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ule_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.leu.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.leu.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ule <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1521,16 +1541,16 @@ define <2 x i1> @test_fcmp_uno(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_uno_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_uno_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_uno_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_uno_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.nan.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.nan.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp uno <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1562,16 +1582,16 @@ define <2 x i1> @test_fcmp_one(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_one_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_one_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_one_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_one_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.ne.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.ne.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp one <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1603,16 +1623,16 @@ define <2 x i1> @test_fcmp_oeq(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_oeq_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_oeq_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_oeq_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_oeq_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.eq.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.eq.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp oeq <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1644,16 +1664,16 @@ define <2 x i1> @test_fcmp_ogt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ogt_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ogt_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ogt_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ogt_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.gt.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.gt.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ogt <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1685,16 +1705,16 @@ define <2 x i1> @test_fcmp_oge(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_oge_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_oge_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_oge_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_oge_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.ge.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.ge.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp oge <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1726,16 +1746,16 @@ define <2 x i1> @test_fcmp_olt(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_olt_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_olt_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_olt_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_olt_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.lt.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.lt.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp olt <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1767,16 +1787,16 @@ define <2 x i1> @test_fcmp_ole(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ole_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ole_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ole_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ole_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.le.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.le.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ole <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1808,16 +1828,16 @@ define <2 x i1> @test_fcmp_ord(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fcmp_ord_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fcmp_ord_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fcmp_ord_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fcmp_ord_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    setp.num.f32 %p1, %r4, %r2;
 ; CHECK-F32X2-NEXT:    setp.num.f32 %p2, %r3, %r1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs1, -1, 0, %p2;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0], %rs1;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0], %rs1;
 ; CHECK-F32X2-NEXT:    selp.b16 %rs2, -1, 0, %p1;
-; CHECK-F32X2-NEXT:    st.param.b8 [func_retval0+1], %rs2;
+; CHECK-F32X2-NEXT:    st.param::func.b8 [func_retval0+1], %rs2;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fcmp ord <2 x float> %a, %b
   ret <2 x i1> %r
@@ -1841,11 +1861,11 @@ define <2 x i32> @test_fptosi_i32(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fptosi_i32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fptosi_i32_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rzi.s32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rzi.s32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fptosi <2 x float> %a to <2 x i32>
   ret <2 x i32> %r
@@ -1870,11 +1890,11 @@ define <2 x i64> @test_fptosi_i64(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fptosi_i64_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fptosi_i64_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rzi.s64.f32 %rd2, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rzi.s64.f32 %rd3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd2};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd2};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fptosi <2 x float> %a to <2 x i64>
   ret <2 x i64> %r
@@ -1898,11 +1918,11 @@ define <2 x i32> @test_fptoui_2xi32(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fptoui_2xi32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fptoui_2xi32_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rzi.u32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rzi.u32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fptoui <2 x float> %a to <2 x i32>
   ret <2 x i32> %r
@@ -1927,11 +1947,11 @@ define <2 x i64> @test_fptoui_2xi64(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fptoui_2xi64_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fptoui_2xi64_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rzi.u64.f32 %rd2, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rzi.u64.f32 %rd3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd2};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd2};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fptoui <2 x float> %a to <2 x i64>
   ret <2 x i64> %r
@@ -1955,28 +1975,40 @@ define <2 x float> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_uitofp_2xi32_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
 
 define <2 x float> @test_uitofp_2xi64(<2 x i64> %a) #0 {
-; CHECK-LABEL: test_uitofp_2xi64(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_uitofp_2xi64_param_0];
-; CHECK-NEXT:    cvt.rn.f32.u64 %r1, %rd2;
-; CHECK-NEXT:    cvt.rn.f32.u64 %r2, %rd1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_uitofp_2xi64(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_uitofp_2xi64_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u64 %r1, %rd2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.u64 %r2, %rd1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_uitofp_2xi64(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_uitofp_2xi64_param_0];
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u64 %r1, %rd2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.u64 %r2, %rd1;
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-F32X2-NEXT:    ret;
   %r = uitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %r
 }
@@ -1999,28 +2031,40 @@ define <2 x float> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sitofp_2xi32_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_sitofp_2xi32_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = sitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
 
 define <2 x float> @test_sitofp_2xi64(<2 x i64> %a) #0 {
-; CHECK-LABEL: test_sitofp_2xi64(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_sitofp_2xi64_param_0];
-; CHECK-NEXT:    cvt.rn.f32.s64 %r1, %rd2;
-; CHECK-NEXT:    cvt.rn.f32.s64 %r2, %rd1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_sitofp_2xi64(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_sitofp_2xi64_param_0];
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s64 %r1, %rd2;
+; CHECK-NOF32X2-NEXT:    cvt.rn.f32.s64 %r2, %rd1;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_sitofp_2xi64(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_sitofp_2xi64_param_0];
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s64 %r1, %rd2;
+; CHECK-F32X2-NEXT:    cvt.rn.f32.s64 %r2, %rd1;
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-F32X2-NEXT:    ret;
   %r = sitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %r
 }
@@ -2046,14 +2090,14 @@ define <2 x float> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_uitofp_2xi32_fadd_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_fadd_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_uitofp_2xi32_fadd_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_uitofp_2xi32_fadd_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r4, %r3};
 ; CHECK-F32X2-NEXT:    add.rn.f32x2 %rd4, %rd2, %rd3;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-F32X2-NEXT:    ret;
   %c = uitofp <2 x i32> %a to <2 x float>
   %r = fadd <2 x float> %b, %c
@@ -2079,11 +2123,11 @@ define <2 x float> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_fptrunc_2xdouble_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_fptrunc_2xdouble_param_0];
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.f64 %r1, %rd2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.f64 %r2, %rd1;
 ; CHECK-F32X2-NEXT:    mov.b64 %rd3, {%r2, %r1};
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-F32X2-NEXT:    ret;
   %r = fptrunc <2 x double> %a to <2 x float>
   ret <2 x float> %r
@@ -2108,11 +2152,11 @@ define <2 x double> @test_fpext_2xdouble(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fpext_2xdouble_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fpext_2xdouble_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd2, %r2;
 ; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd2};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd2};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fpext <2 x float> %a to <2 x double>
   ret <2 x double> %r
@@ -2133,8 +2177,8 @@ define <2 x i32> @test_bitcast_2xfloat_to_2xi32(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xfloat_to_2xi32_param_0];
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_2xfloat_to_2xi32_param_0];
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
 ; CHECK-F32X2-NEXT:    ret;
   %r = bitcast <2 x float> %a to <2 x i32>
   ret <2 x i32> %r
@@ -2155,22 +2199,31 @@ define <2 x float> @test_bitcast_2xi32_to_2xfloat(<2 x i32> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xi32_to_2xfloat_param_0];
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
 ; CHECK-F32X2-NEXT:    ret;
   %r = bitcast <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
 
 define <2 x float> @test_bitcast_double_to_2xfloat(double %a) #0 {
-; CHECK-LABEL: test_bitcast_double_to_2xfloat(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_bitcast_double_to_2xfloat_param_0];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
-; CHECK-NEXT:    ret;
+; CHECK-NOF32X2-LABEL: test_bitcast_double_to_2xfloat(
+; CHECK-NOF32X2:       {
+; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NOF32X2-EMPTY:
+; CHECK-NOF32X2-NEXT:  // %bb.0:
+; CHECK-NOF32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_double_to_2xfloat_param_0];
+; CHECK-NOF32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NOF32X2-NEXT:    ret;
+;
+; CHECK-F32X2-LABEL: test_bitcast_double_to_2xfloat(
+; CHECK-F32X2:       {
+; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F32X2-EMPTY:
+; CHECK-F32X2-NEXT:  // %bb.0:
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_double_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
+; CHECK-F32X2-NEXT:    ret;
   %r = bitcast double %a to <2 x float>
   ret <2 x float> %r
 }
@@ -2190,8 +2243,8 @@ define double @test_bitcast_2xfloat_to_double(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xfloat_to_double_param_0];
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_2xfloat_to_double_param_0];
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
 ; CHECK-F32X2-NEXT:    ret;
   %r = bitcast <2 x float> %a to double
   ret double %r
@@ -2215,11 +2268,11 @@ define <2 x float> @test_sqrt(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sqrt_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_sqrt_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    sqrt.rn.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    sqrt.rn.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.sqrt(<2 x float> %a)
   ret <2 x float> %r
@@ -2250,11 +2303,11 @@ define <2 x float> @test_sin(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sin_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_sin_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    sin.approx.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    sin.approx.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call afn <2 x float> @llvm.sin(<2 x float> %a)
   ret <2 x float> %r
@@ -2278,11 +2331,11 @@ define <2 x float> @test_cos(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_cos_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_cos_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cos.approx.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cos.approx.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call afn <2 x float> @llvm.cos(<2 x float> %a)
   ret <2 x float> %r
@@ -2350,11 +2403,11 @@ define <2 x float> @test_fma(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [test_fma_param_2];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fma_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fma_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [test_fma_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fma_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fma_param_0];
 ; CHECK-F32X2-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.fma(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
@@ -2378,11 +2431,11 @@ define <2 x float> @test_fabs(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fabs_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fabs_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    abs.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    abs.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.fabs(<2 x float> %a)
   ret <2 x float> %r
@@ -2407,13 +2460,13 @@ define <2 x float> @test_minnum(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_minnum_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_minnum_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_minnum_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_minnum_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    min.f32 %r5, %r4, %r2;
 ; CHECK-F32X2-NEXT:    min.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.minnum(<2 x float> %a, <2 x float> %b)
   ret <2 x float> %r
@@ -2438,13 +2491,13 @@ define <2 x float> @test_maxnum(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_maxnum_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_maxnum_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_maxnum_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_maxnum_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
 ; CHECK-F32X2-NEXT:    max.f32 %r5, %r4, %r2;
 ; CHECK-F32X2-NEXT:    max.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.maxnum(<2 x float> %a, <2 x float> %b)
   ret <2 x float> %r
@@ -2469,13 +2522,13 @@ define <2 x float> @test_copysign(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_copysign_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_copysign_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_copysign_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
 ; CHECK-F32X2-NEXT:    copysign.f32 %r5, %r4, %r2;
 ; CHECK-F32X2-NEXT:    copysign.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.copysign(<2 x float> %a, <2 x float> %b)
   ret <2 x float> %r
@@ -2513,8 +2566,8 @@ define <2 x float> @test_copysign_f64(<2 x float> %a, <2 x double> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_copysign_f64_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_copysign_f64_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_copysign_f64_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_f64_param_0];
 ; CHECK-F32X2-NEXT:    shr.u64 %rd4, %rd3, 63;
 ; CHECK-F32X2-NEXT:    and.b64 %rd5, %rd4, 1;
 ; CHECK-F32X2-NEXT:    setp.ne.b64 %p1, %rd5, 0;
@@ -2528,7 +2581,7 @@ define <2 x float> @test_copysign_f64(<2 x float> %a, <2 x double> %b) #0 {
 ; CHECK-F32X2-NEXT:    abs.f32 %r6, %r1;
 ; CHECK-F32X2-NEXT:    neg.f32 %r7, %r6;
 ; CHECK-F32X2-NEXT:    selp.f32 %r8, %r7, %r6, %p2;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r5};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r5};
 ; CHECK-F32X2-NEXT:    ret;
   %tb = fptrunc <2 x double> %b to <2 x float>
   %r = call <2 x float> @llvm.copysign(<2 x float> %a, <2 x float> %tb)
@@ -2557,15 +2610,15 @@ define <2 x double> @test_copysign_extended(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_copysign_extended_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_copysign_extended_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_copysign_extended_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_extended_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
 ; CHECK-F32X2-NEXT:    copysign.f32 %r5, %r3, %r1;
 ; CHECK-F32X2-NEXT:    copysign.f32 %r6, %r4, %r2;
 ; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd3, %r6;
 ; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd4, %r5;
-; CHECK-F32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.copysign(<2 x float> %a, <2 x float> %b)
   %xr = fpext <2 x float> %r to <2 x double>
@@ -2590,11 +2643,11 @@ define <2 x float> @test_floor(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_floor_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_floor_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rmi.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rmi.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.floor(<2 x float> %a)
   ret <2 x float> %r
@@ -2618,11 +2671,11 @@ define <2 x float> @test_ceil(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_ceil_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_ceil_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rpi.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rpi.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.ceil(<2 x float> %a)
   ret <2 x float> %r
@@ -2646,11 +2699,11 @@ define <2 x float> @test_trunc(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_trunc_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.trunc(<2 x float> %a)
   ret <2 x float> %r
@@ -2674,11 +2727,11 @@ define <2 x float> @test_rint(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_rint_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_rint_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.rint(<2 x float> %a)
   ret <2 x float> %r
@@ -2702,11 +2755,11 @@ define <2 x float> @test_nearbyint(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_nearbyint_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_nearbyint_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.nearbyint(<2 x float> %a)
   ret <2 x float> %r
@@ -2730,11 +2783,11 @@ define <2 x float> @test_roundeven(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_roundeven_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_roundeven_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rni.f32.f32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.roundeven(<2 x float> %a)
   ret <2 x float> %r
@@ -2779,7 +2832,7 @@ define <2 x float> @test_round(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_round_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_round_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    and.b32 %r3, %r2, -2147483648;
 ; CHECK-F32X2-NEXT:    or.b32 %r4, %r3, 1056964608;
@@ -2801,7 +2854,7 @@ define <2 x float> @test_round(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r17, %r1;
 ; CHECK-F32X2-NEXT:    setp.lt.f32 %p4, %r15, 0f3F000000;
 ; CHECK-F32X2-NEXT:    selp.f32 %r18, %r17, %r16, %p4;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r18, %r10};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r18, %r10};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.round(<2 x float> %a)
   ret <2 x float> %r
@@ -2826,11 +2879,11 @@ define <2 x float> @test_fmuladd(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd3, [test_fmuladd_param_2];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_fmuladd_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_fmuladd_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd3, [test_fmuladd_param_2];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_fmuladd_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fmuladd_param_0];
 ; CHECK-F32X2-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
-; CHECK-F32X2-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-F32X2-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.fmuladd(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
@@ -2852,9 +2905,9 @@ define <2 x float> @test_shufflevector(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_shufflevector_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_shufflevector_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-F32X2-NEXT:    ret;
   %s = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x float> %s
@@ -2877,10 +2930,10 @@ define <2 x float> @test_insertelement(<2 x float> %a, float %x) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b32 %r1, [test_insertelement_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_insertelement_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b32 %r1, [test_insertelement_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_insertelement_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r2, _}, %rd1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-F32X2-NEXT:    ret;
   %i = insertelement <2 x float> %a, float %x, i64 1
   ret <2 x float> %i
@@ -2904,11 +2957,11 @@ define <2 x float> @test_sitofp_2xi32_to_2xfloat(<2 x i32> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_sitofp_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_sitofp_2xi32_to_2xfloat_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = sitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
@@ -2932,11 +2985,11 @@ define <2 x float> @test_uitofp_2xi32_to_2xfloat(<2 x i32> %a) #0 {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_2xi32_to_2xfloat_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_uitofp_2xi32_to_2xfloat_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
 ; CHECK-F32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-F32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
@@ -2961,8 +3014,8 @@ define void @test_trunc_to_v2bf16(<2 x float> %a, ptr %p) {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_trunc_to_v2bf16_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_to_v2bf16_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_trunc_to_v2bf16_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_trunc_to_v2bf16_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.bf16x2.f32 %r3, %r2, %r1;
 ; CHECK-F32X2-NEXT:    st.b32 [%rd2], %r3;
@@ -2991,8 +3044,8 @@ define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd2, [test_trunc_to_v2f16_param_1];
-; CHECK-F32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_to_v2f16_param_0];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_trunc_to_v2f16_param_1];
+; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_trunc_to_v2f16_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-F32X2-NEXT:    cvt.rn.f16x2.f32 %r3, %r2, %r1;
 ; CHECK-F32X2-NEXT:    st.b32 [%rd2], %r3;
@@ -3004,4 +3057,6 @@ define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
 
 
 attributes #0 = { nounwind }
-attributes #2 = { "denormal-fp-math"="preserve-sign" }
+attributes #2 = { denormal_fpenv(preservesign) }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

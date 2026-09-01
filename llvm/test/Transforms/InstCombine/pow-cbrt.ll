@@ -3,7 +3,7 @@
 
 define double @pow_intrinsic_third_fast(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_third_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double 0x3FD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double f0x3FD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call fast double @llvm.pow.f64(double %x, double 0x3fd5555555555555)
@@ -12,7 +12,7 @@ define double @pow_intrinsic_third_fast(double %x) {
 
 define float @powf_intrinsic_third_fast(float %x) {
 ; CHECK-LABEL: @powf_intrinsic_third_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float 0x3FD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float f0x3EAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call fast float @llvm.pow.f32(float %x, float 0x3fd5555560000000)
@@ -21,7 +21,7 @@ define float @powf_intrinsic_third_fast(float %x) {
 
 define double @pow_intrinsic_third_approx(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_third_approx(
-; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double 0x3FD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double f0x3FD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call afn double @llvm.pow.f64(double %x, double 0x3fd5555555555555)
@@ -30,7 +30,7 @@ define double @pow_intrinsic_third_approx(double %x) {
 
 define float @powf_intrinsic_third_approx(float %x) {
 ; CHECK-LABEL: @powf_intrinsic_third_approx(
-; CHECK-NEXT:    [[POW:%.*]] = call afn float @llvm.pow.f32(float [[X:%.*]], float 0x3FD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call afn float @llvm.pow.f32(float [[X:%.*]], float f0x3EAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call afn float @llvm.pow.f32(float %x, float 0x3fd5555560000000)
@@ -39,7 +39,7 @@ define float @powf_intrinsic_third_approx(float %x) {
 
 define double @pow_libcall_third_fast(double %x) {
 ; CHECK-LABEL: @pow_libcall_third_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @pow(double [[X:%.*]], double 0x3FD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @pow(double [[X:%.*]], double f0x3FD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call fast double @pow(double %x, double 0x3fd5555555555555)
@@ -48,7 +48,7 @@ define double @pow_libcall_third_fast(double %x) {
 
 define float @powf_libcall_third_fast(float %x) {
 ; CHECK-LABEL: @powf_libcall_third_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float 0x3FD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float f0x3EAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call fast float @powf(float %x, float 0x3fd5555560000000)
@@ -57,7 +57,7 @@ define float @powf_libcall_third_fast(float %x) {
 
 define double @pow_intrinsic_negthird_fast(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_negthird_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double 0xBFD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double f0xBFD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call fast double @llvm.pow.f64(double %x, double 0xbfd5555555555555)
@@ -66,7 +66,7 @@ define double @pow_intrinsic_negthird_fast(double %x) {
 
 define float @powf_intrinsic_negthird_fast(float %x) {
 ; CHECK-LABEL: @powf_intrinsic_negthird_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float 0xBFD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @llvm.pow.f32(float [[X:%.*]], float f0xBEAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call fast float @llvm.pow.f32(float %x, float 0xbfd5555560000000)
@@ -75,7 +75,7 @@ define float @powf_intrinsic_negthird_fast(float %x) {
 
 define double @pow_intrinsic_negthird_approx(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_negthird_approx(
-; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double 0xBFD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double f0xBFD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call afn double @llvm.pow.f64(double %x, double 0xbfd5555555555555)
@@ -84,7 +84,7 @@ define double @pow_intrinsic_negthird_approx(double %x) {
 
 define float @powf_intrinsic_negthird_approx(float %x) {
 ; CHECK-LABEL: @powf_intrinsic_negthird_approx(
-; CHECK-NEXT:    [[POW:%.*]] = call afn float @llvm.pow.f32(float [[X:%.*]], float 0xBFD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call afn float @llvm.pow.f32(float [[X:%.*]], float f0xBEAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call afn float @llvm.pow.f32(float %x, float 0xbfd5555560000000)
@@ -93,7 +93,7 @@ define float @powf_intrinsic_negthird_approx(float %x) {
 
 define double @pow_libcall_negthird_fast(double %x) {
 ; CHECK-LABEL: @pow_libcall_negthird_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast double @pow(double [[X:%.*]], double 0xBFD5555555555555)
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @pow(double [[X:%.*]], double f0xBFD5555555555555)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call fast double @pow(double %x, double 0xbfd5555555555555)
@@ -102,7 +102,7 @@ define double @pow_libcall_negthird_fast(double %x) {
 
 define float @powf_libcall_negthird_fast(float %x) {
 ; CHECK-LABEL: @powf_libcall_negthird_fast(
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float 0xBFD5555560000000)
+; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float f0xBEAAAAAB)
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call fast float @powf(float %x, float 0xbfd5555560000000)

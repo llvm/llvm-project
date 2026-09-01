@@ -62,7 +62,7 @@ int test11(int c) {
 }
 
 // CHECK: @test12
-// CHECK: select i1 {{.*}}, double 4.0{{.*}}, double 2.0
+// CHECK: select i1 {{.*}}, double 4.000000e+00{{.*}}, double 2.000000e+00
 double test12(int c) {
   return c ? 4.0 : 2.0;
 }

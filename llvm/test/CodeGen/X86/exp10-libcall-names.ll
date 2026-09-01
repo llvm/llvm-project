@@ -58,10 +58,8 @@ define double @test_exp10_f64(double %x) nounwind {
 ; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    movl 4(%eax), %eax
-; GISEL-X86-NEXT:    xorl %edx, %edx
-; GISEL-X86-NEXT:    addl %esp, %edx
 ; GISEL-X86-NEXT:    movl %ecx, (%esp)
-; GISEL-X86-NEXT:    movl %eax, 4(%edx)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    calll exp10
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl

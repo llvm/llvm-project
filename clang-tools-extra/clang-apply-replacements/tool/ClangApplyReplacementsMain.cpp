@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     return 1;
 
   tooling::ApplyChangesSpec Spec;
-  Spec.Cleanup = true;
+  Spec.Cleanup = DoFormat;
   Spec.Format = DoFormat ? tooling::ApplyChangesSpec::kAll
                          : tooling::ApplyChangesSpec::kNone;
   Spec.Style = DoFormat ? FormatStyle : format::getNoStyle();

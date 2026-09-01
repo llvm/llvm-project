@@ -1,0 +1,418 @@
+# REQUIRES: system-darwin
+# REQUIRES: aarch64-registered-target
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: yaml2obj %t/fat.dylib.yaml -o %t/fat.dylib
+# RUN: yaml2obj %t/a.o.yaml -o %t/a.o
+# RUN: yaml2obj %t/e.o.yaml -o %t/e.o
+
+# RUN: dsymutil --linker classic --no-object-timestamp %t/fat.dylib -oso-prepend-path=%t -o %t/classic.dSYM
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS
+# RUN: od -t x1 %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64e | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/classic.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS-SIZE
+
+# RUN: dsymutil --linker parallel --no-object-timestamp %t/fat.dylib -oso-prepend-path=%t -o %t/parallel.dSYM
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64e | FileCheck %s --check-prefix=PROBES
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS
+# RUN: od -t x1 %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64e | FileCheck %s --check-prefix=DESCS
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probes-arm64 | FileCheck %s --check-prefix=PROBES-SIZE
+# RUN: wc -c < %t/parallel.dSYM/Contents/Resources/Profiling/pseudo_probe_descs-arm64 | FileCheck %s --check-prefix=DESCS-SIZE
+
+# PROBES:      0000000 fa d5 8d e7 36 64 95 db 02 01 00 20 01 41 1f ae
+# PROBES-NEXT: 0000020 90 f5 72 26 01 80 00 02 8f a1 4c dd 75 4f 91 cc
+# PROBES-NEXT: 0000040 01 00 01 80 00 8f a1 4c dd 75 4f 91 cc 02 00 00
+# PROBES-NEXT: 0000060 20 e9 90 36 e9 13 02 d0 8b 01 80 00
+# PROBES-SIZE: 60
+
+# DESCS:      0000000 8f a1 4c dd 75 4f 91 cc ff ff ff ff 00 00 00 00
+# DESCS-NEXT: 0000020 01 66 fa d5 8d e7 36 64 95 db ff ff ff ff 00 00
+# DESCS-NEXT: 0000040 01 00 04 6d 61 69 6e
+# DESCS-SIZE: 39
+
+
+#--- fat.dylib.yaml
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       2
+FatArchs:
+  - cputype:         0x100000C
+    cpusubtype:      0x0
+    offset:          0x4000
+    size:            181
+    align:           14
+  - cputype:         0x100000C
+    cpusubtype:      0x2
+    offset:          0x8000
+    size:            181
+    align:           14
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x100000C
+      cpusubtype:      0x0
+      filetype:        0x6
+      ncmds:           3
+      sizeofcmds:      128
+      flags:           0x100085
+      reserved:        0x0
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         72
+        segname:         __LINKEDIT
+        vmaddr:          16384
+        vmsize:          4096
+        fileoff:         160
+        filesize:        21
+        maxprot:         1
+        initprot:        1
+        nsects:          0
+        flags:           0
+      - cmd:             LC_ID_DYLIB
+        cmdsize:         32
+        dylib:
+          name:            24
+          timestamp:       0
+          current_version: 0
+          compatibility_version: 0
+        Content:         probe
+        ZeroPadBytes:    3
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          160
+        nsyms:           1
+        stroff:          176
+        strsize:         5
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x66
+          n_sect:          0
+          n_desc:          1
+          n_value:         0
+      StringTable:
+        - ''
+        - a.o
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x100000C
+      cpusubtype:      0x2
+      filetype:        0x6
+      ncmds:           3
+      sizeofcmds:      128
+      flags:           0x100085
+      reserved:        0x0
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         72
+        segname:         __LINKEDIT
+        vmaddr:          16384
+        vmsize:          4096
+        fileoff:         160
+        filesize:        21
+        maxprot:         1
+        initprot:        1
+        nsects:          0
+        flags:           0
+      - cmd:             LC_ID_DYLIB
+        cmdsize:         32
+        dylib:
+          name:            24
+          timestamp:       0
+          current_version: 0
+          compatibility_version: 0
+        Content:         probe
+        ZeroPadBytes:    3
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          160
+        nsyms:           1
+        stroff:          176
+        strsize:         5
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x66
+          n_sect:          0
+          n_desc:          1
+          n_value:         0
+      StringTable:
+        - ''
+        - e.o
+...
+
+#--- a.o.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      440
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          813
+    fileoff:         472
+    filesize:        115
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            16
+        offset:          0x1D8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00040011C0035FD640008052C0035FD6
+      - sectname:        __probe_descs
+        segname:         __PSEUDO_PROBE
+        addr:            0x10
+        size:            39
+        offset:          0x1E8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         8FA14CDD754F91CCFFFFFFFF000000000166FAD58DE7366495DBFFFFFFFF00000100046D61696E
+      - sectname:        __probes
+        segname:         __PSEUDO_PROBE
+        addr:            0x2F1
+        size:            60
+        offset:          0x20F
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FAD58DE7366495DB0201002001411FAE90F57226018000028FA14CDD754F91CC01000180008FA14CDD754F91CC02000020E99036E91302D08B018000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           1703936
+    sdk:             1704960
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          587
+    nsyms:           5
+    stroff:          667
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       3
+    iextdefsym:      3
+    nextdefsym:      2
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          22
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          16
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         16
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         753
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         8
+  StringTable:
+    - ''
+    - _main
+    - _f
+    - ltmp2
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+...
+
+#--- e.o.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x80000002
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      440
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          813
+    fileoff:         472
+    filesize:        115
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            16
+        offset:          0x1D8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00040011C0035FD640008052C0035FD6
+      - sectname:        __probe_descs
+        segname:         __PSEUDO_PROBE
+        addr:            0x10
+        size:            39
+        offset:          0x1E8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         8FA14CDD754F91CCFFFFFFFF000000000166FAD58DE7366495DBFFFFFFFF00000100046D61696E
+      - sectname:        __probes
+        segname:         __PSEUDO_PROBE
+        addr:            0x2F1
+        size:            60
+        offset:          0x20F
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x12000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FAD58DE7366495DB0201002001411FAE90F57226018000028FA14CDD754F91CC01000180008FA14CDD754F91CC02000020E99036E91302D08B018000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           1703936
+    sdk:             1704960
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          587
+    nsyms:           5
+    stroff:          667
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       3
+    iextdefsym:      3
+    nextdefsym:      2
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          22
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          16
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         16
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         753
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         8
+  StringTable:
+    - ''
+    - _main
+    - _f
+    - ltmp2
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+...

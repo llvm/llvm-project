@@ -20,7 +20,9 @@
 
 namespace llvm {
 class APFloat;
+class APInt;
 struct fltSemantics;
+struct KnownBits;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -126,6 +128,17 @@ struct KnownFPClass {
     return isKnownNever(OrderedGreaterThanZeroMask);
   }
 
+  /// Return true if it's known this can never be a positive value or a logical
+  /// 0.
+  ///
+  ///      NaN --> true
+  ///  x <= +0 --> false
+  ///     psub --> true if mode is ieee, false otherwise.
+  ///   x > +0 --> true
+  bool cannotBeOrderedLessEqZero(DenormalMode Mode) const {
+    return isKnownNever(fcNegative) && isKnownNeverLogicalPosZero(Mode);
+  }
+
   /// Return true if it's know this can never be a negative value or a logical
   /// 0.
   ///
@@ -176,6 +189,12 @@ struct KnownFPClass {
       SignBit = !*SignBit;
   }
 
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
   void fabs() {
     if (KnownFPClasses & fcNegZero)
       KnownFPClasses |= fcPosZero;
@@ -190,12 +209,6 @@ struct KnownFPClass {
       KnownFPClasses |= fcPosNormal;
 
     signBitMustBeZero();
-  }
-
-  static KnownFPClass fneg(const KnownFPClass &Src) {
-    KnownFPClass Known = Src;
-    Known.fneg();
-    return Known;
   }
 
   static KnownFPClass fabs(const KnownFPClass &Src) {
@@ -224,6 +237,13 @@ struct KnownFPClass {
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
+  /// Report known values for a bitcast into a float with provided semantics.
+  LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
+                                       const KnownBits &Bits);
+
+  /// Report known bits for a float with provided semantics.
+  LLVM_ABI KnownBits toKnownBits(const fltSemantics &FltSemantics) const;
+
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -233,6 +253,11 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   fadd_self(const KnownFPClass &Src,
             DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fsub
+  LLVM_ABI static KnownFPClass
+  fsub(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass
@@ -246,12 +271,87 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
-    Known.propagateNaN(Src);
+    Known.propagateNonNaN(Src);
     return Known;
   }
 
-  /// Report known values for exp, exp2 and exp10.
+  LLVM_ABI static KnownFPClass
+  fmul(const KnownFPClass &LHS, const APFloat &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fdiv
+  LLVM_ABI static KnownFPClass
+  fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fdiv x, x
+  LLVM_ABI static KnownFPClass
+  fdiv_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for frem
+  LLVM_ABI static KnownFPClass
+  frem(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for frem x, x
+  LLVM_ABI static KnownFPClass
+  frem_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fma
+  LLVM_ABI static KnownFPClass
+  fma(const KnownFPClass &LHS, const KnownFPClass &RHS,
+      const KnownFPClass &Addend,
+      DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fma squared, squared, addend
+  LLVM_ABI static KnownFPClass
+  fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+             DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for sqrt
+  LLVM_ABI static KnownFPClass
+  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for log/log2/log10
+  LLVM_ABI static KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for exp, exp2 and exp10
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
+
+  /// Report known values for sin
+  LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
+
+  /// Report known values for cos
+  LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+
+  /// Report known values for tan
+  LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
+
+  /// Report known values for sinh
+  LLVM_ABI static KnownFPClass sinh(const KnownFPClass &Src);
+
+  /// Report known values for cosh
+  LLVM_ABI static KnownFPClass cosh(const KnownFPClass &Src);
+
+  /// Report known values for tanh
+  LLVM_ABI static KnownFPClass tanh(const KnownFPClass &Src);
+
+  /// Report known values for asin
+  LLVM_ABI static KnownFPClass asin(const KnownFPClass &Src);
+
+  /// Report known values for acos
+  LLVM_ABI static KnownFPClass acos(const KnownFPClass &Src);
+
+  /// Report known values for atan
+  LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
+
+  /// Report known values for atan2
+  LLVM_ABI static KnownFPClass
+  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS,
+        DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
@@ -290,16 +390,54 @@ struct KnownFPClass {
       KnownFPClasses &= (fcPositive | fcNan);
   }
 
+  static KnownFPClass copysign(const KnownFPClass &KnownMag,
+                               const KnownFPClass &KnownSign) {
+    KnownFPClass Known = KnownMag;
+    Known.copysign(KnownSign);
+    return Known;
+  }
+
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &Src) {
+    if (Src.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    if (LHS.isKnownNever(fcSNan) && RHS.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
-  void propagateNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+  void propagateNonNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+    propagateNonSNaN(Src);
     if (Src.isKnownNever(fcNan)) {
       knownNot(fcNan);
       if (PreserveSign)
         SignBit = Src.SignBit;
-    } else if (Src.isKnownNever(fcSNan))
-      knownNot(fcSNan);
+    }
+  }
+
+  void propagateNonNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    propagateNonSNaN(LHS, RHS);
+    if (LHS.isKnownNeverNaN() && RHS.isKnownNeverNaN())
+      knownNot(fcNan);
+  }
+
+  // Propagate knowledge for operations whose result sign is the xor of the
+  // operand signs, such as multiply and divide. This only rules out possible
+  // non-NaN sign classes. NaNs do not have a constrained sign class here.
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
+        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+      knownNot(fcNegative);
+
+    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
+        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
+      knownNot(fcPositive);
   }
 
   /// Propagate knowledge from a source value that could be a denormal or
@@ -319,25 +457,46 @@ struct KnownFPClass {
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
 
-  /// Propagate known class for log/log2/log10
-  static LLVM_ABI KnownFPClass
-  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
-
-  /// Propagate known class for sqrt
-  static LLVM_ABI KnownFPClass
-  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
-
   /// Propagate known class for fpext.
-  static LLVM_ABI KnownFPClass fpext(const KnownFPClass &KnownSrc,
+  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
                                      const fltSemantics &DstTy,
                                      const fltSemantics &SrcTy);
+
+  /// Propagate known class for fptrunc.
+  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
 
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
-  static LLVM_ABI KnownFPClass roundToIntegral(const KnownFPClass &Src,
+  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
                                                bool IsTrunc,
                                                bool IsMultiUnitFPType);
+
+  /// Propagate known class for mantissa component of frexp
+  LLVM_ABI static KnownFPClass
+  frexp_mant(const KnownFPClass &Src,
+             DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ldexp, assuming the exponent is known to be
+  /// within [\p ConstantRangeMin, \p ConstantRangeMax]
+  ///
+  // TODO: This really ought to use ConstantRange, but it's in IR not Support.
+  LLVM_ABI static KnownFPClass
+  ldexp(const KnownFPClass &Src, const APInt &ConstantRangeMin,
+        const APInt &ConstantRangeMax, const fltSemantics &Flt,
+        DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass
+  ldexp(const KnownFPClass &Src, const KnownBits &ExpBits,
+        const fltSemantics &Flt,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for pow
+  LLVM_ABI static KnownFPClass pow(const KnownFPClass &LHS,
+                                   const KnownFPClass &RHS);
+
+  /// Propagate known class for powi
+  LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src,
+                                    const KnownBits &N);
 
   void resetAll() { *this = KnownFPClass(); }
 };

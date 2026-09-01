@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -21,7 +20,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-legalize-zero-size-arrays"
 
@@ -193,25 +191,21 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
 }
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
-  if (!hasZeroSizeArray(AI.getAllocatedType()))
+  // Check if allocation size is known-zero
+  const DataLayout &DL = AI.getModule()->getDataLayout();
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (!Size || !Size->isZero())
     return;
 
-  // TODO: Handle structs containing zero-size arrays.
-  ArrayType *ArrTy = dyn_cast<ArrayType>(AI.getAllocatedType());
-  if (shouldLegalizeInstType(ArrTy)) {
-    // Allocate a generic pointer instead of an empty array.
-    IRBuilder<> Builder(&AI);
-    AllocaInst *NewAI = Builder.CreateAlloca(
-        PointerType::get(
-            ArrTy->getContext(),
-            storageClassToAddressSpace(SPIRV::StorageClass::Generic)),
-        /*ArraySize=*/nullptr, AI.getName());
-    NewAI->setAlignment(AI.getAlign());
-    NewAI->setDebugLoc(AI.getDebugLoc());
-    AI.replaceAllUsesWith(NewAI);
-    ToErase.push_back(&AI);
-    Modified = true;
-  }
+  // Allocate a byte instead of an empty alloca.
+  IRBuilder<> Builder(&AI);
+  AllocaInst *NewAI = Builder.CreateAlloca(Builder.getInt8Ty());
+  NewAI->takeName(&AI);
+  NewAI->setAlignment(AI.getAlign());
+  NewAI->setDebugLoc(AI.getDebugLoc());
+  AI.replaceAllUsesWith(NewAI);
+  ToErase.push_back(&AI);
+  Modified = true;
 }
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
@@ -301,12 +295,24 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
       continue;
 
     Type *NewTy = legalizeType(GV.getValueType());
-    Constant *LegalizedInitializer = legalizeConstant(GV.getInitializer());
+    Constant *LegalizedInitializer =
+        GV.hasInitializer() && !GV.hasAppendingLinkage()
+            ? legalizeConstant(GV.getInitializer())
+            : nullptr;
+
+    // The new global will have the same linkage type as the original,
+    // except in the case that it is an llvm intrinsic global such as
+    // llvm.global_ctors with appending linkage, in which case we need to change
+    // the linkage as appending linkage is only allowed for arrays.
+    GlobalValue::LinkageTypes NewLT =
+        GV.hasAppendingLinkage()
+            ? GlobalValue::LinkageTypes::ExternalWeakLinkage
+            : GV.getLinkage();
 
     // Use an empty name for now, we will update it in the
     // following step.
     GlobalVariable *NewGV = new GlobalVariable(
-        M, NewTy, GV.isConstant(), GV.getLinkage(), LegalizedInitializer,
+        M, NewTy, GV.isConstant(), NewLT, LegalizedInitializer,
         /*Name=*/"", &GV, GV.getThreadLocalMode(), GV.getAddressSpace(),
         GV.isExternallyInitialized());
     NewGV->copyAttributesFrom(&GV);
@@ -338,8 +344,8 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
 
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeZeroSizeArrays::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeZeroSizeArraysPass::run(Module &M, ModuleAnalysisManager &AM) {
   SPIRVLegalizeZeroSizeArraysImpl Impl(TM);
   if (Impl.runOnModule(M))
     return PreservedAnalyses::none();

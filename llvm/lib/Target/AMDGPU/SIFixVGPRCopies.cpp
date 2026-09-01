@@ -14,7 +14,6 @@
 #include "SIFixVGPRCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -27,9 +26,7 @@ class SIFixVGPRCopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIFixVGPRCopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSIFixVGPRCopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIFixVGPRCopiesLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

@@ -27,8 +27,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Sema/HeuristicResolver.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -215,7 +215,8 @@ std::string printQualifiedName(const NamedDecl &ND) {
   Policy.SuppressScope = true;
   // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
   // In clangd, context is usually available and paths are mostly noise.
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   ND.printQualifiedName(OS, Policy);
   assert(!StringRef(QName).starts_with("::"));
   return QName;
@@ -530,7 +531,8 @@ public:
     if (CurLoc.isInvalid() && isa<CXXConversionDecl>(D))
       CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
     // Loc of "auto" in function with trailing return type (c++11).
-    if (CurLoc.isInvalid())
+    if (auto *FPT = D->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn())
       CurLoc = D->getSourceRange().getBegin();
     if (CurLoc != SearchedLocation)
       return true;
@@ -1112,6 +1114,22 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
   Visitor.TraverseStmt(FD->getBody());
   return Result;
+}
+
+ArrayRef<const CXXConstructorDecl *>
+getForwardedConstructors(const FunctionDecl *FD,
+                         ForwardingToConstructorCache &Cache) {
+  assert(FD && "FD must not be null");
+  if (!FD->isTemplateInstantiation())
+    return {};
+  if (auto It = Cache.find(FD); It != Cache.end())
+    return It->getSecond();
+  const auto *PT = FD->getPrimaryTemplate();
+  if (!PT || !isLikelyForwardingFunction(PT))
+    return {};
+  auto Inserted =
+      Cache.try_emplace(FD, searchConstructorsInForwardingFunction(FD));
+  return Inserted.first->getSecond();
 }
 
 } // namespace clangd

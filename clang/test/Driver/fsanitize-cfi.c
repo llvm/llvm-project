@@ -37,6 +37,10 @@
 // RUN: not %clang --target=mips-unknown-linux -fsanitize=cfi-icall %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-MIPS
 // CHECK-CFI-ICALL-MIPS: error: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
 
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-HEXAGON
+// CHECK-CFI-ICALL-HEXAGON: "-emit-llvm-bc"
+// CHECK-CFI-ICALL-HEXAGON-NOT: error: unsupported option
+
 // RUN: not %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'
 
@@ -92,3 +96,32 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi,function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-FUNCTION
 // CHECK-KCFI-FUNCTION: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=function'
+
+// -fsanitize-kcfi-arity is forwarded to cc1 when KCFI is enabled.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-arity %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY
+// CHECK-KCFI-ARITY: "-fsanitize-kcfi-arity"
+
+// Without -fsanitize=kcfi, -fsanitize-kcfi-arity is unused.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-arity %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY-UNUSED
+// CHECK-KCFI-ARITY-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-arity'
+
+// -fsanitize-kcfi-hash= is forwarded to cc1 when KCFI is enabled.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-FNV
+// CHECK-KCFI-HASH-FNV: "-fsanitize-kcfi-hash=FNV-1a"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=xxHash64 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-XXHASH
+// CHECK-KCFI-HASH-XXHASH: "-fsanitize-kcfi-hash=xxHash64"
+
+// If -fsanitize-kcfi-hash= is given more than once, the last value wins.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=xxHash64 -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-LAST
+// CHECK-KCFI-HASH-LAST:     "-fsanitize-kcfi-hash=FNV-1a"
+// CHECK-KCFI-HASH-LAST-NOT: "-fsanitize-kcfi-hash=xxHash64"
+
+// An explicitly empty value is still forwarded (not dropped) so cc1 can
+// diagnose it.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-EMPTY
+// CHECK-KCFI-HASH-EMPTY: "-fsanitize-kcfi-hash="
+
+// Without -fsanitize=kcfi, -fsanitize-kcfi-hash= is unused.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-UNUSED
+// CHECK-KCFI-HASH-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-hash=FNV-1a'

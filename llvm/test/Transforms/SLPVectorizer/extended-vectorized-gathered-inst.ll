@@ -8,10 +8,10 @@ define void @test(ptr %top) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[TOP]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i8> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i8> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> <i8 0, i8 0, i8 0, i8 poison>, i8 [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> <i8 0, i8 0, i8 0, i8 poison>, i8 [[TMP4]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i8> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i8> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr <4 x i8> [[TMP7]], splat (i8 2)

@@ -1,14 +1,14 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +isa-v207-instructions -target-feature +power8-vector \
 // RUN:   -triple powerpc64-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
-// RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
-// RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
-// RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
-// RUN:   -U__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck \
-// RUN:   --check-prefix=NOCOMPAT %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -D__XL_COMPAT_ALTIVEC__ \
+// RUN:   -target-cpu pwr8 -triple powerpc64le-unknown-linux-gnu \
+// RUN:   -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -U__XL_COMPAT_ALTIVEC__ \
+// RUN:   -target-cpu pwr8 -triple powerpc64le-unknown-linux-gnu \
+// RUN:   -emit-llvm %s -o - | FileCheck --check-prefix=NOCOMPAT %s
+
 #include <altivec.h>
 vector double vd = { 3.4e22, 1.8e-3 };
 vector signed long long res_vsll, vsll = { -12345678999ll, 12345678999 };

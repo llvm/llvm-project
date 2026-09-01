@@ -102,6 +102,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__HVXDBL__");
   }
 
+  if (HasHVXIeeeFp)
+    Builder.defineMacro("__HVX_IEEE_FP__");
+
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
   }
@@ -113,6 +116,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+
+  if (Opts.CPlusPlus && getTriple().getOS() == llvm::Triple::UnknownOS)
+    Builder.defineMacro("_GNU_SOURCE");
 }
 
 bool HexagonTargetInfo::initFeatureMap(
@@ -148,6 +154,8 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       UseLongCalls = true;
     else if (F == "-long-calls")
       UseLongCalls = false;
+    else if (F == "+hvx-ieee-fp")
+      HasHVXIeeeFp = true;
     else if (F == "+audio")
       HasAudio = true;
   }
@@ -242,6 +250,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx", HasHVX)
       .Case("hvx-length64b", HasHVX64B)
       .Case("hvx-length128b", HasHVX128B)
+      .Case("hvx-ieee-fp", HasHVXIeeeFp)
       .Case("long-calls", UseLongCalls)
       .Case("audio", HasAudio)
       .Default(false);

@@ -9,20 +9,6 @@ define amdgpu_kernel void @readfirstlane() {
   ret void
 }
 
-; CHECK-LABEL: for function 'icmp':
-define amdgpu_kernel void @icmp(i32 inreg %x) {
-; CHECK-NOT: DIVERGENT:  %icmp = call i64 @llvm.amdgcn.icmp.i32
-  %icmp = call i64 @llvm.amdgcn.icmp.i32(i32 %x, i32 0, i32 33)
-  ret void
-}
-
-; CHECK-LABEL: for function 'fcmp':
-define amdgpu_kernel void @fcmp(float inreg %x, float inreg %y) {
-; CHECK-NOT: DIVERGENT:  %fcmp = call i64 @llvm.amdgcn.fcmp.i32
-  %fcmp = call i64 @llvm.amdgcn.fcmp.i32(float %x, float %y, i32 33)
-  ret void
-}
-
 ; CHECK-LABEL: for function 'ballot':
 define amdgpu_kernel void @ballot(i1 inreg %x) {
 ; CHECK-NOT: DIVERGENT:  %ballot = call i64 @llvm.amdgcn.ballot.i32
@@ -119,6 +105,54 @@ define void @s_getreg(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 's_quadmask_i32':
+; CHECK: DIVERGENT: i32 %mask
+; CHECK-NOT: DIVERGENT
+define i32 @s_quadmask_i32(i32 %mask) {
+  %result = call i32 @llvm.amdgcn.s.quadmask.i32(i32 %mask)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_quadmask_i64':
+; CHECK: DIVERGENT: i64 %mask
+; CHECK-NOT: DIVERGENT
+define i64 @s_quadmask_i64(i64 %mask) {
+  %result = call i64 @llvm.amdgcn.s.quadmask.i64(i64 %mask)
+  ret i64 %result
+}
+
+; CHECK-LABEL: for function 's_wqm_i32':
+; CHECK: DIVERGENT: i32 %mask
+; CHECK-NOT: DIVERGENT
+define i32 @s_wqm_i32(i32 %mask) {
+  %result = call i32 @llvm.amdgcn.s.wqm.i32(i32 %mask)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_wqm_i64':
+; CHECK: DIVERGENT: i64 %mask
+; CHECK-NOT: DIVERGENT
+define i64 @s_wqm_i64(i64 %mask) {
+  %result = call i64 @llvm.amdgcn.s.wqm.i64(i64 %mask)
+  ret i64 %result
+}
+
+; CHECK-LABEL: for function 's_get_barrier_state':
+; CHECK: DIVERGENT: i32 %bar
+; CHECK-NOT: DIVERGENT
+define i32 @s_get_barrier_state(i32 %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.barrier.state(i32 %bar)
+  ret i32 %result
+}
+
+; CHECK-LABEL: for function 's_get_named_barrier_state':
+; CHECK: DIVERGENT: ptr addrspace(3) %bar
+; CHECK-NOT: DIVERGENT
+define i32 @s_get_named_barrier_state(ptr addrspace(3) %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %bar)
+  ret i32 %result
+}
+
 ; CHECK-LABEL: for function 'cluster_workgroup_id_x':
 ; CHECK: ALL VALUES UNIFORM
 define void @cluster_workgroup_id_x(ptr addrspace(1) inreg %out) {
@@ -183,6 +217,15 @@ define void @cluster_workgroup_max_flat_id(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 's_alloc_vgpr':
+; CHECK: ALL VALUES UNIFORM
+define void @s_alloc_vgpr(i32 inreg %n, ptr addrspace(1) inreg %out) {
+  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 %n)
+  %sel = select i1 %scc, i32 1, i32 0
+  store i32 %sel, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK-LABEL: for function 's_memtime':
 ; CHECK: ALL VALUES UNIFORM
 define void @s_memtime(ptr addrspace(1) inreg %out) {
@@ -202,8 +245,6 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
-declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
-declare i64 @llvm.amdgcn.fcmp.i32(float, float, i32) #1
 declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
@@ -219,4 +260,4 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }

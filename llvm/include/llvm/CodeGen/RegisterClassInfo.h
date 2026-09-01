@@ -19,6 +19,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Compiler.h"
@@ -26,6 +28,8 @@
 #include <memory>
 
 namespace llvm {
+
+class MachineRegisterClassAnalysis;
 
 class RegisterClassInfo {
   struct RCInfo {
@@ -94,6 +98,21 @@ public:
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
 
+  /// Update cached register class information using ReservedInput, MRI's
+  /// current reserved-register set. Cached orders are compacted when
+  /// only registers are added and `-stress-regalloc` is disabled; otherwise,
+  /// they are invalidated and recomputed on demand.
+  ///
+  /// RegisterClassInfo must be initialized. Target information, callee-saved
+  /// registers, register costs, and allocation orders must remain unchanged.
+  LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
+
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &) {
+    auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
+    return !PAC.preservedWhenStateless();
+  }
+
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
   unsigned getNumAllocatableRegs(const TargetRegisterClass *RC) const {
@@ -156,6 +175,39 @@ public:
 
 protected:
   LLVM_ABI unsigned computePSetLimit(unsigned Idx) const;
+};
+
+class MachineRegisterClassAnalysis
+    : public AnalysisInfoMixin<MachineRegisterClassAnalysis> {
+  friend AnalysisInfoMixin<MachineRegisterClassAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = RegisterClassInfo;
+
+  Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+};
+
+class MachineRegisterClassInfoWrapperPass : public MachineFunctionPass {
+  virtual void anchor();
+
+  RegisterClassInfo RCI;
+
+public:
+  static char ID;
+
+  MachineRegisterClassInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  RegisterClassInfo &getRCI() { return RCI; }
+  const RegisterClassInfo &getRCI() const { return RCI; }
 };
 
 } // end namespace llvm

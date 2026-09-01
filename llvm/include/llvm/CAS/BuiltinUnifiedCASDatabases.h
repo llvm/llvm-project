@@ -9,6 +9,7 @@
 #ifndef LLVM_CAS_BUILTINUNIFIEDCASDATABASES_H
 #define LLVM_CAS_BUILTINUNIFIEDCASDATABASES_H
 
+#include "llvm/CAS/ValidationResult.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::cas {
@@ -21,19 +22,6 @@ class ObjectStore;
 LLVM_ABI
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 createOnDiskUnifiedCASDatabases(StringRef Path);
-
-/// Represents the result of validating the contents using
-/// \c validateOnDiskUnifiedCASDatabasesIfNeeded.
-///
-/// Note: invalid results are handled as an \c Error.
-enum class ValidationResult {
-  /// The data is already valid.
-  Valid,
-  /// The data was invalid, but was recovered.
-  Recovered,
-  /// Validation was skipped, as it was not needed.
-  Skipped,
-};
 
 /// Validate the data in \p Path, if needed to ensure correctness.
 ///

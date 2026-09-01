@@ -46,7 +46,7 @@ struct InstCombineOptions {
   }
 };
 
-class InstCombinePass : public PassInfoMixin<InstCombinePass> {
+class InstCombinePass : public OptionalPassInfoMixin<InstCombinePass> {
 private:
   InstructionWorklist Worklist;
   InstCombineOptions Options;

@@ -18,7 +18,6 @@
 #include "SILowerWWMCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -53,9 +52,7 @@ class SILowerWWMCopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSILowerWWMCopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

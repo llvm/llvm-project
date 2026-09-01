@@ -197,7 +197,7 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
     AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
-    AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
+    AddDReg(MIB, SrcReg, ARM::gsub_1, {});
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
     return;
   }

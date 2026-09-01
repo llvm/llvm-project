@@ -172,7 +172,7 @@ __mmask8 test_mm_mask_fpclass_pd_mask(__mmask8 __U, __m128d __A) {
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.pd.128"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[B]], %[[B]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[SHUF]]) : !cir.vector<2 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[SHUF]] : !cir.vector<2 x !cir.int<s, 1>>
   // CIR: %[[D:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.int<s, 1>>
   // CIR: %[[E:.*]] = cir.vec.shuffle(%[[C]], %[[D]] : !cir.vector<2 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[E]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
@@ -217,7 +217,7 @@ __mmask8 test_mm256_mask_fpclass_pd_mask(__mmask8 __U, __m256d __A) {
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.pd.256"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[B]], %[[B]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[SHUF]]) : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[SHUF]] : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: %[[D:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: %[[E:.*]] = cir.vec.shuffle(%[[C]], %[[D]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[E]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
@@ -262,7 +262,7 @@ __mmask8 test_mm_mask_fpclass_ps_mask(__mmask8 __U, __m128 __A) {
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.ps.128"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[B]], %[[B]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[SHUF]]) : !cir.vector<4 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[SHUF]] : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: %[[D:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 1>>
   // CIR: %[[E:.*]] = cir.vec.shuffle(%[[C]], %[[D]] : !cir.vector<4 x !cir.int<s, 1>>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[E]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
@@ -306,7 +306,7 @@ __mmask8 test_mm256_mask_fpclass_ps_mask(__mmask8 __U, __m256 __A) {
   // CIR-LABEL: _mm256_mask_fpclass_ps_mask
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.ps.256"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[B]] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[C]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
   // LLVM-LABEL: test_mm256_mask_fpclass_ps_mask

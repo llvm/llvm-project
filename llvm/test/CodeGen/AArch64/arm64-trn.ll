@@ -85,18 +85,14 @@ define <2 x i32> @vtrni32(ptr %A, ptr %B) nounwind {
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    ldr d0, [x0]
 ; CHECKLE-NEXT:    ldr d1, [x1]
-; CHECKLE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECKLE-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECKLE-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECKLE-NEXT:    addp v0.2s, v0.2s, v1.2s
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: vtrni32:
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    ld1 { v0.2s }, [x0]
 ; CHECKBE-NEXT:    ld1 { v1.2s }, [x1]
-; CHECKBE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECKBE-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECKBE-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECKBE-NEXT:    addp v0.2s, v0.2s, v1.2s
 ; CHECKBE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECKBE-NEXT:    ret
 	%tmp1 = load <2 x i32>, ptr %A
@@ -112,18 +108,14 @@ define <2 x float> @vtrnf(ptr %A, ptr %B) nounwind {
 ; CHECKLE:       // %bb.0:
 ; CHECKLE-NEXT:    ldr d0, [x0]
 ; CHECKLE-NEXT:    ldr d1, [x1]
-; CHECKLE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECKLE-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECKLE-NEXT:    fadd v0.2s, v2.2s, v0.2s
+; CHECKLE-NEXT:    faddp v0.2s, v0.2s, v1.2s
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: vtrnf:
 ; CHECKBE:       // %bb.0:
 ; CHECKBE-NEXT:    ld1 { v0.2s }, [x0]
 ; CHECKBE-NEXT:    ld1 { v1.2s }, [x1]
-; CHECKBE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECKBE-NEXT:    zip2 v0.2s, v0.2s, v1.2s
-; CHECKBE-NEXT:    fadd v0.2s, v2.2s, v0.2s
+; CHECKBE-NEXT:    faddp v0.2s, v0.2s, v1.2s
 ; CHECKBE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECKBE-NEXT:    ret
 	%tmp1 = load <2 x float>, ptr %A

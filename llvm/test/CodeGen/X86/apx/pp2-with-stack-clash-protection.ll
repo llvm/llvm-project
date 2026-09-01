@@ -8,22 +8,22 @@
 define i32 @foo(ptr %src1, i32 %len, ptr %src2, ptr %dst, i1 %cmp, i32 %sub) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    push2 %r15, %rbp
+; CHECK-NEXT:    push2 %r14, %r15
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    push2 %r13, %r14
+; CHECK-NEXT:    push2 %r12, %r13
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    push2 %rbx, %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 56
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset %rbx, -64
-; CHECK-NEXT:    .cfi_offset %r12, -56
-; CHECK-NEXT:    .cfi_offset %r13, -48
-; CHECK-NEXT:    .cfi_offset %r14, -40
-; CHECK-NEXT:    .cfi_offset %r15, -32
-; CHECK-NEXT:    .cfi_offset %rbp, -24
+; CHECK-NEXT:    .cfi_offset %rbx, -56
+; CHECK-NEXT:    .cfi_offset %r12, -48
+; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    .cfi_offset %r14, -32
+; CHECK-NEXT:    .cfi_offset %r15, -24
+; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %r8d, %ebp
 ; CHECK-NEXT:    movq %rcx, %r14
@@ -44,15 +44,15 @@ define i32 @foo(ptr %src1, i32 %len, ptr %src2, ptr %dst, i1 %cmp, i32 %sub) #0 
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %while.end
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    addq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    pop2 %r12, %rbx
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 56
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    pop2 %r14, %r13
+; CHECK-NEXT:    pop2 %r13, %r12
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pop2 %rbp, %r15
+; CHECK-NEXT:    pop2 %r15, %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:

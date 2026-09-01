@@ -25,6 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 #include <cstdint>
 
@@ -91,9 +92,9 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     newLoopNest = replaceLoopNestWithNewYields(rewriter, loopNest.drop_front(),
                                                innerNewBBArgs, newYieldValuesFn,
                                                replaceIterOperandsUsesInLoop);
-    return llvm::to_vector(llvm::map_range(
+    return llvm::map_to_vector(
         newLoopNest.front().getResults().take_back(innerNewBBArgs.size()),
-        [](OpResult r) -> Value { return r; }));
+        [](OpResult r) -> Value { return r; });
   };
   scf::ForOp outerMostLoop =
       cast<scf::ForOp>(*loopNest.front().replaceWithAdditionalYields(
@@ -362,11 +363,63 @@ void mlir::generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
+/// Splits `forOp` into two consecutive loops at `splitPoint`.
+FailureOr<std::pair<scf::ForOp, scf::ForOp>>
+mlir::splitForOpAtPoint(RewriterBase &rewriter, scf::ForOp forOp,
+                        Value splitPoint) {
+  if (splitPoint.getType() != forOp.getLowerBound().getType())
+    return failure();
+
+  // Reject statically known violations of the split preconditions.
+  bool isUnsigned = forOp.getUnsignedCmp();
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
+  auto checkSplitPoint = [&](auto getBound) -> LogicalResult {
+    auto lb = getBound(lbVal);
+    auto ub = getBound(ubVal);
+    auto step = getBound(stepVal);
+    auto split = getBound(splitPoint);
+    if ((lb && split && *lb > *split) || (split && ub && *split >= *ub) ||
+        (step && *step <= 0))
+      return failure();
+    if (lb && step && split && (*split - *lb) % *step != 0)
+      return failure();
+    return success();
+  };
+  if (failed(isUnsigned ? checkSplitPoint(getConstantUIntValue)
+                        : checkSplitPoint(getConstantIntValue)))
+    return failure();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(forOp);
+  auto firstForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  auto secondForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  rewriter.modifyOpInPlace(firstForOp,
+                           [&] { firstForOp.setUpperBound(splitPoint); });
+  rewriter.modifyOpInPlace(secondForOp,
+                           [&] { secondForOp.setLowerBound(splitPoint); });
+
+  // Chain iter-args across the split:
+  //   - `secondForOp` is initialized from `firstForOp`'s results.
+  //   - Users of `forOp`'s results are redirected to `secondForOp`'s results,
+  //     so downstream code observes the final carried values.
+  rewriter.modifyOpInPlace(secondForOp, [&] {
+    secondForOp->setOperands(secondForOp.getNumControlOperands(),
+                             secondForOp.getInitArgs().size(),
+                             firstForOp.getResults());
+  });
+  rewriter.replaceOp(forOp, secondForOp.getResults());
+
+  return std::pair<scf::ForOp, scf::ForOp>{firstForOp, secondForOp};
+}
+
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
 /// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    bool shouldPromoteIfSingleIteration) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
@@ -384,21 +437,47 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   bool generateEpilogueLoop = true;
 
   std::optional<APInt> constTripCount = forOp.getStaticTripCount();
+  // A static trip count does not imply constant bounds: it is also known when
+  // the lower and the upper bound are the same value (zero iterations), when
+  // the lower bound is zero and the upper bound is the step (one iteration),
+  // and when the upper bound is a constant offset from a non-constant lower
+  // bound. The computation below reads all three bounds as constants, so fall
+  // back to the dynamic case unless they are.
+  if (constTripCount && !(getConstantAPIntValue(forOp.getLowerBound()) &&
+                          getConstantAPIntValue(forOp.getUpperBound()) &&
+                          getConstantAPIntValue(step)))
+    constTripCount = std::nullopt;
   if (constTripCount) {
     // Constant loop bounds computation.
-    int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
-    int64_t ubCst = getConstantIntValue(forOp.getUpperBound()).value();
-    int64_t stepCst = getConstantIntValue(forOp.getStep()).value();
+    bool isUnsignedLoop = forOp.getUnsignedCmp();
+    // For unsigned loops, bounds must be zero-extended: narrow integer types
+    // (e.g. i1, i2, i3) may have bit patterns that are negative in a signed
+    // context (e.g., i1 value 1 has getSExtValue() == -1, getZExtValue() == 1).
+    // Zero-extension is only safe when the unsigned value fits in int64_t, i.e.
+    // the type's bitwidth is < 64. Bail out for 64-bit unsigned loops.
+    if (isUnsignedLoop) {
+      if (auto intTy = dyn_cast<IntegerType>(forOp.getUpperBound().getType()))
+        if (intTy.getWidth() >= 64)
+          return failure();
+    }
+    auto getLoopBound = [&](Value v) -> int64_t {
+      auto apInt = getConstantAPIntValue(v);
+      assert(apInt && "expected constant loop bound");
+      return isUnsignedLoop ? static_cast<int64_t>(apInt->first.getZExtValue())
+                            : apInt->first.getSExtValue();
+    };
+    int64_t lbCst = getLoopBound(forOp.getLowerBound());
+    int64_t ubCst = getLoopBound(forOp.getUpperBound());
+    int64_t stepCst = getLoopBound(step);
     if (unrollFactor == 1) {
-      if (*constTripCount == 1 &&
+      if (shouldPromoteIfSingleIteration && constTripCount->isOne() &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
-    int64_t tripCountEvenMultiple =
-        constTripCount->getSExtValue() -
-        (constTripCount->getSExtValue() % unrollFactor);
+    uint64_t tripCount = constTripCount->getZExtValue();
+    uint64_t tripCountEvenMultiple = tripCount - tripCount % unrollFactor;
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -412,9 +491,16 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     else
       upperBoundUnrolled = forOp.getUpperBound();
 
-    // Create constant for 'stepUnrolled'.
+    // Create constant for 'stepUnrolled'. When the main loop has zero
+    // iterations (tripCountEvenMultiple == 0), keep the original step.
+    // stepCst * unrollFactor may produce a value that, when truncated to the
+    // bound type's bitwidth during IntegerAttr construction, wraps to zero; a
+    // zero step causes constantTripCount to return nullopt instead of 0, which
+    // prevents the zero-trip main loop from being elided.
+    bool mainLoopHasNoIter = (tripCountEvenMultiple == 0);
+    bool stepUnchanged = (stepCst == stepUnrolledCst);
     stepUnrolled =
-        stepCst == stepUnrolledCst
+        (mainLoopHasNoIter || stepUnchanged)
             ? step
             : arith::ConstantOp::create(boundsBuilder, loc,
                                         boundsBuilder.getIntegerAttr(
@@ -449,26 +535,19 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
-    OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPointAfter(forOp);
-    auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
-    epilogueForOp.setLowerBound(upperBoundUnrolled);
-
-    // Update uses of loop results.
-    auto results = forOp.getResults();
-    auto epilogueResults = epilogueForOp.getResults();
-
-    for (auto e : llvm::zip(results, epilogueResults)) {
-      std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-    }
-    epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getInitArgs().size(), results);
-    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+    auto splitLoops = splitForOpAtPoint(rewriter, forOp, upperBoundUnrolled);
+    if (failed(splitLoops))
+      return failure();
+    forOp = splitLoops->first;
+    scf::ForOp epilogueForOp = splitLoops->second;
+    if (!shouldPromoteIfSingleIteration ||
+        epilogueForOp.promoteIfSingleIteration(rewriter).failed())
       resultLoops.epilogueLoopOp = epilogueForOp;
+  } else {
+    forOp.setUpperBound(upperBoundUnrolled);
   }
 
   // Create unrolled loop.
-  forOp.setUpperBound(upperBoundUnrolled);
   forOp.setStep(stepUnrolled);
 
   auto iterArgs = ValueRange(forOp.getRegionIterArgs());
@@ -485,8 +564,10 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
         return arith::AddIOp::create(b, loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
-  // Promote the loop body up if this has turned into a single iteration loop.
-  if (forOp.promoteIfSingleIteration(rewriter).failed())
+  // Promote the loop body up if this has turned into a single iteration loop
+  // and `shouldPromoteIfSingleIteration` is true.
+  if (!shouldPromoteIfSingleIteration ||
+      forOp.promoteIfSingleIteration(rewriter).failed())
     resultLoops.mainLoopOp = forOp;
   return resultLoops;
 }
@@ -500,9 +581,9 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
-  if (tripCount.getSExtValue() == 1)
+  if (tripCount.isOne())
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
+  return loopUnrollByFactor(forOp, tripCount.getZExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -548,12 +629,15 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
-  if (unrollJamFactor > tripCount->getZExtValue()) {
+  uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
+  if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
               "count";
-    unrollJamFactor = tripCount->getZExtValue();
-  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
+    unrollJamFactor = tripCountValue;
+  } else if (tripCountValue % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -913,6 +997,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
 
+  // Bail out if any loop has a known zero step, as normalization
+  // would result in a division by zero.
+  for (auto loop : loops) {
+    if (auto step = getConstantIntValue(loop.getStep())) {
+      if (step.value() == 0) {
+        return failure();
+      }
+    }
+  }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
@@ -947,7 +1040,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],
@@ -961,6 +1055,13 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     auto yieldedVals = llvm::to_vector(innerTerminator->getOperands());
     assert(llvm::equal(outerLoop.getRegionIterArgs(), innerLoop.getInitArgs()));
     for (Value &yieldedVal : yieldedVals) {
+      // The yielded value may be the induction variable of the inner loop,
+      // which is about to be inlined and whose block argument is about to
+      // be destroyed. Use its replacement value instead.
+      if (yieldedVal == innerLoop.getInductionVar()) {
+        yieldedVal = delinearizeIvs[i];
+        continue;
+      }
       // The yielded value may be an iteration argument of the inner loop
       // which is about to be inlined.
       auto iter = llvm::find(innerLoop.getRegionIterArgs(), yieldedVal);
@@ -1338,6 +1439,15 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
 
+  // The strip-mining transformation splices loop bodies into a new inner loop
+  // without threading iter_args.  If any of the collected loops carries
+  // iter_args, the splice would produce invalid IR (yielded values from the
+  // inner scope used in the outer terminator).  Skip the transformation in
+  // that case.
+  if (llvm::any_of(forOps,
+                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
+    return {};
+
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes
   //   numIterations = ceildiv((upperBound - lowerBound), step)
@@ -1559,20 +1669,40 @@ bool mlir::isPerfectlyNestedForLoops(
   return true;
 }
 
-llvm::SmallVector<int64_t>
+llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>>
+mlir::getConstLoopBounds(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>> loopRanges;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    auto lbCst = getConstantIntValue(lb);
+    auto ubCst = getConstantIntValue(ub);
+    auto stepCst = getConstantIntValue(step);
+    if (!lbCst || !ubCst || !stepCst)
+      return {};
+    loopRanges.emplace_back(*lbCst, *ubCst, *stepCst);
+  }
+  return loopRanges;
+}
+
+llvm::SmallVector<llvm::APInt>
 mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
   std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
   std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
   if (!loBnds || !upBnds || !steps)
     return {};
-  llvm::SmallVector<int64_t> tripCounts;
+  llvm::SmallVector<llvm::APInt> tripCounts;
   for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    // TODO(#178506): Signedness is not handled correctly here.
     std::optional<llvm::APInt> numIter = constantTripCount(
         lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
     if (!numIter)
       return {};
-    tripCounts.push_back(numIter->getSExtValue());
+    tripCounts.push_back(*numIter);
   }
   return tripCounts;
 }
@@ -1603,7 +1733,7 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
 
   // Make sure that the unroll factors divide the iteration space evenly
   // TODO: Support unrolling loops with dynamic iteration spaces.
-  const llvm::SmallVector<int64_t> tripCounts = getConstLoopTripCounts(op);
+  const llvm::SmallVector<llvm::APInt> tripCounts = getConstLoopTripCounts(op);
   if (tripCounts.empty())
     return rewriter.notifyMatchFailure(
         op, "Failed to compute constant trip counts for the loop. Note that "
@@ -1611,7 +1741,7 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
 
   for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
     const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
-    if (tripCounts[dimIdx] % unrollFactor)
+    if (tripCounts[dimIdx].urem(unrollFactor) != 0)
       return rewriter.notifyMatchFailure(
           op, "Unroll factors don't divide the iteration space evenly");
   }

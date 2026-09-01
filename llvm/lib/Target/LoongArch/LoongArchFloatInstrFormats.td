@@ -194,7 +194,7 @@ class FP_SEL<bits<32> op, RegisterClass rc = FPR32>
                 "$fd, $fj, $fk, $ca">;
 
 class FP_BRANCH<bits<32> opcode>
-    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2:$imm21),
+    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2_br:$imm21),
               "$cj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;

@@ -73,8 +73,8 @@ HeapProfileRecords:
 ;--- memprof-dump-matched-call-site.ll
 
 ;; From -pass-remarks=memprof
-; CHECK: remark: match.cc:18:3: call in function main matched callsite with frame count 1
-; CHECK: remark: match.cc:13:28: call in function _ZL2f1v matched callsite with frame count 2
+; CHECK: remark: match.cc:18:3: call in function main matched callsite with frame count 1 and stack ids 5401059281181789382
+; CHECK: remark: match.cc:13:28: call in function _ZL2f1v matched callsite with frame count 2 and stack ids 4745611964195289084 10616861955219347331
 
 ;; From -memprof-print-match-info
 ; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched with 1 frames

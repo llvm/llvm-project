@@ -9,6 +9,8 @@
 #ifndef __LLVM_LIBC_TYPES_IMAXDIV_T_H__
 #define __LLVM_LIBC_TYPES_IMAXDIV_T_H__
 
+#include <stdint.h>
+
 typedef struct {
   intmax_t quot;
   intmax_t rem;

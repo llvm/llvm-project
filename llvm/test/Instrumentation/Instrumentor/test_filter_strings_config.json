@@ -1,0 +1,25 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_filter_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "demangle_function_names": false
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "filter": "name.startswith(\"test_\")",
+      "address": false,
+      "address.description": "The function address.",
+      "name": true,
+      "name.description": "The function name.",
+      "num_arguments": false,
+      "num_arguments.description": "Number of function arguments (without varargs).",
+      "arguments": false,
+      "arguments.description": "Description of the arguments.",
+      "is_main": false,
+      "is_main.description": "Flag to indicate it is the main function.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  }
+}

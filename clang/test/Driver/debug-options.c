@@ -486,12 +486,27 @@
 // DIRECTORY-NOT: "-fno-dwarf-directory-asm"
 // NODIRECTORY: "-fno-dwarf-directory-asm"
 
-// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-linux -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-macosx26.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-ios26.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-tvos26.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-xros26.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-watchos26.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-driverkit25.0 -c -g %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -target x86_64-apple-macosx10.11 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+// RUN: %clang -### -target x86_64-apple-ios10.11 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+// RUN: %clang -### -target x86_64-apple-tvos10.11 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+// RUN: %clang -### -target x86_64-apple-xros1 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+// RUN: %clang -### -target x86_64-apple-watchos10.11 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+// RUN: %clang -### -target x86_64-apple-driverkit19.11 -c -g %s 2>&1 | FileCheck --implicit-check-not=-gsimple-template-names --implicit-check-not=-debug-forward-template-params %s
+
 // SIMPLE_TMPL_NAMES: -gsimple-template-names=simple
 // FWD_TMPL_PARAMS-DAG: -debug-forward-template-params
-// RUN: not %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
+
+// RUN: not %clang -### -target x86_64-linux -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
 // MANGLED_TEMP_NAMES: error: unknown argument '-gsimple-template-names=mangled'; did you mean '-Xclang -gsimple-template-names=mangled'
-// RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
+
+// RUN: %clang -### -target x86_64-linux -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
 
 //// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARF version >= 4).

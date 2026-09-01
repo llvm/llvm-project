@@ -1,0 +1,38 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "WrongKey": []
+          }
+        }
+      ],
+      "summary_name": "TypeConstrainedPointers"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@operator new#vp#UL#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "type": "TUSummary"
+}

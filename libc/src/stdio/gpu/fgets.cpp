@@ -31,7 +31,6 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   });
   port.recv_n(&buf, &recv_size,
               [&](uint64_t) { return reinterpret_cast<void *>(str); });
-  port.close();
 
   if (recv_size == 0)
     return nullptr;

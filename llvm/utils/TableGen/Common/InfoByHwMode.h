@@ -28,6 +28,7 @@
 namespace llvm {
 
 class CodeGenRegBank;
+class CodeGenRegister;
 class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
@@ -228,11 +229,11 @@ raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
 
 struct SubRegRange {
-  uint16_t Size;
-  uint16_t Offset;
+  uint32_t Size;
+  uint32_t Offset;
 
   SubRegRange(const Record *R);
-  SubRegRange(uint16_t Size, uint16_t Offset) : Size(Size), Offset(Offset) {}
+  SubRegRange(uint32_t Size, uint32_t Offset) : Size(Size), Offset(Offset) {}
 };
 
 struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
@@ -254,9 +255,18 @@ struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
 
 struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
 public:
-  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                   const CodeGenRegBank &RegBank);
+  RegClassByHwMode(const Record *R, const CodeGenRegBank &RegBank);
   RegClassByHwMode() = default;
+};
+
+struct RegisterByHwMode : public InfoByHwMode<const CodeGenRegister *> {
+  RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank);
+  RegisterByHwMode() = default;
+  /// Resolve the register by calling <target>::RegByHwMode::get<name>(HwMode).
+  void emitResolverCall(raw_ostream &OS, const Twine &HwMode) const;
+
+private:
+  StringRef Namespace;
 };
 
 } // namespace llvm

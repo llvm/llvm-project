@@ -19,6 +19,9 @@ macro(mlir_configure_python_dev_packages)
     # Development.Module.
     # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
     set(_python_development_component Development.Module)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      list(APPEND _python_development_component Development.SABIModule)
+    endif()
 
     find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
@@ -44,9 +47,11 @@ macro(mlir_configure_python_dev_packages)
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     unset(_python_development_component)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      message(STATUS "MLIR Python stable ABI (abi3) enabled")
+    endif()
     message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
     message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
-    message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
     message(STATUS "Python extension suffix for modules: '${Python3_SOABI}'")
     if(nanobind_DIR)
       message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR} (-Dnanobind_DIR to change)")
@@ -77,9 +82,6 @@ macro(mlir_configure_python_dev_packages)
       set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}")
     endif()
     find_package(nanobind 2.9 CONFIG REQUIRED)
-    message(STATUS "Found nanobind v${nanobind_VERSION}: ${nanobind_INCLUDE_DIR}")
-    message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
-            "suffix = '${PYTHON_MODULE_SUFFIX}', "
-            "extension = '${PYTHON_MODULE_EXTENSION}")
+    message(STATUS "Found nanobind v${nanobind_VERSION}")
   endif()
 endmacro()

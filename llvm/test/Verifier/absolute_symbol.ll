@@ -37,21 +37,21 @@ define void @absolute_func_empty_arguments() !absolute_symbol !0 {
 @absolute_wrong_order = external global i32, !absolute_symbol !15
 
 ; CHECK: It should have at least one range!
-; CHECK-NEXT: !0 = !{}
+; CHECK-NEXT: !{{[0-9]+}} = !{}
 ; CHECK: It should have at least one range!
-; CHECK-NEXT: !0 = !{}
+; CHECK-NEXT: !{{[0-9]+}} = !{}
 !0 = !{}
 
 ; CHECK-NEXT: Unfinished range!
-; CHECK-NEXT: !1 = !{i64 128}
+; CHECK-NEXT: !{{[0-9]+}} = !{i64 128}
 !1 = !{i64 128}
 
 ; CHECK-NEXT: Unfinished range!
-; CHECK-NEXT: !2 = !{i64 128, i64 256, i64 512}
+; CHECK-NEXT: !{{[0-9]+}} = !{i64 128, i64 256, i64 512}
 !2 = !{i64 128, i64 256, i64 512}
 
 ; CHECK-NEXT: Unfinished range!
-; CHECK-NEXT: !3 = !{i32 256}
+; CHECK-NEXT: !{{[0-9]+}} = !{i32 256}
 !3 = !{i32 256}
 
 ; CHECK-NEXT: Range types must match instruction type!
@@ -67,7 +67,7 @@ define void @absolute_func_empty_arguments() !absolute_symbol !0 {
 !6 = !{i64 256, i32 512}
 
 ; CHECK-NEXT: Range must not be empty!
-; CHECK-NEXT: !7 = !{i64 0, i64 0}
+; CHECK-NEXT: !{{[0-9]+}} = !{i64 0, i64 0}
 !7 = !{i64 0, i64 0}
 
 ; CHECK-NEXT: The upper and lower limits cannot be the same value

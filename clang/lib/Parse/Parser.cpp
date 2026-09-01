@@ -95,8 +95,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
@@ -192,6 +191,11 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   }
 
   return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
+}
+
+bool Parser::isLikelyAtStartOfNewDeclaration() {
+  return Tok.isAtStartOfLine() &&
+         isDeclarationSpecifier(ImplicitTypenameContext::No);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
@@ -803,6 +807,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
+    return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
@@ -1185,7 +1192,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // declaration-specifiers are completely optional in the grammar.
   if (getLangOpts().isImplicitIntRequired() && D.getDeclSpec().isEmpty()) {
     Diag(D.getIdentifierLoc(), diag::warn_missing_type_specifier)
-        << D.getDeclSpec().getSourceRange();
+        << D.getDeclSpec().getSourceRange()
+        << FixItHint::CreateInsertion(D.getDeclSpec().getBeginLoc(), "int ");
     const char *PrevSpec;
     unsigned DiagID;
     const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
@@ -1299,12 +1307,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -1839,17 +1849,26 @@ SourceLocation Parser::getEndOfPreviousToken() const {
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  // A token lexed and cached before an earlier fallback reverted this keyword
+  // still carries the stale keyword kind; it is already an identifier.
+  if (II->getTokenID() == tok::identifier) {
+    Tok.setKind(tok::identifier);
+    return true;
+  }
+
   Diag(Tok, diag::ext_keyword_as_ident)
     << PP.getSpelling(Tok)
     << DisableKeyword;
   if (DisableKeyword)
-    Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+    II->revertTokenIDToIdentifier();
   Tok.setKind(tok::identifier);
   return true;
 }
 
 bool Parser::TryAnnotateTypeOrScopeToken(
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, bool IsAddressOfOperand) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -1965,9 +1984,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       /*EnteringContext*/ false))
+    if (ParseOptionalCXXScopeSpecifier(
+            SS, /*ObjectType=*/nullptr,
+            /*ObjectHasErrors=*/false,
+            /*EnteringContext=*/false,
+            /*IsAddressOfOperand=*/IsAddressOfOperand))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
@@ -2370,9 +2391,11 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
-  // This should already diagnosed in phase 4, just skip unil semicolon.
-  if (!Tok.isOneOf(tok::semi, tok::l_square))
+  if (Tok.isNoneOf(tok::semi, tok::l_square, tok::eof)) {
+    Diag(Tok, diag::err_unexpected_tok_after_module_name)
+        << PP.getSpelling(Tok);
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+  }
 
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
@@ -2440,7 +2463,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  if (PP.hadModuleLoaderFatalFailure()) {
+  // Clang modules can inject token streams while loading, so a fatal loader
+  // failure must stop parsing. C++20 named module imports are ordinary
+  // declarations, and a prior failed import should not hide later diagnostics.
+  bool IsCXX20NamedModuleImport =
+      getLangOpts().CPlusPlusModules && !IsObjCAtImport && !Path.empty();
+
+  if (PP.hadModuleLoaderFatalFailure() && !IsCXX20NamedModuleImport) {
     // With a fatal failure in the module loader, we abort parsing.
     cutOffParsing();
     return nullptr;
@@ -2489,6 +2518,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
+  // FIXME: If the previous token is tok::header_name like the following:
+  //
+  //  import <%%>
+  //
+  // The diagnostic location is incorrect.
+  //
+  //  <source file>:1:10: error: import directive must end with a ';'
+  //   1 | import <%%>
+  //     |          ^
+  //     |          ;
   bool LexedSemi = false;
   if (getLangOpts().CPlusPlusModules)
     LexedSemi =

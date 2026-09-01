@@ -1,6 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
 
 ! BOTH-LABEL: func.func @_QPteams
 subroutine teams()
@@ -148,6 +148,11 @@ subroutine distribute_parallel_do_simd()
   ! BOTH: omp.distribute
   ! BOTH-NEXT: omp.wsloop
   ! BOTH-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
+  ! DEVICE-NOT: omp.simd
   !$omp distribute parallel do simd num_threads(1)
   do i=1,10
     call foo()

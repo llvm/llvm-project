@@ -15,15 +15,22 @@
 #ifndef _LIBSYCL___IMPL_PLATFORM_HPP
 #define _LIBSYCL___IMPL_PLATFORM_HPP
 
+#include <sycl/__impl/aspect.hpp>
 #include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
+#include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/info/platform.hpp>
 
 #include <memory>
 #include <vector>
 
+#define SYCL_KHR_DEFAULT_CONTEXT 1
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+class device;
 
 namespace detail {
 class PlatformImpl;
@@ -56,6 +63,16 @@ public:
   /// \return the backend associated with this platform.
   backend get_backend() const noexcept;
 
+  /// Returns all SYCL devices associated with this platform.
+  ///
+  /// If there are no devices that match given device
+  /// type, resulting vector is empty.
+  ///
+  /// \param DeviceType is a SYCL device type.
+  /// \return a vector of SYCL devices matching given device type.
+  std::vector<device>
+  get_devices(info::device_type DeviceType = info::device_type::all) const;
+
   /// Queries this SYCL platform for info.
   ///
   /// The return type depends on information being queried.
@@ -69,12 +86,25 @@ public:
   typename detail::is_backend_info_desc<Param>::return_type
   get_backend_info() const;
 
+  /// Indicates if all of the SYCL devices on this platform have the
+  /// given aspect.
+  ///
+  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
+  ///
+  /// \return true if all of the SYCL devices on this platform have the
+  /// given aspect.
+  bool has(aspect Aspect) const;
+
   /// Returns all SYCL platforms from all backends that are available in the
   /// system.
   ///
   /// \return A std::vector containing all of the platforms from all backends
   /// that are available in the system.
   static std::vector<platform> get_platforms();
+
+  /// \return the context that contains all of the root devices that are
+  /// associated with this platform.
+  context khr_get_default_context() const;
 
 private:
   platform(detail::PlatformImpl &Impl) : impl(&Impl) {}

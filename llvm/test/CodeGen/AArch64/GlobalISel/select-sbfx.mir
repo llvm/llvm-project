@@ -17,10 +17,10 @@ body:             |
     ; CHECK-NEXT: %sbfx:gpr32 = SBFMWri %copy, 0, 9
     ; CHECK-NEXT: $w0 = COPY %sbfx
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 0
-    %cst2:gpr(s32) = G_CONSTANT i32 10
-    %sbfx:gpr(s32) = G_SBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 0
+    %cst2:gpr(i32) = G_CONSTANT i32 10
+    %sbfx:gpr(i32) = G_SBFX %copy, %cst1, %cst2
     $w0 = COPY %sbfx
     RET_ReallyLR implicit $w0
 
@@ -40,10 +40,10 @@ body:             |
     ; CHECK-NEXT: %sbfx:gpr64 = SBFMXri %copy, 0, 9
     ; CHECK-NEXT: $x0 = COPY %sbfx
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %cst1:gpr(s64) = G_CONSTANT i64 0
-    %cst2:gpr(s64) = G_CONSTANT i64 10
-    %sbfx:gpr(s64) = G_SBFX %copy, %cst1, %cst2
+    %copy:gpr(i64) = COPY $x0
+    %cst1:gpr(i64) = G_CONSTANT i64 0
+    %cst2:gpr(i64) = G_CONSTANT i64 10
+    %sbfx:gpr(i64) = G_SBFX %copy, %cst1, %cst2
     $x0 = COPY %sbfx
     RET_ReallyLR implicit $x0
 
@@ -65,10 +65,10 @@ body:             |
     ; CHECK-NEXT: %sbfx:gpr32 = SBFMWri %copy, 31, 31
     ; CHECK-NEXT: $w0 = COPY %sbfx
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 31
-    %cst2:gpr(s32) = G_CONSTANT i32 1
-    %sbfx:gpr(s32) = G_SBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 31
+    %cst2:gpr(i32) = G_CONSTANT i32 1
+    %sbfx:gpr(i32) = G_SBFX %copy, %cst1, %cst2
     $w0 = COPY %sbfx
     RET_ReallyLR implicit $w0
 ---
@@ -85,10 +85,10 @@ body:             |
     ; CHECK: %sbfx:gpr32 = SBFMWri %copy, 10, 14
     ; CHECK: $w0 = COPY %sbfx
     ; CHECK: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 10
-    %cst2:gpr(s32) = G_CONSTANT i32 5
-    %sbfx:gpr(s32) = G_SBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 10
+    %cst2:gpr(i32) = G_CONSTANT i32 5
+    %sbfx:gpr(i32) = G_SBFX %copy, %cst1, %cst2
     $w0 = COPY %sbfx
     RET_ReallyLR implicit $w0
 ---
@@ -105,9 +105,9 @@ body:             |
     ; CHECK: %sbfx:gpr64 = SBFMXri %copy, 10, 14
     ; CHECK: $x0 = COPY %sbfx
     ; CHECK: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %cst1:gpr(s64) = G_CONSTANT i64 10
-    %cst2:gpr(s64) = G_CONSTANT i64 5
-    %sbfx:gpr(s64) = G_SBFX %copy, %cst1, %cst2
+    %copy:gpr(i64) = COPY $x0
+    %cst1:gpr(i64) = G_CONSTANT i64 10
+    %cst2:gpr(i64) = G_CONSTANT i64 5
+    %sbfx:gpr(i64) = G_SBFX %copy, %cst1, %cst2
     $x0 = COPY %sbfx
     RET_ReallyLR implicit $x0

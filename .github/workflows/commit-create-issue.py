@@ -2,7 +2,7 @@ import github
 import sys
 
 token = sys.argv[1]
-gh = github.Github(login_or_token=token)
+gh = github.Github(auth=github.Auth.Token(token))
 repo = gh.get_repo("llvm/llvm-project")
 
 length = "4 weeks"

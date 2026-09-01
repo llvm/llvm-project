@@ -19,6 +19,7 @@
 #include "count_new.h"
 #include "operator_hijacker.h"
 #include "test_macros.h"
+#include "MoveOnly.h"
 
 struct A
 {
@@ -91,6 +92,11 @@ void test(const T &t0)
 
 int main(int, char**)
 {
+  {
+    auto val = std::make_shared<MoveOnly>(MoveOnly());
+    assert(val->get() == 1);
+  }
+
     int nc = globalMemCounter.outstanding_new;
     {
     int i = 67;

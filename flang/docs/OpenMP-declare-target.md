@@ -177,10 +177,6 @@ Host functions with `target` regions are marked with a `declare target host`
 attribute so they will be removed after outlining the target regions contained
 inside.
 
-While this infrastructure could be generally applicable to more than just Flang,
-it is only utilised in the Flang frontend, so it resides there rather than in
-the OpenMP dialect codebase.
-
 ## Declare Target OpenMP Dialect To LLVM-IR Lowering
 
 The OpenMP dialect lowering of `declare target` is done through the

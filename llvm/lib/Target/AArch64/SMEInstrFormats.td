@@ -58,6 +58,18 @@ def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO :
   let hasSideEffects = 0;
 }
 
+// Expanded form of FORM_TRANSPOSED_REG_TUPLE. Each FORM_TRANSPOSED_REG_TUPLE is
+// expanded to copies immediately before register allocation. This ensures the
+// live ranges of each member of the tuple are correctly modelled during
+// register allocation. These pseudos are used to guide the hints in
+// AArch64RegisterInfo::getRegAllocationHints().
+def COPY_INTO_TRANSPOSED_TUPLE :
+  Pseudo<(outs ZPR:$tup), (ins ZPR:$zn, imm0_31: $size), []>, Sched<[]>{
+  let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
+  let isReMaterializable = 1;
+}
+
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 // SME ZA loads and stores
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,
@@ -870,7 +882,7 @@ multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
 class sme_load_pseudo
     : Pseudo<(outs), (ins i32imm:$tile, MatrixIndexGPR32Op12_15:$idx,
                           i32imm:$imm, PPR3bAny:$pg, GPR64sp:$base, GPR64:$offset), []>,
-      Sched<[]> {
+      Sched<[WriteLD]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let usesCustomInserter = 1;
   let mayLoad = 1;
@@ -1148,7 +1160,7 @@ multiclass sme_fill<string opcodestr> {
       : Pseudo<(outs),
                (ins MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm4,
                     GPR64sp:$base), []>,
-        Sched<[]> {
+        Sched<[WriteLD]> {
     // Translated to actual instruction in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
     let mayLoad = 1;
@@ -2558,7 +2570,7 @@ class sme2_cvt_vg2_single<string mnemonic, bits<5> op,
 multiclass sme2_cvt_vg2_single<string mnemonic, bits<5> op, ValueType out_vt,
                                ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, op, ZPR16, ZZ_s_mul_r>;
-  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
+  def : SVE_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
 }
 
 // SME2 multi-vec FP8 down convert two registers
@@ -3691,7 +3703,8 @@ class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
 multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperator op> {
   def NAME : sme2_spill_fill_vector<mnemonic, opc>;
   def NAME # _PSEUDO
-      : Pseudo<(outs), (ins ZTR:$ZTt, GPR64sp:$base), []>, Sched<[]> {
+      : Pseudo<(outs), (ins ZTR:$ZTt, GPR64sp:$base), []>,
+        Sched<[!if(opc{7}, WriteST, WriteLD)]> {
     // Translated to actual instruction in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
   }
@@ -3922,8 +3935,8 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
 
 // 8-bit Look up table
 class sme2_lut_single<string asm>
-  : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
-    asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
+    : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
+        asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<5> Zd;
   bits<5> Zn;
@@ -3932,10 +3945,17 @@ class sme2_lut_single<string asm>
   let Inst{4-0}   = Zd;
 }
 
+multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
+  def NAME : sme2_lut_single<asm>;
+
+  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
+            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
+}
+
 //===----------------------------------------------------------------------===//
 // Lookup table read with 6-bit indices (8-bit)
 class sme2_luti6_zt_base<RegisterOperand zd_ty, string asm>
-  : I<(outs zd_ty:$Zd), (ins ZTR:$ZTt, ZZZ_Any:$Zn),
+  : I<(outs zd_ty:$Zd), (ins ZTR:$ZTt, ZZZ_Any_3b:$Zn),
     asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<3> Zd;

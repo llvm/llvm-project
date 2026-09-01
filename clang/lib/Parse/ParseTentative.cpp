@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 
@@ -34,50 +35,79 @@ bool Parser::isCXXDeclarationStatement(
   case tok::coloncolon:
   case tok::identifier: {
     if (DisambiguatingWithExpression) {
+      {
+        // Suppress access checks: the declaration context of an out-of-line
+        // member is not known yet. On the recognized declaration shapes below
+        // the real parse redoes the checks from the unannotated tokens.
+        RevertingTentativeParsingAction TPA(*this, /*Unannotated=*/true);
+        SuppressAccessChecks AccessSuppressor(*this, /*activate=*/true);
+        // Parse the C++ scope specifier.
+        CXXScopeSpec SS;
+        ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHasErrors=*/false,
+                                       /*EnteringContext=*/true);
+
+        switch (Tok.getKind()) {
+        case tok::identifier: {
+          IdentifierInfo *II = Tok.getIdentifierInfo();
+          bool isDeductionGuide = Actions.isDeductionGuideName(
+              getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
+          if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
+              isDeductionGuide) {
+            if (isConstructorDeclarator(
+                    /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                    /*IsFriend=*/DeclSpec::FriendSpecified::No))
+              return true;
+          } else if (SS.isNotEmpty()) {
+            // If the scope is not empty, it could alternatively be something
+            // like a typedef or using declaration. That declaration might be
+            // private in the global context, which would be diagnosed by
+            // calling into isCXXSimpleDeclaration, but may actually be fine in
+            // the context of member functions and static variable definitions.
+            // Check if the next token is also an identifier and assume a
+            // declaration. We cannot check if the scopes match because the
+            // declarations could involve namespaces and friend declarations.
+            if (NextToken().is(tok::identifier))
+              return true;
+          }
+          break;
+        }
+        case tok::kw_operator:
+          return true;
+        case tok::tilde:
+          return true;
+        default:
+          break;
+        }
+      }
+      // Not a recognized declaration shape. Parse the scope specifier again
+      // without suppression, so qualifier access diagnoses as it does for a
+      // statement, and keep the annotations for the checks below.
       RevertingTentativeParsingAction TPA(*this);
-      // Parse the C++ scope specifier.
       CXXScopeSpec SS;
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/true);
-
-      switch (Tok.getKind()) {
-      case tok::identifier: {
-        IdentifierInfo *II = Tok.getIdentifierInfo();
-        bool isDeductionGuide = Actions.isDeductionGuideName(
-            getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
-        if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
-            isDeductionGuide) {
-          if (isConstructorDeclarator(
-                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
-                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
-            return true;
-        } else if (SS.isNotEmpty()) {
-          // If the scope is not empty, it could alternatively be something like
-          // a typedef or using declaration. That declaration might be private
-          // in the global context, which would be diagnosed by calling into
-          // isCXXSimpleDeclaration, but may actually be fine in the context of
-          // member functions and static variable definitions. Check if the next
-          // token is also an identifier and assume a declaration.
-          // We cannot check if the scopes match because the declarations could
-          // involve namespaces and friend declarations.
-          if (NextToken().is(tok::identifier))
-            return true;
-        }
-        break;
-      }
-      case tok::kw_operator:
-        return true;
-      case tok::tilde:
-        return true;
-      default:
-        break;
-      }
     }
   }
     [[fallthrough]];
     // simple-declaration
   default:
+
+    if (DisambiguatingWithExpression) {
+      TentativeParsingAction TPA(*this, /*Unannotated=*/true);
+      // Skip early access checks to support edge cases like extern declarations
+      // involving private types. Tokens are unannotated by reverting so that
+      // access integrity is verified during the subsequent type-lookup phase.
+      SuppressAccessChecks AccessExporter(*this, /*activate=*/true);
+      if (isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false)) {
+        // Do not annotate the tokens, otherwise access will be neglected later.
+        TPA.Revert();
+        return true;
+      }
+      TPA.Commit();
+      return false;
+    }
     return isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false);
   }
 }
@@ -155,9 +185,10 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
     }
     [[fallthrough]];
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
@@ -572,6 +603,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
       isAmbiguous = true;
 
     } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
+    } else if (Context == TentativeCXXTypeIdContext::AsReflectionOperand) {
       TPR = TPResult::True;
       isAmbiguous = true;
     } else
@@ -1124,8 +1158,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))
@@ -1173,6 +1205,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_inline:
   case tok::kw_virtual:
   case tok::kw_explicit:
+  case tok::kw__Noreturn:
 
     // Modules
   case tok::kw___module_private__:
@@ -1223,12 +1256,21 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+    // HLSL matrix layout qualifiers
+  case tok::kw_row_major:
+  case tok::kw_column_major:
 
     // GNU
   case tok::kw_restrict:
   case tok::kw__Complex:
+  case tok::kw__Imaginary:
   case tok::kw___attribute:
   case tok::kw___auto_type:
+    return TPResult::True;
+
+    // OverflowBehaviorTypes
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
     return TPResult::True;
 
     // Microsoft
@@ -1496,7 +1538,8 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     return TPResult::True;
 
   // GNU typeof support.
-  case tok::kw_typeof: {
+  case tok::kw_typeof:
+  case tok::kw_typeof_unqual: {
     if (NextToken().isNot(tok::l_paren))
       return TPResult::True;
 
@@ -1519,7 +1562,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     return TPResult::True;
 
   // C11 _Alignas
@@ -1561,8 +1604,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     return true;
 
     // elaborated-type-specifier
@@ -1621,7 +1665,8 @@ bool Parser::isCXXDeclarationSpecifierAType() {
 }
 
 Parser::TPResult Parser::TryParseTypeofSpecifier() {
-  assert(Tok.is(tok::kw_typeof) && "Expected 'typeof'!");
+  assert(Tok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
+         "Expected 'typeof' or 'typeof_unqual'!");
   ConsumeToken();
 
   assert(Tok.is(tok::l_paren) && "Expected '('");

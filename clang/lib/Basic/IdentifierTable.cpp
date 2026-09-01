@@ -159,7 +159,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
   case KEYNOOPENCL:
   case KEYNOMS18:
-  case KEYNOZOS:
+  case KEYNOHLSL:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
   case KEYFIXEDPOINT:
@@ -178,10 +178,10 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
   // These are tests that need to 'always win', as they are special in that they
   // disable based on certain conditions.
   if (LangOpts.OpenCL && (Flags & KEYNOOPENCL)) return KS_Disabled;
+  if (LangOpts.HLSL && (Flags & KEYNOHLSL))
+    return KS_Disabled;
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
-    return KS_Disabled;
-  if (LangOpts.ZOSExt && (Flags & KEYNOZOS))
     return KS_Disabled;
   KeywordStatus CurStatus = KS_Unknown;
 
@@ -754,9 +754,8 @@ Selector SelectorTable::getSelector(unsigned nKeys,
   llvm::FoldingSetNodeID ID;
   MultiKeywordSelector::Profile(ID, IIV, nKeys);
 
-  void *InsertPos = nullptr;
-  if (MultiKeywordSelector *SI =
-        SelTabImpl.Table.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken InsertToken;
+  if (MultiKeywordSelector *SI = SelTabImpl.Table.lookup(ID, InsertToken))
     return Selector(SI);
 
   // MultiKeywordSelector objects are not allocated with new because they have a
@@ -766,7 +765,7 @@ Selector SelectorTable::getSelector(unsigned nKeys,
       (MultiKeywordSelector *)SelTabImpl.Allocator.Allocate(
           Size, alignof(MultiKeywordSelector));
   new (SI) MultiKeywordSelector(nKeys, IIV);
-  SelTabImpl.Table.InsertNode(SI, InsertPos);
+  SelTabImpl.Table.insert(SI, InsertToken);
   return Selector(SI);
 }
 

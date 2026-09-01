@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class GenericDequeDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def findVariable(self, name):

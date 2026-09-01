@@ -6,7 +6,6 @@ static_library("Frontend") {
     "//clang/lib/APINotes",
     "//clang/lib/AST",
     "//clang/lib/Basic",
-    "//clang/lib/Driver",
     "//clang/lib/Edit",
     "//clang/lib/Lex",
     "//clang/lib/Options",

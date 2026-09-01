@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <grpc++/grpc++.h>
+#include <grpcpp/grpcpp.h>
 
 #include "Client.h"
 #include "Feature.h"

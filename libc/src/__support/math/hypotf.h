@@ -22,82 +22,99 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static float hypotf(float x, float y) {
+LIBC_INLINE float hypotf(float x, float y) {
   using DoubleBits = fputil::FPBits<double>;
   using FPBits = fputil::FPBits<float>;
+  using fputil::DoubleDouble;
 
-  FPBits x_abs = FPBits(x).abs();
-  FPBits y_abs = FPBits(y).abs();
+  uint32_t x_a = FPBits(x).uintval() & 0x7fff'ffff;
+  uint32_t y_a = FPBits(y).uintval() & 0x7fff'ffff;
 
-  bool x_abs_larger = x_abs.uintval() >= y_abs.uintval();
-
-  FPBits a_bits = x_abs_larger ? x_abs : y_abs;
-  FPBits b_bits = x_abs_larger ? y_abs : x_abs;
-
-  uint32_t a_u = a_bits.uintval();
-  uint32_t b_u = b_bits.uintval();
-
-  // Note: replacing `a_u >= FPBits::EXP_MASK` with `a_bits.is_inf_or_nan()`
+  // Note: replacing `x_a >= FPBits::EXP_MASK` with `x_bits.is_inf_or_nan()`
   // generates extra exponent bit masking instructions on x86-64.
-  if (LIBC_UNLIKELY(a_u >= FPBits::EXP_MASK)) {
+  if (LIBC_UNLIKELY(x_a >= FPBits::EXP_MASK || y_a >= FPBits::EXP_MASK)) {
     // x or y is inf or nan
-    if (a_bits.is_signaling_nan() || b_bits.is_signaling_nan()) {
+    FPBits x_bits(x);
+    FPBits y_bits(y);
+    if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
-    if (a_bits.is_inf() || b_bits.is_inf())
+    if (x_bits.is_inf() || y_bits.is_inf())
       return FPBits::inf().get_val();
-    return a_bits.get_val();
+    return x + y;
   }
 
-  if (LIBC_UNLIKELY(a_u - b_u >=
-                    static_cast<uint32_t>((FPBits::FRACTION_LEN + 2)
-                                          << FPBits::FRACTION_LEN)))
-    return x_abs.get_val() + y_abs.get_val();
+  double xd = static_cast<double>(x);
+  double yd = static_cast<double>(y);
 
-  double ad = static_cast<double>(a_bits.get_val());
-  double bd = static_cast<double>(b_bits.get_val());
+  // x^2 and y^2 are exact in double precision.
+  double x_sq = xd * xd;
 
-  // These squares are exact.
-  double a_sq = ad * ad;
+  double sum_sq;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double sum_sq = fputil::multiply_add(bd, bd, a_sq);
+  sum_sq = fputil::multiply_add(yd, yd, x_sq);
 #else
-  double b_sq = bd * bd;
-  double sum_sq = a_sq + b_sq;
+  double y_sq = yd * yd;
+  sum_sq = x_sq + y_sq;
 #endif
 
   // Take sqrt in double precision.
   DoubleBits result(fputil::sqrt<double>(sum_sq));
-  uint64_t r_u = result.uintval();
+  double r = result.get_val();
+  float r_f = static_cast<float>(r);
 
   // If any of the sticky bits of the result are non-zero, except the LSB, then
   // the rounded result is correct.
-  if (LIBC_UNLIKELY(((r_u + 1) & 0x0000'0000'0FFF'FFFE) == 0)) {
-    double r_d = result.get_val();
+  uint64_t r_u = result.uintval();
+  uint32_t r_u32 = static_cast<uint32_t>(r_u);
 
-    // Perform rounding correction.
+  if (LIBC_UNLIKELY(((r_u32 + 1) & 0x0FFF'FFFE) == 0)) {
+    // Almost all the sticky bits of the results are non-zero, extra checks are
+    // needed to make sure rounding is correct.
+
+    // Perform a quick check to see if the result rounded to float is already
+    // correct.  Majority of hard-to-round cases fall in this case.  If not, we
+    // will need to perform more expensive computations to get the correct error
+    // terms.
+    double r_d = static_cast<double>(r_f);
+    bool y_a_smaller = y_a < x_a;
+
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-    double sum_sq_lo = fputil::multiply_add(bd, bd, a_sq - sum_sq);
-    double err = sum_sq_lo - fputil::multiply_add(r_d, r_d, -sum_sq);
+    // Compute the missing y_sq variable for FMA code path.
+    double y_sq = yd * yd;
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+
+    double a = y_a_smaller ? x_sq : y_sq;
+    double b = y_a_smaller ? y_sq : x_sq;
+    double e = b - fputil::multiply_add(r_d, r_d, -a);
+    if (e == 0.0)
+      return r_f;
+
+    // Rounding correction is needed.
+    // The errors come from two parts:
+    // - rounding errors from sqrt(sum_sq) -> D(sum_sq)
+    // - rounding errors from x_sq + y_sq -> sum_sq
+    // We use FastTwoSum algorithm to compute those errors and then combine.
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+    double sum_sq_lo = (b - (sum_sq - a));
+    double err = sum_sq_lo - fputil::multiply_add(r, r, -sum_sq);
 #else
-    fputil::DoubleDouble r_sq = fputil::exact_mult(r_d, r_d);
-    double sum_sq_lo = b_sq - (sum_sq - a_sq);
+    fputil::DoubleDouble r_sq = fputil::exact_mult(r, r);
+    double sum_sq_lo = (b - (sum_sq - a));
     double err = (sum_sq - r_sq.hi) + (sum_sq_lo - r_sq.lo);
 #endif
 
     if (err > 0) {
       r_u |= 1;
-    } else if ((err < 0) && (r_u & 1) == 0) {
+    } else if ((err < 0) && ((r_u32 & 0x0FFF'FFFF) == 0)) {
       r_u -= 1;
-    } else if ((r_u & 0x0000'0000'1FFF'FFFF) == 0) {
-      // The rounded result is exact.
-      fputil::clear_except_if_required(FE_INEXACT);
     }
+
     return static_cast<float>(DoubleBits(r_u).get_val());
   }
 
-  return static_cast<float>(result.get_val());
+  return r_f;
 }
 
 } // namespace math

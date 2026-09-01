@@ -20,8 +20,8 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
+class CycleInfo;
 class Function;
-class LoopInfo;
 class TargetLibraryInfo;
 
 /// This is an alternative analysis pass to
@@ -41,12 +41,12 @@ class TargetLibraryInfo;
 ///   LazyBranchProbabilityInfoPass::getLazyBPIAnalysisUsage(AU)
 ///
 /// 3. The computed BPI should be requested with
-///    getAnalysis<LazyBranchProbabilityInfoPass>().getBPI() before LoopInfo
+///    getAnalysis<LazyBranchProbabilityInfoPass>().getBPI() before CycleInfo
 ///    could be invalidated for example by changing the CFG.
 ///
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
-class LazyBranchProbabilityInfoPass : public FunctionPass {
+class LLVM_ABI LazyBranchProbabilityInfoPass : public FunctionPass {
 
   /// Wraps a BPI to allow lazy computation of the branch probabilities.
   ///
@@ -54,15 +54,15 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
   /// analysis without paying for the overhead if BPI doesn't end up being used.
   class LazyBranchProbabilityInfo {
   public:
-    LazyBranchProbabilityInfo(const Function *F, const LoopInfo *LI,
+    LazyBranchProbabilityInfo(const Function *F, const CycleInfo *CI,
                               const TargetLibraryInfo *TLI)
-        : F(F), LI(LI), TLI(TLI) {}
+        : F(F), CI(CI), TLI(TLI) {}
 
     /// Retrieve the BPI with the branch probabilities computed.
     BranchProbabilityInfo &getCalculated() {
       if (!Calculated) {
-        assert(F && LI && "call setAnalysis");
-        BPI.calculate(*F, *LI, TLI, nullptr, nullptr);
+        assert(F && CI && "call setAnalysis");
+        BPI.calculate(*F, *CI, TLI, nullptr, nullptr);
         Calculated = true;
       }
       return BPI;
@@ -76,7 +76,7 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
     BranchProbabilityInfo BPI;
     bool Calculated = false;
     const Function *F;
-    const LoopInfo *LI;
+    const CycleInfo *CI;
     const TargetLibraryInfo *TLI;
   };
 
@@ -105,7 +105,7 @@ public:
 };
 
 /// Helper for client passes to initialize dependent passes for LBPI.
-void initializeLazyBPIPassPass(PassRegistry &Registry);
+LLVM_ABI void initializeLazyBPIPassPass(PassRegistry &Registry);
 
 /// Simple trait class that provides a mapping between BPI passes and the
 /// corresponding BPInfo.

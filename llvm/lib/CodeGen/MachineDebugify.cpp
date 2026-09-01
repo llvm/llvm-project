@@ -13,6 +13,7 @@
 /// This isn't intended to have feature parity with Debugify.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -20,7 +21,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 
@@ -28,10 +28,10 @@
 
 using namespace llvm;
 
-namespace {
-bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
-                                            DIBuilder &DIB, Function &F) {
-  MachineFunction *MaybeMF = MMI.getMachineFunction(F);
+bool llvm::applyDebugifyMetadataToMachineFunction(
+    DIBuilder &DIB, Function &F,
+    llvm::function_ref<MachineFunction *(Function &)> GetMF) {
+  MachineFunction *MaybeMF = GetMF(F);
   if (!MaybeMF)
     return false;
   MachineFunction &MF = *MaybeMF;
@@ -170,6 +170,8 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   return true;
 }
 
+namespace {
+
 /// ModulePass for attaching synthetic debug info to everything, used with the
 /// legacy module pass manager.
 struct DebugifyMachineModule : public ModulePass {
@@ -182,7 +184,10 @@ struct DebugifyMachineModule : public ModulePass {
     return applyDebugifyMetadata(
         M, M.functions(),
         "ModuleDebugify: ", [&](DIBuilder &DIB, Function &F) -> bool {
-          return applyDebugifyMetadataToMachineFunction(MMI, DIB, F);
+          return applyDebugifyMetadataToMachineFunction(
+              DIB, F, [&MMI](Function &F) -> MachineFunction * {
+                return MMI.getMachineFunction(F);
+              });
         });
   }
 

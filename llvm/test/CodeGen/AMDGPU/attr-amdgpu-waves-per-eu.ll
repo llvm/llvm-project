@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 ; Exactly 1 wave per execution unit.
 ; CHECK-LABEL: {{^}}empty_exactly_1:
@@ -225,15 +225,3 @@ entry:
   ret void
 }
 attributes #12 = {"amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2,10" "amdgpu-lds-size"="16384"}
-
-; At most 2 waves per execution unit.
-; CHECK-LABEL: {{^}}empty_at_most_2:
-; CHECK: SGPRBlocks: 12
-; CHECK: VGPRBlocks: 21
-; CHECK: NumSGPRsForWavesPerEU: 102
-; CHECK: NumVGPRsForWavesPerEU: 85
-define amdgpu_kernel void @empty_at_most_2() #13 {
-entry:
-  ret void
-}
-attributes #13 = {"amdgpu-waves-per-eu"="0,2"}

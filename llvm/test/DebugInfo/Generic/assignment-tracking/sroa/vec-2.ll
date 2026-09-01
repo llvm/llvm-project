@@ -26,7 +26,7 @@
 ;; dbg.assign/DIExpression. Ensure that only the value-expression gets fragment
 ;; info; that the address-expression remains untouched.
 
-; CHECK: %i.sroa.2.12.vec.insert = insertelement <2 x float> %i.sroa.2.0.vec.insert, float %2, i32 1, !dbg
+; CHECK: %i.sroa.2.12.vec.insert = insertelement <2 x float> %i.sroa.2.0.vec.insert, float %2, i64 1, !dbg
 ;; There's a few dbg intrinsics we're not interested in testing wedged in here.
 ; CHECK-NEXT: #dbg_value
 ; CHECK-NEXT: #dbg_value

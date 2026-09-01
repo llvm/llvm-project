@@ -6,6 +6,8 @@ from pygments.lexer import RegexLexer, bygroups, include, using
 from pygments.token import *
 import re
 
+__all__ = ["MlirLexer"]
+
 
 class MlirLexer(RegexLexer):
     """Pygments lexer for MLIR.
@@ -40,6 +42,7 @@ class MlirLexer(RegexLexer):
 
     tokens = {
         "root": [
+            (r"\s+", Text),
             # Comments
             (r"//.*?$", Comment.Single),
             # operation name with assignment: %... = op.name

@@ -187,7 +187,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, ptr %a1) nounwind 
 ; SSE-LABEL: insertps_zero_from_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
-; SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,18446744073709551614]
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -195,7 +195,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, ptr %a1) nounwind 
 ; AVX-LABEL: insertps_zero_from_v2i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,18446744073709551614]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
@@ -211,7 +211,7 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, ptr %a1) nounwind 
 ; SSE-LABEL: insertps_zero_from_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
-; SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,0,1,1,2,2,3,3]
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -219,7 +219,7 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, ptr %a1) nounwind 
 ; AVX-LABEL: insertps_zero_from_v8i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [0,0,1,1,2,2,3,3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq

@@ -355,7 +355,9 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
     line = line.trim();
     if (line.consume_front(cStringEntryPrefix)) {
       uint32_t hash = 0;
-      if (to_integer(line, hash))
+      // Only accept hex (0x prefix) or decimal format
+      if (line.consume_front_insensitive("0x") ? !line.getAsInteger(16, hash)
+                                               : !line.getAsInteger(10, hash))
         cStringPriorities[hash].setPriority(prio, objectFile);
     } else {
       StringRef symbol = utils::getRootSymbol(line);
@@ -371,11 +373,12 @@ DenseMap<const InputSection *, int>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, int> sectionPriorities;
   if (config->bpStartupFunctionSort || config->bpFunctionOrderForCompression ||
-      config->bpDataOrderForCompression) {
+      config->bpDataOrderForCompression ||
+      !config->bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionPriorities = runBalancedPartitioning(
         config->bpStartupFunctionSort ? config->irpgoProfilePath : "",
-        config->bpFunctionOrderForCompression,
+        config->bpCompressionSortSpecs, config->bpFunctionOrderForCompression,
         config->bpDataOrderForCompression,
         config->bpCompressionSortStartupFunctions,
         config->bpVerboseSectionOrderer);
@@ -397,8 +400,11 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     std::optional<int> symbolPriority = getSymbolPriority(sym);
     if (!symbolPriority)
       return;
-    int &priority = sectionPriorities[sym->isec()];
+    auto *isec = sym->isec();
+    int &priority = sectionPriorities[isec];
     priority = std::min(priority, *symbolPriority);
+    // Order file takes precedence over cold partitioning.
+    isec->isCold = false;
   };
 
   // TODO: Make sure this handles weak symbols correctly.

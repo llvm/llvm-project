@@ -1,0 +1,111 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // ---- PointerType with address space ----
+
+  cir.func @target_address_space_ptr(%p: !cir.ptr<!s32i, target_address_space(1)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_local(%p: !cir.ptr<!s32i, lang_address_space(offload_local)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_global(%p: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_constant(%p: !cir.ptr<!s32i, lang_address_space(offload_constant)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_private(%p: !cir.ptr<!s32i, lang_address_space(offload_private)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_generic(%p: !cir.ptr<!s32i, lang_address_space(offload_generic)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_global_device(%p: !cir.ptr<!s32i, lang_address_space(offload_global_device)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_global_host(%p: !cir.ptr<!s32i, lang_address_space(offload_global_host)>) {
+    cir.return
+  }
+
+  cir.func @nested_pointer_address_spaces(%p: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>, lang_address_space(offload_global)>) {
+    cir.return
+  }
+
+  cir.func @array_element_address_space(%p: !cir.ptr<!cir.array<!cir.ptr<!s32i, lang_address_space(offload_global)> x 4>, lang_address_space(offload_constant)>) {
+    cir.return
+  }
+
+  cir.func @function_type_address_spaces(%p: !cir.ptr<!cir.func<(!cir.ptr<!s32i, lang_address_space(offload_global)>) -> !cir.ptr<!s32i, lang_address_space(offload_generic)>>>) {
+    cir.return
+  }
+
+  cir.func @default_address_space(%p: !cir.ptr<!s32i>) {
+    cir.return
+  }
+
+  // ---- GlobalOp with address space ----
+
+  cir.global external target_address_space(1) @global_target_as = #cir.int<42> : !s32i
+  cir.global "private" internal lang_address_space(offload_local) @global_lang_local : !s32i
+  cir.global external lang_address_space(offload_global) @global_lang_global = #cir.int<1> : !s32i
+  cir.global external lang_address_space(offload_constant) @global_lang_constant = #cir.int<2> : !s32i
+  cir.global external @global_default_as = #cir.int<0> : !s32i
+
+  // ---- GetGlobalOp with address space ----
+
+  cir.func @get_global_with_address_space() {
+    %0 = cir.get_global @global_target_as : !cir.ptr<!s32i, target_address_space(1)>
+    %1 = cir.get_global @global_lang_global : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    %2 = cir.get_global @global_default_as : !cir.ptr<!s32i>
+    cir.return
+  }
+}
+
+// CHECK-LABEL: cir.func @target_address_space_ptr
+// CHECK-SAME: !cir.ptr<!s32i, target_address_space(1)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_local
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_local)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_global
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_global)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_constant
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_constant)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_private
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_private)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_generic
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_generic)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_global_device
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_global_device)>
+// CHECK-LABEL: cir.func @lang_address_space_offload_global_host
+// CHECK-SAME: !cir.ptr<!s32i, lang_address_space(offload_global_host)>
+// CHECK-LABEL: cir.func @nested_pointer_address_spaces
+// CHECK-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>, lang_address_space(offload_global)>
+// CHECK-LABEL: cir.func @array_element_address_space
+// CHECK-SAME: !cir.ptr<!cir.array<!cir.ptr<!s32i, lang_address_space(offload_global)> x 4>, lang_address_space(offload_constant)>
+// CHECK-LABEL: cir.func @function_type_address_spaces
+// CHECK-SAME: !cir.ptr<!cir.func<(!cir.ptr<!s32i, lang_address_space(offload_global)>) -> !cir.ptr<!s32i, lang_address_space(offload_generic)>>>
+// CHECK-LABEL: cir.func @default_address_space
+// CHECK-SAME: !cir.ptr<!s32i>
+
+// CHECK: cir.global external target_address_space(1) @global_target_as
+// CHECK: cir.global "private" internal lang_address_space(offload_local)
+// CHECK-SAME: @global_lang_local
+// CHECK: cir.global external lang_address_space(offload_global)
+// CHECK-SAME: @global_lang_global
+// CHECK: cir.global external lang_address_space(offload_constant)
+// CHECK-SAME: @global_lang_constant
+// CHECK: cir.global external @global_default_as
+
+// CHECK-LABEL: cir.func @get_global_with_address_space
+// CHECK:   cir.get_global @global_target_as : !cir.ptr<!s32i, target_address_space(1)>
+// CHECK:   cir.get_global @global_lang_global : !cir.ptr<!s32i, lang_address_space(offload_global)>
+// CHECK:   cir.get_global @global_default_as : !cir.ptr<!s32i>

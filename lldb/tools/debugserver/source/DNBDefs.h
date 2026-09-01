@@ -392,6 +392,13 @@ enum DNBProfileDataScanType {
   eProfileAll = 0xffffffff
 };
 
+enum DNBBinaryInformationLevel {
+  eBinaryInformationLevelAddrOnly,
+  eBinaryInformationLevelAddrName,
+  eBinaryInformationLevelAddrNameUUID,
+  eBinaryInformationLevelFull
+};
+
 typedef nub_addr_t (*DNBCallbackNameToAddress)(nub_process_t pid,
                                                const char *name,
                                                const char *shlib_regex,

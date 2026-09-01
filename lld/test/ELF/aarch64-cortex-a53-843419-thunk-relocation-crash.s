@@ -4,6 +4,7 @@
 // RUN: ld.lld --script lds -fix-cortex-a53-843419 -verbose a.o -o exe \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d exe | FileCheck %s
+// RUN: rm exe a.o
 
 /// Test case for specific crash wrt interaction between thunks and errata
 /// patches where the size of the added thunks meant that a range-extension

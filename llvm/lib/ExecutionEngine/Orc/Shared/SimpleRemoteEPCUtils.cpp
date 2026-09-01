@@ -20,6 +20,9 @@
 #else
 #include <io.h>
 #endif
+#ifndef _WIN32
+#include <sys/socket.h>
+#endif
 
 namespace {
 
@@ -42,6 +45,30 @@ const char *ExecutorSessionObjectName =
 const char *DispatchFnName = "__llvm_orc_SimpleRemoteEPC_dispatch_fn";
 
 } // end namespace SimpleRemoteEPCDefaultBootstrapSymbolNames
+
+shared::WrapperFunctionBuffer encodeHangupPayload(Error Err) {
+  using SPSSerialize = shared::SPSArgList<shared::SPSError>;
+  auto SE = shared::detail::toSPSSerializable(std::move(Err));
+  auto Payload =
+      shared::WrapperFunctionBuffer::allocate(SPSSerialize::size(SE));
+  shared::SPSOutputBuffer OB(Payload.data(), Payload.size());
+  bool Success = SPSSerialize::serialize(OB, SE);
+  (void)Success;
+  assert(Success && "Hangup payload serialization should not fail");
+  return Payload;
+}
+
+Error decodeHangupPayload(shared::WrapperFunctionBuffer Payload) {
+  assert(!Payload.getOutOfBandError() &&
+         "Hangup payload should not be an out-of-band error buffer");
+
+  shared::detail::SPSSerializableError Info;
+  shared::SPSInputBuffer IB(Payload.data(), Payload.size());
+  if (!shared::SPSArgList<shared::SPSError>::deserialize(IB, Info))
+    return make_error<StringError>("Could not deserialize hangup info",
+                                   inconvertibleErrorCode());
+  return shared::detail::fromSPSSerializable(std::move(Info));
+}
 
 SimpleRemoteEPCTransportClient::~SimpleRemoteEPCTransportClient() = default;
 SimpleRemoteEPCTransport::~SimpleRemoteEPCTransport() = default;
@@ -115,6 +142,13 @@ void FDSimpleRemoteEPCTransport::disconnect() {
   Disconnected = true;
   bool CloseOutFD = InFD != OutFD;
 
+#ifndef _WIN32
+  // We need to shutdown the socket to wake up (and terminate) any ongoing
+  // blocking read on this FD. If the FD is not a socket, shutdown will just
+  // complain through errno (instead of crashing).
+  // FIXME: what about Windows?
+  ::shutdown(InFD, CloseOutFD ? SHUT_RD : SHUT_RDWR);
+#endif
   // Close InFD.
   while (close(InFD) == -1) {
     if (errno == EBADF)
@@ -123,6 +157,10 @@ void FDSimpleRemoteEPCTransport::disconnect() {
 
   // Close OutFD.
   if (CloseOutFD) {
+#ifndef _WIN32
+    // FIXME: what about Windows?
+    ::shutdown(OutFD, SHUT_WR);
+#endif
     while (close(OutFD) == -1) {
       if (errno == EBADF)
         break;

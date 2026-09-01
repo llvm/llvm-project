@@ -4,10 +4,13 @@ ExcludeHeaderFilterRegex: 'include-cleaner|clang-query'
 Checks: >
   bugprone-*,
   -bugprone-assignment-in-if-condition,
+  -bugprone-assignment-in-selection-statement,
   -bugprone-branch-clone,
+  -bugprone-derived-method-shadowing-base-method,
   -bugprone-easily-swappable-parameters,
+  -bugprone-missing-end-comparison,
   -bugprone-narrowing-conversions,
-  -bugprone-unchecked-optional-access,
+  -bugprone-signed-bitwise,
   -bugprone-unused-return-value,
   cppcoreguidelines-init-variables,
   cppcoreguidelines-missing-std-forward,
@@ -15,11 +18,13 @@ Checks: >
   cppcoreguidelines-virtual-class-destructor,
   google-readability-casting,
   misc-const-correctness,
+  -misc-explicit-constructor,
   misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
   -modernize-use-nodiscard,
+  -modernize-use-string-view,
   -modernize-use-trailing-return-type,
   performance-*,
   -performance-enum-size,
@@ -36,12 +41,16 @@ Checks: >
   -readability-magic-numbers,
   -readability-named-parameter,
   -readability-qualified-auto,
+  -readability-redundant-lambda-parameter-list,
   -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,
-  -readability-suspicious-call-argument
+  -readability-suspicious-call-argument,
+  -readability-trailing-comma
 
 CheckOptions:
-  - key:             performance-move-const-arg.CheckTriviallyCopyableMove
-    value:           false
   - key:             misc-include-cleaner.MissingIncludes
+    value:           false
+  - key:             misc-override-with-different-visibility.DisallowedVisibilityChange
+    value:           widening
+  - key:             performance-move-const-arg.CheckTriviallyCopyableMove
     value:           false

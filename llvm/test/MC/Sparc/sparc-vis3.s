@@ -101,6 +101,9 @@ fsra32 %f0, %f2, %f4
 ! NO-VIS3: error: instruction requires a CPU feature not currently enabled
 ! VIS3: lzcnt %o0, %o1                          ! encoding: [0x93,0xb0,0x02,0xe8]
 lzcnt %o0, %o1
+! NO-VIS3: error: instruction requires a CPU feature not currently enabled
+! VIS3: lzcnt %o0, %o1                          ! encoding: [0x93,0xb0,0x02,0xe8]
+lzd %o0, %o1
 
 ! NO-VIS3: error: instruction requires a CPU feature not currently enabled
 ! VIS3: movstosw %f0, %o0                       ! encoding: [0x91,0xb0,0x22,0x60]

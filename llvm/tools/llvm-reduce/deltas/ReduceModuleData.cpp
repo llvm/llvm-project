@@ -23,5 +23,5 @@ void llvm::reduceModuleDataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     Program.setSourceFileName("");
   // TODO: clear line by line rather than all at once
   if (!Program.getModuleInlineAsm().empty() && !O.shouldKeep())
-    Program.setModuleInlineAsm("");
+    Program.removeModuleInlineAsm();
 }

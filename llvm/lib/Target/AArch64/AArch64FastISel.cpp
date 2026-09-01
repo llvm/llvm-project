@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -212,7 +211,7 @@ private:
                          bool WantResult = true);
 
   // Emit functions.
-  bool emitCompareAndBranch(const BranchInst *BI);
+  bool emitCompareAndBranch(const CondBrInst *BI);
   bool emitCmp(const Value *LHS, const Value *RHS, bool IsZExt);
   bool emitICmp(MVT RetVT, const Value *LHS, const Value *RHS, bool IsZExt);
   bool emitICmp_ri(MVT RetVT, Register LHSReg, uint64_t Imm);
@@ -485,7 +484,6 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::SUBREG_TO_REG))
         .addDef(Result64)
-        .addImm(0)
         .addReg(ResultReg, RegState::Kill)
         .addImm(AArch64::sub_32);
     return Result64;
@@ -540,6 +538,8 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
   if (isa<ConstantPointerNull>(C)) {
+    if (C->getType()->isVectorTy())
+      return Register();
     assert(VT == MVT::i64 && "Expected 64-bit pointers");
     return materializeInt(ConstantInt::get(Type::getInt64Ty(*Context), 0), VT);
   }
@@ -676,8 +676,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -1874,7 +1873,6 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(ResultReg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     ResultReg = Reg64;
@@ -2254,7 +2252,7 @@ static AArch64CC::CondCode getCompareCC(CmpInst::Predicate Pred) {
 }
 
 /// Try to emit a combined compare-and-branch instruction.
-bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
+bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
   // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
   // will not be produced, as they are conditional branch instructions that do
   // not set flags.
@@ -2380,12 +2378,7 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
 }
 
 bool AArch64FastISel::selectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
-  if (BI->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.getMBB(BI->getSuccessor(0));
-    fastEmitBranch(MSucc, BI->getDebugLoc());
-    return true;
-  }
+  const CondBrInst *BI = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
@@ -2490,6 +2483,11 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
     return false;
 
   // i1 conditions come as i32 values, test the lowest bit with tb(n)z.
+  // However, that's not allowed with SLH.
+  if (FuncInfo.MF->getFunction().hasFnAttribute(
+          Attribute::SpeculativeLoadHardening))
+    return false;
+
   unsigned Opcode = AArch64::TBNZW;
   if (FuncInfo.MBB->isLayoutSuccessor(TBB)) {
     std::swap(TBB, FBB);
@@ -3157,10 +3155,6 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // Allow SelectionDAG isel to handle indirect calls with KCFI checks.
   if (CLI.CB && CLI.CB->isIndirectCall() &&
       CLI.CB->getOperandBundle(LLVMContext::OB_kcfi))
-    return false;
-
-  // Allow SelectionDAG isel to handle clang.arc.attachedcall operand bundle.
-  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB))
     return false;
 
   // Allow SelectionDAG isel to handle tail calls.
@@ -4036,7 +4030,6 @@ Register AArch64FastISel::emiti1Ext(Register SrcReg, MVT DestVT, bool IsZExt) {
       Register Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(AArch64::SUBREG_TO_REG), Reg64)
-          .addImm(0)
           .addReg(ResultReg)
           .addImm(AArch64::sub_32);
       ResultReg = Reg64;
@@ -4183,7 +4176,6 @@ Register AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4300,7 +4292,6 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4406,7 +4397,6 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4464,7 +4454,6 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     Register Src64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Src64)
-        .addImm(0)
         .addReg(SrcReg)
         .addImm(AArch64::sub_32);
     SrcReg = Src64;
@@ -4473,54 +4462,6 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
   const TargetRegisterClass *RC =
       (DestVT == MVT::i64) ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
   return fastEmitInst_rii(Opc, RC, SrcReg, 0, Imm);
-}
-
-static bool isZExtLoad(const MachineInstr *LI) {
-  switch (LI->getOpcode()) {
-  default:
-    return false;
-  case AArch64::LDURBBi:
-  case AArch64::LDURHHi:
-  case AArch64::LDURWi:
-  case AArch64::LDRBBui:
-  case AArch64::LDRHHui:
-  case AArch64::LDRWui:
-  case AArch64::LDRBBroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRWroX:
-  case AArch64::LDRBBroW:
-  case AArch64::LDRHHroW:
-  case AArch64::LDRWroW:
-    return true;
-  }
-}
-
-static bool isSExtLoad(const MachineInstr *LI) {
-  switch (LI->getOpcode()) {
-  default:
-    return false;
-  case AArch64::LDURSBWi:
-  case AArch64::LDURSHWi:
-  case AArch64::LDURSBXi:
-  case AArch64::LDURSHXi:
-  case AArch64::LDURSWi:
-  case AArch64::LDRSBWui:
-  case AArch64::LDRSHWui:
-  case AArch64::LDRSBXui:
-  case AArch64::LDRSHXui:
-  case AArch64::LDRSWui:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRSBWroW:
-  case AArch64::LDRSHWroW:
-  case AArch64::LDRSBXroW:
-  case AArch64::LDRSHXroW:
-  case AArch64::LDRSWroW:
-    return true;
-  }
 }
 
 bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
@@ -4548,7 +4489,8 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     LoadMI = MRI.getUniqueVRegDef(LoadReg);
     assert(LoadMI && "Expected valid instruction");
   }
-  if (!(IsZExt && isZExtLoad(LoadMI)) && !(!IsZExt && isSExtLoad(LoadMI)))
+  if (!(IsZExt && AArch64InstrInfo::isZExtLoad(*LoadMI)) &&
+      !(!IsZExt && AArch64InstrInfo::isSExtLoad(*LoadMI)))
     return false;
 
   // Nothing to be done.
@@ -4561,7 +4503,6 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(Reg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     Reg = Reg64;
@@ -4604,7 +4545,6 @@ bool AArch64FastISel::selectIntExt(const Instruction *I) {
         Register ResultReg = createResultReg(&AArch64::GPR64RegClass);
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(AArch64::SUBREG_TO_REG), ResultReg)
-            .addImm(0)
             .addReg(SrcReg)
             .addImm(AArch64::sub_32);
         SrcReg = ResultReg;
@@ -5142,7 +5082,7 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Or:
   case Instruction::Xor:
     return selectLogicalOp(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBranch(I);
   case Instruction::IndirectBr:
     return selectIndirectBr(I);

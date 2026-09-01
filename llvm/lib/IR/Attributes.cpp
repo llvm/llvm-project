@@ -106,8 +106,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   else
     assert(Val == 0 && "Value must be zero for enum attributes");
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
@@ -116,7 +116,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
       PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
     else
       PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -129,8 +129,8 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
   ID.AddString(Kind);
   if (!Val.empty()) ID.AddString(Val);
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
@@ -139,7 +139,7 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
         pImpl->Alloc.Allocate(StringAttributeImpl::totalSizeToAlloc(Kind, Val),
                               alignof(StringAttributeImpl));
     PA = new (Mem) StringAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -154,14 +154,14 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   ID.AddInteger(Kind);
   ID.AddPointer(Ty);
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
     PA = new (pImpl->Alloc) TypeAttributeImpl(Kind, Ty);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -179,15 +179,15 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   CR.getLower().Profile(ID);
   CR.getUpper().Profile(ID);
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
     PA = new (pImpl->ConstantRangeAttributeAlloc.Allocate())
         ConstantRangeAttributeImpl(Kind, CR);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -207,8 +207,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
     CR.getUpper().Profile(ID);
   }
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
@@ -222,7 +222,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
         ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
         alignof(ConstantRangeListAttributeImpl));
     PA = new (Mem) ConstantRangeListAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
     pImpl->ConstantRangeListAttributes.push_back(
         reinterpret_cast<ConstantRangeListAttributeImpl *>(PA));
   }
@@ -513,6 +513,10 @@ CaptureInfo Attribute::getCaptureInfo() const {
   return CaptureInfo::createFromIntValue(pImpl->getValueAsInt());
 }
 
+DenormalFPEnv Attribute::getDenormalFPEnv() const {
+  return DenormalFPEnv::createFromIntValue(pImpl->getValueAsInt());
+}
+
 FPClassTest Attribute::getNoFPClass() const {
   assert(hasAttribute(Attribute::NoFPClass) &&
          "Can only call getNoFPClass() on nofpclass attribute");
@@ -653,14 +657,28 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       OS << getModRefStr(OtherMR);
     }
 
+    bool TargetPrintedForAll = false;
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
       if (MR == OtherMR)
         continue;
 
-      if (!First)
+      if (!First && !TargetPrintedForAll)
         OS << ", ";
       First = false;
+
+      // isTargetMemLocSameForAll is fine for target location < 3
+      // If more targets are added it should do something like:
+      // memory(target_mem:read, target_mem3:none, target_mem5:write).
+      if (ME.isTargetMemLoc(Loc) && ME.isTargetMemLocSameForAll()) {
+        if (!TargetPrintedForAll) {
+          OS << "target_mem: ";
+          OS << getModRefStr(MR);
+          TargetPrintedForAll = true;
+        }
+        // Only works when target memories are last to be listed in Location.
+        continue;
+      }
 
       switch (Loc) {
       case IRMemLocation::ArgMem:
@@ -690,6 +708,17 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::Captures)) {
     std::string Result;
     raw_string_ostream(Result) << getCaptureInfo();
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::DenormalFPEnv)) {
+    std::string Result = "denormal_fpenv(";
+    raw_string_ostream OS(Result);
+
+    struct DenormalFPEnv FPEnv = getDenormalFPEnv();
+    FPEnv.print(OS, /*OmitIfSame=*/true);
+
+    OS << ')';
     return Result;
   }
 
@@ -751,8 +780,8 @@ bool Attribute::hasParentContext(LLVMContext &C) const {
   assert(isValid() && "invalid Attribute doesn't refer to any context");
   FoldingSetNodeID ID;
   pImpl->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsSet.FindNodeOrInsertPos(ID, Unused) == pImpl;
+  FoldingSetInsertToken Token;
+  return C.pImpl->AttrsSet.lookup(ID, Token) == pImpl;
 }
 
 int Attribute::cmpKind(Attribute A) const {
@@ -1250,8 +1279,8 @@ bool AttributeSet::hasParentContext(LLVMContext &C) const {
   assert(hasAttributes() && "empty AttributeSet doesn't refer to any context");
   FoldingSetNodeID ID;
   SetNode->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsSetNodes.FindNodeOrInsertPos(ID, Unused) == SetNode;
+  FoldingSetInsertToken Token;
+  return C.pImpl->AttrsSetNodes.lookup(ID, Token) == SetNode;
 }
 
 AttributeSet::iterator AttributeSet::begin() const {
@@ -1307,9 +1336,9 @@ AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
   for (const auto &Attr : SortedAttrs)
     Attr.Profile(ID);
 
-  void *InsertPoint;
+  FoldingSetInsertToken Token;
   AttributeSetNode *PA =
-    pImpl->AttrsSetNodes.FindNodeOrInsertPos(ID, InsertPoint);
+    pImpl->AttrsSetNodes.lookup(ID, Token);
 
   // If we didn't find any existing attributes of the same shape then create a
   // new one and insert it.
@@ -1317,7 +1346,7 @@ AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
     // Coallocate entries after the AttributeSetNode itself.
     void *Mem = ::operator new(totalSizeToAlloc<Attribute>(SortedAttrs.size()));
     PA = new (Mem) AttributeSetNode(SortedAttrs);
-    pImpl->AttrsSetNodes.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSetNodes.insert(PA, Token);
   }
 
   // Return the AttributeSetNode that we found or created.
@@ -1529,9 +1558,9 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
   FoldingSetNodeID ID;
   AttributeListImpl::Profile(ID, AttrSets);
 
-  void *InsertPoint;
+  FoldingSetInsertToken Token;
   AttributeListImpl *PA =
-      pImpl->AttrsLists.FindNodeOrInsertPos(ID, InsertPoint);
+      pImpl->AttrsLists.lookup(ID, Token);
 
   // If we didn't find any existing attributes of the same shape then
   // create a new one and insert it.
@@ -1541,7 +1570,7 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
         AttributeListImpl::totalSizeToAlloc<AttributeSet>(AttrSets.size()),
         alignof(AttributeListImpl));
     PA = new (Mem) AttributeListImpl(AttrSets);
-    pImpl->AttrsLists.InsertNode(PA, InsertPoint);
+    pImpl->AttrsLists.insert(PA, Token);
   }
 
   // Return the AttributesList that we found or created.
@@ -2058,8 +2087,8 @@ bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
   FoldingSetNodeID ID;
   pImpl->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsLists.FindNodeOrInsertPos(ID, Unused) == pImpl;
+  FoldingSetInsertToken Token;
+  return C.pImpl->AttrsLists.lookup(ID, Token) == pImpl;
 }
 
 AttributeList::iterator AttributeList::begin() const {
@@ -2285,6 +2314,10 @@ AttrBuilder &AttrBuilder::addCapturesAttr(CaptureInfo CI) {
   return addRawIntAttr(Attribute::Captures, CI.toIntValue());
 }
 
+AttrBuilder &AttrBuilder::addDenormalFPEnvAttr(DenormalFPEnv FPEnv) {
+  return addRawIntAttr(Attribute::DenormalFPEnv, FPEnv.toIntValue());
+}
+
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
   if (Mask == fcNone)
     return *this;
@@ -2455,6 +2488,10 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
     // Attributes that only apply to integers.
     if (ASK & ASK_SAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::AllocAlign);
+  }
+
+  if (!Ty->isIntegerTy() && !Ty->isByteTy()) {
+    // Attributes that only apply to integers and bytes.
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::SExt).addAttribute(Attribute::ZExt);
   }
@@ -2483,7 +2520,9 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::DeadOnUnwind)
           .addAttribute(Attribute::Initializes)
           .addAttribute(Attribute::Captures)
-          .addAttribute(Attribute::DeadOnReturn);
+          .addAttribute(Attribute::DeadOnReturn)
+          .addAttribute(Attribute::NoFree)
+          .addAttribute(Attribute::NoFreeObj);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)
@@ -2543,16 +2582,16 @@ static bool denormModeCompatible(DenormalMode CallerMode,
 }
 
 static bool checkDenormMode(const Function &Caller, const Function &Callee) {
-  DenormalMode CallerMode = Caller.getDenormalModeRaw();
-  DenormalMode CalleeMode = Callee.getDenormalModeRaw();
+  DenormalFPEnv CallerEnv = Caller.getDenormalFPEnv();
+  DenormalFPEnv CalleeEnv = Callee.getDenormalFPEnv();
 
-  if (denormModeCompatible(CallerMode, CalleeMode)) {
-    DenormalMode CallerModeF32 = Caller.getDenormalModeF32Raw();
-    DenormalMode CalleeModeF32 = Callee.getDenormalModeF32Raw();
+  if (denormModeCompatible(CallerEnv.DefaultMode, CalleeEnv.DefaultMode)) {
+    DenormalMode CallerModeF32 = CallerEnv.F32Mode;
+    DenormalMode CalleeModeF32 = CalleeEnv.F32Mode;
     if (CallerModeF32 == DenormalMode::getInvalid())
-      CallerModeF32 = CallerMode;
+      CallerModeF32 = CallerEnv.DefaultMode;
     if (CalleeModeF32 == DenormalMode::getInvalid())
-      CalleeModeF32 = CalleeMode;
+      CalleeModeF32 = CalleeEnv.DefaultMode;
     return denormModeCompatible(CallerModeF32, CalleeModeF32);
   }
 
@@ -2746,6 +2785,11 @@ struct StrBoolAttr {
 bool AttributeFuncs::areInlineCompatible(const Function &Caller,
                                          const Function &Callee) {
   return hasCompatibleFnAttrs(Caller, Callee);
+}
+
+bool AttributeFuncs::isStrictFPInlineCompatible(const Function &Caller,
+                                                const Function &Callee) {
+  return checkStrictFP(Caller, Callee);
 }
 
 bool AttributeFuncs::areOutlineCompatible(const Function &A,

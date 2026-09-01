@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fabsf128.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fabsf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float128, fabsf128, (float128 x)) { return fputil::abs(x); }
+LLVM_LIBC_FUNCTION(float128, fabsf128, (float128 x)) {
+  return math::fabsf128(x);
+}
 
 } // namespace LIBC_NAMESPACE_DECL

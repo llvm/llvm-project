@@ -1,4 +1,15 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+if (LLVM_HAVE_MLIR_LOWERING)
+  include(MLGOLower)
+  mlgo_lower_models(
+    "${LLVM_MLGO_MODELS}"
+    "${LLVM_MLGO_MLIR_OPT}"
+    "${LLVM_MLGO_MLIR_TRANSLATE}"
+    regalloc
+    llvm/CodeGen
+    RegAllocEvictModels
+    MLDeps
+  )
+elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
@@ -37,7 +48,6 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSectionsProfileReader.cpp
   BasicBlockMatchingAndInference.cpp
   CalcSpillWeights.cpp
-  CallBrPrepare.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIFixup.cpp
@@ -58,7 +68,6 @@ add_llvm_component_library(LLVMCodeGen
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
   ExpandIRInsts.cpp
-  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   ExpandVectorPredication.cpp
@@ -78,6 +87,7 @@ add_llvm_component_library(LLVMCodeGen
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp
   InitUndef.cpp
+  InlineAsmPrepare.cpp
   InlineSpiller.cpp
   InsertCodePrefetch.cpp
   InterferenceCache.cpp
@@ -129,6 +139,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
   MachineFunctionSplitter.cpp
+  MachineIDFSSAUpdater.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp
   MachineLateInstrsCleanup.cpp
@@ -197,6 +208,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   GCEmptyBasicBlocks.cpp
+  Rematerializer.cpp
   RemoveRedundantDebugValues.cpp
   RenameIndependentSubregs.cpp
   MachineStableHash.cpp
@@ -266,6 +278,9 @@ add_llvm_component_library(LLVMCodeGen
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
+
+  PRECOMPILE_HEADERS
+  [["llvm/CodeGen/pch.h"]]
 
   LINK_LIBS ${LLVM_PTHREAD_LIB} ${MLLinkDeps}
 

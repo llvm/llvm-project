@@ -208,9 +208,9 @@ createCollectiveProcessGroupSize(GridOp grid, ArrayRef<GridAxis> axes,
 }
 
 TypedValue<IndexType>
-createProcessLinearIndex(StringRef grid, ValueRange processInGroupMultiIndex,
-                         ArrayRef<GridAxis> gridAxes,
-                         ImplicitLocOpBuilder &builder) {
+createProcessLinearIndex(ImplicitLocOpBuilder &builder, StringRef grid,
+                         ValueRange processInGroupMultiIndex,
+                         ArrayRef<GridAxis> gridAxes) {
   Operation::result_range processGroupShape =
       GridShapeOp::create(builder, grid, gridAxes).getResult();
   OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
@@ -224,11 +224,12 @@ createProcessLinearIndex(StringRef grid, ValueRange processInGroupMultiIndex,
   return cast<TypedValue<IndexType>>(res);
 }
 
-TypedValue<IndexType> createProcessLinearIndex(StringRef grid,
-                                               ArrayRef<GridAxis> gridAxes,
-                                               ImplicitLocOpBuilder &builder) {
+TypedValue<IndexType> createProcessLinearIndex(ImplicitLocOpBuilder &builder,
+                                               StringRef grid,
+                                               ArrayRef<GridAxis> gridAxes) {
   return createProcessLinearIndex(
-      grid, ProcessMultiIndexOp::create(builder, grid, gridAxes).getResults(),
-      gridAxes, builder);
+      builder, grid,
+      ProcessMultiIndexOp::create(builder, grid, gridAxes).getResults(),
+      gridAxes);
 }
 } // namespace mlir::shard

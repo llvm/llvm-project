@@ -69,9 +69,9 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
-  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddressWithoutMetadata();
-  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddressWithoutMetadata();
+bool StackID::IsYoungerThan(const StackID &other) const {
+  const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
+  const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on
@@ -85,8 +85,8 @@ bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   if (lhs_cfa != rhs_cfa)
     return lhs_cfa < rhs_cfa;
 
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
+  SymbolContextScope *lhs_scope = GetSymbolContextScope();
+  SymbolContextScope *rhs_scope = other.GetSymbolContextScope();
 
   if (lhs_scope != nullptr && rhs_scope != nullptr) {
     // Same exact scope, lhs is not less than (younger than rhs)

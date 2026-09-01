@@ -19,7 +19,7 @@ int main() {
   // On Windows, %p omits %0x and prints hex characters in upper case,
   // so we use PRIxPTR instead of %p.
   fprintf(stderr, "Expected bad addr: %#" PRIxPTR "\n",
-          reinterpret_cast<uintptr_t>(p + offset));
+          reinterpret_cast<uintptr_t>(p + offset - 1));
   // Flush it so the output came out before the asan report.
   fflush(stderr);
 

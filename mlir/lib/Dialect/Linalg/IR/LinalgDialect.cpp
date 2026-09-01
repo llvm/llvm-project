@@ -72,7 +72,7 @@ using detect_has_region_builder = llvm::is_detected<has_region_builder, T>;
 /// an OpInterface).
 template <typename OpType, typename = std::enable_if_t<
                                !detect_has_region_builder<OpType>::value>>
-void addNamedOpBuilderImpl(
+static void addNamedOpBuilderImpl(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   // Do nothing.
 }
@@ -80,7 +80,7 @@ void addNamedOpBuilderImpl(
 template <typename OpType,
           typename = std::enable_if_t<detect_has_region_builder<OpType>::value>,
           typename = void>
-void addNamedOpBuilderImpl(
+static void addNamedOpBuilderImpl(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   map.insert(std::make_pair(
       OpType::getOperationName(),
@@ -88,8 +88,8 @@ void addNamedOpBuilderImpl(
 }
 
 template <typename... OpTypes>
-void addNamedOpBuilders(
-    llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
+static void
+addNamedOpBuilders(llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
   (addNamedOpBuilderImpl<OpTypes>(map), ...);
 }
 

@@ -4,6 +4,7 @@ static_library("CAS") {
     "ActionCache.cpp",
     "ActionCaches.cpp",
     "BuiltinCAS.cpp",
+    "BuiltinObjectHasher.cpp",
     "BuiltinUnifiedCASDatabases.cpp",
     "CASNodeSchema.cpp",
     "DatabaseFile.cpp",
@@ -18,6 +19,7 @@ static_library("CAS") {
     "OnDiskGraphDB.cpp",
     "OnDiskKeyValueDB.cpp",
     "OnDiskTrieRawHashMap.cpp",
+    "PluginCAS.cpp",
     "UnifiedOnDiskCache.cpp",
   ]
 }

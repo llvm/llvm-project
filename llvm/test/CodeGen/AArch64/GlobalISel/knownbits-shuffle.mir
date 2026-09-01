@@ -6,66 +6,66 @@ name:            lane0
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @lane0
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s8>) = COPY $h1
-    %2:_(<2 x s8>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 0)
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i8>) = COPY $h1
+    %2:_(<2 x i8>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 0)
 ...
 ---
 name:            zext_known
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @zext_known
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:00000000???????? SignBits:8
-  ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s16>) = COPY $s1
-    %2:_(<2 x s16>) = G_ZEXT %0
-    %3:_(<2 x s16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 0)
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:00000000???????? SignBits:8 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8 IsKnownNeverZero:0
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i16>) = COPY $s1
+    %2:_(<2 x i16>) = G_ZEXT %0
+    %3:_(<2 x i16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 0)
 ...
 ---
 name:            zext_unknown
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @zext_unknown
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:00000000???????? SignBits:8
-  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s16>) = COPY $s1
-    %2:_(<2 x s16>) = G_ZEXT %0
-    %3:_(<2 x s16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 2)
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:00000000???????? SignBits:8 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i16>) = COPY $s1
+    %2:_(<2 x i16>) = G_ZEXT %0
+    %3:_(<2 x i16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 2)
 ...
 ---
 name:            sext_known
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sext_known
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:9
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s16>) = COPY $s1
-    %2:_(<2 x s16>) = G_SEXT %0
-    %3:_(<2 x s16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 0)
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i16>) = COPY $s1
+    %2:_(<2 x i16>) = G_SEXT %0
+    %3:_(<2 x i16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 0)
 ...
 ---
 name:            sext_unknown
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sext_unknown
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s16>) = COPY $s1
-    %2:_(<2 x s16>) = G_SEXT %0
-    %3:_(<2 x s16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 2)
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i16>) = COPY $s1
+    %2:_(<2 x i16>) = G_SEXT %0
+    %3:_(<2 x i16>) = G_SHUFFLE_VECTOR %2, %1, shufflemask(0, 2)
 ...

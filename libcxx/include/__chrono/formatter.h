@@ -52,6 +52,7 @@
 #  include <__format/write_escaped.h>
 #  include <__iterator/istreambuf_iterator.h>
 #  include <__iterator/ostreambuf_iterator.h>
+#  include <__locale_dir/num.h>
 #  include <__locale_dir/time.h>
 #  include <__memory/addressof.h>
 #  include <__type_traits/is_specialization.h>

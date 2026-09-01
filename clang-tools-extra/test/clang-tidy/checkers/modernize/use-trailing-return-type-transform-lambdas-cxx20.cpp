@@ -1,12 +1,8 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing
 
+#include <utility>
+
 namespace std {
-template <typename T, typename U>
-struct is_same { static constexpr auto value = false; };
-
-template <typename T>
-struct is_same<T, T> { static constexpr auto value = true; };
-
 template <typename T>
 concept floating_point = std::is_same<T, float>::value || std::is_same<T, double>::value || std::is_same<T, long double>::value;
 }

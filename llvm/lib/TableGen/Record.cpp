@@ -75,10 +75,10 @@ struct detail::RecordKeeperImpl {
   std::map<int64_t, IntInit *> TheIntInitPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitStringPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitCodePool;
-  FoldingSet<ListInit> TheListInitPool;
-  FoldingSet<UnOpInit> TheUnOpInitPool;
-  FoldingSet<BinOpInit> TheBinOpInitPool;
-  FoldingSet<TernOpInit> TheTernOpInitPool;
+  UniquingSet<ListInit> TheListInitPool;
+  UniquingSet<UnOpInit> TheUnOpInitPool;
+  UniquingSet<BinOpInit> TheBinOpInitPool;
+  UniquingSet<TernOpInit> TheTernOpInitPool;
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
@@ -120,7 +120,6 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheVarBitInitPool size = " << TheVarBitInitPool.size() << '\n';
   OS << "TheVarDefInitPool size = " << TheVarDefInitPool.size() << '\n';
   OS << "TheFieldInitPool size = " << TheFieldInitPool.size() << '\n';
-  OS << "Bytes allocated = " << Allocator.getBytesAllocated() << '\n';
   OS << "Total allocator memory = " << Allocator.getTotalMemory() << "\n\n";
 
   OS << "Number of records instantiated = " << LastRecordID << '\n';
@@ -255,8 +254,8 @@ const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
   FoldingSetNodeID ID;
   ProfileRecordRecTy(ID, Classes);
 
-  void *IP = nullptr;
-  if (RecordRecTy *Ty = ThePool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (RecordRecTy *Ty = ThePool.lookup(ID, Token))
     return Ty;
 
 #ifndef NDEBUG
@@ -272,7 +271,7 @@ const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
   void *Mem = RKImpl.Allocator.Allocate(
       totalSizeToAlloc<const Record *>(Classes.size()), alignof(RecordRecTy));
   RecordRecTy *Ty = new (Mem) RecordRecTy(RK, Classes);
-  ThePool.InsertNode(Ty, IP);
+  ThePool.insert(Ty, Token);
   return Ty;
 }
 
@@ -417,13 +416,12 @@ const ArgumentInit *ArgumentInit::get(const Init *Value, ArgAuxType Aux) {
 
   RecordKeeper &RK = Value->getRecordKeeper();
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
-  void *IP = nullptr;
-  if (const ArgumentInit *I =
-          RKImpl.TheArgumentInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const ArgumentInit *I = RKImpl.TheArgumentInitPool.lookup(ID, Token))
     return I;
 
   ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
-  RKImpl.TheArgumentInitPool.InsertNode(I, IP);
+  RKImpl.TheArgumentInitPool.insert(I, Token);
   return I;
 }
 
@@ -474,14 +472,14 @@ BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
   ProfileBitsInit(ID, Bits);
 
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
-  void *IP = nullptr;
-  if (BitsInit *I = RKImpl.TheBitsInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (BitsInit *I = RKImpl.TheBitsInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RKImpl.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(Bits.size()), alignof(BitsInit));
   BitsInit *I = new (Mem) BitsInit(RK, Bits);
-  RKImpl.TheBitsInitPool.InsertNode(I, IP);
+  RKImpl.TheBitsInitPool.insert(I, Token);
   return I;
 }
 
@@ -695,16 +693,6 @@ const Init *StringInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-static void ProfileListInit(FoldingSetNodeID &ID,
-                            ArrayRef<const Init *> Elements,
-                            const RecTy *EltTy) {
-  ID.AddInteger(Elements.size());
-  ID.AddPointer(EltTy);
-
-  for (const Init *E : Elements)
-    ID.AddPointer(E);
-}
-
 ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
       NumElements(Elements.size()) {
@@ -713,12 +701,9 @@ ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
 
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
                               const RecTy *EltTy) {
-  FoldingSetNodeID ID;
-  ProfileListInit(ID, Elements, EltTy);
-
   detail::RecordKeeperImpl &RK = EltTy->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const ListInit *I = RK.TheListInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const ListInit *I = RK.TheListInitPool.lookup({Elements, EltTy}, Token))
     return I;
 
   assert(Elements.empty() || !isa<TypedInit>(Elements[0]) ||
@@ -727,13 +712,8 @@ const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(Elements.size()), alignof(ListInit));
   ListInit *I = new (Mem) ListInit(Elements, EltTy);
-  RK.TheListInitPool.InsertNode(I, IP);
+  RK.TheListInitPool.insert(I, Token);
   return I;
-}
-
-void ListInit::Profile(FoldingSetNodeID &ID) const {
-  const RecTy *EltTy = cast<ListRecTy>(getType())->getElementType();
-  ProfileListInit(ID, getElements(), EltTy);
 }
 
 const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
@@ -768,7 +748,8 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
 const Record *ListInit::getElementAsRecord(unsigned Idx) const {
   const auto *DI = dyn_cast<DefInit>(getElement(Idx));
   if (!DI)
-    PrintFatalError("Expected record in list!");
+    PrintFatalError("expected record type for the element with index " +
+                    Twine(Idx) + " in list " + getAsString());
   return DI->getDef();
 }
 
@@ -809,34 +790,20 @@ std::string ListInit::getAsString() const {
 }
 
 const Init *OpInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
 
-static void ProfileUnOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                            const Init *Op, const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(Op);
-  ID.AddPointer(Type);
-}
-
 const UnOpInit *UnOpInit::get(UnaryOp Opc, const Init *LHS, const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileUnOpInit(ID, Opc, LHS, Type);
-
   detail::RecordKeeperImpl &RK = Type->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const UnOpInit *I = RK.TheUnOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const UnOpInit *I = RK.TheUnOpInitPool.lookup({Opc, LHS, Type}, Token))
     return I;
 
   UnOpInit *I = new (RK.Allocator) UnOpInit(Opc, LHS, Type);
-  RK.TheUnOpInitPool.InsertNode(I, IP);
+  RK.TheUnOpInitPool.insert(I, Token);
   return I;
-}
-
-void UnOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileUnOpInit(ID, getOpcode(), getOperand(), getType());
 }
 
 const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
@@ -1083,32 +1050,17 @@ std::string UnOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ")";
 }
 
-static void ProfileBinOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                             const Init *LHS, const Init *RHS,
-                             const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(LHS);
-  ID.AddPointer(RHS);
-  ID.AddPointer(Type);
-}
-
 const BinOpInit *BinOpInit::get(BinaryOp Opc, const Init *LHS, const Init *RHS,
                                 const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileBinOpInit(ID, Opc, LHS, RHS, Type);
-
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const BinOpInit *I = RK.TheBinOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const BinOpInit *I =
+          RK.TheBinOpInitPool.lookup({Opc, LHS, RHS, Type}, Token))
     return I;
 
   BinOpInit *I = new (RK.Allocator) BinOpInit(Opc, LHS, RHS, Type);
-  RK.TheBinOpInitPool.InsertNode(I, IP);
+  RK.TheBinOpInitPool.insert(I, Token);
   return I;
-}
-
-void BinOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBinOpInit(ID, getOpcode(), getLHS(), getRHS(), getType());
 }
 
 static const StringInit *ConcatStringInits(const StringInit *I0,
@@ -1676,34 +1628,18 @@ std::string BinOpInit::getAsString() const {
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
 
-static void ProfileTernOpInit(FoldingSetNodeID &ID, unsigned Opcode,
-                              const Init *LHS, const Init *MHS, const Init *RHS,
-                              const RecTy *Type) {
-  ID.AddInteger(Opcode);
-  ID.AddPointer(LHS);
-  ID.AddPointer(MHS);
-  ID.AddPointer(RHS);
-  ID.AddPointer(Type);
-}
-
 const TernOpInit *TernOpInit::get(TernaryOp Opc, const Init *LHS,
                                   const Init *MHS, const Init *RHS,
                                   const RecTy *Type) {
-  FoldingSetNodeID ID;
-  ProfileTernOpInit(ID, Opc, LHS, MHS, RHS, Type);
-
   detail::RecordKeeperImpl &RK = LHS->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (TernOpInit *I = RK.TheTernOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (TernOpInit *I =
+          RK.TheTernOpInitPool.lookup({Opc, LHS, MHS, RHS, Type}, Token))
     return I;
 
   TernOpInit *I = new (RK.Allocator) TernOpInit(Opc, LHS, MHS, RHS, Type);
-  RK.TheTernOpInitPool.InsertNode(I, IP);
+  RK.TheTernOpInitPool.insert(I, Token);
   return I;
-}
-
-void TernOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileTernOpInit(ID, getOpcode(), getLHS(), getMHS(), getRHS(), getType());
 }
 
 static const Init *ItemApply(const Init *LHS, const Init *MHSe, const Init *RHS,
@@ -1787,6 +1723,57 @@ static const Init *FilterHelper(const Init *LHS, const Init *MHS,
   return nullptr;
 }
 
+static const Init *SortHelper(const Init *LHS, const Init *MHS, const Init *RHS,
+                              const RecTy *Type, const Record *CurRec) {
+  const auto *MHSl = dyn_cast<ListInit>(MHS);
+  if (!MHSl)
+    return nullptr;
+
+  RecordKeeper &RK = LHS->getRecordKeeper();
+  using KV = std::pair<const Init *, const Init *>;
+  SmallVector<KV, 8> KeyedList;
+
+  for (const Init *Item : MHSl->getElements()) {
+    const Init *Key = ItemApply(LHS, Item, RHS, CurRec);
+    if (!Key)
+      return nullptr;
+    KeyedList.emplace_back(Key, Item);
+  }
+
+  if (KeyedList.empty())
+    return ListInit::get({}, cast<ListRecTy>(Type)->getElementType());
+
+  // Determine key type from the first element; all keys must agree.
+  bool UseInt =
+      dyn_cast_or_null<IntInit>(KeyedList[0].first->convertInitializerTo(
+          IntRecTy::get(RK))) != nullptr;
+  for (auto &[Key, Item] : KeyedList) {
+    if (UseInt) {
+      if (!dyn_cast_or_null<IntInit>(
+              Key->convertInitializerTo(IntRecTy::get(RK))))
+        return nullptr;
+    } else {
+      if (!isa<StringInit>(Key))
+        return nullptr;
+    }
+  }
+
+  llvm::stable_sort(KeyedList, [&RK, UseInt](const KV &A, const KV &B) {
+    if (UseInt)
+      return cast<IntInit>(A.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue() <
+             cast<IntInit>(B.first->convertInitializerTo(IntRecTy::get(RK)))
+                 ->getValue();
+    return cast<StringInit>(A.first)->getValue() <
+           cast<StringInit>(B.first)->getValue();
+  });
+
+  SmallVector<const Init *, 8> Result;
+  for (auto &[Key, Item] : KeyedList)
+    Result.push_back(Item);
+  return ListInit::get(Result, cast<ListRecTy>(Type)->getElementType());
+}
+
 const Init *TernOpInit::Fold(const Record *CurRec) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
@@ -1840,6 +1827,12 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
 
   case FILTER: {
     if (const Init *Result = FilterHelper(LHS, MHS, RHS, getType(), CurRec))
+      return Result;
+    break;
+  }
+
+  case SORT: {
+    if (const Init *Result = SortHelper(LHS, MHS, RHS, getType(), CurRec))
       return Result;
     break;
   }
@@ -2003,7 +1996,7 @@ const Init *TernOpInit::resolveReferences(Resolver &R) const {
   const Init *mhs = MHS->resolveReferences(R);
   const Init *rhs;
 
-  if (getOpcode() == FOREACH || getOpcode() == FILTER) {
+  if (getOpcode() == FOREACH || getOpcode() == FILTER || getOpcode() == SORT) {
     ShadowResolver SR(R);
     SR.addShadow(lhs);
     rhs = RHS->resolveReferences(SR);
@@ -2024,6 +2017,10 @@ std::string TernOpInit::getAsString() const {
   case DAG: Result = "!dag"; break;
   case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case SORT:
+    Result = "!sort";
+    UnquotedLHS = true;
+    break;
   case IF: Result = "!if"; break;
   case RANGE:
     Result = "!range";
@@ -2061,12 +2058,12 @@ const FoldOpInit *FoldOpInit::get(const Init *Start, const Init *List,
   ProfileFoldOpInit(ID, Start, List, A, B, Expr, Type);
 
   detail::RecordKeeperImpl &RK = Start->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const FoldOpInit *I = RK.TheFoldOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const FoldOpInit *I = RK.TheFoldOpInitPool.lookup(ID, Token))
     return I;
 
   FoldOpInit *I = new (RK.Allocator) FoldOpInit(Start, List, A, B, Expr, Type);
-  RK.TheFoldOpInitPool.InsertNode(I, IP);
+  RK.TheFoldOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2104,6 +2101,8 @@ const Init *FoldOpInit::resolveReferences(Resolver &R) const {
 }
 
 const Init *FoldOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
@@ -2126,12 +2125,12 @@ const IsAOpInit *IsAOpInit::get(const RecTy *CheckType, const Init *Expr) {
   ProfileIsAOpInit(ID, CheckType, Expr);
 
   detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const IsAOpInit *I = RK.TheIsAOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const IsAOpInit *I = RK.TheIsAOpInitPool.lookup(ID, Token))
     return I;
 
   IsAOpInit *I = new (RK.Allocator) IsAOpInit(CheckType, Expr);
-  RK.TheIsAOpInitPool.InsertNode(I, IP);
+  RK.TheIsAOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2190,13 +2189,12 @@ const ExistsOpInit *ExistsOpInit::get(const RecTy *CheckType,
   ProfileExistsOpInit(ID, CheckType, Expr);
 
   detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const ExistsOpInit *I =
-          RK.TheExistsOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const ExistsOpInit *I = RK.TheExistsOpInitPool.lookup(ID, Token))
     return I;
 
   ExistsOpInit *I = new (RK.Allocator) ExistsOpInit(CheckType, Expr);
-  RK.TheExistsOpInitPool.InsertNode(I, IP);
+  RK.TheExistsOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2265,13 +2263,12 @@ const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
   ProfileInstancesOpInit(ID, Type, Regex);
 
   detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const InstancesOpInit *I =
-          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const InstancesOpInit *I = RK.TheInstancesOpInitPool.lookup(ID, Token))
     return I;
 
   InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
-  RK.TheInstancesOpInitPool.InsertNode(I, IP);
+  RK.TheInstancesOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2308,10 +2305,6 @@ const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   return this;
 }
 
-const Init *InstancesOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
-}
-
 std::string InstancesOpInit::getAsString() const {
   return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
          ")";
@@ -2328,7 +2321,7 @@ const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
 }
 
 const Init *TypedInit::convertInitializerTo(const RecTy *Ty) const {
-  if (getType() == Ty || getType()->typeIsA(Ty))
+  if (getType()->typeIsA(Ty))
     return this;
 
   if (isa<BitRecTy>(getType()) && isa<BitsRecTy>(Ty) &&
@@ -2357,7 +2350,7 @@ TypedInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
 
 const Init *TypedInit::getCastTo(const RecTy *Ty) const {
   // Handle the common case quickly
-  if (getType() == Ty || getType()->typeIsA(Ty))
+  if (getType()->typeIsA(Ty))
     return this;
 
   if (const Init *Converted = convertInitializerTo(Ty)) {
@@ -2391,7 +2384,7 @@ StringRef VarInit::getName() const {
 }
 
 const Init *VarInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
@@ -2462,14 +2455,14 @@ const VarDefInit *VarDefInit::get(SMLoc Loc, const Record *Class,
   ProfileVarDefInit(ID, Class, Args);
 
   detail::RecordKeeperImpl &RK = Class->getRecords().getImpl();
-  void *IP = nullptr;
-  if (const VarDefInit *I = RK.TheVarDefInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const VarDefInit *I = RK.TheVarDefInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const ArgumentInit *>(Args.size()), alignof(VarDefInit));
   VarDefInit *I = new (Mem) VarDefInit(Loc, Class, Args);
-  RK.TheVarDefInitPool.InsertNode(I, IP);
+  RK.TheVarDefInitPool.insert(I, Token);
   return I;
 }
 
@@ -2584,7 +2577,7 @@ const FieldInit *FieldInit::get(const Init *R, const StringInit *FN) {
 }
 
 const Init *FieldInit::getBit(unsigned Bit) const {
-  if (getType() == BitRecTy::get(getRecordKeeper()))
+  if (isa<BitRecTy>(getType()))
     return this;
   return VarBitInit::get(this, Bit);
 }
@@ -2655,14 +2648,14 @@ const CondOpInit *CondOpInit::get(ArrayRef<const Init *> Conds,
   ProfileCondOpInit(ID, Conds, Values, Ty);
 
   detail::RecordKeeperImpl &RK = Ty->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const CondOpInit *I = RK.TheCondOpInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const CondOpInit *I = RK.TheCondOpInitPool.lookup(ID, Token))
     return I;
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<const Init *>(2 * Conds.size()), alignof(CondOpInit));
   CondOpInit *I = new (Mem) CondOpInit(Conds, Values, Ty);
-  RK.TheCondOpInitPool.InsertNode(I, IP);
+  RK.TheCondOpInitPool.insert(I, Token);
   return I;
 }
 
@@ -2679,6 +2672,16 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
     const Init *NewVal = Val->resolveReferences(R);
     NewVals.push_back(NewVal);
     Changed |= NewVal != Val;
+
+    // Short-circuit if this cond is true.
+    if (auto *NewCondVal = dyn_cast_or_null<IntInit>(
+            NewCond->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if (NewCondVal->getValue()) {
+        Changed = true;
+        // Don't push the rest of the conds and values.
+        break;
+      }
+    }
   }
 
   if (Changed)
@@ -2731,6 +2734,8 @@ std::string CondOpInit::getAsString() const {
 }
 
 const Init *CondOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
@@ -2765,8 +2770,8 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
   ProfileDagInit(ID, V, VN, Args, ArgNames);
 
   detail::RecordKeeperImpl &RK = V->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const DagInit *I = RK.TheDagInitPool.FindNodeOrInsertPos(ID, IP))
+  FoldingSetInsertToken Token;
+  if (const DagInit *I = RK.TheDagInitPool.lookup(ID, Token))
     return I;
 
   void *Mem =
@@ -2774,7 +2779,7 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
                                 Args.size(), ArgNames.size()),
                             alignof(DagInit));
   DagInit *I = new (Mem) DagInit(V, VN, Args, ArgNames);
-  RK.TheDagInitPool.InsertNode(I, IP);
+  RK.TheDagInitPool.insert(I, Token);
   return I;
 }
 
@@ -2870,7 +2875,7 @@ StringRef RecordVal::getName() const {
 }
 
 std::string RecordVal::getPrintType() const {
-  if (getType() == StringRecTy::get(getRecordKeeper())) {
+  if (isa<StringRecTy>(getType())) {
     if (const auto *StrInit = dyn_cast<StringInit>(Value)) {
       if (StrInit->hasCodeFormat())
         return "code";
@@ -2890,10 +2895,11 @@ bool RecordVal::setValue(const Init *V) {
     return false;
   }
 
-  Value = V->getCastTo(getType());
-  if (!Value)
+  const Init *NewValue = V->getCastTo(getType());
+  if (!NewValue)
     return true;
 
+  Value = NewValue;
   assert(!isa<TypedInit>(Value) ||
          cast<TypedInit>(Value)->getType()->typeIsA(getType()));
   if (const auto *BTy = dyn_cast<BitsRecTy>(getType())) {
