@@ -483,6 +483,94 @@ exit:
   ret void
 }
 
+; The pointer operand of the address computation is an AddRec in the *outer*
+; loop, which is invariant in the inner loop being analyzed.
+define void @nested_outer_addrec_base_udiv(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'nested_outer_addrec_base_udiv'
+; CHECK-NEXT:    inner:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %base = getelementptr inbounds i8, ptr %a, i64 %i
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %base, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+  store i8 %la, ptr %gep.b, align 1
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %N
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %ec.outer = icmp eq i64 %i.next, 100
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+; Same as above, but the pointer operand is an AddRec in the loop being
+; analyzed, so it is not loop-invariant and no bounds can be formed.
+define void @nested_inner_addrec_base_udiv(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'nested_inner_addrec_base_udiv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %j = phi i64 [ 0, %entry ], [ %j.next, %loop ]
+  %p = phi ptr [ %a, %entry ], [ %p.next, %loop ]
+  %div = lshr i64 %j, 6
+  %gep.a = getelementptr inbounds i8, ptr %p, i64 %div
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+  store i8 %la, ptr %gep.b, align 1
+  %p.next = getelementptr inbounds i8, ptr %p, i64 8
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @bitset_udiv_neg_4_symbolic_tc(ptr %words, ptr %out, i64 %N) {
 ; CHECK-LABEL: 'bitset_udiv_neg_4_symbolic_tc'
 ; CHECK-NEXT:    loop:
