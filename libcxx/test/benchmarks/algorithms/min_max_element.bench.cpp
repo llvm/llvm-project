@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   auto bm = []<class Container>(std::type_identity<Container>, std::string name, auto algo) {
     benchmark::RegisterBenchmark(
         name,
-        [algo](benchmark::State& state) {
+        [algo](benchmark::State& state) TEST_ALIGN_BENCHMARK {
           Container c(state.range(), 3);
 
           for (auto _ : state) {

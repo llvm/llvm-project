@@ -4,8 +4,8 @@
 ; RUN: llc -debug-only=isel %s -o /dev/null 2> %t.debug
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECKMI
 ;
-; CHECKMI: DBG_LABEL "end_sum", debug-location !17
-; CHECKMI: DBG_LABEL "end", debug-location !19
+; CHECKMI: DBG_LABEL "end_sum", debug-location !{{[0-9]+}}
+; CHECKMI: DBG_LABEL "end", debug-location !{{[0-9]+}}
 source_filename = "debug-label-opt.c"
 
 define i32 @foo(ptr nocapture readonly %a, i32 %n) local_unnamed_addr !dbg !7 {

@@ -225,6 +225,32 @@ Expected<GlobPattern> GlobPattern::create(StringRef S,
   return Pat;
 }
 
+std::optional<std::string> GlobPattern::asLiteral() const {
+  // The prefix and suffix are metacharacter-free by construction, so whether
+  // this pattern denotes a single string is decided by the sub-patterns, which
+  // recorded it while parsing. No sub-pattern at all means there was no
+  // metacharacter; more than one means brace expansion produced a choice.
+  if (SubGlobs.size() > 1 || (SubGlobs.size() == 1 && !SubGlobs[0].isLiteral()))
+    return std::nullopt;
+
+  std::string Literal;
+  Literal.reserve(Pattern.size());
+  for (size_t I = 0, E = Pattern.size(); I != E; ++I) {
+    if (Pattern[I] == '\\' && I + 1 != E)
+      ++I;
+    Literal.push_back(Pattern[I]);
+  }
+
+  // In slash-agnostic mode '/' and '\\' match each other, so a pattern holding
+  // either matches more than one string. A pattern with no sub-pattern cannot
+  // reach here holding one, as both are prefix metacharacters in that mode.
+  if (SlashAgnostic &&
+      StringRef(Literal).find_first_of("/\\") != StringRef::npos)
+    return std::nullopt;
+
+  return Literal;
+}
+
 Expected<GlobPattern::SubGlobPattern>
 GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
   SubGlobPattern Pat;
@@ -260,6 +286,8 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
       if (++I == E)
         return make_error<StringError>("invalid glob pattern, stray '\\'",
                                        errc::invalid_argument);
+    } else if (S[I] == '*' || S[I] == '?') {
+      Pat.HasWildcard = true;
     }
   }
   return Pat;

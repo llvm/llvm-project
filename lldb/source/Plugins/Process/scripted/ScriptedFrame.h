@@ -25,7 +25,7 @@ public:
   ScriptedFrame(lldb::ThreadSP thread_sp,
                 lldb::ScriptedFrameInterfaceSP interface_sp,
                 lldb::user_id_t frame_idx, lldb::addr_t pc,
-                SymbolContext &sym_ctx, lldb::RegisterContextSP reg_ctx_sp,
+                SymbolContext &sym_ctx,
                 StructuredData::GenericSP script_object_sp = nullptr);
 
   ~ScriptedFrame() override;
@@ -90,9 +90,7 @@ public:
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedFrameInterfaceSP GetInterface() const;
-  static llvm::Expected<lldb::RegisterContextSP>
-  CreateRegisterContext(ScriptedFrameInterface &interface, Thread &thread,
-                        lldb::user_id_t frame_id);
+  llvm::Expected<lldb::RegisterContextSP> CreateRegisterContext();
 
   // Populate m_variable_list_sp from the scripted frame interface. The boolean
   // controls if we should try to fabricate Variable objects for each of the
@@ -104,7 +102,7 @@ private:
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
 
-  std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
+  llvm::Expected<lldb::DynamicRegisterInfoSP> GetDynamicRegisterInfo();
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;

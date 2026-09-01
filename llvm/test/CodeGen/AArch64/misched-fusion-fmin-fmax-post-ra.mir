@@ -1030,3 +1030,21 @@ body: |
     $q6 = FADDv2f64 $q3, $q4, implicit $fpcr
     $q7 = FMINv2f64 $q5, $q2, implicit $fpcr
 ...
+# A representative pair that writes different but overlapping architectural registers,
+# which share physical register storage and form a WAW dependency.
+---
+name: fmax_fmin_h_s_overlap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $h1, $s2, $h3, $h4
+    ; CHECK-LABEL: fmax_fmin_h_s_overlap
+    ; CHECK: SU(0): $h5 = FMAXHrr
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $s5 = FMINSrr
+    $h5 = FMAXHrr $h0, $h1, implicit $fpcr
+    $h6 = FADDHrr $h3, $h4, implicit $fpcr
+    $s5 = FMINSrr $s5, $s2, implicit $fpcr
+...

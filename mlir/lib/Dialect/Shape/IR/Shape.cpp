@@ -1220,8 +1220,8 @@ OpFoldResult FromExtentsOp::fold(FoldAdaptor adaptor) {
 
 void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
                               StringRef name) {
-  result.attributes.push_back(builder.getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
 }
 
 FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
@@ -1236,7 +1236,7 @@ ParseResult FunctionLibraryOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   // Parse the op name.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1262,7 +1262,7 @@ void FunctionLibraryOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
   p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(), {mlir::SymbolTable::getSymbolAttrName(), "mapping"});
+      (*this)->getDiscardableAttrDictionary().getValue());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);

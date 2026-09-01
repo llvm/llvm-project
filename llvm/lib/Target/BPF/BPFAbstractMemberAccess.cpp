@@ -77,6 +77,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -150,7 +151,8 @@ private:
   // A map to hold all the base preserve_*_access_index intrinsic calls.
   // The base call is not an input of any other preserve_*
   // intrinsics.
-  std::map<CallInst *, CallInfo> BaseAICalls;
+  // Iterated below, so the order can't come from the addresses.
+  SmallMapVector<CallInst *, CallInfo, 4> BaseAICalls;
   // A map to hold <AnonRecord, TypeDef> relationships
   std::map<DICompositeType *, DIDerivedType *> AnonRecords;
 

@@ -441,6 +441,8 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(
@@ -538,7 +540,7 @@ function(add_header_test target_name source_file deps std_mode)
     add_libc_test(
       ${target_name}
       C_TEST
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
         libc_include_tests
       SRCS

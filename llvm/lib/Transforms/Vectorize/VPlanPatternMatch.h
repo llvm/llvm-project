@@ -447,6 +447,12 @@ m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
   return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::ExtractVectorForPart, Op0_t, Op1_t>
+m_ExtractVectorForPart(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExtractVectorForPart>(Op0, Op1);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractPenultimateElement, Op0_t>
 m_ExtractPenultimateElement(const Op0_t &Op0) {
@@ -454,9 +460,10 @@ m_ExtractPenultimateElement(const Op0_t &Op0) {
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
-m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
+inline VPInstruction_match<VPInstruction::WideActiveLaneMask, Op0_t, Op1_t,
+                           Op2_t>
+m_WideActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::WideActiveLaneMask>(Op0, Op1, Op2);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
@@ -550,6 +557,18 @@ inline AllRecipe_match<Instruction::SExt, Op0_t> m_SExt(const Op0_t &Op0) {
 template <typename Op0_t>
 inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
   return m_Unary<Instruction::FPExt, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline AllRecipe_match<Instruction::BitCast, Op0_t>
+m_BitCast(const Op0_t &Op0) {
+  return m_Unary<Instruction::BitCast, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline AllRecipe_match<Instruction::PtrToAddr, Op0_t>
+m_PtrToAddr(const Op0_t &Op0) {
+  return m_Unary<Instruction::PtrToAddr, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
@@ -664,6 +683,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
 m_URem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SDiv, Op0_t, Op1_t>
+m_SDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SDiv, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

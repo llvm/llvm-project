@@ -221,3 +221,62 @@ define void @load_texture2darray_float4_with_level_and_offset(<3 x i32> %coords)
   call void @use_float4(<4 x float> %data)
   ret void
 }
+
+; A UAV descriptor binds a single mip slice, so there is no mip to select
+; in the case of a UAV. Multisampled UAVs are the exception: the slot
+; carries a sample index and stays live.
+
+; CHECK-LABEL: define void @load_rwtexture2d_float4_implicit_mip(
+define void @load_rwtexture2d_float4_implicit_mip(<2 x i32> %coords) {
+  %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_1_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.f32 @dx.op.textureLoad.f32(i32 66, %dx.types.Handle %{{.*}}, i32 undef, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 undef, i32 undef, i32 undef)
+  %data = call <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_1_0_0_2t.v2i32.i32.v2i32(
+      target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, i32 0, <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[LOAD]], 0
+  call void @use_float4(<4 x float> %data)
+  ret void
+}
+
+; CHECK-LABEL: define void @load_rwtexture2d_float4_explicit_lod(
+define void @load_rwtexture2d_float4_explicit_lod(<2 x i32> %coords) {
+  %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_1_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.f32 @dx.op.textureLoad.f32(i32 66, %dx.types.Handle %{{.*}}, i32 undef, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 undef, i32 undef, i32 undef)
+  %data = call <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_1_0_0_2t.v2i32.i32.v2i32(
+      target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, i32 3, <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[LOAD]], 0
+  call void @use_float4(<4 x float> %data)
+  ret void
+}
+
+; CHECK-LABEL: define void @load_rwtexture2darray_float4(
+define void @load_rwtexture2darray_float4(<3 x i32> %coords) {
+  %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 7)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_1_0_0_7t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i64 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i64 1
+  ; CHECK: %[[COORD2:.*]] = extractelement <3 x i32> %coords, i64 2
+  ; CHECK: %[[LOAD:.*]] = call %dx.types.ResRet.f32 @dx.op.textureLoad.f32(i32 66, %dx.types.Handle %{{.*}}, i32 undef, i32 %[[COORD0]], i32 %[[COORD1]], i32 %[[COORD2]], i32 undef, i32 undef, i32 undef)
+  %data = call <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_1_0_0_7t.v3i32.i32.v2i32(
+      target("dx.Texture", <4 x float>, 1, 0, 0, 7) %texture,
+      <3 x i32> %coords, i32 0, <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[LOAD]], 0
+  call void @use_float4(<4 x float> %data)
+  ret void
+}

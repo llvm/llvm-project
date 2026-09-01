@@ -101,10 +101,10 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 
   SmallVector<ShapedTypeComponents> returnedShapes;
   if (shapeInterface
-          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
-                                     op->getOperands(), op->getAttrDictionary(),
-                                     op->getPropertiesStorage(),
-                                     op->getRegions(), returnedShapes)
+          .inferReturnTypeComponents(
+              op.getContext(), builder.getLoc(), op->getOperands(),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              op->getRegions(), returnedShapes)
           .failed())
     return op;
 

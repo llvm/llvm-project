@@ -167,8 +167,7 @@ body:             |
 
     RegisterOperands RegOpers;
     RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
-    SlotIndex Slot = LIS.getInstructionIndex(MI).getRegSlot();
-    RegOpers.adjustLaneLiveness(LIS, MRI, Slot, &MI);
+    RegOpers.adjustLaneLiveness(LIS, MRI, MI);
   };
 };
 } // namespace
@@ -823,6 +822,36 @@ TEST_F(RematerializerTest, SplitSubRegDeadDef) {
         ASSERT_REGION_SIZES();
       },
       PreRemat);
+}
+
+/// Uses of undefined lanes may create empty sub-ranges during live-interval
+/// refinement. Empty sub-ranges are illegal and are only allowed to exist
+/// temporarily. The rematerializer now automatically deletes these empty
+/// sub-ranges.
+TEST_F(RematerializerTest, RemoveEmptySubRanges) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    undef %fullUndefUse.sub0:vreg_64 = IMPLICIT_DEF
+    undef %partialUndefUse.sub0_sub1_sub2:vreg_128 = IMPLICIT_DEF
+    
+  bb.1:
+    S_NOP 0, implicit %fullUndefUse.sub1
+    S_NOP 0, implicit %partialUndefUse.sub2_sub3
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    // Both registers in bb.0 should be rematerializable.
+    ASSERT_EQ(RW->getNumRegs(), 2U);
+
+    // Rematerialize both registers to bb.1. When the new registers intervals
+    // are created and extended to their users in bb.1, an empty sub-range will
+    // be temporarily created then removed immediately.
+    Rematerializer::DependencyReuseInfo DRI;
+    const unsigned MBB1 = 1;
+    const RegisterIdx FullUndefUse = 0, PartialUndefUse = 1;
+    RW->rematerializeToRegion(FullUndefUse, MBB1, DRI);
+    RW->rematerializeToRegion(PartialUndefUse, MBB1, DRI.clear());
+  });
 }
 
 /// Checks that dead-def elimination successfully deletes all unrematerializable

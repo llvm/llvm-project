@@ -700,8 +700,10 @@ void Module::setLongDoubleFormat(LongDoubleFormat Format) {
 
 FloatABI::ABIType Module::getFloatABI() const {
   if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
-    return FloatABI::parseABIType(Val->getString()).value_or(FloatABI::Default);
-  return FloatABI::Default;
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {

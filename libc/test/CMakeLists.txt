@@ -37,12 +37,8 @@ if(TARGET check-hdrgen)
   add_dependencies(check-libc check-hdrgen)
 endif()
 
-if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
-  add_dependencies(check-libc-build libc-unit-tests-build)
-endif()
-if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
-  add_dependencies(check-libc-build libc-hermetic-tests-build)
-endif()
+add_dependencies(check-libc-build libc-unit-tests-build)
+add_dependencies(check-libc-build libc-hermetic-tests-build)
 
 add_subdirectory(UnitTest)
 

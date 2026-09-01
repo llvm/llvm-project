@@ -49,7 +49,23 @@ using namespace Fortran::parser::omp;
       state.GetLocation(), std::min<size_t>(64, state.BytesRemaining()));
 }
 
-constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
+// Accept the standard "!$omp" sentinel as well as the implementation-defined
+// extension sentinels "!$omx" (fixed form) and "!$ompx" (free form) defined in
+// OpenMP 5.2, section 3.1.  The prescanner normalizes the comment character of
+// fixed-form sentinels (c$omx, *$omx) to '!'.
+//
+// The extension sentinels are tried before "!$omp".  Because "omp" is a prefix
+// of "ompx", matching "!$omp" first would consume the start of an "!$ompx" line
+// and leave a stray "x" ahead of the directive name; trying "!$ompx"/"!$omx"
+// first avoids that.  "_sptok" (rather than "_id") is required because in fixed
+// form the prescanner can emit the sentinel immediately followed by the
+// directive name with no intervening space (e.g. "c$omp0parallel" becomes
+// "!$ompparallel"); "_id" would reject such a token because it is followed by
+// an identifier character.
+constexpr auto ompxSentinel = "!$OMPX "_sptok || "!$OMX "_sptok;
+constexpr auto ompSentinel = "!$OMP "_sptok;
+constexpr auto startOmpLine =
+    skipStuffBeforeStatement >> (ompxSentinel || ompSentinel);
 constexpr auto endOmpLine = space >> endOfLine;
 
 constexpr auto logicalConstantExpr{logical(constantExpr)};
@@ -843,6 +859,10 @@ TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
 TYPE_PARSER(construct<OmpAccessGroup>( //
     "CGROUP" >> pure(OmpAccessGroup::Value::Cgroup)))
 
+TYPE_PARSER(construct<OmpAdjustOp>( //
+    "NOTHING" >> pure(OmpAdjustOp::Value::Nothing) ||
+    "NEED_DEVICE_PTR" >> pure(OmpAdjustOp::Value::Need_Device_Ptr)))
+
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpAlignModifier>( //
@@ -995,6 +1015,12 @@ struct OmpMapTypeModifierParser {
 
 TYPE_PARSER(OmpMapTypeModifierParser{})
 
+TYPE_PARSER(construct<OmpMemSpace>( //
+    "MEMSPACE" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpMotionModifier>( //
+    "PRESENT" >> pure(OmpMotionModifier::Value::Present)))
+
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
     "UNCONSTRAINED" >> pure(OmpOrderModifier::Value::Unconstrained)))
@@ -1050,6 +1076,9 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Value::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Value::Out)))
 
+TYPE_PARSER(construct<OmpTraitsArray>( //
+    "TRAITS" >> parenthesized(indirect(expr))))
+
 TYPE_PARSER(construct<OmpVariableCategory>(
     "AGGREGATE" >> pure(OmpVariableCategory::Value::Aggregate) ||
     "ALL"_id >> pure(OmpVariableCategory::Value::All) ||
@@ -1061,6 +1090,9 @@ TYPE_PARSER(construct<OmpxHoldModifier>( //
     "OMPX_HOLD" >> pure(OmpxHoldModifier::Value::Ompx_Hold)))
 
 // This could be auto-generated.
+TYPE_PARSER(
+    sourced(construct<OmpAdjustArgsClause::Modifier>(Parser<OmpAdjustOp>{})))
+
 TYPE_PARSER(
     sourced(construct<OmpAffinityClause::Modifier>(Parser<OmpIterator>{})))
 
@@ -1077,10 +1109,13 @@ TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
 TYPE_PARSER(sourced(
     construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
-TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
+TYPE_PARSER(
+    sourced(construct<OmpDoacross::Modifier>(Parser<OmpDependenceType>{})))
+
+TYPE_PARSER(sourced( //
     construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
     construct<OmpDependClause::TaskDep::Modifier>(
-        Parser<OmpTaskDependenceType>{})))))
+        Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER( //
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
@@ -1099,7 +1134,12 @@ template <typename MotionClause> struct OmpMotionClauseModifierParser {
 
   std::optional<resultType> Parse(ParseState &state) const {
     unsigned version{state.userState()->langOptions().OpenMPVersion};
-    if (version == 52) {
+    if (version <= 51) {
+      auto motion{sourced(construct<resultType>(Parser<OmpMotionModifier>{}))};
+      if (auto &&result{attempt(motion).Parse(state)}) {
+        return std::move(result);
+      }
+    } else if (version == 52) {
       auto expect{sourced(construct<resultType>(Parser<OmpExpectation>{}))};
       if (auto &&result{attempt(expect).Parse(state)}) {
         return std::move(result);
@@ -1199,16 +1239,17 @@ TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
 TYPE_PARSER(sourced(
     construct<OmpThreadLimitClause::Modifier>(Parser<OmpDimsModifier>{})))
 
+TYPE_PARSER(sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+    sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+                Parser<OmpMemSpace>{}) ||
+        construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
+            Parser<OmpTraitsArray>{})))))
+
 TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
     Parser<OmpContextSelector>{})))
 
 TYPE_PARSER(construct<OmpAppendArgsClause::OmpAppendOp>(
     "INTEROP" >> parenthesized(nonemptyList(Parser<OmpInteropType>{}))))
-
-TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
-    "NOTHING" >> pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Nothing) ||
-    "NEED_DEVICE_PTR" >>
-        pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
 
 TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
 
@@ -1257,7 +1298,7 @@ static inline MOBClause makeMobClause(
 }
 
 TYPE_PARSER(construct<OmpAdjustArgsClause>(
-    (Parser<OmpAdjustArgsClause::OmpAdjustOp>{} / ":"),
+    maybe(nonemptyList(Parser<OmpAdjustArgsClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
 // [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
@@ -1416,9 +1457,10 @@ TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
 TYPE_PARSER(construct<OmpDoacross>(
-    construct<OmpDoacross>(construct<OmpDoacross::Sink>(
-        "SINK"_tok >> ":"_tok >> Parser<OmpIterationVector>{})) ||
-    construct<OmpDoacross>(construct<OmpDoacross::Source>("SOURCE"_tok))))
+    // Don't parse the modifier list as "maybe", or otherwise the parser will
+    // always succeed (never allowing TaskDep in OmpDependClause).
+    nonemptyList(Parser<OmpDoacross::Modifier>{}),
+    maybe(":"_tok >> Parser<OmpIterationVector>{})))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(
@@ -1560,6 +1602,55 @@ TYPE_PARSER(construct<OmpSeverityClause>(
 TYPE_PARSER(construct<OmpMessageClause>(expr))
 
 TYPE_PARSER(construct<OmpHoldsClause>(indirect(expr)))
+
+// The deprecated "allocator[(traits-array)]" form is normalized into the 5.2
+// representation so that both surface syntaxes share one parse tree shape.
+static OmpUsesAllocatorsClause::AllocatorSpec makeLegacyAllocatorSpec(
+    Name &&name, common::Indirection<Expr> &&traits) {
+  using AllocatorSpec = OmpUsesAllocatorsClause::AllocatorSpec;
+  CharBlock traitsSource{traits.value().source};
+  AllocatorSpec::Modifier mod{OmpTraitsArray{std::move(traits)}};
+  mod.source = traitsSource;
+  std::list<AllocatorSpec::Modifier> mods;
+  mods.emplace_back(std::move(mod));
+
+  CharBlock allocatorSource{name.source};
+  Expr allocator{Designator{DataRef{std::move(name)}}};
+  allocator.source = allocatorSource;
+  return AllocatorSpec{std::move(mods),
+      ScalarIntExpr{IntExpr{common::Indirection<Expr>{std::move(allocator)}}},
+      /*IsLegacySyntax=*/true};
+}
+
+static OmpUsesAllocatorsClause::AllocatorSpec makeCanonicalAllocatorSpec(
+    std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier> &&mods,
+    ScalarIntExpr &&allocator) {
+  return OmpUsesAllocatorsClause::AllocatorSpec{
+      std::move(mods), std::move(allocator), /*IsLegacySyntax=*/false};
+}
+
+// Parse "modifier...: allocator" first: a modifier list is followed by a
+// colon, which neither of the other two forms can contain.
+TYPE_PARSER(sourced( //
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeCanonicalAllocatorSpec,
+        nonemptyList(
+            Parser<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>{}) /
+            ":",
+        scalarIntExpr) ||
+    // Parse the deprecated "allocator(traits-array)" before a bare allocator,
+    // because it is also syntactically an array element reference.
+    applyFunction<OmpUsesAllocatorsClause::AllocatorSpec>(
+        makeLegacyAllocatorSpec, Parser<Name>{},
+        parenthesized(indirect(expr))) ||
+    construct<OmpUsesAllocatorsClause::AllocatorSpec>(
+        pure<std::optional<
+            std::list<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>>>(),
+        scalarIntExpr, pure(false))))
+
+TYPE_PARSER(construct<OmpUsesAllocatorsClause>(
+    nonemptyList(Parser<OmpUsesAllocatorsClause::AllocatorSpec>{})))
+
 TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
     construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
@@ -1783,6 +1874,9 @@ TYPE_PARSER( //
     "USE_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::UseDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
+    "USES_ALLOCATORS" >>
+        construct<OmpClause>(construct<OmpClause::UsesAllocators>(
+            parenthesized(Parser<OmpUsesAllocatorsClause>{}))) ||
     "UNIFIED_ADDRESS" >>
         construct<OmpClause>(construct<OmpClause::UnifiedAddress>(
             maybe(parenthesized(scalarLogicalConstantExpr)))) ||
@@ -2755,7 +2849,26 @@ static constexpr llvm::omp::DirectiveSet GetAllDirectives() {
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
     OmpEndDirectiveParser{GetAllDirectives()}))
 
-TYPE_PARSER(startOmpLine >>
-    sourced(construct<OpenMPInvalidDirective>(
-        maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{})))
+// A string following an OpenMP sentinel that is not a recognized directive.
+// When it follows an implementation-defined extension sentinel (!$omx / !$ompx)
+// the node is flagged (true) so that semantics ignores it with a warning rather
+// than reporting an error, allowing portable use of vendor extensions
+// (OpenMP 5.2, section 3.1).
+//
+// This is a fallback that is attempted before the enclosing program unit is
+// reparsed as an execution-part construct, so the standard "!$omp" branch uses
+// the strict "_id" spelling: it must not prefix-match the "!$omp" that begins
+// "!$ompx" line, otherwise a valid extension directive such as "!$ompx barrier"
+// would be misreported as an invalid "!$omp" directive instead of being handled
+// as a real construct.
+static constexpr auto skipUnrecognized{
+    maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{}};
+
+static constexpr auto unrecognizedExtension{ompxSentinel >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(true))};
+static constexpr auto invalidDirective{"!$OMP"_id >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(false))};
+
+TYPE_PARSER(sourced(
+    skipStuffBeforeStatement >> (unrecognizedExtension || invalidDirective)))
 } // namespace Fortran::parser
