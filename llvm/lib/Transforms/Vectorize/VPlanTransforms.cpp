@@ -1129,15 +1129,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
                                       VPBuilder &Builder,
                                       bool CanCreateNewRecipe) {
   VPlan *Plan = Def->getParent()->getPlan();
-
-  // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true.
   VPValue *X, *Y, *Z;
-  if (match(Def,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
-    return X;
 
   // x | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
