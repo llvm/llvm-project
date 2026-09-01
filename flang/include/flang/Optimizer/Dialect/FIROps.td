@@ -298,6 +298,7 @@ def fir_FreeMemOp : fir_Op<"freemem", []> {
 
 def fir_LoadOp : fir_OneResultOp<"load", [
   FirAliasTagOpInterface,
+  fir_FortranObjectLoadOpInterface,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
@@ -332,6 +333,9 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+
+    // FortranObjectLoadOpInterface methods:
+    mlir::Value getLoadSource(mlir::OpResult) { return getMemref(); }
   }];
 }
 
