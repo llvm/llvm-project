@@ -160,11 +160,8 @@ static Desc getSubOpDesc(unsigned Opcode, unsigned SubOpcode) {
   return getDescImpl(Descriptions, SubOpcode);
 }
 
-static std::optional<uint64_t> extractLEB128(const DataExtractor &Data,
-                                             uint64_t &Offset, bool Signed) {
-  DataExtractor::Cursor Cursor(Offset);
-  uint64_t Value = Signed ? static_cast<uint64_t>(Data.getSLEB128(Cursor))
-                          : Data.getULEB128(Cursor);
+static std::optional<uint64_t> finishLEB128(DataExtractor::Cursor &Cursor,
+                                            uint64_t &Offset, uint64_t Value) {
   if (!Cursor) {
     consumeError(Cursor.takeError());
     return std::nullopt;
@@ -173,13 +170,23 @@ static std::optional<uint64_t> extractLEB128(const DataExtractor &Data,
   return Value;
 }
 
-static std::optional<uint64_t> extractGenericConstant(const DataExtractor &Data,
-                                                      uint64_t &Offset,
-                                                      uint8_t AddressSize,
-                                                      bool Signed) {
-  if (std::optional<uint64_t> Value = extractLEB128(Data, Offset, Signed))
-    return Value;
+static std::optional<uint64_t> extractULEB128(const DataExtractor &Data,
+                                              uint64_t &Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  uint64_t Value = Data.getULEB128(Cursor);
+  return finishLEB128(Cursor, Offset, Value);
+}
 
+static std::optional<uint64_t> extractSLEB128(const DataExtractor &Data,
+                                              uint64_t &Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  uint64_t Value = static_cast<uint64_t>(Data.getSLEB128(Cursor));
+  return finishLEB128(Cursor, Offset, Value);
+}
+
+static std::optional<uint64_t>
+extractTruncatedGenericConstant(const DataExtractor &Data, uint64_t &Offset,
+                                uint8_t AddressSize) {
   // Generic constants are truncated to the target's address-sized generic
   // type. If the mathematical value does not fit the decoder's 64-bit return
   // type, scan the complete operand while retaining only those low bits.
@@ -215,25 +222,32 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
   if (Desc.Version == Operation::DwarfNA)
     return false;
 
+  auto FailOperandDecode = [&] {
+    OperandError = true;
+    return false;
+  };
   Operands.resize(Desc.Op.size());
   OperandEndOffsets.resize(Desc.Op.size());
   for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
     unsigned Size = Desc.Op[Operand];
     unsigned Signed = Size & Operation::SignBit;
-    auto ExtractLEBOperand = [&](bool IsSigned) {
-      std::optional<uint64_t> Value = extractLEB128(Data, Offset, IsSigned);
-      if (!Value) {
-        OperandError = true;
-        return false;
-      }
+    auto ExtractLEBOperand = [&](std::optional<uint64_t> Value) {
+      if (!Value)
+        return FailOperandDecode();
       Operands[Operand] = *Value;
       return true;
+    };
+    auto ExtractUnsignedLEBOperand = [&] {
+      return ExtractLEBOperand(extractULEB128(Data, Offset));
+    };
+    auto ExtractSignedLEBOperand = [&] {
+      return ExtractLEBOperand(extractSLEB128(Data, Offset));
     };
 
     switch (Size & ~Operation::SignBit) {
     case Operation::SizeSubOpLEB:
       assert(Operand == 0 && "SubOp operand must be the first operand");
-      if (!ExtractLEBOperand(/*IsSigned=*/false))
+      if (!ExtractUnsignedLEBOperand())
         return false;
       Desc = getSubOpDesc(Opcode, Operands[Operand]);
       if (Desc.Version == Operation::DwarfNA)
@@ -272,24 +286,29 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       break;
     case Operation::SizeLEB:
       if (Opcode == DW_OP_constu || Opcode == DW_OP_consts) {
-        if (std::optional<uint64_t> Value = extractGenericConstant(
-                Data, Offset, AddressSize, /*Signed=*/Signed))
-          Operands[Operand] = *Value;
-        else {
-          OperandError = true;
+        std::optional<uint64_t> Value = Opcode == DW_OP_consts
+                                            ? extractSLEB128(Data, Offset)
+                                            : extractULEB128(Data, Offset);
+        if (!Value)
+          Value = extractTruncatedGenericConstant(Data, Offset, AddressSize);
+        if (!Value)
+          return FailOperandDecode();
+        Operands[Operand] = *Value;
+      } else if (Signed) {
+        if (!ExtractSignedLEBOperand())
           return false;
-        }
-      } else if (!ExtractLEBOperand(Signed)) {
-        return false;
+      } else {
+        if (!ExtractUnsignedLEBOperand())
+          return false;
       }
       break;
     case Operation::BaseTypeRef:
-      if (!ExtractLEBOperand(/*IsSigned=*/false))
+      if (!ExtractUnsignedLEBOperand())
         return false;
       break;
     case Operation::NvidiaMuxArg:
       assert(Operand == 1);
-      if (!ExtractLEBOperand(/*IsSigned=*/false))
+      if (!ExtractUnsignedLEBOperand())
         return false;
       // The selector names an NVIDIA specific operation, and the number and
       // type of the operands that follow it are implied by that operation.
@@ -305,7 +324,7 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       case 1:
       case 2:
       case 4:
-        if (!ExtractLEBOperand(/*IsSigned=*/false))
+        if (!ExtractUnsignedLEBOperand())
           return false;
         break;
       case 3: // global as uint32
