@@ -1349,13 +1349,7 @@ inline bool Stmt::classof(const Node *node) {
   return isa<CompoundStmt, LetStmt, OpRewriteStmt, Expr>(node);
 }
 
-} // namespace ast
-} // namespace pdll
-} // namespace mlir
 
-
-//===----------------------------------------------------------------------===//
-// TypeConversionExpr
 //===----------------------------------------------------------------------===//
 
 /// This expression represents a type conversion using a registered type
@@ -1412,6 +1406,8 @@ private:
   /// The target type
   Expr *typeExpr;
 };
+
+
 
 
 } // namespace ast
