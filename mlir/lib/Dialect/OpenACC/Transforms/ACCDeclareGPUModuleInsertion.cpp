@@ -80,7 +80,7 @@ static bool hasAccDeclareGlobals(ModuleOp mod) {
 static void makeDeviceGlobalDeclaration(Operation &globalOp) {
   globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "initVal"),
                            {});
-  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "linkName"),
+  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "linkage"),
                            {});
   for (Region &region : globalOp.getRegions()) {
     region.dropAllReferences();
