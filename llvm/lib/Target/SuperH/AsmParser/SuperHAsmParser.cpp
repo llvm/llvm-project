@@ -629,20 +629,16 @@ ParseStatus SuperHAsmParser::tryParseRegIndirect(MCRegister &Reg, bool &IsInc, b
 
 ParseStatus SuperHAsmParser::tryParseImm(int64_t &Imm, SMLoc &StartLoc, SMLoc &EndLoc) {
   const AsmToken Tok = Parser.getTok();
-  const MCExpr *Expr;
 
   // Eat % and $ which are used in SuperH asm.
-  if (Tok.is(AsmToken::Percent) || Tok.is(AsmToken::Dollar))
+  if (getTok().is(AsmToken::Percent) || getTok().is(AsmToken::Dollar))
     Parser.Lex();
 
-  if (Parser.parseExpression(Expr, EndLoc))
+  if (Parser.parseAbsoluteExpression(Imm)) {
+    getLexer().UnLex(Tok);
     return ParseStatus::NoMatch;
-
-  if (Expr->evaluateAsAbsolute(Imm))
-    return ParseStatus::Success;
-
-  getLexer().UnLex(Tok);
-  return ParseStatus::NoMatch;
+  }
+  return ParseStatus::Success;
 }
 
 
@@ -652,6 +648,7 @@ ParseStatus SuperHAsmParser::tryParseImm(int64_t &Imm, SMLoc &StartLoc, SMLoc &E
 //===----------------------------------------------------------------------===//
 
 ParseStatus SuperHAsmParser::parseImm(OperandVector &Operands) {
+  const AsmToken Tok = Parser.getTok();
   SMLoc StartLoc = getLexer().getLoc();
   SMLoc EndLoc = getLexer().getLoc();
 
@@ -659,10 +656,10 @@ ParseStatus SuperHAsmParser::parseImm(OperandVector &Operands) {
   if (getTok().isNot(AsmToken::Hash)) {
     return ParseStatus::NoMatch;
   }
+  Parser.Lex();
   
   int64_t Imm;
   if (tryParseImm(Imm, StartLoc, EndLoc).isSuccess()) {
-    EndLoc = getLexer().getLoc();
     Operands.push_back(SuperHOperand::CreateImm(
       MCConstantExpr::create(Imm, getContext()), 
       StartLoc, 
@@ -671,6 +668,7 @@ ParseStatus SuperHAsmParser::parseImm(OperandVector &Operands) {
     return ParseStatus::Success;
   }
 
+  getLexer().UnLex(Tok);
   return ParseStatus::NoMatch;
 }
 
