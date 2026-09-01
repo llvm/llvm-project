@@ -553,7 +553,7 @@ for.end:
         auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
         EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
         EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
-        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNSW);
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNUW);
       });
 }
 

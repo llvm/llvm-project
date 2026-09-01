@@ -29,7 +29,6 @@ class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
-class SCEVAddRecExpr;
 class StoreInst;
 
 /// These are the kinds of recurrences that we support.
@@ -501,8 +500,9 @@ public:
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
   /// is monotonic, the monotonic descriptor \p D will contain the data
   /// describing the PHI.
-  static bool isMonotonicPHI(PHINode *PN, const Loop *L,
-                             MonotonicDescriptor &Desc, ScalarEvolution &SE);
+  LLVM_ABI static bool isMonotonicPHI(PHINode *PN, const Loop *L,
+                                      MonotonicDescriptor &Desc,
+                                      ScalarEvolution &SE);
 
   /// Returns the header PHI described by this descriptor.
   PHINode *getHeaderPHI() const { return HeaderPHI; }
