@@ -426,8 +426,8 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 
     SDValue SubRegOp = N->getOperand(OpNo + 1);
     unsigned SubRegIdx = SubRegOp->getAsZExtVal();
-    return Subtarget->getRegisterInfo()->getSubClassWithSubReg(SuperRC,
-                                                              SubRegIdx);
+    return Subtarget->getRegisterInfo()->getSubRegisterClass(SuperRC,
+                                                             SubRegIdx);
   }
   }
 }
@@ -4783,24 +4783,23 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
 
 const TargetRegisterClass *
 AMDGPUDAGToDAGISel::inferDefRegClass(SDNode *N) const {
-  // LLVM_DEBUG(dbgs() << "GetDefRegClass:\n"; N->dump(CurDAG); dbgs() << "\n");
-
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   if (!N->isMachineOpcode()) {
     switch (N->getOpcode()) {
     case ISD::CopyFromReg: {
       Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
-      if (!Reg.isPhysical())
-        return nullptr;
-      return TRI->getPhysRegBaseClass(Reg);
+      if (Reg.isPhysical())
+        return TRI->getPhysRegBaseClass(Reg);
+      return CurDAG->getMachineFunction().getRegInfo().getRegClass(Reg);
     }
     }
     return nullptr;
   }
 
   switch (N->getMachineOpcode()) {
-  case TargetOpcode::COPY:
+  case TargetOpcode::COPY: {
     return inferDefRegClass(N->getOperand(0).getNode());
+  }
   case TargetOpcode::EXTRACT_SUBREG: {
     const TargetRegisterClass *SrcRC =
         inferDefRegClass(N->getOperand(0).getNode());
@@ -4810,8 +4809,8 @@ AMDGPUDAGToDAGISel::inferDefRegClass(SDNode *N) const {
     return TRI->getSubClassWithSubReg(SrcRC, SubIdx);
   }
   case TargetOpcode::REG_SEQUENCE: {
-    unsigned RCID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-    return TRI->getRegClass(RCID);
+    unsigned RCID = N->getConstantOperandVal(0);
+    return Subtarget->getRegisterInfo()->getRegClass(RCID);
   }
   case TargetOpcode::COPY_TO_REGCLASS: {
     unsigned RCID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
@@ -4828,13 +4827,21 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
       !Subtarget->useRealTrue16Insts())
     return false;
 
-  LLVM_DEBUG(dbgs() << "XXXXXXXXXXXXX:\n"; N->dump(CurDAG); dbgs() << "\n");
-
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
-  // Check 16bit types only
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i16 && VT != MVT::f16 && VT != MVT::bf16)
+  if (!VT.isSimple())
+    return false;
+  MVT SVT = VT.getSimpleVT();
+  if (SVT == MVT::Other || SVT == MVT::Glue || SVT == MVT::Untyped)
+    return false;
+  if (VT.isScalableVector())
+    return false;
+
+  // Check 16/32bit types only
+  bool Is16Bit = VT.getSizeInBits() == 16;
+  bool Is32Bit = VT.getSizeInBits() == 32;
+  if (!Is16Bit && !Is32Bit)
     return false;
 
   SmallVector<std::pair<SDNode *, unsigned>, 4> ToFix;
@@ -4842,14 +4849,10 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
   // Try to check def register class
   const TargetRegisterClass *DstRC = inferDefRegClass(N);
   if (!DstRC) {
-    LLVM_DEBUG(dbgs() << "FAILED TO INFER:\n");
     return false;
   }
   bool IsSGPR32 = TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_32RegClass);
   bool IsVGPR16 = TRI->getCommonSubClass(DstRC, &AMDGPU::VGPR_16RegClass);
-
-  LLVM_DEBUG(dbgs() << "IsSGPR32:" << IsSGPR32 << ", IsVGPR16:" << IsVGPR16
-                    << "\n");
 
   // Scan users
   for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
@@ -4857,29 +4860,24 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
     SDNode *User = UI->getUser();
     unsigned OperandNo = UI->getOperandNo();
 
-    LLVM_DEBUG(dbgs() << "User:" << OperandNo << "---"; User->dump(CurDAG);
-               dbgs() << "\n");
     const TargetRegisterClass *UserRC = getOperandRegClass(User, OperandNo);
+    if (!UserRC)
+      continue;
 
-    // SGPR32 used by reg_sequence with 16bit subreg
-    if (IsSGPR32 && User->getOpcode() == TargetOpcode::REG_SEQUENCE) {
-      unsigned RCID =
-          cast<ConstantSDNode>(User->getOperand(OperandNo + 1))->getZExtValue();
-      if (TRI->getCommonSubClass(TRI->getRegClass(RCID),
-                                 &AMDGPU::VGPR_16RegClass)) {
-        LLVM_DEBUG(dbgs() << "Found To Fix OperandNo:" << "\n");
+    if (Is16Bit) {
+      // SGPR32 used by reg_sequence with 16bit type requires a fix
+      if ((IsSGPR32 &&
+           !TRI->getCommonSubClass(UserRC, &AMDGPU::SGPR_32RegClass)) ||
+          (IsVGPR16 &&
+           !TRI->getCommonSubClass(UserRC, &AMDGPU::VGPR_16RegClass))) {
         ToFix.emplace_back(User, OperandNo);
       }
-    }
-
-    // Cross bank 16bit Def-Use that requires a fix
-    if ((IsSGPR32 && TRI->getCommonSubClass(UserRC, &AMDGPU::VGPR_16RegClass) &&
-         !TRI->getCommonSubClass(UserRC, &AMDGPU::SGPR_32RegClass)) ||
-        (IsVGPR16 && TRI->getCommonSubClass(UserRC, &AMDGPU::SGPR_32RegClass) &&
-         !TRI->getCommonSubClass(UserRC, &AMDGPU::VGPR_16RegClass))) {
-
-      LLVM_DEBUG(dbgs() << "Found To Fix OperandNo:" << "\n");
-      ToFix.emplace_back(User, OperandNo);
+    } else if (Is32Bit && IsSGPR32) {
+      // SGPR32 used by extract_subreg
+      if (User->isMachineOpcode() &&
+          User->getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG) {
+        ToFix.emplace_back(User, OperandNo);
+      }
     }
   }
 
@@ -4891,21 +4889,29 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
   if (IsSGPR32) {
     // t0: sgpr_32 = ...
     // ... = t0: vgpr_16
-    // to
+    // to (is32bit)
+    // t0: sgpr_32 = ...
+    // t1: vgpr_32 = COPY_REGCLASS t0
+    //
+    // to (is16bit)
     // t0: sgpr_32 = ...
     // t1: vgpr_32 = COPY_REGCLASS t0
     // t2: vgpr_16 = EXTRACT_SUBREG t1, lo16
     // ... = t2: vgpr_16
     SDValue RCImm =
         CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, DL, MVT::i32);
-    SDValue SubRegIdx = CurDAG->getTargetConstant(AMDGPU::lo16, DL, MVT::i32);
     SDValue CopyToReg =
         SDValue(CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT,
                                        SDValue(N, 0), RCImm),
                 0);
-    NewValue = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
-                                              VT, CopyToReg, SubRegIdx),
-                       0);
+    if (Is16Bit) {
+      SDValue SubRegIdx = CurDAG->getTargetConstant(AMDGPU::lo16, DL, MVT::i32);
+      NewValue = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                DL, VT, CopyToReg, SubRegIdx),
+                         0);
+    } else
+      NewValue = CopyToReg;
+
   } else if (IsVGPR16) {
     // t0: vgpr_16 = ...
     // ... = t0: sgpr_32
@@ -4936,8 +4942,6 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
     NewOps[OperandNo] = NewValue;
     CurDAG->UpdateNodeOperands(User, NewOps);
   }
-  CurDAG->RemoveDeadNodes();
-
   return true;
 }
 
