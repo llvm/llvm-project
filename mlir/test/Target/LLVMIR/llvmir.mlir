@@ -99,6 +99,9 @@ llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 // CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
 llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 
+// CHECK: @f8E5M3FNU_global_as_i8 = internal global i8 120
+llvm.mlir.global internal @f8E5M3FNU_global_as_i8(1.0 : f8E5M3FNU) : i8
+
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
@@ -3122,6 +3125,26 @@ llvm.func @f()
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
 llvm.func @default_func_attrs_call() {
   llvm.call @f() {default_func_attrs={key="value", justKey}} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @default_func_attrs_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {default_func_attrs={key="value", justKey}} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
   llvm.return
 }
 

@@ -27,6 +27,8 @@ config.test_exec_root = os.path.join('@LIBUNWIND_BINARY_DIR@', 'test')
 # Add a few features that are common to all the configurations
 if @LIBUNWIND_USES_ARM_EHABI@:
     config.available_features.add('libunwind-arm-ehabi')
+if @LIBUNWIND_ENABLE_ASSERTIONS@:
+    config.available_features.add('libunwind-assertions-enabled')
 if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 

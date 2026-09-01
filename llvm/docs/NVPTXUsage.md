@@ -1,9 +1,5 @@
 # User Guide for NVPTX Back-end
 
-```{contents}
-:depth: 3
-:local: true
-```
 
 ## Introduction
 

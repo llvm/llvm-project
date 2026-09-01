@@ -205,6 +205,10 @@ clang_tablegen("BuiltinTemplates") {
   args = [ "-gen-clang-builtin-templates" ]
 }
 
+clang_tablegen("Traits") {
+  args = [ "-gen-clang-traits" ]
+}
+
 # ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {

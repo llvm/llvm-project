@@ -979,6 +979,10 @@ def is_thread_crashed(test, thread):
         )
     elif test.getPlatform() == "windows":
         return "Exception 0xc0000005" in thread.GetStopDescription(200)
+    elif test.getPlatform() in ["wasip1", "wasi"]:
+        # Wasm has no signals. What a bad access raises is a trap, which a
+        # runtime reports as an exception described by the trap it hit.
+        return thread.GetStopReason() == lldb.eStopReasonException
     else:
         return "invalid address" in thread.GetStopDescription(100)
 
@@ -1932,6 +1936,7 @@ def get_latest_apple_simulator(platform_name, log=None):
 
 
 def launch_exe_in_apple_simulator(
+    test,
     device_uuid,
     exe_path,
     exe_args=[],
@@ -1939,17 +1944,20 @@ def launch_exe_in_apple_simulator(
     log=None,
 ):
     exe_path = os.path.realpath(exe_path)
-    cmd = [
-        "xcrun",
-        "simctl",
+    # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
+    simctl_path = (
+        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+    )
+    args = [
         "spawn",
         "-s",
         device_uuid,
         exe_path,
     ] + exe_args
     if log:
-        log(" ".join(cmd))
-    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        log(simctl_path + " " + " ".join(args))
+    # simctl itself gets terminated when the test finishes.
+    sim_launcher = test.spawnSubprocess(simctl_path, args, stderr=subprocess.PIPE)
 
     # Read stderr to try to find matches.
     # Each pattern will return the value of group[1] of the first match in the stderr.

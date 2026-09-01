@@ -37,7 +37,9 @@ function(read_libc_config config_file opt_list)
     DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     PROPERTY CMAKE_CONFIGURE_DEPENDS ${config_file})
 
-  file(READ ${config_file} json_config)
+  file(READ ${config_file} json_config_raw)
+  # Expand all CMake variables in the JSON string first
+  string(CONFIGURE "${json_config_raw}" json_config)
   string(JSON group_count ERROR_VARIABLE json_error LENGTH ${json_config})
   if(json_error)
     message(FATAL_ERROR "${config_file}: ${json_error}")

@@ -136,6 +136,12 @@ const Name &GetFirstName(const AccObject &x) {
       [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
 }
 
+bool IsBOZLiteral(const ScalarIntConstantExpr &x) {
+  const Expr &expr{UnwrapRef<Expr>(x)};
+  const auto *literal{std::get_if<LiteralConstant>(&expr.u)};
+  return literal && std::holds_alternative<BOZLiteralConstant>(literal->u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{

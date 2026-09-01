@@ -68,7 +68,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -183,6 +182,11 @@ if asan_rtlib:
     ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
+elif config.osx_xcrun:
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
+    ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
     config.ocamlfind_executable,
@@ -291,7 +295,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -336,6 +339,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
@@ -692,13 +696,6 @@ def have_ld64_plugin_support():
         return False
 
     if config.ld64_executable == "":
-        return False
-
-    ld_cmd = subprocess.Popen([config.ld64_executable, "-v"], stderr=subprocess.PIPE)
-    ld_out = ld_cmd.stderr.read().decode()
-    ld_cmd.wait()
-
-    if "ld64" not in ld_out or "LTO" not in ld_out:
         return False
 
     return True

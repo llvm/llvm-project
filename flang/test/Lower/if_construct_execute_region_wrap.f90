@@ -31,3 +31,40 @@ end subroutine
 ! CHECK:           fir.unreachable
 ! CHECK:           scf.yield
 ! CHECK:         }
+
+! Subroutine with an alternate ENTRY point followed by a structured outer
+! IF that nests a wrappable inner IF.  The shared PFT is lowered once per
+! entry, and the inner IfConstruct's firstStmt.block field still points
+! at the previous entry's wrap-region block on the second pass.  Reading
+! that stale pointer used to move the builder into the previous entry's
+! function, so both wraps ended up in _QPfoo and _QPbar was left empty
+! with a load referencing an SSA value from the other function.  Fixed by
+! only starting firstStmt.block when it belongs to the current builder's
+! region.
+subroutine foo_with_entry(a)
+  integer a
+entry bar_with_entry(a)
+  if (a .eq. 1) then
+    if (a .ne. 3) stop
+  end if
+end subroutine
+
+! CHECK-LABEL: func.func @_QPfoo_with_entry
+! CHECK:         %[[FOO_A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFfoo_with_entryEa"
+! CHECK:         fir.if
+! CHECK:           scf.execute_region
+! CHECK:             fir.load %[[FOO_A]]#0
+! CHECK:             cf.cond_br
+! CHECK:             fir.call @_FortranAStopStatement
+! CHECK:             scf.yield
+! CHECK:           }
+
+! CHECK-LABEL: func.func @_QPbar_with_entry
+! CHECK:         %[[BAR_A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFfoo_with_entryEa"
+! CHECK:         fir.if
+! CHECK:           scf.execute_region
+! CHECK:             fir.load %[[BAR_A]]#0
+! CHECK:             cf.cond_br
+! CHECK:             fir.call @_FortranAStopStatement
+! CHECK:             scf.yield
+! CHECK:           }

@@ -3067,9 +3067,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                                            MDNode::toCaptureComponents(KMD)));
         break;
       case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD != JMD)
-          K->setMetadata(Kind, nullptr);
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
         break;
       }
   }

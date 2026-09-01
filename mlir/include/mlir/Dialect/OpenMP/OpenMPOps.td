@@ -1776,6 +1776,37 @@ def BarrierOp : OpenMP_Op<"barrier"> {
 }
 
 //===----------------------------------------------------------------------===//
+// [5.1] 2.5.4 error directive
+//===----------------------------------------------------------------------===//
+
+def ErrorOp : OpenMP_Op<"error"> {
+  let summary = "error directive";
+  let description = [{
+    The error directive instructs the compiler or runtime to display a message
+    and, when the severity is `fatal`, to terminate execution. The
+    `at(compilation)` form is handled entirely by the frontend; this operation
+    represents only the `at(execution)` form, which lowers to a call to the
+    `__kmpc_error` runtime entry point.
+
+    The `severity` attribute selects `warning` or `fatal` behavior. The message
+    to display is optional and may be provided as a compile-time-constant
+    string in the `message` attribute, or a pointer to a null-terminated string.
+  }];
+
+  let arguments = (ins ClauseSeverityAttr:$severity,
+                       OptionalAttr<StrAttr>:$message,
+                       Optional<OpenMP_PointerLikeType>:$message_expr);
+
+  let assemblyFormat = [{
+    `severity` `(` custom<ClauseAttr>($severity) `)`
+    ( `message` `(` $message^ `)` )?
+    ( `message_expr` `(` $message_expr^ `:` type($message_expr) `)` )? attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // [5.1] 2.19.9 ordered Construct
 //===----------------------------------------------------------------------===//
 
@@ -2652,6 +2683,106 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
     $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 14.1 interop construct
+//===----------------------------------------------------------------------===//
+
+def InteropInitOp
+    : OpenMP_Op<"interop.init", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop init operation";
+  let description = [{
+    The interop init operation initializes an interop object for
+    foreign runtime interoperability. The `interop_type` attribute specifies
+    whether the interop object provides access to the target execution
+    environment (`target`), a synchronization object (`targetsync`), or both.
+
+    The optional `prefer_type` attribute provides a list of preferred foreign
+    runtime types as integer identifiers.
+
+    The optional `device` operand specifies the device number.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      InteropTypeArrayAttr:$interop_types,
+      OptionalAttr<I64ArrayAttr>:$prefer_type,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    `interop_types` `(` $interop_types `)`
+    (`prefer_type` `(` $prefer_type^ `)`)?
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
+  }];
+}
+
+def InteropUseOp
+    : OpenMP_Op<"interop.use", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop use operation";
+  let description = [{
+    The interop use operation indicates use of an interop object. This is
+    used in combination with depend clauses to synchronize tasks with
+    foreign runtime operations.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
+  }];
+}
+
+def InteropDestroyOp
+    : OpenMP_Op<"interop.destroy", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_DependClause, OpenMP_NowaitClause]> {
+  let summary = "interop destroy operation";
+  let description = [{
+    The interop destroy operation releases an interop object and frees
+    any resources associated with it.
+  }] # clausesDescription;
+
+  let arguments = !con((ins
+      OpenMP_PointerLikeType:$interop_var,
+      Optional<AnyInteger>:$device),
+      clausesArgs);
+
+  let assemblyFormat = [{
+    $interop_var `:` type($interop_var)
+    (`device` `(` $device^ `:` type($device) `)`)?
+    oilist(
+      `depend` `(`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds,
+                            $depend_iterated, type($depend_iterated),
+                            $depend_iterated_kinds) `)`
+      | `nowait` $nowait
+    )
+    attr-dict
   }];
 }
 

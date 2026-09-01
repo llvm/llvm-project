@@ -117,7 +117,7 @@ define void @load_store_vec_loads_not_consecutive(ptr %ptr) {
   ret void
 }
 
-; Vectorize same types, even if bottom-up-vec could do so too.
+; Vectorize same types, even if bundle-vec could do so too.
 define void @load_store_vec_same_types(ptr %ptr) {
 ; CHECK-LABEL: define void @load_store_vec_same_types(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {

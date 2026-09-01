@@ -1043,12 +1043,6 @@ struct ReorderElementwiseOpsOnBroadcast final
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (isa<vector::FMAOp>(op)) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "Op only accepts vector types - not supported as broadcast source "
-          "might be a scalar");
-    }
 
     Type resultElemType = resultType.getElementType();
 
@@ -1067,6 +1061,17 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     Type unbroadcastResultType =
         cloneOrReplace(broadcastSource.getType(), resultElemType);
+
+    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops the
+    // reordering is only possible when the broadcast source is a vector as
+    // well; sinking past a broadcast from a scalar would create an invalid op.
+    // TODO: It may be better to support scalar sources by promoting the scalar
+    // to a single element vector.
+    if (isa<vector::FMAOp>(op) && !isa<VectorType>(unbroadcastResultType)) {
+      return rewriter.notifyMatchFailure(
+          op, "Op only accepts vector types, but the broadcast source is a "
+              "scalar");
+    }
 
     // Make sure that all operands are broadcast from identically-shaped types:
     //  * scalar (`vector.broadcast`), or

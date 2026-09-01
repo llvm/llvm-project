@@ -75,7 +75,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -540,10 +540,10 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name == "alt-name") {
             reg_info.alt_name.SetString(value);
           } else if (name == "bitsize") {
-            if (!value.getAsInteger(0, reg_info.byte_size))
+            if (!value.getAsInteger(BASE_10, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
           } else if (name == "offset") {
-            value.getAsInteger(0, reg_info.byte_offset);
+            value.getAsInteger(BASE_10, reg_info.byte_offset);
           } else if (name == "encoding") {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
@@ -597,9 +597,9 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
           } else if (name == "set") {
             reg_info.set_name.SetString(value);
           } else if (name == "gcc" || name == "ehframe") {
-            value.getAsInteger(0, reg_info.regnum_ehframe);
+            value.getAsInteger(BASE_AUTOSENSE, reg_info.regnum_ehframe);
           } else if (name == "dwarf") {
-            value.getAsInteger(0, reg_info.regnum_dwarf);
+            value.getAsInteger(BASE_AUTOSENSE, reg_info.regnum_dwarf);
           } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
           } else if (name == "container-regs") {
@@ -2452,11 +2452,11 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
         // exception type in big endian hex
-        value.getAsInteger(16, exc_type);
+        value.getAsInteger(BASE_16, exc_type);
       } else if (key.compare("medata") == 0) {
         // exception data in big endian hex
         uint64_t x;
-        value.getAsInteger(16, x);
+        value.getAsInteger(BASE_16, x);
         exc_data.push_back(x);
       } else if (key.compare("thread") == 0) {
         // thread-id
@@ -2479,7 +2479,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         while (!value.empty()) {
           llvm::StringRef pc_str;
           std::tie(pc_str, value) = value.split(',');
-          if (pc_str.getAsInteger(16, pc))
+          if (pc_str.getAsInteger(BASE_16, pc))
             pc = LLDB_INVALID_ADDRESS;
           m_thread_pcs.push_back(pc);
         }
@@ -2499,10 +2499,10 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key.compare("name") == 0) {
         thread_name = std::string(value);
       } else if (key.compare("qaddr") == 0) {
-        value.getAsInteger(16, thread_dispatch_qaddr);
+        value.getAsInteger(BASE_16, thread_dispatch_qaddr);
       } else if (key.compare("dispatch_queue_t") == 0) {
         queue_vars_valid = true;
-        value.getAsInteger(16, dispatch_queue_t);
+        value.getAsInteger(BASE_16, dispatch_queue_t);
       } else if (key.compare("qname") == 0) {
         queue_vars_valid = true;
         StringExtractor name_extractor(value);
@@ -2515,7 +2515,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
                          .Default(eQueueKindUnknown);
         queue_vars_valid = queue_kind != eQueueKindUnknown;
       } else if (key.compare("qserialnum") == 0) {
-        if (!value.getAsInteger(0, queue_serial_number))
+        if (!value.getAsInteger(BASE_10, queue_serial_number))
           queue_vars_valid = true;
       } else if (key.compare("reason") == 0) {
         reason = std::string(value);
@@ -2541,7 +2541,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         std::tie(addr_str, bytes_str) = value.split('=');
         if (!addr_str.empty() && !bytes_str.empty()) {
           lldb::addr_t mem_cache_addr = LLDB_INVALID_ADDRESS;
-          if (!addr_str.getAsInteger(0, mem_cache_addr)) {
+          if (!addr_str.getAsInteger(BASE_AUTOSENSE, mem_cache_addr)) {
             StringExtractor bytes(bytes_str);
             const size_t byte_size = bytes.GetBytesLeft() / 2;
             WritableDataBufferSP data_buffer_sp(
@@ -2556,7 +2556,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
                  key.compare("awatch") == 0) {
         // Support standard GDB remote stop reply packet 'TAAwatch:addr'
         lldb::addr_t wp_addr = LLDB_INVALID_ADDRESS;
-        value.getAsInteger(16, wp_addr);
+        value.getAsInteger(BASE_16, wp_addr);
 
         WatchpointResourceSP wp_resource_sp =
             m_watchpoint_resource_list.FindByAddress(wp_addr);
@@ -2594,17 +2594,17 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         description = std::string(ostr.GetString());
       } else if (key.compare("addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(BASE_10, addressing_bits)) {
           addressable_bits.SetAddressableBits(addressing_bits);
         }
       } else if (key.compare("low_mem_addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(BASE_10, addressing_bits)) {
           addressable_bits.SetLowmemAddressableBits(addressing_bits);
         }
       } else if (key.compare("high_mem_addressing_bits") == 0) {
         uint64_t addressing_bits;
-        if (!value.getAsInteger(0, addressing_bits)) {
+        if (!value.getAsInteger(BASE_10, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
       } else if (key == "added-binaries") {
@@ -2614,7 +2614,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         while (!value.empty()) {
           llvm::StringRef pc_str;
           std::tie(pc_str, value) = value.split(',');
-          if (pc_str.getAsInteger(16, pc))
+          if (pc_str.getAsInteger(BASE_16, pc))
             pc = LLDB_INVALID_ADDRESS;
           added_binaries.push_back(pc);
         }
@@ -2628,7 +2628,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         detailed_binaries_info = StructuredData::ParseJSON(json);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
-        if (!key.getAsInteger(16, reg))
+        if (!key.getAsInteger(BASE_16, reg))
           expedited_register_map[reg] = std::string(std::move(value));
       }
       // swbreak and hwbreak are also expected keys, but we don't need to
@@ -3082,7 +3082,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
-    if (size_str.getAsInteger(16, read_size))
+    if (size_str.getAsInteger(BASE_16, read_size))
       return llvm::createStringErrorV(
           "MultiMemRead response has invalid size string: {0}", size_str);
 
@@ -4938,7 +4938,8 @@ struct GdbServerTargetInfo {
   RegisterSetMap reg_set_map;
 };
 
-static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
+static RegisterTypeEnum::Enumerators
+ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
@@ -4952,7 +4953,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   // 2 = pre-startup, 1 = startup, 0 = startup
   // This only matters for "register info" but let's trust what the server
   // chose regardless.
-  std::map<uint64_t, FieldEnum::Enumerator> enumerators;
+  std::map<uint64_t, RegisterTypeEnum::Enumerator> enumerators;
 
   enum_node.ForEachChildElementWithName(
       "evalue", [&enumerators, &log](const XMLNode &enumerator_node) {
@@ -4991,22 +4992,22 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
 
         if (value && name)
           enumerators.insert_or_assign(
-              *value, FieldEnum::Enumerator(*value, name->str()));
+              *value, RegisterTypeEnum::Enumerator(*value, name->str()));
 
         // Find all evalue elements.
         return true;
       });
 
-  FieldEnum::Enumerators final_enumerators;
+  RegisterTypeEnum::Enumerators final_enumerators;
   for (auto [_, enumerator] : enumerators)
     final_enumerators.push_back(enumerator);
 
   return final_enumerators;
 }
 
-static void
-ParseEnums(XMLNode feature_node,
-           llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+static void ParseEnums(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterTypeEnum>> &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   // The top level element is "<enum...".
@@ -5033,13 +5034,14 @@ ParseEnums(XMLNode feature_node,
         });
 
         if (!id.empty()) {
-          FieldEnum::Enumerators enumerators = ParseEnumEvalues(enum_node);
+          RegisterTypeEnum::Enumerators enumerators =
+              ParseEnumEvalues(enum_node);
           if (!enumerators.empty()) {
             LLDB_LOG(log,
                      "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
                      id);
             registers_enum_types.insert_or_assign(
-                id, std::make_unique<FieldEnum>(id, enumerators));
+                id, std::make_unique<RegisterTypeEnum>(id, enumerators));
           }
         }
 
@@ -5048,14 +5050,15 @@ ParseEnums(XMLNode feature_node,
       });
 }
 
-static std::vector<RegisterFlags::Field> ParseFlagsFields(
-    XMLNode flags_node, unsigned size,
-    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+static std::vector<RegisterTypeFlags::Field>
+ParseFlagsFields(XMLNode flags_node, unsigned size,
+                 const llvm::StringMap<std::unique_ptr<RegisterTypeEnum>>
+                     &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
   const unsigned max_start_bit = size * 8 - 1;
 
   // Process the fields of this set of flags.
-  std::vector<RegisterFlags::Field> fields;
+  std::vector<RegisterTypeFlags::Field> fields;
   flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit, &log,
                                                    &registers_enum_types](
                                                       const XMLNode
@@ -5132,14 +5135,14 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
             "\"{2}\", ignoring",
             *start, *end, name->data());
       else {
-        if (RegisterFlags::Field::GetSizeInBits(*start, *end) > 64)
+        if (RegisterTypeFlags::Field::GetSizeInBits(*start, *end) > 64)
           LLDB_LOG(log,
                    "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{}\" "
                    "that has size > 64 bits, this is not supported",
                    name->data());
         else {
           // A field's type may be set to the name of an enum type.
-          const FieldEnum *enum_type = nullptr;
+          const RegisterTypeEnum *enum_type = nullptr;
           if (type && !type->empty()) {
             auto found = registers_enum_types.find(*type);
             if (found != registers_enum_types.end()) {
@@ -5147,7 +5150,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
 
               // No enumerator can exceed the range of the field itself.
               uint64_t max_value =
-                  RegisterFlags::Field::GetMaxValue(*start, *end);
+                  RegisterTypeFlags::Field::GetMaxValue(*start, *end);
               for (const auto &enumerator : enum_type->GetEnumerators()) {
                 if (enumerator.m_value > max_value) {
                   enum_type = nullptr;
@@ -5171,7 +5174,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
           }
 
           fields.push_back(
-              RegisterFlags::Field(name->str(), *start, *end, enum_type));
+              RegisterTypeFlags::Field(name->str(), *start, *end, enum_type));
         }
       }
     }
@@ -5183,8 +5186,9 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
 
 void ParseFlags(
     XMLNode feature_node,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
-    const llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+    llvm::StringMap<std::unique_ptr<RegisterTypeFlags>> &registers_flags_types,
+    const llvm::StringMap<std::unique_ptr<RegisterTypeEnum>>
+        &registers_enum_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   feature_node.ForEachChildElementWithName(
@@ -5222,15 +5226,15 @@ void ParseFlags(
 
         if (id && size) {
           // Process the fields of this set of flags.
-          std::vector<RegisterFlags::Field> fields =
+          std::vector<RegisterTypeFlags::Field> fields =
               ParseFlagsFields(flags_node, *size, registers_enum_types);
           if (fields.size()) {
             // Sort so that the fields with the MSBs are first.
             std::sort(fields.rbegin(), fields.rend());
-            std::vector<RegisterFlags::Field>::const_iterator overlap =
+            std::vector<RegisterTypeFlags::Field>::const_iterator overlap =
                 std::adjacent_find(fields.begin(), fields.end(),
-                                   [](const RegisterFlags::Field &lhs,
-                                      const RegisterFlags::Field &rhs) {
+                                   [](const RegisterTypeFlags::Field &lhs,
+                                      const RegisterTypeFlags::Field &rhs) {
                                      return lhs.Overlaps(rhs);
                                    });
 
@@ -5256,12 +5260,12 @@ void ParseFlags(
                     id->data());
               } else {
                 registers_flags_types.insert_or_assign(
-                    *id, std::make_unique<RegisterFlags>(id->str(), *size,
-                                                         std::move(fields)));
+                    *id, std::make_unique<RegisterTypeFlags>(
+                             id->str(), *size, std::move(fields)));
               }
             } else {
               // If any fields overlap, ignore the whole set of flags.
-              std::vector<RegisterFlags::Field>::const_iterator next =
+              std::vector<RegisterTypeFlags::Field>::const_iterator next =
                   std::next(overlap);
               LLDB_LOG(
                   log,
@@ -5288,8 +5292,8 @@ void ParseFlags(
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
-    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
-    llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+    llvm::StringMap<std::unique_ptr<RegisterTypeFlags>> &registers_flags_types,
+    llvm::StringMap<std::unique_ptr<RegisterTypeEnum>> &registers_enum_types) {
   if (!feature_node)
     return false;
 
@@ -5385,7 +5389,7 @@ bool ParseRegisters(
 
         if (!gdb_type.empty()) {
           // gdb_type could reference some flags type defined in XML.
-          llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
+          llvm::StringMap<std::unique_ptr<RegisterTypeFlags>>::iterator it =
               registers_flags_types.find(gdb_type);
           if (it != registers_flags_types.end()) {
             auto flags_type = it->second.get();
@@ -6022,7 +6026,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
       if (profileDataExtractor.GetNameColonValue(usec_name, usec_value)) {
         if (usec_name == "thread_used_usec") {
           has_used_usec = true;
-          usec_value.getAsInteger(0, curr_used_usec);
+          usec_value.getAsInteger(BASE_10, curr_used_usec);
         } else {
           // We didn't find what we want, it is probably an older version. Bail
           // out.
@@ -6803,7 +6807,7 @@ ParseMultiBreakpointResponse(llvm::StringRef response_str) {
       return true;
     }
     uint8_t error_code = 0;
-    if (token.drop_front(1).getAsInteger(16, error_code))
+    if (token.drop_front(1).getAsInteger(BASE_16, error_code))
       results.push_back(0xff);
     else
       results.push_back(error_code);

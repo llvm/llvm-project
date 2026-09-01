@@ -12,6 +12,7 @@
 
 #include "RISCVFrameLowering.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -193,6 +194,10 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  // The shadow call stack popchk needs to happen after cm.pop that loads ra.
+  if (MI != MBB.end() &&
+      (MI->getOpcode() == RISCV::CM_POP || MI->getOpcode() == RISCV::QC_CM_POP))
+    ++MI;
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK))
@@ -1485,7 +1490,8 @@ static MCRegister getLargestFPRegisterOrZero(const RISCVSubtarget &STI,
 }
 
 void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                              MachineBasicBlock &MBB) const {
+                                              MachineBasicBlock &MBB,
+                                              RegScavenger *RS) const {
   // Insertion point.
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
 
@@ -1500,6 +1506,8 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector FinalRegsToZero(TRI.getNumRegs());
 
+  bool HasVRegister = false;
+
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       FinalRegsToZero.set(getPhysicalGPR(TRI, Reg).id());
@@ -1511,7 +1519,50 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
+    } else if (RISCVRegisterInfo::isRVVRegClass(
+                   TRI.getMinimalPhysRegClass(Reg))) {
+      if (!STI.hasVInstructions())
+        continue;
+      HasVRegister = true;
+
+      for (MCRegister SubReg : TRI.subregs_inclusive(Reg)) {
+        if (TRI.subregs(SubReg).empty())
+          FinalRegsToZero.set(SubReg.id());
+      }
     }
+  }
+
+  if (HasVRegister) {
+    RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(1, /*Fractional=*/false);
+    unsigned VTypeImm = RISCVVType::encodeVTYPE(
+        VLMUL, /*SEW=*/32, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
+
+    MCRegister TemporaryReg = RISCV::NoRegister;
+    for (MCRegister Reg : FinalRegsToZero.set_bits()) {
+      if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+        TemporaryReg = Reg;
+        break;
+      }
+    }
+
+    if (TemporaryReg == RISCV::NoRegister) {
+      RS->enterBasicBlockEnd(MBB);
+      TemporaryReg = RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MBBI,
+                                                   /*RestoreAfter=*/false,
+                                                   /*SPAdj=*/0);
+    }
+
+    if (MBB.getParent()
+            ->getFunction()
+            .getFnAttribute("zero-call-used-regs")
+            .getValueAsString() == "used")
+      FinalRegsToZero.set(TemporaryReg.id());
+
+    BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
+        .addReg(RISCV::X0)
+        .addImm(VTypeImm)
+        .addReg(RISCV::VL, RegState::ImplicitDefine)
+        .addReg(RISCV::VTYPE, RegState::ImplicitDefine);
   }
 
   for (MCRegister Reg : FinalRegsToZero.set_bits())

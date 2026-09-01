@@ -571,6 +571,7 @@ static bool isGOTRISCV(uint32_t Type) {
     return false;
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
     return true;
   }
 }
@@ -609,6 +610,7 @@ static bool isTLSRISCV(uint32_t Type) {
   default:
     return false;
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
   case ELF::R_RISCV_TPREL_HI20:
   case ELF::R_RISCV_TPREL_ADD:
   case ELF::R_RISCV_TPREL_LO12_I:

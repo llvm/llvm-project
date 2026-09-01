@@ -53,9 +53,16 @@ class ExprWithForkTestCase(TestBase):
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.expect_expr(
-            "fork_and_return_trap(42)", result_type="int", result_value="1"
+        # Use a longer timeout because the parent blocks in waitpid() until
+        # the detached child is scheduled by the kernel and hits SIGTRAP.
+        options = lldb.SBExpressionOptions()
+        options.SetTimeoutInMicroSeconds(5000000)  # 5s
+
+        value = thread.GetSelectedFrame().EvaluateExpression(
+            "fork_and_return_trap(42)", options
         )
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.GetValueAsSigned(), 1)
 
     # --- follow-fork-mode child override during expression evaluation ---
 

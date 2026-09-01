@@ -666,11 +666,17 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
+  auto createNeg = [&](mlir::Location loc, mlir::Value a) {
+    return cir::isFPOrVectorOfFPType(a.getType()) ? builder.createFNeg(loc, a)
+                                                  : builder.createNeg(loc, a);
+  };
+
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
   mlir::Value newReal = createSub(op.loc, op.lhs, real);
-  return builder.createComplexCreate(op.loc, newReal, imag);
+  mlir::Value newImag = createNeg(op.loc, imag);
+  return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
 static cir::ComplexRangeKind

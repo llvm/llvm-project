@@ -434,6 +434,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  coverage_count_mismatch,
 };
 
 /// An ordered list of functions identified by their NameRef found in

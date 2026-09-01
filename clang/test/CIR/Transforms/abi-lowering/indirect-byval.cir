@@ -196,13 +196,15 @@ module attributes {
   // CHECK:        cir.store %{{.*}}, %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.return
 
-  // byref callee definition: the parameter gets llvm.byref instead of
-  // llvm.byval.  noalias and noundef are NOT added (byref passes the
-  // original, which may alias and may carry padding).  The body
-  // transformation (ptr + load at entry) is identical to byval.
+  // byref callee: llvm.byref without noalias/noundef.  CIRGen spills the
+  // by-value param into a local alloca; the rewriter rewires that alloca to
+  // the incoming pointer (no entry load / byte-copy).
   cir.func @takes_big_byref(%arg0: !rec_Big) -> !rec_Big
       attributes { test_classify = #byref_arg } {
-    cir.return %arg0 : !rec_Big
+    %0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
   }
 
   // CHECK:      cir.func{{.*}} @takes_big_byref(%[[PTR:.*]]: !cir.ptr<!rec_Big>
@@ -210,8 +212,62 @@ module attributes {
   // CHECK-SAME:     llvm.byref = !rec_Big
   // CHECK-NOT:    llvm.noalias
   // CHECK-NOT:    llvm.noundef
+  // CHECK-NOT:    cir.alloca
   // CHECK:        %[[L:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[L]] : !rec_Big
+
+  // byref field access must use the incoming pointer in place — no local
+  // alloca and no byte-copy of the non-trivially-copyable aggregate.
+  cir.func @takes_big_byref_field(%arg0: !rec_Big) -> !s64i
+      attributes { test_classify = #byref_arg } {
+    %0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.get_member %0[0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_byref_field(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK:        %[[M:.*]] = cir.get_member %[[PTR]][0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:   %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:   cir.return %[[V]] : !s64i
+
+  // byval with the same CIRGen spill keeps a local copy: load the byval
+  // pointer at entry and store into the param-slot alloca.
+  cir.func @takes_big_byval_field(%arg0: !rec_Big) -> !s64i
+      attributes { test_classify = #byval_arg } {
+    %0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.get_member %0[0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_byval_field(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[LOADED]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        %[[M:.*]] = cir.get_member %[[SLOT]][0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+  // CHECK:        %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        cir.return %[[V]] : !s64i
+
+  // byref with the param spill removed (e.g. by DCE): the block arg has no
+  // use, so the rewriter only retypes it to a pointer and emits nothing else.
+  cir.func @takes_big_byref_unused(%arg0: !rec_Big) -> !s32i
+      attributes { test_classify = #byref_arg } {
+    %r = cir.const #cir.int<0> : !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @takes_big_byref_unused(%{{.*}}: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        %[[R:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:   cir.return %[[R]] : !s32i
 
   // byref forward declaration: signature gets llvm.byref, no body.
   cir.func private @takes_big_byref_decl(%arg0: !rec_Big) -> !rec_Big

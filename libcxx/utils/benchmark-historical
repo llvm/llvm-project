@@ -40,6 +40,8 @@ def main(argv):
                     're-run on a potentially-overlapping set of commits, such as after pulling new commits with Git.')
     parser.add_argument('--output', '-o', type=pathlib.Path, required=True,
         help='Path to the directory where the resulting .lnt files are stored.')
+    parser.add_argument('--compiler', type=str, required=True,
+        help='Path to the compiler to use to build libc++ and run the tests.')
     parser.add_argument('--commit-list', type=argparse.FileType('r'), default=sys.stdin,
         help='Path to a file containing a whitespace separated list of commits to test. '
              'By default, this is read from standard input.')
@@ -83,10 +85,12 @@ def main(argv):
                 build_cmd = [PARENT_DIR / 'build-at-commit', '--git-repo', args.git_repo,
                                                              '--commit', commit,
                                                              '--install-dir', libcxx_install_dir,
-                                                             '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo']
+                                                             '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo',
+                                                                   f'-DCMAKE_CXX_COMPILER={args.compiler}']
 
                 test_cmd = [PARENT_DIR / 'test-at-commit', '--git-repo', args.git_repo,
                                                            '--libcxx-installation', libcxx_install_dir,
+                                                           '--compiler', args.compiler,
                                                            '--build-dir', build_dir]
                 test_cmd += ['--'] + lit_options
 

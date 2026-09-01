@@ -209,12 +209,10 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-LABEL: define void @load_store_noalias_via_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P6:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[N5:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P2]], -3074457345618258603
-; CHECK-NEXT:    [[N1:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[N1]], 3074457345618258603
+; CHECK-NEXT:    [[P6:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[N5:%.*]] = ptrtoaddr ptr [[N]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], -3074457345618258603
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[N5]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1

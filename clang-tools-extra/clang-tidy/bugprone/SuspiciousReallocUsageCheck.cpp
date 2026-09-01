@@ -104,13 +104,13 @@ namespace clang::tidy::bugprone {
 
 void SuspiciousReallocUsageCheck::registerMatchers(MatchFinder *Finder) {
   // void *realloc(void *ptr, size_t size);
-  auto ReallocDecl =
+  const auto ReallocDecl =
       functionDecl(hasName("::realloc"), parameterCountIs(2),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())))
           .bind("realloc");
 
-  auto ReallocCall =
+  const auto ReallocCall =
       callExpr(callee(ReallocDecl), hasArgument(0, expr().bind("ptr_input")),
                hasAncestor(functionDecl().bind("parent_function")))
           .bind("call");

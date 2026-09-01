@@ -295,6 +295,8 @@ public:
   /// Return the kind of stored template argument.
   ArgKind getKind() const { return (ArgKind)TypeOrValue.Kind; }
 
+  StringRef getKindName() const;
+
   /// Determine whether this template argument has no value.
   bool isNull() const { return getKind() == Null; }
 

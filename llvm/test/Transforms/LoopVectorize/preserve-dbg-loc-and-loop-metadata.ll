@@ -71,8 +71,8 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; CHECK-LABEL: define void @widen_ptr_induction_dbg(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[END1]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
@@ -113,8 +113,8 @@ define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
 ; DEBUGLOC-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) !dbg [[DBG29:![0-9]+]] {
 ; DEBUGLOC-NEXT:  [[ENTRY:.*]]:
-; DEBUGLOC-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[END]] to i64, !dbg [[DBG34:![0-9]+]]
-; DEBUGLOC-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[START]] to i64, !dbg [[DBG34]]
+; DEBUGLOC-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[END]] to i64, !dbg [[DBG34:![0-9]+]]
+; DEBUGLOC-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[START]] to i64, !dbg [[DBG34]]
 ; DEBUGLOC-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[TMP1]], !dbg [[DBG34]]
 ; DEBUGLOC-NEXT:    [[TMP7:%.*]] = add i64 [[TMP2]], -8, !dbg [[DBG34]]
 ; DEBUGLOC-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3, !dbg [[DBG34]]

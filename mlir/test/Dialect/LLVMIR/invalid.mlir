@@ -1847,6 +1847,11 @@ llvm.mlir.alias external @y5 : i32 {
 
 // -----
 
+// expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
+llvm.named_metadata "not_node" [#llvm.md_string<"int">]
+
+// -----
+
 module {
   llvm.func @foo()
 

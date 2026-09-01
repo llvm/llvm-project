@@ -1821,7 +1821,7 @@ struct VectorBroadcastScalarToNdLowering
       return rewriter.notifyMatchFailure(
           broadcast, "broadcast to 1-d or 0-d handled elsewhere");
 
-    // First insert it into an undef vector so we can shuffle it.
+    // First insert it into a poison vector so we can shuffle it.
     auto loc = broadcast.getLoc();
     auto vectorTypeInfo =
         LLVM::detail::extractNDVectorTypeInfo(resultType, *getTypeConverter());

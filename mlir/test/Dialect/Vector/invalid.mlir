@@ -1688,14 +1688,6 @@ func.func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>,
 
 // -----
 
-func.func @expand_base_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
-  %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
-  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
-}
-
-// -----
-
 func.func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op expected result shape to match mask shape}}
@@ -1742,18 +1734,17 @@ func.func @expand_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<1
 
 // -----
 
-func.func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op base element type ('f64') does not match valueToStore element type ('f32')}}
-  vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
+func.func @expand_scalable_dims_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<[16]xf32>, %c0: index) {
+  // expected-error@+1 {{expected result scalable dims to match mask scalable dims}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<16xi1>, vector<[16]xf32> into vector<[16]xf32>
 }
 
 // -----
 
-func.func @compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %value: vector<[16]xf32>) {
+func.func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
-  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  // expected-error@+1 {{'vector.compressstore' op base element type ('f64') does not match valueToStore element type ('f32')}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
@@ -1792,6 +1783,14 @@ func.func @compress_nonpositive_alignment(%base: memref<?xf32>, %mask: vector<16
 func.func @compress_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.compressstore %base[%c0], %mask, %value { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_scalable_dims_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{expected valueToStore scalable dims to match mask scalable dims}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<[16]xf32>
 }
 
 // -----

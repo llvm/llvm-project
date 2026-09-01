@@ -456,6 +456,17 @@ struct SampleProfTest : ::testing::Test {
       if (Samples != nullptr)
         Esamples = Samples->getTotalSamples();
       ASSERT_EQ(I->getValue(), Esamples);
+
+      if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+        ASSERT_TRUE(Reader->contains(I->getKey()));
+        ASSERT_TRUE(Reader->contains(FunctionId(I->getKey()).getHashCode()));
+      }
+    }
+
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      StringRef FakeSymbol = "non_existent_symbol_for_test";
+      ASSERT_FALSE(Reader->contains(FakeSymbol));
+      ASSERT_FALSE(Reader->contains(FunctionId(FakeSymbol).getHashCode()));
     }
   }
 };
@@ -484,6 +495,20 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 
   const char *ArgsFalse[] = {"SampleProfTest", "--md5-prof-sym-list=false"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
+  const char *Args[] = {"SampleProfTest",
+                        "--sample-profile-write-eytzinger-name-tables=true"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
+
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+
+  const char *ArgsFalse[] = {
+      "SampleProfTest", "--sample-profile-write-eytzinger-name-tables=false"};
   cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
 }

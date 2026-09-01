@@ -125,6 +125,14 @@ def CIR_AnyFundamentalIntType
     let cppFunctionName = "isFundamentalIntType";
 }
 
+// An 8 bit character type of either signedness, since the signedness of plain
+// char follows the target. _BitInt types are excluded even at width 8.
+def CIR_AnyChar8Type
+    : CIR_ConfinedType<CIR_AnyIntType,
+        [CIR_HasWidthPred<8>, CIR_IsNotBitIntPred], "8-bit character type"> {
+    let cppFunctionName = "isChar8Type";
+}
+
 def CIR_AnyFundamentalUIntType
     : CIR_ConfinedType<CIR_AnyUIntType,
         [CIR_HasFundamentalIntWidthPred, CIR_IsNotBitIntPred],
@@ -267,6 +275,10 @@ def CIR_PtrToVoidPtrType : CIR_PtrToPtrTo<CIR_AnyVoidType, "void type">;
 
 class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 
+def CIR_PtrToChar8Type : CIR_PtrToType<CIR_AnyChar8Type> {
+    let cppFunctionName = "isPtrToChar8Type";
+}
+
 // Pointer to type constraints
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
@@ -390,8 +402,8 @@ def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
 def CIR_AnyMethodType : CIR_TypeBase<"::cir::MethodType", "method type">;
 
 def CIR_ComparableType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
-                 CIR_AnyComplexType, CIR_AnyVPtrType,
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_AnyFloatType,
+                 CIR_AnyPtrType, CIR_AnyComplexType, CIR_AnyVPtrType,
                  CIR_AnyDataMemberType, CIR_AnyMethodType],
                 "comparable type"> {
   let cppFunctionName = "isComparableType";

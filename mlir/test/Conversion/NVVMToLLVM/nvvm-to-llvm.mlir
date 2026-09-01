@@ -597,6 +597,25 @@ llvm.func @init_mbarrier(
 }
 // -----
 
+llvm.func @init_mbarrier_memory_clobber(
+    %barrier_gen : !llvm.ptr,
+    %count : i32,
+    %pred : i1) {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}"
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b,~{memory}"
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true, predicate = %pred
+  llvm.return
+}
+// -----
+
+llvm.func @memory_clobber_no_operands() {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.sc.cta;", "~{memory}"
+  nvvm.inline_ptx "fence.sc.cta;" memory_clobber = true
+  llvm.return
+}
+// -----
+
 llvm.func @ex2(%input : f32, %pred : i1) {
   // CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "ex2.approx.ftz.f32 $0, $1;", "=f,f" %{{.*}} : (f32) -> f32
   %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 {$w0}, {$r0};" ro (%input : f32) -> f32
@@ -666,6 +685,20 @@ llvm.func @inline_ptx_multi_rw_pred(%a : i32, %b : i32, %rw_c : f32, %rw_d : f32
     nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
     ro (%a, %b : i32,i32)
     rw (%rw_c, %rw_d: f32,f32), predicate = %pred
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   llvm.return %r4 : f32
+}
+
+// CHECK-LABEL: @inline_ptx_multi_rw_memory_clobber(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32)
+llvm.func @inline_ptx_multi_rw_memory_clobber(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}",
+// CHECK-SAME: "=f,=f,r,r,0,1,~{memory}"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]]
+// CHECK-SAME: : (f32, f32, i32, i32) -> !llvm.struct<(f32, f32)>
+    nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
+    ro (%a, %b : i32,i32)
+    rw (%rw_c, %rw_d: f32,f32) memory_clobber = true
    %r4 = llvm.fadd %rw_c, %rw_d : f32
    llvm.return %r4 : f32
 }

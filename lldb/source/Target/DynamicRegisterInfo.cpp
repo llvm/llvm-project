@@ -765,19 +765,19 @@ void DynamicRegisterInfo::Dump(Stream &s) const {
     if (m_regs[i].alt_name)
       s.Printf(", alt-name = %s", m_regs[i].alt_name);
     if (m_regs[i].value_regs) {
-      s.Printf(", value_regs = [ ");
+      s.PutCString(", value_regs = [ ");
       for (size_t j = 0; m_regs[i].value_regs[j] != LLDB_INVALID_REGNUM; ++j) {
         s.Printf("%s ", m_regs[m_regs[i].value_regs[j]].name);
       }
-      s.Printf("]");
+      s.PutCString("]");
     }
     if (m_regs[i].invalidate_regs) {
-      s.Printf(", invalidate_regs = [ ");
+      s.PutCString(", invalidate_regs = [ ");
       for (size_t j = 0; m_regs[i].invalidate_regs[j] != LLDB_INVALID_REGNUM;
            ++j) {
         s.Printf("%s ", m_regs[m_regs[i].invalidate_regs[j]].name);
       }
-      s.Printf("]");
+      s.PutCString("]");
     }
     s.EOL();
   }
@@ -791,7 +791,7 @@ void DynamicRegisterInfo::Dump(Stream &s) const {
     for (size_t idx = 0; idx < m_sets[i].num_registers; ++idx) {
       s.Printf("%s ", m_regs[m_sets[i].registers[idx]].name);
     }
-    s.Printf("]\n");
+    s.PutCString("]\n");
   }
 }
 

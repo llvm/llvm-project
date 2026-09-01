@@ -1191,6 +1191,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFmt(LangOpts, "__SIZE", TI.getSizeType(), TI, Builder);
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
+  DefineType("__SIG_ATOMIC_TYPE__", TI.getSigAtomicType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
   DefineTypeMin("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
   if (LangOpts.C23)

@@ -11,8 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
 #include "FPExceptMatcher.h"
 
 #include "src/__support/macros/config.h"

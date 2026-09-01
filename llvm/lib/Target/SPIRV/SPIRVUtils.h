@@ -100,6 +100,10 @@ public:
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
 
+  // Returns the dominator tree computed for the function this visitor
+  // operates on.
+  const DomTreeBuilder::BBDomTree &getDominatorTree() const { return DT; }
+
   // Returns true is |LHS| comes before |RHS| in the partial ordering.
   // If |LHS| and |RHS| have the same rank, the traversal order determines the
   // order (order is stable).

@@ -514,7 +514,7 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
 
   const auto *CE = dyn_cast<CXXConstructExpr>(NoTemporaries);
   const auto *FC = dyn_cast<CXXFunctionalCastExpr>(NoTemporaries);
-  if ((isa<CallExpr>(NoTemporaries)) || (CE && (CE->getNumArgs() > 0)) ||
+  if (isa<CallExpr>(NoTemporaries) || (CE && (CE->getNumArgs() > 0)) ||
       (FC && (FC->getCastKind() == CK_ConstructorConversion)))
     // CE is something that looks like a call, with arguments - either
     // a function call or a constructor invocation.
@@ -653,7 +653,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("bind");
 
   LambdaProperties LP = getLambdaProperties(Result);
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getBeginLoc(),
            formatv("prefer a lambda to {0}::bind", LP.BindNamespace).str());
   if (!LP.IsFixitSupported)

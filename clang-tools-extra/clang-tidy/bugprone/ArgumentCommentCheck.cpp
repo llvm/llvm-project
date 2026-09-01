@@ -314,7 +314,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
+  const auto MakeFileCharRange = [Ctx](SourceLocation Begin,
+                                       SourceLocation End) {
     return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
                                     Ctx->getSourceManager(),
                                     Ctx->getLangOpts());

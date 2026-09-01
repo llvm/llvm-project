@@ -1,8 +1,5 @@
 # Building LLVM with CMake
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

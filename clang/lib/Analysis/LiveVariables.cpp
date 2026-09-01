@@ -30,9 +30,6 @@ namespace {
 class LiveVariablesImpl {
 public:
   template <typename T> using SetTy = LiveVariables::SetTy<T>;
-  template <typename T>
-  using SetRefTy = llvm::ImmutableSetRef<T, llvm::ImutContainerInfo<T>,
-                                         /*Canonicalize=*/false>;
 
   AnalysisDeclContext &analysisContext;
   SetTy<const Expr *>::Factory ESetFact;
@@ -89,51 +86,18 @@ bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
   return liveDecls.contains(D);
 }
 
-namespace {
-template <typename SET> SET mergeSets(SET A, SET B) {
-  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
-    return A;
-
-  if (A.getHeight() < B.getHeight())
-    std::swap(A, B);
-
-  for (const auto *Elem : B) {
-    A = A.add(Elem);
-  }
-  return A;
-}
-} // namespace
-
 void LiveVariables::Observer::anchor() { }
 
 LiveVariables::LivenessValues
 LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                          LiveVariables::LivenessValues valsB) {
-
-  SetRefTy<const Expr *> SSetRefA(valsA.liveExprs.getRootWithoutRetain(),
-                                  ESetFact.getTreeFactory()),
-      SSetRefB(valsB.liveExprs.getRootWithoutRetain(),
-               ESetFact.getTreeFactory());
-
-  SetRefTy<const VarDecl *> DSetRefA(valsA.liveDecls.getRootWithoutRetain(),
-                                     DSetFact.getTreeFactory()),
-      DSetRefB(valsB.liveDecls.getRootWithoutRetain(),
-               DSetFact.getTreeFactory());
-
-  SetRefTy<const BindingDecl *> BSetRefA(
-      valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
-      BSetRefB(valsB.liveBindings.getRootWithoutRetain(),
-               BSetFact.getTreeFactory());
-
-  SSetRefA = mergeSets(SSetRefA, SSetRefB);
-  DSetRefA = mergeSets(DSetRefA, DSetRefB);
-  BSetRefA = mergeSets(BSetRefA, BSetRefB);
-
-  // Finalize the merged builder refs into immutable sets. These are not
-  // canonicalized; LivenessValues::operator== compares them structurally.
-  return LiveVariables::LivenessValues(SSetRefA.asImmutableSet(),
-                                       DSetRefA.asImmutableSet(),
-                                       BSetRefA.asImmutableSet());
+  // Liveness at a merge point is the union of the successors' live sets. These
+  // sets are not canonicalized; LivenessValues::operator== compares them
+  // structurally.
+  return LiveVariables::LivenessValues(
+      ESetFact.unionSets(valsA.liveExprs, valsB.liveExprs),
+      DSetFact.unionSets(valsA.liveDecls, valsB.liveDecls),
+      BSetFact.unionSets(valsA.liveBindings, valsB.liveBindings));
 }
 
 bool LiveVariables::LivenessValues::operator==(const LivenessValues &V) const {

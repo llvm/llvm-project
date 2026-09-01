@@ -9,30 +9,17 @@ gpu.func @load_1D_vector(%source: memref<8x16x32xf32>, %offset: index) -> vector
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL:  @load_1D_vector(
-// LOAD-ND-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// LOAD-ND:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-ND:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// LOAD-ND-COUNT2: arith.muli {{.*}} : index
-// LOAD-ND-COUNT2: arith.addi {{.*}} : index
-// LOAD-ND:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
-// LOAD-ND:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
-// LOAD-ND:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
-// LOAD-ND:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
-
-// LOAD-GATHER-LABEL:  @load_1D_vector(
-// LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-GATHER:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// LOAD-GATHER-COUNT2: arith.muli {{.*}} : index
-// LOAD-GATHER-COUNT2: arith.addi {{.*}} : index
-// LOAD-GATHER:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
-// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
-// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
-// LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
-
+// CHECK-LABEL:  @load_1D_vector(
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// CHECK-COUNT-2: arith.muli {{.*}} : index
+// CHECK-COUNT-2: arith.addi {{.*}} : index
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
+// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
 }
 
 // -----
@@ -75,9 +62,7 @@ gpu.func @load_2D_vector(%source: memref<8x16x32xf32>,
 // LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
 // LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
-
 }
-
 
 // -----
 gpu.module @xevm_module {
@@ -99,9 +84,7 @@ gpu.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
 
 // LOAD-GATHER-LABEL:  @load_zero_pad_out_of_bounds(
 // LOAD-GATHER:        vector.transfer_read
-
 }
-
 
 // -----
 gpu.module @xevm_module {
@@ -125,7 +108,6 @@ gpu.func @load_transposed(%source: memref<32x64xf32>,
 // LOAD-ND:        %[[VEC_TRANSPOSED:.+]] = vector.transpose %[[VEC]], [1, 0] : vector<16x8xf32> to vector<8x16xf32>
 // LOAD-ND:        return %[[VEC_TRANSPOSED]]
 
-
 // LOAD-GATHER-LABEL:  @load_transposed(
 // LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64xf32>,
 // LOAD-GATHER:         %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
@@ -139,7 +121,6 @@ gpu.func @load_transposed(%source: memref<32x64xf32>,
 // LOAD-GATHER:        %[[COLLAPSE:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<32x64xf32> -> index
 // LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // LOAD-GATHER:        %[[LOAD:.*]] = xegpu.load %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
-
 }
 
 // -----
@@ -179,7 +160,33 @@ gpu.func @load_transpose_3d_memref(%source: memref<32x64x128xf32>,
 // LOAD-GATHER:         %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64x128xf32> -> index
 // LOAD-GATHER-NEXT:    %[[I64PTR:.+]] = arith.index_cast %[[INTPTR]] : index to i64
 // LOAD-GATHER-NEXT:    %[[LOAD:.*]] = xegpu.load %[[I64PTR]][%[[IDX]]], %{{.*}} : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
+}
 
+// -----
+// A high-dim load whose innermost two dims are transposed lowers to an
+// (untransposed) nd block load followed by a vector.transpose of the last two
+// dims.
+gpu.module @xevm_module {
+gpu.func @load_high_dim_transposed(%source: memref<2x2x64x128xf16>,
+    %offset: index) -> vector<1x1x64x128xf16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[%offset, %offset, %offset, %offset], %c0
+    {permutation_map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3, d2)>,
+    in_bounds = [true, true, true, true]}
+    : memref<2x2x64x128xf16>, vector<1x1x64x128xf16>
+  gpu.return %0 : vector<1x1x64x128xf16>
+}
+
+// LOAD-ND-LABEL:  @load_high_dim_transposed(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<2x2x64x128xf16>,
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<2x2x64x128xf16>
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<1x1x128x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]]
+// LOAD-ND-SAME:     -> vector<1x1x128x64xf16>
+// LOAD-ND:        vector.transpose %[[VEC]], [0, 1, 3, 2] : vector<1x1x128x64xf16> to vector<1x1x64x128xf16>
+
+// LOAD-GATHER-LABEL:  @load_high_dim_transposed(
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load {{.*}} : i64, vector<1x1x64x128xindex>, vector<1x1x64x128xi1> -> vector<1x1x64x128xf16>
 }
 
 // -----
@@ -206,7 +213,6 @@ gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
 // LOAD-ND-SAME:                      #xegpu.block_tdesc_attr<boundary_check = false>>
 // LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFF1]], %[[OFF2]]]{{.*}}-> vector<8x16xf32>
 // LOAD-ND:        return %[[VEC]]
-
 
 // LOAD-GATHER-LABEL:  @load_dynamic_source(
 // LOAD-GATHER-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>,
@@ -262,7 +268,6 @@ gpu.func @load_dynamic_source2(%source: memref<?x8x16xf32>,
 // LOAD-GATHER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %arg0 : memref<?x8x16xf32> -> index
 // LOAD-GATHER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[OFFSETS]]{{\]}}, %[[CST_0]] : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
-
 }
 
 // -----
@@ -275,21 +280,31 @@ gpu.func @load_dynamic_source3(%source: memref<?x?x?x?x?xf32>,
   gpu.return %0 : vector<2x4x8x16xf32>
 }
 
-// CHECK-LABEL:  @load_dynamic_source3(
-// CHECK-SAME:   %[[SRC:.+]]: memref<?x?x?x?x?xf32>
-// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<2x4x8x16xi1>
-// CHECK:        memref.extract_strided_metadata %[[SRC]] : memref<?x?x?x?x?xf32> -> memref<f32>, index, index, index, index, index, index, index, index, index, index, index
-// CHECK-COUNT4: vector.step
-// CHECK-COUNT3: vector.broadcast
-// CHECK-COUNT4: vector.shape_cast
-// CHECK-COUNT4: vector.broadcast {{.*}} : vector<2x4x8x16xindex>
-// CHECK-COUNT3: arith.addi {{.*}} : vector<2x4x8x16xindex>
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x4x8x16xindex>
-// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x4x8x16xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?x?x?xf32> -> index
-// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<2x4x8x16xindex>, vector<2x4x8x16xi1> -> vector<2x4x8x16xf32>
-// CHECK:        return %[[VEC]]
+// LOAD-ND-LABEL:  @load_dynamic_source3(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<?x?x?x?x?xf32>
+// LOAD-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]]
+// LOAD-ND:        %[[BASE_BUFFER:.*]], %[[OFF1:.*]], %[[SIZES:.*]]:4, %[[STRIDES:.*]]:4 = memref.extract_strided_metadata %[[SUBVIEW]]
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<2x4x8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]]
+// LOAD-ND-SAME:     -> vector<2x4x8x16xf32>
+// LOAD-ND:        return %[[VEC]]
+
+// LOAD-GATHER-LABEL:  @load_dynamic_source3(
+// LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<?x?x?x?x?xf32>
+// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<2x4x8x16xi1>
+// LOAD-GATHER:        memref.extract_strided_metadata %[[SRC]] : memref<?x?x?x?x?xf32> -> memref<f32>, index, index, index, index, index, index, index, index, index, index, index
+// LOAD-GATHER-COUNT4: vector.step
+// LOAD-GATHER-COUNT3: vector.broadcast
+// LOAD-GATHER-COUNT4: vector.shape_cast
+// LOAD-GATHER-COUNT4: vector.broadcast {{.*}} : vector<2x4x8x16xindex>
+// LOAD-GATHER-COUNT3: arith.addi {{.*}} : vector<2x4x8x16xindex>
+// LOAD-GATHER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x4x8x16xindex>
+// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x4x8x16xindex>
+// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?x?x?xf32> -> index
+// LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<2x4x8x16xindex>, vector<2x4x8x16xi1> -> vector<2x4x8x16xf32>
+// LOAD-GATHER:        return %[[VEC]]
 }
 
 // -----
@@ -302,22 +317,27 @@ gpu.func @load_high_dim_vector(%source: memref<16x32x64xf32>,
   gpu.return %0 : vector<8x16x32xf32>
 }
 
-// CHECK-LABEL:  @load_high_dim_vector(
-// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
-// CHECK:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
-// CHECK:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
-// CHECK:        %[[C2048:.+]] = arith.constant 2048 : index
-// CHECK:        %[[C64:.+]] = arith.constant 64 : index
-// CHECK-COUNT3: vector.step
-// CHECK-COUNT3: vector.shape_cast
-// CHECK-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
-// CHECK-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
-// CHECK:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
-// CHECK:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %arg0 : memref<16x32x64xf32> -> index
-// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : i64, vector<8x16x32xindex>, vector<8x16x32xi1> -> vector<8x16x32xf32>
+// LOAD-ND-LABEL:  @load_high_dim_vector(
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %arg0 : memref<16x32x64xf32>
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<8x16x32xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]]
+// LOAD-ND-SAME:     -> vector<8x16x32xf32>
 
+// LOAD-GATHER-LABEL:  @load_high_dim_vector(
+// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
+// LOAD-GATHER:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
+// LOAD-GATHER:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
+// LOAD-GATHER:        %[[C2048:.+]] = arith.constant 2048 : index
+// LOAD-GATHER:        %[[C64:.+]] = arith.constant 64 : index
+// LOAD-GATHER-COUNT3: vector.step
+// LOAD-GATHER-COUNT3: vector.shape_cast
+// LOAD-GATHER-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
+// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %arg0 : memref<16x32x64xf32> -> index
+// LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : i64, vector<8x16x32xindex>, vector<8x16x32xi1> -> vector<8x16x32xf32>
 }
 
 // -----
@@ -330,19 +350,25 @@ gpu.func @load_8D_vector(%source: memref<2x2x2x2x2x2x2x2xf32>,
   gpu.return %0 : vector<2x2x2x2x2x2x2x2xf32>
 }
 
-// CHECK-LABEL:  @load_8D_vector(
-// CHECK-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>,
-// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<2x2x2x2x2x2x2x2xi1>
-// CHECK-COUNT8: vector.step
-// CHECK-COUNT7: vector.shape_cast
-// CHECK-COUNT8: vector.broadcast {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// CHECK-COUNT7: arith.addi {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x2x2x2x2x2x2x2xindex>
-// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32> -> index
-// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : i64, vector<2x2x2x2x2x2x2x2xindex>, vector<2x2x2x2x2x2x2x2xi1> -> vector<2x2x2x2x2x2x2x2xf32>
+// LOAD-ND-LABEL:  @load_8D_vector(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>,
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32>
+// LOAD-ND-SAME:     -> !xegpu.tensor_desc<2x2x2x2x2x2x2x2xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]]
+// LOAD-ND-SAME:     -> vector<2x2x2x2x2x2x2x2xf32>
 
+// LOAD-GATHER-LABEL:  @load_8D_vector(
+// LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>,
+// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<2x2x2x2x2x2x2x2xi1>
+// LOAD-GATHER-COUNT8: vector.step
+// LOAD-GATHER-COUNT7: vector.shape_cast
+// LOAD-GATHER-COUNT8: vector.broadcast {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// LOAD-GATHER-COUNT7: arith.addi {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// LOAD-GATHER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x2x2x2x2x2x2x2xindex>
+// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32> -> index
+// LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : i64, vector<2x2x2x2x2x2x2x2xindex>, vector<2x2x2x2x2x2x2x2xi1> -> vector<2x2x2x2x2x2x2x2xf32>
 }
 
 // -----
@@ -387,11 +413,8 @@ gpu.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
   gpu.return %0, %1 : vector<8x16xf32>, vector<8x16xf32>
 }
 
-// LOAD-ND-LABEL:    @no_load_out_of_bounds_non_zero_pad(
-// LOAD-ND-COUNT-2: vector.transfer_read
-
-// LOAD-GATHER-LABEL: @no_load_out_of_bounds_non_zero_pad(
-// LOAD-GATHER-COUNT-2: vector.transfer_read
+// CHECK-LABEL: @no_load_out_of_bounds_non_zero_pad(
+// CHECK-COUNT-2: vector.transfer_read
 }
 
 // -----
@@ -404,11 +427,8 @@ gpu.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL:  @no_load_out_of_bounds_1D_vector(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_out_of_bounds_1D_vector(
-// LOAD-GATHER:        vector.transfer_read
+// CHECK-LABEL:  @no_load_out_of_bounds_1D_vector(
+// CHECK:        vector.transfer_read
 }
 
 // -----
@@ -422,11 +442,8 @@ gpu.func @no_load_masked(%source : memref<4xf32>,
   gpu.return %0 : vector<4xf32>
 }
 
-// LOAD-ND-LABEL:  @no_load_masked(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_masked(
-// LOAD-GATHER:        vector.transfer_read
+// CHECK-LABEL:  @no_load_masked(
+// CHECK:        vector.transfer_read
 }
 
 // -----
@@ -439,13 +456,9 @@ gpu.func @no_load_tensor(%source: tensor<32x64xf32>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// LOAD-ND-LABEL:  @no_load_tensor(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_tensor(
-// LOAD-GATHER:        vector.transfer_read
+// CHECK-LABEL:  @no_load_tensor(
+// CHECK:        vector.transfer_read
 }
-
 
 // -----
 gpu.module @xevm_module {
@@ -458,13 +471,9 @@ gpu.func @no_load_non_unit_inner_stride(
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL:  @no_load_non_unit_inner_stride(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_non_unit_inner_stride(
-// LOAD-GATHER:        vector.transfer_read
+// CHECK-LABEL:  @no_load_non_unit_inner_stride(
+// CHECK:        vector.transfer_read
 }
-
 
 // -----
 gpu.module @xevm_module {
@@ -477,11 +486,8 @@ gpu.func @no_load_unsupported_map(%source: memref<16x32x64xf32>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// LOAD-ND-LABEL:  @no_load_unsupported_map(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_unsupported_map(
-// LOAD-GATHER:        vector.transfer_read
+// CHECK-LABEL:  @no_load_unsupported_map(
+// CHECK:        vector.transfer_read
 }
 
 // -----
@@ -494,37 +500,21 @@ gpu.func @load_from_subview_1D(%source: memref<4096x4096xf16>, %off1: index, %of
   gpu.return %0 : vector<8xf16>
 }
 
-// LOAD-ND-LABEL:  @load_from_subview_1D(
-// LOAD-ND-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
-// LOAD-ND-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// LOAD-ND:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
-// LOAD-ND:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
-// LOAD-ND:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// LOAD-ND:        arith.muli {{.*}} : index
-// LOAD-ND:        arith.addi %[[OFFSET]]{{.*}} : index
-// LOAD-ND:        arith.addi {{.*}} : index
-// LOAD-ND:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
-// LOAD-ND:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
-// LOAD-ND:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
-// LOAD-ND:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf16>
-
-// LOAD-GATHER-LABEL:  @load_from_subview_1D(
-// LOAD-GATHER-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
-// LOAD-GATHER-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// LOAD-GATHER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
-// LOAD-GATHER:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
-// LOAD-GATHER:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// LOAD-GATHER:        arith.muli {{.*}} : index
-// LOAD-GATHER:        arith.addi %[[OFFSET]]{{.*}} : index
-// LOAD-GATHER:        arith.addi {{.*}} : index
-// LOAD-GATHER:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
-// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
-// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
-// LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf16>
+// CHECK-LABEL:  @load_from_subview_1D(
+// CHECK-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
+// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
+// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+// CHECK:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
+// CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi %[[OFFSET]]{{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
+// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf16>
 }
 
 // -----
@@ -580,20 +570,12 @@ gpu.func @load_2D_vector_addrspace3(%source: memref<16x32xf32, 3>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// LOAD-ND-LABEL: @load_2D_vector_addrspace3
-// LOAD-ND-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
-// LOAD-ND-SAME: %[[OFFSET:.+]]: index
-// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// LOAD-ND: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : !xegpu.mem_desc<16x32xf32>, index, index -> vector<8x16xf32>
-// LOAD-ND: gpu.return %[[DATA]] : vector<8x16xf32>
-
-// LOAD-GATHER-LABEL: @load_2D_vector_addrspace3
-// LOAD-GATHER-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
-// LOAD-GATHER-SAME: %[[OFFSET:.+]]: index
-// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// LOAD-GATHER: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : !xegpu.mem_desc<16x32xf32>, index, index -> vector<8x16xf32>
-// LOAD-GATHER: gpu.return %[[DATA]] : vector<8x16xf32>
-
+// CHECK-LABEL: @load_2D_vector_addrspace3
+// CHECK-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// CHECK: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : !xegpu.mem_desc<16x32xf32>, index, index -> vector<8x16xf32>
+// CHECK: gpu.return %[[DATA]] : vector<8x16xf32>
 }
 
 // -----
@@ -606,20 +588,12 @@ gpu.func @load_1D_vector_addrspace3(%source: memref<32xf32, 3>,
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL: @load_1D_vector_addrspace3
-// LOAD-ND-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
-// LOAD-ND-SAME: %[[OFFSET:.+]]: index
-// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
-// LOAD-ND: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
-// LOAD-ND: gpu.return %[[DATA]] : vector<8xf32>
-
-// LOAD-GATHER-LABEL: @load_1D_vector_addrspace3
-// LOAD-GATHER-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
-// LOAD-GATHER-SAME: %[[OFFSET:.+]]: index
-// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
-// LOAD-GATHER: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
-// LOAD-GATHER: gpu.return %[[DATA]] : vector<8xf32>
-
+// CHECK-LABEL: @load_1D_vector_addrspace3
+// CHECK-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// CHECK: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
+// CHECK: gpu.return %[[DATA]] : vector<8xf32>
 }
 
 // -----
@@ -636,16 +610,10 @@ gpu.func @load_2D_vector_alloca_promoted_to_slm(%offset: index)
   gpu.return %0 : vector<8x16xf32>
 }
 
-// LOAD-ND-LABEL: @load_2D_vector_alloca_promoted_to_slm
-// LOAD-ND: %[[BUF:.+]] = memref.alloca() : memref<16x32xf32, 3>
-// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// LOAD-ND: xegpu.load_matrix %[[MEM_DESC]]
-
-// LOAD-GATHER-LABEL: @load_2D_vector_alloca_promoted_to_slm
-// LOAD-GATHER: %[[BUF:.+]] = memref.alloca() : memref<16x32xf32, 3>
-// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// LOAD-GATHER: xegpu.load_matrix %[[MEM_DESC]]
-
+// CHECK-LABEL: @load_2D_vector_alloca_promoted_to_slm
+// CHECK: %[[BUF:.+]] = memref.alloca() : memref<16x32xf32, 3>
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// CHECK: xegpu.load_matrix %[[MEM_DESC]]
 }
 
 // -----
@@ -661,16 +629,10 @@ gpu.func @load_1D_vector_alloca_promoted_to_slm(%offset: index)
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL: @load_1D_vector_alloca_promoted_to_slm
-// LOAD-ND: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
-// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
-// LOAD-ND: xegpu.load_matrix %[[MEM_DESC]]
-
-// LOAD-GATHER-LABEL: @load_1D_vector_alloca_promoted_to_slm
-// LOAD-GATHER: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
-// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
-// LOAD-GATHER: xegpu.load_matrix %[[MEM_DESC]]
-
+// CHECK-LABEL: @load_1D_vector_alloca_promoted_to_slm
+// CHECK: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
+// CHECK: xegpu.load_matrix %[[MEM_DESC]]
 }
 
 // -----
@@ -683,7 +645,6 @@ gpu.func @load_0D_memref_unsupported(%source: memref<f16>) -> vector<f16> {
 
 // CHECK-LABEL: @load_0D_memref_unsupported
 // CHECK: vector.transfer_read
-
 }
 
 // -----
@@ -696,12 +657,8 @@ gpu.func @load_0D_vector_unsupported(%source: memref<3xf32>,
   gpu.return %0 : vector<f32>
 }
 
-// LOAD-ND-LABEL: @load_0D_vector_unsupported
-// LOAD-ND: vector.transfer_read
-
-// LOAD-GATHER-LABEL: @load_0D_vector_unsupported
-// LOAD-GATHER: vector.transfer_read
-
+// CHECK-LABEL: @load_0D_vector_unsupported
+// CHECK: vector.transfer_read
 }
 
 // -----
@@ -728,23 +685,37 @@ gpu.func @transpose_1x1024x24x64(
   gpu.return
 }
 
-// CHECK-LABEL: @transpose_1x1024x24x64
-// CHECK-DAG: %[[C1536:.+]] = arith.constant 1536 : index
-// CHECK-DAG: %[[C64:.+]] = arith.constant 64 : index
-// CHECK-DAG: %[[C65536:.+]] = arith.constant 65536 : index
+// The vector.transpose is folded into the transfer_read via
+// CombineTransferReadOpTranspose, giving the read a mid-vector permutation map
+// (d0, d1, d2, d3) -> (d0, d2, d1, d3). An nd block load can only realize an
+// innermost-two-dims transpose, so the read falls back to the scattered path
+// while the identity-map write still lowers to store_nd.
+// LOAD-ND-LABEL: @transpose_1x1024x24x64
+// LOAD-ND-DAG: %[[C1536:.+]] = arith.constant 1536 : index
+// LOAD-ND-DAG: %[[C64:.+]] = arith.constant 64 : index
+// LOAD-ND:     arith.muli %{{.+}}, %[[C1536]] : index
+// LOAD-ND:     arith.muli %block_id_x, %[[C64]] : index
+// LOAD-ND:     %[[VEC:.+]] = xegpu.load {{.*}} -> vector<1x1x16x8xf16>
+// LOAD-ND:     %[[WDESC:.+]] = xegpu.create_nd_tdesc %arg1 : memref<1x24x1024x64xf16>
+// LOAD-ND-SAME:  -> !xegpu.tensor_desc<1x1x16x8xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:     xegpu.store_nd %[[VEC]], %[[WDESC]]
+
+// LOAD-GATHER-LABEL: @transpose_1x1024x24x64
+// LOAD-GATHER-DAG: %[[C1536:.+]] = arith.constant 1536 : index
+// LOAD-GATHER-DAG: %[[C64:.+]] = arith.constant 64 : index
+// LOAD-GATHER-DAG: %[[C65536:.+]] = arith.constant 65536 : index
 
 // Read from memref<1x1024x24x64xf16>, strides [1572864, 1536, 64, 1].
 // Scalar base offset: seq_off * 1536 (original dim1 stride),
 //                    block_id_x * 64  (original dim2 stride).
-// CHECK:     arith.muli %{{.+}}, %[[C1536]] : index
-// CHECK:     arith.muli %block_id_x, %[[C64]] : index
-// CHECK:     xegpu.load {{.*}} -> vector<1x1x16x8xf16>
+// LOAD-GATHER:     arith.muli %{{.+}}, %[[C1536]] : index
+// LOAD-GATHER:     arith.muli %block_id_x, %[[C64]] : index
+// LOAD-GATHER:     xegpu.load {{.*}} -> vector<1x1x16x8xf16>
 
 // Write to memref<1x24x1024x64xf16>, strides [1572864, 65536, 64, 1].
 // Scalar base offset: block_id_x * 65536 (original dim1 stride),
 //                    seq_off * 64        (original dim2 stride).
-// CHECK:     arith.muli %block_id_x, %[[C65536]] : index
-// CHECK:     arith.muli %{{.+}}, %[[C64]] : index
-// CHECK:     xegpu.store {{.*}}
-
+// LOAD-GATHER:     arith.muli %block_id_x, %[[C65536]] : index
+// LOAD-GATHER:     arith.muli %{{.+}}, %[[C64]] : index
+// LOAD-GATHER:     xegpu.store {{.*}}
 }

@@ -86,15 +86,12 @@ def getListOfFiles(clang_tidy_path: str) -> List[str]:
         os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers", "**"),
         recursive=True,
     )
-    files += glob.glob(
-        os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*.rst")
-    )
-    files += glob.glob(
-        os.path.join(
-            clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*", "*.rst"
-        ),
-        recursive=True,
-    )
+    docs_path = os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks")
+    # TODO: Stop discovering reST files once all clang-tidy check
+    # documentation has been migrated to MyST.
+    for extension in (".md", ".rst"):
+        files += glob.glob(os.path.join(docs_path, f"*{extension}"))
+        files += glob.glob(os.path.join(docs_path, "*", f"*{extension}"))
     return [filename for filename in files if os.path.isfile(filename)]
 
 
@@ -315,6 +312,8 @@ def main() -> None:
         for header_guard in header_guard_variants:
             replaceInFile(filename, header_guard, header_guard_new)
 
+        # TODO: Remove the reST heading handling once all clang-tidy check
+        # documentation has been migrated to MyST.
         if new_module + "/" + new_name + ".rst" in filename:
             replaceInFile(
                 filename,

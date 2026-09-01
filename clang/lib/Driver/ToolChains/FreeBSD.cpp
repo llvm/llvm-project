@@ -473,7 +473,11 @@ FreeBSD::getDefaultUnwindTableLevel(const ArgList &Args) const {
 }
 
 bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  return getSanitizerArgs(Args).requiresPIE();
+  // The FreeBSD base system builds with PIE by default since 13.1.
+  VersionTuple OSVersion = getTriple().getOSVersion();
+  if (OSVersion.getMajor() != 0 && OSVersion < VersionTuple(13, 1))
+    return getSanitizerArgs(Args).requiresPIE();
+  return true;
 }
 
 SanitizerMask

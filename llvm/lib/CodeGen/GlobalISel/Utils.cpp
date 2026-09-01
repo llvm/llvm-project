@@ -659,19 +659,6 @@ MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
 
-APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
-  if (Size == 32)
-    return APFloat(float(Val));
-  if (Size == 64)
-    return APFloat(Val);
-  if (Size != 16)
-    llvm_unreachable("Unsupported FPConstant size");
-  bool Ignored;
-  APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
-  return APF;
-}
-
 std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
                                              const Register Op1,
                                              const Register Op2,
@@ -2234,13 +2221,10 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     const auto &SrcMMO = **std::next(MI.memoperands_begin());
     MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
-    // FIXME: SelectionDAG always passes true for 'IsVolatile', apparently
-    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
-    // the same thing here.
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
         MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
-                    SrcAlign, /*IsVolatile=*/true),
+                    SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
   }

@@ -82,7 +82,7 @@ std::string NamespaceAliaser::getNamespaceName(ASTContext &Context,
                                                const Stmt &Statement,
                                                StringRef Namespace) const {
   const auto *Function = getSurroundingFunction(Context, Statement);
-  auto FunctionAliases = AddedAliases.find(Function);
+  const auto FunctionAliases = AddedAliases.find(Function);
   if (FunctionAliases != AddedAliases.end()) {
     if (FunctionAliases->second.contains(Namespace))
       return FunctionAliases->second.find(Namespace)->getValue();

@@ -237,7 +237,7 @@ Design Documents
 Build Bots and Test Coverage
 ============================
 
-* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml>`_
+* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-pr-conformance-tests.yaml>`_
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
 * `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`

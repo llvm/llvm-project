@@ -114,7 +114,7 @@ ${COMPILER} --version
 echo "Benchmark suite version: ${BENCHMARK_SUITE_VERSION}"
 echo "***********************************************"
 
-LNT_TEST_SUITE=libcxx2
+LNT_TEST_SUITE=libcxx
 
 mkdir -p "${RESULTS_DIR}"
 

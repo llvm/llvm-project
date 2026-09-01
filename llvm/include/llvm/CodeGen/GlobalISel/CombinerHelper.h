@@ -1177,6 +1177,9 @@ public:
   LLVM_ABI bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
                          Register Y, unsigned TargetOpc) const;
 
+  LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI) const;
+  LLVM_ABI void applyCountZeroToZeroPoison(MachineInstr &MI) const;
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

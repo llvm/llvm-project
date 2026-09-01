@@ -223,7 +223,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       return nullptr;
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
-      return convertOp.getInputLayoutAttr();
+      return convertOp.getEffectiveInputLayout();
     }
     auto layout = anchorOp.getAnchorLayout();
 

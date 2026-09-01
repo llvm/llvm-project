@@ -3,19 +3,21 @@ Tests about which gdb-remote packets lldb sends while inspecting the stack at a
 public stop.
 
 On Darwin, debugserver expedites the frame-pointer backchain (up to 256 frames,
-for every thread) in the jThreadsInfo response at a public stop, and lldb seeds
-those bytes into its memory cache.  Consequences exercised here:
+for every thread) and the stopped frame's stack memory in the jThreadsInfo
+response at a public stop, and lldb seeds those bytes into its memory cache.
+Consequences exercised here:
 
   * A backtrace (GetNumFrames() / GetFrameAtIndex() for every frame) is
     satisfied entirely from the expedited/cached backchain and sends no packets.
     With the cache disabled it must read the backchain frame by frame, which
     confirms the test is really exercising the unwinder's memory reads.
 
-  * Examining frame local variables the way an IDE does is NOT covered by the
-    expedite: the values live at addresses that were never sent up, so reading
-    them produces memory-read packets. This is checked two ways, mirroring
-    an IDE: examining only the selected frame's locals (frame 0, what a
-    variables view does on a stop) and examining every frame's locals (the
+  * Examining the stopped frame's locals is covered by the stack expedite, so
+    it sends no stack memory-read packets; heap buffers behind pointers are not
+    on the stack and are still read from the stub.  Examining deeper frames'
+    locals does produce stack memory-read packets.  This is checked two ways,
+    mirroring an IDE: examining only the selected frame's locals (frame 0, what
+    a variables view does on a stop) and examining every frame's locals (the
     "view all frames" case).
 """
 
@@ -34,40 +36,47 @@ from lldbsuite.test.gdbclientutils import (
 class TestExpeditedStackMemory(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_no_packets_during_backtrace(self):
         """With the memory cache on, the backtrace sends no packets at all."""
         self.check_packets_during_backtrace(disable_memory_cache=False)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_during_backtrace_without_cache(self):
         """With the memory cache off, the backtrace reads the backchain from the
         stub, producing memory-read packets."""
         self.check_packets_during_backtrace(disable_memory_cache=True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_when_examining_frame0_locals(self):
         """Model an IDE stop: walk the whole stack (a backtrace / debug
         navigator) but examine the locals of only the selected frame 0.
-        Frame 0 (func_e in main.c) carries scalar, aggregate, and
-        pointer-to-heap locals, so examining it alone reads both stack and
-        heap memory."""
-        self.check_memory_reads_when_examining_locals(examine_all_frames=False)
+        Frame 0 (func_e in main.c) carries scalar, aggregate,
+        pointer-to-heap, and stack-passed-parameter locals.  Its stack is
+        expedited, so examining it reads heap memory but no stack memory."""
+        self.check_memory_reads_when_examining_locals(
+            examine_all_frames=False, expect_stack_reads=False
+        )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_when_examining_all_frames_locals(self):
         """Model "view all frames": walk the whole stack and examine every
-        frame's locals.  This reads the same variety of memory across several
-        frames."""
-        self.check_memory_reads_when_examining_locals(examine_all_frames=True)
+        frame's locals.  Only the stopped frame's stack is expedited, so the
+        deeper frames' locals still read stack memory."""
+        self.check_memory_reads_when_examining_locals(
+            examine_all_frames=True, expect_stack_reads=True
+        )
 
-    def check_memory_reads_when_examining_locals(self, examine_all_frames):
-        """Examining frame locals reads value memory that is not expedited.
-        Classify those reads into stack vs heap and check the counts.
+    def check_memory_reads_when_examining_locals(
+        self, examine_all_frames, expect_stack_reads
+    ):
+        """Examining frame locals reads value memory; classify those reads into
+        stack vs heap and check the counts.
 
-        The frame-pointer backchain is expedited, but the locals' *values* are
-        not, so both stack-resident locals and heap buffers behind pointers are
-        read from the stub today.
+        The frame-pointer backchain and the stopped frame's stack are expedited,
+        so frame 0's stack-resident locals are served from the cache while heap
+        buffers behind pointers (and deeper frames' locals) are read from the
+        stub.
 
         We have two regions and ask the process which one each read falls in:
           * the stack region: whichever region the stack pointer points into.
@@ -131,15 +140,22 @@ class TestExpeditedStackMemory(TestBase):
             )
         )
 
-        # Examining locals reads both stack and heap memory.
-        self.assertGreater(
-            len(stack_reads),
-            0,
-            "expected stack memory reads while examining stack-resident "
-            "locals.\n" + breakdown,
-        )
-        # Heap reads come from disclosing the pointer-to-heap local; a stack
-        # expedite would NOT remove these.
+        if expect_stack_reads:
+            # Deeper frames' stacks are not expedited.
+            self.assertGreater(
+                len(stack_reads),
+                0,
+                "expected stack memory reads while examining deeper frames' "
+                "stack-resident locals.\n" + breakdown,
+            )
+        else:
+            # The stopped frame's stack is expedited.
+            self.assertEqual(
+                len(stack_reads),
+                0,
+                "expected NO stack memory reads for frame 0 (its stack is "
+                "expedited in jThreadsInfo).\n" + breakdown,
+            )
         self.assertGreater(
             len(heap_reads),
             0,

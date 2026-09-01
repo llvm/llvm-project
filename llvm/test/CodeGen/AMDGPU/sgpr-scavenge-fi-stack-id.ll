@@ -6,10 +6,10 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v10, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v10, s31, 1
+; CHECK-NEXT:    v_writelane_b32 v12, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v12, s31, 1
 ; CHECK-NEXT:    v_and_b32_e32 v2, 1, v2
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[10:11], 1, v2
 ; CHECK-NEXT:    v_and_b32_e32 v2, 1, v4
@@ -138,15 +138,10 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_14
 ; CHECK-NEXT:  ; %bb.12: ; %inner_stack_loop.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=4
+; CHECK-NEXT:    s_mov_b32 vcc_lo, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v5, v3, 0, s[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v4, v2, 0, s[4:5]
-; CHECK-NEXT:    v_cndmask_b32_e64 v5, v5, 0, s[14:15]
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[14:15]
-; CHECK-NEXT:    v_mul_f64 v[4:5], v[4:5], s[28:29]
-; CHECK-NEXT:    v_mul_f64 v[4:5], v[4:5], s[40:41]
-; CHECK-NEXT:    s_mov_b32 vcc_lo, 0
 ; CHECK-NEXT:    s_mov_b64 s[94:95], 0
-; CHECK-NEXT:    v_mul_f64 v[4:5], v[4:5], s[42:43]
 ; CHECK-NEXT:  .LBB0_13: ; %inner_stack_loop
 ; CHECK-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    ; Parent Loop BB0_4 Depth=2
@@ -181,10 +176,15 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    v_mov_b32_e32 v7, vcc_hi
 ; CHECK-NEXT:    buffer_load_dword v8, v7, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v9, v7, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    v_cndmask_b32_e64 v11, v5, 0, s[14:15]
+; CHECK-NEXT:    v_cndmask_b32_e64 v10, v4, 0, s[14:15]
+; CHECK-NEXT:    v_mul_f64 v[10:11], v[10:11], s[28:29]
+; CHECK-NEXT:    v_mul_f64 v[10:11], v[10:11], s[40:41]
+; CHECK-NEXT:    v_mul_f64 v[10:11], v[10:11], s[42:43]
 ; CHECK-NEXT:    v_mov_b32_e32 v7, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mul_f64 v[8:9], v[4:5], v[8:9]
+; CHECK-NEXT:    v_mul_f64 v[8:9], v[10:11], v[8:9]
 ; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], 0
 ; CHECK-NEXT:    buffer_store_dword v6, v7, s[0:3], 0 offen
@@ -232,10 +232,10 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_21: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[20:21]
-; CHECK-NEXT:    v_readlane_b32 s30, v10, 0
-; CHECK-NEXT:    v_readlane_b32 s31, v10, 1
+; CHECK-NEXT:    v_readlane_b32 s30, v12, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v12, 1
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

@@ -15,7 +15,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -25,7 +24,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -393,6 +391,170 @@ public:
   }
   bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
     report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
+    return true;
+  }
+
+  // Objective-C support
+
+  bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
+    reportType(TL.getNameLoc(), TL.getIFaceDecl());
+    return true;
+  }
+
+  // Protocols are odd in that they are covered by Traverse instead of Visit.
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    if (auto *Proto = ProtocolLoc.getProtocol()) {
+      report(ProtocolLoc.getLocation(), Proto);
+    }
+    return true;
+  }
+
+  bool VisitObjCImplementationDecl(ObjCImplementationDecl *D) {
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    return true;
+  }
+
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+    // Identify the selector and the method declaration
+    if (auto *Method = E->getMethodDecl()) {
+      // Report the method as a used symbol
+      report(E->getSelectorStartLoc(), Method);
+    }
+
+    // If it's a class message, report the interface/class as used
+    if (E->getReceiverKind() == ObjCMessageExpr::Class) {
+      if (auto *Interface = E->getReceiverInterface()) {
+        report(E->getReceiverRange().getBegin(), Interface);
+      }
+    }
+    return true;
+  }
+
+  bool VisitObjCPropertyDecl(clang::ObjCPropertyDecl *PD) {
+    reportType(PD->getLocation(), PD);
+    return true;
+  }
+
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) {
+    // Unconditionally report property declarations and their backing accessor
+    // methods. Dot-notation or pseudo-object references (`foo.bar`) require
+    // the underlying property definition or getters/setters to compile.
+    // Bypassing transient compiler state flags (isMessagingGetter/
+    // isMessagingSetter) guarantees that the declaring
+    // header keeps the properties recorded as used.
+    if (E->isExplicitProperty()) {
+      if (auto *Prop = E->getExplicitProperty()) {
+        report(E->getLocation(), Prop);
+        if (auto *Getter = Prop->getGetterMethodDecl())
+          report(E->getLocation(), Getter);
+        if (auto *Setter = Prop->getSetterMethodDecl())
+          report(E->getLocation(), Setter);
+      }
+    } else {
+      if (auto *Getter = E->getImplicitPropertyGetter())
+        report(E->getLocation(), Getter);
+      if (auto *Setter = E->getImplicitPropertySetter())
+        report(E->getLocation(), Setter);
+    }
+    return true;
+  }
+
+  bool VisitObjCProtocolExpr(ObjCProtocolExpr *E) {
+    if (auto *Proto = E->getProtocol()) {
+      report(E->getProtocolIdLoc(), Proto);
+    }
+    return true;
+  }
+
+  bool VisitCastExpr(CastExpr *E) {
+    // Handle implicit or explicit casts between Objective-C object pointers
+    // aimed towards protocol-qualification (e.g., `ClassName *` to
+    // `id<Proto>`).
+    QualType SourceType = E->getSubExpr()->getType();
+    QualType DestType = E->getType();
+
+    const auto *SrcPtr = SourceType->getAs<ObjCObjectPointerType>();
+    const auto *DestPtr = DestType->getAs<ObjCObjectPointerType>();
+
+    // If we're casting from a known class pointer to protocol conformance.
+    if (SrcPtr && DestPtr && SrcPtr->getInterfaceDecl()) {
+      const ObjCInterfaceDecl *Class = SrcPtr->getInterfaceDecl();
+      ASTContext &Ctx = Class->getASTContext();
+
+      // For every protocol required by the destination type.
+      for (const ObjCProtocolDecl *Proto : DestPtr->quals()) {
+        const ObjCInterfaceDecl *Current = Class;
+        // Search the inheritance hierarchy for the provider of conformance.
+        while (Current) {
+          bool ConformsDirectly = false;
+          for (const auto *PI : Current->protocols()) {
+            if (Ctx.ProtocolCompatibleWithProtocol(
+                    const_cast<ObjCProtocolDecl *>(Proto),
+                    const_cast<ObjCProtocolDecl *>(PI))) {
+              ConformsDirectly = true;
+              break;
+            }
+          }
+          // If the class itself provides the conformance directly, we don't
+          // need to keep searching Categories.
+          if (ConformsDirectly)
+            break;
+
+          // If the class doesn't declare direct conformance but conformance is
+          // injected via a visible Category attached to this class, note that
+          // the category header is required by recording an Implicit reference
+          // to it.
+          for (const auto *Cat : Current->visible_categories()) {
+            for (auto *PI : Cat->protocols()) {
+              if (Ctx.ProtocolCompatibleWithProtocol(
+                      const_cast<ObjCProtocolDecl *>(Proto),
+                      const_cast<ObjCProtocolDecl *>(PI))) {
+                report(E->getExprLoc(), const_cast<ObjCCategoryDecl *>(Cat),
+                       RefType::Implicit);
+              }
+            }
+          }
+          Current = Current->getSuperClass();
+        }
+      }
+    }
+    return true;
+  }
+
+  bool VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
+    // A category declaration depends on its base interface.
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    return true;
+  }
+
+  bool VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *D) {
+    // Implementation requires the base interface.
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    // Implementation requires the category declaration.
+    if (auto *Category = D->getCategoryDecl()) {
+      report(D->getCategoryNameLoc(), Category);
+    }
+    return true;
+  }
+
+  bool VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
+    // An alias declaration requires the underlying class.
+    if (auto *Aliased = D->getClassInterface()) {
+      report(D->getLocation(), Aliased);
+    }
+    return true;
+  }
+
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
+    if (auto *Ivar = E->getDecl()) {
+      report(E->getLocation(), Ivar);
+    }
     return true;
   }
 };

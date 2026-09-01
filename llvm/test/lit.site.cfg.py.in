@@ -20,6 +20,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
+config.osx_xcrun = path(r"@CMAKE_XCRUN@")
 config.ocamlfind_executable = "@OCAMLFIND@"
 config.have_ocamlopt = @HAVE_OCAMLOPT@
 config.ocaml_flags = "@OCAMLFLAGS@"

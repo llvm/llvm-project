@@ -73,6 +73,15 @@ SBFileSpec SBProcessInfo::GetExecutableFile() {
   return file_spec;
 }
 
+const char *SBProcessInfo::GetArg0() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_up)
+    return nullptr;
+
+  return ConstString(m_opaque_up->GetArg0()).GetCString();
+}
+
 lldb::pid_t SBProcessInfo::GetProcessID() {
   LLDB_INSTRUMENT_VA(this);
 

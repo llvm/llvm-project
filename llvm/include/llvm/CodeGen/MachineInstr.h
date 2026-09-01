@@ -1368,6 +1368,7 @@ public:
   }
 
   // True if the instruction represents a position in the function.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isNonListDebugValue() const {

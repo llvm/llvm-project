@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_mman_unittests)
 
-add_libc_unittest(
+add_libc_test(
   mmap_test
   SUITE
     libc_sys_mman_unittests
@@ -18,7 +18,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mremap_test
   SUITE
     libc_sys_mman_unittests
@@ -36,7 +36,7 @@ add_libc_unittest(
 )
 
 if (NOT LLVM_USE_SANITIZER)
-  add_libc_unittest(
+  add_libc_test(
     mprotect_test
     SUITE
       libc_sys_mman_unittests
@@ -54,7 +54,7 @@ if (NOT LLVM_USE_SANITIZER)
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   madvise_test
   SUITE
     libc_sys_mman_unittests
@@ -75,7 +75,7 @@ add_libc_unittest(
 # This test intentionally triggers segfaults to verify pkey_mprotect behavior,
 # and sanitizers register signal handlers that interfere with death testing.
 if (NOT LLVM_USE_SANITIZER)
-  add_libc_unittest(
+  add_libc_test(
     pkey_test
     SUITE
       libc_sys_mman_unittests
@@ -98,7 +98,7 @@ if (NOT LLVM_USE_SANITIZER)
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   posix_madvise_test
   SUITE
     libc_sys_mman_unittests
@@ -115,7 +115,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mincore_test
   SUITE
     libc_sys_mman_unittests
@@ -137,7 +137,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   mlock_test
   SUITE
     libc_sys_mman_unittests
@@ -165,7 +165,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   msync_test
   SUITE
     libc_sys_mman_unittests
@@ -192,7 +192,7 @@ if(CMAKE_CROSSCOMPILING_EMULATOR)
     message(STATUS "Skipping remap_file_pages_test under emulator.")
   endif()
 else()
-add_libc_unittest(
+add_libc_test(
   remap_file_pages_test
   SUITE
     libc_sys_mman_unittests
@@ -213,7 +213,7 @@ add_libc_unittest(
 )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   shm_test
   SUITE
     libc_sys_mman_unittests
@@ -237,7 +237,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   memfd_create_test
   SUITE
     libc_sys_mman_unittests

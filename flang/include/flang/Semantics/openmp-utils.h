@@ -298,6 +298,21 @@ bool HasDataEnvironment(llvm::omp::Directive dir);
 
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
+/// The AT, SEVERITY, and MESSAGE clause values of an `!$omp error` directive.
+/// `at` and `severity` default to AT(compilation)/SEVERITY(fatal) when absent;
+/// `message` is null when there is no MESSAGE clause.
+struct OmpErrorArgs {
+  parser::OmpAtClause::ActionTime at{
+      parser::OmpAtClause::ActionTime::Compilation};
+  parser::OmpSeverityClause::SevLevel severity{
+      parser::OmpSeverityClause::SevLevel::Fatal};
+  const parser::Expr *message{nullptr};
+};
+
+/// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
+/// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
+
 inline bool IsDoConcurrentLegal(unsigned version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
   // in OpenMP 6.0+.
@@ -403,6 +418,12 @@ std::optional<int64_t> GetMinimumSequenceCount(
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
     const parser::OpenMPLoopConstruct &x, unsigned version,
     SemanticsContext *semaCtx = nullptr);
+
+/// Returns whether the loop nest associated with `x` is a doacross loop nest,
+/// i.e. its body contains an `ordered` directive carrying a doacross
+/// dependence (the `doacross` clause, or the pre-5.2 `depend(sink/source)`
+/// equivalent) that binds to `x`. Such a nest must be perfectly nested.
+bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

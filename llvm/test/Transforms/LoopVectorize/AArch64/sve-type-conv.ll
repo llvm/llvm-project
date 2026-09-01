@@ -263,4 +263,4 @@ attributes #0 = { "target-features"="+sve" }
 !2 = !{!"llvm.loop.vectorize.width", i32 8}
 !3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
-!5 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.enable"}

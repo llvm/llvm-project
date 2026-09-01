@@ -47,6 +47,9 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getparam
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getscheduler
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
     libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS

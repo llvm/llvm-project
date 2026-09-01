@@ -50,6 +50,37 @@ subroutine array_split(x, y, n)
   !$acc end parallel
 end subroutine
 
+! Array-section reduction on a dynamic-extent array: element accesses inside
+! the region must remap to the acc.reduction result rather than to the
+! original (host) declare, otherwise the private reduction copy is silently
+! bypassed and the wrong memory gets updated.
+subroutine array_section_combined(a, mm, nn)
+  integer :: mm, nn
+  real :: a(mm)
+  integer :: i, k
+  !$acc parallel loop reduction(+:a(1:16))
+  do i = 1, nn
+    do k = 1, mm
+      a(k) = a(k) + 1.0
+    end do
+  end do
+end subroutine
+
+! Same as above, but the section's lower bound (11) does not coincide with
+! the array's own lower bound (1): a "shift". The reduction recipe absorbs
+! this via a base-pointer offset, so remapping must still work.
+subroutine array_section_shifted(a, mm, nn)
+  integer :: mm, nn
+  real :: a(mm)
+  integer :: i, k
+  !$acc parallel loop reduction(+:a(11:20))
+  do i = 1, nn
+    do k = 11, 20
+      a(k) = a(k) + 1.0
+    end do
+  end do
+end subroutine
+
 ! CHECK-LABEL:   func.func @_QPscalar_combined(
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[DECLARE_Y:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[DUMMY_SCOPE_0]] arg 2 {uniq_name = "_QFscalar_combinedEy"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -156,5 +187,61 @@ end subroutine
 ! CHECK:             }
 ! CHECK:             acc.yield
 ! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+
+! CHECK-LABEL:   func.func @_QParray_section_combined(
+! CHECK:           %[[DECLARE_A:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_combinedEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:           %[[BOUND0:.*]] = acc.bounds {{.*}}
+! CHECK:           %[[COPYIN:.*]] = acc.copyin var(%[[DECLARE_A]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND0]]) -> !fir.box<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "a(1:16)"}
+! CHECK:           acc.parallel combined(loop) dataOperands(%[[COPYIN]] : !fir.box<!fir.array<?xf32>>) {
+! CHECK:             %[[BOX_ADDR_PAR:.*]] = fir.box_addr %[[COPYIN]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+! CHECK:             %[[DECLARE_A_PAR:.*]]:2 = hlfir.declare %[[BOX_ADDR_PAR]]({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_combinedEa"}
+! CHECK:             %[[BOUND1:.*]] = acc.bounds {{.*}}
+! CHECK:             %[[RED:.*]] = acc.reduction var(%[[DECLARE_A_PAR]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND1]]) recipe(@reduction_add_section_lb0.ub15_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "a(1:16)"}
+! CHECK:             acc.loop combined(parallel) {{.*}} reduction(%[[RED]] : !fir.box<!fir.array<?xf32>>) {{.*}} {
+! CHECK:               %[[BOX_ADDR_RED:.*]] = fir.box_addr %[[RED]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+! CHECK:               %[[DECLARE_A_RED:.*]]:2 = hlfir.declare %[[BOX_ADDR_RED]]({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_combinedEa"}
+! CHECK:               acc.loop {{.*}} {
+! CHECK:                 %[[DESIGNATE_READ:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK:                 {{.*}} = fir.load %[[DESIGNATE_READ]] : !fir.ref<f32>
+! CHECK:                 %[[DESIGNATE_WRITE:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK:                 hlfir.assign {{.*}} to %[[DESIGNATE_WRITE]] : f32, !fir.ref<f32>
+! CHECK:                 acc.yield
+! CHECK:               }
+! CHECK:               acc.yield
+! CHECK:             }
+! CHECK:             acc.yield
+! CHECK:           }
+! CHECK:           acc.copyout accVar(%[[COPYIN]] : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND0]]) to var(%[[DECLARE_A]]#0 : !fir.box<!fir.array<?xf32>>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "a(1:16)"}
+! CHECK:           return
+! CHECK:         }
+
+
+! CHECK-LABEL:   func.func @_QParray_section_shifted(
+! CHECK:           %[[DECLARE_A:.*]]:2 = hlfir.declare %{{.*}}({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_shiftedEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:           %[[BOUND0:.*]] = acc.bounds lowerbound(%c10{{.*}} : index) upperbound(%c19{{.*}} : index) {{.*}}
+! CHECK:           %[[COPYIN:.*]] = acc.copyin var(%[[DECLARE_A]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND0]]) -> !fir.box<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "a(11:20)"}
+! CHECK:           acc.parallel combined(loop) dataOperands(%[[COPYIN]] : !fir.box<!fir.array<?xf32>>) {
+! CHECK:             %[[BOX_ADDR_PAR:.*]] = fir.box_addr %[[COPYIN]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+! CHECK:             %[[DECLARE_A_PAR:.*]]:2 = hlfir.declare %[[BOX_ADDR_PAR]]({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_shiftedEa"}
+! CHECK:             %[[BOUND1:.*]] = acc.bounds lowerbound(%c10{{.*}} : index) upperbound(%c19{{.*}} : index) {{.*}}
+! CHECK:             %[[RED:.*]] = acc.reduction var(%[[DECLARE_A_PAR]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND1]]) recipe(@reduction_add_section_lb10.ub19_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "a(11:20)"}
+! CHECK:             acc.loop combined(parallel) {{.*}} reduction(%[[RED]] : !fir.box<!fir.array<?xf32>>) {{.*}} {
+! CHECK:               %[[BOX_ADDR_RED:.*]] = fir.box_addr %[[RED]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+! CHECK:               %[[DECLARE_A_RED:.*]]:2 = hlfir.declare %[[BOX_ADDR_RED]]({{.*}}) dummy_scope {{.*}} arg 1 {uniq_name = "_QFarray_section_shiftedEa"}
+! CHECK:               acc.loop {{.*}} control(%{{.*}} : i32) = (%c11{{.*}} : i32) to (%c20{{.*}} : i32) {{.*}} {
+! CHECK:                 %[[DESIGNATE_READ:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK:                 {{.*}} = fir.load %[[DESIGNATE_READ]] : !fir.ref<f32>
+! CHECK:                 %[[DESIGNATE_WRITE:.*]] = hlfir.designate %[[DECLARE_A_RED]]#0 ({{.*}}) : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+! CHECK:                 hlfir.assign {{.*}} to %[[DESIGNATE_WRITE]] : f32, !fir.ref<f32>
+! CHECK:                 acc.yield
+! CHECK:               }
+! CHECK:               acc.yield
+! CHECK:             }
+! CHECK:             acc.yield
+! CHECK:           }
+! CHECK:           acc.copyout accVar(%[[COPYIN]] : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUND0]]) to var(%[[DECLARE_A]]#0 : !fir.box<!fir.array<?xf32>>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "a(11:20)"}
 ! CHECK:           return
 ! CHECK:         }

@@ -92,7 +92,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP233:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP234:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP235:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 96
@@ -348,7 +348,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <8 x float> [ [[TMP239]], %[[VEC_EPILOG_PH]] ], [ [[TMP297:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP240:%.*]] = shl i64 [[INDEX9]], 5
+; CHECK-NEXT:    [[TMP240:%.*]] = shl nuw i64 [[INDEX9]], 5
 ; CHECK-NEXT:    [[TMP241:%.*]] = add i64 [[TMP240]], 32
 ; CHECK-NEXT:    [[TMP242:%.*]] = add i64 [[TMP240]], 64
 ; CHECK-NEXT:    [[TMP243:%.*]] = add i64 [[TMP240]], 96
@@ -466,8 +466,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP9]], [[TMP13]]
@@ -550,8 +549,8 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-LABEL: define i1 @any_of_cost(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 40
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -625,7 +624,7 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK-LABEL: define i64 @cost_assume(
 ; CHECK-SAME: ptr [[END:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -9
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 9
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -1117,4 +1116,4 @@ attributes #4 = { "target-cpu"="haswell" }
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
 !2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}

@@ -2241,9 +2241,15 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   auto [AssociatedDecl, Final] =
       TemplateArgs.getAssociatedDecl(NTTP->getDepth());
   UnsignedOrNone PackIndex = std::nullopt;
-  if (NTTP->isParameterPack()) {
-    assert(Arg.getKind() == TemplateArgument::Pack &&
-           "Missing argument pack");
+  if (NTTP->isParameterPack() ||
+      // In concept parameter mapping for fold expressions, packs that aren't
+      // expanded in place are treated as having non-pack dependency, so that
+      // a PackExpansionType won't prevent expanding the packs outside the
+      // TreeTransform. However, we still need to unpack the arguments during
+      // any template argument substitution, so we also check its FoundDecl.
+      (E->getFoundDecl() && E->getFoundDecl() != E->getDecl() &&
+       E->getFoundDecl()->isParameterPack())) {
+    assert(Arg.getKind() == TemplateArgument::Pack && "Missing argument pack");
 
     if (!getSema().ArgPackSubstIndex) {
       // We have an argument pack, but we can't select a particular argument
@@ -2826,7 +2832,6 @@ TemplateInstantiator::TransformNestedRequirement(
 
   ASTContext &C = SemaRef.Context;
 
-  Expr *Constraint = Req->getConstraintExpr();
   ConstraintSatisfaction Satisfaction;
 
   auto NestedReqWithDiag = [&C, this](Expr *E,
@@ -2845,6 +2850,8 @@ TemplateInstantiator::TransformNestedRequirement(
                                       Req->getConstraintSatisfaction());
     return Req;
   }
+
+  Expr *Constraint = Req->getConstraintExpr();
 
   if (!getEvaluateConstraints()) {
     ExprResult TransConstraint = TransformExpr(Req->getConstraintExpr());

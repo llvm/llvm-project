@@ -2156,21 +2156,21 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                             bool print_json_thread, bool print_json_stopinfo) {
   const bool stop_format = false;
   DumpUsingSettingsFormat(strm, 0, stop_format);
-  strm.Printf("\n");
+  strm.PutCString("\n");
 
   StructuredData::ObjectSP thread_info = GetExtendedInfo();
 
   if (print_json_thread || print_json_stopinfo) {
     if (thread_info && print_json_thread) {
       thread_info->Dump(strm);
-      strm.Printf("\n");
+      strm.PutCString("\n");
     }
 
     if (print_json_stopinfo && m_stop_info_sp) {
       StructuredData::ObjectSP stop_info = m_stop_info_sp->GetExtendedInfo();
       if (stop_info) {
         stop_info->Dump(strm);
-        strm.Printf("\n");
+        strm.PutCString("\n");
       }
     }
 
@@ -2201,7 +2201,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     bool printed_breadcrumb = false;
     if (breadcrumb && breadcrumb->GetType() == eStructuredDataTypeDictionary) {
       if (printed_activity)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Dictionary *breadcrumb_dict =
           breadcrumb->GetAsDictionary();
       StructuredData::ObjectSP breadcrumb_text =
@@ -2215,7 +2215,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     }
     if (messages && messages->GetType() == eStructuredDataTypeArray) {
       if (printed_breadcrumb)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Array *messages_array = messages->GetAsArray();
       const size_t msg_count = messages_array->GetSize();
       if (msg_count > 0) {

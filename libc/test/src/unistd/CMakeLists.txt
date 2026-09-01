@@ -52,7 +52,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   chown_test
   SUITE
     libc_unistd_unittests
@@ -188,7 +188,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   ftruncate_test
   SUITE
     libc_unistd_unittests
@@ -230,22 +230,19 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   read_write_test
   SUITE
     libc_unistd_unittests
   SRCS
     read_write_test.cpp
   DEPENDS
-    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.unistd.close
-    libc.src.unistd.fsync
+    libc.src.unistd.pipe
     libc.src.unistd.read
     libc.src.unistd.write
-    libc.src.stdio.remove
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -599,7 +596,7 @@ add_libc_unittest(
     libc.src.unistd.geteuid
 )
 
-add_libc_unittest(
+add_libc_test(
   syscall_test
   SUITE
     libc_unistd_unittests

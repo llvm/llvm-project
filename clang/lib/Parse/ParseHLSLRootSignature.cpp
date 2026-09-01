@@ -1556,7 +1556,7 @@ void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
 
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
   if (HaveLexer) {
-    P->Initialize();
+    P->ConsumeToken();
     S.ActOnStartOfTranslationUnit();
 
     // Skim through the file to parse to find the define

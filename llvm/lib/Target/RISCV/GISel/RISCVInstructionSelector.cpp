@@ -144,8 +144,6 @@ private:
                           int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
-  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
@@ -1552,14 +1550,6 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal + 1);
-}
-
-void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
-         "Expected G_FRAME_INDEX");
-  MIB.add(MI.getOperand(1));
 }
 
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,

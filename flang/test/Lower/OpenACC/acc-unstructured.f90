@@ -1,4 +1,4 @@
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine test_unstructured1(a, b, c)
   integer :: i, j, k
@@ -253,7 +253,6 @@ end subroutine
 ! corresponding acc.loop must privatize all N induction variables, carry
 ! both `collapse = [N]` and `unstructured` attributes, and emit the
 ! iteration mechanics for all N levels as explicit cf inside the body.
-! Reproducer derived from lorado issue #2856.
 subroutine test_unstructured_collapse_cycle(a)
   integer :: i, j, jdiag
   real(8) :: a(:,:)

@@ -167,6 +167,10 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::counter_value_too_large:
     OS << "excessively large counter value suggests corrupted profile data";
     break;
+  case instrprof_error::coverage_count_mismatch:
+    OS << "cannot merge single-byte-coverage profiles with count "
+          "(non-coverage) profiles";
+    break;
   }
 
   // If optional error message is not empty, append it to the message.
@@ -564,7 +568,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
     return E;
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
-  if (CanonicalName != VTablePGOName)
+  if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
     return NameToGUIDMap(CanonicalName);
 
   return Error::success();
@@ -673,7 +677,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
     return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
+  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName)
     return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();

@@ -257,6 +257,7 @@ bool BinaryFunctionPass::shouldPrint(const BinaryFunction &BF) const {
 }
 
 void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
+  const BinaryContext &BC = BF.getBinaryContext();
   uint64_t NumRemoved = 0;
   uint64_t NumDuplicateEdges = 0;
   uint64_t NeedsFixBranches = 0;
@@ -286,7 +287,14 @@ void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
     // Redirect all predecessors to the successor block.
     while (!BB.pred_empty()) {
       BinaryBasicBlock *Predecessor = *BB.pred_begin();
-      if (Predecessor->hasJumpTable())
+      // Do not redirect a predecessor that reaches this block via an indirect
+      // branch. This covers both a regular jump table and an unresolved
+      // "unknown control flow" indirect jump (in --strict mode), where the
+      // instruction has no jump table annotation but the jump table data still
+      // references this block. Removing this block would leave a dangling
+      // reference in .rodata, an undefined jump table entry at emission time.
+      const MCInst *LastInst = Predecessor->getLastNonPseudoInstr();
+      if (LastInst && BC.MIB->isIndirectBranch(*LastInst))
         break;
 
       if (Predecessor == Successor)

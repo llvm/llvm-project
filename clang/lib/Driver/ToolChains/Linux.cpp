@@ -317,13 +317,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
   // Hexagon linker/loader does not support .gnu.hash.
-  // SUSE SLES 11 will stop being supported Mar 2028.
-  if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE())
-      ExtraOpts.push_back("--hash-style=both");
-    else
-      ExtraOpts.push_back("--hash-style=gnu");
-  }
+  if (!IsMips && !IsHexagon)
+    ExtraOpts.push_back("--hash-style=gnu");
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
@@ -542,6 +537,10 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
           options::OPT_fptrauth_init_fini_address_discrimination,
           options::OPT_fno_ptrauth_init_fini_address_discrimination))
     CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
+
+  if (!DriverArgs.hasArg(options::OPT_fptrauth_elf_got,
+                         options::OPT_fno_ptrauth_elf_got))
+    CC1Args.push_back("-fptrauth-elf-got");
 
   if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
                          options::OPT_fno_aarch64_jump_table_hardening))

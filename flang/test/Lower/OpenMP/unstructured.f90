@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" \
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region %s -fopenmp -emit-hlfir -o "-" \
 ! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {

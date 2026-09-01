@@ -119,9 +119,10 @@ func.func private @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tenso
 }
 
 //===----------------------------------------------------------------------===//
-// @matmul_via_mmt4d
+// @pack_lhs
 //
-// Implements matrix-multiplication via linalg.mmt4d
+// Implements packing for the A matrix (LHS) in matrix multiplication. The inner
+// tile size is fixed: 8 * 1.
 //===----------------------------------------------------------------------===//
 func.func private @pack_lhs(%A: tensor<7x16xi32>) -> tensor<1x16x8x1xi32> {
   %pad = arith.constant 0 : i32

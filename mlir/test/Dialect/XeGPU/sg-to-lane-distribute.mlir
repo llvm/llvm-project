@@ -484,7 +484,6 @@ gpu.module @xevm_module {
       %4 = vector.reduction <add>, %3 : vector<16xf32> into f32
       %anchor = xegpu.convert_layout %4
         <{
-          input_layout = #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, dims=[0]>,
           target_layout =  #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, dims=[0]>
         }>
         : f32

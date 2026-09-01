@@ -285,8 +285,9 @@ static T createIfNonNull(MLIRContext *ctx, const P &...args) {
 }
 
 FailureOr<LoopVectorizeAttr> LoopMetadataConversion::convertVectorizeAttr() {
-  FailureOr<BoolAttr> enable =
-      lookupBoolNode("llvm.loop.vectorize.enable", true);
+  FailureOr<BoolAttr> enable = lookupBooleanUnitNode(
+      "llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable",
+      /*negated=*/true);
   FailureOr<BoolAttr> predicateEnable =
       lookupBoolNode("llvm.loop.vectorize.predicate.enable");
   FailureOr<BoolAttr> scalableEnable =
@@ -358,8 +359,9 @@ FailureOr<LoopLICMAttr> LoopMetadataConversion::convertLICMAttr() {
 }
 
 FailureOr<LoopDistributeAttr> LoopMetadataConversion::convertDistributeAttr() {
-  FailureOr<BoolAttr> disable =
-      lookupBoolNode("llvm.loop.distribute.enable", true);
+  FailureOr<BoolAttr> disable = lookupBooleanUnitNode(
+      "llvm.loop.distribute.enable", "llvm.loop.distribute.disable",
+      /*negated=*/true);
   FailureOr<LoopAnnotationAttr> followupCoincident =
       lookupFollowupNode("llvm.loop.distribute.followup_coincident");
   FailureOr<LoopAnnotationAttr> followupSequential =

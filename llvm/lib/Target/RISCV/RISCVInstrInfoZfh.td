@@ -46,6 +46,7 @@ def GPRAsFPR16 : AsmOperandClass {
   let Name = "GPRAsFPR16";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR16INX : RegisterOperand<GPRF16> {

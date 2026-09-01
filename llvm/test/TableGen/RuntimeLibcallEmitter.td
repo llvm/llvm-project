@@ -33,21 +33,32 @@ def calloc  : RuntimeLibcallImpl<CALLOC, "calloc">;
 def CompilerRTLibcalls : LibcallImpls<(add __ashlsi3, __lshrdi3)>;
 def LibmLibcalls : LibcallImpls<(add sqrtl_f80)>;
 
-def isSimpleArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::simple}]>;
-def isFooArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::foo}]>;
+def IsSimpleArch : LibcallPredicate<[{TT.getArch() == Triple::simple}]>;
+def IsFooArch : LibcallPredicate<[{TT.getArch() == Triple::foo}]>;
+def IsZOS : LibcallPredicate<[{TT.getOS() == Triple::zos}]>;
+def IsPPCLeaf : LibcallPredicate<[{TT.getArch().isPPC()}]>;
+def IsPPC64Leaf : LibcallPredicate<[{TT.getArch().isPPC64()}]>;
+def IsFoo : LibcallPredicate<[{isFOO()}]>;
+def IsBarOS : LibcallPredicate<[{TT.getOS() == Triple::bar}]>;
+def IsBuzzArch : LibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
+def IsBlahArch : LibcallPredicate<[{TT.getArch() == Triple::blah}]>;
+def HasCompilerRT : LibcallPredicate<[{TT.hasCompilerRT()}]>;
+
+def isSimpleArch : RuntimeLibcallAvailability<(all_of IsSimpleArch)>;
+def isFooArch : RuntimeLibcallAvailability<(all_of IsFooArch)>;
 
 
-def isZOS : RuntimeLibcallPredicate<[{TT.getOS() == Triple::zos}]>;
-def isPPC : RuntimeLibcallPredicate<[{TT.getArch().isPPC()}]>;
-def isPPC64 : RuntimeLibcallPredicate<[{TT.getArch().isPPC64()}]>;
+def isZOS : RuntimeLibcallAvailability<(all_of IsZOS)>;
+def isPPC : RuntimeLibcallAvailability<(all_of IsPPCLeaf)>;
+def isPPC64 : RuntimeLibcallAvailability<(all_of IsPPC64Leaf)>;
 
 
-def isFoo : RuntimeLibcallPredicate<[{isFOO()}]>;
-def isBarOS : RuntimeLibcallPredicate<[{TT.getOS() == Triple::bar}]>;
-def isBuzzArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
-def isBlahArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::blah}]>;
+def isFoo : RuntimeLibcallAvailability<(all_of IsFoo)>;
+def isBarOS : RuntimeLibcallAvailability<(all_of IsBarOS)>;
+def isBuzzArch : RuntimeLibcallAvailability<(all_of IsBuzzArch)>;
+def isBlahArch : RuntimeLibcallAvailability<(all_of IsBlahArch)>;
 
-def hasCompilerRT : RuntimeLibcallPredicate<[{TT.hasCompilerRT()}]>;
+def hasCompilerRT : RuntimeLibcallAvailability<(all_of HasCompilerRT)>;
 
 
 def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch,

@@ -909,6 +909,17 @@ llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
   llvm.return
 }
 
+llvm.func @rocdl.ptr.s.buffer(%rsrc : !llvm.ptr<8>, %offset : i32) {
+  // CHECK-LABEL: rocdl.ptr.s.buffer
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : i32
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : vector<2xi32>
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : vector<4xi32>
+  %r1 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : i32
+  %r2 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<2xi32>
+  %r4 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<4xi32>
+  llvm.return
+}
+
 llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
                        %size: i32, %voffset : i32, %soffset : i32, %offset : i32,
                        %aux : i32) {

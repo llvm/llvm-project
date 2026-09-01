@@ -1569,7 +1569,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1578,8 +1579,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
-        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr, {}, {},
-        normal, unwind);
+        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
+        /*default_func_attrs=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1589,7 +1590,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -4734,7 +4736,7 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
-  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDGlobalValueAttr,
           LLVM::MDNodeAttr>(value))
     if (isa<LLVM::LLVMMetadataType>(type))
       return LLVM::MetadataAsValueOp::create(builder, loc, type, value);

@@ -64,7 +64,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   // Define available target features
   // These must be defined in sorted order!
   NoAsmVariants = true;
-  GPU = OffloadArch::Unused;
+  GPU = OffloadArch::getUnused();
 
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
@@ -176,7 +176,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__NVPTX__");
 
   // Skip setting architecture dependent macros if undefined.
-  if (!IsNVIDIAOffloadArch(GPU))
+  if (!GPU.isNVPTX())
     return;
 
   if (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice || !HostTarget) {

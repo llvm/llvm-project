@@ -91,6 +91,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
@@ -1139,8 +1140,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
-  if (CodeGenOpts.LinkBitcodePostopt)
+  if (CodeGenOpts.LinkBitcodePostopt) {
     MPM.addPass(LinkInModulesPass(BC));
+    MPM.addPass(AssignGUIDPass());
+  }
 
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)

@@ -89,7 +89,7 @@ namespace clang {
     TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype,          // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     TST_auto,            // C++11 auto
     TST_decltype_auto,   // C++1y decltype(auto)
     TST_auto_type,       // __auto_type extension

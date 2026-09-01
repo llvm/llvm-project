@@ -1355,6 +1355,33 @@ static ValueLatticeElement getValueFromICmpCtpop(ICmpInst::Predicate Pred,
       ConstantRange::getNonEmpty(std::move(ValMin), ValMax + 1));
 }
 
+/// Get the unsigned range for \p V from a `mul nuw V, V` comparison.
+static std::optional<ConstantRange>
+getRangeForNUWMulSquare(const Value *V, CmpInst::Predicate Pred,
+                        const Value *LHS, const Value *RHS) {
+  if (!V->getType()->isIntegerTy())
+    return std::nullopt;
+
+  if (!match(LHS, m_NUWMul(m_Specific(V), m_Specific(V)))) {
+    if (!match(RHS, m_NUWMul(m_Specific(V), m_Specific(V))))
+      return std::nullopt;
+
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    RHS = LHS;
+  }
+
+  ConstantRange MulCR =
+      ConstantRange::getFull(V->getType()->getScalarSizeInBits());
+  const APInt *C;
+  if (match(RHS, m_APInt(C)))
+    MulCR = ConstantRange::makeExactICmpRegion(Pred, *C);
+
+  ConstantRange Res = MulCR.sqrtFloor();
+  if (Res.isFullSet())
+    return std::nullopt;
+  return Res;
+}
+
 std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     Value *Val, ICmpInst *ICI, bool isTrueDest, bool UseBlockValue) {
   Value *LHS = ICI->getOperand(0);
@@ -1378,6 +1405,9 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     return ValueLatticeElement::getOverdefined();
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
+  if (auto Range = getRangeForNUWMulSquare(Val, EdgePred, LHS, RHS))
+    return ValueLatticeElement::getRange(*Range);
+
   APInt Offset(BitWidth, 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset, ICI,

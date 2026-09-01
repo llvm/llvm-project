@@ -1,0 +1,25 @@
+# RUN: llvm-profdata merge --sample --extbinary --use-md5 --split-layout \
+# RUN:   --sample-profile-write-eytzinger-name-tables %s -o %t.xfdo
+# RUN: llvm-profdata show --sample --show-sec-info-only %t.xfdo > %t.secinfo
+# RUN: FileCheck %s -input-file %t.secinfo
+# Extract and verify the Eytzinger span counts (NumCS, NumFlat,
+# NumInlinees) from NameTableSection to ensure correct symbol
+# partitioning.
+# RUN: %python -c "import re; off = int(re.search(r'NameTableSection - Offset: (\d+)', open(r'%t.secinfo').read()).group(1)); d = open(r'%t.xfdo', 'rb').read()[off:off+3]; print(list(d))" | FileCheck %s --check-prefix=COUNTS
+
+# CHECK: ProfileSummarySection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
+# CHECK: NameTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {eytzinger,fixlenmd5}
+# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
+# CHECK: LBRProfileSection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
+# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {flat}
+# CHECK: LBRProfileSection - Offset: {{.*}}, Size: {{.*}}, Flags: {flat}
+
+# COUNTS: [1, 1, 1]
+
+main:1000:10
+ 1: 1000
+ 2: foo:500
+  1: 500
+
+leaf_func:100:5
+ 1: 100

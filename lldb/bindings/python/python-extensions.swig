@@ -612,7 +612,8 @@ class SBSyntheticValueProvider(object):
 
     def __iter__(self):
       '''Iterate over all children in a lldb.SBSyntheticValueProvider object.'''
-      return lldb_iter(self, 'num_children', 'get_child_at_index')
+      for i in range(self.num_children()):
+          yield self.get_child_at_index(i)
 
 %}
 

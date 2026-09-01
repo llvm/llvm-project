@@ -10,6 +10,10 @@
   define void @test_memcpy2_const_minsize() #3 { entry: unreachable }
   define void @test_memcpy3_const_arrays_unaligned() #4 { entry: unreachable }
   define void @test_memcpy_addrspace() #5 { entry: unreachable }
+  define void @test_memcpy_load_store_offsets_1() #6 { entry: unreachable }
+  define void @test_memcpy_load_store_offsets_2() #7 { entry: unreachable }
+  define void @test_memcpy_load_store_offsets_volatile_1() #8 { entry: unreachable }
+  define void @test_memcpy_load_store_offsets_volatile_2() #9 { entry: unreachable }
 
   attributes #2 = { optsize }
   attributes #3 = { minsize }
@@ -281,4 +285,120 @@ body:             |
     G_MEMCPY %0(p1), %1(p2), %2(s64), 1 :: (store (s8), align 4, addrspace 1), (load (s8), align 4, addrspace 2)
     RET_ReallyLR
 
+...
+---
+name:            test_memcpy_load_store_offsets_1
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: test_memcpy_load_store_offsets_1
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[COPY1]](p0) :: (load (s16), align 8)
+    ; CHECK-NEXT: G_STORE [[LOAD]](i16), [[COPY]](p0) :: (store (s16), align 8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2, align 2)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](i8), [[PTR_ADD1]](p0) :: (store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(i64) = G_CONSTANT i64 3
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 0 :: (store (s8), align 8), (load (s8), align 8)
+    RET_ReallyLR
+
+...
+---
+name:            test_memcpy_load_store_offsets_2
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: test_memcpy_load_store_offsets_2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY1]](p0) :: (load (s32), align 8)
+    ; CHECK-NEXT: G_STORE [[LOAD]](i32), [[COPY]](p0) :: (store (s32), align 8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from unknown-address + 3, align 1)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](i32), [[PTR_ADD1]](p0) :: (store (s32) into unknown-address + 3, align 1)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(i64) = G_CONSTANT i64 7
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 0 :: (store (s8), align 8), (load (s8), align 8)
+    RET_ReallyLR
+
+...
+---
+name:            test_memcpy_load_store_offsets_volatile_1
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: test_memcpy_load_store_offsets_volatile_1
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[COPY1]](p0) :: (volatile load (s16), align 8)
+    ; CHECK-NEXT: G_STORE [[LOAD]](i16), [[COPY]](p0) :: (volatile store (s16), align 8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (s8) from unknown-address + 2, align 2)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](i8), [[PTR_ADD1]](p0) :: (volatile store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(i64) = G_CONSTANT i64 3
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 0 :: (volatile store (s8), align 8), (volatile load (s8), align 8)
+    RET_ReallyLR
+
+...
+---
+name:            test_memcpy_load_store_offsets_volatile_2
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: test_memcpy_load_store_offsets_volatile_2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY1]](p0) :: (volatile load (s32), align 8)
+    ; CHECK-NEXT: G_STORE [[LOAD]](i32), [[COPY]](p0) :: (volatile store (s32), align 8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; CHECK-NEXT: [[LOAD1:%[0-9]+]]:_(i16) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (s16) from unknown-address + 4, align 4)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: G_STORE [[LOAD1]](i16), [[PTR_ADD1]](p0) :: (volatile store (s16) into unknown-address + 4, align 4)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 6
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](i64)
+    ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD2]](p0) :: (volatile load (s8) from unknown-address + 6, align 2)
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](i64)
+    ; CHECK-NEXT: G_STORE [[LOAD2]](i8), [[PTR_ADD3]](p0) :: (volatile store (s8) into unknown-address + 6, align 2)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(i64) = G_CONSTANT i64 7
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 0 :: (volatile store (s8), align 8), (volatile load (s8), align 8)
+    RET_ReallyLR
 ...

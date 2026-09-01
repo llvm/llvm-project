@@ -28,7 +28,7 @@ for.end:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 
 define void @sin_f32(ptr nocapture %varray) {
@@ -56,7 +56,7 @@ for.end:
 
 !21 = distinct !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 8}
-!23 = !{!"llvm.loop.vectorize.enable", i1 true}
+!23 = !{!"llvm.loop.vectorize.enable"}
 
 define void @sin_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f64_intrinsic(
@@ -83,7 +83,7 @@ for.end:
 
 !31 = distinct !{!31, !32, !33}
 !32 = !{!"llvm.loop.vectorize.width", i32 2}
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 
 define void @sin_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @sin_f32_intrinsic(
@@ -110,7 +110,7 @@ for.end:
 
 !41 = distinct !{!41, !42, !43}
 !42 = !{!"llvm.loop.vectorize.width", i32 8}
-!43 = !{!"llvm.loop.vectorize.enable", i1 true}
+!43 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cos_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f64(
@@ -137,7 +137,7 @@ for.end:
 
 !51 = distinct !{!51, !52, !53}
 !52 = !{!"llvm.loop.vectorize.width", i32 2}
-!53 = !{!"llvm.loop.vectorize.enable", i1 true}
+!53 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cos_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f32(
@@ -164,7 +164,7 @@ for.end:
 
 !61 = distinct !{!61, !62, !63}
 !62 = !{!"llvm.loop.vectorize.width", i32 8}
-!63 = !{!"llvm.loop.vectorize.enable", i1 true}
+!63 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cos_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f64_intrinsic(
@@ -191,7 +191,7 @@ for.end:
 
 !71 = distinct !{!71, !72, !73}
 !72 = !{!"llvm.loop.vectorize.width", i32 2}
-!73 = !{!"llvm.loop.vectorize.enable", i1 true}
+!73 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cos_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @cos_f32_intrinsic(
@@ -218,7 +218,7 @@ for.end:
 
 !81 = distinct !{!81, !82, !83}
 !82 = !{!"llvm.loop.vectorize.width", i32 8}
-!83 = !{!"llvm.loop.vectorize.enable", i1 true}
+!83 = !{!"llvm.loop.vectorize.enable"}
 
 
 define void @exp_f32(ptr nocapture %varray) {
@@ -245,7 +245,7 @@ for.end:
 
 !91 = distinct !{!91, !92, !93}
 !92 = !{!"llvm.loop.vectorize.width", i32 8}
-!93 = !{!"llvm.loop.vectorize.enable", i1 true}
+!93 = !{!"llvm.loop.vectorize.enable"}
 
 define void @exp_f32_intrin(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f32_intrin
@@ -271,7 +271,7 @@ for.end:
 
 !101 = distinct !{!101, !102, !103}
 !102 = !{!"llvm.loop.vectorize.width", i32 8}
-!103 = !{!"llvm.loop.vectorize.enable", i1 true}
+!103 = !{!"llvm.loop.vectorize.enable"}
 
 
 define void @log_f32(ptr nocapture %varray) {
@@ -298,7 +298,7 @@ for.end:
 
 !111 = distinct !{!111, !112, !113}
 !112 = !{!"llvm.loop.vectorize.width", i32 8}
-!113 = !{!"llvm.loop.vectorize.enable", i1 true}
+!113 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32
@@ -326,7 +326,7 @@ for.end:
 
 !121 = distinct !{!121, !122, !123}
 !122 = !{!"llvm.loop.vectorize.width", i32 8}
-!123 = !{!"llvm.loop.vectorize.enable", i1 true}
+!123 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f32_intrin(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32_intrin
@@ -354,7 +354,7 @@ for.end:
 
 !131 = distinct !{!131, !132, !133}
 !132 = !{!"llvm.loop.vectorize.width", i32 8}
-!133 = !{!"llvm.loop.vectorize.enable", i1 true}
+!133 = !{!"llvm.loop.vectorize.enable"}
 
 define void @tan_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f64(
@@ -381,7 +381,7 @@ for.end:
 
 !141 = distinct !{!141, !142, !143}
 !142 = !{!"llvm.loop.vectorize.width", i32 2}
-!143 = !{!"llvm.loop.vectorize.enable", i1 true}
+!143 = !{!"llvm.loop.vectorize.enable"}
 
 
 define void @tan_f32(ptr nocapture %varray) {
@@ -409,7 +409,7 @@ for.end:
 
 !151 = distinct !{!151, !152, !153}
 !152 = !{!"llvm.loop.vectorize.width", i32 8}
-!153 = !{!"llvm.loop.vectorize.enable", i1 true}
+!153 = !{!"llvm.loop.vectorize.enable"}
 
 define void @tan_f64_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f64_intrinsic(
@@ -436,7 +436,7 @@ for.end:
 
 !161 = distinct !{!161, !162, !163}
 !162 = !{!"llvm.loop.vectorize.width", i32 2}
-!163 = !{!"llvm.loop.vectorize.enable", i1 true}
+!163 = !{!"llvm.loop.vectorize.enable"}
 
 define void @tan_f32_intrinsic(ptr nocapture %varray) {
 ; CHECK-LABEL: @tan_f32_intrinsic(
@@ -465,7 +465,7 @@ for.end:
 
 !171 = distinct !{!171, !172, !173}
 !172 = !{!"llvm.loop.vectorize.width", i32 8}
-!173 = !{!"llvm.loop.vectorize.enable", i1 true}
+!173 = !{!"llvm.loop.vectorize.enable"}
 
 attributes #0 = { nounwind readnone }
 

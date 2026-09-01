@@ -65,7 +65,7 @@ Sirraide \
 aeternalmail@gmail.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 Mariya Podchishchaeva \
-mariya.podchishchaeva@intel.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+fznamznon23@gmail.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Recovery AST
 
@@ -167,7 +167,7 @@ i@maskray.me (email), MaskRay (Phabricator), [MaskRay](https://github.com/MaskRa
 ### Constant Expressions
 
 Mariya Podchishchaeva \
-mariya.podchishchaeva@intel.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+fznamznon23@gmail.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Thread Safety Analysis
 

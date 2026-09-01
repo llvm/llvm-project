@@ -364,13 +364,15 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   llvm::PointerType *signatureType =
       llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
 
+  // FIXME: Pass the enclosing FunctionDecl so Objective-C message sends use
+  // the caller's target features when arranging their ABI.
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
 
     const CGFunctionInfo &signatureForCall =
-      CGM.getTypes().arrangeCall(signature, callArgs);
+        CGM.getTypes().arrangeCall(signature, callArgs, /*ABIInfoFD=*/nullptr);
 
     return MessageSendInfo(signatureForCall, signatureType);
   }

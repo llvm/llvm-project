@@ -15,6 +15,9 @@ GitHub Actions Best Practices
 This section contains information on best practices/guidelines when working on
 LLVM's GitHub actions workflows.
 
+For details on the runner pools these workflows execute on and their
+platform-specific constraints, see :doc:`GitHubActionsRunners`.
+
 Disabling Jobs In Forks
 -----------------------
 

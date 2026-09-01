@@ -19,10 +19,10 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
@@ -372,7 +372,10 @@ void TextNodeDumper::Visit(const OMPClause *C) {
   }
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
-    StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
+    OpenMPClauseKind CKind = C->getClauseKind();
+    StringRef ClauseName(CKind == llvm::omp::Clause::OMPC_update_depend_objects
+                             ? StringRef("UpdateDependObjects")
+                             : llvm::omp::getOpenMPClauseName(CKind));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
   }
@@ -2244,7 +2247,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 

@@ -16,17 +16,17 @@ body:             |
     ; CHECK-LABEL: name: fma_f32
     ; CHECK: liveins: $s0, $s1, $s2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s32) = COPY $s0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $s1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s32) = COPY $s2
-    ; CHECK-NEXT: [[FMA:%[0-9]+]]:fpr(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $s0 = COPY [[FMA]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(f32) = COPY $s0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(f32) = COPY $s1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(f32) = COPY $s2
+    ; CHECK-NEXT: [[FMA:%[0-9]+]]:fpr(f32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $s0 = COPY [[FMA]](f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %0:_(s32) = COPY $s0
-    %1:_(s32) = COPY $s1
-    %2:_(s32) = COPY $s2
-    %3:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA %0, %1, %2
-    $s0 = COPY %3(s32)
+    %0:_(f32) = COPY $s0
+    %1:_(f32) = COPY $s1
+    %2:_(f32) = COPY $s2
+    %3:_(f32) = nnan ninf nsz arcp contract afn reassoc G_FMA %0, %1, %2
+    $s0 = COPY %3(f32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -43,17 +43,17 @@ body:             |
     ; CHECK-LABEL: name: fma_f64
     ; CHECK: liveins: $d0, $d1, $d2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d2
-    ; CHECK-NEXT: [[FMA:%[0-9]+]]:fpr(s64) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $d0 = COPY [[FMA]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(f64) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(f64) = COPY $d1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr(f64) = COPY $d2
+    ; CHECK-NEXT: [[FMA:%[0-9]+]]:fpr(f64) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $d0 = COPY [[FMA]](f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(s64) = COPY $d0
-    %1:_(s64) = COPY $d1
-    %2:_(s64) = COPY $d2
-    %3:_(s64) = nnan ninf nsz arcp contract afn reassoc G_FMA %0, %1, %2
-    $d0 = COPY %3(s64)
+    %0:_(f64) = COPY $d0
+    %1:_(f64) = COPY $d1
+    %2:_(f64) = COPY $d2
+    %3:_(f64) = nnan ninf nsz arcp contract afn reassoc G_FMA %0, %1, %2
+    $d0 = COPY %3(f64)
     RET_ReallyLR implicit $d0
 
 ...

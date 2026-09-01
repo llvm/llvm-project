@@ -44,6 +44,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
+    static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
@@ -82,6 +83,8 @@ def CIR_Dialect : Dialect {
 
     static llvm::StringRef getAMDGPUCodeObjectVersionAttrName() { return "cir.amdhsa_code_object_version"; }
     static llvm::StringRef getAMDGPUPrintfKindAttrName() { return "cir.amdgpu_printf_kind"; }
+    static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
+    static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
 
     void registerAttributes();

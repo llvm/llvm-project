@@ -359,7 +359,7 @@ protected:
 
         // Get provider metadata for header.
         if (provider_id == 0) {
-          strm.Printf(": Base Unwinder ===\n");
+          strm.PutCString(": Base Unwinder ===\n");
         } else {
           // Find the descriptor in the provider chain.
           const auto &provider_chain = thread->GetProviderChainIds();
@@ -380,7 +380,7 @@ protected:
           if (provider_priority.has_value()) {
             strm.Printf(" (priority: %u)", *provider_priority);
           }
-          strm.Printf(" ===\n");
+          strm.PutCString(" ===\n");
 
           if (!provider_desc.empty()) {
             strm.Printf("Description: %s\n", provider_desc.c_str());
@@ -401,7 +401,7 @@ protected:
             selected_frame_marker);
 
         if (num_frames == 0) {
-          strm.Printf("(No frames available)\n");
+          strm.PutCString("(No frames available)\n");
         }
       }
 
@@ -1633,7 +1633,7 @@ public:
         return false;
       }
     } else
-      strm.Printf("(no siginfo)\n");
+      strm.PutCString("(no siginfo)\n");
     strm.PutChar('\n');
 
     return true;

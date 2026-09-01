@@ -33,13 +33,13 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
@@ -2116,9 +2116,29 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
 /// getPredefinedExprDecl - Returns Decl of a given DeclContext that can be used
 /// to determine the value of a PredefinedExpr. This can be either a
 /// block, lambda, captured statement, function, otherwise a nullptr.
-static Decl *getPredefinedExprDecl(DeclContext *DC) {
-  while (DC && !isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC))
+static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
+  auto LSI = S.FunctionScopes.rbegin();
+
+  auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
+    if (isLambdaCallOperator(DC)) {
+      auto E = S.FunctionScopes.rend();
+      while (LSI != E && isa<CapturingScopeInfo>(*LSI) &&
+             !isa<LambdaScopeInfo>(*LSI))
+        ++LSI;
+      assert(LSI != E && "Should be in a lambda scope info");
+      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
+        DC = DC->getParent();
+      ++LSI;
+    }
+  };
+
+  tryAdjustLambdaContext(DC);
+  while (DC &&
+         !isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC)) {
     DC = DC->getParent();
+    tryAdjustLambdaContext(DC);
+  }
+
   return cast_or_null<Decl>(DC);
 }
 
@@ -2202,7 +2222,7 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
   // Note: Although function local macros are defined only inside functions,
   // we ensure a valid `CurrentDecl` even outside of a function. This allows
   // expansion of macros into empty string literals without additional checks.
-  Decl *CurrentDecl = getPredefinedExprDecl(CurContext);
+  Decl *CurrentDecl = getPredefinedExprDecl(*this, CurContext);
   if (!CurrentDecl)
     CurrentDecl = Context.getTranslationUnitDecl();
 
@@ -3629,7 +3649,7 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
                                      PredefinedIdentKind IK) {
-  Decl *currentDecl = getPredefinedExprDecl(CurContext);
+  Decl *currentDecl = getPredefinedExprDecl(*this, CurContext);
   if (!currentDecl) {
     Diag(Loc, diag::ext_predef_outside_function);
     currentDecl = Context.getTranslationUnitDecl();
@@ -4672,6 +4692,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    case Type::LateParsedAttr:
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -5698,17 +5719,12 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
   }
 
   // A nested lambda might have parameters with immediate invocations
-  // in their default arguments, or init-captures that are evaluated in the
-  // enclosing context.
+  // in their default arguments.
   // The compound statement is not visited (as it does not constitute a
   // subexpression).
+  // FIXME: We should consider visiting and transforming captures
+  // with init expressions.
   bool VisitLambdaExpr(LambdaExpr *E) override {
-    auto Init = E->capture_init_begin();
-    for (auto C = E->capture_begin(), CEnd = E->capture_end(); C != CEnd;
-         ++C, ++Init) {
-      if (E->isInitCapture(C) && !TraverseLambdaCapture(E, C, *Init))
-        return false;
-    }
     return VisitCXXMethodDecl(E->getCallOperator());
   }
 
@@ -5723,51 +5739,16 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
 
 struct EnsureImmediateInvocationInDefaultArgs
     : TreeTransform<EnsureImmediateInvocationInDefaultArgs> {
-  using Base = TreeTransform<EnsureImmediateInvocationInDefaultArgs>;
-
   EnsureImmediateInvocationInDefaultArgs(Sema &SemaRef)
       : TreeTransform(SemaRef) {}
 
   bool AlwaysRebuild() { return true; }
-  bool ReplacingOriginal() { return true; }
 
-  // Lambda bodies are not subexpressions of the enclosing default initializer,
-  // but init-capture expressions are evaluated in the enclosing context. Keep
-  // the existing closure type and capture declarations so the existing body
-  // still refers to the right declarations.
-  ExprResult TransformLambdaExpr(LambdaExpr *E) {
-    SmallVector<Expr *, 4> CaptureInits(E->capture_inits());
-
-    bool Changed = false;
-    for (unsigned I = 0, N = E->capture_size(); I != N; ++I) {
-      const LambdaCapture *C = E->capture_begin() + I;
-      if (!E->isInitCapture(C))
-        continue;
-
-      auto *VD = cast<VarDecl>(C->getCapturedVar());
-      Expr *Init = CaptureInits[I];
-      ExprResult NewInit =
-          TransformInitializer(Init, VD->getInitStyle() == VarDecl::CallInit);
-      if (NewInit.isInvalid())
-        return ExprError();
-      Changed |= NewInit.get() != Init;
-      CaptureInits[I] = NewInit.get();
-    }
-
-    LambdaExpr *Lambda = E;
-    if (Changed) {
-      // Reuse the existing closure class: it owns the capture declarations,
-      // fields, and call operator body. Only the LambdaExpr's capture
-      // initializer list is replaced.
-      Lambda = LambdaExpr::Create(
-          SemaRef.Context, E->getLambdaClass(), E->getIntroducerRange(),
-          E->getCaptureDefault(), E->getCaptureDefaultLoc(),
-          E->hasExplicitParameters(), E->hasExplicitResultType(), CaptureInits,
-          E->getEndLoc(), E->containsUnexpandedParameterPack());
-    }
-
-    return SemaRef.MaybeBindToTemporary(Lambda);
-  }
+  // Lambda can only have immediate invocations in the default
+  // args of their parameters, which is transformed upon calling the closure.
+  // The body is not a subexpression, so we have nothing to do.
+  // FIXME: Immediate calls in capture initializers should be transformed.
+  ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
 
   // Make sure we don't rebuild the this pointer as it would
@@ -21133,6 +21114,14 @@ bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
   }
 
   if (getCurFunction()) {
+    // This queue flushes after the function is analyzed, by which time an
+    // ignore-all-warnings region live here is gone, so sample it now.  A note
+    // is not error-class either, so this also drops the notes that accompany a
+    // skipped warning.  They arrive on their own call, out of reach of the
+    // engine's rule that drops a note whose warning was ignored.
+    if (Diags.getIgnoreAllWarnings() &&
+        Diags.getDiagnosticIDs()->isWarningOrExtension(PD.getDiagID()))
+      return false;
     FunctionScopes.back()->PossiblyUnreachableDiags.push_back(
         sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
     return true;

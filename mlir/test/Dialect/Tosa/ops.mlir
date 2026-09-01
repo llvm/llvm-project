@@ -288,11 +288,11 @@ func.func @test_matmul_t_bf16(%arg0: tensor<2x14x19xbf16>, %arg1: tensor<2x28x19
 
 // -----
 // CHECK-LABEL: test_matmul_t_fp8_mixed
-func.func @test_matmul_t_fp8_mixed(%arg0: tensor<2x14x19xf8E4M3FN>, %arg1: tensor<2x28x19xf8E5M2>) -> tensor<2x14x28xf16> {
+func.func @test_matmul_t_fp8_mixed(%arg0: tensor<2x14x19xf8E4M3FN>, %arg1: tensor<2x28x19xf8E5M2>) -> tensor<2x14x28xbf16> {
 %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E4M3FN>}> : () -> tensor<1xf8E4M3FN>
 %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E5M2>}> : () -> tensor<1xf8E5M2>
-%0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x14x19xf8E4M3FN>, tensor<2x28x19xf8E5M2>, tensor<1xf8E4M3FN>, tensor<1xf8E5M2>)  -> tensor<2x14x28xf16>
-  return %0 : tensor<2x14x28xf16>
+%0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x14x19xf8E4M3FN>, tensor<2x28x19xf8E5M2>, tensor<1xf8E4M3FN>, tensor<1xf8E5M2>)  -> tensor<2x14x28xbf16>
+  return %0 : tensor<2x14x28xbf16>
 }
 
 // -----
@@ -1170,6 +1170,27 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
+}
+
+// -----
+// CHECK-LABEL: test_resize_fp8
+func.func @test_resize_fp8(%arg0: tensor<1x32x32x8xf8E4M3FN>, %arg1: tensor<1x32x32x8xf8E5M2>) -> (tensor<1x64x64x8xf8E4M3FN>, tensor<1x64x64x8xf8E5M2>) {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xf8E4M3FN>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf8E4M3FN>
+  %1 = tosa.resize %arg1, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x8xf8E5M2>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf8E5M2>
+  return %0, %1 : tensor<1x64x64x8xf8E4M3FN>, tensor<1x64x64x8xf8E5M2>
+}
+
+// -----
+// CHECK-LABEL: test_resize_mxfp
+func.func @test_resize_mxfp(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----

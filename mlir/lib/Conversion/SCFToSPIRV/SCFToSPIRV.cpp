@@ -214,6 +214,16 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
       initTypes.push_back(arg.getType());
     replaceSCFOutputValue(forOp, loopOp, rewriter, scfToSPIRVContext,
                           initTypes);
+
+    // Store init values so a zero-trip loop returns them instead of undef.
+    // Skip the stores if the loop is known to always execute at least once.
+    std::optional<APInt> tripCount = forOp.getStaticTripCount();
+    if (!tripCount || tripCount->isZero()) {
+      auto &allocas = scfToSPIRVContext->outputVars[loopOp];
+      rewriter.setInsertionPoint(loopOp);
+      for (auto [alloca, init] : llvm::zip(allocas, adaptor.getInitArgs()))
+        spirv::StoreOp::create(rewriter, loc, alloca, init);
+    }
     return success();
   }
 };

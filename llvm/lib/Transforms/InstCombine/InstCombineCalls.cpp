@@ -1180,6 +1180,12 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   KnownFPClass Known =
       computeKnownFPClass(Src0, Mask, SQ.getWithInstruction(&II));
 
+  // If none of the tests which can return false are possible, fold to true.
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Known.isKnownAlways(Mask))
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
@@ -1188,12 +1194,6 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
         1, ConstantInt::get(Src1->getType(), Mask & Known.KnownFPClasses));
     return &II;
   }
-
-  // If none of the tests which can return false are possible, fold to true.
-  // fp_class (nnan x), ~(qnan|snan) -> true
-  // fp_class (ninf x), ~(ninf|pinf) -> true
-  if (Mask == Known.KnownFPClasses)
-    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
 
   return nullptr;
 }

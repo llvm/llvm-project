@@ -145,7 +145,7 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target, uint8_t *Data,
                                      uint64_t Value, bool IsResolved) {
-  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
+  addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -398,12 +398,12 @@ bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
   return !Res.getSubSym();
 }
 
-bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+void LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
   auto Fallback = [&]() {
     MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
-    return true;
+    return;
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
@@ -442,24 +442,24 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
         // difference directly. The computed Value in evaluateFixup is correct
         // based on the current layout.
         if (!SecA.isLinkerRelaxable() || SecCur.getName().ends_with(".dwo"))
-          return true;
+          return;
       }
     }
 
     switch (Fixup.getKind()) {
-    case llvm::FK_Data_1:
+    case FK_Data_1:
       FK = getRelocPairForSize(8);
       break;
-    case llvm::FK_Data_2:
+    case FK_Data_2:
       FK = getRelocPairForSize(16);
       break;
-    case llvm::FK_Data_4:
+    case FK_Data_4:
       FK = getRelocPairForSize(32);
       break;
-    case llvm::FK_Data_8:
+    case FK_Data_8:
       FK = getRelocPairForSize(64);
       break;
-    case llvm::FK_Data_leb128:
+    case FK_Data_leb128:
       FK = getRelocPairForSize(128);
       break;
     default:
@@ -472,26 +472,26 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     Asm->getWriter().recordRelocation(F, FA, A, FixedValueA);
     Asm->getWriter().recordRelocation(F, FB, B, FixedValueB);
     FixedValue = FixedValueA - FixedValueB;
-    return false;
+    return;
   }
 
   // If linker relaxation is enabled and supported by the current relocation,
   // generate a relocation and then append a RELAX.
-  if (Fixup.isLinkerRelaxable())
-    IsResolved = false;
-  if (IsResolved && Fixup.isPCRel())
-    IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
-
-  if (!IsResolved)
-    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
-
   if (Fixup.isLinkerRelaxable()) {
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm->getWriter().recordRelocation(F, FA, MCValue::get(nullptr),
                                       FixedValueA);
+    return;
   }
 
-  return true;
+  if (!IsResolved) {
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+    return;
+  }
+
+  if (Fixup.isPCRel() && !isPCRelFixupResolved(Target.getAddSym(), F))
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

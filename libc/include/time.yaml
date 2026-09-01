@@ -132,6 +132,14 @@ functions:
       - type: const char *__restrict
       - type: const struct tm *__restrict
       - type: locale_t
+  - name: strptime
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: struct tm *__restrict
   - name: time
     standards:
       - stdc

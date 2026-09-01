@@ -339,10 +339,10 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
                          .Default(eSectionTypeInvalid);
     }
 
-    SectionSP section_sp(new Section(
+    SectionSP section_sp = std::make_shared<Section>(
         module_sp, this, ++idx, const_sect_name, section_type,
         section.VirtualAddress, section.SectionSize,
-        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags));
+        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags);
 
     uint32_t permissions = ePermissionsReadable;
     if (section.Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))

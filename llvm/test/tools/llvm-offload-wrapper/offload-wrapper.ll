@@ -1,10 +1,15 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openmp %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=OMP
+; RUN: llc --filetype=obj %t.bc -o %t.o
+; RUN: llvm-readelf --sections %t.o | FileCheck %s --check-prefix=OMP-SECTION
+
+; OMP-SECTION: llvm_offload_entries PROGBITS {{.*}} AR
 
 ;      OMP: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; OMP-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; OMP-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
-; OMP-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
+; OMP-NEXT: @llvm.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; OMP-NEXT: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading", align 8
 ; OMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr @.omp_offloading.device_image, ptr getelementptr ([[[SIZE]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[SIZE]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
 ; OMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
@@ -29,7 +34,7 @@
 ;      HIP: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; HIP-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; HIP-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
-; HIP-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
+; HIP-NEXT: @llvm.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; HIP-NEXT: @.fatbin_image = internal constant {{.*}}, section ".hip_fatbin"
 ; HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", no_sanitize_address, no_sanitize_hwaddress, align 8
 ; HIP-NEXT: @.hip.binary_handle = internal global ptr null
@@ -57,7 +62,7 @@
 ;      HIP-MACHO: @"\01section$start$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; HIP-MACHO-NEXT: @"\01section$end$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; HIP-MACHO-NEXT: @"__dummy.__LLVM,offload_entries" = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "__LLVM,offload_entries", align 8
-; HIP-MACHO-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @"__dummy.__LLVM,offload_entries"], section "llvm.metadata"
+; HIP-MACHO-NEXT: @llvm.used = appending global [1 x ptr] [ptr @"__dummy.__LLVM,offload_entries"], section "llvm.metadata"
 ; HIP-MACHO-NEXT: @.fatbin_image = internal constant {{.*}}, section "__HIP,__hip_fatbin"
 ; HIP-MACHO-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section "__HIP,__fatbin", no_sanitize_address, no_sanitize_hwaddress, align 8
 ; HIP-MACHO-NEXT: @.hip.binary_handle = internal global ptr null
@@ -85,7 +90,7 @@
 ;      CUDA: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; CUDA-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 ; CUDA-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
-; CUDA-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
+; CUDA-NEXT: @llvm.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; CUDA-NEXT: @.fatbin_image = internal constant {{.*}}, section ".nv_fatbin"
 ; CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", no_sanitize_address, no_sanitize_hwaddress, align 8
 ; CUDA-NEXT: @.cuda.binary_handle = internal global ptr null

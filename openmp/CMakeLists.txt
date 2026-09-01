@@ -168,13 +168,22 @@ add_custom_target(install-openmp-stripped
 add_dependencies(install-openmp openmp)
 add_dependencies(install-openmp-stripped openmp)
 
+# Whether this build targets a GPU. "amdgcn" is the legacy spelling of "amdgpu";
+# both reach here, and the offload cache files use "amdgpu-amd-amdhsa".
+set(LIBOMP_GPU_TRIPLE_REGEX "^amdgpu|^amdgcn|^nvptx|^spirv64")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}" OR
+   "${CMAKE_Fortran_COMPILER_TARGET}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}")
+  set(LIBOMP_TARGET_IS_GPU TRUE)
+else()
+  set(LIBOMP_TARGET_IS_GPU FALSE)
+endif()
+
 if(LIBOMP_FORTRAN_MODULES)
   add_subdirectory(module)
 endif()
 
-# Use the current compiler target to determine the appropriate runtime to build.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv64")
+if(LIBOMP_TARGET_IS_GPU)
   add_subdirectory(device)
 else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they

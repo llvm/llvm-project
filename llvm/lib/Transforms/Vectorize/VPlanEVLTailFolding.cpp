@@ -154,15 +154,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                       LoadR->getScalarType(), {}, {}, DL);
   }
 
-  VPValue *Stride;
-  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
-                            m_VPValue(Addr), m_VPValue(Stride),
-                            m_RemoveMask(HeaderMask, Mask),
-                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
-    if (!Mask)
-      Mask = Plan->getTrue();
+  if (match(&CurRecipe,
+            m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                m_VPValue(), m_VPValue(), m_RemoveMask(HeaderMask, Mask),
+                m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
     auto *NewLoad = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
-    NewLoad->setOperand(2, Mask);
+    NewLoad->setOperand(2, Mask ? Mask : Plan->getTrue());
     NewLoad->setOperand(3, &EVL);
     return NewLoad;
   }

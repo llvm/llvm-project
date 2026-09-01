@@ -6,17 +6,7 @@
 define bfloat @fuse_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; AVX10_2-LABEL: fuse_bf16:
 ; AVX10_2:       # %bb.0: # %entry
-; AVX10_2-NEXT:    vmovw %xmm1, %eax
-; AVX10_2-NEXT:    vmovw %xmm0, %ecx
-; AVX10_2-NEXT:    vmovw %xmm2, %edx
-; AVX10_2-NEXT:    shll $16, %edx
-; AVX10_2-NEXT:    vmovd %edx, %xmm0
-; AVX10_2-NEXT:    shll $16, %ecx
-; AVX10_2-NEXT:    vmovd %ecx, %xmm1
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm2
-; AVX10_2-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm1 * xmm2) + xmm0
-; AVX10_2-NEXT:    vcvtneps2bf16 %xmm2, %xmm0
+; AVX10_2-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fuse_bf16:

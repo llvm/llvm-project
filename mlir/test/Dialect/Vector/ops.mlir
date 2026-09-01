@@ -885,6 +885,16 @@ func.func @expand_and_compress(%base: memref<?xf32>, %mask: vector<16xi1>, %pass
   return
 }
 
+// CHECK-LABEL: @expand_and_compress_scalable
+func.func @expand_and_compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[X:.*]] = vector.expandload %{{.*}}[%{{.*}}], %{{.*}}, %{{.*}} : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  // CHECK: vector.compressstore %{{.*}}[%{{.*}}], %{{.*}}, %[[X]] : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  vector.compressstore %base[%c0], %mask, %0 : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  return
+}
+
 // CHECK-LABEL: @expand_and_compress2d
 func.func @expand_and_compress2d(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -892,6 +902,16 @@ func.func @expand_and_compress2d(%base: memref<?x?xf32>, %mask: vector<16xi1>, %
   %0 = vector.expandload %base[%c0, %c0], %mask, %pass_thru : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   // CHECK: vector.compressstore %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %[[X]] : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
   vector.compressstore %base[%c0, %c0], %mask, %0 : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// CHECK-LABEL: @expand_and_compress2d_scalable
+func.func @expand_and_compress2d_scalable(%base: memref<?x?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[X:.*]] = vector.expandload %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  %0 = vector.expandload %base[%c0, %c0], %mask, %pass_thru : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  // CHECK: vector.compressstore %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}, %[[X]] : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  vector.compressstore %base[%c0, %c0], %mask, %0 : memref<?x?xf32>, vector<[16]xi1>, vector<[16]xf32>
   return
 }
 

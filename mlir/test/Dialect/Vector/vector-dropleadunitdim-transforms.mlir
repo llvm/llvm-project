@@ -270,44 +270,45 @@ func.func @cast_away_contraction_leading_one_dims_to_dot_product(%arg0: vector<6
 }
 
 // -----
+
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
 func.func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
-  // CHECK:     %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<8x8xf16> from vector<1x8x8xf16>
+  // CHECK:     %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
   // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [4], sizes = [1], strides = [1]} : vector<8x8xf16> to vector<1x8xf16>
   %0 = vector.extract_strided_slice %arg0 {offsets = [0, 4], sizes = [1, 1], strides = [1, 1]} : vector<1x8x8xf16> to vector<1x1x8xf16>
-  // CHECK:     %[[RET:.+]] = vector.broadcast %[[EXTRACT]] : vector<1x8xf16> to vector<1x1x8xf16>
+  // CHECK:     %[[RET:.+]] = vector.shape_cast %[[EXTRACT]] : vector<1x8xf16> to vector<1x1x8xf16>
   // CHECK: return %[[RET]]
   return %0: vector<1x1x8xf16>
 }
 
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims_scalable
 func.func @cast_away_extract_strided_slice_leading_one_dims_scalable(%arg0: vector<1x8x[8]xf16>) -> vector<1x1x[8]xf16> {
-  // CHECK:     %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<8x[8]xf16> from vector<1x8x[8]xf16>
+  // CHECK:     %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8x[8]xf16> to vector<8x[8]xf16>
   // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [4], sizes = [1], strides = [1]} : vector<8x[8]xf16> to vector<1x[8]xf16>
   %0 = vector.extract_strided_slice %arg0 {offsets = [0, 4], sizes = [1, 1], strides = [1, 1]} : vector<1x8x[8]xf16> to vector<1x1x[8]xf16>
-  // CHECK:     %[[RET:.+]] = vector.broadcast %[[EXTRACT]] : vector<1x[8]xf16> to vector<1x1x[8]xf16>
+  // CHECK:     %[[RET:.+]] = vector.shape_cast %[[EXTRACT]] : vector<1x[8]xf16> to vector<1x1x[8]xf16>
   // CHECK: return %[[RET]]
   return %0: vector<1x1x[8]xf16>
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims
 func.func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %arg1: vector<1x8x8xf16>) -> vector<1x8x8xf16> {
-  // CHECK:    %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<8xf16> from vector<1x8xf16>
-  // CHECK:    %[[DST:.+]] = vector.extract %{{.*}}[0] : vector<8x8xf16> from vector<1x8x8xf16>
+  // CHECK:    %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8xf16> to vector<8xf16>
+  // CHECK:    %[[DST:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
   // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[SRC]], %[[DST]] {offsets = [0, 0], strides = [1]} : vector<8xf16> into vector<8x8xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x8xf16> into vector<1x8x8xf16>
-  // CHECK:    %[[RET:.+]] = vector.broadcast %[[INSERT]] : vector<8x8xf16> to vector<1x8x8xf16>
+  // CHECK:    %[[RET:.+]] = vector.shape_cast %[[INSERT]] : vector<8x8xf16> to vector<1x8x8xf16>
   // CHECK: return %[[RET]]
   return %0: vector<1x8x8xf16>
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_scalable
 func.func @cast_away_insert_strided_slice_leading_one_dims_scalable(%arg0: vector<1x[8]xf16>, %arg1: vector<1x8x[8]xf16>) -> vector<1x8x[8]xf16> {
-  // CHECK:    %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<[8]xf16> from vector<1x[8]xf16>
-  // CHECK:    %[[DST:.+]] = vector.extract %{{.*}}[0] : vector<8x[8]xf16> from vector<1x8x[8]xf16>
+  // CHECK:    %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x[8]xf16> to vector<[8]xf16>
+  // CHECK:    %[[DST:.+]] = vector.shape_cast %{{.*}} : vector<1x8x[8]xf16> to vector<8x[8]xf16> 
   // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[SRC]], %[[DST]] {offsets = [0, 0], strides = [1]} : vector<[8]xf16> into vector<8x[8]xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x[8]xf16> into vector<1x8x[8]xf16>
-  // CHECK:    %[[RET:.+]] = vector.broadcast %[[INSERT]] : vector<8x[8]xf16> to vector<1x8x[8]xf16>
+  // CHECK:    %[[RET:.+]] = vector.shape_cast %[[INSERT]] : vector<8x[8]xf16> to vector<1x8x[8]xf16>
   // CHECK: return %[[RET]]
   return %0: vector<1x8x[8]xf16>
 }
@@ -315,20 +316,18 @@ func.func @cast_away_insert_strided_slice_leading_one_dims_scalable(%arg0: vecto
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element
 //  CHECK-SAME: %[[ARG0:.+]]: vector<1x1xf16>, %{{.+}}: vector<1x1x1xf16>
 func.func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
-  // CHECK: %[[EXT:.+]] = vector.extract %{{.*}}[0] : vector<1xf16> from vector<1x1xf16>
-  // CHECK: %[[B:.+]] = vector.broadcast %[[EXT]] : vector<1xf16> to vector<1x1x1xf16>
+  // CHECK: %[[RET:.+]] = vector.shape_cast %{{.*}} : vector<1x1xf16> to vector<1x1x1xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x1xf16> into vector<1x1x1xf16>
-  // CHECK: return %[[B]]
+  // CHECK: return %[[RET]]
   return %0: vector<1x1x1xf16>
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element_scalable
 //  CHECK-SAME: %[[ARG0:.+]]: vector<1x[1]xf16>, %{{.+}}: vector<1x1x[1]xf16>
 func.func @cast_away_insert_strided_slice_leading_one_dims_one_element_scalable(%arg0: vector<1x[1]xf16>, %arg1: vector<1x1x[1]xf16>) -> vector<1x1x[1]xf16> {
-  // CHECK: %[[EXT:.+]] = vector.extract %{{.*}}[0] : vector<[1]xf16> from vector<1x[1]xf16>
-  // CHECK: %[[B:.+]] = vector.broadcast %[[EXT]] : vector<[1]xf16> to vector<1x1x[1]xf16>
+  // CHECK: %[[RET:.+]] = vector.shape_cast %{{.*}} : vector<1x[1]xf16> to vector<1x1x[1]xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x[1]xf16> into vector<1x1x[1]xf16>
-  // CHECK: return %[[B]]
+  // CHECK: return %[[RET]]
   return %0: vector<1x1x[1]xf16>
 }
 
@@ -733,6 +732,19 @@ func.func @cast_away_expandload_leading_one_dims(%base: memref<16xf32>, %i: inde
 
 // -----
 
+// CHECK-LABEL: func.func @cast_away_expandload_leading_one_dims_scalable
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<[4]xi1> from vector<1x[4]xi1>
+// CHECK:         %[[P:.+]] = vector.extract %{{.*}}[0] : vector<[4]xf32> from vector<1x[4]xf32>
+// CHECK:         %[[L:.+]] = vector.expandload %{{.*}}[%{{.*}}], %[[M]], %[[P]] : memref<16xf32>, vector<[4]xi1>, vector<[4]xf32> into vector<[4]xf32>
+// CHECK:         %[[B:.+]] = vector.broadcast %[[L]] : vector<[4]xf32> to vector<1x[4]xf32>
+// CHECK:         return %[[B]] : vector<1x[4]xf32>
+func.func @cast_away_expandload_leading_one_dims_scalable(%base: memref<16xf32>, %i: index, %mask: vector<1x[4]xi1>, %pass: vector<1x[4]xf32>) -> vector<1x[4]xf32> {
+  %0 = vector.expandload %base[%i], %mask, %pass : memref<16xf32>, vector<1x[4]xi1>, vector<1x[4]xf32> into vector<1x[4]xf32>
+  return %0 : vector<1x[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @cast_away_gather_leading_one_dims
 // CHECK:         %[[I:.+]] = vector.extract %{{.*}}[0] : vector<4xi32> from vector<1x4xi32>
 // CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
@@ -774,6 +786,17 @@ func.func @cast_away_maskedstore_leading_one_dims(%base: memref<16xf32>, %i: ind
 // CHECK:         vector.compressstore %{{.*}}[%{{.*}}], %[[M]], %[[V]] : memref<16xf32>, vector<4xi1>, vector<4xf32>
 func.func @cast_away_compressstore_leading_one_dims(%base: memref<16xf32>, %i: index, %mask: vector<1x4xi1>, %val: vector<1x4xf32>) {
   vector.compressstore %base[%i], %mask, %val : memref<16xf32>, vector<1x4xi1>, vector<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @cast_away_compressstore_leading_one_dims_scalable
+// CHECK:         %[[M:.+]] = vector.extract %{{.*}}[0] : vector<[4]xi1> from vector<1x[4]xi1>
+// CHECK:         %[[V:.+]] = vector.extract %{{.*}}[0] : vector<[4]xf32> from vector<1x[4]xf32>
+// CHECK:         vector.compressstore %{{.*}}[%{{.*}}], %[[M]], %[[V]] : memref<16xf32>, vector<[4]xi1>, vector<[4]xf32>
+func.func @cast_away_compressstore_leading_one_dims_scalable(%base: memref<16xf32>, %i: index, %mask: vector<1x[4]xi1>, %val: vector<1x[4]xf32>) {
+  vector.compressstore %base[%i], %mask, %val : memref<16xf32>, vector<1x[4]xi1>, vector<1x[4]xf32>
   return
 }
 

@@ -596,6 +596,10 @@ public:
                   "Unparse for ExplicitShapeBoundsSpec should not be reached");
             },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
+            [&](const AssumedShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for AssumedShapeBoundsSpec should not be reached");
+            },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
             [&](const ImpliedShapeSpec &y) { Walk(y); },

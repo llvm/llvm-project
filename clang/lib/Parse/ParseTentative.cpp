@@ -174,7 +174,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
   case tok::kw_typeof_unqual:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
@@ -1550,7 +1550,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     return TPResult::True;
 
   // C11 _Alignas
@@ -1594,7 +1594,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     return true;
 
     // elaborated-type-specifier

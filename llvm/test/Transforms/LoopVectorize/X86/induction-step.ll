@@ -148,7 +148,7 @@ define void @canonical_iv_matches_user_iv(i64 %n, ptr %A, ptr %B) {
 ; CHECK-LABEL: define void @canonical_iv_matches_user_iv(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 6
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
@@ -160,12 +160,9 @@ define void @canonical_iv_matches_user_iv(i64 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i64 24
-; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP0]])
-; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[TMP4]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
@@ -193,8 +190,8 @@ define void @canonical_iv_matches_user_iv(i64 %n, ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [16 x i8], ptr [[B]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [16 x i8], ptr [[B]], i64 [[TMP14]]
-; CHECK-NEXT:    store <2 x double> [[BROADCAST_SPLAT]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    store <2 x double> [[BROADCAST_SPLAT]], ptr [[TMP16]], align 8
+; CHECK-NEXT:    store <2 x double> [[BROADCAST_SPLAT]], ptr [[TMP13]], align 8, !alias.scope [[META9]]
+; CHECK-NEXT:    store <2 x double> [[BROADCAST_SPLAT]], ptr [[TMP16]], align 8, !alias.scope [[META9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]

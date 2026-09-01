@@ -8,9 +8,6 @@ you can either use the [Forum] or, for a more interactive chat, go to our
 
 If you want to contribute code, please familiarize yourself with the {doc}`DeveloperPolicy`.
 
-```{contents}
-:local:
-```
 
 
 ## Ways to Contribute

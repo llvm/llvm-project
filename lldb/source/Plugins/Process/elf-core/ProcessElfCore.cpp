@@ -1238,13 +1238,35 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
   info.SetProcessID(GetID());
   info.SetArchitecture(GetArchitecture());
+  ModuleSpec exe_module_spec;
+  bool added_executable = false;
   lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+  const bool add_exe_file_as_first_arg = true;
   if (module_sp) {
-    const bool add_exe_file_as_first_arg = false;
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
+    added_executable = true;
+  } else {
+    ModuleSpec exe_module_spec;
+    if (GetMainExecutableModuleSpec(exe_module_spec)) {
+      if (exe_module_spec.GetFileSpec()) {
+        info.SetExecutableFile(exe_module_spec.GetFileSpec(),
+                               add_exe_file_as_first_arg);
+        added_executable = true;
+      }
+    }
   }
-  info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
+  Args process_args = m_process_args.as_args();
+  bool first_arg_is_executable = true;
+  if (added_executable) {
+    // Strip the executable name from the process args as it can be a symlink
+    // that doesn't match the executable we would have created from a call to
+    // GetMainExecutableModuleSpec(...).
+    first_arg_is_executable = false;
+    info.SetArg0(process_args.GetArgumentAtIndex(0));
+    process_args.DeleteArgumentAtIndex(0);
+  }
+  info.SetArguments(process_args, first_arg_is_executable);
   return true;
 }
 

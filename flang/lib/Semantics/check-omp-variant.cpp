@@ -17,6 +17,7 @@
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -26,8 +27,10 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <optional>
@@ -40,6 +43,148 @@
 namespace Fortran::semantics {
 
 using namespace Fortran::semantics::omp;
+
+namespace {
+
+bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  const parser::OmpClause *clause{
+      parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
+  if (!clause) {
+    return false;
+  }
+  const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
+  return defaultClause.v.v == DataSharingAttribute::None;
+}
+
+bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
+  if (symbol.owner() == scope || !scope.Contains(symbol.owner())) {
+    return false;
+  }
+  if (symbol.test(Symbol::Flag::OmpPreDetermined)) {
+    return true;
+  }
+  // Only PRIVATE on an enclosed construct avoids an implicit reference in the
+  // enclosing construct. Other explicit DSAs still require an outer DSA.
+  return symbol.test(Symbol::Flag::OmpExplicit) &&
+      symbol.test(Symbol::Flag::OmpPrivate);
+}
+
+class MetadirectiveDefaultNoneChecker {
+public:
+  MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
+      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed)
+      : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
+        diagnosed_{diagnosed} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::DoConstruct &loop) {
+    for (const omp::LoopControl &control : omp::GetLoopControls(loop)) {
+      if (const Symbol *symbol{control.iv.symbol}) {
+        loopIndices_.insert(symbol->GetUltimate());
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::SpecificationPart &) {
+    ++declarativeNesting_;
+    return true;
+  }
+  void Post(const parser::SpecificationPart &) { --declarativeNesting_; }
+
+  bool Pre(const parser::DataStmt &) {
+    ++declarativeNesting_;
+    return true;
+  }
+  void Post(const parser::DataStmt &) { --declarativeNesting_; }
+
+  bool Pre(const parser::Expr &) {
+    ++expressionNesting_;
+    return true;
+  }
+  void Post(const parser::Expr &) { --expressionNesting_; }
+
+  bool Pre(const parser::Name &name) {
+    // A declarative name is not a reference, but a name in a specification
+    // expression can require an explicit DSA.
+    if ((declarativeNesting_ > 0 && expressionNesting_ == 0) || !name.symbol) {
+      return true;
+    }
+
+    const Symbol &symbol{*name.symbol};
+    const Symbol &ultimate{symbol.GetUltimate()};
+    // Variables declared inside the associated loop without static storage are
+    // predetermined private.
+    bool isNonStaticLocal{ultimate.owner() != scope_ &&
+        scope_.Contains(ultimate.owner()) && !semantics::IsSaved(ultimate) &&
+        !ultimate.test(Symbol::Flag::InCommonBlock)};
+    if (!omp::IsPrivatizable(ultimate) ||
+        ultimate.test(Symbol::Flag::OmpThreadprivate) ||
+        loopIndices_.count(ultimate) != 0 ||
+        HasNestedPrivateDSA(symbol, scope_) || isNonStaticLocal) {
+      return true;
+    }
+
+    const Symbol *requiredSymbol{&ultimate};
+    if (ultimate.test(Symbol::Flag::CrayPointee)) {
+      requiredSymbol = &semantics::GetCrayPointer(ultimate).GetUltimate();
+    }
+    if (explicitDSA_.count(&ultimate) != 0 ||
+        explicitDSA_.count(requiredSymbol) != 0 ||
+        !diagnosed_.insert(*requiredSymbol).second) {
+      return true;
+    }
+
+    if (ultimate.test(Symbol::Flag::CrayPointee)) {
+      context_.Say(name.source,
+          "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+          requiredSymbol->name());
+    } else {
+      context_.Say(name.source,
+          "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+          ultimate.name());
+    }
+    return true;
+  }
+
+private:
+  SemanticsContext &context_;
+  const Scope &scope_;
+  const SymbolSourceMap &explicitDSA_;
+  UnorderedSymbolSet &diagnosed_;
+  UnorderedSymbolSet loopIndices_;
+  int declarativeNesting_{0};
+  int expressionNesting_{0};
+};
+
+} // namespace
+
+void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
+    const parser::OmpDirectiveSpecification &spec,
+    const parser::DoConstruct &rootLoop, UnorderedSymbolSet &diagnosed) {
+  if (!HasDefaultNone(spec)) {
+    return;
+  }
+
+  SymbolSourceMap explicitDSA;
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
+    if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
+      if (const parser::OmpObjectList *objects{
+              parser::omp::GetOmpObjectList(clause)}) {
+        GetSymbolsInObjectList(*objects, explicitDSA);
+      }
+    }
+  }
+
+  const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
+  MetadirectiveDefaultNoneChecker checker{
+      context_, scope, explicitDSA, diagnosed};
+  parser::Walk(rootLoop, checker);
+}
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   OmpVerifyModifiers(
@@ -569,8 +714,11 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   }
 
   llvm::omp::Directive dirId{x.DirId()};
+  bool checkDefaultNoneInAssociatedLoop{
+      GetDirectiveNest(MetadirectiveNest) != 0};
   if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
     if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
+      checkDefaultNoneInAssociatedLoop = false;
       unsigned version{context_.langOptions().OpenMPVersion};
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
@@ -594,7 +742,8 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // Record each variant directive. A loop-associated one is later validated
   // against the loop nest that follows the metadirective.
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
-    metadirectiveLoopVariants_.push_back({currentWhenSelector_, &x});
+    metadirectiveLoopVariants_.push_back(
+        {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
   }
 }
 
@@ -672,6 +821,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
   // Build the matching context once for the static-applicability gate below.
   OmpVariantMatchContext matchContext{context_};
+  UnorderedSymbolSet defaultNoneDiagnosed;
 
   for (const MetadirectiveLoopVariant &variant : variants) {
     const parser::OmpDirectiveSpecification *spec{variant.spec};
@@ -684,6 +834,12 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
     if (assoc == llvm::omp::Association::LoopNest) {
       if (!checkRootLoopCanonical(*spec, /*isSequence=*/false)) {
         continue;
+      }
+
+      // A standalone metadirective does not contain its associated loop in
+      // the parse tree, so name resolution cannot apply DEFAULT(NONE) to it.
+      if (variant.checkDefaultNoneInAssociatedLoop) {
+        CheckDefaultNoneInAssociatedLoop(*spec, rootLoop, defaultNoneDiagnosed);
       }
 
       auto [needDepth, needPerfect]{
@@ -853,6 +1009,81 @@ static bool CheckVariantAccessibility(SemanticsContext &context,
   return false;
 }
 
+// Normalize the text spanned by `source` for structural comparison: drop
+// whitespace and fold to lower case (Fortran is case-insensitive). This lets
+// e.g. `simdlen(4)` and `SIMDLEN( 4 )` compare equal while `simdlen(4)` and
+// `simdlen(8)` do not.
+static std::string NormalizeSelectorText(parser::CharBlock source) {
+  std::string text{source.ToString()};
+  llvm::erase_if(text, parser::IsWhiteSpace);
+  return parser::ToLowerCaseLetters(text);
+}
+
+// Render the properties of a trait selector into a canonical string (in a
+// construct selector set only `simd` currently carries properties, e.g.
+// simdlen, inbranch/notinbranch). The property list is unordered, so the
+// individual properties are sorted; two selectors have the same properties iff
+// these strings are equal.
+static std::string CanonicalizeTraitProperties(
+    const parser::OmpTraitSelector &trait) {
+  const auto &maybeProperties{
+      std::get<std::optional<parser::OmpTraitSelector::Properties>>(trait.t)};
+  if (!maybeProperties) {
+    return {};
+  }
+  llvm::SmallVector<std::string> items;
+  for (const parser::OmpTraitProperty &property :
+      std::get<std::list<parser::OmpTraitProperty>>(maybeProperties->t)) {
+    items.push_back(NormalizeSelectorText(property.source));
+  }
+  std::sort(items.begin(), items.end());
+  std::string result;
+  for (const std::string &item : items) {
+    result += item;
+    result += ';';
+  }
+  return result;
+}
+
+// Collect the construct selector set of `sel` into `constructs` as an ordered
+// list of elements: a leaf construct directive plus a normalized rendering of
+// any properties it carries. Combined and composite constructs are decomposed
+// into their leaves (e.g. `target teams` -> target, teams). The properties
+// are included so that e.g. `simd(simdlen(4))` and `simd(simdlen(8))` are
+// treated as different construct selector sets. Two match selectors have the
+// same construct selector set iff the collected lists are equal; an absent
+// construct selector yields an empty list.
+static void CollectConstructSelectorSet(
+    const parser::traits::OmpContextSelectorSpecification &sel,
+    llvm::SmallVectorImpl<std::pair<llvm::omp::Directive, std::string>>
+        &constructs) {
+  using SetName = parser::OmpTraitSetSelectorName;
+  using TraitName = parser::OmpTraitSelectorName;
+  for (const parser::OmpTraitSetSelector &traitSet : sel.v) {
+    if (std::get<SetName>(traitSet.t).v != SetName::Value::Construct) {
+      continue;
+    }
+    for (const parser::OmpTraitSelector &trait :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &traitName{std::get<TraitName>(trait.t)};
+      if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
+        for (llvm::omp::Directive leaf :
+            llvm::omp::getLeafConstructsOrSelf(*dir)) {
+          constructs.emplace_back(leaf, std::string{});
+        }
+      } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
+          value && *value == TraitName::Value::Simd) {
+        // In a construct selector, `simd` is represented as Value::Simd (it can
+        // carry simd-specific properties), not as a Directive; treat it as
+        // OMPD_simd and fold in its properties so they participate in the
+        // comparison.
+        constructs.emplace_back(llvm::omp::Directive::OMPD_simd,
+            CanonicalizeTraitProperties(trait));
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     const parser::OmpDeclareVariantDirective &x) {
   const parser::OmpDirectiveSpecification &spec{x.v};
@@ -940,23 +1171,65 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     if (base == variant) {
       context_.Say(arg.source,
           "The variant procedure must differ from the base procedure"_err_en_US);
-    } else if (!declareVariantPairs_.emplace(base, variant).second) {
-      context_.Say(arg.source,
-          "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
-          variant->name(), base->name());
-    } else if (CheckVariantAccessibility(
-                   context_, *base, *variant, arg.source)) {
-      if (!hasArgModifiers) {
-        // adjust_args/append_args perform the "transformation for its OpenMP
-        // context", so the variant interface intentionally differs from the
-        // base; skip the same-interface check until they are supported.
-        CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+    } else {
+      // OpenMP 5.2 [7.5] / 6.0 [9.6]: a procedure determined to be a function
+      // variant may not be a base function in another DECLARE VARIANT
+      // directive, and vice versa. A variant is recorded as a key in
+      // declareVariantConstructSets_ below, so that map serves as the set of
+      // procedures that appear as a variant.
+      if (declareVariantConstructSets_.find(base) !=
+          declareVariantConstructSets_.end()) {
+        context_.Say(arg.source,
+            "The base procedure '%s' is also specified as a variant procedure in another DECLARE VARIANT directive"_err_en_US,
+            base->name());
       }
-      // Record the variant on its base procedure.
-      if (base->has<SubprogramDetails>()) {
-        auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
-        details.addOmpDeclareVariant(
-            OmpDeclareVariantEntry{*variant, matchSelector});
+      if (declareVariantBases_.find(variant) != declareVariantBases_.end()) {
+        context_.Say(arg.source,
+            "The variant procedure '%s' is also specified as a base procedure in another DECLARE VARIANT directive"_err_en_US,
+            variant->name());
+      }
+      declareVariantBases_.insert(base);
+
+      if (!declareVariantPairs_.emplace(base, variant).second) {
+        context_.Say(arg.source,
+            "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
+            variant->name(), base->name());
+      } else {
+        // OpenMP 5.2 [7.5] / 6.0 [9.6]: if a procedure is determined to be a
+        // function variant through more than one DECLARE VARIANT directive, the
+        // construct selector set of their context selectors must be the same.
+        llvm::SmallVector<std::pair<llvm::omp::Directive, std::string>, 4>
+            constructs;
+        CollectConstructSelectorSet(*matchSelector, constructs);
+        auto it{declareVariantConstructSets_.find(variant)};
+        if (it == declareVariantConstructSets_.end()) {
+          declareVariantConstructSets_.emplace(
+              variant, std::make_pair(std::move(constructs), arg.source));
+        } else if (it->second.first != constructs) {
+          context_
+              .Say(arg.source,
+                  "Variant procedure '%s' must have the same 'construct' selector set in all DECLARE VARIANT directives"_err_en_US,
+                  variant->name())
+              .Attach(it->second.second,
+                  "Previous DECLARE VARIANT directive for '%s'"_en_US,
+                  variant->name());
+        }
+
+        if (CheckVariantAccessibility(context_, *base, *variant, arg.source)) {
+          if (!hasArgModifiers) {
+            // adjust_args/append_args perform the "transformation for its
+            // OpenMP context", so the variant interface intentionally differs
+            // from the base; skip the same-interface check until they are
+            // supported.
+            CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+          }
+          // Record the variant on its base procedure.
+          if (base->has<SubprogramDetails>()) {
+            auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+            details.addOmpDeclareVariant(
+                OmpDeclareVariantEntry{*variant, matchSelector});
+          }
+        }
       }
     }
   }

@@ -123,6 +123,7 @@ jobs:
         env:
           REF: ${{ matrix.ref }}
           ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
+          ABI_LIBS: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
         run: |
           parallel abi-dumper -lver "$REF" -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o {}-$REF.abi ./build/lib/{} ::: $ABI_LIBS
           for lib in $ABI_LIBS; do

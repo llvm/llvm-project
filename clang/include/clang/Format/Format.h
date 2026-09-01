@@ -5074,9 +5074,18 @@ struct FormatStyle {
     ///    # include "A-util.h"           # include "A.inc"
     /// \endcode
     bool IgnoreExtension;
+    /// Whether or not includes are sorted by natural ordering i.e., whether
+    /// embedded runs of digits are compared as numbers rather than sequences of
+    /// characters.
+    /// \code
+    ///    true:                      false:
+    ///    #include "A2.h"     vs.    #include "A10.h"
+    ///    #include "A10.h"           #include "A2.h"
+    /// \endcode
+    bool Natural;
     bool operator==(const SortIncludesOptions &R) const {
       return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
-             IgnoreExtension == R.IgnoreExtension;
+             IgnoreExtension == R.IgnoreExtension && Natural == R.Natural;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);
@@ -5589,6 +5598,30 @@ struct FormatStyle {
   /// The SpacesInAnglesStyle to use for template argument lists.
   /// \version 3.4
   SpacesInAnglesStyle SpacesInAngles;
+
+  /// Styles for controlling spacing after ``/*`` and before ``*/`` in block
+  /// comments.
+  enum SpacesInBlockCommentsStyle : int8_t {
+    /// Remove spaces after ``/*`` and before ``*/``.
+    /// \code
+    ///    /*comment*/
+    /// \endcode
+    SIBCS_Never,
+    /// Add spaces after ``/*`` and before ``*/``.
+    /// \code
+    ///    /* comment */
+    /// \endcode
+    SIBCS_Always,
+    /// Leave existing spaces unchanged.
+    SIBCS_Leave
+  };
+
+  /// The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  /// Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  /// and parameter comments ending with ``=`` before the closing ``*/`` are
+  /// left unchanged.
+  /// \version 24
+  SpacesInBlockCommentsStyle SpacesInBlockComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
@@ -6241,6 +6274,7 @@ struct FormatStyle {
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
+           SpacesInBlockComments == R.SpacesInBlockComments &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&

@@ -122,9 +122,11 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
 
 void DependencyTracker::addActionToRootEntriesWorkList(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &Entry,
-    std::optional<UnitEntryPairTy> ReferencedBy) {
+    std::optional<UnitEntryPairTy> ReferencedBy,
+    const DWARFDebugInfoEntry *ReferencedTypeDieEntry) {
   if (ReferencedBy) {
-    RootEntriesWorkList.emplace_back(Action, Entry, *ReferencedBy);
+    RootEntriesWorkList.emplace_back(Action, Entry, *ReferencedBy,
+                                     ReferencedTypeDieEntry);
     return;
   }
 
@@ -264,8 +266,18 @@ bool DependencyTracker::updateDependenciesCompleteness() {
            "Root entry without dependency inside the dependencies list");
 
     UnitEntryPairTy RootEntry = Root.getRootEntry();
+
+    // Completeness must be checked against the actual referenced DIE, not its
+    // enclosing root. A nested type can be demoted to plain DWARF while its
+    // root stays in the type table, and a type-table DIE may only reference
+    // DIEs that are themselves in the type table. Checking the root instead
+    // leaves such a DIE in the type table, later tripping the type-unit
+    // reference assertion in DIEAttributeCloner::cloneDieRefAttr.
+    const DWARFDebugInfoEntry *ReferencedDieEntry =
+        Root.getReferencedTypeDieEntry() ? Root.getReferencedTypeDieEntry()
+                                         : RootEntry.DieEntry;
     CompileUnit::DIEInfo &RootInfo =
-        RootEntry.CU->getDIEInfo(RootEntry.DieEntry);
+        RootEntry.CU->getDIEInfo(ReferencedDieEntry);
 
     UnitEntryPairTy ReferencedByEntry = Root.getReferencedByEntry();
     CompileUnit::DIEInfo &ReferencedByInfo =
@@ -397,19 +409,44 @@ void DependencyTracker::markParentsAsKeepingChildren(
   }
 }
 
-// This function tries to set specified \p Placement for the \p Entry.
-// Depending on the concrete entry, the placement could be:
-//  a) changed to another.
-//  b) joined with current entry placement.
-//  c) set as requested.
-static CompileUnit::DieOutputPlacement
+namespace {
+struct FinalPlacement {
+  CompileUnit::DieOutputPlacement Placement;
+
+  /// How Placement combines with the DIE's current placement when applied.
+  enum ApplyMode {
+    /// Overwrite the current placement. Used for entries whose placement is
+    /// fully determined regardless of how they were reached, so every mark
+    /// agrees on the value (ODR-unavailable entries and static data member
+    /// declarations).
+    Overwrite,
+    /// OR-join into the current placement (the common monotone-lattice case):
+    /// a DIE reached by both a live and a type mark ends up in Both.
+    Join,
+    /// Join for a DW_TAG_variable, which cannot occupy the type table and plain
+    /// DWARF at once: PlainDwarf is absorbing so the variable never lands in
+    /// Both.
+    JoinVariable,
+  } Mode;
+};
+} // namespace
+
+// Computes the placement to apply to \p Entry for a mark requesting \p
+// Placement (PlainDwarf for a live action, TypeTable for a type action), along
+// with how it combines with the DIE's current placement. Most entries join, so
+// a DIE reached by both actions ends up in Both. Entries whose placement is
+// fully determined regardless of how they were reached instead overwrite with
+// an exact placement: ODR-unavailable entries cannot be deduplicated into the
+// type table, and a DW_TAG_variable cannot occupy the type table and plain
+// DWARF at once.
+static FinalPlacement
 getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
                           CompileUnit::DieOutputPlacement Placement) {
   assert((Placement != CompileUnit::NotSet) && "Placement is not set");
   CompileUnit::DIEInfo &EntryInfo = Entry.CU->getDIEInfo(Entry.DieEntry);
 
   if (!EntryInfo.getODRAvailable())
-    return CompileUnit::PlainDwarf;
+    return {CompileUnit::PlainDwarf, FinalPlacement::Overwrite};
 
   if (Entry.DieEntry->getTag() == dwarf::DW_TAG_variable) {
     // In-class static member declarations (e.g. "static constexpr int x = 1;")
@@ -435,64 +472,77 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
     if (IsDeclaration && ParentIsType) {
       // Pure declarations have no runtime address; they belong with the class
       // type. Always place in TypeTable regardless of how they were reached.
-      return CompileUnit::TypeTable;
+      return {CompileUnit::TypeTable, FinalPlacement::Overwrite};
     }
 
-    // Do not put variable into the "TypeTable" and "PlainDwarf" at the same
-    // time.
-    if (EntryInfo.getPlacement() == CompileUnit::PlainDwarf ||
-        EntryInfo.getPlacement() == CompileUnit::Both)
-      return CompileUnit::PlainDwarf;
-
+    // A live (PlainDwarf) mark pins the variable to plain DWARF.
     if (Placement == CompileUnit::PlainDwarf || Placement == CompileUnit::Both)
-      return CompileUnit::PlainDwarf;
+      return {CompileUnit::PlainDwarf, FinalPlacement::Overwrite};
+
+    // Only a type-table mark reaches here. The variable join keeps a PlainDwarf
+    // mark racing this one from turning the variable into Both.
+    return {Placement, FinalPlacement::JoinVariable};
   }
 
-  switch (EntryInfo.getPlacement()) {
-  case CompileUnit::NotSet:
-    return Placement;
-
-  case CompileUnit::TypeTable:
-    return Placement == CompileUnit::PlainDwarf ? CompileUnit::Both : Placement;
-
-  case CompileUnit::PlainDwarf:
-    return Placement == CompileUnit::TypeTable ? CompileUnit::Both : Placement;
-
-  case CompileUnit::Both:
-    return CompileUnit::Both;
-  };
-
-  llvm_unreachable("Unknown placement type.");
-  return Placement;
+  return {Placement, FinalPlacement::Join};
 }
 
 bool DependencyTracker::markDIEEntryAsKeptRec(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
-    std::atomic<bool> &HasNewInterconnectedCUs) {
+    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
   if (Entry.DieEntry->getAbbreviationDeclarationPtr() == nullptr)
     return true;
 
   CompileUnit::DIEInfo &Info = Entry.CU->getDIEInfo(Entry.DieEntry);
 
-  // Calculate final placement placement.
-  CompileUnit::DieOutputPlacement Placement = getFinalPlacementForEntry(
+  // Calculate final placement.
+  FinalPlacement Final = getFinalPlacementForEntry(
       Entry,
       isLiveAction(Action) ? CompileUnit::PlainDwarf : CompileUnit::TypeTable);
+  CompileUnit::DieOutputPlacement Placement = Final.Placement;
   assert((Info.getODRAvailable() || isLiveAction(Action) ||
           Placement == CompileUnit::PlainDwarf) &&
          "Wrong kind of placement for ODR unavailable entry");
 
-  if (!isChildrenAction(Action))
-    if (isAlreadyMarked(Entry, Placement))
-      return true;
+  if (!RecordDepsOnly && !isChildrenAction(Action) &&
+      isAlreadyMarked(Entry, Placement)) {
+    // Entry (and its subtree) were already marked, possibly by a racing CU or
+    // another referencing root, and which one wins is non-deterministic. Skip
+    // the redundant marking, but re-walk the subtree in record-deps-only mode
+    // so this referencing root still contributes its outgoing completeness
+    // dependencies. Otherwise the recorded dependency set depends on thread
+    // interleaving, the demotion fixpoint misses demotions, and whole type
+    // subtrees are left in the artificial type unit non-deterministically.
+    // Recording extra dependencies is harmless: a dependency only triggers a
+    // demotion when the referenced type is actually placed in plain DWARF.
+    return markDIEEntryAsKeptRec(Action, RootEntry, Entry,
+                                 InterCUProcessingStarted,
+                                 HasNewInterconnectedCUs,
+                                 /*RecordDepsOnly=*/true);
+  }
 
-  // Mark current DIE as kept.
-  Info.setKeep();
-  Info.setPlacement(Placement);
+  if (!RecordDepsOnly) {
+    // Mark current DIE as kept.
+    Info.setKeep();
+    // Marks compose monotonically so no interleaving loses an update: a general
+    // mark only raises the placement in the lattice, and a forced placement is
+    // a value every mark agrees on.
+    switch (Final.Mode) {
+    case FinalPlacement::Overwrite:
+      Info.setPlacement(Placement);
+      break;
+    case FinalPlacement::Join:
+      Info.joinPlacement(Placement);
+      break;
+    case FinalPlacement::JoinVariable:
+      Info.joinVariablePlacement(Placement);
+      break;
+    }
 
-  // Set keep children property for parents.
-  markParentsAsKeepingChildren(Entry);
+    // Set keep children property for parents.
+    markParentsAsKeepingChildren(Entry);
+  }
 
   UnitEntryPairTy FinalRootEntry =
       Entry.DieEntry->getTag() == dwarf::DW_TAG_subprogram ? Entry : RootEntry;
@@ -501,7 +551,7 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
   bool Res = true;
   if (!maybeAddReferencedRoots(Action, FinalRootEntry, Entry,
                                InterCUProcessingStarted,
-                               HasNewInterconnectedCUs))
+                               HasNewInterconnectedCUs, RecordDepsOnly))
     Res = false;
 
   // Return if we do not need to process children.
@@ -566,9 +616,10 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
       } break;
       }
 
-      if (!markDIEEntryAsKeptRec(
-              Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
-              InterCUProcessingStarted, HasNewInterconnectedCUs))
+      if (!markDIEEntryAsKeptRec(Action, FinalRootEntry,
+                                 UnitEntryPairTy{Entry.CU, CurChild},
+                                 InterCUProcessingStarted,
+                                 HasNewInterconnectedCUs, RecordDepsOnly))
         Res = false;
     }
 
@@ -595,7 +646,7 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
 
     if (!markDIEEntryAsKeptRec(
             Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
-            InterCUProcessingStarted, HasNewInterconnectedCUs))
+            InterCUProcessingStarted, HasNewInterconnectedCUs, RecordDepsOnly))
       Res = false;
   }
 
@@ -653,10 +704,25 @@ bool DependencyTracker::isTypeTableCandidate(
 bool DependencyTracker::maybeAddReferencedRoots(
     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
-    std::atomic<bool> &HasNewInterconnectedCUs) {
+    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
   const auto *Abbrev = Entry.DieEntry->getAbbreviationDeclarationPtr();
   if (Abbrev == nullptr)
     return true;
+
+  // In record-deps-only mode the referenced root is not scheduled for marking.
+  // The completeness dependency is appended directly so it participates in the
+  // demotion fixpoint without triggering any reference-following recursion.
+  auto AddRoot = [&](LiveRootWorklistActionTy RootAction,
+                     const UnitEntryPairTy &Root,
+                     const DWARFDebugInfoEntry *ReferencedTypeDieEntry) {
+    if (RecordDepsOnly) {
+      Dependencies.emplace_back(RootAction, Root, RootEntry,
+                                ReferencedTypeDieEntry);
+      return;
+    }
+    addActionToRootEntriesWorkList(RootAction, Root, RootEntry,
+                                   ReferencedTypeDieEntry);
+  };
 
   DWARFUnit &Unit = Entry.CU->getOrigUnit();
   DWARFDataExtractor Data = Unit.getDebugInfoExtractor();
@@ -685,6 +751,12 @@ bool DependencyTracker::maybeAddReferencedRoots(
     }
 
     if (!RefDie->DieEntry) {
+      // The reference could not be resolved yet. Recording dependencies
+      // happens only after marking has fully resolved interconnections, so skip
+      // it here. The scheduling path below handles the delayed-resolution case.
+      if (RecordDepsOnly)
+        continue;
+
       // Delay resolving reference.
       RefDie->CU->setInterconnectedCU();
       Entry.CU->setInterconnectedCU();
@@ -712,20 +784,23 @@ bool DependencyTracker::maybeAddReferencedRoots(
 
     if (AttrSpec.Attr == dwarf::DW_AT_import) {
       if (isNamespaceLikeEntry(RefDie->DieEntry)) {
-        addActionToRootEntriesWorkList(
-            isTypeAction(Action)
-                ? LiveRootWorklistActionTy::MarkSingleTypeEntry
-                : LiveRootWorklistActionTy::MarkSingleLiveEntry,
-            *RefDie, RootEntry);
+        AddRoot(isTypeAction(Action)
+                    ? LiveRootWorklistActionTy::MarkSingleTypeEntry
+                    : LiveRootWorklistActionTy::MarkSingleLiveEntry,
+                *RefDie, nullptr);
         continue;
       }
 
-      addActionToRootEntriesWorkList(Action, *RefDie, RootEntry);
+      AddRoot(Action, *RefDie, nullptr);
       continue;
     }
 
+    // Mark the enclosing root type as kept, but also record the actual
+    // referenced DIE: a nested type can be demoted to plain DWARF independently
+    // of its root, in which case ReferencedBy must be demoted too (see
+    // updateDependenciesCompleteness).
     UnitEntryPairTy RootForReferencedDie = getRootForSpecifiedEntry(*RefDie);
-    addActionToRootEntriesWorkList(Action, RootForReferencedDie, RootEntry);
+    AddRoot(Action, RootForReferencedDie, RefDie->DieEntry);
   }
 
   return true;
