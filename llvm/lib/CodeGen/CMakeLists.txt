@@ -258,6 +258,7 @@ add_llvm_component_library(LLVMCodeGen
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
   TargetSubtargetInfo.cpp
+  TriggerCrashMachineFunction.cpp
   TwoAddressInstructionPass.cpp
   TypePromotion.cpp
   UnreachableBlockElim.cpp
