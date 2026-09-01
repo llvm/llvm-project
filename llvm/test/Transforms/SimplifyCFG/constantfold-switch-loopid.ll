@@ -29,7 +29,7 @@ define void @constant_cond() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br label %[[LOOP]], !llvm.loop [[LOOP0]]
+; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:
   br label %loop

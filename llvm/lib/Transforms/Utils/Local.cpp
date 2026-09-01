@@ -151,11 +151,9 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
-      UncondBrInst *NewBI = Builder.CreateBr(Dest1);
-
-      // Transfer the metadata to the new branch instruction.
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+      UncondBrInst *NewBI = Builder.CreateBr(Dest1, BI);
+      // This transformation preserves loop metadata
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop});
 
       Value *Cond = BI->getCondition();
       BI->eraseFromParent();
@@ -175,11 +173,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
-      UncondBrInst *NewBI = Builder.CreateBr(Destination);
-
-      // Transfer the metadata to the new branch instruction.
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+      Builder.CreateBr(Destination, BI);
 
       BI->eraseFromParent();
       if (DTU)
@@ -273,9 +267,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
-      UncondBrInst *NewBI = Builder.CreateBr(TheOnlyDest);
-      NewBI->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+      Builder.CreateBr(TheOnlyDest, SI);
       BasicBlock *BB = SI->getParent();
 
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
@@ -317,9 +309,10 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 
       // Insert the new branch.
       CondBrInst *NewBr = Builder.CreateCondBr(
-          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
-      NewBr->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest(), SI);
+      // The new branch preserves both switch destinations, including any loop
+      // backedge
+      NewBr->copyMetadata(*SI, {LLVMContext::MD_loop});
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];
