@@ -113,6 +113,11 @@ LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
 
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+
+/// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
+/// unrecognized.
+LLVM_ABI Triple::SubArchType getSubArchFromGPUName(StringRef CPU);
+
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
 /// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
@@ -208,6 +213,10 @@ LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
 LLVM_ABI unsigned
 getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Number of LDS banks per compute unit.
+LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
+LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
 
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.

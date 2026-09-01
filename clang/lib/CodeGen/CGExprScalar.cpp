@@ -4106,17 +4106,42 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // the loaded integer to double, performing FP arithmetics, and truncation
     // back as a single atomic operation. Integer promotion is still
     // semantically safe.
-    bool CanEmitAtomicRMW =
-        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
-        ResultTy->isIntegerType() &&
-        !(AtomicValueTy->isUnsignedIntegerType() &&
-          CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
-        CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping;
+    bool CanEmitAtomicRMW;
+    if (AtomicValueTy->isFloatingType()) {
+      llvm::Type *IRTy = CGF.ConvertType(AtomicValueTy);
+      uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      // Floating atomicrmw operations cannot model constrained FP semantics.
+      CanEmitAtomicRMW =
+          !OpInfo.FPFeatures.isFPConstrained() &&
+          CGF.getContext().hasSameUnqualifiedType(AtomicValueTy, ResultTy) &&
+          llvm::isPowerOf2_64(StoreBits);
+    } else {
+      CanEmitAtomicRMW =
+          !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+          ResultTy->isIntegerType() &&
+          !(AtomicValueTy->isUnsignedIntegerType() &&
+            CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
+          CGF.getLangOpts().getSignedOverflowBehavior() !=
+              LangOptions::SOB_Trapping;
+    }
     if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
-      switch (OpInfo.Opcode) {
+      if (AtomicValueTy->isFloatingType()) {
+        switch (OpInfo.Opcode) {
+        case BO_AddAssign:
+          AtomicOp = llvm::AtomicRMWInst::FAdd;
+          Op = llvm::Instruction::FAdd;
+          break;
+        case BO_SubAssign:
+          AtomicOp = llvm::AtomicRMWInst::FSub;
+          Op = llvm::Instruction::FSub;
+          break;
+        default:
+          break;
+        }
+      } else {
+        switch (OpInfo.Opcode) {
         // We don't have atomicrmw operands for *, %, /, <<, >>
         case BO_MulAssign: case BO_DivAssign:
         case BO_RemAssign:
@@ -4145,6 +4170,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           break;
         default:
           llvm_unreachable("Invalid compound assignment type");
+        }
       }
       if (AtomicOp != llvm::AtomicRMWInst::BAD_BINOP) {
         llvm::Value *Amt = CGF.EmitToMemory(

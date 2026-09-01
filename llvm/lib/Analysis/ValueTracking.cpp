@@ -2285,6 +2285,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = getVScaleRange(II->getFunction(), BitWidth).toKnownBits();
         break;
       }
+      case Intrinsic::stepvector: {
+        auto *VecTy = cast<VectorType>(II->getType());
+        unsigned MinNumElts = VecTy->getElementCount().getKnownMinValue();
+        if (!isUIntN(BitWidth, MinNumElts))
+          break;
+
+        bool Overflow = false;
+        APInt MaxNumElts(BitWidth, MinNumElts);
+        if (VecTy->isScalableTy()) {
+          if (!II->getParent() || !II->getFunction())
+            break;
+          MaxNumElts = getVScaleRange(II->getFunction(), BitWidth)
+                           .getUnsignedMax()
+                           .umul_ov(MaxNumElts, Overflow);
+        }
+
+        // Give up if the lane count could wrap. Stepvector truncates lane
+        // indices that do not fit in the element type.
+        if (Overflow)
+          break;
+
+        Known.Zero.setHighBits((MaxNumElts - 1).countl_zero());
+        break;
+      }
       }
     }
     break;
@@ -5114,13 +5138,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.KnownFPClasses = fcPosZero;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
     Known.KnownFPClasses = fcNone;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
@@ -5159,7 +5183,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         SignBitAllOne = false;
     }
     if (SignBitAllOne != SignBitAllZero)
-      Known.SignBit = SignBitAllOne;
+      Known.setSignBit(SignBitAllOne);
     return;
   }
 
@@ -5209,8 +5233,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
-    if (!Known.SignBit && AssumedClasses.SignBit) {
-      if (*AssumedClasses.SignBit)
+    if (!Known.getSignBit() && AssumedClasses.getSignBit()) {
+      if (*AssumedClasses.getSignBit())
         Known.signBitMustBeOne();
       else
         Known.signBitMustBeZero();
@@ -5496,7 +5520,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                                   InterestedClasses, Q, Depth + 1);
       // Can only propagate sign if output is never NaN.
       if (!Known.isKnownNeverNaN())
-        Known.SignBit.reset();
+        Known.setSignBit(std::nullopt);
       break;
     }
       // reverse preserves all characteristics of the input vec's element.
@@ -6440,7 +6464,7 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V,
                                                 const SimplifyQuery &SQ,
                                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, SQ, Depth);
-  return Known.SignBit;
+  return Known.getSignBit();
 }
 
 bool llvm::canIgnoreSignBitOfZero(const Use &U) {

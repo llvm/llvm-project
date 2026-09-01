@@ -27,14 +27,12 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1103,6 +1101,8 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
                                         ES->getTargetFlags());
   if (const auto *FIN = dyn_cast<FrameIndexSDNode>(N))
     return DAG->getTargetFrameIndex(FIN->getIndex(), FIN->getValueType(0));
+  if (N.getOpcode() == NVPTXISD::Symbol)
+    return N.getOperand(0);
 
   return N;
 }
