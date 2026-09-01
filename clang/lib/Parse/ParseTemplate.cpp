@@ -327,8 +327,8 @@ bool Parser::ParseTemplateParameters(
 
   // Try to parse the template parameter list.
   bool Failed = false;
-  // FIXME: Missing greatergreatergreater support.
-  if (!Tok.is(tok::greater) && !Tok.is(tok::greatergreater)) {
+  if (!Tok.is(tok::greater) && !Tok.is(tok::greatergreater) &&
+      !Tok.is(tok::greatergreatergreater)) {
     TemplateScopes.Enter(Scope::TemplateParamScope);
     Failed = ParseTemplateParameterList(Depth, TemplateParams);
   }
@@ -340,6 +340,10 @@ bool Parser::ParseTemplateParameters(
     // This matters for elegant diagnosis of:
     //   template<template<typename>> struct S;
     Tok.setKind(tok::greater);
+    RAngleLoc = Tok.getLocation();
+    Tok.setLocation(Tok.getLocation().getLocWithOffset(1));
+  } else if (Tok.is(tok::greatergreatergreater)) {
+    Tok.setKind(tok::greatergreater);
     RAngleLoc = Tok.getLocation();
     Tok.setLocation(Tok.getLocation().getLocWithOffset(1));
   } else if (!TryConsumeToken(tok::greater, RAngleLoc) && Failed) {
@@ -367,7 +371,8 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
     // Did we find a comma or the end of the template parameter list?
     if (Tok.is(tok::comma)) {
       ConsumeToken();
-    } else if (Tok.isOneOf(tok::greater, tok::greatergreater)) {
+    } else if (Tok.isOneOf(tok::greater, tok::greatergreater,
+                           tok::greatergreatergreater)) {
       // Don't consume this... that's done by template parser.
       break;
     } else {
