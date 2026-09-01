@@ -333,7 +333,7 @@ define i64 @insert_10_i64_load(ptr %p, i64 %b) nounwind {
 ; X64-NEXT:    shlq $10, %rax
 ; X64-NEXT:    shrdq $10, %rsi, %rax
 ; X64-NEXT:    retq
-; 
+;
 ; X64-SLOW-LABEL: insert_10_i64_load:
 ; X64-SLOW:       # %bb.0:
 ; X64-SLOW-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
