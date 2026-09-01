@@ -1312,7 +1312,7 @@ define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %
 ; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
 ; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + (ptrtoaddr ptr %a to i64)) umin (32 + (-5 * %s1) + (ptrtoaddr ptr %a to i64))) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + %a) umin (32 + (-5 * %s1) + %a)) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
 ; MERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
@@ -2021,7 +2021,7 @@ define void @stencil_merge_constant_and_stride_candidates(ptr %a, ptr %out, ptr 
 ; MERGE-NEXT:          (Low: (16 + %out2) High: (-16 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(16 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((16 + (-1 * %cdj) + (ptrtoaddr ptr %a to i64)) umin (ptrtoaddr ptr %a to i64)) High: (((8 * %n) + (ptrtoaddr ptr %a to i64)) umax (-16 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %cdj)))
+; MERGE-NEXT:          (Low: ((16 + (-1 * %cdj) + %a) umin %a) High: (((8 * %n) + %a) umax (-16 + (8 * %n) + %cdj + %a)))
 ; MERGE-NEXT:            Member: {(16 + %cdj + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(16 + (-1 * %cdj) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %a),+,8}<nuw><%loop>
@@ -2191,7 +2191,7 @@ define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n
 ; MERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + (ptrtoaddr ptr %a to i64)) umin (32 + (-1 * %s2) + (ptrtoaddr ptr %a to i64)) umin (32 + (-1 * %s1) + (ptrtoaddr ptr %a to i64))) High: ((-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s1) umax (-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s2) umax (-32 + (8 * %n) + (ptrtoaddr ptr %a to i64) + %s3)))
+; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + %a) umin (32 + (-1 * %s2) + %a) umin (32 + (-1 * %s1) + %a)) High: ((-32 + (8 * %n) + %s1 + %a) umax (-32 + (8 * %n) + %s2 + %a) umax (-32 + (8 * %n) + %s3 + %a)))
 ; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
@@ -2761,7 +2761,7 @@ define void @stencil_merge_depth_cap_sum(ptr %p, ptr %q, ptr %q2, ptr %q3, ptr %
 ; MERGE-NEXT:          (Low: %q4 High: (1 + (8 * %n) + %q4))
 ; MERGE-NEXT:            Member: {%q4,+,8}<%loop>
 ; MERGE-NEXT:        Group GRP4:
-; MERGE-NEXT:          (Low: %p High: ((1 + (8 * %n) + (64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + (ptrtoaddr ptr %p to i64)) umax (1 + (8 * %n) + (64 * %s1) + (ptrtoaddr ptr %p to i64))))
+; MERGE-NEXT:          (Low: %p High: ((1 + (8 * %n) + (64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p) umax (1 + (8 * %n) + (64 * %s1) + %p)))
 ; MERGE-NEXT:            Member: {%p,+,8}<%loop>
 ; MERGE-NEXT:            Member: {((64 * %s1) + %p),+,8}<%loop>
 ; MERGE-NEXT:            Member: {((64 * ((65 * (%s1 + %s2)) + %s3 + %s4)) + %p),+,8}<%loop>
