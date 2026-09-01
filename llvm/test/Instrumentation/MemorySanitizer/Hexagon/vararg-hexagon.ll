@@ -9,9 +9,8 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-LABEL: define i32 @foo(
 ; CHECK-SAME: i32 [[GUARD:%.*]], ...) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i32 [[TMP1]], align 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP2]], i8 0, i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 800)
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i32 [[TMP3]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i32 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[VL:%.*]] = alloca ptr, align 4
@@ -25,13 +24,12 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i32 [[TMP8]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP9]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VL]])
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[VL]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[VL]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[TMP13]], 536870912
 ; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i32 [[TMP14]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP15]], ptr align 4 [[TMP2]], i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP15]], ptr align 4 [[TMP2]], i32 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VL]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VL]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -40,9 +38,8 @@ define i32 @foo(i32 %guard, ...) {
 ; ORIGIN-LABEL: define i32 @foo(
 ; ORIGIN-SAME: i32 [[GUARD:%.*]], ...) {
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
-; ORIGIN-NEXT:    [[TMP2:%.*]] = alloca i8, i32 [[TMP1]], align 8
-; ORIGIN-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP2]], i8 0, i32 [[TMP1]], i1 false)
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 800)
+; ORIGIN-NEXT:    [[TMP2:%.*]] = alloca i8, i32 [[TMP3]], align 8
 ; ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i32 [[TMP3]], i1 false)
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[VL:%.*]] = alloca ptr, align 4
@@ -61,15 +58,14 @@ define i32 @foo(i32 %guard, ...) {
 ; ORIGIN-NEXT:    [[TMP14:%.*]] = inttoptr i32 [[TMP13]] to ptr
 ; ORIGIN-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP12]], i8 0, i64 12, i1 false)
 ; ORIGIN-NEXT:    call void @llvm.va_start.p0(ptr [[VL]])
-; ORIGIN-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[VL]] to i32
-; ORIGIN-NEXT:    [[TMP16:%.*]] = inttoptr i32 [[TMP15]] to ptr
+; ORIGIN-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[VL]], i32 8
 ; ORIGIN-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = ptrtoint ptr [[TMP17]] to i32
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = xor i32 [[TMP18]], 536870912
 ; ORIGIN-NEXT:    [[TMP20:%.*]] = inttoptr i32 [[TMP19]] to ptr
 ; ORIGIN-NEXT:    [[TMP21:%.*]] = add i32 [[TMP19]], 1342177280
 ; ORIGIN-NEXT:    [[TMP22:%.*]] = inttoptr i32 [[TMP21]] to ptr
-; ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP20]], ptr align 4 [[TMP2]], i32 [[TMP1]], i1 false)
+; ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP20]], ptr align 4 [[TMP2]], i32 [[TMP3]], i1 false)
 ; ORIGIN-NEXT:    call void @llvm.va_end.p0(ptr [[VL]])
 ; ORIGIN-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VL]])
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8

@@ -311,7 +311,7 @@ define dso_local i64 @many_args() {
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 776), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 784), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 792), align 8
-; CHECK-NEXT:    store i64 960, ptr @__msan_va_arg_overflow_size_tls, align 8
+; CHECK-NEXT:    store i64 808, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call i64 (i64, ...) @sum(i64 120, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i64, ptr @__msan_retval_tls, align 8
