@@ -1902,8 +1902,6 @@ static bool rebuildLoopAfterUnswitch(Loop &L, DominatorTree &DT, LoopInfo &LI,
                                      LPMUpdater &LoopUpdater) {
   SmallVector<Loop *, 4> Children(L.begin(), L.end());
 
-  // Recompute the forest from the CFG. Every loop that survives keeps its
-  // object, so pointer-keyed analyses stay valid across the rebuild.
   SmallVector<std::pair<Loop *, BasicBlock *>, 4> Removed = LI.recompute(DT);
   SmallPtrSet<Loop *, 4> RemovedSet;
   for (Loop *RemovedL : make_first_range(Removed))
@@ -3103,19 +3101,10 @@ static bool collectUnswitchCandidatesWithInjections(
   return Found;
 }
 
-static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
-  if (!L.isSafeToClone())
+static bool isSafeForNoNTrivialUnswitching(const DominatorTree &DT, Loop &L,
+                                           LoopInfo &LI) {
+  if (!L.isSafeToCloneConditionally(DT))
     return false;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
-        if (CB->isConvergent())
-          return false;
-      }
-    }
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the
@@ -3461,7 +3450,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return false;
 
   // Perform legality checks.
-  if (!isSafeForNoNTrivialUnswitching(L, LI))
+  if (!isSafeForNoNTrivialUnswitching(DT, L, LI))
     return false;
 
   // For non-trivial unswitching, because it often creates new loops, we rely on

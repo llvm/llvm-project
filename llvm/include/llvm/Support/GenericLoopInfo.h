@@ -479,12 +479,10 @@ protected:
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
 
-  // Since loop passes like SCEV are allowed to key analysis results off of
-  // `Loop` pointers, we cannot re-use pointers within a loop pass manager.
-  // This means loop passes should not be `delete` ing `Loop` objects directly
-  // (and risk a later `Loop` allocation re-using the address of a previous one)
-  // but should be using LoopInfo::markAsRemoved, which keeps around the `Loop`
-  // pointer till the end of the lifetime of the `LoopInfo` object.
+  // Analyses such as ScalarEvolution key their results off `Loop` pointers, so
+  // an address must never come to name a different loop. Rather than `delete` a
+  // `Loop`, passes call LoopInfo::destroy(), which retains the memory until the
+  // owning LoopInfo dies.
   //
   // To make it easier to follow this rule, we mark the destructor as
   // non-public.
@@ -498,10 +496,9 @@ protected:
     clear();
   }
 
-  /// Reset to the state of a freshly constructed one. The block storage is
-  /// reclaimed by the owning LoopInfo.
   void clear() {
     SubLoops.clear();
+    // The block storage is reclaimed by the owning LoopInfo.
     BlockData = nullptr;
     BlockLen = 0;
     BlockCapacity = 0;

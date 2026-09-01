@@ -2,93 +2,80 @@
 Test lldb-dap locations request
 """
 
-
-import dap_server
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import os
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
-    def verify_location(self, location_reference: str, filename: str, line: int):
-        response = self.dap_server.request_locations(location_reference)
-        self.assertTrue(response["success"])
-        self.assertTrue(response["body"]["source"]["path"].endswith(filename))
-        self.assertEqual(response["body"]["line"], line)
+class TestDAP_locations(DAPTestCaseBase):
 
     @skipIfWindows
     @skipIf(
         bugnumber="https://github.com/llvm/llvm-project/issues/203127", archs=["arm64e"]
     )
+    @skipIfWasm  # a Wasm function pointer is a table index, not a code address
     def test_locations(self):
         """
         Tests the 'locations' request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "break here")],
-        )
-        self.continue_to_next_stop()
+        session = self.build_and_create_session()
+        source = self.getSourcePath("main.cpp")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(
+                source, [line_number(source, "break here")]
+            )
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
 
-        locals = {l["name"]: l for l in self.dap_server.get_local_variables()}
+        top_frame = session.top_frame_from(stop_event)
+        top_frame_locals = top_frame.locals
 
-        # var1 has a declarationLocation but no valueLocation
-        declaration_location_reference = locals["var1"].get(
-            "declarationLocationReference"
-        )
-        self.assertIsNotNone(declaration_location_reference)
-        self.verify_location(declaration_location_reference, "main.cpp", 11)
-        value_location_reference = locals["var1"].get("valueLocationReference")
-        self.assertIsNone(value_location_reference)
+        # var1 has a declarationLocation but no valueLocation.
+        var1 = top_frame_locals["var1"].variable
+        decl_ref = self.expect_not_none(var1.declarationLocationReference)
+        session.verify_location(decl_ref, "main.cpp", line_number(source, "var1 decl"))
+        self.assertIsNone(var1.valueLocationReference)
 
-        # func_ptr has both a declaration and a valueLocation
-        declaration_location_reference = locals["func_ptr"].get(
-            "declarationLocationReference"
+        # func_ptr has both a declaration and a valueLocation.
+        func_ptr = top_frame_locals["func_ptr"].variable
+        decl_ref = self.expect_not_none(func_ptr.declarationLocationReference)
+        session.verify_location(
+            decl_ref, "main.cpp", line_number(source, "func_ptr decl")
         )
-        self.assertIsNotNone(declaration_location_reference)
-        self.verify_location(declaration_location_reference, "main.cpp", 12)
-        value_location_reference = locals["func_ptr"].get("valueLocationReference")
-        self.assertIsNotNone(value_location_reference)
-        self.verify_location(value_location_reference, "main.cpp", 3)
+        value_ref = self.expect_not_none(func_ptr.valueLocationReference)
+        session.verify_location(
+            value_ref, "main.cpp", line_number(source, "greet decl")
+        )
 
-        # func_ref has both a declaration and a valueLocation
-        declaration_location_reference = locals["func_ref"].get(
-            "declarationLocationReference"
+        # func_ref has both a declaration and a valueLocation.
+        func_ref = top_frame_locals["func_ref"].variable
+        decl_ref = self.expect_not_none(func_ref.declarationLocationReference)
+        session.verify_location(
+            decl_ref, "main.cpp", line_number(source, "func_ref decl")
         )
-        self.assertIsNotNone(declaration_location_reference)
-        self.verify_location(declaration_location_reference, "main.cpp", 13)
-        value_location_reference = locals["func_ref"].get("valueLocationReference")
-        self.assertIsNotNone(value_location_reference)
-        self.verify_location(value_location_reference, "main.cpp", 3)
+        value_ref = self.expect_not_none(func_ref.valueLocationReference)
+        session.verify_location(
+            value_ref, "main.cpp", line_number(source, "greet decl")
+        )
 
-        # member_ptr has both a declaration and a valueLocation
-        declaration_location_reference = locals["member_ptr"].get(
-            "declarationLocationReference"
+        # member_ptr has both a declaration and a valueLocation.
+        member_ptr = top_frame_locals["member_ptr"].variable
+        decl_ref = self.expect_not_none(member_ptr.declarationLocationReference)
+        session.verify_location(
+            decl_ref, "main.cpp", line_number(source, "member_ptr decl")
         )
-        self.assertIsNotNone(declaration_location_reference)
-        self.verify_location(declaration_location_reference, "main.cpp", 14)
-        value_location_reference = locals["member_ptr"].get("valueLocationReference")
-        self.assertIsNotNone(value_location_reference)
-        self.verify_location(value_location_reference, "main.cpp", 6)
+        value_ref = self.expect_not_none(member_ptr.valueLocationReference)
+        session.verify_location(value_ref, "main.cpp", line_number(source, "foo decl"))
 
-        # virtual_member_ptr has a declarationLocation but no valueLocation
-        declaration_location_reference = locals["virtual_member_ptr"].get(
-            "declarationLocationReference"
+        # virtual_member_ptr has a declarationLocation but no valueLocation.
+        virtual_member_ptr = top_frame_locals["virtual_member_ptr"].variable
+        decl_ref = self.expect_not_none(virtual_member_ptr.declarationLocationReference)
+        session.verify_location(
+            decl_ref, "main.cpp", line_number(source, "virtual_member_ptr decl")
         )
-        self.assertIsNotNone(declaration_location_reference)
-        self.verify_location(declaration_location_reference, "main.cpp", 15)
-        value_location_reference = locals["virtual_member_ptr"].get(
-            "valueLocationReference"
-        )
-        self.assertIsNone(value_location_reference)
+        self.assertIsNone(virtual_member_ptr.valueLocationReference)
 
-        # `evaluate` responses for function pointers also have locations associated
-        eval_res = self.dap_server.request_evaluate("greet")
-        self.assertTrue(eval_res["success"])
-        self.assertIn("valueLocationReference", eval_res["body"].keys())
+        # `evaluate` responses for function pointers also have locations associated.
+        eval_body = top_frame.evaluate("greet")
+        self.assertIsNotNone(eval_body.valueLocationReference)

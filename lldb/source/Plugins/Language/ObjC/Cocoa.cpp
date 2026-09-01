@@ -30,6 +30,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorExtras.h"
+#include <cmath>
 
 using namespace lldb;
 using namespace lldb_private;

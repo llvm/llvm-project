@@ -488,14 +488,11 @@ void LoopInfoBase<BlockT, LoopT>::analyze(
   analyzeImpl(F, GetDomTree, /*ReuseLoop=*/{});
 }
 
-/// Rebuild the forest in place, keeping the loop object of every surviving
-/// header so that pointer-keyed analyses need not be discarded.
 template <class BlockT, class LoopT>
 SmallVector<std::pair<LoopT *, BlockT *>, 4>
 LoopInfoBase<BlockT, LoopT>::recompute(const DomTreeBase<BlockT> &DomTree) {
   // Index the loops by header so the analysis can find them again, and empty
-  // them out for it to refill. Their block storage belongs to this LoopInfo
-  // and is reclaimed with it.
+  // them out for it to refill.
   MapVector<BlockT *, LoopT *> ReuseByHeader;
   for (LoopT *L : getLoopsInPreorder()) {
     ReuseByHeader[L->getHeader()] = L;
@@ -707,7 +704,9 @@ void LoopInfoBase<BlockT, LoopT>::analyzeImpl(
       // Whatever reaches a latch without passing the header is in the loop.
       for (unsigned I = 0; I != Worklist.size(); ++I)
         for (BlockT *Pred : inverse_children<BlockT *>(Worklist[I]))
-          enqueue(Pred);
+          // Do not enqueue any unreachable nodes.
+          if (Blocks[num(Pred)])
+            enqueue(Pred);
       // Without a backedge the header forms no loop at all.
       Info[H].Pos = HasBackedge ? IsHeader : OffPath;
       // Partition the header's blocks: the loop keeps the ones the traversal

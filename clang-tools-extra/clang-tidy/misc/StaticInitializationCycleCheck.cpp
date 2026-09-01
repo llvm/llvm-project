@@ -199,21 +199,19 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
-    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!shouldIgnoreRef(DRE, Node->getDecl()) &&
-          (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
-        Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
-    }
+    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
+        VarD && (!shouldIgnoreRef(DRE, Node->getDecl()) &&
+                 (VarD->hasGlobalStorage() || VarD->isStaticLocal())))
+      Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     return true;
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
-    if (const FunctionDecl *F = CE->getDirectCallee()) {
-      if (F->isGlobal() || F->isStatic()) {
-        const FunctionDecl *Def = F->getDefinition();
-        if (Def)
-          Node->Uses.emplace_back(CE, G.addNode(Def));
-      }
+    if (const FunctionDecl *F = CE->getDirectCallee();
+        F && (F->isGlobal() || F->isStatic())) {
+      const FunctionDecl *Def = F->getDefinition();
+      if (Def)
+        Node->Uses.emplace_back(CE, G.addNode(Def));
     }
     return true;
   }
@@ -310,7 +308,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
              clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
   // Check if the SCC contains any variable, otherwise it is a function
   // recursion.
-  auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
+  const auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
   const auto *VarNode = llvm::find_if(SCC, NodeIsVar);
   if (VarNode == SCC.end())
     return;
@@ -362,7 +360,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
 
     CycleOs << *N->getDecl() << " -> ";
   }
-  CycleOs << *(FoundPath.front()->getDecl());
+  CycleOs << *FoundPath.front()->getDecl();
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
            "possible cyclical initialization: %0", DiagnosticIDs::Note)

@@ -315,3 +315,29 @@ non_zero:
 exit:
   ret i64 -1
 }
+
+define i32 @test0_odd_mul(i64 %x) {
+; CHECK-LABEL: @test0_odd_mul(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[CTZ32:%.*]] = trunc nuw nsw i64 [[CTZ]] to i32
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[CTZ32]], [[NON_ZERO]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+start:
+  %c = icmp eq i64 %x, 0
+  br i1 %c, label %exit, label %non_zero
+non_zero:
+  %m = mul i64 %x, 3
+  %ctz = call i64 @llvm.cttz.i64(i64 %m, i1 false)
+  %ctz32 = trunc i64 %ctz to i32
+  br label %exit
+exit:
+  %res = phi i32 [ %ctz32, %non_zero ], [ 0, %start ]
+  ret i32 %res
+}
