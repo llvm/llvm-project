@@ -41,9 +41,47 @@ void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << StringRef(getRegisterName(Reg)).lower();
 }
 
+void SuperHInstPrinter::printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << Op.getImm();
+}
+
+void SuperHInstPrinter::printImm(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << "#" << Op.getImm();
+}
+
+void SuperHInstPrinter::printIReg(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << "@" << StringRef(getRegisterName(Op.getReg())).lower();
+}
+
+void SuperHInstPrinter::printIRegInc(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << "@" << StringRef(getRegisterName(Op.getReg())).lower() << "+";
+}
+
+void SuperHInstPrinter::printIRegDec(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << "@-" << StringRef(getRegisterName(Op.getReg())).lower();
+}
+
 void SuperHInstPrinter::printPCRelImm(const MCInst *MI, uint64_t Address, 
-        unsigned OpNo, raw_ostream &O) {
-  printOperand(MI, OpNo, O);
+                                      unsigned OpNo, raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+
+  // Print standalone symbol.
+  if (Op.isExpr()) {
+    if (const MCSymbolRefExpr *SymOp = dyn_cast<MCSymbolRefExpr>(Op.getExpr())) {
+      O << SymOp->getSymbol().getName();
+      return;
+    }
+  }
+
+  // Print immediate value.
+  if (Op.isImm()) {
+    O << "@(" << Op.getImm() << ",pc)";
+  }
 }
 
 void SuperHInstPrinter::printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
@@ -52,7 +90,6 @@ void SuperHInstPrinter::printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_
 
 void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  
 
   // Print Register
   if (Op.isReg()) {
@@ -62,7 +99,7 @@ void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostrea
 
   // Print immediates
   if (Op.isImm()) {
-    O << Op.getImm();
+    O << "#" << Op.getImm();
     return;
   }
 

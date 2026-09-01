@@ -98,8 +98,6 @@ class SuperHAsmParser : public MCTargetAsmParser {
   ParseStatus parseOperand(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
   ParseStatus parseRegisterIndirect(OperandVector &Operands);
-  ParseStatus parseRegisterIndirectInc(OperandVector &Operands);
-  ParseStatus parseRegisterIndirectDec(OperandVector &Operands);
   ParseStatus parsePCRel(OperandVector &Operands);
   ParseStatus parseImm(OperandVector &Operands);
   ParseStatus parseDisp(OperandVector &Operands);
@@ -192,8 +190,10 @@ public:
   bool isReg() const override { return Kind == k_Register; }
   bool isDisp() const { return Kind == k_Displacement; }
   bool isMem() const override { return (Kind & (k_IndirectReg | k_IndirectRegInc | k_IndirectRegDec | k_IndirectIndex)) != 0; }
-  bool isIndirectReg() const { return (Kind & (k_IndirectReg | k_IndirectRegInc | k_IndirectRegDec)) != 0; }
-  bool isAnyReg() const { return isReg() || isIndirectReg(); }
+  bool isIReg() const { return Kind == k_IndirectReg; }
+  bool isIRegInc() const { return Kind == k_IndirectRegInc; }
+  bool isIRegDec() const { return Kind == k_IndirectRegDec; }
+  bool isAnyReg() const { return isReg() || isIReg() || isIRegInc() || isIRegDec(); }
   bool isPCRel() const { return Kind == k_Displacement && Mem.Base == SH::PC; }
 
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -378,18 +378,18 @@ public:
     }
 
     // Indirect register has @ prefix.
-    if (isIndirectReg())
+    if (isIReg())
       OS << "@";
     
     // Pre-decrement.
-    if (Kind == k_IndirectRegDec)
+    if (isIRegDec())
       OS << "-";
 
     // Register or other symbol.
     OS << StrFromLoc(this->getStartLoc(), this->getEndLoc());
 
     // Indirect Post-Increment.
-    if (Kind == k_IndirectRegInc)
+    if (isIRegInc())
       OS << "+";
   }
 };
@@ -450,18 +450,13 @@ bool SuperHAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &End
 
 ParseStatus SuperHAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) {
   unsigned RegKind;
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken Tok = Parser.getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
 
-  // SuperH Registers are in the form of an identifier.
-  Reg = SH::NoRegister;
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
   // Match.
   Reg = matchRegisterName(Tok, RegKind);
-  if (RegKind == SuperHOperand::rk_None)
+  if (Reg == SH::NoRegister)
     return ParseStatus::NoMatch;
 
   // Consume the register.
@@ -482,14 +477,9 @@ ParseStatus SuperHAsmParser::tryParseRegister(MCRegister &Reg, unsigned &RegKind
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
 
-  // SuperH Registers are in the form of an identifier.
-  Reg = SH::NoRegister;
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
   // Match.
   Reg = matchRegisterName(Tok, RegKind);
-  if (RegKind == SuperHOperand::rk_None)
+  if (Reg == SH::NoRegister)
     return ParseStatus::NoMatch;
 
   // Consume the register.
@@ -526,15 +516,14 @@ ParseStatus SuperHAsmParser::tryParseRegRelative(MCRegister &BaseReg, MCRegister
     return ParseStatus::Success;
   }
 
-  // Parse "@(" sequence
-  if (getTok().isNot(AsmToken::At))
-    return ParseStatus::NoMatch;
-  Parser.Lex();
+  AsmToken Buf[2];
+  getLexer().peekTokens(Buf);
 
-  if (getTok().isNot(AsmToken::LParen)) {
-    getLexer().UnLex(Tok);
+  // Parse "@(" sequence
+  if (Buf[0].isNot(AsmToken::At) && Buf[1].isNot(AsmToken::LParen)) {
     return ParseStatus::NoMatch;
   }
+  Parser.Lex();
   Parser.Lex();
 
   // Parse identifier
@@ -550,35 +539,30 @@ ParseStatus SuperHAsmParser::tryParseRegRelative(MCRegister &BaseReg, MCRegister
   } else if (getTok().is(AsmToken::Integer)) {
 
     // Try parsing numeric displacements.
-    if (Parser.parseExpression(Offset, EndLoc)) {
-      getLexer().UnLex(Tok);
-      return ParseStatus::NoMatch;
-    }
+    int64_t Disp;
+    ParseStatus Result = tryParseImm(Disp, StartLoc, EndLoc);
+    if (!Result.isSuccess())
+      return Result;
+
+    Offset = MCConstantExpr::create(Disp, getContext());
   } else {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
+
+    return Error(getTok().getLoc(), "expected identifier, register or displacement");
   }
 
   // Parse seperator
-  if (getTok().isNot(AsmToken::Comma)) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
-  }
-  Parser.Lex();
+  if (parseToken(AsmToken::Comma, "expected ','"))
+    return ParseStatus::Failure;
 
   // Parse base register
-  if (tryParseRegister(BaseReg, RegKind, StartLoc, EndLoc).isNoMatch()) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
-  }
+  ParseStatus Result = tryParseRegister(BaseReg, RegKind, StartLoc, EndLoc);
+  if (!Result.isSuccess())
+    return ParseStatus::Failure;
 
   // Whoops! missing ending parenthesis.
-  if (getTok().isNot(AsmToken::RParen)) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
-  }
+  if (parseToken(AsmToken::RParen, "expected ')'"))
+    return ParseStatus::Failure;
 
-  Parser.Lex();
   return ParseStatus::Success;
 }
 
@@ -594,27 +578,21 @@ ParseStatus SuperHAsmParser::tryParseRegIndirect(MCRegister &Reg, bool &IsInc, b
   SMLoc E = EndLoc;
   unsigned RegKind;
 
-  if (getTok().isNot(AsmToken::At))
+  if (!Parser.parseOptionalToken(AsmToken::At))
     return ParseStatus::NoMatch;
-  Parser.Lex();
 
   // Parse possible pre-decement
-  if (getTok().is(AsmToken::Minus)) {
+  if (Parser.parseOptionalToken(AsmToken::Minus))
     IsDec = true;
-    Parser.Lex();
-  }
 
   // Parse Register
-  if (tryParseRegister(Reg, RegKind, S, E).isNoMatch()) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
+  if (!tryParseRegister(Reg, RegKind, S, E).isSuccess()) {
+    return ParseStatus::Failure;
   }
 
   // Parse possible post-increment
-  if (Tok.is(AsmToken::Plus)) {
+  if (Parser.parseOptionalToken(AsmToken::Plus))
     IsInc = true;
-    Parser.Lex();
-  }
 
   // You can't do both increment and decrement.
   // this is just a straight up syntax error.
@@ -638,6 +616,8 @@ ParseStatus SuperHAsmParser::tryParseImm(int64_t &Imm, SMLoc &StartLoc, SMLoc &E
     getLexer().UnLex(Tok);
     return ParseStatus::NoMatch;
   }
+
+  EndLoc = Parser.getTok().getLoc();
   return ParseStatus::Success;
 }
 
@@ -648,15 +628,14 @@ ParseStatus SuperHAsmParser::tryParseImm(int64_t &Imm, SMLoc &StartLoc, SMLoc &E
 //===----------------------------------------------------------------------===//
 
 ParseStatus SuperHAsmParser::parseImm(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << __FUNCTION__ << "\n");
   const AsmToken Tok = Parser.getTok();
   SMLoc StartLoc = getLexer().getLoc();
   SMLoc EndLoc = getLexer().getLoc();
 
-  // Immediates are prefixed with a #
-  if (getTok().isNot(AsmToken::Hash)) {
+  // Immediates start with a '#'
+  if (!Parser.parseOptionalToken(AsmToken::Hash))
     return ParseStatus::NoMatch;
-  }
-  Parser.Lex();
   
   int64_t Imm;
   if (tryParseImm(Imm, StartLoc, EndLoc).isSuccess()) {
@@ -673,10 +652,12 @@ ParseStatus SuperHAsmParser::parseImm(OperandVector &Operands) {
 }
 
 ParseStatus SuperHAsmParser::parseDisp(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << __FUNCTION__ << "\n");
   return ParseStatus::NoMatch;
 }
 
 ParseStatus SuperHAsmParser::parsePCRel(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << __FUNCTION__ << "\n");
   const AsmToken Tok = Parser.getTok();
   SMLoc StartLoc = getLexer().getLoc();
   SMLoc EndLoc = getLexer().getLoc();
@@ -685,15 +666,13 @@ ParseStatus SuperHAsmParser::parsePCRel(OperandVector &Operands) {
   MCRegister BaseReg;
   MCRegister OffReg;
   const MCExpr *Offset;
-  if (tryParseRegRelative(BaseReg, OffReg, Offset, StartLoc, EndLoc).isNoMatch()) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
-  }
+  ParseStatus Result = tryParseRegRelative(BaseReg, OffReg, Offset, StartLoc, EndLoc);
+  if (!Result.isSuccess())
+    return Result;
 
   // Base register must be PC for this type.
   if (BaseReg != SH::PC) {
-    getLexer().UnLex(Tok);
-    return ParseStatus::NoMatch;
+    return Error(getTok().getLoc(), "expected PC-relative displacement");
   }
 
   EndLoc = getLexer().getLoc();
@@ -702,20 +681,27 @@ ParseStatus SuperHAsmParser::parsePCRel(OperandVector &Operands) {
 }
 
 ParseStatus SuperHAsmParser::parseRegister(OperandVector &Operands) {
-  SMLoc StartLoc = getLexer().getLoc();
-  SMLoc EndLoc = getLexer().getLoc();
+  LLVM_DEBUG(dbgs() << __FUNCTION__ << "\n");
+  const AsmToken Tok = Parser.getTok();
+  SMLoc StartLoc = Tok.getLoc();
+  SMLoc EndLoc = Tok.getEndLoc();
 
   MCRegister Reg;
   unsigned RegKind;
   if (tryParseRegister(Reg, RegKind, StartLoc, EndLoc).isSuccess()) {
+    LLVM_DEBUG({
+      dbgs() << __FUNCTION__ << " (next): ";
+      getTok().dump(dbgs());
+      dbgs() << "\n";
+    });
     Operands.push_back(SuperHOperand::CreateReg(Reg, RegKind, StartLoc, EndLoc));
     return ParseStatus::Success;
   }
-
   return ParseStatus::NoMatch;
 }
 
 ParseStatus SuperHAsmParser::parseRegisterIndirect(OperandVector &Operands) {
+  LLVM_DEBUG(dbgs() << __FUNCTION__ << "\n");
   const AsmToken Tok = Parser.getTok();
   SMLoc StartLoc = getLexer().getLoc();
   SMLoc EndLoc = getLexer().getLoc();
@@ -727,60 +713,30 @@ ParseStatus SuperHAsmParser::parseRegisterIndirect(OperandVector &Operands) {
   if (!Result.isSuccess())
     return Result;
 
-  // We're only looking for base register indirect here.
+  // Indirect
   if (!IsInc && !IsDec) {
+
     EndLoc = getLexer().getLoc();
     Operands.push_back(SuperHOperand::CreateIReg(Reg, StartLoc, EndLoc));
     return ParseStatus::Success;
   }
 
-  getLexer().UnLex(Tok);
-  return ParseStatus::NoMatch;
-}
-
-ParseStatus SuperHAsmParser::parseRegisterIndirectInc(OperandVector &Operands) {
-  const AsmToken Tok = Parser.getTok();
-  SMLoc StartLoc = getLexer().getLoc();
-  SMLoc EndLoc = getLexer().getLoc();
-
-  bool IsInc, IsDec;
-  MCRegister Reg;
-
-  ParseStatus Result = tryParseRegIndirect(Reg, IsInc, IsDec, StartLoc, EndLoc);
-  if (!Result.isSuccess())
-    return Result;
-
-  // We're only looking for register indirect inc here.
-  if (IsInc && !IsDec) {
-    EndLoc = getLexer().getLoc();
-    Operands.push_back(SuperHOperand::CreateIRegInc(Reg, StartLoc, EndLoc));
-    return ParseStatus::Success;
-  }
-
-  getLexer().UnLex(Tok);
-  return ParseStatus::NoMatch;
-}
-
-ParseStatus SuperHAsmParser::parseRegisterIndirectDec(OperandVector &Operands) {
-  const AsmToken Tok = Parser.getTok();
-  SMLoc StartLoc = getLexer().getLoc();
-  SMLoc EndLoc = getLexer().getLoc();
-
-  bool IsInc, IsDec;
-  MCRegister Reg;
-
-  ParseStatus Result = tryParseRegIndirect(Reg, IsInc, IsDec, StartLoc, EndLoc);
-  if (!Result.isSuccess())
-    return Result;
-
-  // We're only looking for register indirect dec here.
+  // Indirect Pre-Decrement
   if (!IsInc && IsDec) {
+
     EndLoc = getLexer().getLoc();
     Operands.push_back(SuperHOperand::CreateIRegDec(Reg, StartLoc, EndLoc));
     return ParseStatus::Success;
   }
 
-  getLexer().UnLex(Tok);
+  // Indirect Post-Increment
+  if (IsInc && !IsDec) {
+
+    EndLoc = getLexer().getLoc();
+    Operands.push_back(SuperHOperand::CreateIRegInc(Reg, StartLoc, EndLoc));
+    return ParseStatus::Success;
+  }
+
   return ParseStatus::NoMatch;
 }
 
@@ -806,12 +762,7 @@ ParseStatus SuperHAsmParser::parseOperand(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   case AsmToken::Identifier:
-    // Try to parse a register, fall through to the next case if it fails.
-    if (parseRegister(Operands).isSuccess()) {
-      Parser.Lex();
-      return ParseStatus::Success;
-    }
-    return ParseStatus::NoMatch;
+    return parseRegister(Operands);
   }
 }
 
