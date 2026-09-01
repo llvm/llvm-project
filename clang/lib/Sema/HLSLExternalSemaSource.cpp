@@ -24,6 +24,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -254,100 +255,133 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
       .addStaticInitializationFunctions(false);
 }
 
-/// Set up common members and attributes for texture types
+namespace {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+/// Which members a texture type has. Overloads within a member family
+/// (e.g., offset overloads for samplers) follow from ResourceDimension.
+enum class TexCap : uint32_t {
+  Load = 1u << 0,      // Load(int<N+1>) taking a mip level
+  LoadMS = 1u << 1,    // Load(int<N>, int sampleIndex) on a multisampled type
+  LoadRW = 1u << 2,    // Load(int<N>) on a writable texture
+  Subscript = 1u << 3, // operator[]
+  Mips = 1u << 4,      // mips[]
+  Sample = 1u << 5,    // Sample, SampleBias, SampleGrad, SampleLevel
+  SampleCmp = 1u << 6, // SampleCmp, SampleCmpLevelZero
+  Gather = 1u << 7,    // Gather*, GatherCmp*
+  CalcLOD = 1u << 8,   // CalculateLevelOfDetail, ...Unclamped
+  GetDims = 1u << 9,   // GetDimensions
+
+  // TODO: multisampled types need an MS-specific GetDimensions
+  // https://github.com/llvm/wg-hlsl/issues/347
+
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/GetDims)
+};
+
+/// How a type's template parameters are spelled. Independent of its
+/// capabilities; also decides which types get a vector partial specialization.
+enum class TemplateShape {
+  ElementType,               // template<typename T = float4>
+  ElementTypeAndSampleCount, // template<typename T, uint N>
+};
+
+struct TextureTypeInfo {
+  const char *Name;
+  ResourceClass RC;
+  ResourceDimension Dim;
+  bool IsArray;
+  bool IsROV;
+  TemplateShape Shape;
+  TexCap Caps;
+
+  bool has(TexCap C) const { return (Caps & C) != TexCap{}; }
+  bool hasSampleCount() const {
+    return Shape == TemplateShape::ElementTypeAndSampleCount;
+  }
+};
+} // namespace
+
+static const TextureTypeInfo TextureTypes[] = {
+    {"Texture2D", ResourceClass::SRV, ResourceDimension::Dim2D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |
+         TexCap::GetDims},
+    {"RWTexture2D", ResourceClass::UAV, ResourceDimension::Dim2D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript | TexCap::GetDims},
+    {"Texture2DArray", ResourceClass::SRV, ResourceDimension::Dim2D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |
+         TexCap::GetDims},
+    {"RWTexture2DArray", ResourceClass::UAV, ResourceDimension::Dim2D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript | TexCap::GetDims},
+    {"Texture2DMS", ResourceClass::SRV, ResourceDimension::Dim2D,
+     /*IsArray=*/false, /*IsROV=*/false,
+     TemplateShape::ElementTypeAndSampleCount,
+     TexCap::LoadMS | TexCap::Subscript},
+    {"TextureCube", ResourceClass::SRV, ResourceDimension::Cube,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Sample | TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |
+         TexCap::GetDims},
+    {"TextureCubeArray", ResourceClass::SRV, ResourceDimension::Cube,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Sample | TexCap::SampleCmp | TexCap::CalcLOD | TexCap::Gather |
+         TexCap::GetDims},
+};
+
 static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
-                                               ResourceClass RC, bool IsROV,
-                                               bool IsArray,
-                                               ResourceDimension Dim) {
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(RC, IsROV, IsArray, Dim)
-      .addTextureLoadMethods(Dim, IsArray)
-      .addArraySubscriptOperators(Dim, IsArray)
-      .addMipsMember(Dim)
-      .addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator()
-      .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim, IsArray)
-      .addSampleBiasMethods(Dim, IsArray)
-      .addSampleGradMethods(Dim, IsArray)
-      .addSampleLevelMethods(Dim, IsArray)
-      .addSampleCmpMethods(Dim, IsArray)
-      .addSampleCmpLevelZeroMethods(Dim, IsArray)
-      .addCalculateLodMethods(Dim)
-      .addGetDimensionsMethods(Dim)
-      .addGatherMethods(Dim, IsArray)
-      .addGatherCmpMethods(Dim, IsArray);
-}
+                                               const TextureTypeInfo &T) {
+  const ResourceDimension Dim = T.Dim;
+  const bool IsArray = T.IsArray;
 
-/// Set up RWTexture type: UAV texture with only operator[] (uint2, read/write),
-/// Load and GetDimensions (no sample/gather/mips/LOD).
-static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
-                                                 bool IsArray,
-                                                 ResourceDimension Dim) {
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
-      .addTextureLoadMethods(Dim, IsArray)
-      .addArraySubscriptOperators(Dim, IsArray)
-      .addGetDimensionsMethods(Dim)
+  Expr *SampleCountExpr = nullptr;
+  if (T.hasSampleCount()) {
+    ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
+    assert(CTD && "multisampled texture must be a class template");
+    // Parameter 1 is the N in Texture2DMS<T, N>.
+    auto *NTTP = cast<NonTypeTemplateParmDecl>(
+        CTD->getTemplateParameters()->getParam(1));
+    SampleCountExpr =
+        S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
+  }
+
+  BuiltinTypeDeclBuilder B(S, Decl);
+  B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false);
-}
 
-/// Set up TextureCube type: SRV cube texture. Locations are float3 direction
-/// vectors into the cube rather than texel coordinates, so cube textures have
-/// no Load, no operator[] and no mips member. Their sampling and gather
-/// methods also have no offset overloads.
-static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl,
-                                                   Sema &S) {
-  constexpr ResourceDimension Dim = ResourceDimension::Cube;
-  constexpr bool IsArray = false;
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
-      .addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator()
-      .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim, IsArray)
-      .addSampleBiasMethods(Dim, IsArray)
-      .addSampleGradMethods(Dim, IsArray)
-      .addSampleLevelMethods(Dim, IsArray)
-      .addSampleCmpMethods(Dim, IsArray)
-      .addSampleCmpLevelZeroMethods(Dim, IsArray)
-      .addCalculateLodMethods(Dim)
-      .addGetDimensionsMethods(Dim)
-      .addGatherMethods(Dim, IsArray)
-      .addGatherCmpMethods(Dim, IsArray);
-}
+  if (T.has(TexCap::Load))
+    B.addTextureLoadMethods(Dim, IsArray);
+  if (T.has(TexCap::LoadMS))
+    B.addTextureLoadMSMethods(Dim, IsArray);
+  if (T.has(TexCap::LoadRW))
+    B.addRWTextureLoadMethods(Dim, IsArray);
+  if (T.has(TexCap::Subscript))
+    B.addArraySubscriptOperators(Dim, IsArray);
+  if (T.has(TexCap::Mips))
+    B.addMipsMember(Dim);
 
-/// Set up Texture2DMS (multisampled) type: SRV texture with only operator[]
-/// and sample-indexed Load. It does not support sampling, gather, LOD, or mips.
-static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
-                                                 bool IsArray,
-                                                 ResourceDimension Dim) {
-  ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
-  assert(CTD && "multisampled texture must be a class template");
+  if (T.has(TexCap::Sample))
+    B.addSampleMethods(Dim, IsArray)
+        .addSampleBiasMethods(Dim, IsArray)
+        .addSampleGradMethods(Dim, IsArray)
+        .addSampleLevelMethods(Dim, IsArray);
+  if (T.has(TexCap::SampleCmp))
+    B.addSampleCmpMethods(Dim, IsArray)
+        .addSampleCmpLevelZeroMethods(Dim, IsArray);
+  if (T.has(TexCap::CalcLOD))
+    B.addCalculateLodMethods(Dim);
+  if (T.has(TexCap::GetDims))
+    B.addGetDimensionsMethods(Dim);
+  if (T.has(TexCap::Gather))
+    B.addGatherMethods(Dim, IsArray).addGatherCmpMethods(Dim, IsArray);
 
-  // Parameter 1 is the N in Texture2DMS<T, N>.
-  auto *NTTP =
-      cast<NonTypeTemplateParmDecl>(CTD->getTemplateParameters()->getParam(1));
-  Expr *SampleCountExpr =
-      S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
-
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim,
-                        SampleCountExpr)
-      .addTextureLoadMSMethods(Dim, IsArray)
-      .addArraySubscriptOperators(Dim, IsArray)
-      // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);
-      // the generic addGetDimensionsMethods is mip-based and unsuitable here.
-      // https://github.com/llvm/wg-hlsl/issues/347
-      .addDefaultHandleConstructor()
-      .addCopyConstructor()
-      .addCopyAssignmentOperator()
-      .addStaticInitializationFunctions(false);
+  return B;
 }
 
 // Add a partial specialization for a template. The `TextureTemplate` is
@@ -743,113 +777,33 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
-             .finalizeForwardDeclaration();
+  for (const TextureTypeInfo &T : TextureTypes) {
+    BuiltinTypeDeclBuilder TexBuilder(*SemaPtr, HLSLNamespace, T.Name);
+    switch (T.Shape) {
+    case TemplateShape::ElementType:
+      TexBuilder.addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                         TypedBufferConcept);
+      break;
+    case TemplateShape::ElementTypeAndSampleCount:
+      TexBuilder.addMSTextureTemplateParams("element_type", "sample_count",
+                                            TypedBufferConcept);
+      break;
+    }
+    Decl = TexBuilder.finalizeForwardDeclaration();
 
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
+    onCompletion(Decl, [this, &T](CXXRecordDecl *Decl) {
+      setupTextureType(Decl, *SemaPtr, T).completeDefinition();
+    });
 
-  auto *PartialSpec = addVectorTexturePartialSpecialization(
-      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
-  onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
+    if (T.Shape != TemplateShape::ElementType)
+      continue;
 
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
-             .finalizeForwardDeclaration();
-
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
-                       ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  auto *PartialSpecRW = addVectorTexturePartialSpecialization(
-      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
-  onCompletion(PartialSpecRW, [this](CXXRecordDecl *Decl) {
-    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
-                       ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  // Texture2DArray — same as Texture2D but IsArray=true
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DArray")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
-             .finalizeForwardDeclaration();
-
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/true, ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  auto *PartialSpec2DA = addVectorTexturePartialSpecialization(
-      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
-  onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
-    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/true, ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  // RWTexture2DArray — same as RWTexture2D but IsArray=true
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
-             .finalizeForwardDeclaration();
-
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
-                       ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
-      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
-  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
-    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
-                       ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  // Texture2DMS — like Texture2D but multisampled, and the element type has no
-  // default argument.
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DMS")
-             .addMSTextureTemplateParams("element_type", "sample_count",
-                                         TypedBufferConcept)
-             .finalizeForwardDeclaration();
-
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupMSTextureType(Decl, *SemaPtr, /*IsArray=*/false,
-                       ResourceDimension::Dim2D)
-        .completeDefinition();
-  });
-
-  // TextureCube — SRV cube texture. Locations are float3 direction vectors.
-  // Cube textures do not support Load, operator[], mips or offsets.
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCube")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
-             .finalizeForwardDeclaration();
-
-  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureCubeType(Decl, *SemaPtr).completeDefinition();
-  });
-
-  auto *PartialSpecCube = addVectorTexturePartialSpecialization(
-      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
-  onCompletion(PartialSpecCube, [this](CXXRecordDecl *Decl) {
-    setupTextureCubeType(Decl, *SemaPtr).completeDefinition();
-  });
+    CXXRecordDecl *PartialSpec = addVectorTexturePartialSpecialization(
+        *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+    onCompletion(PartialSpec, [this, &T](CXXRecordDecl *Decl) {
+      setupTextureType(Decl, *SemaPtr, T).completeDefinition();
+    });
+  }
 }
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.

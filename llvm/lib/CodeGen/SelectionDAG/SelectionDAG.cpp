@@ -787,8 +787,16 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, unsigned OpC,
 }
 
 /// If this is an SDNode with special info, add this info to the NodeID data.
-static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
-  switch (N->getOpcode()) {
+/// MorphNodeTo passes the opcode \p N is becoming, so \p Opc may differ from
+/// N->getOpcode() and a case may only cast to a class \p N already is.
+static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N,
+                            unsigned Opc) {
+  // Machine nodes are uniqued by opcode, value types and operands alone, as in
+  // getMachineNode; MorphNodeTo's clearMemRefs overwrites the fields below.
+  if (SDNode::isMachineOpcode(Opc))
+    return;
+
+  switch (Opc) {
   case ISD::TargetExternalSymbol:
   case ISD::ExternalSymbol:
   case ISD::MCSymbol:
@@ -817,6 +825,13 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   }
   case ISD::BasicBlock:
     ID.AddPointer(cast<BasicBlockSDNode>(N)->getBasicBlock());
+    break;
+  case ISD::EH_LABEL:
+  case ISD::ANNOTATION_LABEL:
+    ID.AddPointer(cast<LabelSDNode>(N)->getLabel());
+    break;
+  case ISD::DEACTIVATION_SYMBOL:
+    ID.AddPointer(cast<DeactivationSymbolSDNode>(N)->getGlobal());
     break;
   case ISD::Register:
     ID.AddInteger(cast<RegisterSDNode>(N)->getReg().id());
@@ -954,35 +969,15 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(MG->getMemOperand()->getFlags());
     break;
   }
-  case ISD::MSCATTER: {
-    const MaskedScatterSDNode *MS = cast<MaskedScatterSDNode>(N);
-    ID.AddInteger(MS->getMemoryVT().getRawBits());
-    ID.AddInteger(MS->getRawSubclassData());
-    ID.AddInteger(MS->getPointerInfo().getAddrSpace());
-    ID.AddInteger(MS->getMemOperand()->getFlags());
-    break;
-  }
-  case ISD::ATOMIC_CMP_SWAP:
-  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
-  case ISD::ATOMIC_SWAP:
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_SUB:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_CLR:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
-  case ISD::ATOMIC_LOAD_NAND:
-  case ISD::ATOMIC_LOAD_MIN:
-  case ISD::ATOMIC_LOAD_MAX:
-  case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE: {
-    const AtomicSDNode *AT = cast<AtomicSDNode>(N);
-    ID.AddInteger(AT->getMemoryVT().getRawBits());
-    ID.AddInteger(AT->getRawSubclassData());
-    ID.AddInteger(AT->getPointerInfo().getAddrSpace());
-    ID.AddInteger(AT->getMemOperand()->getFlags());
+  case ISD::MSCATTER:
+  case ISD::GET_FPENV_MEM:
+  case ISD::SET_FPENV_MEM:
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM: {
+    const MemSDNode *M = cast<MemSDNode>(N);
+    ID.AddInteger(M->getMemoryVT().getRawBits());
+    ID.AddInteger(M->getRawSubclassData());
+    ID.AddInteger(M->getPointerInfo().getAddrSpace());
+    ID.AddInteger(M->getMemOperand()->getFlags());
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
@@ -1016,7 +1011,14 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::MDNODE_SDNODE:
     ID.AddPointer(cast<MDNodeSDNode>(N)->getMD());
     break;
-  } // end switch (N->getOpcode())
+  } // end switch (Opc)
+
+  if (auto *AT = dyn_cast<AtomicSDNode>(N)) {
+    ID.AddInteger(AT->getMemoryVT().getRawBits());
+    ID.AddInteger(AT->getRawSubclassData());
+    ID.AddInteger(AT->getPointerInfo().getAddrSpace());
+    ID.AddInteger(AT->getMemOperand()->getFlags());
+  }
 
   // MemIntrinsic nodes could also have subclass data, address spaces, and flags
   // to check.
@@ -1040,7 +1042,7 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, const SDNode *N) {
   AddNodeIDOperands(ID, N->ops());
 
   // Handle SDNode leafs with special info.
-  AddNodeIDCustom(ID, N);
+  AddNodeIDCustom(ID, N, N->getOpcode());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1384,7 +1386,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op,
   SDValue Ops[] = { Op };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
-  AddNodeIDCustom(ID, N);
+  AddNodeIDCustom(ID, N, N->getOpcode());
   SDNode *Node = lookupNode(ID, SDLoc(N), InsertToken);
   if (Node)
     Node->intersectFlagsWith(N->getFlags());
@@ -1403,7 +1405,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
   SDValue Ops[] = { Op1, Op2 };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
-  AddNodeIDCustom(ID, N);
+  AddNodeIDCustom(ID, N, N->getOpcode());
   SDNode *Node = lookupNode(ID, SDLoc(N), InsertToken);
   if (Node)
     Node->intersectFlagsWith(N->getFlags());
@@ -1421,7 +1423,7 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
 
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, N->getOpcode(), N->getVTList(), Ops);
-  AddNodeIDCustom(ID, N);
+  AddNodeIDCustom(ID, N, N->getOpcode());
   SDNode *Node = lookupNode(ID, SDLoc(N), InsertToken);
   if (Node)
     Node->intersectFlagsWith(N->getFlags());
@@ -10650,7 +10652,6 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
 
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTs, Ops);
-  ID.AddInteger(FrameIndex);
   FoldingSetInsertToken InsertToken;
   if (SDNode *E = lookupNode(ID, dl, InsertToken))
     return SDValue(E, 0);
@@ -10675,6 +10676,7 @@ SDValue SelectionDAG::getPseudoProbeNode(const SDLoc &Dl, SDValue Chain,
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(Guid);
   ID.AddInteger(Index);
+  ID.AddInteger(Attr);
   FoldingSetInsertToken InsertToken;
   if (SDNode *E = lookupNode(ID, Dl, InsertToken))
     return SDValue(E, 0);
@@ -11274,7 +11276,7 @@ SDValue SelectionDAG::getStridedLoadVP(
                          : getVTList(VT, MVT::Other);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::EXPERIMENTAL_VP_STRIDED_LOAD, VTs, Ops);
-  ID.AddInteger(VT.getRawBits());
+  ID.AddInteger(MemVT.getRawBits());
   ID.AddInteger(getSyntheticNodeSubclassData<VPStridedLoadSDNode>(
       DL.getIROrder(), VTs, AM, ExtType, IsExpanding, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
@@ -12553,6 +12555,7 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
   if (VTs.VTs[VTs.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opc, VTs, Ops);
+    AddNodeIDCustom(ID, N, Opc);
     if (SDNode *ON = lookupNode(ID, SDLoc(N), InsertToken))
       return UpdateSDLocOnMergeSDNode(ON, SDLoc(N));
   }
