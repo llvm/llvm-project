@@ -834,3 +834,11 @@ Some_struct g_s1{ .SomeMember = 1 };
 // CHECK-FIXES: Some_struct g_s1{ .some_member = 1 };
 Some_struct g_s2{.SomeMember=1};
 // CHECK-FIXES: Some_struct g_s2{.some_member=1};
+
+template<class t_t>
+struct X {
+  struct B;
+  struct A : public B {
+    virtual void v_Foo() { }
+  };
+};
