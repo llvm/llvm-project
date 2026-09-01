@@ -80,6 +80,8 @@ namespace opts {
 
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
+extern cl::opt<bool> HugifyAllText;
+extern cl::opt<bool> HugifyAllTextStats;
 extern cl::opt<bool> Instrument;
 extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
@@ -2527,6 +2529,17 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
+
+  if (opts::HugifyAllText && !opts::Hugify) {
+    BC->errs() << "BOLT-ERROR: --hugify-all-text requires --hugify\n";
+    exit(1);
+  }
+
+  if (opts::HugifyAllTextStats && (!opts::Hugify || !opts::HugifyAllText)) {
+    BC->errs() << "BOLT-ERROR: --hugify-all-text-stats requires --hugify and "
+                  "--hugify-all-text\n";
+    exit(1);
+  }
 
   // RV32 support is currently limited to statically linked, non-PIE
   // programs. Reject anything that requires features still out of scope

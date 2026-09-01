@@ -504,6 +504,22 @@
   Automatically put hot code on 2MB page(s) (hugify) at runtime. No manual call
   to hugify is needed in the binary (which is what --hot-text relies on).
 
+- `--hugify-all-text`
+
+  Expands `--hugify` to apply anonymous 2MB THPs to all executable mappings,
+  including loaded DSOs. This approach bypasses strict file-backed THP
+  requirements, such as 2MB ELF alignment and
+  `CONFIG_READ_ONLY_THP_FOR_FS`. Set `DISABLE_BOLT_HUGIFY_ALL_TEXT=1` at runtime
+  to revert to the default hot-text-only behavior.
+
+- `--hugify-all-text-stats`
+
+  When used with `--hugify-all-text`, read `/proc/self/smaps` at startup and
+  print the actual `AnonHugePages` and `FilePmdMapped` usage for executable VMAs.
+  Disabled by default to avoid the extra memory and page-fault overhead of
+  collecting statistics. `deferred_kb` identifies a runtime code range that is
+  remapped after the statistics snapshot.
+
 - `--icf=<value>`
 
   Fold functions with identical code
