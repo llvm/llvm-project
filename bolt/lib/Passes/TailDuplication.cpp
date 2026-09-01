@@ -158,8 +158,7 @@ bool remapInstructionLabels(const MCPlusBuilder &MIB,
   if (LabelMap.empty())
     return true;
 
-  InstructionListType RemappedInstructions = Instructions;
-  for (MCInst &Inst : RemappedInstructions) {
+  for (MCInst &Inst : Instructions) {
     if (MCSymbol *Label = MIB.getInstLabel(Inst)) {
       MIB.removeAnnotation(Inst, MCPlus::MCAnnotation::kLabel);
       MIB.setInstLabel(Inst, LabelMap.lookup(Label));
@@ -178,7 +177,6 @@ bool remapInstructionLabels(const MCPlusBuilder &MIB,
     }
   }
 
-  Instructions = std::move(RemappedInstructions);
   return true;
 }
 

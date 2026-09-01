@@ -4,14 +4,18 @@
 // RUN:   --tail-duplication-minimum-offset=1 --print-finalized \
 // RUN:   --print-only=_start -o %t.out | FileCheck %s
 
-// CHECK: BOLT-INFO: tail duplication modified 1
+// CHECK:      beqz a0, {{\.Ltmp[0-9]+}}
+// CHECK:      beqz a1, {{\.Ltmp[0-9]+}}
 // CHECK:      auipc t0, %pcrel_hi(object) # Label: [[DUP:\.Ltmp[0-9]+]]
 // CHECK-NEXT: ld t1, %pcrel_lo([[DUP]])(t0)
 // CHECK-NEXT: sd t1, %pcrel_lo([[DUP]])(t0)
+// CHECK-NEXT: ret
+// CHECK:      ret
 // CHECK-NOT:  # Label: [[DUP]]
 // CHECK:      auipc t0, %pcrel_hi(object) # Label: [[ORIG:\.Ltmp[0-9]+]]
 // CHECK-NEXT: ld t1, %pcrel_lo([[ORIG]])(t0)
 // CHECK-NEXT: sd t1, %pcrel_lo([[ORIG]])(t0)
+// CHECK-NEXT: ret
 
   .data
   .p2align 3
