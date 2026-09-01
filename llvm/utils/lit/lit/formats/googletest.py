@@ -282,7 +282,7 @@ class GoogleTest(TestFormat):
         return cmd
 
     @staticmethod
-    def post_process_shard_results(selected_tests, discovered_tests):
+    def post_process_shard_results(selected_tests, discovered_tests, opts=None):
         def remove_gtest(tests):
             return [t for t in tests if t.gtest_json_file is None]
 
@@ -299,6 +299,7 @@ class GoogleTest(TestFormat):
             start_time = test.result.start or 0.0
 
             has_failure_in_shard = False
+            has_filtered_out_failure = False
 
             # Load json file to retrieve results.
             with open(test.gtest_json_file, encoding="utf-8") as f:
@@ -324,6 +325,20 @@ class GoogleTest(TestFormat):
                         subtest = lit.Test.Test(
                             test.suite, testPath, test.config, test.file_path
                         )
+
+                        # A gtest shard is a single lit test, so --filter-out
+                        # cannot select individual gtest cases at discovery
+                        # time. Apply it here, where the real names are known.
+                        if opts and opts.filter_out.search(subtest.getFullName()):
+                            if "failures" in testinfo:
+                                has_filtered_out_failure = True
+                            res = lit.Test.Result(lit.Test.EXCLUDED, "", 0.0)
+                            res.pid = test.result.pid or 0
+                            res.start = start_time
+                            subtest.setResult(res)
+                            selected_tests.append(subtest)
+                            discovered_tests.append(subtest)
+                            continue
 
                         testname = testcase["name"] + "." + testinfo["name"]
                         header = f"Script:\n--\n%s --gtest_filter=%s\n--\n" % (
@@ -361,7 +376,11 @@ class GoogleTest(TestFormat):
                         discovered_tests.append(subtest)
             os.remove(test.gtest_json_file)
 
-            if not has_failure_in_shard and test.isFailure():
+            if (
+                not has_failure_in_shard
+                and not has_filtered_out_failure
+                and test.isFailure()
+            ):
                 selected_tests.append(test)
                 discovered_tests.append(test)
 
