@@ -54,6 +54,11 @@ in a future version of Clang.
 
 ### C++ Specific Potentially Breaking Changes
 
+- The `[[carries_dependency]]` attribute is no longer recognized, in any language
+  mode, as it was removed from the standard by
+  [P3475R2](https://wg21.link/P3475R2).
+
+
 ### Objective-C Specific Potentially Breaking Changes
 
 - Fixed an issue where AST consumers based on `RecursiveASTVisitor` would bypass
@@ -73,7 +78,7 @@ features cannot lower the translation-unit ABI level;
 - On SPARC, a `_Complex` value with an integer element type is now passed and
   returned packed into the one or two integer registers it fits in, matching GCC.
   Clang previously passed such a value indirectly and returned it with one part
-  per register. 
+  per register.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
 
 - On SPARC64, a `_Complex char` or `_Complex short` is now
@@ -126,7 +131,7 @@ features cannot lower the translation-unit ABI level;
 
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
-  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
 ### OpenCL Potentially Breaking Changes
 
@@ -156,6 +161,10 @@ features cannot lower the translation-unit ABI level;
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
+
+- Implemented the language part of [P3475R2](https://wg21.link/P3475R2) (Defang
+  and deprecate `memory_order::consume`) by removing support for the
+  `[[carries_dependency]]` attribute.
 
 #### C++23 Feature Support
 
