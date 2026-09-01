@@ -525,7 +525,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 /// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
 /// expected to fuse during instruction selection. \p Ty is the type the fused
 /// operation runs on.
-static bool canFuseFMulWithFAddSub(const SITargetLowering *TLI, Type *Ty,
+static bool canFuseFMulWithFAddSub(const SITargetLowering &TLI, Type *Ty,
                                    const Instruction *FMul,
                                    const Instruction *FAddSub) {
   assert((FAddSub->getOpcode() == Instruction::FAdd ||
@@ -535,15 +535,13 @@ static bool canFuseFMulWithFAddSub(const SITargetLowering *TLI, Type *Ty,
   // The mad forms fuse exactly without fast-math flags but flush denormals.
   // An fma forms only when it is not slower than the separate operations.
   const Function &F = *FAddSub->getFunction();
-  const bool HasFMAD = TLI->isFMADLegal(F, Ty);
-  const bool HasFMA = TLI->isFMAFasterThanFMulAndFAdd(F, Ty);
+  const bool HasFMAD = TLI.isFMADLegal(F, Ty);
+  const bool HasFMA = TLI.isFMAFasterThanFMulAndFAdd(F, Ty);
   if (!HasFMAD && !HasFMA)
     return false;
 
-  // Without a mad the pair fuses only with contract or fast.
-  const TargetOptions &Options = TLI->getTargetMachine().Options;
-  return HasFMAD || Options.AllowFPOpFusion == FPOpFusion::Fast ||
-         (FAddSub->hasAllowContract() && FMul->hasAllowContract());
+  // Without a mad the pair fuses only when both carry contract.
+  return HasFMAD || (FAddSub->hasAllowContract() && FMul->hasAllowContract());
 }
 
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
@@ -613,7 +611,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
            FAddSub->getOpcode() == Instruction::FSub) &&
-          canFuseFMulWithFAddSub(TLI, Ty, CxtI, FAddSub))
+          canFuseFMulWithFAddSub(*TLI, Ty, CxtI, FAddSub))
         return TargetTransformInfo::TCC_Free;
     }
     [[fallthrough]];
@@ -1507,7 +1505,7 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       auto *FMul = dyn_cast<Instruction>(Op.get());
       if (!FMul || FMul->getOpcode() != Instruction::FMul ||
           !FMul->hasOneUse() ||
-          !canFuseFMulWithFAddSub(TLI, I->getType(), FMul, I))
+          !canFuseFMulWithFAddSub(*TLI, I->getType(), FMul, I))
         continue;
       // The fused operand. Sink it when it sits in another block, then stop.
       if (FMul->getParent() != I->getParent())
