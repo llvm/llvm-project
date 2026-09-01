@@ -64,7 +64,34 @@ for.end:
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Precomputed costs for VF 2: 8
 ;
-define void @predicated_store(ptr %a, i1 %c, i32 %x, i64 %n) {
+define void @predicated_store(ptr %a, i32 %x, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %tmp0 = getelementptr inbounds i32, ptr %a, i64 %i
+  %tmp1 = load i32, ptr %tmp0, align 4
+  %tmp2 = add nsw i32 %tmp1, %x
+  %c = icmp eq i32 %tmp1, 42
+  br i1 %c, label %if.then, label %for.inc
+
+if.then:
+  store i32 %tmp2, ptr %tmp0, align 4
+  br label %for.inc
+
+for.inc:
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; CHECK-LABEL: store_in_preserved_uniform_control_flow
+; CHECK: Cost of 1 for VF 2: WIDEN store {{.*}}, ir<%tmp2>
+define void @store_in_preserved_uniform_control_flow(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -99,7 +126,7 @@ for.end:
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
 ; CHECK: Precomputed costs for VF 2: 8
 ;
-define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
+define void @predicated_store_phi(ptr %a, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -108,6 +135,7 @@ for.body:
   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
   %tmp1 = load i32, ptr %addr, align 4
   %tmp2 = add nsw i32 %tmp1, %x
+  %c = icmp eq i32 %tmp1, 42
   br i1 %c, label %if.then, label %for.inc
 
 if.then:
@@ -189,7 +217,7 @@ for.end:
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Precomputed costs for VF 2: 9
 ;
-define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
+define void @predicated_store_scalarized_operand(ptr %a, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -197,6 +225,7 @@ for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %tmp0 = getelementptr inbounds i32, ptr %a, i64 %i
   %tmp1 = load i32, ptr %tmp0, align 4
+  %c = icmp eq i32 %tmp1, 42
   br i1 %c, label %if.then, label %for.inc
 
 if.then:
@@ -246,7 +275,7 @@ for.end:
 ; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
 ; CHECK: Precomputed costs for VF 2: 9
 ;
-define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
+define void @predication_multi_context(ptr %a, i32 %x, i64 %n) {
 entry:
   br label %for.body
 
@@ -254,6 +283,7 @@ for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
   %tmp0 = getelementptr inbounds i32, ptr %a, i64 %i
   %tmp1 = load i32, ptr %tmp0, align 4
+  %c = icmp eq i32 %tmp1, 42
   br i1 %c, label %if.then, label %for.inc
 
 if.then:

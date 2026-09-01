@@ -35,23 +35,13 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[START]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor i1 [[C]], true
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH4]], label %[[ELSE1:.*]]
 ; CHECK:       [[ELSE1]]:
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
-; CHECK:       [[PRED_STORE_IF2]]:
-; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
-; CHECK:       [[PRED_STORE_CONTINUE3]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH4]]
 ; CHECK:       [[LOOP_LATCH4]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i32 [[OFFSET_IDX]] to i16

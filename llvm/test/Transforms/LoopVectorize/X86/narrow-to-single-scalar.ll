@@ -9,23 +9,25 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @narrow_store_user_mask_operand(i32 %x) {
 ; CHECK-LABEL: define void @narrow_store_user_mask_operand(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP_PH:.*]]
 ; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_TAIL:.*]] ]
 ; CHECK-NEXT:    [[X_POS:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[X_POS]], label %[[LOOP_BODY:.*]], label %[[LOOP_TAIL]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    br i1 [[X_POS]], label %[[LOOP_BODY:.*]], label %[[LOOP_TAIL:.*]]
 ; CHECK:       [[LOOP_BODY]]:
 ; CHECK-NEXT:    [[LD_P:%.*]] = load double, ptr @p, align 8
-; CHECK-NEXT:    [[GEP_Q_IV:%.*]] = getelementptr double, ptr @q, i64 [[IV]]
-; CHECK-NEXT:    [[GEP_Q_IV_8:%.*]] = getelementptr i8, ptr [[GEP_Q_IV]], i64 -8
-; CHECK-NEXT:    store double [[LD_P]], ptr [[GEP_Q_IV_8]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @p, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[LD_P]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[TMP2]], i64 1
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr getelementptr (i8, ptr @q, i64 -8), align 8
 ; CHECK-NEXT:    br label %[[LOOP_TAIL]]
 ; CHECK:       [[LOOP_TAIL]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

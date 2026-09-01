@@ -11,53 +11,33 @@ define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE]]
-; CHECK:       [[PRED_UREM_IF]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF2:.*]], label %[[PRED_UREM_CONTINUE1:.*]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE1:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF2:.*]], label %[[PRED_UREM_CONTINUE1]]
 ; CHECK:       [[PRED_UREM_IF2]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE1]]
 ; CHECK:       [[PRED_UREM_CONTINUE1]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ poison, %[[PRED_UREM_IF]] ], [ [[TMP3]], %[[PRED_UREM_IF2]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[PRED_UREM_IF1]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[TMP5]], i64 1
-; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_UREM_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP2]], %[[PRED_UREM_CONTINUE1]] ], [ [[TMP4]], %[[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF3:.*]], label %[[PRED_UREM_CONTINUE4:.*]]
-; CHECK:       [[PRED_UREM_IF3]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP9]], i64 2
-; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4:.*]]
 ; CHECK:       [[PRED_UREM_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ [[TMP6]], %[[PRED_UREM_CONTINUE2]] ], [ [[TMP7]], %[[PRED_UREM_IF3]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6:.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 96, %[[PRED_UREM_CONTINUE2]] ], [ [[IV_NEXT:%.*]], %[[PRED_UREM_CONTINUE6:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_IF5]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP13]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_UREM_CONTINUE4]] ], [ [[TMP10]], %[[PRED_UREM_IF5]] ]
-; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
-; CHECK:       [[PRED_UREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP11]], %[[PRED_UREM_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[PRED_UREM_CONTINUE6]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> [[TMP12]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, %[[PRED_UREM_CONTINUE4]] ], [ [[TMP13]], %[[PRED_UREM_IF5]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 99
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_UREM_CONTINUE4]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i32 [ [[RES]], %[[PRED_UREM_CONTINUE6]] ]
 ; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
 entry:
@@ -84,4 +64,5 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

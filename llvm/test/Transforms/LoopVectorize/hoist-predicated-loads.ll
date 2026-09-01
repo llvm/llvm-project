@@ -912,58 +912,35 @@ define void @hoist_predicated_load_with_chained_geps1(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[COND]], true
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH11:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE8:.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN6:.*]], label %[[ELSE3:.*]]
 ; CHECK:       [[ELSE3]]:
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
-; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP20]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META68:![0-9]+]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP7]], i64 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
-; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i16> [ poison, %[[ELSE3]] ], [ [[TMP8]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
-; CHECK:       [[PRED_LOAD_IF4]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP20]], i64 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
-; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[TMP11]], align 2, !alias.scope [[META68]]
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP9]], i16 [[TMP12]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
-; CHECK:       [[PRED_LOAD_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i16> [ [[TMP9]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], %[[PRED_LOAD_IF4]] ]
-; CHECK-NEXT:    br label %[[LOOP_LATCH11]]
-; CHECK:       [[THEN6]]:
-; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_LOAD_IF7:.*]], label %[[PRED_LOAD_CONTINUE8:.*]]
-; CHECK:       [[PRED_LOAD_IF7]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 8
-; CHECK-NEXT:    [[TMP17:%.*]] = load i16, ptr [[TMP16]], align 2, !alias.scope [[META68]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i16, ptr [[TMP6]], align 2, !alias.scope [[META68:![0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP11]], align 2, !alias.scope [[META68]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i16> poison, i16 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP18]], i16 [[TMP9]], i64 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE8]]
+; CHECK:       [[THEN6]]:
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP29]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP30]], align 2, !alias.scope [[META68]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[TMP15]], align 2, !alias.scope [[META68]]
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i16> poison, i16 [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i16> [[TMP19]], i16 [[TMP22]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE8]]
 ; CHECK:       [[PRED_LOAD_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = phi <2 x i16> [ poison, %[[THEN6]] ], [ [[TMP18]], %[[PRED_LOAD_IF7]] ]
-; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_LOAD_IF9:.*]], label %[[PRED_LOAD_CONTINUE10:.*]]
-; CHECK:       [[PRED_LOAD_IF9]]:
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP29]], i64 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[TMP30]], align 2, !alias.scope [[META68]]
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i16> [[TMP19]], i16 [[TMP22]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE10]]
-; CHECK:       [[PRED_LOAD_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = phi <2 x i16> [ [[TMP19]], %[[PRED_LOAD_CONTINUE8]] ], [ [[TMP23]], %[[PRED_LOAD_IF9]] ]
-; CHECK-NEXT:    br label %[[LOOP_LATCH11]]
-; CHECK:       [[LOOP_LATCH11]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i16> [ [[TMP14]], %[[PRED_LOAD_CONTINUE5]] ], [ poison, %[[PRED_LOAD_CONTINUE10]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = phi <2 x i16> [ poison, %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP24]], %[[PRED_LOAD_CONTINUE10]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = phi <2 x i1> [ zeroinitializer, %[[PRED_LOAD_CONTINUE5]] ], [ [[BROADCAST_SPLAT]], %[[PRED_LOAD_CONTINUE10]] ]
+; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i16> [ [[TMP12]], %[[ELSE3]] ], [ poison, %[[THEN6]] ]
+; CHECK-NEXT:    [[TMP31:%.*]] = phi <2 x i16> [ poison, %[[ELSE3]] ], [ [[TMP23]], %[[THEN6]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = phi <2 x i1> [ zeroinitializer, %[[ELSE3]] ], [ splat (i1 true), %[[THEN6]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP27]], <2 x i16> [[TMP31]], <2 x i16> [[TMP25]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP28]], ptr [[DST]], align 2, !alias.scope [[META71:![0-9]+]], !noalias [[META68]]
@@ -1018,9 +995,6 @@ define void @hoist_predicated_load_with_chained_geps2(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[COND]], true
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH11:.*]] ]
@@ -1029,45 +1003,25 @@ define void @hoist_predicated_load_with_chained_geps2(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN6:.*]], label %[[ELSE3:.*]]
 ; CHECK:       [[ELSE3]]:
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
-; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META75:![0-9]+]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> poison, i16 [[TMP8]], i64 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
-; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ poison, %[[ELSE3]] ], [ [[TMP9]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
-; CHECK:       [[PRED_LOAD_IF4]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META75:![0-9]+]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[TMP11]], align 2, !alias.scope [[META75]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> poison, i16 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP10]], i16 [[TMP12]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
-; CHECK:       [[PRED_LOAD_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i16> [ [[TMP10]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], %[[PRED_LOAD_IF4]] ]
 ; CHECK-NEXT:    br label %[[LOOP_LATCH11]]
 ; CHECK:       [[THEN6]]:
-; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_LOAD_IF7:.*]], label %[[PRED_LOAD_CONTINUE8:.*]]
-; CHECK:       [[PRED_LOAD_IF7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
-; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP15]], align 2, !alias.scope [[META75]]
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i16> poison, i16 [[TMP16]], i64 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE8]]
-; CHECK:       [[PRED_LOAD_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <2 x i16> [ poison, %[[THEN6]] ], [ [[TMP17]], %[[PRED_LOAD_IF7]] ]
-; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_LOAD_IF9:.*]], label %[[PRED_LOAD_CONTINUE10:.*]]
-; CHECK:       [[PRED_LOAD_IF9]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
+; CHECK-NEXT:    [[TMP14:%.*]] = load i16, ptr [[TMP15]], align 2, !alias.scope [[META75]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i16, ptr [[TMP19]], align 2, !alias.scope [[META75]]
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i16> poison, i16 [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x i16> [[TMP18]], i16 [[TMP20]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE10]]
-; CHECK:       [[PRED_LOAD_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = phi <2 x i16> [ [[TMP18]], %[[PRED_LOAD_CONTINUE8]] ], [ [[TMP27]], %[[PRED_LOAD_IF9]] ]
 ; CHECK-NEXT:    br label %[[LOOP_LATCH11]]
 ; CHECK:       [[LOOP_LATCH11]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = phi <2 x i16> [ [[TMP14]], %[[PRED_LOAD_CONTINUE5]] ], [ poison, %[[PRED_LOAD_CONTINUE10]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = phi <2 x i16> [ poison, %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP22]], %[[PRED_LOAD_CONTINUE10]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i1> [ zeroinitializer, %[[PRED_LOAD_CONTINUE5]] ], [ [[BROADCAST_SPLAT]], %[[PRED_LOAD_CONTINUE10]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi <2 x i16> [ [[TMP13]], %[[ELSE3]] ], [ poison, %[[THEN6]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = phi <2 x i16> [ poison, %[[ELSE3]] ], [ [[TMP27]], %[[THEN6]] ]
+; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i1> [ zeroinitializer, %[[ELSE3]] ], [ splat (i1 true), %[[THEN6]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP25]], <2 x i16> [[TMP24]], <2 x i16> [[TMP23]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP28]], ptr [[DST]], align 2, !alias.scope [[META78:![0-9]+]], !noalias [[META75]]
