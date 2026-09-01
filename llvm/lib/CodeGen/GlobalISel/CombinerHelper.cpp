@@ -1111,12 +1111,6 @@ bool CombinerHelper::matchSextTruncSextLoad(MachineInstr &MI) const {
   return false;
 }
 
-void CombinerHelper::applySextTruncSextLoad(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
-  Builder.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
-  MI.eraseFromParent();
-}
-
 bool CombinerHelper::matchSextInRegOfLoad(
     MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
@@ -2129,40 +2123,10 @@ void CombinerHelper::applyShiftOfShiftedLogic(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
-                                       BuildFnTy &MatchInfo) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SHL && "Expected G_SHL");
-  // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
-  // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
-  auto &Shl = cast<GenericMachineInstr>(MI);
-  Register DstReg = Shl.getReg(0);
-  Register SrcReg = Shl.getReg(1);
-  Register ShiftReg = Shl.getReg(2);
-  Register X, C1;
-
-  if (!getTargetLowering().isDesirableToCommuteWithShift(MI, !isPreLegalize()))
-    return false;
-
-  MachineInstr *SrcDef;
-  if (!mi_match(SrcReg, MRI,
-                m_OneNonDBGUse(m_any_of(m_GAdd(m_Reg(X), m_Reg(C1)),
-                                        m_GOr(m_Reg(X), m_Reg(C1))))) ||
-      !mi_match(SrcReg, MRI, m_MInstr(SrcDef)))
-    return false;
-
-  APInt C1Val, C2Val;
-  if (!mi_match(C1, MRI, m_ICstOrSplat(C1Val)) ||
-      !mi_match(ShiftReg, MRI, m_ICstOrSplat(C2Val)))
-    return false;
-
-  unsigned SrcOpc = SrcDef->getOpcode();
-  LLT SrcTy = MRI.getType(SrcReg);
-  MatchInfo = [=](MachineIRBuilder &B) {
-    auto S1 = B.buildShl(SrcTy, X, ShiftReg);
-    auto S2 = B.buildShl(SrcTy, C1, ShiftReg);
-    B.buildInstr(SrcOpc, {DstReg}, {S1, S2});
-  };
-  return true;
+bool CombinerHelper::isDesirableToCommuteWithShift(
+    const MachineInstr &MI) const {
+  return getTargetLowering().isDesirableToCommuteWithShift(MI,
+                                                           !isPreLegalize());
 }
 
 bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
@@ -2649,24 +2613,6 @@ bool CombinerHelper::tryCombineShiftToUnmerge(
   }
 
   return false;
-}
-
-bool CombinerHelper::matchCombineI2PToP2I(MachineInstr &MI,
-                                          Register &Reg) const {
-  assert(MI.getOpcode() == TargetOpcode::G_INTTOPTR && "Expected a G_INTTOPTR");
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  Register SrcReg = MI.getOperand(1).getReg();
-  return mi_match(SrcReg, MRI,
-                  m_GPtrToInt(m_all_of(m_SpecificType(DstTy), m_Reg(Reg))));
-}
-
-void CombinerHelper::applyCombineI2PToP2I(MachineInstr &MI,
-                                          Register &Reg) const {
-  assert(MI.getOpcode() == TargetOpcode::G_INTTOPTR && "Expected a G_INTTOPTR");
-  Register DstReg = MI.getOperand(0).getReg();
-  Builder.buildCopy(DstReg, Reg);
-  MI.eraseFromParent();
 }
 
 void CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI,
@@ -3992,12 +3938,6 @@ bool CombinerHelper::matchPtrAddZero(MachineInstr &MI) const {
   return isBuildVectorAllZeros(*VecMI, MRI);
 }
 
-void CombinerHelper::applyPtrAddZero(MachineInstr &MI) const {
-  auto &PtrAdd = cast<GPtrAdd>(MI);
-  Builder.buildIntToPtr(PtrAdd.getReg(0), PtrAdd.getOffsetReg());
-  PtrAdd.eraseFromParent();
-}
-
 /// The second source operand is known to be a power of 2.
 void CombinerHelper::applySimplifyURemByPow2(MachineInstr &MI) const {
   Register DstReg = MI.getOperand(0).getReg();
@@ -4959,8 +4899,13 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
                        m_ICst(AndImm))))
     return false;
 
+  // AndImm is sign-extended to 64 bits by m_ICst; restrict it to the operand
+  // width so an all-ones mask (a redundant AND) is not misread as a wider mask.
+  uint64_t MaybeMask = static_cast<uint64_t>(AndImm);
+  if (Size < 64)
+    MaybeMask &= maskTrailingOnes<uint64_t>(Size);
+
   // The mask is a mask of the low bits iff imm & (imm+1) == 0.
-  auto MaybeMask = static_cast<uint64_t>(AndImm);
   if (MaybeMask & (MaybeMask + 1))
     return false;
 
@@ -4968,7 +4913,14 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
   if (static_cast<uint64_t>(LSBImm) >= Size)
     return false;
 
-  uint64_t Width = APInt(Size, AndImm).countr_one();
+  uint64_t Width = APInt(Size, MaybeMask).countr_one();
+  // The extracted field [LSB, LSB+Width) must fit within the register.
+  // Otherwise this is a redundant AND (e.g. an all-ones mask combined with a
+  // non-zero shift) that is better handled by other combines, and would form
+  // an out-of-range bitfield extract.
+  if (static_cast<uint64_t>(LSBImm) + Width > Size)
+    return false;
+
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
     auto LSBCst = B.buildConstant(ExtractTy, LSBImm);
