@@ -28,6 +28,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -35,6 +36,159 @@
 namespace llvm {
 
 namespace AMDGPU {
+
+/// Normalized WMMA or SWMMAC family used to select co-execution rules.
+enum class WMMAVariant {
+  Unknown = 0,
+  IU8_16x16x64,
+  F8F6F4_16x16x128,
+  F8F6F4_16x16x128_BothF4,
+  FP8BF8_16x16x64,
+  F16BF16_16x16x32,
+  FP8BF8_16x16x128,
+  F4_32x16x128,
+};
+
+/// Classify the generated opcode \p Opc for co-execution rule selection.
+/// \returns Unknown when the opcode does not identify a modeled WMMA family.
+inline WMMAVariant getWMMAOpcodeVariant(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_threeaddr:
+  case AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_twoaddr:
+    return WMMAVariant::IU8_16x16x64;
+
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f4_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f6_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f4_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f6_f8_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f6_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f6_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr:
+    return WMMAVariant::F8F6F4_16x16x128;
+
+  case AMDGPU::V_WMMA_F32_32X16X128_F4_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_32X16X128_F4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_32X16X128_F4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE16_F32_32X16X128_F4_w32_twoaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_32X16X128_F4_w32_threeaddr:
+  case AMDGPU::V_WMMA_SCALE_F32_32X16X128_F4_w32_twoaddr:
+    return WMMAVariant::F4_32x16x128;
+
+  case AMDGPU::V_WMMA_F16_16X16X64_BF8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_BF8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_FP8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_FP8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X64_FP8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_BF8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_BF8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_FP8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_FP8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X64_FP8_FP8_w32_twoaddr:
+    return WMMAVariant::FP8BF8_16x16x64;
+
+  case AMDGPU::V_SWMMAC_BF16_16X16X32_BF16_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_BF16_16X16X32_BF16_w64_twoaddr:
+  case AMDGPU::V_SWMMAC_F16_16X16X32_F16_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F16_16X16X32_F16_w64_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X32_BF16_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X32_BF16_w64_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X32_F16_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X32_F16_w64_twoaddr:
+  case AMDGPU::V_WMMA_BF16F32_16X16X32_BF16_w32_threeaddr:
+  case AMDGPU::V_WMMA_BF16F32_16X16X32_BF16_w32_twoaddr:
+  case AMDGPU::V_WMMA_BF16_16X16X32_BF16_w32_threeaddr:
+  case AMDGPU::V_WMMA_BF16_16X16X32_BF16_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X32_F16_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X32_F16_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X32_BF16_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X32_BF16_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X32_F16_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X32_F16_w32_twoaddr:
+    return WMMAVariant::F16BF16_16x16x32;
+
+  case AMDGPU::V_SWMMAC_F16_16X16X128_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F16_16X16X128_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F16_16X16X128_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F16_16X16X128_FP8_FP8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X128_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X128_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X128_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_SWMMAC_F32_16X16X128_FP8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_BF8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_BF8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_FP8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_FP8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F16_16X16X128_FP8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_BF8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_BF8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_BF8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_BF8_FP8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_FP8_BF8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_FP8_BF8_w32_twoaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_FP8_FP8_w32_threeaddr:
+  case AMDGPU::V_WMMA_F32_16X16X128_FP8_FP8_w32_twoaddr:
+    return WMMAVariant::FP8BF8_16x16x128;
+
+  default:
+    return WMMAVariant::Unknown;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Co-execution Bitmasks
@@ -234,6 +388,9 @@ struct CoExecSlotInfo {
 
 /// Co-execution characteristics for a multi-cycle instruction.
 struct CoExecInfo {
+  /// Number of cycles for which the producing instruction occupies its
+  /// execution unit.
+  unsigned UnitOccupancy = 0;
   /// Number of cycles in the co-execution window, counting any trailing
   /// vacant stages.
   unsigned TotalWindow = 0;
@@ -297,8 +454,9 @@ struct CoExecInfo {
     return getStageType(getMask(Stage));
   }
 
-  /// Build a CoExecInfo from a pattern string.
-  static CoExecInfo build(unsigned TotalWindow, const char *Pattern);
+  /// Build a CoExecInfo from an occupancy and stage pattern.
+  static CoExecInfo build(unsigned UnitOccupancy, unsigned TotalWindow,
+                          const char *Pattern);
 };
 
 //===----------------------------------------------------------------------===//
@@ -309,8 +467,10 @@ struct CoExecInfo {
 /// Pattern chars: '0'=E0, 'E'=External, 'I'=Internal, 'V'=Vacant,
 ///                'S'=Internal+ScaleWMMAAbsorb (I plus next scaled WMMA),
 ///                'T'=TRANS co-exec (all except TRANS), 'A'=Any
-inline CoExecInfo CoExecInfo::build(unsigned TotalWindow, const char *Pattern) {
+inline CoExecInfo CoExecInfo::build(unsigned UnitOccupancy,
+                                    unsigned TotalWindow, const char *Pattern) {
   CoExecInfo Info;
+  Info.UnitOccupancy = UnitOccupancy;
   Info.TotalWindow = TotalWindow;
   Info.Pattern = Pattern;
   assert(Info.Pattern.size() == TotalWindow &&
@@ -351,6 +511,7 @@ inline CoExecInfo CoExecInfo::build(unsigned TotalWindow, const char *Pattern) {
 inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
                                 const SIInstrInfo &TII) {
   unsigned Opc = MI.getOpcode();
+  WMMAVariant Variant = getWMMAOpcodeVariant(Opc);
 
   // Scaled variants (LD_SCALE rule) absorb the next WMMA in the last I slot.
   bool HasScaling = AMDGPU::getHasMatrixScale(Opc);
@@ -365,96 +526,44 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
     bool BothF4 = FmtB && FmtA->getImm() == AMDGPU::WMMA::MATRIX_FMT_FP4 &&
                   FmtB->getImm() == AMDGPU::WMMA::MATRIX_FMT_FP4;
     if (BothF4)
-      return CoExecInfo::build(6, HasScaling ? "0EESVV" : "0EEIVV");
-    return CoExecInfo::build(10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
+      Variant = WMMAVariant::F8F6F4_16x16x128_BothF4;
   }
 
-  switch (Opc) {
+  switch (Variant) {
   // 16x16x64 IU8: 16-cycle occupancy, 17-cycle window.
-  case AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_threeaddr:
-  case AMDGPU::V_WMMA_I32_16X16X64_IU8_w32_twoaddr:
-    return CoExecInfo::build(17, "0EIIEEIIEEIIEEIIV");
+  case WMMAVariant::IU8_16x16x64:
+    return CoExecInfo::build(16, 17, "0EIIEEIIEEIIEEIIV");
+
+  // 16x16x128 F8/F6/F4 has occupancy of 8 cycles and a window of 10 cycles.
+  case WMMAVariant::F8F6F4_16x16x128:
+    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
+
+  // 16x16x128 with two F4 inputs has occupancy of 4 cycles and a window of 6
+  // cycles.
+  case WMMAVariant::F8F6F4_16x16x128_BothF4:
+    return CoExecInfo::build(4, 6, HasScaling ? "0EESVV" : "0EEIVV");
 
   // 16x16x64 FP8/BF8: 4-cycle occupancy, 6-cycle window.
-  case AMDGPU::V_WMMA_F16_16X16X64_BF8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_BF8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_FP8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_FP8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X64_FP8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_BF8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_BF8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_FP8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_FP8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X64_FP8_FP8_w32_twoaddr:
-    return CoExecInfo::build(6, "0EEIVV");
+  case WMMAVariant::FP8BF8_16x16x64:
+    return CoExecInfo::build(4, 6, "0EEIVV");
 
   // 16x16x32 F16/BF16: 8-cycle occupancy, 9-cycle window.
-  case AMDGPU::V_SWMMAC_BF16_16X16X32_BF16_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_BF16_16X16X32_BF16_w64_twoaddr:
-  case AMDGPU::V_SWMMAC_F16_16X16X32_F16_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F16_16X16X32_F16_w64_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X32_BF16_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X32_BF16_w64_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X32_F16_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X32_F16_w64_twoaddr:
-  case AMDGPU::V_WMMA_BF16F32_16X16X32_BF16_w32_threeaddr:
-  case AMDGPU::V_WMMA_BF16F32_16X16X32_BF16_w32_twoaddr:
-  case AMDGPU::V_WMMA_BF16_16X16X32_BF16_w32_threeaddr:
-  case AMDGPU::V_WMMA_BF16_16X16X32_BF16_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X32_F16_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X32_F16_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X32_BF16_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X32_BF16_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X32_F16_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X32_F16_w32_twoaddr:
-    return CoExecInfo::build(9, "0EIIEEIIV");
+  case WMMAVariant::F16BF16_16x16x32:
+    return CoExecInfo::build(8, 9, "0EIIEEIIV");
 
   // 16x16x128 FP8/BF8: 8-cycle occupancy, 10-cycle window.
-  case AMDGPU::V_SWMMAC_F16_16X16X128_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F16_16X16X128_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F16_16X16X128_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F16_16X16X128_FP8_FP8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X128_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X128_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X128_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_SWMMAC_F32_16X16X128_FP8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_BF8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_BF8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_FP8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_FP8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F16_16X16X128_FP8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_BF8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_BF8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_BF8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_BF8_FP8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_FP8_BF8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_FP8_BF8_w32_twoaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_FP8_FP8_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_16X16X128_FP8_FP8_w32_twoaddr:
-    return CoExecInfo::build(10, "0EEIEEIIVV");
+  case WMMAVariant::FP8BF8_16x16x128:
+    return CoExecInfo::build(8, 10, "0EEIEEIIVV");
 
   // 32x16x128 F4: 8-cycle occupancy, 10-cycle window.
-  case AMDGPU::V_WMMA_F32_32X16X128_F4_w32_threeaddr:
-  case AMDGPU::V_WMMA_F32_32X16X128_F4_w32_twoaddr:
-  case AMDGPU::V_WMMA_SCALE16_F32_32X16X128_F4_w32_threeaddr:
-  case AMDGPU::V_WMMA_SCALE16_F32_32X16X128_F4_w32_twoaddr:
-  case AMDGPU::V_WMMA_SCALE_F32_32X16X128_F4_w32_threeaddr:
-  case AMDGPU::V_WMMA_SCALE_F32_32X16X128_F4_w32_twoaddr:
-    return CoExecInfo::build(10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
+  case WMMAVariant::F4_32x16x128:
+    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
 
-  default:
+  case WMMAVariant::Unknown:
     // Permissive window for variants without a modeled slot pattern.
-    return CoExecInfo::build(9, "AAAAAAAAA");
+    return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
+  llvm_unreachable("unknown WMMA variant");
 }
 
 } // namespace AMDGPU
