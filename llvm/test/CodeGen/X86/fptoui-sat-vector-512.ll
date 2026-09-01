@@ -1932,15 +1932,10 @@ define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmaxpd %zmm1, %zmm0, %zmm1
-; AVX512F-NEXT:    vcvttpd2dq %zmm1, %ymm2
-; AVX512F-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm3
-; AVX512F-NEXT:    vpsrad $31, %ymm2, %ymm4
-; AVX512F-NEXT:    vcvttpd2dq %zmm3, %ymm3
-; AVX512F-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; AVX512F-NEXT:    vcvttpd2udq %zmm1, %ymm2
 ; AVX512F-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpor %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vpor %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0
@@ -1950,17 +1945,13 @@ define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm1
-; AVX512-NEXT:    vcvttpd2dq %zmm1, %ymm2
-; AVX512-NEXT:    vpsrad $31, %ymm2, %ymm3
-; AVX512-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm4
-; AVX512-NEXT:    vcvttpd2dq %zmm4, %ymm4
 ; AVX512-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k1
-; AVX512-NEXT:    vpternlogd {{.*#+}} ymm4 = (ymm4 & ymm3) | ymm2
-; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm4 {%k1}
+; AVX512-NEXT:    vcvttpd2udq %zmm1, %ymm1
+; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX512-NEXT:    vmovdqa32 %ymm2, %ymm1 {%k1}
 ; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
 ; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm4, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f64(<8 x double> %f)
   ret <8 x i32> %x

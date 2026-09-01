@@ -1260,7 +1260,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v4i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2i32, Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v2i32, Custom);
 
     // Custom legalize these to avoid over promotion or custom promotion.
     for (auto VT : {MVT::v2i8, MVT::v4i8, MVT::v8i8, MVT::v2i16, MVT::v4i16}) {
@@ -1536,8 +1536,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i16, MVT::v8i32);
     setOperationAction(ISD::FP_TO_SINT,                MVT::v8i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,                MVT::v8i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,            MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT,            MVT::v8i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Custom);
@@ -1947,8 +1947,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
     }
 
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,    MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT,    MVT::v16i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
@@ -22558,7 +22558,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   EVT DstVT = Node->getValueType(0);
   EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
 
-  if (DstVT == MVT::v4i32 || DstVT == MVT::v8i32 || DstVT == MVT::v16i32) {
+  if (DstVT == MVT::v2i32 || DstVT == MVT::v4i32 || DstVT == MVT::v8i32 || DstVT == MVT::v16i32) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
@@ -22629,7 +22629,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
         // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
         // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
         SDValue Cvt;
-        if (DstVT == MVT::v16i32)
+        if (Subtarget.hasAVX512())
           Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
         else
           Cvt = expandFP_TO_UINT_SSE(DstVT.getSimpleVT(), Clamped, dl, DAG,

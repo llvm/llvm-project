@@ -352,17 +352,13 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcvttps2dq %xmm1, %xmm2
-; AVX512-NEXT:    vpsrad $31, %xmm2, %xmm3
-; AVX512-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm4
-; AVX512-NEXT:    vcvttps2dq %xmm4, %xmm4
 ; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm4 = (xmm4 & xmm3) | xmm2
-; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm4 {%k1}
+; AVX512-NEXT:    vcvttps2udq %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
 ; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k0
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %f)
   ret <4 x i32> %x
@@ -2373,17 +2369,13 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512-NEXT:    vmaxps %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vcvttps2dq %ymm1, %ymm2
-; AVX512-NEXT:    vpsrad $31, %ymm2, %ymm3
-; AVX512-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm4
-; AVX512-NEXT:    vcvttps2dq %ymm4, %ymm4
 ; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %k1
-; AVX512-NEXT:    vpternlogd {{.*#+}} ymm4 = (ymm4 & ymm3) | ymm2
-; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm4 {%k1}
+; AVX512-NEXT:    vcvttps2udq %ymm1, %ymm1
+; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX512-NEXT:    vmovdqa32 %ymm2, %ymm1 {%k1}
 ; AVX512-NEXT:    vcmpunordps %ymm0, %ymm0, %k0
 ; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm4, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f16(<8 x half> %f)
   ret <8 x i32> %x
