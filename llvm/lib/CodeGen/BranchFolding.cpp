@@ -392,14 +392,7 @@ static bool haveSamePseudoProbeContext(const MachineInstr &MI1,
   if (IsSensitive1 != IsSensitive2)
     return false;
 
-  DebugLoc DL1 = MI1.getDebugLoc();
-  DebugLoc DL2 = MI2.getDebugLoc();
-  if (!DL1.isSameSourceLocation(DL2))
-    return false;
-
-  // A call probe's identity is encoded in its discriminator, which
-  // isSameSourceLocation intentionally ignores.
-  return !MI1.isCall() || DL1->getDiscriminator() == DL2->getDiscriminator();
+  return MI1.getDebugLoc().isSameSourceLocation(MI2.getDebugLoc());
 }
 
 /// Iterate backwards from the given iterator \p I, towards the beginning of the
