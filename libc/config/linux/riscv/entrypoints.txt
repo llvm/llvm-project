@@ -472,6 +472,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
+    libc.src.unistd.tcgetpgrp
+    libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
