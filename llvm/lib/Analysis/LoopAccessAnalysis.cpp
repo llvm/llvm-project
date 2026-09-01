@@ -362,7 +362,9 @@ getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
   if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
     return {nullptr, nullptr};
 
-  const SCEV *Base = SE->getPointerBase(PtrExpr);
+  const SCEV *Base = *find_if(PtrAdd->operands(), [](const auto &Op) {
+    return Op->getType()->isPointerTy();
+  });
   if (isa<SCEVCouldNotCompute>(Base) || !SE->isLoopInvariant(Base, Lp))
     return {nullptr, nullptr};
 

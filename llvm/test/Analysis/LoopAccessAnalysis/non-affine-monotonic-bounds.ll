@@ -488,10 +488,21 @@ exit:
 define void @nested_outer_addrec_base_udiv(ptr %a, ptr %b, i64 %N) {
 ; CHECK-LABEL: 'nested_outer_addrec_base_udiv'
 ; CHECK-NEXT:    inner:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %j
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i8, ptr %base, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%inner>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: {%a,+,1}<nuw><%outer.header> High: {(1 + ((-1 + %N) /u 64) + %a),+,1}<nw><%outer.header>)
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%inner> /u 64) + {%a,+,1}<nuw><%outer.header>)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
