@@ -26,6 +26,8 @@ namespace cir {
 static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   if (triple.getArch() == llvm::Triple::x86_64)
     return CallConvTarget::X86_64;
+  if (triple.isAMDGPU())
+    return CallConvTarget::AMDGPU;
   return CallConvTarget::None;
 }
 
@@ -115,8 +117,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
-    // records the classifier can handle.  Only the x86_64 System V classifier
-    // is implemented; other targets are left unchanged.
+    // records the classifier can handle.  Only the x86_64 System V and AMDGPU
+    // classifiers are implemented; other targets are left unchanged.
     const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
     CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
     if (target != CallConvTarget::None)
