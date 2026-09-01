@@ -478,6 +478,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
 
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
+
 #### Bug Fixes to Attribute Support
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
