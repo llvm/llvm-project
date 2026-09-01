@@ -1212,39 +1212,47 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
             cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
         Address OriginalAddr =
             EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
-        // Emit private VarDecl with copy init. Remap VDInit to point to the
-        // original binding so EmitDecl properly initializes VD.
-        setAddrOfLocalVar(VDInit, OriginalAddr);
-        EmitDecl(*VD);
-        LocalDeclMap.erase(VDInit);
-        Address VDAddr = GetAddrOfLocalVar(VD);
 
-        // VD contains the full DecompositionDecl, but we need to map BD to
-        // its specific field. Temporarily map the DecompositionDecl to
-        // VDAddr and emit the binding expression to extract the field.
-        const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
-        auto It = LocalDeclMap.find(DD);
-        bool WasMapped = It != LocalDeclMap.end();
-        Address SavedAddr = WasMapped ? It->second : Address::invalid();
-        if (WasMapped)
-          It->second = VDAddr;
-        else
-          LocalDeclMap.insert({DD, VDAddr});
-
-        const Expr *BindingExpr = BD->getBinding();
-        LValue BindingLVal = EmitLValue(const_cast<Expr *>(BindingExpr));
-        Address BindingAddr = BindingLVal.getAddress();
-
-        // Restore the DecompositionDecl mapping
-        if (WasMapped) {
-          auto RestoreIt = LocalDeclMap.find(DD);
-          assert(RestoreIt != LocalDeclMap.end());
-          RestoreIt->second = SavedAddr;
+        QualType Type = VD->getType();
+        bool IsRegistered;
+        if (Type->isArrayType()) {
+          // For array bindings, use array copy logic
+          AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
+          const Expr *Init = VD->getInit();
+          LValue OriginalLVal = MakeAddrLValue(OriginalAddr, Type);
+          if (!Init || !isa<CXXConstructExpr>(Init) ||
+              isTrivialInitializer(Init)) {
+            // Perform simple memcpy.
+            LValue Dest = MakeAddrLValue(Emission.getAllocatedAddress(), Type);
+            EmitAggregateAssign(Dest, OriginalLVal, Type);
+          } else {
+            EmitOMPAggregateAssign(
+                Emission.getAllocatedAddress(), OriginalAddr, Type,
+                [this, VDInit, Init](Address DestElement, Address SrcElement) {
+                  // Clean up any temporaries needed by the initialization.
+                  RunCleanupsScope InitScope(*this);
+                  // Emit initialization for single element.
+                  setAddrOfLocalVar(VDInit, SrcElement);
+                  EmitAnyExprToMem(Init, DestElement,
+                                   Init->getType().getQualifiers(),
+                                   /*IsInitializer*/ false);
+                  LocalDeclMap.erase(VDInit);
+                });
+          }
+          EmitAutoVarCleanups(Emission);
+          IsRegistered =
+              PrivateScope.addPrivate(BD, Emission.getAllocatedAddress());
         } else {
-          LocalDeclMap.erase(DD);
+          // VD now has the binding's type (e.g., int), not the struct type.
+          // Emit VD initialized from the binding's field address.
+          setAddrOfLocalVar(VDInit, OriginalAddr);
+          EmitDecl(*VD);
+          LocalDeclMap.erase(VDInit);
+          Address VDAddr = GetAddrOfLocalVar(VD);
+          // VD is the private copy of the binding, map BD to VDAddr directly
+          IsRegistered = PrivateScope.addPrivate(BD, VDAddr);
         }
 
-        bool IsRegistered = PrivateScope.addPrivate(BD, BindingAddr);
         assert(IsRegistered &&
                "firstprivate var already registered as firstprivate");
         (void)IsRegistered;
