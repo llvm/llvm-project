@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -444,18 +443,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
   if (MMI) {
-    M->renumberMetadataForAssembly();
     printMIR(ROS, *M);
     for (Function &F : *M) {
-      if (auto *MF = MMI->getMachineFunction(F)) {
-        MachineModuleSlotTracker MST(
-            [&](const Function &F) { return MMI->getMachineFunction(F); }, MF);
-        MST.renumberMetadataForAssembly();
+      if (auto *MF = MMI->getMachineFunction(F))
         printMIR(ROS, *MMI, *MF);
-      }
     }
   } else {
-    M->renumberMetadataForAssembly();
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);
   }
