@@ -23,8 +23,7 @@ void OffloadTopology::registerNewPlatformsAndDevices(
     auto GroupIt = std::find_if(MPlatformGroups.begin(), MPlatformGroups.end(),
                                 [&](const OffloadPlatformGroup &Group) {
                                   return Group.Platform == Entry.Platform &&
-                                         Group.DriverId ==
-                                             Entry.DriverId;
+                                         Group.DriverId == Entry.DriverId;
                                 });
     if (GroupIt == MPlatformGroups.end()) {
       MPlatformGroups.push_back({Entry.Platform, Entry.DriverId, {}});
@@ -74,8 +73,7 @@ void discoverOffloadDevices() {
           return true;
 
         uint32_t DriverId = 0;
-        Res = callNoCheck(olGetDeviceInfo, Dev,
-                          OL_DEVICE_INFO_DRIVER_ID,
+        Res = callNoCheck(olGetDeviceInfo, Dev, OL_DEVICE_INFO_DRIVER_ID,
                           sizeof(DriverId), &DriverId);
         if (Res != OL_SUCCESS)
           DriverId = 0;

@@ -60,8 +60,7 @@ TEST(olGetDeviceInfoSizeHostTest, SuccessDriverId) {
   ASSERT_NE(Host, nullptr);
 
   size_t Size = 0;
-  ASSERT_SUCCESS(
-      olGetDeviceInfoSize(Host, OL_DEVICE_INFO_DRIVER_ID, &Size));
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_DRIVER_ID, &Size));
   ASSERT_EQ(Size, sizeof(uint32_t));
 }
 
