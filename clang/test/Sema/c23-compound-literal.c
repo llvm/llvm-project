@@ -48,11 +48,11 @@ void test5(void) {
 int *a1 = &(register int){42}; // expected-error {{file scope compound literal specifies 'register'}}
 
 void test6(void) {
-  (void)(constexpr volatile int){1}; // expected-error {{constexpr compound literal cannot have type 'const volatile int'}}
-  (void)(constexpr _Atomic int){1};  // expected-error {{constexpr compound literal cannot have type 'const _Atomic(int)'}}
+  (void)(constexpr volatile int){1}; // expected-error {{constexpr variable cannot have type 'const volatile int'}}
+  (void)(constexpr _Atomic int){1};  // expected-error {{constexpr variable cannot have type 'const _Atomic(int)'}}
 
   int c;
-  (void)(constexpr int[c]){0}; // expected-error {{constexpr compound literal cannot have type 'const int[c]'}}
+  (void)(constexpr int[c]){0}; // expected-error {{constexpr variable cannot have type 'const int[c]'}}
 }
 
 void test7(void) {
@@ -187,7 +187,7 @@ struct S8 {
   int *restrict a;
 };
 void test16(void) {
-  (void)(constexpr struct S8){0}; // expected-error {{constexpr compound literal cannot have type 'int *restrict'}}
+  (void)(constexpr struct S8){0}; // expected-error {{constexpr variable cannot have type 'int *restrict'}}
 }
 
 void test17(void) {

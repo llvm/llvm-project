@@ -7607,7 +7607,7 @@ ExprResult Sema::BuildCompoundLiteralExpr(
     }
     if (HasConstexpr &&
         CheckConstexprType(ConstexprLoc, literalType,
-                           diag::err_constexpr_compound_literal_invalid_type))
+                           diag::err_c23_constexpr_invalid_type))
       return ExprError();
   }
 
