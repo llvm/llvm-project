@@ -893,10 +893,9 @@ void SmartPtrInitializationCheck::emitDiagnostic(
     const SourceLocation Loc = PointerArg->getBeginLoc();
     if (Loc.isInvalid())
       return;
-    diag(Loc, "passing a raw pointer '%0' to %1 constructor may cause "
+    diag(Loc, "passing a raw pointer %0 to %1 constructor may cause "
               "double deletion")
-        << getRawPointerDescription(PointerArg, Context)
-        << SmartPtrCtor->getType();
+        << PointerArg->getType() << SmartPtrCtor->getType();
   } else if (const auto *ResetCall =
                  dyn_cast<const CXXMemberCallExpr>(ConstructorOrMember)) {
     const Expr *PointerArg = stripWrappers(ResetCall->getArg(0));
@@ -905,43 +904,11 @@ void SmartPtrInitializationCheck::emitDiagnostic(
     const SourceLocation Loc = PointerArg->getBeginLoc();
     if (Loc.isInvalid())
       return;
-    diag(Loc,
-         "passing a raw pointer '%0' to '%1::reset' may cause double deletion")
-        << getRawPointerDescription(PointerArg, Context)
-        << getSmartPointerDescription(ResetCall->getMethodDecl()->getParent(),
-                                      Context);
+    diag(
+        Loc,
+        "passing a raw pointer %0 to %1 reset method may cause double deletion")
+        << PointerArg->getType() << ResetCall->getObjectType();
   }
-}
-
-std::string SmartPtrInitializationCheck::getSmartPointerDescription(
-    const CXXRecordDecl *RecordDecl, const ASTContext &Context) {
-  const PrintingPolicy Policy = Context.getPrintingPolicy();
-
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  RecordDecl->getNameForDiagnostic(OS, Policy, /*Qualified=*/true);
-
-  return Result;
-}
-
-std::string SmartPtrInitializationCheck::getRawPointerDescription(
-    const Expr *PointerExpr, const ASTContext &Context) {
-  const QualType ExprType = PointerExpr->getType();
-
-  PrintingPolicy Policy(Context.getLangOpts());
-  Policy.SuppressSpecifiers = false;
-  Policy.SuppressTagKeyword = true;
-
-  // TODO: get ride of getAsString()??
-  std::string Result = ExprType.getAsString(Policy);
-
-  size_t Pos = Result.find(" *");
-  while (Pos != std::string::npos) {
-    Result.erase(Pos, 1); // remove the space
-    Pos = Result.find(" *", Pos);
-  }
-
-  return Result;
 }
 
 } // namespace clang::tidy::bugprone

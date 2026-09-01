@@ -63,14 +63,14 @@ void test_copy_move_constructor_ok(std::unique_ptr<A[]> up) {
 void test_unique_ptr_reset() {
   std::unique_ptr<A[]> b;
   b.reset(arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer 'A[10]' to 'std::unique_ptr<A[]>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer 'A[10]' to 'std::unique_ptr<A[]>' reset method may cause double deletion
 }
 
 void test_stack_variable_reset() {
   int x[10] = {5};
   std::unique_ptr<int[]> ptr;
   ptr.reset(x);
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'int[10]' to 'std::unique_ptr<int[]>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'int[10]' to 'std::unique_ptr<int[]>' reset method may cause double deletion
 }
 
 void test_new_expression_reset_ok() {

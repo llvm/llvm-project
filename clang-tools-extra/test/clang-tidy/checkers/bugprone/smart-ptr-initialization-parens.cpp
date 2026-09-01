@@ -12,18 +12,18 @@ A* getAPtr();
 
 void test_shared_ptr_constructor() {
   std::shared_ptr<A> a((&getA()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
 }
 
 void test_unique_ptr_constructor() {
   std::unique_ptr<A> b((&getA()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
 void test_stack_variable() {
   int x = 5;
   std::unique_ptr<int> ptr((&x));
-  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int*' to 'std::unique_ptr<int>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::unique_ptr<int>' constructor may cause double deletion
 }
 
 // Should trigger for member variables
@@ -31,13 +31,13 @@ struct S {
   int member;
   void test() {
     std::unique_ptr<int> ptr((&member));
-    // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: passing a raw pointer 'int*' to 'std::unique_ptr<int>' constructor may cause double deletion
+    // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: passing a raw pointer 'int *' to 'std::unique_ptr<int>' constructor may cause double deletion
   }
 };
 
 void test_function_return() {
   std::shared_ptr<A> sp((getAPtr()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
 }
 
 void test_new_expression_ok() {
@@ -79,26 +79,26 @@ void test_copy_move_constructor_ok(std::shared_ptr<A> sp, std::unique_ptr<A> up)
 void test_shared_ptr_reset() {
   std::shared_ptr<A> a;
   a.reset((&getA()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
 }
 
 void test_unique_ptr_reset() {
   std::unique_ptr<A> b;
   b.reset((&getA()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' reset method may cause double deletion
 }
 
 void test_stack_variable_reset() {
   int x = 5;
   std::unique_ptr<int> ptr;
   ptr.reset((&x));
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing a raw pointer 'int*' to 'std::unique_ptr<int>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing a raw pointer 'int *' to 'std::unique_ptr<int>' reset method may cause double deletion
 }
 
 void test_function_return_reset() {
   std::shared_ptr<A> sp;
   sp.reset((getAPtr()));
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
 }
 
 void test_new_expression_reset_ok() {

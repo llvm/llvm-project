@@ -27,10 +27,25 @@ void test_new_expression_fail() {
   A* second = new A();
   std::shared_ptr<A> a(first);
   std::shared_ptr<A> a2(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
   std::unique_ptr<A> b(second);
   std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
+}
+
+using ptr_a_t = A*;
+using shared_ptr_a_t = std::shared_ptr<A>;
+using unique_ptr_a_t = std::unique_ptr<A>;
+
+void test_new_expression_with_aliases() {
+  ptr_a_t first = new A();
+  ptr_a_t second = new A();
+  shared_ptr_a_t a(first);
+  shared_ptr_a_t a2(first);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'shared_ptr_a_t' (aka 'std::shared_ptr<A>') constructor may cause double deletion
+  unique_ptr_a_t b(second);
+  unique_ptr_a_t b2(second);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'unique_ptr_a_t' (aka 'std::unique_ptr<A>') constructor may cause double deletion
 }
 
 void test_new_expression_fail_in_different_scopes() {
@@ -41,14 +56,14 @@ void test_new_expression_fail_in_different_scopes() {
   }
   {
   std::shared_ptr<A> a2(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
   }
   {
   std::unique_ptr<A> b(second);
   }
   {
   std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
   }
 }
 
@@ -67,10 +82,10 @@ void test_new_expression_fail_in_scope() {
   A* second = new A();
   std::shared_ptr<A> a(first);
   std::shared_ptr<A> a2(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
   std::unique_ptr<A> b(second);
   std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
   }
 }
 
@@ -88,10 +103,10 @@ void test_new_expression_fail_as_method() {
   A* second = new A();
   std::shared_ptr<A> a(first);
   std::shared_ptr<A> a2(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
   std::unique_ptr<A> b(second);
   std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
 };
@@ -131,12 +146,27 @@ void test_new_expression_reset_fail() {
   a.reset(first);
   std::shared_ptr<A> a2;
   a2.reset(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
   std::unique_ptr<A> b;
   b.reset(second);
   std::unique_ptr<A> b2;
   b2.reset(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' reset method may cause double deletion
+}
+
+void test_new_expression_reset_fail_with_aliases() {
+  ptr_a_t first = new A();
+  ptr_a_t second = new A();
+  shared_ptr_a_t a;
+  a.reset(first);
+  shared_ptr_a_t a2;
+  a2.reset(first);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'shared_ptr_a_t' (aka 'std::shared_ptr<A>') reset method may cause double deletion
+  unique_ptr_a_t b;
+  b.reset(second);
+  unique_ptr_a_t b2;
+  b2.reset(second);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'unique_ptr_a_t' (aka 'std::unique_ptr<A>') reset method may cause double deletion
 }
 
 void test_new_expression_crossed_fail() {
@@ -145,11 +175,11 @@ void test_new_expression_crossed_fail() {
   std::shared_ptr<A> a(first);
   std::shared_ptr<A> a2;
   a2.reset(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A*' to 'std::shared_ptr<A>::reset' may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
   std::unique_ptr<A> b;
   b.reset(second);
   std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
 bool can_take(std::shared_ptr<A> a);

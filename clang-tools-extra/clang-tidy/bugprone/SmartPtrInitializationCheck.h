@@ -35,10 +35,6 @@ public:
 
 private:
   void emitDiagnostic(ASTContext &Context, const Expr *ConstructorOrMember);
-  std::string getSmartPointerDescription(const CXXRecordDecl *RecordDecl,
-                                         const ASTContext &Context);
-  std::string getRawPointerDescription(const Expr *PointerExpr,
-                                       const ASTContext &Context);
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
