@@ -3417,6 +3417,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     // "struct x {int x;} x = (struct x) {};".
     // FIXME: This accepts other cases it shouldn't!
     const auto *CLE = cast<CompoundLiteralExpr>(this);
+    // A constant initializer cannot access a thread-local lvalue.
     if (CLE->hasThreadStorage()) {
       if (Culprit)
         *Culprit = this;

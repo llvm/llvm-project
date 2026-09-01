@@ -4878,14 +4878,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         assert(BaseVal && "got reference to unevaluated temporary");
       } else if (const CompoundLiteralExpr *CLE =
                      dyn_cast_or_null<CompoundLiteralExpr>(Base)) {
-        if (CLE->hasThreadStorage()) {
-          if (IsAccess) {
-            Info.FFDiag(E);
-            return CompleteObject();
-          }
-          return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-        }
-
         // According to GCC info page:
         //
         // 6.28 Compound Literals
@@ -9761,6 +9753,7 @@ bool
 LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   assert((!Info.getLangOpts().CPlusPlus || E->isFileScope()) &&
          "lvalue compound literal in c++?");
+  // A thread-local lvalue cannot be the result of constant evaluation.
   if (E->hasThreadStorage()) {
     Info.FFDiag(E);
     return false;
