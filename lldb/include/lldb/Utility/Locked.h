@@ -184,11 +184,11 @@ public:
   Guarded &operator=(const Guarded &) = delete;
 
   /// Exclusive (read/write) access to the value.
-  Locked<T *, Mutex> Lock() { return Locked<T *, Mutex>(m_mutex, &m_value); }
+  LockedPtr<T, Mutex> Lock() { return LockedPtr<T, Mutex>(m_mutex, &m_value); }
 
   /// Shared (read-only) access to the value.
-  SharedLocked<const T *, Mutex> LockShared() const {
-    return SharedLocked<const T *, Mutex>(m_mutex, &m_value);
+  SharedLockedPtr<T, Mutex> LockShared() const {
+    return SharedLockedPtr<T, Mutex>(m_mutex, &m_value);
   }
 
 private:

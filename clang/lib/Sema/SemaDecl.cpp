@@ -3455,26 +3455,7 @@ static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
-                                     const ParmVarDecl *oldDecl,
-                                     Sema &S) {
-  // C++11 [dcl.attr.depend]p2:
-  //   The first declaration of a function shall specify the
-  //   carries_dependency attribute for its declarator-id if any declaration
-  //   of the function specifies the carries_dependency attribute.
-  const CarriesDependencyAttr *CDA = newDecl->getAttr<CarriesDependencyAttr>();
-  if (CDA && !oldDecl->hasAttr<CarriesDependencyAttr>()) {
-    S.Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 1/*Param*/;
-    // Find the first declaration of the parameter.
-    // FIXME: Should we build redeclaration chains for function parameters?
-    const FunctionDecl *FirstFD =
-      cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
-    const ParmVarDecl *FirstVD =
-      FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
-    S.Diag(FirstVD->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
-  }
-
+                                     const ParmVarDecl *oldDecl, Sema &S) {
   propagateAttributes(
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
@@ -4230,18 +4211,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
             << NRA;
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
-
-    // C++11 [dcl.attr.depend]p2:
-    //   The first declaration of a function shall specify the
-    //   carries_dependency attribute for its declarator-id if any declaration
-    //   of the function specifies the carries_dependency attribute.
-    const CarriesDependencyAttr *CDA = New->getAttr<CarriesDependencyAttr>();
-    if (CDA && !Old->hasAttr<CarriesDependencyAttr>()) {
-      Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 0/*Function*/;
-      Diag(Old->getFirstDecl()->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
-    }
 
     // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
     //   When a function is declared with SYCL_EXTERNAL, that macro must be

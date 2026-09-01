@@ -46,9 +46,9 @@ def GFX88F : ProcessorModel<"gfx88f", NoSchedModel, []>,
 
 // The GPU table: the base GPU has no base name (offset 0); the variant uses
 // AMDGPUSubArch888A and records "gfx888" as its base name.
-// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], 0, [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], 0, [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], 0, [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], 0, [[#]], [[#]], [[#]]},
 
 // The subarch-name table maps the variant's own subarch to its triple name.
 // CHECK: {Triple::AMDGPUSubArch888A, [[#]], [[#]]},

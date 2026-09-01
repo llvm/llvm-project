@@ -262,7 +262,7 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
                                                        table.resultType(),
                                                        table.getSymbol()));
 
-  mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
+  fir::LinkageAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type sizeTy =
       fir::runtime::getModel<std::size_t>()(builder.getContext());
@@ -426,7 +426,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
   const auto &details =
       symbol.GetUltimate().get<Fortran::semantics::NamelistDetails>();
   mlir::MLIRContext *context = builder.getContext();
-  mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
+  fir::LinkageAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type sizeTy =
       fir::runtime::getModel<std::size_t>()(builder.getContext());

@@ -74,7 +74,8 @@ public:
   bool run(MachineFunction &MF);
 
 private:
-  DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
+  DemandedVL getMinimumVLForUser(const MachineInstr &UserMI,
+                                 unsigned OpIdx) const;
   /// Returns true if the users of \p MI have compatible EEWs and SEWs.
   bool checkUsers(const MachineInstr &MI) const;
   bool tryReduceVL(MachineInstr &MI, MachineOperand VL) const;
@@ -1030,13 +1031,12 @@ bool RISCVVLOptimizerImpl::isCandidate(const MachineInstr &MI) const {
 /// completely slid down and none of its lanes will be read (since %slideamt is
 /// greater than the largest VLMAX of 65536) so we can demand any minimum VL.
 static std::optional<DemandedVL>
-getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
+getMinimumVLForVSLIDEDOWN_VX(const MachineInstr &MI, unsigned OpIdx,
                              const MachineRegisterInfo *MRI) {
-  const MachineInstr &MI = *UserOp.getParent();
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VSLIDEDOWN_VX)
     return std::nullopt;
   // We're looking at what lanes are used from the src operand.
-  if (UserOp.getOperandNo() != 2)
+  if (OpIdx != 2)
     return std::nullopt;
   // For now, the AVL must be 1.
   const MachineOperand &AVL = MI.getOperand(4);
@@ -1054,9 +1054,9 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   return SlideAmtDef->getOperand(1);
 }
 
-DemandedVL
-RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
-  const MachineInstr &UserMI = *UserOp.getParent();
+DemandedVL RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineInstr &UserMI,
+                                                     unsigned OpIdx) const {
+  const MachineOperand &UserOp = UserMI.getOperand(OpIdx);
   const MCInstrDesc &Desc = UserMI.getDesc();
 
   if (UserMI.isPHI() || UserMI.isFullCopy() || isTupleInsertInstr(UserMI))
@@ -1068,7 +1068,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
     return DemandedVL::vlmax();
   }
 
-  if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserOp, MRI))
+  if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserMI, OpIdx, MRI))
     return *VL;
 
   if (RISCVII::readsPastVL(
@@ -1086,7 +1086,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // If the user is a passthru it will read the elements past VL, so
   // abort if any of the elements past VL are demanded.
   if (UserOp.isTied()) {
-    assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
+    assert(OpIdx == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
     if (!RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
@@ -1097,7 +1097,7 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
-  if (isVectorOpUsedAsScalarOp(UserMI, UserMI.getOperandNo(&UserOp))) {
+  if (isVectorOpUsedAsScalarOp(UserMI, OpIdx)) {
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
     return MachineOperand::CreateImm(1);
   }
@@ -1315,7 +1315,8 @@ void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = DemandedVLs[Def].max(*MRI, getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(
+        *MRI, getMinimumVLForUser(MI, MI.getOperandNo(&MO)));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }
