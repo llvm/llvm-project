@@ -984,14 +984,18 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
     return;
   }
 
-  // Use a simple -z notext rule that treats all sections except .eh_frame as
-  // writable. GNU ld does not produce dynamic relocations in .eh_frame.
+  // Use a simple -z notext rule that treats all sections except the exception
+  // handling metadata as writable. GNU ld and gold do not produce dynamic
+  // relocations in .eh_frame or .gcc_except_table; they resolve the reference
+  // at link time, with a copy relocation where one is needed.
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
-  bool canWrite = (sec->flags & SHF_WRITE) ||
-                  !(ctx.arg.zText ||
-                    (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
+  bool isEhMetadata =
+      isa<EhInputSection>(sec) || sec->name.starts_with(".gcc_except_table");
+  bool canWrite =
+      (sec->flags & SHF_WRITE) ||
+      !(ctx.arg.zText || (isEhMetadata && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
     if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
