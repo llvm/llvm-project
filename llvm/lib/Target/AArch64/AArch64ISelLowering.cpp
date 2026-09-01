@@ -10563,8 +10563,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // and NumReusableBytes may not have been aligned, so we further increase by
     // the amount needed to keep FPDiff aligned, and therefore preserve the
     // required alignment going into the callee.
-    FPDiff -= offsetToAlignment(FPDiff, StackAlign);
-    NumBytes += offsetToAlignment(FPDiff, StackAlign);
+    uint64_t Realign = offsetToAlignment(FPDiff, StackAlign);
+    FPDiff -= Realign;
+    NumBytes += Realign;
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.
