@@ -200,6 +200,7 @@ public:
 
   /// Possible exception handling behavior.
   enum class ExceptionHandlingKind {
+    Default,
     None,
     SjLj,
     WinEH,
@@ -213,6 +214,8 @@ public:
   static llvm::ExceptionHandling
   toExceptionHandling(ExceptionHandlingKind Kind) {
     switch (Kind) {
+    case ExceptionHandlingKind::Default:
+      return llvm::ExceptionHandling::Default;
     case ExceptionHandlingKind::None:
       return llvm::ExceptionHandling::None;
     case ExceptionHandlingKind::SjLj:
