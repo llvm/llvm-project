@@ -621,6 +621,8 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
   KnownFPClass Known;
   Known.knownNot(fcNegZero | fcSubnormal);
 
+  Known.propagateNonSNaN(KnownSrc);
+
   if (KnownSrc.isKnownNeverPosInfinity())
     Known.knownNot(fcPosInf);
 

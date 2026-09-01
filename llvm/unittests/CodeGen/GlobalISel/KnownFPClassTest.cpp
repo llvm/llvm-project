@@ -874,7 +874,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogNeg) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNan | fcNegInf | fcPosZero | fcNormal, Known.KnownFPClasses);
+  EXPECT_EQ(fcQNan | fcNegInf | fcPosZero | fcNormal, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
