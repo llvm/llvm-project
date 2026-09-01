@@ -3006,6 +3006,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
              << " : + 0x" << Twine::utohexstr(Addend) << '\n'
     );
 
+    DynamicRelocationOrder.push_back(Rel.getOffset());
     if (IsJmpRel)
       IsJmpRelocation[RType] = true;
 
@@ -6244,16 +6245,28 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
     Offset += sizeof(*RelA);
   };
 
-  auto writeRelocations = [&](bool PatchRelative) {
-    for (BinarySection &Section : BC->allocatableSections()) {
+  {
+    for (const uint64_t Address : DynamicRelocationOrder) {
+      ErrorOr<BinarySection &> SectionOrError =
+          BC->getSectionForAddress(Address);
+      if (!SectionOrError) {
+        BC->errs() << "Cannot find section for dynamic relocation at 0x"
+                   << Twine::utohexstr(Address) << "\n";
+        exit(1);
+      }
+
+      BinarySection &Section = *SectionOrError;
       const uint64_t SectionInputAddress = Section.getAddress();
       uint64_t SectionAddress = Section.getOutputAddress();
       if (!SectionAddress)
         SectionAddress = SectionInputAddress;
 
-      for (const Relocation &Rel : Section.dynamicRelocations()) {
+      const Relocation &Rel =
+          *Section.getDynamicRelocationAt(Address - SectionInputAddress);
+
+      {
         const bool IsRelative = Rel.isRelative();
-        if (PatchRelative != IsRelative || Rel.isRELR())
+        if (Rel.isRELR())
           continue;
 
         if (IsRelative)
@@ -6297,12 +6310,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         writeRela(&NewRelA, Offset);
       }
     }
-  };
-
-  // The dynamic linker expects all R_*_RELATIVE relocations in RELA
-  // to be emitted first.
-  writeRelocations(/* PatchRelative */ true);
-  writeRelocations(/* PatchRelative */ false);
+  }
 
   auto fillNone = [&](uint64_t &Offset, uint64_t EndOffset) {
     if (!Offset)

@@ -17,6 +17,7 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -545,6 +546,9 @@ private:
 
   /// True if relocation of specified type came from .rela.plt
   DenseMap<uint64_t, bool> IsJmpRelocation;
+
+  /// Original dynamic relocation order.
+  std::vector<uint64_t> DynamicRelocationOrder;
 
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.
