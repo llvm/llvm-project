@@ -333,6 +333,11 @@ ExprDependence clang::computeDependence(CXXThisExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(CThisExpr *E) {
+  // Forward the implied type's dependence.
+  return toExprDependenceForImpliedType(E->getType()->getDependence());
+}
+
 ExprDependence clang::computeDependence(CXXThrowExpr *E) {
   auto *Op = E->getSubExpr();
   if (!Op)

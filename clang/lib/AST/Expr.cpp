@@ -433,6 +433,16 @@ APValue ConstantExpr::getAPValueResult() const {
   llvm_unreachable("invalid ResultKind");
 }
 
+CThisExpr *CThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
+                             QualType Ty) {
+  return new (Ctx) CThisExpr(L, Ty);
+}
+
+CThisExpr *CThisExpr::CreateEmpty(const ASTContext &Ctx) {
+  return new (Ctx) CThisExpr(EmptyShell());
+}
+
+
 DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
                          bool RefersToEnclosingVariableOrCapture, QualType T,
                          ExprValueKind VK, SourceLocation L,
@@ -3768,6 +3778,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case NoInitExprClass:
   case CXXBoolLiteralExprClass:
   case CXXNullPtrLiteralExprClass:
+  case CThisExprClass:
   case CXXThisExprClass:
   case CXXScalarValueInitExprClass:
   case TypeTraitExprClass:
@@ -4363,6 +4374,7 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
   switch (E1->getStmtClass()) {
     default:
       return false;
+    case CThisExprClass:
     case CXXThisExprClass:
       return true;
     case DeclRefExprClass: {
