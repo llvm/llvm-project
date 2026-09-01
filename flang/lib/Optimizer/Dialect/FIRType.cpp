@@ -1661,6 +1661,22 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
+    if (recTy.isPacked()) {
+      // LLVM packed structs (<{ ... }>) place fields back-to-back with no
+      // inter-field alignment padding and no tail padding.  Each component
+      // occupies exactly its store size (dl.getTypeSize(), which is what
+      // getTypeSizeAndAlignment returns as compSize).  Unlike ordinary
+      // structs, there is no per-component rounding of compSize to compAlign.
+      // The packed struct ABI alignment is always 1.
+      for (auto component : recTy.getTypeList()) {
+        auto result =
+            getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+        if (!result)
+          return result;
+        size += result->first; // store size only; no alignment rounding
+      }
+      return std::pair{size, static_cast<unsigned short>(1)};
+    }
     for (auto component : recTy.getTypeList()) {
       auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
       if (!result)
