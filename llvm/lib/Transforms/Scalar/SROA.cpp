@@ -219,6 +219,25 @@ class SROA {
   /// allocas.
   SmallMapVector<SelectInst *, RewriteableMemOps, 8> SelectsToRewrite;
 
+  /// Select instructions that use an alloca and are subsequently loaded can be
+  /// rewritten to load both input pointers and then select between the result,
+  /// allowing the load of the alloca to be promoted.
+  /// From this:
+  ///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
+  ///   %V = load <type>, ptr %P2
+  /// to:
+  ///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
+  ///   %V2 = load <type>, ptr %Other
+  ///   %V = select i1 %cond, <type> %V1, <type> %V2
+  ///
+  /// We can do this to a select if its only uses are loads
+  /// and if either the operand to the select can be loaded unconditionally,
+  ///        or if we are allowed to perform CFG modifications.
+  /// If found an intervening bitcast with a single use of the load,
+  /// allow the promotion.
+  static std::optional<RewriteableMemOps>
+  isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
+
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
        SROAOptions Options)
@@ -1725,10 +1744,8 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   return Spec;
 }
 
-namespace {
-
-static std::optional<RewriteableMemOps>
-isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+std::optional<RewriteableMemOps>
+SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
@@ -1773,8 +1790,6 @@ isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
 
   return Ops;
 }
-
-} // namespace
 
 static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
                                      IRBuilderTy &IRB) {
