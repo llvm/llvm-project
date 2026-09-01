@@ -513,6 +513,7 @@ namespace std {
 #    include <__ranges/adjacent_transform_view.h>
 #    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
+#    include <__ranges/cartesian_product_view.h>
 #    include <__ranges/chunk_by_view.h>
 #    include <__ranges/enumerate_view.h>
 #    include <__ranges/from_range.h>
