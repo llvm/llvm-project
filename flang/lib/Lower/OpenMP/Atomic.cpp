@@ -226,7 +226,7 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
 
 static std::optional<mlir::omp::ClauseMemoryOrderKind>
 getDefaultAtomicMemOrder(semantics::SemanticsContext &semaCtx) {
-  llvm::omp::Version version = semaCtx.langOptions().getOpenMP();
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   if (version > 50)
     return mlir::omp::ClauseMemoryOrderKind::Relaxed;
   return std::nullopt;
@@ -355,7 +355,7 @@ genAtomicRead(lower::AbstractConverter &converter,
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Release) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (semaCtx.langOptions().getOpenMP() <= 50 &&
+    } else if (semaCtx.langOptions().getOpenMPVersion() <= 50 &&
                *memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
       // In OpenMP 5.0, acq_rel is not allowed on read; decay to acquire.
       // In OpenMP 5.1+, acq_rel is permitted on read.
@@ -418,7 +418,7 @@ genAtomicWrite(lower::AbstractConverter &converter,
     if (*memOrder == mlir::omp::ClauseMemoryOrderKind::Acquire) {
       // Reset it back to the default.
       memOrder = getDefaultAtomicMemOrder(semaCtx);
-    } else if (semaCtx.langOptions().getOpenMP() <= 50 &&
+    } else if (semaCtx.langOptions().getOpenMPVersion() <= 50 &&
                *memOrder == mlir::omp::ClauseMemoryOrderKind::Acq_rel) {
       // In OpenMP 5.0, acq_rel is not allowed on write; decay to release.
       // In OpenMP 5.1+, acq_rel is permitted on write.
@@ -574,7 +574,7 @@ void Fortran::lower::omp::lowerAtomic(
   auto [memOrder, canOverride] = getAtomicMemoryOrder(
       semaCtx, clauses, semaCtx.FindScope(construct.source));
 
-  llvm::omp::Version version = semaCtx.langOptions().getOpenMP();
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   int action0 = analysis.op0.what & analysis.Action;
   int action1 = analysis.op1.what & analysis.Action;
   memOrder = makeValidForAction(memOrder, action0, action1, version);

@@ -170,7 +170,7 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
   }
 
   SymbolSourceMap explicitDSA;
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
       if (const parser::OmpObjectList *objects{
@@ -655,7 +655,7 @@ void OmpStructureChecker::CheckTraitDeviceNum(
 void OmpStructureChecker::CheckTraitRequires(
     const parser::OmpTraitSetSelector &traitSet,
     const parser::OmpTraitSelector &trait) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &traitName{std::get<parser::OmpTraitSelectorName>(trait.t)};
   auto &properties{GetTraitPropertyList(trait)};
 
@@ -680,7 +680,7 @@ void OmpStructureChecker::CheckTraitRequires(
 void OmpStructureChecker::CheckTraitSimd(
     const parser::OmpTraitSetSelector &traitSet,
     const parser::OmpTraitSelector &trait) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &traitName{std::get<parser::OmpTraitSelectorName>(trait.t)};
   auto &properties{GetTraitPropertyList(trait)};
 
@@ -719,7 +719,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
     if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
       checkDefaultNoneInAssociatedLoop = false;
-      llvm::omp::Version version{context_.langOptions().getOpenMP()};
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
       case llvm::omp::Association::LoopNest:
@@ -786,7 +786,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   std::vector<MetadirectiveLoopVariant> variants;
   variants.swap(metadirectiveLoopVariants_);
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
   const parser::DoConstruct &rootLoop{*parser::Unwrap<parser::DoConstruct>(x)};
   const auto &[haveSemantic, havePerfect]{sequence.depth()};

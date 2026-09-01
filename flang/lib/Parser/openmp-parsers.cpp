@@ -969,7 +969,8 @@ struct OmpMapTypeParser {
   using resultType = OmpMapType::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    llvm::omp::Version version{state.userState()->langOptions().getOpenMP()};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
@@ -999,7 +1000,8 @@ struct OmpMapTypeModifierParser {
   using resultType = OmpMapTypeModifier::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    llvm::omp::Version version{state.userState()->langOptions().getOpenMP()};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
@@ -1133,7 +1135,8 @@ template <typename MotionClause> struct OmpMotionClauseModifierParser {
   using resultType = typename MotionClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    llvm::omp::Version version{state.userState()->langOptions().getOpenMP()};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version <= 51) {
       auto motion{sourced(construct<resultType>(Parser<OmpMotionModifier>{}))};
       if (auto &&result{attempt(motion).Parse(state)}) {
@@ -1178,7 +1181,8 @@ struct OmpLinearClauseModifierParser {
   using resultType = OmpLinearClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    llvm::omp::Version version{state.userState()->langOptions().getOpenMP()};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 52) {
       auto parser{sourced( //
           construct<resultType>(Parser<OmpLinearModifier>{}) ||

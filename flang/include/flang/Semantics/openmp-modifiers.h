@@ -295,7 +295,7 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers) {
     return true;
   }
-  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   bool result{true};
   for (auto &m : *modifiers) {
     const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor(m)};
@@ -346,7 +346,7 @@ template <typename SpecificTy, typename UnionTy>
 bool verifyIfRequired(const SpecificTy *,
     const std::optional<std::list<UnionTy>> &modifiers,
     parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
-  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
   if (!desc.getProperties(version).test(llvm::omp::Property::Required)) {
     // If the modifier is not required, there is nothing to do.
@@ -400,7 +400,7 @@ bool verifyIfUnique(const SpecificTy *,
   // `specific` is the location of the modifier of type SpecificTy.
   assert(specific != end && "`specific` must be a valid location");
 
-  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
   // Ultimate implies Unique.
   if (!desc.getProperties(version).test(llvm::omp::Property::Unique) &&
@@ -449,7 +449,7 @@ bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
-  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   bool result{true};
   auto first{modifiers->cbegin()};
   auto last{std::prev(modifiers->cend())};
@@ -498,7 +498,7 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
-  llvm::omp::Version version{semaCtx.langOptions().getOpenMP()};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const UnionTy &front{modifiers->front()};
   const llvm::omp::descriptor::Modifier &frontDesc{OmpGetDescriptor(front)};
 

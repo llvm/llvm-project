@@ -1961,7 +1961,7 @@ void CompilerInvocation::setDefaultPredefinitions() {
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
     Fortran::common::setOpenMPMacro(
-        static_cast<unsigned>(getLangOpts().getOpenMP()),
+        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
         fortranOptions.predefinitions);
   }
 

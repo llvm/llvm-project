@@ -88,7 +88,7 @@ public:
   /// List of triples passed in using -fopenmp-targets.
   std::vector<llvm::Triple> OMPTargetTriples;
 
-  llvm::omp::Version getOpenMP() const {
+  llvm::omp::Version getOpenMPVersion() const {
     return llvm::omp::Version(OpenMPVersion);
   }
 

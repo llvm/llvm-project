@@ -164,7 +164,7 @@ void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
 }
 
 void OmpStructureChecker::CheckTempDescriptorMappings() {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const auto &[symbol, source] : tempDescriptorEnterMaps_) {
     if (tempDescriptorExitMaps_.find(symbol) == tempDescriptorExitMaps_.end()) {
       if (version >= 61) {
@@ -441,8 +441,8 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
     return true;
   }
-  return llvm::omp::isAllowedClauseForDirective(
-      GetContext().directive, clauseId, context_.langOptions().getOpenMP());
+  return llvm::omp::isAllowedClauseForDirective(GetContext().directive,
+      clauseId, context_.langOptions().getOpenMPVersion());
 }
 
 bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
@@ -457,7 +457,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
     return true;
   }
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   if (!llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version)) {
     llvm::omp::Version allowedInVersion{[&] {
@@ -588,7 +588,7 @@ void OmpStructureChecker::CheckLabelContext(const parser::CharBlock source,
     return getSource(*lhs).Contains(getSource(*rhs));
   };
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (tgtOmp && !isSameOrIncludes(tgtOmp, srcOmp)) {
     parser::OmpDirectiveName name{GetOmpDirectiveName(*tgtOmp)};
     context_
@@ -732,7 +732,7 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
 }
 
 void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive dirId{GetContext().directive};
   llvm::omp::Clause clauseId{x.Id()};
 
@@ -901,7 +901,7 @@ void OmpStructureChecker::CheckDirectiveSpelling(
     ref = ref.drop_front(3);
   }
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   // For every "future" version v, check if the check if the corresponding
   // spelling of id was introduced later than the current version. If so,
@@ -933,7 +933,7 @@ void OmpStructureChecker::CheckDirectiveSpelling(
 void OmpStructureChecker::CheckDirectiveDeprecation(
     const parser::OpenMPConstruct &x) {
   parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // We only want to emit the warning when the version being used has the
   // directive deprecated
   if (version >= 52) {
@@ -964,7 +964,7 @@ void OmpStructureChecker::CheckDirectiveInPureProcedure(
   if (!FindPureProcedureContaining(scope)) {
     return;
   }
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // A directive's "pure" property is version-specific: pureSince is the
   // OpenMP version at which the directive gained that property.
   llvm::omp::Version pureSince{llvm::omp::getDirectivePureSince(id)};
@@ -1010,7 +1010,7 @@ OmpStructureChecker::FindMutuallyExclusiveClauses(
 void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
     llvm::iterator_range<ClauseIterator> beginClauses,
     llvm::iterator_range<ClauseIterator> endClauses) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive dirId{dirName.v};
   std::vector<const parser::OmpClause *> allClauses;
 
@@ -1513,7 +1513,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
       },
       c.u);
   if (!eligibleTarget) {
-    llvm::omp::Version version{context_.langOptions().getOpenMP()};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     context_.Warn(common::UsageWarning::OpenMPUsage, source,
         "If %s directive is nested inside TARGET region, the behaviour is unspecified"_port_en_US,
         parser::omp::GetUpperName(ineligibleTargetDir, version));
@@ -1524,7 +1524,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
   const parser::Block &block{std::get<parser::Block>(x.t)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   // Missing mandatory end block: this is checked in semantics because that
   // makes it easier to control the error messages.
@@ -1642,7 +1642,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
 void OmpStructureChecker::CheckSingleConstruct(
     const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   SymbolSourceMap copyPrivateSyms;
   parser::CharBlock nowaitSource1, nowaitSource2;
 
@@ -2041,7 +2041,7 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
 void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
@@ -2179,7 +2179,7 @@ void OmpStructureChecker::CheckInitOnDepobj(
 
 void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   const auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   const parser::OmpArgumentList &arguments{x.v.Arguments()};
   const parser::OmpClauseList &clauses{x.v.Clauses()};
@@ -2234,7 +2234,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpRequiresDirective &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
@@ -2347,7 +2347,7 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
 
   auto maybePredefined{maybeHasPredefinedAllocator(allocator)};
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::string condStr{version == 50
           ? "a named common block, has SAVE attribute or is declared in the "
             "scope of a module"
@@ -2468,7 +2468,7 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
 
   bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (isExecutable && allocateDirectiveLevel_ == 1 && version >= 52) {
     context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
         "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
@@ -2708,7 +2708,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
       context_.Say(x.source,
           "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
     }
-    llvm::omp::Version version{context_.langOptions().getOpenMP()};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     if (toClause && version >= 52) {
       context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
@@ -3125,7 +3125,7 @@ struct TaskgraphVisitor {
       }
     }
 
-    llvm::omp::Version version{context_.langOptions().getOpenMP()};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     bool allowsNogroup{llvm::omp::isAllowedClauseForDirective(
         leafs[0], llvm::omp::Clause::OMPC_nogroup, version)};
 
@@ -3264,7 +3264,7 @@ void OmpStructureChecker::CheckTaskgraph(const parser::OmpBlockConstruct &x) {
 void OmpStructureChecker::CheckTaskDependenceType(
     const parser::OmpTaskDependenceType::Value &x) {
   // Common checks for task-dependence-type (DEPEND and UPDATE clauses).
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Version since;
 
   switch (x) {
@@ -3344,7 +3344,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
     }
   }
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (version >= 52) {
     auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(x.v.t)};
     if (flags.test(parser::OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
@@ -3488,7 +3488,7 @@ void OmpStructureChecker::Enter(
     const parser::OmpClause::CancellationConstructType &x) {
   llvm::omp::Directive dir{GetContext().directive};
   auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   if (dir != llvm::omp::Directive::OMPD_cancel &&
       dir != llvm::omp::Directive::OMPD_cancellation_point) {
@@ -3534,7 +3534,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
   }
   // Given clauses from CANCEL or CANCELLATION_POINT, identify the construct
   // to which the cancellation applies.
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::optional<llvm::omp::Directive> cancelee;
   std::string cancelName{parser::omp::GetUpperName(cancelDir, version)};
 
@@ -3564,7 +3564,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
 
 void OmpStructureChecker::CheckCancellationNest(
     const parser::CharBlock &source, llvm::omp::Directive type) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::string typeName{parser::omp::GetUpperName(type, version)};
 
   if (CurrentDirectiveIsNested()) {
@@ -3678,7 +3678,7 @@ void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
 // 3. Checks on clauses which are not in 'struct OmpClause' from parse-tree.h.
 
 void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   // 2.7.1 Loop Construct Restriction
   if (llvm::omp::allDoSet.test(GetContext().directive)) {
@@ -3916,7 +3916,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
   }
 
   llvm::omp::Directive dir{GetContext().directive};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (dir == llvm::omp::Directive::OMPD_depobj) {
     llvm::omp::Version argSince(52);
     llvm::omp::Version noargDeprecatedIn(52);
@@ -4012,7 +4012,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::TaskReduction &x) {
 bool OmpStructureChecker::CheckReductionOperator(
     const parser::OmpReductionIdentifier &ident, parser::CharBlock source,
     llvm::omp::Clause clauseId) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   auto visitOperator{[&](const parser::DefinedOperator &dOpr) {
     if (const auto *intrinsicOp{
@@ -4079,7 +4079,7 @@ bool OmpStructureChecker::CheckReductionOperator(
 /// Check restrictions on objects that are common to all reduction clauses.
 void OmpStructureChecker::CheckReductionObjects(
     const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objects, symbols);
 
@@ -4329,7 +4329,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
 
 void OmpStructureChecker::CheckReductionModifier(
     const parser::OmpReductionModifier &modifier) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   using ReductionModifier = parser::OmpReductionModifier;
   if (modifier.v == ReductionModifier::Value::Default) {
@@ -4399,7 +4399,7 @@ void OmpStructureChecker::CheckReductionArraySection(
 
 void OmpStructureChecker::CheckSharedBindingInOuterContext(
     const parser::OmpObjectList &redObjectList) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   //  TODO: Verify the assumption here that the immediately enclosing region is
   //  the parallel region to which the worksharing construct having reduction
   //  binds to.
@@ -4458,7 +4458,7 @@ void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
     if (IsTypeParamInquiry(*symbol)) {
       context_.Say(source,
           "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
-          GetUpperName(dirId, context_.langOptions().getOpenMP()));
+          GetUpperName(dirId, context_.langOptions().getOpenMPVersion()));
     }
   }
 }
@@ -4469,7 +4469,7 @@ void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
     if (IsTypeParamInquiry(*symbol)) {
       context_.Say(source,
           "A type parameter inquiry cannot appear on the %s clause"_err_en_US,
-          GetUpperName(clauseId, context_.langOptions().getOpenMP()));
+          GetUpperName(clauseId, context_.langOptions().getOpenMPVersion()));
     }
   }
 }
@@ -4584,7 +4584,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   using ImplicitBehavior = parser::OmpDefaultmapClause::ImplicitBehavior;
   auto behavior{std::get<ImplicitBehavior>(x.v.t)};
   if (version <= 45) {
@@ -4624,7 +4624,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive dir{GetContext().directive};
 
   auto isConstituent{[](llvm::omp::Directive dir, llvm::omp::Directive part) {
@@ -4764,7 +4764,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   CheckTypeParamInquiry(
       GetContext().clauseSource, x.v.v, llvm::omp::Clause::OMPC_detach);
   // OpenMP 5.2: 12.5.2 Detach clause restrictions
@@ -4811,7 +4811,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   }
 
   auto &modifiers{OmpGetModifiers(x.v)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (auto commas{std::get<bool>(x.v.t)}; !commas && version >= 52) {
     context_.Say(GetContext().clauseSource,
         "The specification of modifiers without comma separators for the "
@@ -5028,7 +5028,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const parser::OmpDeviceClause &deviceClause{x.v};
   const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // The predefined identifiers omp_initial_device (-1) and omp_invalid_device
   // (-2) were introduced in OpenMP 5.2. Under earlier versions the device
   // expression must be a non-negative integer.
@@ -5064,7 +5064,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   llvm::omp::Directive dir{GetContext().directive};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   auto *doaDep{std::get_if<parser::OmpDoacross>(&x.v.u)};
   auto *taskDep{std::get_if<parser::OmpDependClause::TaskDep>(&x.v.u)};
@@ -5248,7 +5248,7 @@ void OmpStructureChecker::CheckDoacross(
 
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (context_.ShouldWarn(common::UsageWarning::Portability)) {
     for (auto &[symbol, source] : symbols) {
       if (IsPolymorphicAllocatable(*symbol)) {
@@ -5389,7 +5389,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 
 void OmpStructureChecker::CheckStructureComponent(
     const parser::OmpObject &object, llvm::omp::Clause clauseId) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (auto *desg{GetDesignatorFromObj(object)}) {
     if (auto *symbol{GetLastName(*desg).symbol}) {
       if (!IsTypeParamInquiry(*symbol) &&
@@ -5416,7 +5416,7 @@ void OmpStructureChecker::CheckStructureComponent(
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::UpdateDependObjects &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   auto *taskType = std::get_if<parser::OmpTaskDependenceType>(&x.v.u);
   if (taskType) {
@@ -5609,7 +5609,7 @@ static bool ClauseHasTargetEffect(llvm::omp::Directive directive,
 
 void OmpStructureChecker::CheckUsesAllocatorsSpec(
     const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   bool isLegacySyntax{std::get<bool>(spec.t)};
 
   // The traits of the deprecated syntax are stored as a traits-array modifier,
@@ -5756,7 +5756,7 @@ void OmpStructureChecker::CheckUsesAllocatorsTraits(
     return;
   }
   const Symbol &ultimate{symbol->GetUltimate()};
-  if (context_.langOptions().getOpenMP() < 60 &&
+  if (context_.langOptions().getOpenMPVersion() < 60 &&
       &ultimate.owner() !=
           &GetScopingUnit(context_.FindScope(GetContext().directiveSource))) {
     context_.Say(traitsSource,
@@ -5788,7 +5788,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UsesAllocators &x) {
     return;
   }
 
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   const std::list<parser::OmpUsesAllocatorsClause::AllocatorSpec> &specs{x.v.v};
 
   // Classify by the syntax each specification was written in, which the parse
@@ -5904,7 +5904,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   }
 
   auto &modifiers{OmpGetModifiers(x.v)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
     CheckIteratorModifier(*iter);
@@ -5927,7 +5927,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   }
 
   auto &modifiers{OmpGetModifiers(x.v)};
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   // The "to" clause is only allowed on "declare target" (pre-5.1), and
   // "target update". In the former case it can take an extended list item,
@@ -5956,7 +5956,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::OmpxBare &x) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Don't call CheckAllowedClause, because it allows "ompx_bare" on
   // a non-combined "target" directive (for reasons of splitting combined
   // directives). In source code it's only allowed on "target teams".
@@ -5968,13 +5968,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::OmpxBare &x) {
 }
 
 llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   return llvm::omp::getOpenMPClauseName(clause, version);
 }
 
 llvm::StringRef OmpStructureChecker::getDirectiveName(
     llvm::omp::Directive directive) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   return llvm::omp::getOpenMPDirectiveName(directive, version);
 }
 
@@ -6001,7 +6001,7 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
 void OmpStructureChecker::CheckArraySection(
     const parser::ArrayElement &arrayElement, const parser::Name &name,
     const llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Sometimes substring operations are incorrectly parsed as array accesses.
   // Detect this by looking for array accesses on character variables which are
   // not arrays.
@@ -6103,7 +6103,7 @@ void OmpStructureChecker::CheckLastPartRefForArraySection(
 
 void OmpStructureChecker::CheckIntentInPointer(
     SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (auto &[symbol, source] : symbols) {
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
       context_.Say(source,
@@ -6115,7 +6115,7 @@ void OmpStructureChecker::CheckIntentInPointer(
 
 void OmpStructureChecker::CheckProcedurePointer(
     SymbolSourceMap &symbols, llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const auto &[symbol, source] : symbols) {
     if (IsProcedurePointer(*symbol)) {
       context_.Say(source,
@@ -6165,7 +6165,7 @@ void OmpStructureChecker::GetSymbolsInObjectList(
 
 void OmpStructureChecker::CheckDefinableObjects(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (auto &[symbol, source] : symbols) {
     if (!IsVariableListItem(*symbol)) {
       continue;
@@ -6184,7 +6184,7 @@ void OmpStructureChecker::CheckDefinableObjects(
 void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
     SymbolSourceMap &currSymbols, DirectivesClauseTriple &dirClauseTriple,
     const llvm::omp::Clause currClause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   SymbolSourceMap enclosingSymbols;
   auto range{dirClauseTriple.equal_range(GetContext().directive)};
   for (auto dirIter{range.first}; dirIter != range.second; ++dirIter) {
@@ -6310,7 +6310,7 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
 
 void OmpStructureChecker::CheckWorkdistributeBlockStmts(
     const parser::Block &block, parser::CharBlock source) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Version since(60);
   if (version < since)
     context_.Say(source,
@@ -6388,7 +6388,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::ReverseOffload &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_reverse_offload);
   if (IsAllowedClause(llvm::omp::Clause::OMPC_reverse_offload)) {
-    llvm::omp::Version version{context_.langOptions().getOpenMP()};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     context_.Say(GetContext().clauseSource,
         "%s clause is not supported and will be ignored"_warn_en_US,
         GetUpperName(llvm::omp::Clause::OMPC_reverse_offload, version));
@@ -6685,7 +6685,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
 }
 
 void OmpStructureChecker::CheckAllowedRequiresClause(llvm::omp::Clause clause) {
-  llvm::omp::Version version{context_.langOptions().getOpenMP()};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   if (clause != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
     // Check that it does not appear after a device construct
