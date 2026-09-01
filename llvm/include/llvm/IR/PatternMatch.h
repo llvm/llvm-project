@@ -46,10 +46,10 @@
 #include <cstdint>
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -231,20 +231,6 @@ inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
 
 /// Match an arbitrary basic block value and ignore it.
 inline auto m_BasicBlock() { return m_Isa<BasicBlock>(); }
-
-/// Inverting matcher
-template <typename Ty> struct match_unless {
-  Ty M;
-
-  match_unless(const Ty &Matcher) : M(Matcher) {}
-
-  template <typename ITy> bool match(ITy *V) const { return !M.match(V); }
-};
-
-/// Match if the inner matcher does *NOT* match.
-template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
-  return match_unless<Ty>(M);
-}
 
 template <typename APTy> struct ap_match {
   static_assert(std::is_same_v<APTy, APInt> || std::is_same_v<APTy, APFloat>);

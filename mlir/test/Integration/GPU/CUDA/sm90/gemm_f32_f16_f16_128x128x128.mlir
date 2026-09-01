@@ -57,7 +57,7 @@
 
 func.func private @printMemrefF32(memref<*xf32>)
 
-memref.global "private" @accShmem : memref<0xf32, 3> {alignment = 16 : i64}
+memref.global "private" @accShmem : memref<0xf32, 3> alignment = 16
 
 func.func @main() {
   // matrix A (128*64) * matrix B (64*128) * stages(2)
@@ -206,7 +206,7 @@ func.func @main() {
       %dA = nvgpu.warpgroup.generate.descriptor %lhsSlice, %descA : memref<128x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>, !lhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<128x64xf16, 3>>
       %dB = nvgpu.warpgroup.generate.descriptor %rhsSlice, %descB : memref<64x128xf16, strided<[128, 1], offset: ?>, #gpu.address_space<workgroup>>, !rhsTensorMap -> !nvgpu.warpgroup.descriptor<tensor=memref<64x128xf16, 3>>
       // Perform WGMMA 128x128x64
-      %md  = nvgpu.warpgroup.mma %dA, %dB, %mc {transposeB} : <tensor = memref<128x64xf16,3>>, <tensor = memref<64x128xf16,3>>, <fragmented = vector<128x128xf32>> -> <fragmented = vector<128x128xf32>>
+      %md  = nvgpu.warpgroup.mma %dA, %dB, %mc transposeB : <tensor = memref<128x64xf16,3>>, <tensor = memref<64x128xf16,3>>, <fragmented = vector<128x128xf32>> -> <fragmented = vector<128x128xf32>>
       scf.yield %md : !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
     }
     

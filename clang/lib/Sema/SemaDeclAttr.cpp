@@ -72,6 +72,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -436,18 +437,20 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   }
 }
 
-/// True if T (or its pointee, after stripping a top-level reference) is a
-/// function pointer or dependent.
-static bool isFunctionPointerOrDependent(QualType T) {
+/// True if T names a function to call: a function pointer, a function
+/// reference, or a reference to a function pointer. Dependent types are also
+/// accepted, and re-checked after instantiation.
+static bool isCallbackOrDependent(QualType T) {
   T = T.getNonReferenceType();
-  return T->isDependentType() || T->isFunctionPointerType();
+  return T->isDependentType() || T->isFunctionPointerType() ||
+         T->isFunctionType();
 }
 
 /// Checks that thread-safety attributes on variables or fields apply only to
-/// function pointer types.
+/// function pointer or function reference types.
 static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
                                                const AttributeCommonInfo &A) {
-  if (isFunctionPointerOrDependent(VD->getType()))
+  if (isCallbackOrDependent(VD->getType()))
     return true;
   S.Diag(A.getLoc(), diag::warn_thread_attribute_not_on_fun_ptr)
       << A << (isa<FieldDecl>(VD) ? 1 : 0);
@@ -477,8 +480,8 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
 
   if (CheckParmVar) {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
-      // A function-pointer parameter is also valid here.
-      if (isFunctionPointerOrDependent(PVD->getType()))
+      // A function-pointer or function-reference parameter is also valid here.
+      if (isCallbackOrDependent(PVD->getType()))
         return true;
       return checkFunParamsAreScopedLockable(S, PVD, AL);
     }
@@ -500,7 +503,7 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
-    if (isFunctionPointerOrDependent(PVD->getType()))
+    if (isCallbackOrDependent(PVD->getType()))
       return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
   }
@@ -1509,8 +1512,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   }
 
   ParamIdx Idx;
-  const auto *FuncDecl = cast<FunctionDecl>(D);
-  if (!checkFunctionOrMethodParameterIndex(FuncDecl, CI,
+  if (!checkFunctionOrMethodParameterIndex(D, CI,
                                            /*AttrArgNum=*/1, ParamExpr, Idx))
     return;
 
@@ -1518,7 +1520,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   if (!Ty->isDependentType() && !Ty->isIntegralType(Context) &&
       !Ty->isAlignValT()) {
     Diag(ParamExpr->getBeginLoc(), diag::err_attribute_integers_only)
-        << CI << FuncDecl->getParamDecl(Idx.getASTIndex())->getSourceRange();
+        << CI << getFunctionOrMethodParamRange(D, Idx.getASTIndex());
     return;
   }
 
@@ -2291,21 +2293,6 @@ static void handleVecReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context) VecReturnAttr(S.Context, AL));
-}
-
-static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
-                                 const ParsedAttr &AL) {
-  if (isa<ParmVarDecl>(D)) {
-    // [[carries_dependency]] can only be applied to a parameter if it is a
-    // parameter of a function declaration or lambda.
-    if (!(Scope->getFlags() & clang::Scope::FunctionDeclarationScope)) {
-      S.Diag(AL.getLoc(),
-             diag::err_carries_dependency_param_not_function_decl);
-      return;
-    }
-  }
-
-  D->addAttr(::new (S.Context) CarriesDependencyAttr(S.Context, AL));
 }
 
 static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -5222,9 +5209,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
   if (NewElemTy.isNull()) {
+    // FIXME: We need to make sure that the target handles correctly the
+    // requested mode.
     // Only emit diagnostic on host for 128-bit mode attribute
-    if (!(DestWidth == 128 &&
-          (getLangOpts().CUDAIsDevice || getLangOpts().SYCLIsDevice)))
+    if (!(DestWidth == 128 && getLangOpts().isTargetDevice()))
       Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }
@@ -6126,12 +6114,23 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
     // We might want to ignore the nvptx arch check, e.g., when processing the
     // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
-      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-      auto SM = getOffloadArch(Context.getTargetInfo());
-      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
-        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-        // Ignore it by setting MaxBlocks to null;
+      const TargetInfo &DeviceTI =
+          (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
+              ? *Context.getAuxTargetInfo()
+              : Context.getTargetInfo();
+      if (DeviceTI.getTriple().isNVPTX()) {
+        // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+        OffloadArch SM = getOffloadArch(DeviceTI);
+        if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
+          Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+              << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          // Ignore it by setting MaxBlocks to null;
+          MaxBlocks = nullptr;
+        }
+      } else {
+        // maxclusterrank is only handled for NVPTX; ignore it elsewhere.
+        // TODO: Interpret this for AMDGPU with the "clusters" subtarget
+        // feature.
         MaxBlocks = nullptr;
       }
     }
@@ -6242,7 +6241,8 @@ void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+  if ((TTI.getTriple().isNVPTX() &&
+       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
@@ -6261,7 +6261,8 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+  if ((TTI.getTriple().isNVPTX() &&
+       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
@@ -7554,7 +7555,7 @@ static void handlePersonalityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
 static void
-ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
                      const Sema::ProcessDeclAttributeOptions &Options) {
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
@@ -7776,9 +7777,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Availability:
     handleAvailabilityAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_CarriesDependency:
-    handleDependencyAttr(S, scope, D, AL);
     break;
   case ParsedAttr::AT_CPUDispatch:
   case ParsedAttr::AT_CPUSpecific:
@@ -8553,7 +8551,7 @@ void Sema::ProcessDeclAttributeList(
     return;
 
   for (const ParsedAttr &AL : AttrList)
-    ProcessDeclAttribute(*this, S, D, AL, Options);
+    ProcessDeclAttribute(*this, D, AL, Options);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
@@ -8674,8 +8672,7 @@ bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
     if (AL.getKind() == ParsedAttr::AT_Annotate) {
-      ProcessDeclAttribute(*this, nullptr, ASDecl, AL,
-                           ProcessDeclAttributeOptions());
+      ProcessDeclAttribute(*this, ASDecl, AL, ProcessDeclAttributeOptions());
     } else {
       Diag(AL.getLoc(), diag::err_only_annotate_after_access_spec);
       return true;

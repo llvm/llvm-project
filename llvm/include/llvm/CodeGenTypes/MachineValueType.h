@@ -64,6 +64,10 @@ namespace llvm {
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
+    // Support comparison with SimpleValueType.
+    bool operator==(SimpleValueType S) const { return SimpleTy == S; }
+    bool operator!=(SimpleValueType S) const { return SimpleTy != S; }
+
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
 

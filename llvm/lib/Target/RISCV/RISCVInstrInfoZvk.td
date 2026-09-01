@@ -790,6 +790,12 @@ defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
 
+defm : VPatBinaryVL_VV_VX<riscv_clmul_vl,  "PseudoVCLMUL",  I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinaryVL_VV_VX<riscv_clmulh_vl, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+
+defm : VPatBinaryVL_VV_VX<riscv_clmul_vl,  "PseudoVCLMUL",  NonI64IntegerVectors, ExtraPreds=[HasStdExtZvbc32e]>;
+defm : VPatBinaryVL_VV_VX<riscv_clmulh_vl, "PseudoVCLMULH", NonI64IntegerVectors, ExtraPreds=[HasStdExtZvbc32e]>;
+
 defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 // Although there is no vrol.vi, an immediate rotate left can be achieved by
 // negating the immediate in vror.vi

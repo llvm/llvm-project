@@ -157,6 +157,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:TargetParser",

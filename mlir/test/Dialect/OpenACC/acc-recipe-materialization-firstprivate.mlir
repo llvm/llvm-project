@@ -37,7 +37,7 @@ func.func @firstpriv() {
   %c1336 = arith.constant 1336 : i32
   %alloc = memref.alloca() : memref<i32>
   memref.store %c1336, %alloc[] : memref<i32>
-  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) -> memref<i32> {implicit = true, name = "t"}
+  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) implicit(true) name("t") -> memref<i32>
   acc.parallel firstprivate(%fp : memref<i32>) {
     %c1 = arith.constant 1 : i32
     %v = memref.load %fp[] : memref<i32>

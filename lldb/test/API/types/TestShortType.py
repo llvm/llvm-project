@@ -12,7 +12,7 @@ class ShortTypeTestCase(AbstractBase.GenericTester):
         """Test that short-type variables are displayed correctly."""
         self.build_and_run("short.cpp", ["short"])
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_short_type_from_block(self):
         """Test that short-type variables are displayed correctly from a block."""
         self.build_and_run("short.cpp", ["short"], bc=True)
@@ -21,7 +21,7 @@ class ShortTypeTestCase(AbstractBase.GenericTester):
         """Test that 'unsigned_short'-type variables are displayed correctly."""
         self.build_and_run("unsigned_short.cpp", ["unsigned", "short"])
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_unsigned_short_type_from_block(self):
         """Test that 'unsigned short'-type variables are displayed correctly from a block."""
         self.build_and_run("unsigned_short.cpp", ["unsigned", "short"], bc=True)

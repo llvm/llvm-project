@@ -18,8 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __restore_rt()
-    __attribute__((no_sanitize("all"),
-                   hidden));
+    __attribute__((no_sanitize("all"), visibility("hidden")));
 
 extern "C" void __restore_rt() {
   LIBC_NAMESPACE::syscall_impl<long>(SYS_rt_sigreturn);

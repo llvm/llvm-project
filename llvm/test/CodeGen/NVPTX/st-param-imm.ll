@@ -22,7 +22,6 @@ define void @st_param_i8_i16() {
 ; CHECK-LABEL: st_param_i8_i16(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[4];
@@ -39,7 +38,6 @@ define void @st_param_i32() {
 ; CHECK-LABEL: st_param_i32(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b32 param0;
@@ -54,7 +52,6 @@ define void @st_param_i32() {
 define void @st_param_i64() {
 ; CHECK-LABEL: st_param_i64(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 2, 0
@@ -71,7 +68,6 @@ define void @st_param_f32() {
 ; CHECK-LABEL: st_param_f32(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .b32 param0;
@@ -86,7 +82,6 @@ define void @st_param_f32() {
 define void @st_param_f64() {
 ; CHECK-LABEL: st_param_f64(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 4, 0
@@ -108,7 +103,6 @@ declare void @call_f64(double)
 define void @st_param_v2_i8_ii() {
 ; CHECK-LABEL: st_param_v2_i8_ii(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 5, 0
@@ -161,7 +155,6 @@ define void @st_param_v2_i16_ii() {
 ; CHECK-LABEL: st_param_v2_i16_ii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 8, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
@@ -212,7 +205,6 @@ define void @st_param_v2_i16_ri(i16 %val) {
 define void @st_param_v2_i32_ii() {
 ; CHECK-LABEL: st_param_v2_i32_ii(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 11, 0
@@ -265,7 +257,6 @@ define void @st_param_v2_i64_ii() {
 ; CHECK-LABEL: st_param_v2_i64_ii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 14, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
@@ -317,7 +308,6 @@ define void @st_param_v2_f32_ii(float %val) {
 ; CHECK-LABEL: st_param_v2_f32_ii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 17, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
@@ -368,7 +358,6 @@ define void @st_param_v2_f32_ri(float %val) {
 define void @st_param_v2_f64_ii(double %val) {
 ; CHECK-LABEL: st_param_v2_f64_ii(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 20, 0
@@ -427,7 +416,6 @@ declare void @call_v2_f64(%struct.double2 alignstack(16))
 define void @st_param_v4_i8_iiii() {
 ; CHECK-LABEL: st_param_v4_i8_iiii(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 23, 0
@@ -774,7 +762,6 @@ define void @st_param_v4_i16_iiii() {
 ; CHECK-LABEL: st_param_v4_i16_iiii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 38, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
@@ -1100,7 +1087,6 @@ define void @st_param_v4_i32_iiii() {
 ; CHECK-LABEL: st_param_v4_i32_iiii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 53, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
@@ -1409,7 +1395,6 @@ define void @st_param_v4_i32_riii(i32 %a) {
 define void @st_param_v4_f32_iiii() {
 ; CHECK-LABEL: st_param_v4_f32_iiii(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 68, 0
@@ -1724,7 +1709,6 @@ declare void @call_v4_f32(%struct.float4 alignstack(16))
 define void @st_param_bfloat() {
 ; CHECK-LABEL: st_param_bfloat(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    { // callseq 83, 0

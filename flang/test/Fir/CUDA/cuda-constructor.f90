@@ -2,6 +2,9 @@
 ! RUN: bbc -fcuda -emit-fir %s -o - | fir-opt \
 ! RUN:   --cuf-add-constructor="allocator-registration-function=custom_register" \
 ! RUN:   | FileCheck %s --check-prefix=CUSTOM
+! RUN: bbc -fcuda -emit-fir %s -o - | fir-opt \
+! RUN:   --cuf-add-constructor="priority=100" \
+! RUN:   | FileCheck %s --check-prefix=PRIORITY
 
 program main
   real, allocatable, device :: ahost(:)
@@ -18,3 +21,5 @@ end
 ! CUSTOM:   llvm.call @custom_register() : () -> ()
 ! CUSTOM: }
 ! CUSTOM: llvm.func @custom_register() attributes {sym_visibility = "private"}
+
+! PRIORITY: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor], priorities = [100 : i32], data = [#llvm.zero]

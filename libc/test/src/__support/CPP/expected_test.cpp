@@ -84,6 +84,41 @@ TEST(LlvmLibcExpectedTest, ArrowOperator) {
   ASSERT_EQ(CE->get_x(), 123);
 }
 
+TEST(LlvmLibcExpectedTest, VoidValueConstruction) {
+  expected<void, int> e;
+  ASSERT_TRUE(e.has_value());
+  ASSERT_TRUE(static_cast<bool>(e));
+  e.value();
+  *e;
+}
+
+TEST(LlvmLibcExpectedTest, VoidErrorConstruction) {
+  expected<void, int> e(unexpected(404));
+  ASSERT_FALSE(e.has_value());
+  ASSERT_FALSE(static_cast<bool>(e));
+  ASSERT_EQ(e.error(), 404);
+}
+
+TEST(LlvmLibcExpectedTest, VoidMutation) {
+  expected<void, int> u(unexpected<int>(1));
+  ASSERT_EQ(u.error(), 1);
+  u.error() = 2;
+  ASSERT_EQ(u.error(), 2);
+}
+
+TEST(LlvmLibcExpectedTest, VoidConstAccess) {
+  const expected<void, int> CE;
+  ASSERT_TRUE(CE.has_value());
+  ASSERT_TRUE(static_cast<bool>(CE));
+  CE.value();
+  *CE;
+
+  const expected<void, int> CU(unexpected(500));
+  ASSERT_FALSE(CU.has_value());
+  ASSERT_FALSE(static_cast<bool>(CU));
+  ASSERT_EQ(CU.error(), 500);
+}
+
 constexpr bool test_constexpr_value() {
   expected<int, int> e(42);
   if (!e.has_value() || !static_cast<bool>(e))
@@ -94,6 +129,18 @@ constexpr bool test_constexpr_value() {
 }
 
 static_assert(test_constexpr_value(), "expected constexpr value check failed");
+
+constexpr bool test_constexpr_void_value() {
+  expected<void, int> e;
+  if (!e.has_value() || !static_cast<bool>(e))
+    return false;
+  e.value();
+  *e;
+  return true;
+}
+
+static_assert(test_constexpr_void_value(),
+              "expected<void> constexpr value check failed");
 
 constexpr bool test_constexpr_error() {
   expected<int, int> e(unexpected<int>(99));
@@ -106,5 +153,20 @@ constexpr bool test_constexpr_error() {
 
 static_assert(test_constexpr_error(), "expected constexpr error check failed");
 
+constexpr bool test_constexpr_void_error() {
+  expected<void, int> e(unexpected<int>(99));
+  if (e.has_value() || static_cast<bool>(e))
+    return false;
+  if (e.error() != 99)
+    return false;
+  return true;
+}
+
+static_assert(test_constexpr_void_error(),
+              "expected<void> constexpr error check failed");
+
 static_assert(!LIBC_NAMESPACE::cpp::is_convertible_v<expected<int, long>, bool>,
               "only explicit conversions allowed");
+static_assert(
+    !LIBC_NAMESPACE::cpp::is_convertible_v<expected<void, long>, bool>,
+    "only explicit conversions allowed");

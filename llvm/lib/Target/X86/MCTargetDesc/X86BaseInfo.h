@@ -1155,6 +1155,16 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
   }
 }
 
+/// \returns the operand index for the first field of the memory operand,
+/// adjusted with getOperandBias(), or -1 if the instruction has no memory
+/// operands.
+inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
+  int MemRefIdx = getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefIdx < 0)
+    return -1;
+  return MemRefIdx + getOperandBias(Desc);
+}
+
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,

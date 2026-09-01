@@ -262,7 +262,7 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
                                                 ScalarEvolution *SE) {
-  Type *Ty = Phi->getType();
+  Type *Ty = Phi->getType()->getScalarType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (Phi->getNumIncomingValues() != 2 ||
       Phi->getParent() != TheLoop->getHeader() ||
@@ -355,7 +355,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
   if (PhiHasInvalidUses) {
-    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RK) ||
+    if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
         !BackedgeValue->hasOneUse())
       return {};
     return RecurrenceDescriptor(

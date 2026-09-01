@@ -43,7 +43,7 @@ target_compile_definitions(LLVMOffload PRIVATE
 
 set_target_properties(LLVMOffload PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
-                      INSTALL_RPATH "$ORIGIN"
+                      INSTALL_RPATH "${OFFLOAD_INSTALL_RPATH}"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 if(UNIX AND NOT APPLE)
   set_target_properties(LLVMOffload PROPERTIES

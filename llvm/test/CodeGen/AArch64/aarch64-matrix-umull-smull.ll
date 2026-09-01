@@ -824,7 +824,7 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
 ; CHECK-SD-NEXT:    mov w11, w1
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-SD-NEXT:    movi d3, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    sxtb x11, w11
 ; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    dup v1.2s, w11
@@ -838,14 +838,11 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    adds x8, x8, #4
 ; CHECK-SD-NEXT:    ushll v4.8h, v4.8b, #0
 ; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
-; CHECK-SD-NEXT:    ushll v5.2d, v4.2s, #0
-; CHECK-SD-NEXT:    ushll2 v4.2d, v4.4s, #0
-; CHECK-SD-NEXT:    and v5.16b, v5.16b, v3.16b
-; CHECK-SD-NEXT:    and v4.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v4.2s
-; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v5.2s
+; CHECK-SD-NEXT:    mov d5, v4.d[1]
+; CHECK-SD-NEXT:    and v4.8b, v4.8b, v3.8b
+; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v4.2s
+; CHECK-SD-NEXT:    and v5.8b, v5.8b, v3.8b
+; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v5.2s
 ; CHECK-SD-NEXT:    b.ne .LBB6_11
 ; CHECK-SD-NEXT:  // %bb.12: // %vec.epilog.middle.block
 ; CHECK-SD-NEXT:    add v0.2d, v2.2d, v0.2d

@@ -1722,6 +1722,8 @@ def err_omp_expected_fr_or_attr_selector : Error<
   "expected 'fr' or 'attr' selector in 'prefer_type'">;
 def err_omp_expected_pref_spec : Error<
   "expected preference-specification in 'prefer_type'">;
+def err_omp_append_args_prefer_type_60 : Error<
+  "'prefer_type' in 'append_args' requires OpenMP version 6.0 or later">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<
@@ -1750,6 +1752,8 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
+def err_omp_incompatible_modifiers
+    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
 def err_omp_unknown_need_device_ptr_kind
     : Error<
         "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
@@ -1815,6 +1819,9 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
+def err_unexpected_tok_after_module_name : Error<
+  "unexpected '%0' after module name, only ';' and '[' (start of attribute "
+  "specifier sequence) are allowed">;
 def err_unexpected_module_or_import_decl : Error<
   "%select{module|import}0 declaration can only appear at the top level">;
 def err_attribute_not_module_attr : Error<

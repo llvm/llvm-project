@@ -11,15 +11,15 @@ An access to the value of an `StatusOr<T>` occurs when one of its
 `value`, `operator*`, or `operator->` member functions is invoked.
 To align with common misconceptions, the check considers these member
 functions as equivalent, even though there are subtle differences
-related to exceptions vs. undefined behavior.
+related to exceptions vs. undefined behavior.
 
 An access to the value of a `StatusOr<T>` is considered safe if and
-only if code in the local scope (e.g. function body) ensures that the
+only if code in the local scope (e.g. function body) ensures that the
 status of the `StatusOr<T>` is ok in all possible execution paths that
 can reach the access. That should happen either through an explicit
 check, using the `StatusOr<T>::ok` member function, or by constructing
 the `StatusOr<T>` in a way that shows that its status is unambiguously
-ok (e.g. by passing a value to its constructor).
+ok (e.g. by passing a value to its constructor).
 
 Below we list some examples of safe and unsafe `StatusOr<T>` access
 patterns.

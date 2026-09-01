@@ -286,13 +286,17 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         auto &secondOp = *ops.getNextNode(firstOp);
         auto firstReadStmt = dyn_cast<AtomicReadOpInterface>(firstOp);
         auto firstUpdateStmt = dyn_cast<AtomicUpdateOpInterface>(firstOp);
+        auto firstCompareStmt = dyn_cast<AtomicCompareOpInterface>(firstOp);
         auto secondReadStmt = dyn_cast<AtomicReadOpInterface>(secondOp);
         auto secondUpdateStmt = dyn_cast<AtomicUpdateOpInterface>(secondOp);
         auto secondWriteStmt = dyn_cast<AtomicWriteOpInterface>(secondOp);
+        auto secondCompareStmt = dyn_cast<AtomicCompareOpInterface>(secondOp);
 
         if (!((firstUpdateStmt && secondReadStmt) ||
               (firstReadStmt && secondUpdateStmt) ||
-              (firstReadStmt && secondWriteStmt)))
+              (firstReadStmt && secondWriteStmt) ||
+              (firstReadStmt && secondCompareStmt) ||
+              (firstCompareStmt && secondReadStmt)))
           return ops.front().emitError()
                 << "invalid sequence of operations in the capture region";
         if (firstUpdateStmt && secondReadStmt &&
@@ -310,6 +314,16 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
           return firstReadStmt.emitError()
                 << "captured variable in atomic.read must be updated in "
                     "second operation";
+        if (firstReadStmt && secondCompareStmt &&
+            firstReadStmt.getX() != secondCompareStmt.getX())
+          return firstReadStmt.emitError()
+                << "captured variable in atomic.read must be updated in "
+                    "second operation";
+        if (firstCompareStmt && secondReadStmt &&
+            secondReadStmt.getX() != firstCompareStmt.getX())
+          return secondReadStmt.emitError()
+                << "captured variable in atomic.read must be updated in "
+                    "first operation";
 
         return mlir::success();
       }]
@@ -431,7 +445,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
           llvm::StringRef opName = op.getName().getStringRef();
           if (opName == "arith.cmpi" || opName == "llvm.icmp") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
 	      auto predName = mlir::arith::stringifyCmpIPredicate(
                   static_cast<mlir::arith::CmpIPredicate>(predAttr.getInt()));
@@ -446,7 +461,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
             break;
           } else if (opName == "arith.cmpf" || opName == "llvm.fcmp") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
               auto predName = mlir::arith::stringifyCmpFPredicate(
                   static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
@@ -461,7 +477,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
             break;
           } else if (opName == "fir.cmpc") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
               auto predName = mlir::arith::stringifyCmpFPredicate(
                   static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
@@ -473,6 +490,19 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
                      "only 'oeq' is supported";
               }
             }
+            break;
+          } else if (llvm::is_contained(
+                         {"arith.maxsi", "arith.minsi", "arith.maxui",
+                          "arith.minui", "arith.maximumf", "arith.minimumf",
+                          "llvm.intr.smax", "llvm.intr.smin",
+                          "llvm.intr.umax", "llvm.intr.umin",
+                          "llvm.intr.maxnum", "llvm.intr.minnum"},
+                         opName)) {
+            // The canonicalizer may fold select(cmpi slt, e, x) into
+            // maxsi/minsi (or the float equivalents). After fir-to-llvm-ir
+            // these become llvm.intr.smax/smin etc. All are valid
+            // representations of atomic compare min/max operations.
+            foundComparison = true;
             break;
           }
         }

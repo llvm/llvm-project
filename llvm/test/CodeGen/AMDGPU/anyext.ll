@@ -102,7 +102,6 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_add_u16_e32 v0, v2, v0
 ; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -121,7 +120,6 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    v_add_u16_e32 v0, v2, v3
 ; GFX9-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 entry:

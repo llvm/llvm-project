@@ -238,10 +238,10 @@ struct S {
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
-// OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
-// CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
-// OMP50-DAG: !{!"llvm.loop.vectorize.enable", i1 false}
-// OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP45-NOT: !{!"llvm.loop.vectorize.disable"}
+// CHECK-DAG: !{!"llvm.loop.vectorize.enable"}
+// OMP50-DAG: !{!"llvm.loop.vectorize.disable"}
+// OMP45-NOT: !{!"llvm.loop.vectorize.disable"}
 // CHECK-DAG: !{!"llvm.loop.vectorize.width", i32 4}
 // CHECK-DAG: !{!"llvm.loop.vectorize.width", i32 32}
 // CHECK-DAG: !{!"llvm.loop.vectorize.width", i32 8}

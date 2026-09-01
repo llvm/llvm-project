@@ -135,6 +135,17 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
       TypeSummaryImplSP(new ScriptSummaryFormat(options, "", data)));
 }
 
+SBTypeSummary SBTypeSummary::CreateWithClassName(const char *data,
+                                                 uint32_t options) {
+  LLDB_INSTRUMENT_VA(data, options);
+
+  if (!data || data[0] == 0)
+    return SBTypeSummary();
+
+  return SBTypeSummary(
+      TypeSummaryImplSP(new ScriptedSummaryFormat(options, data)));
+}
+
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
                                                 uint32_t options,
                                                 const char *description) {
@@ -372,6 +383,16 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
     return GetOptions() == rhs.GetOptions();
   case TypeSummaryImpl::Kind::eInternal:
     return (m_opaque_sp.get() == rhs.m_opaque_sp.get());
+  case TypeSummaryImpl::Kind::eScriptedClass: {
+    ScriptedSummaryFormat *lhs_ptr =
+        llvm::dyn_cast<ScriptedSummaryFormat>(m_opaque_sp.get());
+    ScriptedSummaryFormat *rhs_ptr =
+        llvm::dyn_cast<ScriptedSummaryFormat>(rhs.m_opaque_sp.get());
+    if (!lhs_ptr || !rhs_ptr)
+      return false;
+    return strcmp(lhs_ptr->GetClassName(), rhs_ptr->GetClassName()) == 0 &&
+           GetOptions() == rhs.GetOptions();
+  }
   }
 
   return false;
@@ -417,6 +438,10 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get())) {
     new_sp = TypeSummaryImplSP(new StringSummaryFormat(
         GetOptions(), current_summary_ptr->GetSummaryString()));
+  } else if (ScriptedSummaryFormat *current_summary_ptr =
+                 llvm::dyn_cast<ScriptedSummaryFormat>(m_opaque_sp.get())) {
+    new_sp = TypeSummaryImplSP(new ScriptedSummaryFormat(
+        GetOptions(), current_summary_ptr->GetClassName()));
   }
 
   SetSP(new_sp);

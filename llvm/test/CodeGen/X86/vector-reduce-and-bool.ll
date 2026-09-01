@@ -17,7 +17,7 @@
 ; Truncate
 ;
 
-define i1 @trunc_v2i64_v2i1(<2 x i64>) nounwind {
+define zeroext i1 @trunc_v2i64_v2i1(<2 x i64>) nounwind {
 ; SSE2-LABEL: trunc_v2i64_v2i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm0
@@ -81,11 +81,12 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) nounwind {
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <2 x i64> %0 to <2 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %a)
-  ret i1 %b
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp eq i2 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v4i32_v4i1(<4 x i32>) nounwind {
+define zeroext i1 @trunc_v4i32_v4i1(<4 x i32>) nounwind {
 ; SSE2-LABEL: trunc_v4i32_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm0
@@ -150,11 +151,12 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) nounwind {
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <4 x i32> %0 to <4 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v8i16_v8i1(<8 x i16>) nounwind {
+define zeroext i1 @trunc_v8i16_v8i1(<8 x i16>) nounwind {
 ; SSE2-LABEL: trunc_v8i16_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllw $7, %xmm0
@@ -220,11 +222,12 @@ define i1 @trunc_v8i16_v8i1(<8 x i16>) nounwind {
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <8 x i16> %0 to <8 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v16i8_v16i1(<16 x i8>) nounwind {
+define zeroext i1 @trunc_v16i8_v16i1(<16 x i8>) nounwind {
 ; SSE2-LABEL: trunc_v16i8_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllw $7, %xmm0
@@ -289,11 +292,12 @@ define i1 @trunc_v16i8_v16i1(<16 x i8>) nounwind {
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <16 x i8> %0 to <16 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v4i64_v4i1(<4 x i64>) nounwind {
+define zeroext i1 @trunc_v4i64_v4i1(<4 x i64>) nounwind {
 ; SSE2-LABEL: trunc_v4i64_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -354,11 +358,12 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <4 x i64> %0 to <4 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v8i32_v8i1(<8 x i32>) nounwind {
+define zeroext i1 @trunc_v8i32_v8i1(<8 x i32>) nounwind {
 ; SSE2-LABEL: trunc_v8i32_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -420,11 +425,12 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <8 x i32> %0 to <8 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
+define zeroext i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
 ; SSE2-LABEL: trunc_v16i16_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -487,11 +493,12 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <16 x i16> %0 to <16 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v32i8_v32i1(<32 x i8>) nounwind {
+define zeroext i1 @trunc_v32i8_v32i1(<32 x i8>) nounwind {
 ; SSE2-LABEL: trunc_v32i8_v32i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -553,11 +560,12 @@ define i1 @trunc_v32i8_v32i1(<32 x i8>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <32 x i8> %0 to <32 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v8i64_v8i1(<8 x i64>) nounwind {
+define zeroext i1 @trunc_v8i64_v8i1(<8 x i64>) nounwind {
 ; X86-SSE2-LABEL: trunc_v8i64_v8i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -663,11 +671,12 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <8 x i64> %0 to <8 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
+define zeroext i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ; X86-SSE2-LABEL: trunc_v16i32_v16i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -762,11 +771,12 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = trunc <16 x i32> %0 to <16 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
+define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE2-LABEL: trunc_v32i16_v32i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -885,11 +895,12 @@ define i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %a = trunc <32 x i16> %0 to <32 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, -1
+  ret i1 %c
 }
 
-define i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
+define zeroext i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; X86-SSE2-LABEL: trunc_v64i8_v64i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -1006,15 +1017,16 @@ define i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %a = trunc <64 x i8> %0 to <64 x i1>
-  %b = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> %a)
-  ret i1 %b
+  %b = bitcast <64 x i1> %a to i64
+  %c = icmp eq i64 %b, -1
+  ret i1 %c
 }
 
 ;
 ; Comparison With Zero
 ;
 
-define i1 @icmp0_v2i64_v2i1(<2 x i64>) nounwind {
+define zeroext i1 @icmp0_v2i64_v2i1(<2 x i64>) nounwind {
 ; SSE2-LABEL: icmp0_v2i64_v2i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1035,12 +1047,13 @@ define i1 @icmp0_v2i64_v2i1(<2 x i64>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <2 x i64> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <2 x i64> %0, zeroinitializer
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp eq i2 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v4i32_v4i1(<4 x i32>) nounwind {
+define zeroext i1 @icmp0_v4i32_v4i1(<4 x i32>) nounwind {
 ; SSE2-LABEL: icmp0_v4i32_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1061,12 +1074,13 @@ define i1 @icmp0_v4i32_v4i1(<4 x i32>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <4 x i32> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i32> %0, zeroinitializer
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v8i16_v8i1(<8 x i16>) nounwind {
+define zeroext i1 @icmp0_v8i16_v8i1(<8 x i16>) nounwind {
 ; SSE2-LABEL: icmp0_v8i16_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1087,12 +1101,13 @@ define i1 @icmp0_v8i16_v8i1(<8 x i16>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <8 x i16> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i16> %0, zeroinitializer
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v16i8_v16i1(<16 x i8>) nounwind {
+define zeroext i1 @icmp0_v16i8_v16i1(<16 x i8>) nounwind {
 ; SSE2-LABEL: icmp0_v16i8_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1113,12 +1128,13 @@ define i1 @icmp0_v16i8_v16i1(<16 x i8>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <16 x i8> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i8> %0, zeroinitializer
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v4i64_v4i1(<4 x i64>) nounwind {
+define zeroext i1 @icmp0_v4i64_v4i1(<4 x i64>) nounwind {
 ; SSE2-LABEL: icmp0_v4i64_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1142,12 +1158,13 @@ define i1 @icmp0_v4i64_v4i1(<4 x i64>) nounwind {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <4 x i64> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i64> %0, zeroinitializer
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v8i32_v8i1(<8 x i32>) nounwind {
+define zeroext i1 @icmp0_v8i32_v8i1(<8 x i32>) nounwind {
 ; SSE2-LABEL: icmp0_v8i32_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1171,12 +1188,13 @@ define i1 @icmp0_v8i32_v8i1(<8 x i32>) nounwind {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <8 x i32> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i32> %0, zeroinitializer
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
+define zeroext i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
 ; SSE2-LABEL: icmp0_v16i16_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1200,12 +1218,13 @@ define i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <16 x i16> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i16> %0, zeroinitializer
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v32i8_v32i1(<32 x i8>) nounwind {
+define zeroext i1 @icmp0_v32i8_v32i1(<32 x i8>) nounwind {
 ; SSE2-LABEL: icmp0_v32i8_v32i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1229,12 +1248,13 @@ define i1 @icmp0_v32i8_v32i1(<32 x i8>) nounwind {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <32 x i8> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i8> %0, zeroinitializer
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v8i64_v8i1(<8 x i64>) nounwind {
+define zeroext i1 @icmp0_v8i64_v8i1(<8 x i64>) nounwind {
 ; X86-SSE2-LABEL: icmp0_v8i64_v8i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -1312,12 +1332,13 @@ define i1 @icmp0_v8i64_v8i1(<8 x i64>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <8 x i64> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i64> %0, zeroinitializer
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
+define zeroext i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
 ; X86-SSE2-LABEL: icmp0_v16i32_v16i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -1395,12 +1416,13 @@ define i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <16 x i32> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i32> %0, zeroinitializer
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
+define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE2-LABEL: icmp0_v32i16_v32i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -1478,12 +1500,13 @@ define i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <32 x i16> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i16> %0, zeroinitializer
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
+define zeroext i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; X86-SSE2-LABEL: icmp0_v64i8_v64i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -1561,70 +1584,100 @@ define i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <64 x i8> %0, zeroinitializer
-  %b = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <64 x i8> %0, zeroinitializer
+  %b = bitcast <64 x i1> %a to i64
+  %c = icmp eq i64 %b, 0
+  ret i1 %c
 }
 
 define i8 @icmp0_v8i1(<8 x i8>) nounwind {
-; SSE2-LABEL: icmp0_v8i1:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psllw $15, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    testl $43690, %eax # imm = 0xAAAA
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: icmp0_v8i1:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    orl %eax, %ecx
+; X86-SSE2-NEXT:    sete %al
+; X86-SSE2-NEXT:    retl
 ;
-; SSE4-LABEL: icmp0_v8i1:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE4-NEXT:    psllw $15, %xmm0
-; SSE4-NEXT:    pmovmskb %xmm0, %eax
-; SSE4-NEXT:    testl $43690, %eax # imm = 0xAAAA
-; SSE4-NEXT:    sete %al
-; SSE4-NEXT:    ret{{[l|q]}}
+; X64-SSE-LABEL: icmp0_v8i1:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movq %xmm0, %rax
+; X64-SSE-NEXT:    testq %rax, %rax
+; X64-SSE-NEXT:    sete %al
+; X64-SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: icmp0_v8i1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX1OR2-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1OR2-NEXT:    testl $43690, %eax # imm = 0xAAAA
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: icmp0_v8i1:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pextrd $1, %xmm0, %eax
+; X86-SSE4-NEXT:    movd %xmm0, %ecx
+; X86-SSE4-NEXT:    orl %eax, %ecx
+; X86-SSE4-NEXT:    sete %al
+; X86-SSE4-NEXT:    retl
+;
+; X86-AVX1-LABEL: icmp0_v8i1:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; X86-AVX1-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX1-NEXT:    orl %eax, %ecx
+; X86-AVX1-NEXT:    sete %al
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: icmp0_v8i1:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    testq %rax, %rax
+; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    retq
+;
+; X86-AVX2-LABEL: icmp0_v8i1:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; X86-AVX2-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX2-NEXT:    orl %eax, %ecx
+; X86-AVX2-NEXT:    sete %al
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: icmp0_v8i1:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    testq %rax, %rax
+; X64-AVX2-NEXT:    sete %al
+; X64-AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: icmp0_v8i1:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    testq %rax, %rax
 ; AVX512F-NEXT:    sete %al
-; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: icmp0_v8i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    testb %al, %al
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rax
+; AVX512BW-NEXT:    testq %rax, %rax
 ; AVX512BW-NEXT:    sete %al
-; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: icmp0_v8i1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovmskb %xmm0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    testq %rax, %rax
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <8 x i8> %0 to <8 x i1>
-  %b = icmp eq <8 x i1> %a, zeroinitializer
-  %c = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %b)
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
   %d = zext i1 %c to i8
   ret i8 %d
 }
@@ -1633,7 +1686,7 @@ define i8 @icmp0_v8i1(<8 x i8>) nounwind {
 ; Comparison With All Ones
 ;
 
-define i1 @icmp1_v2i64_v2i1(<2 x i64>) nounwind {
+define zeroext i1 @icmp1_v2i64_v2i1(<2 x i64>) nounwind {
 ; SSE2-LABEL: icmp1_v2i64_v2i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -1656,12 +1709,13 @@ define i1 @icmp1_v2i64_v2i1(<2 x i64>) nounwind {
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    setb %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <2 x i64> %0, <i64 -1, i64 -1>
-  %b = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <2 x i64> %0, splat (i64 -1)
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp eq i2 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v4i32_v4i1(<4 x i32>) nounwind {
+define zeroext i1 @icmp1_v4i32_v4i1(<4 x i32>) nounwind {
 ; SSE2-LABEL: icmp1_v4i32_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -1684,12 +1738,13 @@ define i1 @icmp1_v4i32_v4i1(<4 x i32>) nounwind {
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    setb %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <4 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1>
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i32> %0, splat (i32 -1)
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v8i16_v8i1(<8 x i16>) nounwind {
+define zeroext i1 @icmp1_v8i16_v8i1(<8 x i16>) nounwind {
 ; SSE2-LABEL: icmp1_v8i16_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -1712,12 +1767,13 @@ define i1 @icmp1_v8i16_v8i1(<8 x i16>) nounwind {
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    setb %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <8 x i16> %0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i16> %0, splat (i16 -1)
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v16i8_v16i1(<16 x i8>) nounwind {
+define zeroext i1 @icmp1_v16i8_v16i1(<16 x i8>) nounwind {
 ; SSE2-LABEL: icmp1_v16i8_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
@@ -1740,12 +1796,13 @@ define i1 @icmp1_v16i8_v16i1(<16 x i8>) nounwind {
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    setb %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <16 x i8> %0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i8> %0, splat (i8 -1)
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v4i64_v4i1(<4 x i64>) nounwind {
+define zeroext i1 @icmp1_v4i64_v4i1(<4 x i64>) nounwind {
 ; SSE2-LABEL: icmp1_v4i64_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1788,12 +1845,13 @@ define i1 @icmp1_v4i64_v4i1(<4 x i64>) nounwind {
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <4 x i64> %0, <i64 -1, i64 -1, i64 -1, i64 -1>
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i64> %0, splat (i64 -1)
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v8i32_v8i1(<8 x i32>) nounwind {
+define zeroext i1 @icmp1_v8i32_v8i1(<8 x i32>) nounwind {
 ; SSE2-LABEL: icmp1_v8i32_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1836,12 +1894,13 @@ define i1 @icmp1_v8i32_v8i1(<8 x i32>) nounwind {
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <8 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i32> %0, splat (i32 -1)
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v16i16_v16i1(<16 x i16>) nounwind {
+define zeroext i1 @icmp1_v16i16_v16i1(<16 x i16>) nounwind {
 ; SSE2-LABEL: icmp1_v16i16_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1884,12 +1943,13 @@ define i1 @icmp1_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <16 x i16> %0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i16> %0, splat (i16 -1)
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v32i8_v32i1(<32 x i8>) nounwind {
+define zeroext i1 @icmp1_v32i8_v32i1(<32 x i8>) nounwind {
 ; SSE2-LABEL: icmp1_v32i8_v32i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1932,12 +1992,13 @@ define i1 @icmp1_v32i8_v32i1(<32 x i8>) nounwind {
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <32 x i8> %0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i8> %0, splat (i8 -1)
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v8i64_v8i1(<8 x i64>) nounwind {
+define zeroext i1 @icmp1_v8i64_v8i1(<8 x i64>) nounwind {
 ; X86-SSE2-LABEL: icmp1_v8i64_v8i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2021,12 +2082,13 @@ define i1 @icmp1_v8i64_v8i1(<8 x i64>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <8 x i64> %0, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i64> %0, splat (i64 -1)
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v16i32_v16i1(<16 x i32>) nounwind {
+define zeroext i1 @icmp1_v16i32_v16i1(<16 x i32>) nounwind {
 ; X86-SSE2-LABEL: icmp1_v16i32_v16i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2110,12 +2172,13 @@ define i1 @icmp1_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <16 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i32> %0, splat (i32 -1)
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v32i16_v32i1(<32 x i16>) nounwind {
+define zeroext i1 @icmp1_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE2-LABEL: icmp1_v32i16_v32i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2199,12 +2262,13 @@ define i1 @icmp1_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <32 x i16> %0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i16> %0, splat (i16 -1)
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp1_v64i8_v64i1(<64 x i8>) nounwind {
+define zeroext i1 @icmp1_v64i8_v64i1(<64 x i8>) nounwind {
 ; X86-SSE2-LABEL: icmp1_v64i8_v64i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2288,73 +2352,114 @@ define i1 @icmp1_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <64 x i8> %0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-  %b = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <64 x i8> %0, splat (i8 -1)
+  %b = bitcast <64 x i1> %a to i64
+  %c = icmp eq i64 %b, 0
+  ret i1 %c
 }
 
 define i8 @icmp1_v8i1(<8 x i8>) nounwind {
-; SSE2-LABEL: icmp1_v8i1:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psllw $15, %xmm0
-; SSE2-NEXT:    packsswb %xmm0, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    cmpb $-1, %al
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    ret{{[l|q]}}
+; X86-SSE2-LABEL: icmp1_v8i1:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    xorl $16843009, %eax # imm = 0x1010101
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, %ecx
+; X86-SSE2-NEXT:    xorl $16843009, %ecx # imm = 0x1010101
+; X86-SSE2-NEXT:    orl %eax, %ecx
+; X86-SSE2-NEXT:    sete %al
+; X86-SSE2-NEXT:    retl
 ;
-; SSE4-LABEL: icmp1_v8i1:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE4-NEXT:    psllw $15, %xmm0
-; SSE4-NEXT:    packsswb %xmm0, %xmm0
-; SSE4-NEXT:    pmovmskb %xmm0, %eax
-; SSE4-NEXT:    cmpb $-1, %al
-; SSE4-NEXT:    sete %al
-; SSE4-NEXT:    ret{{[l|q]}}
+; X64-SSE-LABEL: icmp1_v8i1:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movq %xmm0, %rax
+; X64-SSE-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-SSE-NEXT:    cmpq %rcx, %rax
+; X64-SSE-NEXT:    sete %al
+; X64-SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: icmp1_v8i1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX1OR2-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1OR2-NEXT:    cmpb $-1, %al
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    ret{{[l|q]}}
+; X86-SSE4-LABEL: icmp1_v8i1:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE4-NEXT:    pextrd $1, %xmm0, %eax
+; X86-SSE4-NEXT:    xorl $16843009, %eax # imm = 0x1010101
+; X86-SSE4-NEXT:    movd %xmm0, %ecx
+; X86-SSE4-NEXT:    xorl $16843009, %ecx # imm = 0x1010101
+; X86-SSE4-NEXT:    orl %eax, %ecx
+; X86-SSE4-NEXT:    sete %al
+; X86-SSE4-NEXT:    retl
+;
+; X86-AVX1-LABEL: icmp1_v8i1:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; X86-AVX1-NEXT:    xorl $16843009, %eax # imm = 0x1010101
+; X86-AVX1-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX1-NEXT:    xorl $16843009, %ecx # imm = 0x1010101
+; X86-AVX1-NEXT:    orl %eax, %ecx
+; X86-AVX1-NEXT:    sete %al
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: icmp1_v8i1:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-AVX1-NEXT:    cmpq %rcx, %rax
+; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    retq
+;
+; X86-AVX2-LABEL: icmp1_v8i1:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; X86-AVX2-NEXT:    xorl $16843009, %eax # imm = 0x1010101
+; X86-AVX2-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX2-NEXT:    xorl $16843009, %ecx # imm = 0x1010101
+; X86-AVX2-NEXT:    orl %eax, %ecx
+; X86-AVX2-NEXT:    sete %al
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: icmp1_v8i1:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-AVX2-NEXT:    cmpq %rcx, %rax
+; X64-AVX2-NEXT:    sete %al
+; X64-AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: icmp1_v8i1:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    cmpb $-1, %al
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; AVX512F-NEXT:    cmpq %rcx, %rax
 ; AVX512F-NEXT:    sete %al
-; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: icmp1_v8i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    cmpb $-1, %al
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rax
+; AVX512BW-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; AVX512BW-NEXT:    cmpq %rcx, %rax
 ; AVX512BW-NEXT:    sete %al
-; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: icmp1_v8i1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovmskb %xmm0, %eax
-; AVX512VL-NEXT:    cmpb $-1, %al
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; AVX512VL-NEXT:    cmpq %rcx, %rax
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <8 x i8> %0 to <8 x i1>
-  %b = icmp eq <8 x i1> %a, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
-  %c = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %b)
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, -1
   %d = zext i1 %c to i8
   ret i8 %d
 }
@@ -2363,7 +2468,7 @@ define i8 @icmp1_v8i1(<8 x i8>) nounwind {
 ; Comparison
 ;
 
-define i1 @icmp_v2i64_v2i1(<2 x i64>, <2 x i64>) nounwind {
+define zeroext i1 @icmp_v2i64_v2i1(<2 x i64>, <2 x i64>) nounwind {
 ; SSE2-LABEL: icmp_v2i64_v2i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -2385,12 +2490,13 @@ define i1 @icmp_v2i64_v2i1(<2 x i64>, <2 x i64>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <2 x i64> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <2 x i64> %0, %1
+  %b = bitcast <2 x i1> %a to i2
+  %c = icmp eq i2 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v4i32_v4i1(<4 x i32>, <4 x i32>) nounwind {
+define zeroext i1 @icmp_v4i32_v4i1(<4 x i32>, <4 x i32>) nounwind {
 ; SSE2-LABEL: icmp_v4i32_v4i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -2412,12 +2518,13 @@ define i1 @icmp_v4i32_v4i1(<4 x i32>, <4 x i32>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <4 x i32> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i32> %0, %1
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v8i16_v8i1(<8 x i16>, <8 x i16>) nounwind {
+define zeroext i1 @icmp_v8i16_v8i1(<8 x i16>, <8 x i16>) nounwind {
 ; SSE2-LABEL: icmp_v8i16_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
@@ -2439,12 +2546,13 @@ define i1 @icmp_v8i16_v8i1(<8 x i16>, <8 x i16>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <8 x i16> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i16> %0, %1
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) nounwind {
+define zeroext i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) nounwind {
 ; SSE2-LABEL: icmp_v16i8_v16i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
@@ -2466,12 +2574,13 @@ define i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    ret{{[l|q]}}
-  %a = icmp eq <16 x i8> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i8> %0, %1
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) nounwind {
+define zeroext i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) nounwind {
 ; X86-SSE2-LABEL: icmp_v4i64_v4i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2545,12 +2654,13 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <4 x i64> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <4 x i64> %0, %1
+  %b = bitcast <4 x i1> %a to i4
+  %c = icmp eq i4 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v8i32_v8i1(<8 x i32>, <8 x i32>) nounwind {
+define zeroext i1 @icmp_v8i32_v8i1(<8 x i32>, <8 x i32>) nounwind {
 ; X86-SSE2-LABEL: icmp_v8i32_v8i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2624,12 +2734,13 @@ define i1 @icmp_v8i32_v8i1(<8 x i32>, <8 x i32>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <8 x i32> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i32> %0, %1
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
+define zeroext i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
 ; X86-SSE2-LABEL: icmp_v16i16_v16i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2703,12 +2814,13 @@ define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <16 x i16> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i16> %0, %1
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v32i8_v32i1(<32 x i8>, <32 x i8>) nounwind {
+define zeroext i1 @icmp_v32i8_v32i1(<32 x i8>, <32 x i8>) nounwind {
 ; X86-SSE2-LABEL: icmp_v32i8_v32i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2782,12 +2894,13 @@ define i1 @icmp_v32i8_v32i1(<32 x i8>, <32 x i8>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <32 x i8> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i8> %0, %1
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) nounwind {
+define zeroext i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) nounwind {
 ; X86-SSE2-LABEL: icmp_v8i64_v8i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -2915,12 +3028,13 @@ define i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <8 x i64> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <8 x i64> %0, %1
+  %b = bitcast <8 x i1> %a to i8
+  %c = icmp eq i8 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
+define zeroext i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
 ; X86-SSE2-LABEL: icmp_v16i32_v16i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -3048,12 +3162,13 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <16 x i32> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <16 x i32> %0, %1
+  %b = bitcast <16 x i1> %a to i16
+  %c = icmp eq i16 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v32i16_v32i1(<32 x i16>, <32 x i16>) nounwind {
+define zeroext i1 @icmp_v32i16_v32i1(<32 x i16>, <32 x i16>) nounwind {
 ; X86-SSE2-LABEL: icmp_v32i16_v32i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -3181,12 +3296,13 @@ define i1 @icmp_v32i16_v32i1(<32 x i16>, <32 x i16>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <32 x i16> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <32 x i16> %0, %1
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  ret i1 %c
 }
 
-define i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) nounwind {
+define zeroext i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) nounwind {
 ; X86-SSE2-LABEL: icmp_v64i8_v64i1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
@@ -3314,18 +3430,13 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) nounwind {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %a = icmp eq <64 x i8> %0, %1
-  %b = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> %a)
-  ret i1 %b
+  %a = icmp ne <64 x i8> %0, %1
+  %b = bitcast <64 x i1> %a to i64
+  %c = icmp eq i64 %b, 0
+  ret i1 %c
 }
 
-declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
-declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
-declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
-declare i1 @llvm.vector.reduce.and.v16i1(<16 x i1>)
-declare i1 @llvm.vector.reduce.and.v32i1(<32 x i1>)
-declare i1 @llvm.vector.reduce.and.v64i1(<64 x i1>)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX1OR2: {{.*}}
 ; SSE: {{.*}}
-; X64-SSE: {{.*}}
 ; X86-SSE: {{.*}}

@@ -195,31 +195,8 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
   return offset;
 }
 
-cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
-    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
-  assert(!cir::MissingFeatures::astRecordDeclAttr());
-  llvm::SmallVector<mlir::Type> members;
-  members.reserve(fields.size());
-  llvm::transform(fields, std::back_inserter(members),
-                  [](mlir::Attribute attr) {
-                    return mlir::cast<mlir::TypedAttr>(attr).getType();
-                  });
-
-  if (name.empty())
-    return getAnonRecordTy(members, packed, padded);
-
-  return getCompleteNamedRecordType(members, packed, padded, name);
-}
-
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
-    mlir::ArrayAttr arrayAttr, bool packed, bool padded, mlir::Type type) {
-  auto recordTy = mlir::cast_or_null<cir::RecordType>(type);
-
-  // Record type not specified: create anon record type from members.
-  if (!recordTy) {
-    recordTy = getCompleteRecordType(arrayAttr, packed, padded);
-  }
-
+    mlir::ArrayAttr arrayAttr, cir::RecordType recordTy) {
   // Return zero or anonymous constant record.
   const bool isZero = llvm::all_of(
       arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });

@@ -687,8 +687,6 @@ func.func @brmatmul_bf16dp_flat_layout_loop(%arg0: memref<16x64x32xbf16>, %arg1:
 }
 
 // CHECK-LABEL: @brmatmul_bf16dp_flat_layout_loop
-// CHECK: vector.shuffle{{.*}}[0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23] : vector<16xf32>, vector<16xf32>
-// CHECK-NEXT: vector.shuffle{{.*}}[8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31] : vector<16xf32>, vector<16xf32>
 // CHECK: scf.for
 // CHECK: scf.for
 // CHECK: vector.transfer_read {{.*}} vector<32xbf16>
@@ -706,6 +704,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
       transform.apply_patterns.x86.vector_contract_to_packed_type_dot_product
     } : !transform.any_op
     transform.yield

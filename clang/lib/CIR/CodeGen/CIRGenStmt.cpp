@@ -20,7 +20,9 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -87,20 +89,37 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
+
+  bool noinline = inNoInlineAttributedStmt;
+  bool alwaysinline = inAlwaysInlineAttributedStmt;
+  const CallExpr *musttail = mustTailCall;
+
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
       break;
     case attr::NoMerge:
-    case attr::NoInline:
-    case attr::AlwaysInline:
     case attr::NoConvergent:
-    case attr::MustTail:
     case attr::Atomic:
+    case attr::AMDGPUAvailableVisible:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
       break;
+    case attr::NoInline:
+      noinline = true;
+      alwaysinline = false;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
+      noinline = false;
+      break;
+    case attr::MustTail: {
+      const Stmt *sub = s.getSubStmt();
+      const ReturnStmt *ret = cast<ReturnStmt>(sub);
+      musttail = cast<CallExpr>(ret->getRetValue()->IgnoreParens());
+      break;
+    }
     case attr::CXXAssume: {
       const Expr *assumptionExpr = cast<CXXAssumeAttr>(attr)->getAssumption();
       if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
@@ -113,6 +132,14 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
+  SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
+  SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
+
+  SaveAndRestore save_musttail(mustTailCall, musttail);
 
   return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
 }
@@ -199,6 +226,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::CoreturnStmtClass:
     return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -288,8 +317,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
   case Stmt::OMPScanDirectiveClass:
     return emitOMPScanDirective(cast<OMPScanDirective>(*s));
-  case Stmt::OMPOrderedDirectiveClass:
-    return emitOMPOrderedDirective(cast<OMPOrderedDirective>(*s));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    return emitOMPOrderedStandaloneDirective(
+        cast<OMPOrderedStandaloneDirective>(*s));
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    return emitOMPOrderedBlockAssocDirective(
+        cast<OMPOrderedBlockAssocDirective>(*s));
   case Stmt::OMPAtomicDirectiveClass:
     return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
   case Stmt::OMPTargetDirectiveClass:
@@ -420,7 +453,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
@@ -708,13 +740,20 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  // An indirect goto with an active cleanup may leave its scope.  Determining
+  // whether its dynamic destination requires cleanup is not implemented.
+  if (ehStack.stable_begin() != prologueCleanupDepth) {
+    cgm.errorNYI(s.getSourceRange(), "indirect goto with active cleanup");
+    return mlir::success();
+  }
+
   mlir::Value val = emitScalarExpr(s.getTarget());
-  // Create the shared indirect-branch block on first use.  Its successors are
-  // every address-taken label, wired in finishIndirectBranch once all labels
-  // are emitted.
-  instantiateIndirectGotoBlock();
-  cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
-                    val);
+  // Emit a symbolic indirect goto.  GotoSolver resolves it into the shared
+  // indirect-branch block after FlattenCFG merges regions, so this stays valid
+  // even when the goto sits inside a nested scope.
+  cir::IndirectGotoOp::create(builder, getLoc(s.getSourceRange()), val);
+
+  // The indirect goto ends the block; open a fresh one so codegen can resume.
   builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
@@ -745,14 +784,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp label =
-      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
-  builder.setInsertionPointToEnd(labelBlock);
-  auto func = cast<cir::FuncOp>(curFn);
-  cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
-                                                  func.getSymName(),
-                                                  label.getLabel()),
-                      label);
+  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
@@ -858,6 +890,11 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
+
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // as an int later on.
+  if (isa<cir::BoolType>(condType))
+    condType = builder.getUIntNTy(1);
 
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
@@ -984,15 +1021,15 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region. This scope is constructed after the
-    // init-statement so its cleanups are not captured.
+    // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1117,14 +1154,14 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1268,6 +1305,13 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 
+    // Coerce bool values to an i1. There is no real sensible reason we need to
+    // represent a 'switch' of scoped-enum-with-bool-backing-type specially
+    // here.  It is a rarely used thing, and would result in a lot of work to
+    // properly handle this everywhere.
+    if (isa<cir::BoolType>(condV.getType()))
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
+
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());
     assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
@@ -1328,7 +1372,8 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
       emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
     }
   } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+    assert(rv.isComplex() && "Unknown rvalue kind?");
+    builder.createStore(loc, rv.getComplexValue(), returnValue);
   }
 
   // Classic codegen emits a branch through any cleanups before continuing to

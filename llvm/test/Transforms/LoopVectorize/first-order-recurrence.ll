@@ -25,7 +25,7 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[PRE_LOAD]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -83,7 +83,7 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -139,7 +139,7 @@ define void @recurrence_1(ptr readonly noalias %a, ptr noalias %b, i32 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[PRE_LOAD]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -225,7 +225,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -292,7 +292,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -355,7 +355,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -462,7 +462,7 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[CONV1]], i64 0
@@ -540,7 +540,7 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -613,7 +613,7 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[CONV1]], i64 0
@@ -864,7 +864,7 @@ define i32 @PR27246() {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[I_016]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[I_016]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[I_016]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[I_016]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = sub i32 [[I_016]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I_016]], i64 0
@@ -912,7 +912,7 @@ define i32 @PR27246() {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[I_016]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[I_016]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[I_016]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i32 [[I_016]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[IND_END:%.*]] = sub i32 [[I_016]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -954,7 +954,7 @@ define i32 @PR27246() {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[I_016]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[I_016]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[I_016]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[I_016]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = sub i32 [[I_016]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I_016]], i64 0
@@ -1029,7 +1029,7 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 1
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1075,7 +1075,7 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 1
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1120,7 +1120,7 @@ define i32 @PR30183(i32 %pre_load, ptr %a, ptr %b, i64 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 1
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1249,7 +1249,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x, i32 %n)  {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1291,7 +1291,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x, i32 %n)  {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -1328,7 +1328,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x, i32 %n)  {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1407,7 +1407,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP46]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP46]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP46]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP46]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[TMP47:%.*]] = mul i64 [[N_VEC]], 200
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP47]]
@@ -1447,18 +1447,18 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP9]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = load double, ptr [[TMP10]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP11]], align 8
-; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> poison, double [[TMP16]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = insertelement <4 x double> [[TMP20]], double [[TMP17]], i32 1
-; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = insertelement <4 x double> [[TMP21]], double [[TMP18]], i32 2
-; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP22]], double [[TMP19]], i32 3
+; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> poison, double [[TMP16]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = insertelement <4 x double> [[TMP20]], double [[TMP17]], i64 1
+; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = insertelement <4 x double> [[TMP21]], double [[TMP18]], i64 2
+; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP22]], double [[TMP19]], i64 3
 ; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP12]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = load double, ptr [[TMP13]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = load double, ptr [[TMP14]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = load double, ptr [[TMP15]], align 8
-; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = insertelement <4 x double> poison, double [[TMP24]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = insertelement <4 x double> [[TMP28]], double [[TMP25]], i32 1
-; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = insertelement <4 x double> [[TMP29]], double [[TMP26]], i32 2
-; UNROLL-NO-IC-NEXT:    [[TMP31]] = insertelement <4 x double> [[TMP30]], double [[TMP27]], i32 3
+; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = insertelement <4 x double> poison, double [[TMP24]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = insertelement <4 x double> [[TMP28]], double [[TMP25]], i64 1
+; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = insertelement <4 x double> [[TMP29]], double [[TMP26]], i64 2
+; UNROLL-NO-IC-NEXT:    [[TMP31]] = insertelement <4 x double> [[TMP30]], double [[TMP27]], i64 3
 ; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[TMP23]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = shufflevector <4 x double> [[TMP23]], <4 x double> [[TMP31]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP34:%.*]] = fmul <4 x double> [[TMP32]], [[TMP23]]
@@ -1512,7 +1512,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP16]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP16]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP16]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP16]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = mul i64 [[N_VEC]], 200
 ; UNROLL-NO-VF-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]
@@ -1581,7 +1581,7 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP25]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP25]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP25]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP25]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[TMP26:%.*]] = mul i64 [[N_VEC]], 200
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP26]]
@@ -1608,10 +1608,10 @@ define i32 @PR33613(ptr %b, double %j, i32 %d, i32 %n) {
 ; SINK-AFTER-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP5]], align 8
 ; SINK-AFTER-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP6]], align 8
 ; SINK-AFTER-NEXT:    [[TMP11:%.*]] = load double, ptr [[TMP7]], align 8
-; SINK-AFTER-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i32 0
-; SINK-AFTER-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP9]], i32 1
-; SINK-AFTER-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP10]], i32 2
-; SINK-AFTER-NEXT:    [[TMP15]] = insertelement <4 x double> [[TMP14]], double [[TMP11]], i32 3
+; SINK-AFTER-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP8]], i64 0
+; SINK-AFTER-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP9]], i64 1
+; SINK-AFTER-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP10]], i64 2
+; SINK-AFTER-NEXT:    [[TMP15]] = insertelement <4 x double> [[TMP14]], double [[TMP11]], i64 3
 ; SINK-AFTER-NEXT:    [[TMP16:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[TMP15]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; SINK-AFTER-NEXT:    [[TMP17:%.*]] = fmul <4 x double> [[TMP16]], [[TMP15]]
 ; SINK-AFTER-NEXT:    [[TMP18:%.*]] = fcmp une <4 x double> [[TMP17]], zeroinitializer
@@ -1689,7 +1689,7 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1747,7 +1747,7 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -1803,7 +1803,7 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1892,7 +1892,7 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1922,18 +1922,18 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = load i16, ptr [[TMP10]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = load i16, ptr [[TMP11]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = load i16, ptr [[TMP12]], align 2
-; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = insertelement <4 x i16> poison, i16 [[TMP19]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = insertelement <4 x i16> [[TMP23]], i16 [[TMP20]], i32 1
-; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = insertelement <4 x i16> [[TMP24]], i16 [[TMP21]], i32 2
-; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> [[TMP25]], i16 [[TMP22]], i32 3
+; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = insertelement <4 x i16> poison, i16 [[TMP19]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = insertelement <4 x i16> [[TMP23]], i16 [[TMP20]], i64 1
+; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = insertelement <4 x i16> [[TMP24]], i16 [[TMP21]], i64 2
+; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> [[TMP25]], i16 [[TMP22]], i64 3
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = load i16, ptr [[TMP13]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = load i16, ptr [[TMP14]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = load i16, ptr [[TMP15]], align 2
 ; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = load i16, ptr [[TMP16]], align 2
-; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = insertelement <4 x i16> poison, i16 [[TMP27]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP31]], i16 [[TMP28]], i32 1
-; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = insertelement <4 x i16> [[TMP32]], i16 [[TMP29]], i32 2
-; UNROLL-NO-IC-NEXT:    [[TMP34]] = insertelement <4 x i16> [[TMP33]], i16 [[TMP30]], i32 3
+; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = insertelement <4 x i16> poison, i16 [[TMP27]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP31]], i16 [[TMP28]], i64 1
+; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = insertelement <4 x i16> [[TMP32]], i16 [[TMP29]], i64 2
+; UNROLL-NO-IC-NEXT:    [[TMP34]] = insertelement <4 x i16> [[TMP33]], i16 [[TMP30]], i64 3
 ; UNROLL-NO-IC-NEXT:    [[TMP35:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP26]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP36:%.*]] = shufflevector <4 x i16> [[TMP26]], <4 x i16> [[TMP34]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC-NEXT:    [[TMP37:%.*]] = sext <4 x i16> [[TMP35]] to <4 x i32>
@@ -1981,7 +1981,7 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -2041,7 +2041,7 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2061,10 +2061,10 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; SINK-AFTER-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP6]], align 2
 ; SINK-AFTER-NEXT:    [[TMP12:%.*]] = load i16, ptr [[TMP7]], align 2
 ; SINK-AFTER-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP8]], align 2
-; SINK-AFTER-NEXT:    [[TMP14:%.*]] = insertelement <4 x i16> poison, i16 [[TMP10]], i32 0
-; SINK-AFTER-NEXT:    [[TMP15:%.*]] = insertelement <4 x i16> [[TMP14]], i16 [[TMP11]], i32 1
-; SINK-AFTER-NEXT:    [[TMP16:%.*]] = insertelement <4 x i16> [[TMP15]], i16 [[TMP12]], i32 2
-; SINK-AFTER-NEXT:    [[TMP17]] = insertelement <4 x i16> [[TMP16]], i16 [[TMP13]], i32 3
+; SINK-AFTER-NEXT:    [[TMP14:%.*]] = insertelement <4 x i16> poison, i16 [[TMP10]], i64 0
+; SINK-AFTER-NEXT:    [[TMP15:%.*]] = insertelement <4 x i16> [[TMP14]], i16 [[TMP11]], i64 1
+; SINK-AFTER-NEXT:    [[TMP16:%.*]] = insertelement <4 x i16> [[TMP15]], i16 [[TMP12]], i64 2
+; SINK-AFTER-NEXT:    [[TMP17]] = insertelement <4 x i16> [[TMP16]], i16 [[TMP13]], i64 3
 ; SINK-AFTER-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP17]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; SINK-AFTER-NEXT:    [[TMP19:%.*]] = sext <4 x i16> [[TMP18]] to <4 x i32>
 ; SINK-AFTER-NEXT:    [[TMP20:%.*]] = sext <4 x i16> [[TMP17]] to <4 x i32>
@@ -2139,7 +2139,7 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2200,7 +2200,7 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
@@ -2259,7 +2259,7 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2599,12 +2599,12 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-IC-SAME: i32 [[Y:%.*]]) {
 ; UNROLL-NO-IC-NEXT:  [[BB:.*:]]
 ; UNROLL-NO-IC-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = sub i32 [[Y]], [[SMIN]]
-; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = add i32 [[TMP5]], 1
+; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = add i32 [[Y]], 1
+; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP5]], [[SMIN]]
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
 ; UNROLL-NO-IC-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 7
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -2712,12 +2712,12 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; UNROLL-NO-VF-SAME: i32 [[Y:%.*]]) {
 ; UNROLL-NO-VF-NEXT:  [[BB:.*:]]
 ; UNROLL-NO-VF-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = sub i32 [[Y]], [[SMIN]]
-; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = add i32 [[TMP4]], 1
+; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = add i32 [[Y]], 1
+; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP4]], [[SMIN]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
 ; UNROLL-NO-VF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2761,12 +2761,12 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; SINK-AFTER-SAME: i32 [[Y:%.*]]) {
 ; SINK-AFTER-NEXT:  [[BB:.*:]]
 ; SINK-AFTER-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; SINK-AFTER-NEXT:    [[TMP4:%.*]] = sub i32 [[Y]], [[SMIN]]
-; SINK-AFTER-NEXT:    [[TMP1:%.*]] = add i32 [[TMP4]], 1
+; SINK-AFTER-NEXT:    [[TMP4:%.*]] = add i32 [[Y]], 1
+; SINK-AFTER-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP4]], [[SMIN]]
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
 ; SINK-AFTER-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -2852,12 +2852,12 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-IC-SAME: ptr [[X:%.*]], i32 [[Y:%.*]]) {
 ; UNROLL-NO-IC-NEXT:  [[BB:.*:]]
 ; UNROLL-NO-IC-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = sub i32 [[Y]], [[SMIN]]
-; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = add i32 [[TMP2]], 1
+; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i32 [[Y]], 1
+; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP2]], [[SMIN]]
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
 ; UNROLL-NO-IC-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 7
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -3021,12 +3021,12 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; UNROLL-NO-VF-SAME: ptr [[X:%.*]], i32 [[Y:%.*]]) {
 ; UNROLL-NO-VF-NEXT:  [[BB:.*:]]
 ; UNROLL-NO-VF-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = sub i32 [[Y]], [[SMIN]]
-; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = add i32 [[TMP2]], 1
+; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = add i32 [[Y]], 1
+; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP2]], [[SMIN]]
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
 ; UNROLL-NO-VF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -3082,12 +3082,12 @@ define i32 @sink_into_replication_region_multiple(ptr %x, i32 %y) {
 ; SINK-AFTER-SAME: ptr [[X:%.*]], i32 [[Y:%.*]]) {
 ; SINK-AFTER-NEXT:  [[BB:.*:]]
 ; SINK-AFTER-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
-; SINK-AFTER-NEXT:    [[TMP2:%.*]] = sub i32 [[Y]], [[SMIN]]
-; SINK-AFTER-NEXT:    [[TMP1:%.*]] = add i32 [[TMP2]], 1
+; SINK-AFTER-NEXT:    [[TMP2:%.*]] = add i32 [[Y]], 1
+; SINK-AFTER-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP2]], [[SMIN]]
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
 ; SINK-AFTER-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -3313,7 +3313,7 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = add i16 -27, [[DOTCAST]]
@@ -3333,12 +3333,12 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; UNROLL-NO-IC:       [[SCALAR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label %[[FOR_COND:.*]]
 ; UNROLL-NO-IC:       [[FOR_COND]]:
-; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
-; UNROLL-NO-IC-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
+; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
+; UNROLL-NO-IC-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP11]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
 ; UNROLL-NO-IC-NEXT:    [[USE_REC_1:%.*]] = sub i16 [[REC_1]], 10
 ; UNROLL-NO-IC-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
 ; UNROLL-NO-IC-NEXT:    [[REC_1_PREV]] = add i16 [[IV_NEXT]], 5
@@ -3356,7 +3356,7 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP6]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP6]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP6]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP6]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[DOTCAST1:%.*]] = trunc i32 [[N_VEC]] to i16
 ; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = add i16 -27, [[DOTCAST1]]
@@ -3375,12 +3375,12 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP6]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; UNROLL-NO-VF:       [[SCALAR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
-; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = phi i16 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
+; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = phi i16 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; UNROLL-NO-VF-NEXT:    br label %[[FOR_COND:.*]]
 ; UNROLL-NO-VF:       [[FOR_COND]]:
-; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP11]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
-; UNROLL-NO-VF-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP12]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
+; UNROLL-NO-VF-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP12]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
+; UNROLL-NO-VF-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP13]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
 ; UNROLL-NO-VF-NEXT:    [[USE_REC_1:%.*]] = sub i16 [[REC_1]], 10
 ; UNROLL-NO-VF-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
 ; UNROLL-NO-VF-NEXT:    [[REC_1_PREV]] = add i16 [[IV_NEXT]], 5
@@ -3398,7 +3398,7 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = add i16 -27, [[DOTCAST]]
@@ -3417,12 +3417,12 @@ define void @unused_recurrence(ptr %a, i16 %n) {
 ; SINK-AFTER-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; SINK-AFTER-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; SINK-AFTER:       [[SCALAR_PH]]:
-; SINK-AFTER-NEXT:    [[TMP9:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
-; SINK-AFTER-NEXT:    [[TMP10:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[TMP10:%.*]] = phi i16 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ -27, %[[ENTRY]] ]
+; SINK-AFTER-NEXT:    [[TMP11:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; SINK-AFTER-NEXT:    br label %[[FOR_COND:.*]]
 ; SINK-AFTER:       [[FOR_COND]]:
-; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
-; SINK-AFTER-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
+; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_COND]] ]
+; SINK-AFTER-NEXT:    [[REC_1:%.*]] = phi i16 [ [[TMP11]], %[[SCALAR_PH]] ], [ [[REC_1_PREV:%.*]], %[[FOR_COND]] ]
 ; SINK-AFTER-NEXT:    [[USE_REC_1:%.*]] = sub i16 [[REC_1]], 10
 ; SINK-AFTER-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
 ; SINK-AFTER-NEXT:    [[REC_1_PREV]] = add i16 [[IV_NEXT]], 5

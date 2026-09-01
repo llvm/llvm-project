@@ -239,7 +239,7 @@
 #    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++26"
@@ -309,6 +309,76 @@
 #    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_allocator_traits_is_always_equal
+#    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++29"
+#  endif
+#  if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_associative_heterogeneous_erasure
+#      error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++29"
+#    endif
+#    if __cpp_lib_associative_heterogeneous_erasure != 202110L
+#      error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_associative_heterogeneous_erasure
+#      error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_associative_heterogeneous_insertion
+#      error "__cpp_lib_associative_heterogeneous_insertion should be defined in c++29"
+#    endif
+#    if __cpp_lib_associative_heterogeneous_insertion != 202306L
+#      error "__cpp_lib_associative_heterogeneous_insertion should have the value 202306L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_associative_heterogeneous_insertion
+#      error "__cpp_lib_associative_heterogeneous_insertion should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_containers_ranges
+#    error "__cpp_lib_containers_ranges should be defined in c++29"
+#  endif
+#  if __cpp_lib_containers_ranges != 202202L
+#    error "__cpp_lib_containers_ranges should have the value 202202L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_erase_if
+#    error "__cpp_lib_erase_if should be defined in c++29"
+#  endif
+#  if __cpp_lib_erase_if != 202002L
+#    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_generic_unordered_lookup
+#    error "__cpp_lib_generic_unordered_lookup should be defined in c++29"
+#  endif
+#  if __cpp_lib_generic_unordered_lookup != 201811L
+#    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_node_extract
+#    error "__cpp_lib_node_extract should be defined in c++29"
+#  endif
+#  if __cpp_lib_node_extract != 201606L
+#    error "__cpp_lib_node_extract should have the value 201606L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_nonmember_container_access
+#    error "__cpp_lib_nonmember_container_access should be defined in c++29"
+#  endif
+#  if __cpp_lib_nonmember_container_access != 201411L
+#    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on
