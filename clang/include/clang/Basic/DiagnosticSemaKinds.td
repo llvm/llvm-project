@@ -11094,6 +11094,10 @@ def warn_lifetime_safety_dangling_global_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_global_in_main
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle after main returns">,
+      InGroup<LifetimeSafetyDanglingGlobalInMain>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_lifetimebound_violation
     : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
