@@ -3,38 +3,46 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fmodules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/part1.cppm -o %t/A-Part1.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fmodules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/part2.cppm -o %t/A-Part2.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fmodules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/A.cppm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
 // RUN:   -o %t/A.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
-// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fmodules-unique-gmf-internal-linkage \
 // RUN:   %t/use.cpp -fmodule-file=%t/A.pcm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
 // RUN:   | FileCheck %s
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-modules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/part1.cppm -o %t/no-A-Part1.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-modules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/part2.cppm -o %t/no-A-Part2.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-modules-unique-gmf-internal-linkage \
 // RUN:   -emit-module-interface %t/A.cppm \
 // RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \
 // RUN:   -o %t/no-A.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
-// RUN:   -fno-skip-odr-check-in-gmf \
+// RUN:   -fskip-odr-check-in-gmf \
+// RUN:   -fno-modules-unique-gmf-internal-linkage \
 // RUN:   %t/use.cpp -fmodule-file=%t/no-A.pcm \
 // RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \

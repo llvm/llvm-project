@@ -3590,7 +3590,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     if (!C.isSameEntity(Existing, D))
       return false;
 
-    if (!C.getLangOpts().SkipODRCheckInGMF)
+    if (!C.getLangOpts().ModulesUniqueGMFInternalLinkage)
       return true;
 
     auto *FD = dyn_cast<FunctionDecl>(D);
@@ -3606,7 +3606,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
         !ExistingM->isGlobalModule())
       return true;
 
-    return M->getTopLevelModule() == ExistingM->getTopLevelModule();
+    return false;
   };
   DeclContext *DC = D->getDeclContext()->getRedeclContext();
   if (TypedefNameForLinkage) {
