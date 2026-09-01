@@ -6432,7 +6432,8 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
          "Should have been handled prior to this!");
 
   // We can only replicate an extractvalue if its operand generates per lane in
-  // the same replicate region.
+  // the same block, otherwise we would need to extract a lane from its struct
+  // operand which is invalid.
   if (VPI->getOpcode() == Instruction::ExtractValue)
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
       if (!vputils::doesGeneratePerAllLanes(OpR) ||

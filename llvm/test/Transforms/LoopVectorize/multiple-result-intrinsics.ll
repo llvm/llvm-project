@@ -817,16 +817,16 @@ exit:
   ret void
 }
 
-define void @sincos_predicated_store(i1 %c, double %x, ptr noalias %dst, ptr noalias %cos_dst) {
+define void @sincos_predicated_store(i1 %c, ptr noalias %src, ptr noalias %dst, ptr noalias %cos_dst) {
 ; CHECK-LABEL: define void @sincos_predicated_store(
-; CHECK-SAME: i1 [[C:%.*]], double [[X:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[COS_DST:%.*]]) {
+; CHECK-SAME: i1 [[C:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[COS_DST:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*]]:
-; CHECK:    [[TMP0:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[BROADCAST_SPLAT:%.*]])
-; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
 ; CHECK:  [[VECTOR_BODY:.*:]]
 ; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
+; CHECK:    [[TMP0:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[BROADCAST_SPLAT:%.*]])
 ; CHECK:    store <2 x double> zeroinitializer, ptr [[TMP3:%.*]], align 8
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
 ; CHECK:    br i1 [[TMP1:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:  [[PRED_STORE_IF]]:
 ; CHECK:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
@@ -847,9 +847,11 @@ entry:
 
 loop:
   %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %src.gep = getelementptr double, ptr %src, i64 %iv
+  %x = load double, ptr %src.gep
   %sincos = tail call { double, double } @llvm.sincos.f64(double %x)
-  %gep = getelementptr double, ptr %dst, i64 %iv
-  store double 0.0, ptr %gep
+  %dst.gep = getelementptr double, ptr %dst, i64 %iv
+  store double 0.0, ptr %dst.gep
   br i1 %c, label %latch, label %if
 
 if:
