@@ -70,6 +70,8 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   M.convertFromNewDbgValues();
 
   DXILDebugInfoMap Res;
+  // convertFromNewDbgValues() may change IR.
+  Res.Modified = true;
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
@@ -113,6 +115,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
           }
           if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
             DL->eraseFromParent();
+            Res.Modified = true;
             continue;
           }
           // Process both llvm.dbg.value and llvm.dbg.assign here. We convert
@@ -152,6 +155,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
               // location, this value is redundant.
               if (DbgValueFragment.first == NextNonDebugInst) {
                 DV->eraseFromParent();
+                Res.Modified = true;
                 continue;
               }
               // If there is a later identical value of the same fragment at a
@@ -162,6 +166,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
                   DbgValueFragment.second == DbgValue.second &&
                   DbgValueFragment.second->getValue() == DV->getValue()) {
                 DbgValue.second->eraseFromParent();
+                Res.Modified = true;
               }
             }
             DbgValueInst *NewDV;
@@ -183,6 +188,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
               NewDV->setTailCall();
               NewDV->setDebugLoc(DV->getDebugLoc());
               DV->eraseFromParent();
+              Res.Modified = true;
             } else {
               NewDV = DV;
             }
@@ -199,6 +205,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
               continue;
             if (isa<UndefValue>(DV->getValue())) {
               DV->eraseFromParent();
+              Res.Modified = true;
               continue;
             }
             DbgVariablesSeen.insert(DV->getVariable());
@@ -216,6 +223,7 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
                                [](Metadata *M) { return isa<DILabel>(M); }),
                 MDs.end());
       SP->replaceRetainedNodes(MDTuple::get(M.getContext(), MDs));
+      Res.Modified = true;
     }
   }
 
