@@ -567,7 +567,7 @@ feature_test_macros = [
             "name": "__cpp_lib_expected",
             "values": {
                 "c++23": 202211,
-                # "c++29": 202606 # P3798R1 The unexpected in std::expected
+                "c++29": 202606,
             },
             "headers": ["expected"],
         },
@@ -1559,6 +1559,13 @@ feature_test_macros = [
             "name": "__cpp_lib_type_identity",
             "values": {"c++20": 201806},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_type_order",
+            "values": {"c++26": 202506},
+            "headers": ["compare"],
+            "test_suite_guard": "__has_builtin(__builtin_type_order)",
+            "libcxx_guard": "__has_builtin(__builtin_type_order)",
         },
         {
             "name": "__cpp_lib_type_trait_variable_templates",

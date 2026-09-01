@@ -22,24 +22,16 @@
 // RUN:   %s 2>&1 | FileCheck --check-prefixes=CHECK %s
 
 // CHECK: [[CLANG:"[^"]*clang[^"]*"]] "-cc1" "-triple" "amdgpu9.08-amd-amdhsa"
-// CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-mxnack"
 // CHECK-SAME: "-msramecc"
 
-// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
-// TMP-SAME: "-target-cpu" "gfx908"
+// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgpu9.08-amd-amdhsa"
 // TMP-SAME: "-mxnack"
 // TMP-SAME: "-msramecc"
-
-// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgpu9.08-amd-amdhsa"
-// TMP-SAME: "-target-cpu" "gfx908"
-// TMP-SAME: "-target-feature" "+sramecc"
-// TMP-SAME: "-target-feature" "+xnack"
 
 // CHECK: [[LLD:"[^"]*lld[^"]*"]] {{.*}} "-plugin-opt=mcpu=gfx908"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgpu9.08-amd-amdhsa"
-// CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-mxnack"
 // CHECK-SAME: "-mno-sramecc"
 

@@ -178,9 +178,6 @@ private:
                          MachineBasicBlock *&MBB,
                          const yaml::StringValue &Source);
 
-  bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                            const yaml::StringValue &Source);
-
   /// Return a MIR diagnostic converted from an MI string diagnostic.
   SMDiagnostic diagFromMIStringDiag(const SMDiagnostic &Error,
                                     SMRange SourceRange);
@@ -1226,26 +1223,31 @@ bool MIRParserImpl::parseMBBReference(PerFunctionMIParsingState &PFS,
   return false;
 }
 
-bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                         const yaml::StringValue &Source) {
-  SMDiagnostic Error;
-  if (llvm::parseMachineMetadata(PFS, Source.Value, Source.SourceRange, Error))
-    return error(Error, Source.SourceRange);
-  return false;
-}
-
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (const auto &MDS : YMF.MachineMetadataNodes) {
-    if (parseMachineMetadata(PFS, MDS))
+  SmallVector<StringRef> Definitions;
+  for (const auto &MDS : YMF.MachineMetadataNodes)
+    Definitions.push_back(MDS.Value);
+
+  SlotMapping Slots = PFS.IRSlots;
+  SMDiagnostic Error;
+  unsigned ErrorDefinitionIndex = 0;
+  if (parseMetadataDefinitions(Definitions, Error,
+                               *MF.getFunction().getParent(), Slots,
+                               ErrorDefinitionIndex)) {
+    const yaml::StringValue &Source =
+        YMF.MachineMetadataNodes[ErrorDefinitionIndex];
+    if (StringRef(Source.Value).contains('\n')) {
+      reportDiagnostic(diagFromBlockStringDiag(Error, Source.SourceRange));
       return true;
+    }
+    return error(Error, Source.SourceRange);
   }
-  // Report missing definitions from forward referenced nodes.
-  if (!PFS.MachineForwardRefMDNodes.empty())
-    return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[ID, MD] : Slots.MetadataNodes)
+    if (PFS.IRSlots.MetadataNodes.find(ID) == PFS.IRSlots.MetadataNodes.end())
+      PFS.MachineMetadataNodes.try_emplace(ID, MD);
   return false;
 }
 
