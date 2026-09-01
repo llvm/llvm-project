@@ -656,8 +656,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (int Res = cmpValues(L, R))
     return Res;
 
-  // Differences from Instruction::isSameOperationAs:
-  //  * replace type comparison with calls to cmpTypes.
   if (int Res = cmpNumbers(L->getOpcode(), R->getOpcode()))
     return Res;
 
