@@ -2736,6 +2736,8 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_BSWAP;
     case Intrinsic::bitreverse:
       return TargetOpcode::G_BITREVERSE;
+    case Intrinsic::clmul:
+      return TargetOpcode::G_CLMUL;
     case Intrinsic::fshl:
       return TargetOpcode::G_FSHL;
     case Intrinsic::fshr:
