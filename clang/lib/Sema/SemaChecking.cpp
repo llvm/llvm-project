@@ -16977,6 +16977,26 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
   }
 }
 
+/// If packing reduces \p FD below the alignment required by its type, return
+/// the alignment it is reduced to. __attribute__((packed)) reduces every
+/// field; #pragma pack(N) only reduces fields that require more than N.
+static std::optional<CharUnits> getPackedFieldAlignment(const ASTContext &Ctx,
+                                                        const FieldDecl *FD) {
+  const RecordDecl *RD = FD->getParent();
+  bool IsPacked = FD->hasAttr<PackedAttr>() || RD->hasAttr<PackedAttr>();
+  const auto *MFAA = RD->getAttr<MaxFieldAlignmentAttr>();
+  if (!IsPacked && !MFAA)
+    return std::nullopt;
+
+  CharUnits TypeAlignment = Ctx.getTypeAlignInChars(FD->getType());
+  if (!IsPacked &&
+      Ctx.toCharUnitsFromBits(MFAA->getAlignment()) >= TypeAlignment)
+    return std::nullopt;
+
+  return std::min(TypeAlignment,
+                  Ctx.getTypeAlignInChars(Ctx.getCanonicalTagType(RD)));
+}
+
 void Sema::RefersToMemberWithReducedAlignment(
     Expr *E,
     llvm::function_ref<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)>
@@ -17011,7 +17031,7 @@ void Sema::RefersToMemberWithReducedAlignment(
       return;
 
     AnyIsPacked =
-        AnyIsPacked || (RD->hasAttr<PackedAttr>() || MD->hasAttr<PackedAttr>());
+        AnyIsPacked || getPackedFieldAlignment(Context, FD).has_value();
     ReverseMemberChain.push_back(FD);
 
     TopME = ME;
@@ -17070,16 +17090,17 @@ void Sema::RefersToMemberWithReducedAlignment(
     // FieldDecl that either is packed or else its RecordDecl is,
     // seems reasonable.
     FieldDecl *FD = nullptr;
-    CharUnits Alignment;
+    // Take the least alignment left by any link of the chain, not the one
+    // left by the first link that reduced it: an outer packed record can
+    // reduce a field further than the #pragma pack on its own record did.
+    CharUnits Alignment = ExpectedAlignment;
     for (FieldDecl *FDI : ReverseMemberChain) {
-      if (FDI->hasAttr<PackedAttr>() ||
-          FDI->getParent()->hasAttr<PackedAttr>()) {
+      std::optional<CharUnits> Packed = getPackedFieldAlignment(Context, FDI);
+      if (!FD && Packed)
         FD = FDI;
-        Alignment = std::min(Context.getTypeAlignInChars(FD->getType()),
-                             Context.getTypeAlignInChars(
-                                 Context.getCanonicalTagType(FD->getParent())));
-        break;
-      }
+      Alignment = std::min(
+          Alignment,
+          Packed.value_or(Context.getTypeAlignInChars(FDI->getType())));
     }
     assert(FD && "We did not find a packed FieldDecl!");
     Action(E, FD->getParent(), FD, Alignment);
