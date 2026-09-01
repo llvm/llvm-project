@@ -2680,7 +2680,7 @@ global together with the module instance to read it from. A stub that advertises
 `qWasmInstance+` requires that module instance to be named explicitly:
 
 ```
-send packet: $qWasmGlobal:2;instance:16;#32
+send packet: $qWasmGlobal:2;instance:16#f7
 read packet: $e0030100#b9
 ```
 
@@ -2713,7 +2713,7 @@ send packet: qSupported:xmlRegisters=i386,arm,mips
 read packet: qXfer:libraries:read+;qWasmInstance+;PacketSize=1000
 ```
 
-An instance is named with a `;instance:<id>;` suffix in place of a frame index,
+An instance is named with a `;instance:<id>` suffix in place of a frame index,
 in which the id is encoded as base 10. `qWasmGlobal` is the only packet that
 carries it today, because a global is the only Wasm state with no address to
 identify its instance. A later query for instance-scoped state carries the same

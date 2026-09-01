@@ -28,16 +28,21 @@ struct KnownFPClass {
   /// Floating-point classes the value could be one of.
   FPClassTest KnownFPClasses = fcAllFlags;
 
+  std::optional<bool> SignBitValue;
+
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
-  std::optional<bool> SignBit;
+  std::optional<bool> getSignBit() const { return SignBitValue; }
+
+  void setSignBit(std::optional<bool> Sign) { SignBitValue = Sign; }
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
-      : KnownFPClasses(Known), SignBit(Sign) {}
+      : KnownFPClasses(Known), SignBitValue(Sign) {}
   LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
-    return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
+    return KnownFPClasses == Other.KnownFPClasses &&
+           getSignBit() == Other.getSignBit();
   }
 
   /// Return true if it's known this can never be one of the mask entries.
@@ -47,7 +52,9 @@ struct KnownFPClass {
 
   bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
 
-  bool isUnknown() const { return KnownFPClasses == fcAllFlags && !SignBit; }
+  bool isUnknown() const {
+    return KnownFPClasses == fcAllFlags && !getSignBit();
+  }
 
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const { return isKnownNever(fcNan); }
@@ -152,15 +159,16 @@ struct KnownFPClass {
 
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
-                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
+                        getSignBit() == RHS.getSignBit() ? getSignBit()
+                                                         : std::nullopt);
   }
 
   KnownFPClass unionWith(const KnownFPClass &RHS) const {
     std::optional<bool> MergedSignBit;
-    if (SignBit && !RHS.SignBit)
-      MergedSignBit = SignBit;
-    else if (!SignBit && RHS.SignBit)
-      MergedSignBit = RHS.SignBit;
+    if (getSignBit() && !RHS.getSignBit())
+      MergedSignBit = getSignBit();
+    else if (!getSignBit() && RHS.getSignBit())
+      MergedSignBit = RHS.getSignBit();
 
     return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
   }
@@ -168,25 +176,25 @@ struct KnownFPClass {
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 
-    if (SignBit != RHS.SignBit)
-      SignBit = std::nullopt;
+    if (getSignBit() != RHS.getSignBit())
+      setSignBit(std::nullopt);
     return *this;
   }
 
   void knownNot(FPClassTest RuleOut) {
     KnownFPClasses = KnownFPClasses & ~RuleOut;
-    if (isKnownNever(fcNan) && !SignBit) {
+    if (isKnownNever(fcNan) && !getSignBit()) {
       if (isKnownNever(fcNegative))
-        SignBit = false;
+        setSignBit(false);
       else if (isKnownNever(fcPositive))
-        SignBit = true;
+        setSignBit(true);
     }
   }
 
   void fneg() {
     KnownFPClasses = llvm::fneg(KnownFPClasses);
-    if (SignBit)
-      SignBit = !*SignBit;
+    if (std::optional<bool> Sign = getSignBit())
+      setSignBit(!*Sign);
   }
 
   static KnownFPClass fneg(const KnownFPClass &Src) {
@@ -359,13 +367,13 @@ struct KnownFPClass {
   /// Assume the sign bit is zero.
   void signBitMustBeZero() {
     KnownFPClasses &= (fcPositive | fcNan);
-    SignBit = false;
+    setSignBit(false);
   }
 
   /// Assume the sign bit is one.
   void signBitMustBeOne() {
     KnownFPClasses &= (fcNegative | fcNan);
-    SignBit = true;
+    setSignBit(true);
   }
 
   void copysign(const KnownFPClass &Sign) {
@@ -381,12 +389,14 @@ struct KnownFPClass {
       KnownFPClasses |= fcInf;
 
     // Sign bit is exactly preserved even for nans.
-    SignBit = Sign.SignBit;
+    setSignBit(Sign.getSignBit());
 
     // Clear sign bits based on the input sign mask.
-    if (Sign.isKnownNever(fcPositive | fcNan) || (SignBit && *SignBit))
+    if (Sign.isKnownNever(fcPositive | fcNan) ||
+        (getSignBit() && *getSignBit()))
       KnownFPClasses &= (fcNegative | fcNan);
-    if (Sign.isKnownNever(fcNegative | fcNan) || (SignBit && !*SignBit))
+    if (Sign.isKnownNever(fcNegative | fcNan) ||
+        (getSignBit() && !*getSignBit()))
       KnownFPClasses &= (fcPositive | fcNan);
   }
 
@@ -417,7 +427,7 @@ struct KnownFPClass {
     if (Src.isKnownNever(fcNan)) {
       knownNot(fcNan);
       if (PreserveSign)
-        SignBit = Src.SignBit;
+        setSignBit(Src.getSignBit());
     }
   }
 

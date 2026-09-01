@@ -107,15 +107,15 @@ SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
 }
 
 uint32_t SystemZXPLINKAsmPrinter::AssociatedDataAreaTable::insert(
-    const MachineOperand MO) {
+    const MachineFunction &MF, const MachineOperand &MO) {
   MCSymbol *Sym;
   if (MO.getType() == MachineOperand::MO_GlobalAddress) {
     const GlobalValue *GV = MO.getGlobal();
-    Sym = MO.getParent()->getMF()->getTarget().getSymbol(GV);
+    Sym = MF.getTarget().getSymbol(GV);
     assert(Sym && "No symbol");
   } else if (MO.getType() == MachineOperand::MO_ExternalSymbol) {
     const char *SymName = MO.getSymbolName();
-    Sym = MO.getParent()->getMF()->getContext().getOrCreateSymbol(SymName);
+    Sym = MF.getContext().getOrCreateSymbol(SymName);
     assert(Sym && "No symbol");
   } else
     llvm_unreachable("Unexpected operand type");
@@ -169,7 +169,7 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::ADA_ENTRY: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-    uint32_t Disp = ADATable.insert(MI->getOperand(1));
+    uint32_t Disp = ADATable.insert(*MF, MI->getOperand(1));
     Register TargetReg = MI->getOperand(0).getReg();
 
     Register ADAReg = MI->getOperand(2).getReg();
