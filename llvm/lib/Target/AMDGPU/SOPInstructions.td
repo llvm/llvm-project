@@ -1718,9 +1718,16 @@ let SubtargetPredicate = HasWaitXcnt in {
   def S_WAIT_XCNT_soft : SOPP_Pseudo<"", (ins s16imm:$simm16), "$simm16">;
 }
 
-// Represents the point at which a wave must wait for all outstanding direct loads to LDS.
-// Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
+// Represents the point at which a wave must wait for all outstanding direct
+// loads to LDS. Typically inserted by the memory legalizer and consumed by
+// SIInsertWaitcnts.
 def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
+   let hasSideEffects = 0;
+}
+// Represents the point at which a wave must wait for all outstanding reads from
+// LDS before a direct memory access. Typically inserted by the memory legalizer
+// and consumed by SIInsertWaitcnts.
+def S_WAITCNT_lds_before_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
 }
 
