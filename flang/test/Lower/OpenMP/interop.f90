@@ -173,3 +173,30 @@ subroutine test_interop_destroy_device(obj, dev)
   integer :: dev
   !$omp interop destroy(obj) device(dev)
 end subroutine
+
+!===============================================================================
+! Interop Init — array element interop-var
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPtest_interop_init_array_element(
+!CHECK:         %[[EL:.*]] = hlfir.designate %{{.*}} (%{{.*}}) : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+!CHECK:         omp.interop.init %[[EL]] : !fir.ref<i64> interop_types([#omp<interop_type(target)>])
+subroutine test_interop_init_array_element(arr)
+  integer(8) :: arr(10)
+  !$omp interop init(target: arr(1))
+end subroutine
+
+!===============================================================================
+! Interop Use — derived-type component interop-var
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPtest_interop_use_component(
+!CHECK:         %[[COMP:.*]] = hlfir.designate %{{.*}}{"obj"} : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<i64>
+!CHECK:         omp.interop.use %[[COMP]] : !fir.ref<i64>
+subroutine test_interop_use_component(rec)
+  type t
+    integer(8) :: obj
+  end type
+  type(t) :: rec
+  !$omp interop use(rec%obj)
+end subroutine

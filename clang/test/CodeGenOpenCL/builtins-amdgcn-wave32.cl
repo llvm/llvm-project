@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu10.10-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu11.00-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s

@@ -39,14 +39,14 @@ constexpr bool test_default_template_arg() {
 
   // &&, has_value()
   {
-    const std::expected<int, ConstructFromInt> e(5);
+    std::expected<int, ConstructFromInt> e(5);
     std::same_as<ConstructFromInt> decltype(auto) x = std::move(e).error_or(10);
     assert(x.value == 10);
   }
 
   // &&, !has_value()
   {
-    const std::expected<int, ConstructFromInt> e(std::unexpect, 5);
+    std::expected<int, ConstructFromInt> e(std::unexpect, 5);
     std::same_as<ConstructFromInt> decltype(auto) x = std::move(e).error_or(10);
     assert(x.value == 5);
   }

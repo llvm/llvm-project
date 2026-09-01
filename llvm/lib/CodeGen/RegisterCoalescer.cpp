@@ -606,10 +606,7 @@ void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addPreservedID(MachineDominatorsID);
   AU.addRequired<MachineRegisterClassInfoWrapperPass>();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -2620,7 +2617,8 @@ private:
                              const MachineInstr &ImpDef) {
       assert(ImpDef.isImplicitDef());
       ErasableImplicitDef = false;
-      ValidLanes = TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
+      ValidLanes |=
+          TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
     }
   };
 
@@ -4306,8 +4304,6 @@ RegisterCoalescerPass::run(MachineFunction &MF,
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 

@@ -4,22 +4,31 @@
 
 name: "[libc++] Run benchmark suite against commit"
 
+# Keep in sync with libcxx/utils/ci/lnt/dispatch-benchmarks
+run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}${{ !inputs.submit-lnt && ' (dry run)' || '' }}"
+
 permissions:
   contents: read
 
 on:
-  # TODO: Support dispatching only to selected configurations.
   workflow_dispatch:
     inputs:
       commit:
         description: 'The libc++ commit to benchmark'
         required: true
         type: string
-      benchmark-suite-version:
-        description: 'The version of the benchmark suite to use (a LLVM monorepo SHA)'
+      lnt-machine:
+        description: 'The LNT machine to run the benchmarks on'
+        required: true
+        type: string
+      benchmark-suite-override:
+        description: |
+          Override the version of the benchmark suite to use (a LLVM monorepo SHA). By default, the version pinned
+          for this machine in machines.json is used. This override can be used to dry-run benchmarks with arbitrary
+          commits of the benchmark suite, but only the version pinned in machines.json can be used when actually
+          submitting to LNT.
         required: false
         type: string
-        default: 0eefb2682bf8c04954c46e91916b5164d8424702
       filter:
         description: 'An optional filter to determine which benchmarks to run'
         required: false
@@ -33,22 +42,67 @@ on:
         description: 'The URL of the LNT instance to submit to'
         required: false
         type: string
-        default: http://lnt.llvm.org
+        default: https://lnt.llvm.org
 
 jobs:
+  # Determine which configuration to run based on the `lnt-machine` input.
+  select-machine:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Checkout the machine definitions
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Select the configuration to benchmark on
+        id: select
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          LNT_MACHINE: ${{ inputs.lnt-machine }}
+          BENCHMARK_SUITE_OVERRIDE: ${{ inputs.benchmark-suite-override }}
+          SUBMIT_LNT: ${{ inputs.submit-lnt }}
+        with:
+          script: |
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+
+            const requested = process.env.LNT_MACHINE;
+            const selected = config.filter(cfg => cfg['lnt-machine'] === requested);
+            if (selected.length === 0) {
+              const known = config.map(cfg => cfg['lnt-machine']).join(', ');
+              core.setFailed(`Unknown LNT machine '${requested}' (known machines: ${known})`);
+              return;
+            }
+
+            // Honor benchmark suite version override and make sure we don't submit if an incorrect
+            // override is provided.
+            const version_override = (process.env.BENCHMARK_SUITE_OVERRIDE || '').trim().toLowerCase();
+            for (const cfg of selected) {
+              const pinned = cfg['benchmark-suite-version'];
+              if (process.env.SUBMIT_LNT === 'true' && version_override && version_override !== pinned) {
+                core.setFailed(`Refusing to submit results for ${cfg['lnt-machine']}, since the benchmark suite was `
+                                + `overridden to version ${version_override}, which is different from the version `
+                                + `pinned in machines.json (${pinned}).`);
+                return;
+              }
+
+              if (version_override) {
+                cfg['benchmark-suite-version'] = version_override;
+              }
+            }
+
+            core.setOutput('matrix', JSON.stringify(selected));
+
   run-benchmarks:
+    needs:
+      - select-machine
     strategy:
       matrix:
-        include:
-          - lnt-machine: macos-26.5-arm64
-            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cxx: clang++
-            running-on: macos
-            xcode-version: '26.5'
-          - lnt-machine: linux-x86_64
-            runner: llvm-premerge-libcxx-runners
-            cxx: clang++-22
-            running-on: linux
+        include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
     env:
@@ -86,21 +140,31 @@ jobs:
           "${COMPILER}" --version
           python3 --version
 
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/utils/ci/lnt/requirements.txt
+
       - name: Run the benchmarks
         env:
+          BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ inputs.commit }}
-          BENCHMARK_SUITE_VERSION: ${{ inputs.benchmark-suite-version }}
           FILTER: ${{ inputs.filter }}
+          LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
+          source .venv/bin/activate
           filter_arg=()
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
           fi
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
-            --machine ${{ matrix.lnt-machine }}                         \
+            --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
+            --cmake-cache "${CMAKE_CACHE}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"
 
@@ -112,7 +176,8 @@ jobs:
           COMMIT: ${{ inputs.commit }}
           LNT_URL: ${{ inputs.lnt-url }}
         run: |
+          source .venv/bin/activate
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx2                            \
+            --test-suite libcxx                             \
             "${COMMIT}.json"

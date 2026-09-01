@@ -91,7 +91,12 @@ private:
 };
 
 // Analyze a parser::ArraySpec or parser::CoarraySpec
-ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &);
+// A zero-size explicit-shape bounds array (F2023) declares a scalar; its
+// bounds are dropped from the shape but are still specification expressions,
+// appended to droppedBoundsToCheck so the caller can validate them during
+// declaration checking
+ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &,
+    std::vector<Bound> &droppedBoundsToCheck);
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &, const parser::ComponentArraySpec &);
 ArraySpec AnalyzeDeferredShapeSpecList(

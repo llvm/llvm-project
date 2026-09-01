@@ -511,13 +511,12 @@ define amdgpu_ps <2 x half> @test_fminimum_v2f16_vv(<2 x half> %a, <2 x half> %b
 ; GFX9-GISEL-LABEL: test_fminimum_v2f16_vv:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    v_pk_min_f16 v2, v0, v1
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x7e00
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v0, v1
-; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v1 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, v3, v2, s[0:1]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v3, v2, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_fminimum_v2f16_vv:
@@ -546,9 +545,8 @@ define amdgpu_ps <2 x half> @test_fminimum_v2f16_ss(<2 x half> inreg %a, <2 x ha
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX9-SDAG-NEXT:    v_cmp_o_f16_e32 vcc, s0, v3
-; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-SDAG-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fminimum_v2f16_ss:
@@ -615,10 +613,10 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_vv(<3 x half> %a, <3 x half> %b
 ; GFX9-GISEL-NEXT:    v_pk_min_f16 v2, v1, v3
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_e32 vcc, v1, v3
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v2, vcc
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v4
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, s0, 16, v1
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e64 v2, 16, s0
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-SDAG-LABEL: test_fminimum_v3f16_vv:
@@ -684,9 +682,8 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX9-SDAG-NEXT:    v_cmp_o_f16_e32 vcc, s0, v4
-; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v2, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SDAG-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v2, v2, v3, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-SDAG-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fminimum_v3f16_ss:
@@ -791,15 +788,14 @@ define amdgpu_ps <4 x half> @test_fminimum_v4f16(<4 x half> %a, <4 x half> %b) {
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v0, v2 src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v6, v5, vcc
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v4
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX9-GISEL-NEXT:    v_pk_min_f16 v2, v1, v3
-; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v1, v3
 ; GFX9-GISEL-NEXT:    v_cmp_o_f16_sdwa vcc, v1, v3 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e64 s[0:1], v1, v3
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v6, v2, s[0:1]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v2, v6, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v2, v6, v2, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-GISEL-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_fminimum_v4f16:
@@ -841,11 +837,10 @@ define amdgpu_ps <4 x half> @test_fminimum_v4f16_ss(<4 x half> inreg %a, <4 x ha
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
 ; GFX9-SDAG-NEXT:    v_cmp_o_f16_e32 vcc, s0, v5
-; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v2, v2, v4, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-SDAG-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX9-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v3
-; GFX9-SDAG-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX9-SDAG-NEXT:    v_cndmask_b32_sdwa v2, v2, v4, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-SDAG-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-SDAG-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_fminimum_v4f16_ss:

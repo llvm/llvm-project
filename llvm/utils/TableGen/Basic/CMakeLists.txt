@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
+  AMDGPUTargetDefEmitter.cpp
   ARMTargetDefEmitter.cpp
   Attributes.cpp
   CodeGenIntrinsics.cpp

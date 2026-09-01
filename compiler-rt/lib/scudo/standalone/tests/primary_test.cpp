@@ -354,7 +354,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   };
   Allocator->disable();
   Allocator->iterateOverBlocks(Lambda);
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
   EXPECT_EQ(Found, V.size());
   while (!V.empty()) {
     auto Pair = V.back();

@@ -1050,6 +1050,27 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility functions for querying the long double format
+  /// @{
+
+  /// Returns the long double format from the "long-double-type" module flag,
+  /// or the triple default when the flag is absent.
+  LongDoubleFormat getLongDoubleFormat() const;
+
+  /// Set the long double format.
+  void setLongDoubleFormat(LongDoubleFormat Format);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying the floating-point ABI
+  /// @{
+
+  /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
+  /// the ABI implied by the target triple when the flag is absent.
+  FloatABI::ABIType getFloatABI() const;
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

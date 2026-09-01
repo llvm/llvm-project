@@ -22,7 +22,7 @@ end program
 subroutine acc_loop()
   integer :: i, j
   real :: a(10)
-  integer :: gangNum, gangDim, gangStatic
+  integer :: gangNum, gangDim, gangStatic, workerNum
 
 !CHECK-LABEL: SUBROUTINE acc_loop
 
@@ -47,6 +47,9 @@ subroutine acc_loop()
   end do
 ! CHECK: !$ACC LOOP GANG
 
+! A GANG num argument requires the loop to be associated with a kernels
+! construct.
+  !$acc kernels
   !$acc loop gang(gangNum)
   do i = 1, 10
     a(i) = i
@@ -57,6 +60,7 @@ subroutine acc_loop()
   do i = 1, 10
     a(i) = i
   end do
+  !$acc end kernels
 ! CHECK: !$ACC LOOP GANG(NUM:gangnum)
 
   !$acc loop gang(dim: gangDim)
@@ -108,11 +112,27 @@ subroutine acc_loop()
   end do
 ! CHECK: !$ACC LOOP GANG(DIM:gangdim)
 
+! A GANG num argument and a valued WORKER/VECTOR clause require the loop to be
+! associated with a kernels construct.
+  !$acc kernels
   !$acc loop gang(num : gangNum)
   do i = 1, 10
     a(i) = i
   end do
 ! CHECK: !$ACC LOOP GANG(NUM:gangnum)
+
+  !$acc loop worker(num : workerNum)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP WORKER(workernum)
+
+  !$acc loop vector(length : 128)
+  do i = 1, 10
+    a(i) = i
+  end do
+  !$acc end kernels
+! CHECK: !$ACC LOOP VECTOR(128_4)
 
 end subroutine
 

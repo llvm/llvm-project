@@ -671,6 +671,23 @@ struct WasmGlobalWithGetGlobalInitConversion
   }
 };
 
+struct WasmGlobalSetOpConversion : OpConversionPattern<GlobalSetOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GlobalSetOp globalSetOp, GlobalSetOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = globalSetOp.getLoc();
+    auto globalPtr = memref::GetGlobalOp::create(
+        rewriter, loc, MemRefType::get({1}, adaptor.getValue().getType()),
+        globalSetOp.getGlobal());
+    auto idx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        globalSetOp, adaptor.getValue(), globalPtr.getResult(),
+        ValueRange{idx.getResult()});
+    return success();
+  }
+};
+
 struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -796,6 +813,24 @@ struct WasmReturnOpConversion : OpConversionPattern<ReturnOp> {
   }
 };
 
+struct WasmSelectOpConversion : OpConversionPattern<SelectOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SelectOp selectOp, SelectOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = selectOp.getLoc();
+    auto zero =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getI32IntegerAttr(0));
+    auto flag = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
+                                      adaptor.getCondition(), zero.getResult());
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(selectOp, flag.getResult(),
+                                                 adaptor.getTrueValue(),
+                                                 adaptor.getFalseValue());
+    return success();
+  }
+};
+
 struct RaiseWasmMLIRPass : public impl::RaiseWasmMLIRBase<RaiseWasmMLIRPass> {
   void runOnOperation() override {
     ConversionTarget target{getContext()};
@@ -876,6 +911,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmGeSIOpConversion,
            WasmGeUIOpConversion,
            WasmGlobalImportOpConverter,
+           WasmGlobalSetOpConversion,
            WasmGlobalWithConstInitConversion,
            WasmGlobalWithGetGlobalInitConversion,
            WasmGtOpConversion,
@@ -906,6 +942,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmReturnOpConversion,
            WasmRotlOpConversion,
            WasmRotrOpConversion,
+           WasmSelectOpConversion,
            WasmShLOpConversion,
            WasmShRSOpConversion,
            WasmShRUOpConversion,

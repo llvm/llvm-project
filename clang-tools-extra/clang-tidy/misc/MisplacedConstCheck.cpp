@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
 
 void MisplacedConstCheck::registerMatchers(MatchFinder *Finder) {
-  auto NonConstAndNonFunctionPointerType = hasType(pointerType(unless(
+  const auto NonConstAndNonFunctionPointerType = hasType(pointerType(unless(
       pointee(anyOf(isConstQualified(), ignoringParens(functionType()))))));
 
   Finder->addMatcher(

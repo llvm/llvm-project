@@ -348,7 +348,7 @@ define i8 @optimizable() {
 entry:
   %ptr = alloca i8
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK-NEXT: store i8 42, ptr %ptr, align 1, !invariant.group !0
+; CHECK-NEXT: store i8 42, ptr %ptr, align 1, !invariant.group !{{[0-9]+}}
   store i8 42, ptr %ptr, !invariant.group !0
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: call ptr @llvm.launder.invariant.group
@@ -377,7 +377,7 @@ entry:
 define i8 @unoptimizable2() {
   %ptr = alloca i8
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK-NEXT: store i8 42, ptr %ptr, align 1, !invariant.group !0
+; CHECK-NEXT: store i8 42, ptr %ptr, align 1, !invariant.group !{{[0-9]+}}
   store i8 42, ptr %ptr, !invariant.group !0
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: call ptr @llvm.launder.invariant.group
@@ -397,7 +397,7 @@ define i8 @unoptimizable2() {
 ; CHECK-NEXT: call void @use(ptr %ptr3)
   call void @use(ptr %ptr3)
 ; CHECK: MemoryUse(7)
-; CHECK-NEXT: %v = load i8, ptr %ptr3, align 1, !invariant.group !0
+; CHECK-NEXT: %v = load i8, ptr %ptr3, align 1, !invariant.group !{{[0-9]+}}
   %v = load i8, ptr %ptr3, !invariant.group !0
   ret i8 %v
 }

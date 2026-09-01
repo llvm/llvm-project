@@ -81,7 +81,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <array>
@@ -273,9 +272,9 @@ INITIALIZE_PASS_END(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
 
 Pass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 
-PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
-                                          LoopStandardAnalysisResults &AR,
-                                          LPMUpdater &U) {
+PreservedAnalyses
+AArch64SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
+                               LoopStandardAnalysisResults &AR, LPMUpdater &U) {
   const AArch64Subtarget &ST =
       *TM.getSubtargetImpl(*L.getHeader()->getParent());
 
