@@ -200,7 +200,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
-  - Added the {option}`TypedefInheritAnonTagConfig` option, which checks a
+  - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
     typedef or type alias that provides the only name of an otherwise unnamed
     tag, such as `typedef enum {} MyEnum;`, against the style configured for
     that tag kind instead of the typedef or type alias style.
