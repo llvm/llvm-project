@@ -18,10 +18,7 @@
 ; VLENB >= 4 always holds, so this folds to true.
 define i64 @vlenb_uge_arch_min() {
 ; CHECK-LABEL: define i64 @vlenb_uge_arch_min() {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 3
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %c = icmp uge i64 %v, 4
@@ -32,7 +29,7 @@ define i64 @vlenb_uge_arch_min() {
 ; VLENB may be as small as 4 (Zvl32b), so >= 8 must NOT fold.
 define i64 @vlenb_uge_arch_min_no_fold() {
 ; CHECK-LABEL: define i64 @vlenb_uge_arch_min_no_fold() {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
+; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 7
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
@@ -46,10 +43,7 @@ define i64 @vlenb_uge_arch_min_no_fold() {
 ; VLENB <= 8192 always holds, so > 8192 folds to false.
 define i64 @vlenb_ugt_arch_max() {
 ; CHECK-LABEL: define i64 @vlenb_ugt_arch_max() {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 8192
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %c = icmp ugt i64 %v, 8192
@@ -65,10 +59,7 @@ define i64 @vlenb_ugt_arch_max() {
 define i64 @vlenb_uge_min_v() vscale_range(2,1024) {
 ; CHECK-LABEL: define i64 @vlenb_uge_min_v(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 15
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %c = icmp uge i64 %v, 16
@@ -95,10 +86,7 @@ define i64 @vlenb_uge_mid_v128() vscale_range(2,1024) {
 define i64 @vlenb_uge_mid_v512() vscale_range(8,1024) {
 ; CHECK-LABEL: define i64 @vlenb_uge_mid_v512(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 63
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %c = icmp uge i64 %v, 64
@@ -110,10 +98,7 @@ define i64 @vlenb_uge_mid_v512() vscale_range(8,1024) {
 define i64 @vlenb_ugt_max_v() vscale_range(2,1024) {
 ; CHECK-LABEL: define i64 @vlenb_ugt_max_v(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 8192
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %c = icmp ugt i64 %v, 8192
@@ -125,10 +110,7 @@ define i64 @vlenb_ugt_max_v() vscale_range(2,1024) {
 define i32 @vlenb_i32_uge_min_v() vscale_range(2,1024) {
 ; CHECK-LABEL: define i32 @vlenb_i32_uge_min_v(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.read_register.i32(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[V]], 15
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i32
-; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK-NEXT:    ret i32 1
 ;
   %v = call i32 @llvm.read_register.i32(metadata !0)
   %c = icmp uge i32 %v, 16
@@ -141,9 +123,7 @@ define i64 @vlenb_volatile_uge_min_v() vscale_range(2,1024) {
 ; CHECK-LABEL: define i64 @vlenb_volatile_uge_min_v(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[V]], 15
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v = call i64 @llvm.read_volatile_register.i64(metadata !0)
   %c = icmp uge i64 %v, 16
@@ -158,10 +138,7 @@ define i64 @vlenb_volatile_uge_min_v() vscale_range(2,1024) {
 ; VLENB is a power of two, so v & (v - 1) folds to 0.
 define i64 @vlenb_is_pow2() {
 ; CHECK-LABEL: define i64 @vlenb_is_pow2() {
-; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[M1:%.*]] = add i64 [[V]], -1
-; CHECK-NEXT:    [[A:%.*]] = and i64 [[V]], [[M1]]
-; CHECK-NEXT:    ret i64 [[A]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
   %m1 = sub i64 %v, 1
@@ -174,7 +151,8 @@ define i64 @vlenb_urem_pow2(i64 %x) {
 ; CHECK-LABEL: define i64 @vlenb_urem_pow2(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[R:%.*]] = urem i64 [[X]], [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[V]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
@@ -187,7 +165,8 @@ define i64 @vlenb_udiv_pow2(i64 %x) {
 ; CHECK-LABEL: define i64 @vlenb_udiv_pow2(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]])
-; CHECK-NEXT:    [[D1:%.*]] = udiv i64 [[X]], [[V]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[V]], i1 true)
+; CHECK-NEXT:    [[D1:%.*]] = lshr i64 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[D1]]
 ;
   %v = call i64 @llvm.read_register.i64(metadata !0)
