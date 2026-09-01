@@ -32,14 +32,20 @@ namespace GH147293_regression {
 
 struct A {
   [[deprecated("use something else")]] int x = 42;
-
   auto operator<=>(const A&) const = default;
+};
+
+struct B : A {
+  bool operator==(const B&) const = default;
 };
 
 void foo() {
   A x, y;
-  // FIXME: We want the deprecation warnings because operator<=> uses A.x!
   (void)(x == y);
+  (void)(x < y);
+
+  B bx, by;
+  (void)(bx != by);
 }
 
 }
