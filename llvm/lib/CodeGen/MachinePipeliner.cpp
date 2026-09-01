@@ -1644,9 +1644,9 @@ private:
            MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
   }
 
-  bool isDefinedInThisLoop(VirtRegOrUnit Reg) const {
-    return Reg.isVirtualReg() &&
-           MRI.getDefBlock(Reg.asVirtualReg()) == OrigMBB;
+  bool isDefinedInThisLoop(VirtRegOrUnit VRegOrUnit) const {
+    return VRegOrUnit.isVirtualReg() &&
+           MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
