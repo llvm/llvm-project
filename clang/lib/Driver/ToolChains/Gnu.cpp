@@ -535,6 +535,24 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
 
+      // musl does not provide __stack_chk_fail_local, but GCC emits calls
+      // to it in PIC/PIE code on some targets (32-bit x86, PowerPC). musl
+      // distributions ship the symbol in libssp_nonshared.a and make GCC
+      // link it when stack protection is on; match that if the library
+      // exists.
+      if (ToolChain.getTriple().isMusl()) {
+        bool WantsSSP = ToolChain.GetDefaultStackProtectorLevel(
+                            /*KernelOrKext=*/false) != LangOptions::SSPOff;
+        if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
+                                     options::OPT_fstack_protector,
+                                     options::OPT_fstack_protector_all,
+                                     options::OPT_fstack_protector_strong))
+          WantsSSP = !A->getOption().matches(options::OPT_fno_stack_protector);
+        if (WantsSSP &&
+            ToolChain.GetFilePath("libssp_nonshared.a") != "libssp_nonshared.a")
+          CmdArgs.push_back("-lssp_nonshared");
+      }
+
       // Add IAMCU specific libs, if needed.
       if (IsIAMCU)
         CmdArgs.push_back("-lgloss");

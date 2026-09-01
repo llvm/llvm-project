@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
@@ -549,6 +550,178 @@ TEST(FoldingSetTest, TokenSurvivesGrowth) {
   EXPECT_EQ(&Late, Set.lookup(ID, Token));
   EXPECT_FALSE(Token);
   EXPECT_EQ(201u, Set.size());
+}
+
+// FoldingSetNode is a non-first base, so lookup()'s two-step cast must adjust.
+struct KeyedPair : NonEmptyBase, FoldingSetNode {
+  unsigned A, B;
+  KeyedPair(unsigned A, unsigned B) : A(A), B(B) {}
+  std::pair<unsigned, unsigned> getKey() const { return {A, B}; }
+};
+
+TEST(UniquingSetTest, Basic) {
+  UniquingSet<KeyedPair> Set;
+  FoldingSetInsertToken Token;
+  EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
+  EXPECT_TRUE(bool(Token));
+
+  KeyedPair A(1, 2);
+  Set.insert(&A, Token);
+  EXPECT_EQ(1u, Set.size());
+
+  // insert leaves Token set; the hit must clear it.
+  EXPECT_EQ(&A, Set.lookup({1, 2}, Token));
+  EXPECT_FALSE(bool(Token));
+  EXPECT_EQ(nullptr, Set.lookup({2, 1}, Token));
+  EXPECT_TRUE(bool(Token));
+
+  KeyedPair B(2, 1);
+  Set.insert(&B, Token);
+
+  std::vector<KeyedPair *> Visited;
+  for (KeyedPair &N : Set)
+    Visited.push_back(&N);
+  EXPECT_THAT(Visited, UnorderedElementsAre(&A, &B));
+
+  std::vector<const KeyedPair *> ConstVisited;
+  for (const KeyedPair &N : std::as_const(Set))
+    ConstVisited.push_back(&N);
+  EXPECT_THAT(ConstVisited, UnorderedElementsAre(&A, &B));
+
+  EXPECT_TRUE(Set.erase(&A));
+  EXPECT_FALSE(Set.erase(&A));
+  KeyedPair NeverInserted(3, 4);
+  EXPECT_FALSE(Set.erase(&NeverInserted));
+  EXPECT_EQ(1u, Set.size());
+  EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
+}
+
+// Every key hashes to NotAHash, which must be remapped so that erase() does not
+// read a live node as never-inserted.
+struct ZeroHashNode : FoldingSetNode {
+  unsigned Key;
+  explicit ZeroHashNode(unsigned Key) : Key(Key) {}
+  unsigned getKey() const { return Key; }
+};
+
+struct ZeroHashInfo : UniquingSetInfo<ZeroHashNode> {
+  static unsigned getHashValue(const KeyTy &) {
+    return FoldingSetNodeIDRef::NotAHash;
+  }
+};
+
+TEST(UniquingSetTest, KeyHashingToNotAHash) {
+  UniquingSet<ZeroHashNode, ZeroHashInfo> Set;
+  ZeroHashNode A(1), B(2);
+
+  FoldingSetInsertToken P;
+  ASSERT_EQ(nullptr, Set.lookup(1, P));
+  ASSERT_TRUE(bool(P));
+  Set.insert(&A, P);
+  // Same bucket, different key: the probe must walk past A.
+  ASSERT_EQ(nullptr, Set.lookup(2, P));
+  ASSERT_TRUE(bool(P));
+  Set.insert(&B, P);
+
+  FoldingSetInsertToken Unused;
+  EXPECT_EQ(&A, Set.lookup(1, Unused));
+  EXPECT_EQ(&B, Set.lookup(2, Unused));
+  EXPECT_EQ(2u, Set.size());
+
+  EXPECT_TRUE(Set.erase(&A));
+  EXPECT_FALSE(Set.erase(&A));
+  EXPECT_EQ(&B, Set.lookup(2, Unused));
+  EXPECT_EQ(1u, Set.size());
+}
+
+// The default Info must strip cv/ref from getKey()'s return type.
+struct RefKeyNode : FoldingSetNode {
+  std::pair<unsigned, unsigned> Key;
+  RefKeyNode(unsigned A, unsigned B) : Key(A, B) {}
+  const std::pair<unsigned, unsigned> &getKey() const { return Key; }
+};
+static_assert(std::is_same_v<UniquingSetInfo<RefKeyNode>::KeyTy,
+                             std::pair<unsigned, unsigned>>,
+              "KeyTy must decay to a value type");
+
+// A node with no getKey(): the Info supplies the three-member contract itself,
+// and the key aliases storage owned by the node.
+struct VectorNode : FoldingSetNode {
+  SmallVector<unsigned, 4> Elts;
+  explicit VectorNode(ArrayRef<unsigned> E) : Elts(E) {}
+};
+
+struct VectorNodeInfo {
+  using KeyTy = ArrayRef<unsigned>;
+  static KeyTy getKey(const VectorNode &N) { return N.Elts; }
+  static unsigned getHashValue(const KeyTy &Key) {
+    unsigned H = 0;
+    for (unsigned E : Key)
+      H = detail::combineHashValue(H, DenseMapInfo<unsigned>::getHashValue(E));
+    return H;
+  }
+};
+
+TEST(UniquingSetTest, StandaloneInfoAliasingKeyAcrossGrowth) {
+  UniquingSet<VectorNode, VectorNodeInfo> Set;
+  SmallVector<unsigned, 4> Lookup = {1, 2, 3};
+  FoldingSetInsertToken Token;
+  ASSERT_EQ(nullptr, Set.lookup(Lookup, Token));
+  ASSERT_TRUE(bool(Token));
+
+  std::vector<std::unique_ptr<VectorNode>> Nodes;
+  for (unsigned I = 0; I != 200; ++I) {
+    SmallVector<unsigned, 4> K = {I, I + 1};
+    FoldingSetInsertToken P;
+    ASSERT_EQ(nullptr, Set.lookup(K, P));
+    Nodes.push_back(std::make_unique<VectorNode>(K));
+    Set.insert(Nodes.back().get(), P);
+  }
+
+  VectorNode Late(Lookup);
+  Set.insert(&Late, Token);
+  EXPECT_EQ(201u, Set.size());
+
+  SmallVector<unsigned, 4> Again = {1, 2, 3};
+  FoldingSetInsertToken Unused;
+  EXPECT_EQ(&Late, Set.lookup(Again, Unused));
+  EXPECT_TRUE(Set.erase(&Late));
+  EXPECT_EQ(nullptr, Set.lookup(Again, Unused));
+}
+
+TEST(UniquingSetTest, InsertEraseStress) {
+  UniquingSet<KeyedPair> Set;
+  std::map<unsigned, std::unique_ptr<KeyedPair>> Model;
+  std::mt19937 Rng(42);
+  for (unsigned Op = 0; Op != 1000; ++Op) {
+    unsigned Key = Rng() % 4096;
+    auto It = Model.find(Key);
+    if (Rng() & 1) {
+      FoldingSetInsertToken Token;
+      KeyedPair *Found = Set.lookup({Key, Key}, Token);
+      if (It != Model.end()) {
+        ASSERT_EQ(It->second.get(), Found);
+        continue;
+      }
+      ASSERT_EQ(nullptr, Found);
+      auto N = std::make_unique<KeyedPair>(Key, Key);
+      Set.insert(N.get(), Token);
+      Model.emplace(Key, std::move(N));
+    } else if (It != Model.end()) {
+      ASSERT_TRUE(Set.erase(It->second.get()));
+      ASSERT_FALSE(Set.erase(It->second.get()));
+      Model.erase(It);
+    }
+    ASSERT_EQ(Model.size(), Set.size());
+  }
+
+  FoldingSetInsertToken P;
+  for (const auto &KV : Model)
+    EXPECT_EQ(KV.second.get(), Set.lookup({KV.first, KV.first}, P));
+  std::set<KeyedPair *> Visited;
+  for (KeyedPair &N : Set)
+    EXPECT_TRUE(Visited.insert(&N).second);
+  EXPECT_EQ(Model.size(), Visited.size());
 }
 
 } // namespace
