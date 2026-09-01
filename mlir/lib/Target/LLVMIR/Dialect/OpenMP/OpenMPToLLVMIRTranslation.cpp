@@ -4812,7 +4812,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk);
+          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk,
+          /*HasLastiterClause=*/!wsloopOp.getLinearVars().empty());
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();

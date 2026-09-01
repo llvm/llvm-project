@@ -1186,7 +1186,8 @@ private:
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
                                          omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+                                         bool NoLoop,
+                                         bool HasLastiterClause = false);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1358,7 +1359,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool HasLastiterClause = false);
 
   /// Tile a loop nest.
   ///
