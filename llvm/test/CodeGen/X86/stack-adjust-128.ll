@@ -5,8 +5,9 @@
 ; A 128-byte stack adjustment should be emitted as `add rsp, -128` in the
 ; prologue and `sub rsp, -128` in the epilogue: 128 misses the sign-extended
 ; 8-bit immediate form, but -128 fits it, saving three bytes each. Windows
-; keeps the canonical SUB/ADD spelling because the Win64 unwinder recognizes
-; epilogues by disassembling for `add rsp, imm`.
+; epilogues keep the canonical `add rsp, imm` because the Win64 v1 unwinder
+; recognizes epilogues by disassembling for it; prologues are located by
+; SizeOfProlog and never disassembled, so they may flip.
 
 declare void @escape(ptr)
 
@@ -53,7 +54,8 @@ define ptr @frame128(ptr %p) {
 }
 
 ; The same shape with 96 bytes of locals reaches a 128-byte adjustment on
-; Win64 (32-byte shadow area included), which must keep `sub rsp, 128`.
+; Win64 (32-byte shadow area included): the prologue flips to `add rsp, -128`
+; but the epilogue must keep `add rsp, 128`.
 define ptr @frame128_win(ptr %p) {
 ; LINUX-LABEL: frame128_win:
 ; LINUX:       # %bb.0:
@@ -76,7 +78,7 @@ define ptr @frame128_win(ptr %p) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
 ; WIN64-NEXT:    .seh_pushreg %rsi
-; WIN64-NEXT:    subq $128, %rsp
+; WIN64-NEXT:    addq $-128, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 128
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    movq %rcx, %rsi

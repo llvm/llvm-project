@@ -421,11 +421,15 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
     // epilogue): 128 is the one magnitude whose negation fits the
     // sign-extended 8-bit immediate while the value itself does not, so the
     // flipped operation is three bytes shorter. EFLAGS is dead here (this
-    // branch clobbers it anyway). Skip under Windows CFI: the Win64 unwinder
-    // recognizes an epilogue by disassembling forward for `add rsp, imm` and
-    // must not see the SUB spelling.
+    // branch clobbers it anyway). Windows CFI epilogues keep the canonical
+    // ADD: v1 unwind info describes no epilogues, so the unwinder detects
+    // one by disassembling forward for `add rsp, imm` (prologues are
+    // delimited by SizeOfProlog and never disassembled). Unwind v2/v3 do
+    // describe epilogues, but X86WinEHUnwindV2 expects the ADD spelling
+    // too.
     if (AbsOffset == 128 &&
-        !MBB.getParent()->getTarget().getMCAsmInfo().usesWindowsCFI()) {
+        !(InEpilogue &&
+          MBB.getParent()->getTarget().getMCAsmInfo().usesWindowsCFI())) {
       Opc = IsSub ? getADDriOpcode(Uses64BitFramePtr)
                   : getSUBriOpcode(Uses64BitFramePtr);
       Imm = -128;
