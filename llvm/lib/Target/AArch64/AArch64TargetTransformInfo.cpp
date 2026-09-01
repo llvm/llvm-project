@@ -3899,6 +3899,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // From a vector to a scalarized vector will be an series of extract-element
+  // and extends.
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      DstTy.getScalarSizeInBits() > 64 && SrcTy.getScalarSizeInBits() <= 64 &&
+      DstTy.isFixedLengthVector()) {
+    InstructionCost LaneCost = getVectorInstrCost(
+        Instruction::ExtractElement, Src, CostKind, -1, nullptr, nullptr);
+    InstructionCost ExtCost = getCastInstrCost(
+        Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind);
+    return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
+  }
+
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
@@ -5410,7 +5422,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   }
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   // TODO: Though vector loads usually perform well on AArch64, in some targets
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
@@ -5694,7 +5706,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        VT.getVectorNumElements() >= (128 / EltSize) || Alignment != Align(1))
+        Alignment != Align(1))
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -5704,22 +5716,23 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // Check non-power-of-2 loads/stores for legal vector element types with
     // NEON. Non-power-of-2 memory ops will get broken down to a set of
     // operations on smaller power-of-2 ops, including ld1/st1.
-    LLVMContext &C = Ty->getContext();
-    InstructionCost Cost(0);
-    SmallVector<EVT> TypeWorklist;
-    TypeWorklist.push_back(VT);
-    while (!TypeWorklist.empty()) {
-      EVT CurrVT = TypeWorklist.pop_back_val();
-      unsigned CurrNumElements = CurrVT.getVectorNumElements();
-      if (isPowerOf2_32(CurrNumElements)) {
-        Cost += 1;
-        continue;
-      }
+    InstructionCost Cost = VT.getVectorNumElements() / (128 / EltSize);
+    unsigned Remainder = VT.getVectorNumElements() % (128 / EltSize);
+    if (Remainder != 0) {
+      SmallVector<std::pair<unsigned, unsigned>> TypeWorklist;
+      TypeWorklist.push_back({Remainder, 0});
+      while (!TypeWorklist.empty()) {
+        auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
+        if (isPowerOf2_32(CurrNumElements)) {
+          // 1 per load/store + possible lane insert.
+          Cost += 1 + (Offset == 0 ? 0 : 1);
+          continue;
+        }
 
-      unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
-      TypeWorklist.push_back(EVT::getVectorVT(C, EltVT, PrevPow2));
-      TypeWorklist.push_back(
-          EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
+        unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
+        TypeWorklist.push_back({PrevPow2, Offset});
+        TypeWorklist.push_back({CurrNumElements - PrevPow2, Offset + PrevPow2});
+      }
     }
     return Cost;
   }
@@ -6850,9 +6863,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
 InstructionCost
 AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
+                               ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -6947,7 +6960,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
           NumSources <= 2
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NTp, NMask, CostKind, 0, nullptr, Args,
+                               NTp, NTp, CostKind, NMask, 0, nullptr, Args,
                                CxtI)
               : LTNumElts;
       Result.first->second = NCost;
@@ -7210,14 +7223,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   // Restore optimal kind.
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
                                Args, CxtI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE,
                                        const DominatorTree &DT) {
-  const auto &Strides = DenseMap<Value *, const SCEV *>();
+  const auto &Strides = SymbolicStrideMap();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.
@@ -7225,8 +7238,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
+        // Analyze assuming predicates will be added, but discard them; this
+        // query only guides tail-folding and must not add runtime checks to the
+        // loop.
+        SmallVector<const SCEVPredicate *> Predicates;
         if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, DT, Strides,
-                         /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                         /*ShouldCheckWrap=*/false, &Predicates)
                 .value_or(0) < 0)
           return true;
       }

@@ -278,7 +278,7 @@ bool CodeGenAction::beginSourceFileAction() {
     mlir::omp::setOpenMPVersionAttribute(
         lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
-      setOpenMPIntegerWrapAround(lb.getModule(), false);
+      mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -1092,9 +1092,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
       }
     } else if (action == BackendActionTy::Backend_EmitLL) {
-      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                        /*ShouldPreserveUseListOrder=*/false,
-                                        emitSummary));
+      mpm.addPass(llvm::PrintModulePass(
+          os, /*Banner=*/"", /*ShouldPreserveUseListOrder=*/false, emitSummary,
+          /*ShouldRenumberMetadata=*/true));
     }
   }
 

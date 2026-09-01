@@ -3309,6 +3309,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT``   0x0eb      ``gfx1250-strict``
      ========================================== ========== =============================
 
 Sections
@@ -7180,7 +7181,7 @@ CFI
 
 2.  The CFI CFA is defined using an expression which evaluates to a location
     description that comprises one memory location description for the
-    ``DW_ASPACE_AMDGPU_private_lane`` address space address ``0``.
+    ``DW_ASPACE_AMDGPU_private_wave`` address space address ``0``.
 
 .. _amdgpu-amdhsa-kernel-prolog-m0:
 

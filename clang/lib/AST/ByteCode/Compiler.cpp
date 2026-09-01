@@ -116,7 +116,7 @@ public:
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
-    if (!Idx)
+    if (!Idx || ExplicitlyDestroyed)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
@@ -130,6 +130,7 @@ public:
     // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
+    ExplicitlyDestroyed = true;
     return Success;
   }
 
@@ -212,6 +213,7 @@ public:
 
   /// Index of the scope in the chain.
   UnsignedOrNone Idx = std::nullopt;
+  bool ExplicitlyDestroyed = false;
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -1551,7 +1553,6 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
   BinaryOperatorKind Op = E->getOpcode();
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  OptPrimType T = classify(E->getType());
 
   if (Op == BO_LOr) {
     // Logical OR. Visit LHS and only evaluate RHS if LHS was FALSE.
@@ -1600,9 +1601,10 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
     return this->emitPopBool(E);
 
   // For C, cast back to integer type.
-  assert(T);
-  if (T != PT_Bool)
-    return this->emitCast(PT_Bool, *T, E);
+  if (!E->getType()->isBooleanType()) {
+    PrimType T = classifyPrim(E->getType());
+    return this->emitCast(PT_Bool, T, E);
+  }
   return true;
 }
 
@@ -3114,10 +3116,8 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   if (DiscardResult)
     return true;
 
-  if (!Initializing) {
-    unsigned StringIndex = P.createGlobalString(E);
-    return this->emitGetPtrGlobal(StringIndex, E);
-  }
+  if (!Initializing)
+    return this->emitGetStringPtr(E, E);
 
   // We are initializing an array on the stack.
   const ConstantArrayType *CAT =
@@ -3203,9 +3203,7 @@ bool Compiler<Emitter>::VisitSYCLUniqueStableNameExpr(
   StringLiteral *SL =
       StringLiteral::Create(A, ResultStr, StringLiteralKind::Ordinary,
                             /*Pascal=*/false, ArrayTy, E->getLocation());
-
-  unsigned StringIndex = P.createGlobalString(SL);
-  return this->emitGetPtrGlobal(StringIndex, E);
+  return this->emitGetStringPtr(SL, E);
 }
 
 template <class Emitter>
@@ -3751,11 +3749,8 @@ bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (!Initializing) {
-    unsigned StringIndex = P.createGlobalString(E->getFunctionName(), E);
-    return this->emitGetPtrGlobal(StringIndex, E);
-  }
-
+  if (!Initializing)
+    return this->emitGetStringPtr(E, E);
   return this->delegate(E->getFunctionName());
 }
 
@@ -7289,9 +7284,9 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
     FunctionTemplateDecl *CallOpTemplate =
         LambdaCallOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     const FunctionDecl *CorrespondingCallOpSpecialization =
-        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
     assert(CorrespondingCallOpSpecialization);
     LambdaCallOp = CorrespondingCallOpSpecialization;
   } else {

@@ -529,7 +529,8 @@ bool llvm::runPassPipeline(
       MPM.addPass(AssignGUIDPass());
     }
     MPM.addPass(PrintModulePass(
-        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex,
+        /*ShouldRenumberMetadata=*/true));
     break;
   case OK_OutputBitcode:
     if (EmitSummaryIndex) {

@@ -14,7 +14,6 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
@@ -26,10 +25,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 

@@ -147,6 +147,12 @@ static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
 
+/// Attribute holding the unique name of the Fortran entity an allocation
+/// belongs to. It is an inherent attribute of the FIR allocation operations,
+/// and may also be carried by allocation operations of other dialects that
+/// FIR allocations were rewritten into.
+static constexpr llvm::StringRef getUniqNameAttrName() { return "uniq_name"; }
+
 /// Attribute to mark coarray Fortran entities with the CORANK attribute.
 constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }
 

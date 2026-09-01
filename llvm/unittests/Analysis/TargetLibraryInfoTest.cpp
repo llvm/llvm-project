@@ -8,11 +8,14 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+
+#include <type_traits>
 
 using namespace llvm;
 
@@ -751,3 +754,48 @@ TEST_F(TLITestAarch64, TestFrem) {
   EXPECT_EQ(getScalarName(Instruction::FRem, Type::getDoubleTy(Ctx)), "fmod");
   EXPECT_EQ(getScalarName(Instruction::FRem, Type::getFloatTy(Ctx)), "fmodf");
 }
+
+namespace {
+
+TEST(VecDescTest, GetCallingConvAbsent) {
+  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", std::nullopt);
+  EXPECT_FALSE(VD.getCallingConv().has_value());
+}
+
+TEST(VecDescTest, GetCallingConvC) {
+  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", CallingConv::C);
+  ASSERT_TRUE(VD.getCallingConv().has_value());
+  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::C);
+}
+
+TEST(VecDescTest, GetCallingConvAArch64VectorCall) {
+  VecDesc VD("acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall);
+  ASSERT_TRUE(VD.getCallingConv().has_value());
+  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::AArch64_VectorCall);
+}
+
+static_assert(std::is_trivially_destructible_v<VecDesc>,
+              "VecDesc must not require dynamic static initialization");
+static_assert(std::is_trivially_copyable_v<VecDesc>,
+              "VecDesc static tables must be constexpr-friendly");
+
+TEST(VecDescTest, ConstexprStaticTable) {
+  static constexpr VecDesc Table[] = {
+      {"ceilf", "vceilf", ElementCount::getFixed(4), false, "_ZGV_LLVM_N4v",
+       std::nullopt},
+      {"sin", "__svml_sin2", ElementCount::getFixed(2), false, "_ZGV_LLVM_N2v",
+       CallingConv::C},
+      {"acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
+       "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall},
+  };
+  EXPECT_FALSE(Table[0].getCallingConv().has_value());
+  ASSERT_TRUE(Table[1].getCallingConv().has_value());
+  EXPECT_EQ(Table[1].getCallingConv().value(), CallingConv::C);
+  ASSERT_TRUE(Table[2].getCallingConv().has_value());
+  EXPECT_EQ(Table[2].getCallingConv().value(), CallingConv::AArch64_VectorCall);
+}
+
+} // namespace

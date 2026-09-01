@@ -80,7 +80,7 @@ multiclass SM_Instantiate<list<int> gpu_list> {
   }
 }
 
-defm SM : SM_Instantiate<[121, 120, 110, 103, 101, 100, 90, 89, 88, 87, 86, 80, 75, 72, 70, 62, 61, 60, 53]>;
+defm SM : SM_Instantiate<[121, 120, 110, 107, 103, 101, 100, 90, 89, 88, 87, 86, 80, 75, 72, 70, 62, 61, 60, 53]>;
 
 class PTXFeatures {
   string Features;
