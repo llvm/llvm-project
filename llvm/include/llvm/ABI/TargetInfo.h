@@ -92,6 +92,10 @@ protected:
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
+  /// If the record reduces to a single scalar element,
+  /// return that element type; otherwise null.
+  LLVM_ABI const Type *isSingleElementStruct(const Type *Ty) const;
+
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 
@@ -126,6 +130,8 @@ protected:
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+
+LLVM_ABI std::unique_ptr<TargetInfo> createAMDGPUTargetInfo(TypeBuilder &TB);
 
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
