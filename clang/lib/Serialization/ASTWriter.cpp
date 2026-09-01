@@ -6836,6 +6836,7 @@ SourceLocationEncoding::RawLocEncoding
 ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
   SourceLocation::UIntTy BaseOffset = 0;
   unsigned ModuleFileIndex = 0;
+  [[maybe_unused]] ModuleFile *OwningModuleFile = nullptr;
 
   // See SourceLocationEncoding.h for the encoding details.
   if (PP->getSourceManager().isLoadedSourceLocation(Loc) && Loc.isValid()) {
@@ -6845,14 +6846,34 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
     assert(SLocMapI != getChain()->GlobalSLocOffsetMap.end() &&
            "Corrupted global sloc offset map");
     ModuleFile *F = SLocMapI->second;
-    BaseOffset = F->SLocEntryBaseOffset - 2;
+    OwningModuleFile = F;
+    // The reader's local-to-global map is piecewise once a file has been
+    // reused from an earlier module, so SLocEntryBaseOffset - 2 does not invert
+    // it. Recover the delta that produced this location.
+    BaseOffset = static_cast<SourceLocation::UIntTy>(
+        getChain()->getSLocInverseDelta(*F, Loc.getOffset()));
     // 0 means the location is not loaded. So we need to add 1 to the index to
     // make it clear.
     ModuleFileIndex = F->Index + 1;
     assert(&getChain()->getModuleManager()[F->Index] == F);
   }
 
-  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
+  SourceLocationEncoding::RawLocEncoding Encoded =
+      SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
+
+#ifndef NDEBUG
+  // The reader must recover Loc from what we wrote, which holds only if
+  // BaseOffset inverts its local-to-global map. A stale inverse otherwise goes
+  // unnoticed until the location resolves into an unrelated file.
+  if (OwningModuleFile) {
+    SourceLocation Decoded = SourceLocationEncoding::decode(Encoded).first;
+    assert(getChain()->TranslateSourceLocation(*OwningModuleFile, Decoded) ==
+               Loc &&
+           "loaded source location did not round-trip");
+  }
+#endif
+
+  return Encoded;
 }
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {

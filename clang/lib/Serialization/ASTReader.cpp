@@ -1928,6 +1928,10 @@ void ASTReader::buildLoadedSLocRemapping(
   if (NumDupEntries == 0) {
     F.SLocRemap.push_back({0, ~SourceLocation::UIntTy(0),
                            static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
+    // The inverse is the same flat shift over this module's whole range.
+    F.SLocRemapGlobal.push_back(
+        {F.SLocEntryBaseOffset, F.SLocEntryBaseOffset + SLocSpaceSize,
+         static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
     for (unsigned I = 0; I != N; ++I)
       if (!Files[I].Name.empty())
         registerPrimaryLoadedFile(Files[I], F.SLocEntryBaseOffset + Offsets[I],
@@ -1957,9 +1961,13 @@ void ASTReader::buildLoadedSLocRemapping(
       int GlobalID = F.SLocEntryBaseID + (int)KeptCount++;
       SourceLocation::UIntTy GlobalStart =
           F.SLocEntryBaseOffset + Offsets[I] - DupBefore;
-      F.SLocRemap.push_back(
-          {LowStart, LowEnd,
-           static_cast<int64_t>(GlobalStart) - static_cast<int64_t>(LowStart)});
+      int64_t Delta =
+          static_cast<int64_t>(GlobalStart) - static_cast<int64_t>(LowStart);
+      F.SLocRemap.push_back({LowStart, LowEnd, Delta});
+      // Kept entries are visited in increasing global order, so appending
+      // keeps SLocRemapGlobal sorted.
+      F.SLocRemapGlobal.push_back(
+          {GlobalStart, GlobalStart + (LowEnd - LowStart), Delta});
       F.LocalToGlobalID[I] = GlobalID;
       F.KeptSLocLocalIndex.push_back(I);
       if (!Files[I].Name.empty())
@@ -1997,6 +2005,27 @@ ASTReader::remapSLocEntryOffset(ModuleFile &F, uint32_t LocalOffset) const {
   }
   // No remap for this module. Use the flat shift.
   return F.SLocEntryBaseOffset + LocalOffset;
+}
+
+int64_t ASTReader::getSLocInverseDelta(ModuleFile &F,
+                                       SourceLocation::UIntTy G) const {
+  // The list is sorted by global start and its segments tile this module's
+  // range, so the covering segment is the last one whose start is <= G.
+  if (!F.SLocRemapGlobal.empty()) {
+    auto It = llvm::upper_bound(
+        F.SLocRemapGlobal, G,
+        [](SourceLocation::UIntTy V,
+           const serialization::ModuleFile::SLocRemapSegment &S) {
+          return V < S.LocalBegin;
+        });
+    if (It != F.SLocRemapGlobal.begin()) {
+      const auto &Seg = *std::prev(It);
+      if (G < Seg.LocalEnd)
+        return Seg.Delta;
+    }
+  }
+  // No inverse for this module. Use the flat shift.
+  return static_cast<int64_t>(F.SLocEntryBaseOffset) - 2;
 }
 
 llvm::Expected<SourceLocation::UIntTy>

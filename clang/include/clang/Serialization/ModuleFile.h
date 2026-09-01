@@ -364,6 +364,11 @@ public:
   /// which case the flat shift is used directly.
   llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
 
+  /// The inverse of SLocRemap, sorted by global start, where LocalBegin and
+  /// LocalEnd hold global bounds and a global location G maps to G - Delta.
+  /// Holds only the entries this module kept, which tile its own range.
+  llvm::SmallVector<SLocRemapSegment, 4> SLocRemapGlobal;
+
   /// Maps a local SLoc entry index to its global SLoc entry ID. A kept entry
   /// maps to its own ID. A file reused from an earlier module maps to that
   /// module's copy. Empty when no file was reused (the global ID is then

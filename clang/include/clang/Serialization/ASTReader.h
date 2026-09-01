@@ -2460,6 +2460,11 @@ public:
   SourceLocation::UIntTy remapSLocEntryOffset(ModuleFile &F,
                                               uint32_t LocalOffset) const;
 
+  /// The delta that produced global offset \p G in \p F, to be subtracted to
+  /// recover \p F's local location. \p G must lie in \p F's own range, as it
+  /// does when \p F was found through GlobalSLocOffsetMap.
+  int64_t getSLocInverseDelta(ModuleFile &F, SourceLocation::UIntTy G) const;
+
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.
   std::pair<SourceLocation, StringRef> getModuleImportLoc(int ID) override;
