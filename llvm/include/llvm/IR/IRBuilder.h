@@ -1241,9 +1241,10 @@ public:
                            Instruction *MDSrc) {
     CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
-      unsigned WL[5] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
-                        LLVMContext::MD_make_implicit, LLVMContext::MD_dbg,
-                        LLVMContext::MD_annotation};
+      static constexpr unsigned WL[5] = {
+          LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+          LLVMContext::MD_make_implicit, LLVMContext::MD_dbg,
+          LLVMContext::MD_annotation};
       Br->copyMetadata(*MDSrc, WL);
     }
     return Insert(Br);
