@@ -1125,13 +1125,47 @@ void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   return setOperand(0, cast<Value>(callee));
 }
 
+/// Return the number of leading callee operands of `callOp` that the operation
+/// consumes instead of passing them to the callee.
+template <typename OpTy>
+static unsigned getNumConsumedCalleeOperands(OpTy callOp) {
+  // The first operand is the callee if no callee attribute is present.
+  if (callOp.getCallee().has_value())
+    return 0;
+  return 1;
+}
+
+/// Return the operands of `callOp` that are passed to the callee, including the
+/// variadic arguments in case of a call to a variadic callee.
+template <typename OpTy>
+static Operation::operand_range getOperandsPassedToCallee(OpTy callOp) {
+  return callOp.getCalleeOperands().drop_front(
+      getNumConsumedCalleeOperands(callOp));
+}
+
+/// Return the operands of `callOp` that correspond to the declared parameters
+/// of the callee, i.e., its `CallOpInterface` argument operands.
+///
+/// The variadic arguments of a call to a variadic callee are *not* included:
+/// they do not correspond to any argument of the callee. The callee does not
+/// receive them as block arguments but reads them with `llvm.intr.vastart` and
+/// friends, so in terms of `CallOpInterface` they are consumed operands rather
+/// than forwarded ones.
+template <typename OpTy>
+static Operation::operand_range getArgOperandsImpl(OpTy callOp) {
+  Operation::operand_range operands = getOperandsPassedToCallee(callOp);
+  if (std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType())
+    return operands.take_front(varCalleeType->getNumParams());
+  return operands;
+}
+
 Operation::operand_range CallOp::getArgOperands() {
-  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getArgOperandsImpl(*this);
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
-                             getCalleeOperands().size());
+  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
+                             getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1163,6 +1197,11 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
 /// the `callOp` argument and result types.
 template <typename OpTy>
 static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+  // An indirect call stores the callee in its first callee operand.
+  if (!callOp.getCallee().has_value() && callOp.getCalleeOperands().empty())
+    return callOp.emitOpError(
+        "must have either a `callee` attribute or at least an operand");
+
   std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
   if (!varCalleeType)
     return success();
@@ -1172,15 +1211,19 @@ static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
     return callOp.emitOpError(
         "expected var_callee_type to be a variadic function type");
 
+  // Note: `getArgOperands` is derived from `var_callee_type`, so the raw callee
+  // operands are used here instead.
+  Operation::operand_range passedOperands = getOperandsPassedToCallee(callOp);
+
   // Verify the variadic callee type has at most as many parameters as the call
   // has argument operands.
-  if (varCalleeType->getNumParams() > callOp.getArgOperands().size())
+  if (varCalleeType->getNumParams() > passedOperands.size())
     return callOp.emitOpError("expected var_callee_type to have at most ")
-           << callOp.getArgOperands().size() << " parameters";
+           << passedOperands.size() << " parameters";
 
   // Verify the variadic callee type matches the call argument types.
   for (auto [paramType, operand] :
-       llvm::zip(varCalleeType->getParams(), callOp.getArgOperands()))
+       llvm::zip(varCalleeType->getParams(), passedOperands))
     if (paramType != operand.getType())
       return callOp.emitOpError()
              << "var_callee_type parameter type mismatch: " << paramType
@@ -1230,20 +1273,17 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // or indirect call.
   Type fnType;
 
-  bool isIndirect = false;
-
   // If this is an indirect call, the callee attribute is missing.
   FlatSymbolRefAttr calleeName = getCalleeAttr();
   if (!calleeName) {
-    isIndirect = true;
-    if (!getNumOperands())
-      return emitOpError(
-          "must have either a `callee` attribute or at least an operand");
+    // Note: `verifyCallOpVarCalleeType` has already checked that there is a
+    // callee operand.
     auto ptrType = llvm::dyn_cast<LLVMPointerType>(getOperand(0).getType());
     if (!ptrType)
       return emitOpError("indirect call expects a pointer as callee: ")
              << getOperand(0).getType();
 
+    // Nothing else to verify: an indirect callee cannot be resolved.
     return success();
   } else {
     Operation *callee =
@@ -1277,27 +1317,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (funcType.isVarArg() && !getVarCalleeType())
     return emitOpError() << "missing var_callee_type attribute for vararg call";
 
-  // Verify that the operand and result types match the callee.
-
-  if (!funcType.isVarArg() &&
-      funcType.getNumParams() != (getCalleeOperands().size() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getCalleeOperands().size() - isIndirect)
-                         << ") for callee (expecting: "
-                         << funcType.getNumParams() << ")";
-
-  if (funcType.getNumParams() > (getCalleeOperands().size() - isIndirect))
-    return emitOpError() << "incorrect number of operands ("
-                         << (getCalleeOperands().size() - isIndirect)
-                         << ") for varargs callee (expecting at least: "
-                         << funcType.getNumParams() << ")";
-
-  for (unsigned i = 0, e = funcType.getNumParams(); i != e; ++i)
-    if (getOperand(i + isIndirect).getType() != funcType.getParamType(i))
-      return emitOpError() << "operand type mismatch for operand " << i << ": "
-                           << getOperand(i + isIndirect).getType()
-                           << " != " << funcType.getParamType(i);
-
+  // Verify the result types. These checks are more specific than what
+  // `verifyCallOpInterface` can report, so they are run first.
   if (getNumResults() == 0 &&
       !llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
     return emitOpError() << "expected function call to produce a value";
@@ -1315,7 +1336,14 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError() << "result type mismatch: " << getResult().getType()
                          << " != " << funcType.getReturnType();
 
-  return success();
+  // Verify that the operand types match the callee. Note that this does not
+  // need to special-case a variadic callee: the variadic arguments are not
+  // argument operands.
+  SmallVector<Type, 1> calleeResultTypes;
+  if (!llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
+    calleeResultTypes.push_back(funcType.getReturnType());
+  return call_interface_impl::verifyCallOpInterface(*this, funcType.getParams(),
+                                                    calleeResultTypes);
 }
 
 void CallOp::print(OpAsmPrinter &p) {
@@ -1620,12 +1648,12 @@ void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {
-  return getCalleeOperands().drop_front(getCallee().has_value() ? 0 : 1);
+  return getArgOperandsImpl(*this);
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
-                             getCalleeOperands().size());
+  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
+                             getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -2377,8 +2405,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool dsoLocal, ThreadLocalMode threadModel,
                      SymbolRefAttr comdat, ArrayRef<NamedAttribute> attrs,
                      ArrayRef<Attribute> dbgExprs) {
-  result.addAttribute(getSymNameAttrName(result.name),
-                      builder.getStringAttr(name));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
   result.addAttribute(
       getTlsModeAttrName(result.name),
@@ -2452,12 +2480,11 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getGlobalTypeAttrName(), getConstantAttrName(),
-                           getValueAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName(), getComdatAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
+       getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
+       getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -2508,6 +2535,7 @@ template <typename OpType>
 static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                                              OperationState &result) {
   MLIRContext *ctx = parser.getContext();
+
   // Parse optional linkage, default to External.
   result.addAttribute(
       OpType::getLinkageAttrName(result.name),
@@ -2696,6 +2724,27 @@ LogicalResult GlobalOp::verify() {
       return emitError() << "alignment attribute is not a power of 2";
   }
 
+  if (FlatSymbolRefAttr associated = getAssociatedAttr()) {
+    if (associated.getValue() == getSymName())
+      return emitOpError("associated cannot refer to the global itself");
+  }
+
+  if (ArrayAttr absSym = getAbsoluteSymbolAttr()) {
+    if (absSym.empty() || absSym.size() % 2 != 0)
+      return emitOpError(
+          "absolute_symbol must contain one or more integer range pairs");
+    Type pairType;
+    for (Attribute attr : absSym) {
+      auto intAttr = dyn_cast<IntegerAttr>(attr);
+      if (!intAttr)
+        return emitOpError("absolute_symbol operands must be integers");
+      if (!pairType)
+        pairType = intAttr.getType();
+      else if (intAttr.getType() != pairType)
+        return emitOpError("absolute_symbol range pair types must match");
+    }
+  }
+
   return success();
 }
 
@@ -2814,10 +2863,9 @@ void AliasOp::print(OpAsmPrinter &p) {
 
   p.printSymbolName(getSymName());
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName()});
+                          {getSymNameAttrName(), getAliasTypeAttrName(),
+                           getLinkageAttrName(), getUnnamedAddrAttrName(),
+                           getTlsModeAttrName(), getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -2922,7 +2970,7 @@ void IFuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                     Linkage linkage, LLVM::Visibility visibility) {
   return build(builder, result, name, iFuncType, resolverName, resolverType,
                linkage, /*dso_local=*/false, /*address_space=*/0,
-               UnnamedAddr::None, visibility);
+               UnnamedAddr::None, visibility, /*sym_visibility=*/nullptr);
 }
 
 LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -3057,7 +3105,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        ArrayRef<DictionaryAttr> argAttrs,
                        std::optional<uint64_t> functionEntryCount) {
   result.addRegion();
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
@@ -3172,7 +3220,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes) ||
       function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
@@ -3298,6 +3346,10 @@ LogicalResult LLVMFuncOp::verify() {
     return failure();
 
   if (isExternal()) {
+    if (getFunctionEntryCountAttr())
+      return emitOpError() << "external functions cannot have "
+                           << getFunctionEntryCountAttrName() << " attribute";
+
     if (getLinkage() != LLVM::Linkage::External &&
         getLinkage() != LLVM::Linkage::ExternWeak)
       return emitOpError() << "external functions must have '"
@@ -3451,7 +3503,7 @@ static int64_t getNumElements(Type t) {
 
 /// Determine the element type of `type`. Supported types are `VectorType`,
 /// `TensorType`, and `LLVMArrayType`. Everything else is treated as a scalar.
-static Type getElementType(Type type) {
+Type LLVM::getConstantElementType(Type type) {
   while (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
     type = arrayType.getElementType();
   if (auto vecType = dyn_cast<VectorType>(type))
@@ -3623,13 +3675,52 @@ LogicalResult LLVM::ConstantOp::verify() {
     return success();
   };
 
+  // Check that an integer attribute whose element type is `attributeIntType`
+  // is compatible with a type whose element type is `constantElementType`.
+  //
+  // Contrary to floats, integers must match exactly. An integer attribute
+  // carries no information that the corresponding LLVM type cannot represent,
+  // so any difference in width, signedness, or in `index` versus a fixed-width
+  // integer indicates a malformed constant. Note that `index` never reaches
+  // this check as a constant type, since it is not LLVM dialect-compatible.
+  auto verifyIntegerSemantics = [this](Type attributeIntType,
+                                       Type constantElementType,
+                                       StringRef description) -> LogicalResult {
+    if (attributeIntType != constantElementType)
+      return emitOpError() << "attribute and type have different integer "
+                           << description << "s: " << attributeIntType
+                           << " vs. " << constantElementType;
+    return success();
+  };
+
   // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
-  if (isa<IntegerAttr>(getValue())) {
+  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
+    return verifyIntegerSemantics(intAttr.getType(), getType(), "type");
   } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     return verifyFloatSemantics(floatAttr.getValue().getSemantics(), getType());
   } else if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
+    // Check that the element type of the attribute is compatible with the
+    // element type of the constant. Shared by the scalable and the fixed-size
+    // paths, since element types must agree either way.
+    auto verifyElementTypes = [&](ElementsAttr attr) -> LogicalResult {
+      Type attrElmType = LLVM::getConstantElementType(attr.getType());
+      Type resultElmType = LLVM::getConstantElementType(getType());
+      if (auto floatType = dyn_cast<FloatType>(attrElmType))
+        return verifyFloatSemantics(floatType.getFloatSemantics(),
+                                    resultElmType);
+
+      if (isa<IntegerType, IndexType>(attrElmType)) {
+        if (!isa<IntegerType>(resultElmType))
+          return emitOpError(
+              "expected integer element type for integer elements attribute");
+        return verifyIntegerSemantics(attrElmType, resultElmType,
+                                      "element type");
+      }
+      return success();
+    };
+
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3637,7 +3728,7 @@ LogicalResult LLVM::ConstantOp::verify() {
       if (!splatElementsAttr)
         return emitOpError()
                << "scalable vector type requires a splat attribute";
-      return success();
+      return verifyElementTypes(splatElementsAttr);
     }
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
@@ -3650,15 +3741,7 @@ LogicalResult LLVM::ConstantOp::verify() {
              << getNumElements(getType()) << " vs. " << attrNumElements;
     }
 
-    Type attrElmType = getElementType(elementsAttr.getType());
-    Type resultElmType = getElementType(getType());
-    if (auto floatType = dyn_cast<FloatType>(attrElmType))
-      return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
-
-    if (isa<IntegerType>(attrElmType) && !isa<IntegerType>(resultElmType)) {
-      return emitOpError(
-          "expected integer element type for integer elements attribute");
-    }
+    return verifyElementTypes(elementsAttr);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
 
     // The case where the constant is LLVMStructType has already been handled.

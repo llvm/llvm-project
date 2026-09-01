@@ -5,21 +5,15 @@ Test lldb-dap module request
 import platform
 import re
 
-from lldbsuite.test.decorators import (
-    requireDarwin,
-    skipIf,
-    skipIfWindows,
-    skipIfTargetDoesNotSupportSharedLibraries,
-)
-import lldbsuite.test.lldbplatformutil as lldbplatformutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnitsArgs,
     LaunchArgs,
     ModuleEvent,
     ModuleReason,
 )
-from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()

@@ -376,8 +376,7 @@ void GCNIterativeScheduler::restoreLivenessFlags(MachineInstr &MI) {
   RegisterOperands RegOpers;
   RegOpers.collect(MI, *TRI, MRI, /*ShouldTrackLaneMasks=*/true,
                    /*IgnoreDead=*/false);
-  SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
-  RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, &MI);
+  RegOpers.adjustLaneLiveness(*LIS, MRI, MI);
 }
 
 void GCNIterativeScheduler::restoreRegionLivenessFlags(const Region &R) {

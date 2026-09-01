@@ -1457,16 +1457,14 @@ define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32
 ; CHECK-GI-FP16-NEXT:    mov v3.s[2], w2
 ; CHECK-GI-FP16-NEXT:    fmov s1, w8
 ; CHECK-GI-FP16-NEXT:    umov w8, v0.h[6]
-; CHECK-GI-FP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-FP16-NEXT:    mov v4.s[2], v6.s[0]
 ; CHECK-GI-FP16-NEXT:    ldr s6, [sp, #40]
 ; CHECK-GI-FP16-NEXT:    mov v7.s[2], w6
+; CHECK-GI-FP16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-FP16-NEXT:    mov v1.s[1], w9
-; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-FP16-NEXT:    mov v2.s[2], v6.s[0]
 ; CHECK-GI-FP16-NEXT:    mov v3.s[3], w3
 ; CHECK-GI-FP16-NEXT:    mov v4.s[3], v16.s[0]
-; CHECK-GI-FP16-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-FP16-NEXT:    mov v1.s[2], w8
 ; CHECK-GI-FP16-NEXT:    bsl v0.16b, v3.16b, v4.16b
 ; CHECK-GI-FP16-NEXT:    shl v1.4s, v1.4s, #31
@@ -1474,10 +1472,10 @@ define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32
 ; CHECK-GI-FP16-NEXT:    mov s4, v0.s[3]
 ; CHECK-GI-FP16-NEXT:    fmov w0, s0
 ; CHECK-GI-FP16-NEXT:    cmlt v1.4s, v1.4s, #0
-; CHECK-GI-FP16-NEXT:    eor v5.16b, v1.16b, v5.16b
-; CHECK-GI-FP16-NEXT:    and v1.16b, v7.16b, v1.16b
 ; CHECK-GI-FP16-NEXT:    fmov w2, s3
 ; CHECK-GI-FP16-NEXT:    fmov w3, s4
+; CHECK-GI-FP16-NEXT:    eor v5.16b, v1.16b, v5.16b
+; CHECK-GI-FP16-NEXT:    and v1.16b, v7.16b, v1.16b
 ; CHECK-GI-FP16-NEXT:    and v2.16b, v2.16b, v5.16b
 ; CHECK-GI-FP16-NEXT:    orr v1.16b, v1.16b, v2.16b
 ; CHECK-GI-FP16-NEXT:    mov s2, v0.s[1]
@@ -1521,9 +1519,7 @@ define <4 x i32> @v4f16_i32(<4 x half> %a, <4 x half> %b, <4 x i32> %d, <4 x i32
 ; CHECK-GI-FP16-LABEL: v4f16_i32:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcmgt v0.4h, v1.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-GI-FP16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-FP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
@@ -1574,12 +1570,8 @@ define <8 x i32> @v8f16_i32(<8 x half> %a, <8 x half> %b, <8 x i32> %d, <8 x i32
 ; CHECK-GI-FP16-LABEL: v8f16_i32:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-GI-FP16-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-FP16-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    cmlt v1.4s, v1.4s, #0
-; CHECK-GI-FP16-NEXT:    cmlt v6.4s, v0.4s, #0
+; CHECK-GI-FP16-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-GI-FP16-NEXT:    sshll2 v6.4s, v0.8h, #0
 ; CHECK-GI-FP16-NEXT:    mov v0.16b, v1.16b
 ; CHECK-GI-FP16-NEXT:    mov v1.16b, v6.16b
 ; CHECK-GI-FP16-NEXT:    bsl v0.16b, v2.16b, v4.16b
@@ -1661,23 +1653,15 @@ define <16 x i32> @v16f16_i32(<16 x half> %a, <16 x half> %b, <16 x i32> %d, <16
 ; CHECK-GI-FP16-NEXT:    fcmgt v0.8h, v2.8h, v0.8h
 ; CHECK-GI-FP16-NEXT:    fcmgt v1.8h, v3.8h, v1.8h
 ; CHECK-GI-FP16-NEXT:    ldp q18, q19, [sp, #32]
-; CHECK-GI-FP16-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-GI-FP16-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-FP16-NEXT:    ushll v3.4s, v1.4h, #0
-; CHECK-GI-FP16-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-GI-FP16-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-GI-FP16-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-FP16-NEXT:    shl v3.4s, v3.4s, #31
-; CHECK-GI-FP16-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-FP16-NEXT:    cmlt v2.4s, v2.4s, #0
-; CHECK-GI-FP16-NEXT:    cmlt v16.4s, v0.4s, #0
-; CHECK-GI-FP16-NEXT:    cmlt v3.4s, v3.4s, #0
-; CHECK-GI-FP16-NEXT:    cmlt v17.4s, v1.4s, #0
+; CHECK-GI-FP16-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-GI-FP16-NEXT:    sshll2 v3.4s, v0.8h, #0
+; CHECK-GI-FP16-NEXT:    sshll v16.4s, v1.4h, #0
+; CHECK-GI-FP16-NEXT:    sshll2 v17.4s, v1.8h, #0
 ; CHECK-GI-FP16-NEXT:    ldp q0, q1, [sp]
 ; CHECK-GI-FP16-NEXT:    bit v0.16b, v4.16b, v2.16b
-; CHECK-GI-FP16-NEXT:    mov v2.16b, v3.16b
+; CHECK-GI-FP16-NEXT:    bit v1.16b, v5.16b, v3.16b
+; CHECK-GI-FP16-NEXT:    mov v2.16b, v16.16b
 ; CHECK-GI-FP16-NEXT:    mov v3.16b, v17.16b
-; CHECK-GI-FP16-NEXT:    bit v1.16b, v5.16b, v16.16b
 ; CHECK-GI-FP16-NEXT:    bsl v2.16b, v6.16b, v18.16b
 ; CHECK-GI-FP16-NEXT:    bsl v3.16b, v7.16b, v19.16b
 ; CHECK-GI-FP16-NEXT:    ret

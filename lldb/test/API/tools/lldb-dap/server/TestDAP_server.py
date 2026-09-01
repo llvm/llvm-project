@@ -15,6 +15,7 @@ from subprocess import Popen
 from typing import Tuple
 
 
+@requireSocketPermission  # every test starts lldb-dap in listening server mode
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(
         self, connection, connection_timeout=30
@@ -33,7 +34,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
             try:
                 process.stdin.close()
                 process.wait(timeout=5)
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 process.kill()
 
         self.addTearDownHook(cleanup)

@@ -1021,6 +1021,15 @@ def _ssaf_global_scope_analysis_result :
     "consumed by the source transformation. The extension selects which file "
     "format to use.">,
   MarshallingInfoString<SSAFOpts<"GlobalScopeAnalysisResult">>;
+def _ssaf_link_unit_id :
+  Joined<["--"], "ssaf-link-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier of the link unit that this compilation unit was "
+    "linked into.">,
+  MarshallingInfoString<SSAFOpts<"LinkUnitId">>;
 def _ssaf_src_edit_file :
   Joined<["--"], "ssaf-src-edit-file=">,
   MetaVarName<"<path>">,
@@ -1124,7 +1133,11 @@ def allowable__client : Separate<["-"], "allowable_client">;
 def ansi : Flag<["-", "--"], "ansi">, Group<CompileOnly_Group>;
 def arch__errors__fatal : Flag<["-"], "arch_errors_fatal">;
 def arch : Separate<["-"], "arch">, Flags<[NoXarchOption,TargetSpecific]>;
+
+// Ignored option for gcc compatibility - not used for anything.
+// -arch_only is passed to libtool through --static-lib-target-arch-only
 def arch__only : Separate<["-"], "arch_only">;
+
 def autocomplete : Joined<["--"], "autocomplete=">;
 def bind__at__load : Flag<["-"], "bind_at_load">;
 def bundle__loader : Separate<["-"], "bundle_loader">;
@@ -1433,6 +1446,28 @@ defm cuda_short_ptr : BoolOptionWithoutMarshalling<
 
 def emit_static_lib : Flag<["--"], "emit-static-lib">,
   HelpText<"Enable linker job to emit a static library.">;
+
+// Options controlling the static library tool. Most of these are specific
+// to Apple's libtool.
+def static_lib_target_arch_only : Flag<["--"],
+  "static-lib-target-arch-only">,
+  Visibility<[ClangOption]>,
+  HelpText<"Restrict the static library to the target architecture, ignoring "
+           "other architectures present in universal inputs (Darwin only)">;
+defm static_lib_deterministic : BoolOptionWithoutMarshalling<"",
+  "static-lib-deterministic",
+  PosFlag<SetTrue, [], [ClangOption],
+          "Set static library member metadata to fixed values so that "
+          "identical inputs produce identical output (default)">,
+  NegFlag<SetFalse, [], [ClangOption]>, BothFlags<[]>, ["--"]>;
+defm static_lib_warn_no_symbols : BoolOptionWithoutMarshalling<"",
+  "static-lib-warn-no-symbols",
+  PosFlag<SetTrue, [], [ClangOption],
+          "Warn about static library members that define no symbols">,
+  NegFlag<SetFalse, [], [ClangOption]>, BothFlags<[]>, ["--"]>;
+def Xstatic_lib_tool : Separate<["-"], "Xstatic-lib-tool">,
+  Visibility<[ClangOption]>,
+  HelpText<"Pass <arg> to the static library tool">, MetaVarName<"<arg>">;
 
 def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
   HelpText<"Specify the printf lowering scheme (AMDGPU only), allowed values are "
@@ -1819,6 +1854,10 @@ def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
   Visibility<[ClangOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
+def foffload_include_binary : Separate<["-"], "foffload-include-binary">,
+  Visibility<[CC1Option]>,
+  HelpText<"Incorporate offloading device-side binary into host object file.">,
+  MarshallingInfoString<CodeGenOpts<"OffloadBinaryToEmbedFile">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption]>,
     Visibility<[ClangOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
@@ -1950,7 +1989,7 @@ def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fprofile_generate_EQ : Joined<["-"], "fprofile-generate=">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
     MetaVarName<"<directory>">,
     HelpText<"Generate instrumented code to collect execution counts into <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
 def fcs_profile_generate : Flag<["-"], "fcs-profile-generate">,
@@ -1971,7 +2010,7 @@ def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_generate : Flag<["-"], "fno-profile-generate">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
@@ -3879,6 +3918,9 @@ def fmodule_file : Joined<["-"], "fmodule-file=">,
 def fmodules_ignore_macro : Joined<["-"], "fmodules-ignore-macro=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ignore the definition of the given macro when building and loading modules">;
+def fmodules_ignore_search_path : Joined<["-"], "fmodules-ignore-search-path=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Ignore the given header search path when building and loading modules">;
 def fmodules_strict_decluse : Flag <["-"], "fmodules-strict-decluse">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Like -fmodules-decluse but requires all headers to be in modules">,
@@ -5064,8 +5106,8 @@ defm separate_named_sections : BoolFOption<"separate-named-sections",
 
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
 
 defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
@@ -5368,6 +5410,24 @@ defm key_instructions : BoolGOption<"key-instructions",
         " in some debuggers. DWARF only.">,
     BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
   Group<g_flags_Group>;
+defm dynamic_debugging : BoolOption<"f", "dynamic-debugging",
+    CodeGenOpts<"DynamicDebugging">, DefaultFalse,
+    NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
+        "Enable Dynamic Debugging, which allows runtime switching between"
+        " optimized and unoptimized code in debuggers that support it."
+        " Specified optimization level affects only the optimized code."
+        " This flag inhibits interprocedural optimizations.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
+def save_dynamic_debugging_temps : Flag<["--"], "save-dynamic-debugging-temps">,
+    Visibility<[ClangOption, CLOption, CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to save the intermediate"
+             " states of dynamic debugging in the same directory as the final"
+             " output file">;
+def discard_dynamic_debugging_debug_module : Flag<["--"], "discard-dynamic-debugging-debug-module">,
+    MarshallingInfoFlag<CodeGenOpts<"DiscardDynamicDebuggingDebugModule">>,
+    Visibility<[CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to discard the dynamic"
+             " debugging debug module before Clang codegen">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,
@@ -7006,7 +7066,8 @@ def _dyld_prefix_EQ : Joined<["--"], "dyld-prefix=">;
 def _dyld_prefix : Separate<["--"], "dyld-prefix">, Alias<_dyld_prefix_EQ>;
 def _encoding_EQ : Joined<["--"], "encoding=">, Alias<fencoding_EQ>;
 def _encoding : Separate<["--"], "encoding">, Alias<fencoding_EQ>;
-def _entry : Flag<["--"], "entry">, Alias<e>;
+def : Joined<["--"], "entry=">, Alias<e>;
+def : Separate<["--"], "entry">, Alias<e>;
 def _extdirs_EQ : Joined<["--"], "extdirs=">, Alias<fextdirs_EQ>;
 def _extdirs : Separate<["--"], "extdirs">, Alias<fextdirs_EQ>;
 def _extra_warnings : Flag<["--"], "extra-warnings">, Alias<W_Joined>;
@@ -9108,6 +9169,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def fmodules_force_redundant_lookup
+    : Flag<["-"], "fmodules-force-redundant-lookup">,
+      Group<f_Group>,
+      HelpText<"Force redundant module lookup when loading PCM files">,
+      MarshallingInfoFlag<PreprocessorOpts<"ModulesForceRedundantLookup">>;
 def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
   HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
   Values<"default,literalone,undefined">,
@@ -9126,8 +9192,7 @@ def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,
   MarshallingInfoFlag<LangOpts<"CUDAIsDevice">>;
 def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
-  HelpText<"Incorporate CUDA device-side binary into host object file.">,
-  MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
+  Alias<foffload_include_binary>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
   HelpText<"Deprecated; Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
@@ -9551,7 +9616,7 @@ def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
       HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
-def _SLASH_experimental_deterministic : CLJoined<"experimental:deterministic">,
+def _SLASH_experimental_deterministic : CLFlag<"experimental:deterministic">,
       HelpText<"Emit warnings on usage of non-deterministic macros __DATE__, __TIME__ and __TIMESTAMP__">;
 def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
       HelpText<"Undefine the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
@@ -10013,6 +10078,15 @@ def fhlsl_spv_use_unknown_image_format
                "attribute. If this option is not used, the format is inferred "
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
+def fhlsl_spv_use_legacy_buffer_matrix_order
+    : Flag<["-"], "fspv-use-legacy-buffer-matrix-order">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Assume the legacy matrix order (row major) when accessing "
+               "raw buffers (e.g. ByteAddressBuffer). Defaults to column "
+               "major.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseLegacyBufferMatrixOrder">>;
 
 def fhlsl_spv_enable_maximal_reconvergence
     : Flag<["-"], "fspv-enable-maximal-reconvergence">,

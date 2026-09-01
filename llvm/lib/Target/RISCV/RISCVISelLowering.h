@@ -122,8 +122,6 @@ public:
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
 
-  bool shouldExpandCttzElements(EVT VT) const override;
-
   /// Return the cost of LMUL for linear operations.
   InstructionCost getLMULCost(MVT VT) const;
 
@@ -543,8 +541,6 @@ private:
   SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
-                                               SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
