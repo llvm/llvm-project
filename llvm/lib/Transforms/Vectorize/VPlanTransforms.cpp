@@ -1132,8 +1132,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   // Simplify (X && Y) | (X && !Y) -> X.
   // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
+  // && (Y | Z) and (X | !X) into true.
   VPValue *X, *Y, *Z;
   if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
@@ -1234,7 +1233,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 /// Try to simplify VPSingleDefRecipe \p Def. Returns a new recipe if it should
 /// be replaced, or the existing recipe if it was modified. Returns nullptr if
 /// nothing was simplified.
-static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
+static VPValue *simplifyRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder) {
   VPlan *Plan = Def->getParent()->getPlan();
 
   // Simplification of live-in IR values for SingleDef recipes using
@@ -1262,11 +1261,9 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
         RepR->getDebugLoc());
-    Unmasked->insertBefore(RepR);
+    Builder.insert(Unmasked);
     return Unmasked;
   }
-
-  VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
   // VPInstructions, as we would fail to create widen/replicate recpes from the
@@ -1632,6 +1629,24 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
   return nullptr;
 }
 
+namespace {
+/// Variant of VPBuilder that inserts newly created recipes to a worklist.
+class VPSimplifyBuilder : public VPBuilder {
+  SetVector<VPRecipeBase *> &Worklist;
+
+public:
+  VPSimplifyBuilder(SetVector<VPRecipeBase *> &Worklist)
+      : VPBuilder(), Worklist(Worklist) {}
+
+protected:
+  virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                            VPBasicBlock::iterator It) const override {
+    VPBuilder::insertHelper(R, VPBB, It);
+    Worklist.insert(R);
+  }
+};
+} // namespace
+
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   SetVector<VPRecipeBase *> Worklist;
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
@@ -1639,11 +1654,13 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT))
     Worklist.insert_range(make_pointer_range(reverse(*VPBB)));
 
+  VPSimplifyBuilder Builder(Worklist);
   while (!Worklist.empty()) {
     auto *Def = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
     if (!Def)
       continue;
-    if (VPValue *New = simplifyRecipe(Def)) {
+    Builder.setInsertPoint(Def);
+    if (VPValue *New = simplifyRecipe(Def, Builder)) {
       if (New != Def) {
         // Replace the recipe with a new one.
         Def->replaceAllUsesWith(New);
