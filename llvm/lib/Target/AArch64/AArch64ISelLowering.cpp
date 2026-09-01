@@ -2127,9 +2127,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
     for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
-      setOperationAction(
-          {ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON},
-          VT, Custom);
+      setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS,
+                          ISD::CTTZ_ELTS_ZERO_POISON, ISD::EXTRACT_SUBVECTOR},
+                         VT, Custom);
 
     // Without SubReg Liveness the multi-vector instructions can introduce
     // unnecessary COPY and/or MOVPFRX instructions.
@@ -32213,6 +32213,28 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (VT.isFixedLengthVectorOf(MVT::i1)) {
+    EVT NewEltVT;
+    switch (VT.getVectorMinNumElements()) {
+    case 2:
+      NewEltVT = MVT::i32;
+      break;
+    case 4:
+      NewEltVT = MVT::i16;
+      break;
+    default:
+      NewEltVT = MVT::i8;
+      break;
+    }
+
+    EVT NewInVT = InVT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    EVT NewVT = VT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    In = DAG.getNode(ISD::ANY_EXTEND, DL, NewInVT, In);
+    In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, In, N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, In));
+    return;
+  }
 
   // The following checks bail if this is not a halving operation.
 
