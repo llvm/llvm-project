@@ -18,8 +18,9 @@
 
 using namespace llvm;
 
-KnownFPClass::KnownFPClass(const APFloat &C)
-    : KnownFPClasses(C.classify()), SignBit(C.isNegative()) {}
+KnownFPClass::KnownFPClass(const APFloat &C) : KnownFPClasses(C.classify()) {
+  setSignBit(C.isNegative());
+}
 
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
@@ -140,9 +141,9 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
   }
 
   if (Known.isKnownNeverNaN()) {
-    if (KnownLHS.SignBit && KnownRHS.SignBit &&
-        *KnownLHS.SignBit == *KnownRHS.SignBit) {
-      if (*KnownLHS.SignBit)
+    if (KnownLHS.getSignBit() && KnownRHS.getSignBit() &&
+        *KnownLHS.getSignBit() == *KnownRHS.getSignBit()) {
+      if (*KnownLHS.getSignBit())
         Known.signBitMustBeOne();
       else
         Known.signBitMustBeZero();
@@ -156,16 +157,16 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
                  KnownRHS.isKnownNeverNegZero()))) {
       // Don't take sign bit from NaN operands.
       if (!KnownLHS.isKnownNeverNaN())
-        KnownLHS.SignBit = std::nullopt;
+        KnownLHS.setSignBit(std::nullopt);
       if (!KnownRHS.isKnownNeverNaN())
-        KnownRHS.SignBit = std::nullopt;
+        KnownRHS.setSignBit(std::nullopt);
       if ((Kind == MinMaxKind::maximum || Kind == MinMaxKind::maximumnum ||
            Kind == MinMaxKind::maxnum) &&
-          (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
+          (KnownLHS.getSignBit() == false || KnownRHS.getSignBit() == false))
         Known.signBitMustBeZero();
       else if ((Kind == MinMaxKind::minimum || Kind == MinMaxKind::minimumnum ||
                 Kind == MinMaxKind::minnum) &&
-               (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
+               (KnownLHS.getSignBit() == true || KnownRHS.getSignBit() == true))
         Known.signBitMustBeOne();
     }
   }
@@ -317,8 +318,8 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
     Known.One.clearSignBit();
   }
 
-  if (SignBit) {
-    if (*SignBit)
+  if (std::optional<bool> Sign = getSignBit()) {
+    if (*Sign)
       Known.makeNegative();
     else
       Known.makeNonNegative();
@@ -821,7 +822,7 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
 
   // Sign bit of a nan isn't guaranteed.
   if (!Known.isKnownNeverNaN())
-    Known.SignBit = std::nullopt;
+    Known.setSignBit(std::nullopt);
 
   return Known;
 }

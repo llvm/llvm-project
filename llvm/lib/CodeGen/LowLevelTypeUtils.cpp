@@ -72,7 +72,8 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     if (Ty.isByteTy())
       return LLT::integer(SizeInBits);
 
-    return LLT::scalar(SizeInBits);
+    // Fall back to integer types for anything else.
+    return LLT::integer(SizeInBits);
   }
 
   if (Ty.isTokenTy())

@@ -47,6 +47,8 @@ public:
   /// displaying backtraces, for example.
   virtual bool ShouldHide() { return false; }
 
+  virtual lldb::ThreadPlanSP GetStepThroughPlan() { return {}; }
+
 protected:
   lldb::ValueObjectListSP m_arguments;
   std::string m_stop_desc;

@@ -1,11 +1,5 @@
 # User Guide for the DirectX Target
 
-:::{warning}
-Disclaimer: The DirectX backend is experimental and under active development.
-It is not yet feature complete or ready to be used outside of experimental or
-demonstration contexts.
-:::
-
 ```{toctree}
 :hidden:
 
@@ -25,11 +19,10 @@ interfaces are documented in the [DirectX Specifications.](https://github.com/Mi
 Initially the backend is aimed at supporting DirectX 12, and support for DirectX
 11 is planned at a later date.
 
-The DirectX backend is currently experimental and is not shipped with any
-release builds of LLVM tools. To build the DirectX backend locally, add
-`DirectX` to the `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD` CMake option. For more
-information on building LLVM see the {doc}`CMake` documentation.
-
+The DirectX backend is an official LLVM target and is built by default as part
+ of `LLVM_ALL_TARGETS`. For more information on building LLVM see the 
+ {doc}`CMake` documentation.
+ 
 (dx-target-triples)=
 
 ## Target Triples

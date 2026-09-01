@@ -11471,14 +11471,6 @@ def err_noreturn_has_return_expr : Error<
 def warn_noreturn_coroutine : Warning<
   "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
   InGroup<InvalidNoreturn>;
-def err_carries_dependency_missing_on_first_decl : Error<
-  "%select{function|parameter}0 declared '[[carries_dependency]]' "
-  "after its first declaration">;
-def note_carries_dependency_missing_first_decl : Note<
-  "declaration missing '[[carries_dependency]]' attribute is here">;
-def err_carries_dependency_param_not_function_decl : Error<
-  "'[[carries_dependency]]' attribute only allowed on parameter in a function "
-  "declaration or lambda">;
 def err_block_not_allowed_on : Error<
   "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
   "%NonlocalVariable{a nonlocal variable}|"
@@ -14336,6 +14328,8 @@ def note_amdgpu_named_barrier_reason_inherited : Note<
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_invalid_sync_scope
+    : Error<"unsupported atomic synchronization scope '%0'">;
 def err_amdgcn_processor_is_arg_not_literal
     : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
             "literal">;
