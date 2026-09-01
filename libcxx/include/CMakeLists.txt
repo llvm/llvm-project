@@ -308,6 +308,7 @@ set(files
   __compare/strong_order.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
+  __compare/type_order.h
   __compare/weak_order.h
   __concepts/arithmetic.h
   __concepts/assignable.h
@@ -424,6 +425,7 @@ set(files
   __format/formatter_tuple.h
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
+  __format/parser_std_format_spec_data.h
   __format/range_default_formatter.h
   __format/range_format.h
   __format/range_formatter.h
@@ -904,6 +906,7 @@ set(files
   __type_traits/is_polymorphic.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
+  __type_traits/is_relocatable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -916,7 +919,6 @@ set(files
   __type_traits/is_trivially_copyable.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_relocatable.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h

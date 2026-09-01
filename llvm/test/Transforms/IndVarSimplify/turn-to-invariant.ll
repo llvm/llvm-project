@@ -925,9 +925,7 @@ constant_check_failed:
 define i32 @test_predicated_backedge_no_side_exit(i32 %len) {
 ; CHECK-LABEL: @test_predicated_backedge_no_side_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN]], i32 [[TMP0]])
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[LEN:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[LEN]], [[UMIN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

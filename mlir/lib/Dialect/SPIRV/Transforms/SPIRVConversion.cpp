@@ -868,9 +868,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
   // Look through all global variables in the given `body` block and check if
   // there is a spirv.GlobalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
-            spirv::SPIRVDialect::getAttributeName(
-                spirv::Decoration::BuiltIn))) {
+    if (StringAttr builtinAttr = varOp.getBuiltInAttr()) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
       if (varBuiltIn == builtin) {
         return varOp;
@@ -1023,12 +1021,16 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
 
-    // Copy over all attributes other than the function name and type.
-    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-    }
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    cast<SymbolOpInterface>(newFuncOp.getOperation())
+        .setVisibility(
+            cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
+    // Copy over the discardable attributes.
+    for (NamedAttribute namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
@@ -1289,11 +1291,13 @@ static void addNoWrapDecorations(Operation *op,
                                  spirv::LinearizedIndexNoWrapFlags flags,
                                  OpBuilder &builder) {
   if (flags.noSignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
+        builder.getUnitAttr());
   if (flags.noUnsignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
+        builder.getUnitAttr());
 }
 
 static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
@@ -1316,43 +1320,41 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
   return maxLinearIndex;
 }
 
-static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+static spirv::ArrayType getStorageBufferArrayType(Value basePtr) {
   auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
   if (!pointerType ||
       pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
-    return std::nullopt;
+    return {};
 
   Type pointeeType = pointerType.getPointeeType();
   if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
     if (structType.getNumElements() != 1)
-      return std::nullopt;
+      return {};
     pointeeType = structType.getElementType(0);
   }
-  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
-  if (!arrayType)
-    return std::nullopt;
-  return arrayType.getNumElements();
+  return dyn_cast<spirv::ArrayType>(pointeeType);
 }
 
 static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
                                           ArrayRef<int64_t> strides,
                                           int64_t offset,
                                           uint64_t accessElementCount) {
-  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
-  // than the source element. Keep a plain access chain so later bitwidth
-  // emulation can adjust the final index in storage-element units.
-  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
-    if (integerType.getWidth() < 16)
-      return false;
-
   std::optional<uint64_t> maxSourceElementIndex =
       getMaxLinearizedIndex(baseType.getShape(), strides, offset);
-  std::optional<uint64_t> storageElementCount =
-      getStorageBufferElementCount(basePtr);
-  if (!maxSourceElementIndex || !storageElementCount)
+  spirv::ArrayType storageArrayType = getStorageBufferArrayType(basePtr);
+  if (!maxSourceElementIndex || !storageArrayType)
     return false;
 
-  if (accessElementCount == 0 || accessElementCount > *storageElementCount)
+  // Source indices and storage element counts use the same units only when
+  // each source element maps to one SPIR-V array element. An i16 or a narrower
+  // memref source may be stored using a wider SPIR-V array element than that
+  // of the source. Keep a plain access chain so later bitwidth emulation can
+  // adjust the final index in storage-element units.
+  if (baseType.getElementType() != storageArrayType.getElementType())
+    return false;
+
+  uint64_t storageElementCount = storageArrayType.getNumElements();
+  if (accessElementCount == 0 || accessElementCount > storageElementCount)
     return false;
 
   // `InBoundsAccessChain` requires the computed pointer to stay within the
@@ -1361,7 +1363,7 @@ static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
   // rejects widths that cannot fit in the fixed StorageBuffer object at all.
   // The static proof here is that the memref layout's linear index space maps
   // into that same object.
-  return *maxSourceElementIndex < *storageElementCount;
+  return *maxSourceElementIndex < storageElementCount;
 }
 
 } // namespace

@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -45,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -724,10 +728,12 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
-  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Build a GEP-style field-index path from \p destClass to \p decl.
+  /// \p decl may be a FieldDecl, or an IndirectFieldDecl(in the case of an
+  /// anonymous struct/union).
   /// Returns std::nullopt and emits errorNYI for virtual-base paths.
   std::optional<llvm::SmallVector<int32_t>>
-  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+  buildMemberPath(const CXXRecordDecl *destClass, const ValueDecl *decl);
 
   /// Returns true if \p field is an empty field that isn't laid out in the CIR
   /// record (e.g. a [[no_unique_address]] empty member). Such fields have no

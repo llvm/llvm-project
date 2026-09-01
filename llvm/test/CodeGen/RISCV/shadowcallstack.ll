@@ -4,16 +4,16 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
-; RUN:   -mattr=+zcmp,+experimental-zicfiss,+zcmop | FileCheck %s --check-prefix=RV64-ZCMP
+; RUN:   -mattr=+zcmp,+zimop,+zcmop | FileCheck %s --check-prefix=RV64-ZCMP
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
-; RUN:   -mattr=+zcmp,+experimental-zicfiss | FileCheck %s --check-prefix=RV32-ZCMP-NOZCMOP
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss < %s \
+; RUN:   -mattr=+zcmp,+zimop | FileCheck %s --check-prefix=RV32-ZCMP-NOZCMOP
+; RUN: llc -mtriple=riscv32 -mattr=+zimop < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-NOZCMOP
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zimop < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-NOZCMOP
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-ZCMOP
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-ZCMOP
 
 define void @f1() shadowcallstack {
