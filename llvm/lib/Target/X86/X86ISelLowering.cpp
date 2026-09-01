@@ -22563,6 +22563,14 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
 
+    if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f16 ||
+                           SrcVT.getScalarType() == MVT::bf16)) {
+      EVT F32VT = EVT::getVectorVT(*DAG.getContext(), MVT::f32,
+                                   SrcVT.getVectorNumElements());
+      Src = DAG.getNode(ISD::FP_EXTEND, dl, F32VT, Src);
+      SrcVT = F32VT;
+    }
+
     if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f32 ||
                            SrcVT.getScalarType() == MVT::f64)) {
       if (IsSigned) {
