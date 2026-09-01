@@ -606,6 +606,8 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::ldexpf128(Float128(0.0), 0));
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::scalbnf128(Float128(0.0), 0));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -747,8 +749,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(1, remquof128_exp);
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0L));
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0));
+
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
