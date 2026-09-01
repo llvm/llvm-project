@@ -114,6 +114,110 @@ body:             |
     RET_ReallyLR implicit $x0
 ...
 ---
+name:            cb_triangle_w_imm
+alignment:       4
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32 }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: cb_triangle_w_imm
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[ADDWrr]], 10, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
+  ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1
+
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    CBWPri 10, %0, 10, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    %2:gpr32 = ADDWrr %0, %1
+
+  bb.2:
+    %3:gpr32 = PHI %1, %bb.0, %2, %bb.1
+    %4:gpr32 = ADDWrr killed %3, %0
+    $w0 = COPY %4
+    RET_ReallyLR implicit $w0
+...
+---
+name:            cb_triangle_x_imm
+alignment:       4
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64 }
+  - { id: 3, class: gpr64 }
+  - { id: 4, class: gpr64 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: cb_triangle_x_imm
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+  ; CHECK-NEXT:   [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $xzr = SUBSXri [[COPY]], 10, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[COPY1]], [[ADDXrr]], 10, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr killed [[CSELXr]], [[COPY]]
+  ; CHECK-NEXT:   $x0 = COPY [[ADDXrr1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1
+
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    CBXPri 10, %0, 10, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    %2:gpr64 = ADDXrr %0, %1
+
+  bb.2:
+    %3:gpr64 = PHI %1, %bb.0, %2, %bb.1
+    %4:gpr64 = ADDXrr killed %3, %0
+    $x0 = COPY %4
+    RET_ReallyLR implicit $x0
+...
+---
 name:            cbb_diamond_no_ext
 alignment:       4
 tracksRegLiveness: true

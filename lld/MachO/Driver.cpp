@@ -16,6 +16,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SectionPriorities.h"
+#include "StripSwiftForceLoad.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -2049,6 +2050,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
+  config->stripSwiftForceLoad =
+      args.hasFlag(OPT_strip_swift_force_load, OPT_no_strip_swift_force_load,
+                   /*Default=*/false);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
@@ -2539,6 +2543,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
+
+    stripSwiftForceLoadFixups();
 
     // Write to an output file.
     if (target->wordSize == 8)
