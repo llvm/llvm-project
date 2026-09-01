@@ -3740,18 +3740,16 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
             return nullptr;
         }
         bool Result =
-            ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
-            ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
-            ((Mask & fcNegInf) && Op1V.isNegInfinity()) ||
-            ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
-            ((Mask & fcNegSubnormal) && Op1V.isDenormal() &&
-             Op1V.isNegative()) ||
-            ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
-            ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
-            ((Mask & fcPosSubnormal) && Op1V.isDenormal() &&
-             !Op1V.isNegative()) ||
-            ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
-            ((Mask & fcPosInf) && Op1V.isPosInfinity());
+          ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
+          ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
+          ((Mask & fcNegInf) && Op1V.isNegInfinity()) ||
+          ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegSubnormal) && Op1V.isDenormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
+          ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
+          ((Mask & fcPosSubnormal) && Op1V.isDenormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosInf) && Op1V.isPosInfinity());
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
