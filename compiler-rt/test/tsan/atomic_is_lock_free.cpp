@@ -16,6 +16,13 @@ struct Huge {
 extern "C" bool __atomic_is_lock_free(size_t size, const volatile void *ptr);
 
 int main() {
+#if defined(__SIZEOF_INT128__)
+  if (__atomic_always_lock_free(sizeof(Large), 0)) {
+    std::atomic<Large> a;
+    assert(a.is_lock_free());
+  }
+#endif
+
   std::atomic<Huge> b;
   assert(!b.is_lock_free());
 
@@ -55,16 +62,20 @@ int main() {
   assert(!__atomic_is_lock_free(s8, buffer + 1));
 
 #if defined(__SIZEOF_INT128__)
-  std::atomic<Large> a;
-  bool is_16_lock_free = a.is_lock_free();
-  assert(__atomic_is_lock_free(s16, nullptr) == is_16_lock_free);
-
-  if (is_16_lock_free) {
+#  if defined(__APPLE__)
+  // On Apple platforms, dynamic calls to __atomic_is_lock_free resolve to
+  // libSystem, which returns false for 128-bit atomics.
+  assert(!__atomic_is_lock_free(s16, nullptr));
+  assert(!__atomic_is_lock_free(s16, buffer));
+#  else
+  // On Linux/ELF, dynamic calls resolve to compiler-rt's __atomic_is_lock_free.
+  if (__atomic_always_lock_free(16, 0)) {
     assert(__atomic_is_lock_free(s16, buffer));
     assert(!__atomic_is_lock_free(s16, buffer + 1));
   } else {
     assert(!__atomic_is_lock_free(s16, buffer));
   }
+#  endif
 #endif
 
   fprintf(stderr, "PASS\n");
