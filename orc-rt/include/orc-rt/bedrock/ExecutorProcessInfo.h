@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_EXECUTORPROCESSINFO_H
-#define ORC_RT_EXECUTORPROCESSINFO_H
+#ifndef ORC_RT_BEDROCK_EXECUTORPROCESSINFO_H
+#define ORC_RT_BEDROCK_EXECUTORPROCESSINFO_H
 
-#include "orc-rt/bedrock/Error.h"
+#include "orc-rt/support/Error.h"
 
 #include <initializer_list>
 #include <string>
@@ -73,4 +73,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_EXECUTORPROCESSINFO_H
+#endif // ORC_RT_BEDROCK_EXECUTORPROCESSINFO_H

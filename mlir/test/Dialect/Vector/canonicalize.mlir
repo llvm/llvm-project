@@ -3842,7 +3842,7 @@ func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
 // CHECK-NEXT:    return %[[CST]] : vector<1xi8>
 func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
-  %cst = llvm.mlir.constant(0: i1) : i8
+  %cst = llvm.mlir.constant(0: i8) : i8
   %v = vector.from_elements %cst : vector<1xi8>
   return %v : vector<1xi8>
 }

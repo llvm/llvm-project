@@ -1338,12 +1338,7 @@ public:
 
   [[nodiscard]] friend bool operator==(const DenseMapIterator &LHS,
                                        const DenseMapIterator &RHS) {
-    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert(LHS.getEpochAddress() == RHS.getEpochAddress() &&
-           "comparing incomparable iterators!");
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 
