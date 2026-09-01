@@ -53768,12 +53768,13 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
   return SDValue();
 }
 
-// Matches the following pattern:
-//
-//   (or (and X, HighBitsMask(C)), (srl Y, C)) --> (fshl (srl X, BW-C), Y, BW-C)
-static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
+ 
+// Fold an OR with a masked destination and a left-shifted
+// source into a shift + double-precision shift (SHRD):
+static SDValue combineORToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 										const X86Subtarget &Subtarget) {
 	using namespace SDPatternMatch;
+	assert(N->getOpcode() == ISD::OR && "Invalid Node. Expected OR.");
 
 	// Bail if SHLD is slow
 	if (Subtarget.isSHLDSlow())
@@ -53816,9 +53817,9 @@ static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 	LLVM_DEBUG(dbgs() << "The optimization is applicable.\n");
 
 	uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount;
-	SDValue ShVal = DAG.getShiftAmountConstant(InvShAmt, VT, DL);
-	SDValue SHLVal = DAG.getNode(ISD::SHL, DL, VT, X, ShVal);
-	return DAG.getNode(ISD::FSHR, DL, VT, Y, SHLVal, ShVal);
+	SDValue ShAConst = DAG.getShiftAmountConstant(InvShAmt, VT, DL);
+	SDValue SHLVal = DAG.getNode(ISD::SHL, DL, VT, X, ShAConst);
+	return DAG.getNode(ISD::FSHR, DL, VT, Y, SHLVal, ShAConst);
 }
 
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
@@ -53883,7 +53884,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
     return R;
 
-  if (SDValue R = combineDisjointORToSHLD(N, dl, DAG, Subtarget))
+  if (SDValue R = combineORToSHRD(N, dl, DAG, Subtarget))
   	  return R;
 
   if (DCI.isBeforeLegalizeOps())
