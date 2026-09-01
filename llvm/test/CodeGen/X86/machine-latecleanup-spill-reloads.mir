@@ -26,6 +26,28 @@
     ret void
   }
 
+  define void @store_through_ir_pointer_keeps_reload_reusable(ptr %p) {
+    ret void
+  }
+
+  define void @store_to_alloca_keeps_reload_reusable() {
+    %a = alloca i64
+    ret void
+  }
+
+  define void @store_without_pointer_info_blocks_reload_reuse(ptr %p) {
+    ret void
+  }
+
+  define void @store_without_memoperand_blocks_reload_reuse(ptr %p) {
+    ret void
+  }
+
+  define void @non_spill_slot_reload_is_not_reused_across_ir_store() {
+    %a = alloca i64
+    ret void
+  }
+
   declare void @sink()
 
   attributes #0 = { "frame-pointer"="all" }
@@ -190,6 +212,139 @@ body:             |
     ; CHECK-NOT:   MOV64rm
     ; CHECK:       MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
     ; CHECK-NEXT:  RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# A spill slot is created by the register allocator and its address never
+# reaches the IR, so a store that names an IR value cannot write it.
+name:            store_through_ir_pointer_keeps_reload_reusable
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rdi, $rdx
+
+    ; CHECK-LABEL: name: store_through_ir_pointer_keeps_reload_reusable
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64) into %ir.p)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64) into %ir.p)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# Same reasoning for an alloca: it is an IR object, so it is not the spill slot.
+name:            store_to_alloca_keeps_reload_reusable
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+  - { id: 2, name: a, offset: -32, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rdx
+
+    ; CHECK-LABEL: name: store_to_alloca_keeps_reload_reusable
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 48, $noreg, $rdx :: (store (s64) into %ir.a)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 48, $noreg, $rdx :: (store (s64) into %ir.a)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# Nothing says where this store lands, so it has to be assumed to reach the slot.
+name:            store_without_pointer_info_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rdi, $rdx
+
+    ; CHECK-LABEL: name: store_without_pointer_info_blocks_reload_reuse
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64))
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx :: (store (s64))
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# An empty memory operand list describes nothing, so the store may reach the slot.
+name:            store_without_memoperand_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rdi, $rdx
+
+    ; CHECK-LABEL: name: store_without_memoperand_blocks_reload_reuse
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rdi, 1, $noreg, 0, $noreg, $rdx
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# Guards the precondition of mayWriteSpillSlot(): the load reads a frame object
+# that is not a spill slot, and the store names that very object through its IR
+# value. Reusing the load here would return the value from before the store, so
+# isSingleSpillSlotAccess() must refuse to track it in the first place.
+name:            non_spill_slot_reload_is_not_reused_across_ir_store
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, name: a, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rdx
+
+    ; CHECK-LABEL: name: non_spill_slot_reload_is_not_reused_across_ir_store
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0.a)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 32, $noreg, $rdx :: (store (s64) into %ir.a)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0.a)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 32, $noreg, $rdx :: (store (s64) into %ir.a)
     $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
     RET64

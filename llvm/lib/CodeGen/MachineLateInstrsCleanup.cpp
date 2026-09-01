@@ -190,9 +190,45 @@ static bool isSingleSpillSlotAccess(const MachineInstr &MI,
   return MFI.isSpillSlotObjectIndex(FI);
 }
 
+// Return true unless MI provably cannot write the spill slot FI. The address of
+// a spill slot never escapes, so only an instruction that names the slot can
+// write it. An instruction whose memory effects are not fully described must
+// however be assumed to name it: a call may be a statepoint whose collector
+// rewrites the frame, and a frame-setup push stores with no memory operand at
+// all.
+static bool mayWriteSpillSlot(const MachineInstr &MI, int FI,
+                              const MachineFrameInfo &MFI) {
+  assert(MFI.isSpillSlotObjectIndex(FI) &&
+         "Only a spill slot is known not to alias any IR value");
+  // A call or an instruction with unmodeled side effects writes more than its
+  // memory operands describe, and an empty list describes nothing at all, so
+  // neither leaves a description to prove the slot untouched with.
+  if (MI.isCall() || MI.hasUnmodeledSideEffects() || MI.memoperands_empty())
+    return true;
+
+  // Past that point the list names every location MI accesses, so it is enough
+  // to show that none of them is this slot. Whether an operand loads or stores
+  // says nothing about which location it names, and a read-modify-write may
+  // describe both of its accesses with a single operand flagged as both, so
+  // consider them all.
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    // An access to an LLVM IR value cannot reach a spill slot.
+    if (MMO->getValue())
+      continue;
+    // Distinct frame objects do not overlap, so only an access to this very
+    // slot matters. Any other kind of pseudo value, and the absence of any
+    // pointer information, may reach the frame.
+    const auto *FSPSV =
+        dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
+    if (!FSPSV || FSPSV->getFrameIndex() == FI)
+      return true;
+  }
+  return false;
+}
+
 // Return true if MI may write the memory read by Reload, so that Reload can no
 // longer be reused. The only tracked loads are invariant ones and spill-slot
-// reloads, so a store to a different spill slot cannot change the loaded value.
+// reloads.
 static bool mayOverwriteReload(const MachineInstr &MI,
                                const MachineInstr &Reload,
                                const MachineFrameInfo &MFI) {
@@ -200,15 +236,16 @@ static bool mayOverwriteReload(const MachineInstr &MI,
   // objects, keep reading the same value whatever memory MI writes.
   if (!Reload.mayLoad() || Reload.isDereferenceableInvariantLoad())
     return false;
+  // An instruction that writes no memory cannot overwrite the slot.
   if (!MI.mayStore() && !MI.isCall() && !MI.hasUnmodeledSideEffects())
     return false;
-  int StoreFI, ReloadFI;
-  if (isSingleSpillSlotAccess(MI, MFI, StoreFI) &&
-      isSingleSpillSlotAccess(Reload, MFI, ReloadFI))
-    return StoreFI == ReloadFI;
-  // Anything else may reach the slot, e.g. a call or a store through a
-  // pointer to an escaped stack object.
-  return true;
+  // Reload is either invariant, and already handled above, or a spill-slot
+  // reload, so this also picks up the slot it reads. The bail-out is therefore
+  // unreachable today, and errs towards dropping the reload if that changes.
+  int ReloadFI;
+  if (!isSingleSpillSlotAccess(Reload, MFI, ReloadFI))
+    return true;
+  return mayWriteSpillSlot(MI, ReloadFI, MFI);
 }
 
 // Return true if MI is a potential candidate for reuse/removal and if so
