@@ -16,11 +16,9 @@
 #else // Overlay mode
 
 // MacOS doesn't provide uchar.h so we use the types provided by LLVM-libc.
-#ifdef __APPLE__
-#include "include/llvm-libc-types/char8_t.h"
-#else
+#ifndef __APPLE__
 #include "hdr/uchar_overlay.h"
-#endif
+#endif // !__APPLE__
 
 // Define char8_t in C++ for internal usage if it is not provided by compiler
 // or system uchar.h header.
