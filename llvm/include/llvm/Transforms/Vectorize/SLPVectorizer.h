@@ -101,6 +101,16 @@ private:
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
                           bool MaxVFOnly = false, bool StandaloneSeeds = false);
 
+  /// Try to vectorize \p VL by walking its single-use user chain downward
+  /// (toward users) as far as it stays isomorphic (same opcode/type, same
+  /// block), rerooting the tree at the deepest such list first. Falls back to
+  /// vectorizing \p VL itself, so it is a superset of a plain bottom-up
+  /// tryToVectorizeList(VL) attempt.
+  /// \returns true if any list along the chain was vectorized.
+  bool tryToVectorizeListDownwards(ArrayRef<Value *> VL,
+                                   slpvectorizer::BoUpSLP &R, unsigned Depth = 0,
+                                   bool MaxVFOnly = false);
+
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
                       SmallSetVector<Instruction *, 8> &FMACandidates,

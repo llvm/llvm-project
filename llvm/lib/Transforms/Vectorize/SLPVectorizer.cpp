@@ -181,6 +181,11 @@ static cl::opt<unsigned> RecursionMaxDepth(
     "slp-recursion-max-depth", cl::init(12), cl::Hidden,
     cl::desc("Limit the recursion depth when building a vectorizable tree"));
 
+static cl::opt<bool> SLPTraverseDownNonVec(
+    "slp-traverse-down-nonvec", cl::init(true), cl::Hidden,
+    cl::desc("Extend compare chains downward (toward users) before attempting "
+             "bottom-up vectorization of the compare roots"));
+
 static cl::opt<unsigned> MinTreeSize(
     "slp-min-tree-size", cl::init(3), cl::Hidden,
     cl::desc("Only vectorize small trees if they are fully vectorizable"));
@@ -33588,6 +33593,61 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   return IsCompatibility;
 }
 
+bool SLPVectorizerPass::tryToVectorizeListDownwards(ArrayRef<Value *> VL,
+                                                    BoUpSLP &R, unsigned Depth,
+                                                    bool MaxVFOnly) {
+  if (VL.size() <= 1)
+    return false;
+  if (Depth > RecursionMaxDepth)
+    return false;
+  // Collect the single, in-block, isomorphic user of each value. If every
+  // value has such a user, the users form a list one level closer to the sinks
+  // that we can try to reroot the tree at.
+  SmallVector<Value *, 8> UseVL;
+  Instruction *ReprInst = nullptr;
+  for (Value *V : VL) {
+    if (!V->hasOneUse())
+      break;
+    auto *I = dyn_cast<Instruction>(*V->user_begin());
+    if (!I)
+      break;
+    if (I->isTerminator() || isa<CallInst>(I))
+      break;
+    if (isa<InsertElementInst, InsertValueInst, ExtractValueInst,
+            ExtractElementInst>(I))
+      break;
+    if (!ReprInst)
+      ReprInst = I;
+    else if (I->getParent() != ReprInst->getParent())
+      break;
+    if (ReprInst->getOpcode() != I->getOpcode() ||
+        ReprInst->getType() != I->getType())
+      break;
+    UseVL.push_back(I);
+  }
+  // Try the deepest reachable list first: rerooting further down subsumes the
+  // current list as operands of a larger tree.
+  if (UseVL.size() == VL.size() &&
+      tryToVectorizeListDownwards(UseVL, R, Depth + 1, MaxVFOnly))
+    return true;
+  // insertvalue/insertelement bundles can share a result type while their
+  // inserted-value operands differ in type, which would feed buildTree a
+  // mixed-type operand bundle. They are handled by vectorizeInserts, not here.
+  if (isa<InsertElementInst, InsertValueInst, ExtractValueInst,
+          ExtractElementInst>(VL[0]))
+    return false;
+  // The downward use-chain collection above only matches opcodes, so the list
+  // may mix element types. buildTree asserts that a bundle is all-constant or
+  // all-same-type, so guard against mixed-type lists here.
+  if ((allConstant(VL) || allSameType(VL)) &&
+      tryToVectorizeList(VL, R, MaxVFOnly)) {
+    LLVM_DEBUG(dbgs() << "SLP: Vectorized a downward use-chain at depth "
+                      << Depth << ".\n");
+    return true;
+  }
+  return false;
+}
+
 template <typename ItT>
 bool SLPVectorizerPass::vectorizeCmpInsts(
     iterator_range<ItT> CmpInsts, BasicBlock *BB, BoUpSLP &R,
@@ -33645,6 +33705,13 @@ bool SLPVectorizerPass::vectorizeCmpInsts(
         });
         if (ArePossiblyReducedInOtherBlock)
           return false;
+        // Extend the chain downward (toward the compares' users) first; this
+        // reroots the tree deeper and pulls the compares in as operands, and
+        // falls back internally to the bottom-up list vectorization of the
+        // compares themselves.
+        if (SLPTraverseDownNonVec)
+          return tryToVectorizeListDownwards(Candidates, R, /*Depth=*/0,
+                                             MaxVFOnly);
         return tryToVectorizeList(Candidates, R, MaxVFOnly);
       },
       /*MaxVFOnly=*/true, R);
