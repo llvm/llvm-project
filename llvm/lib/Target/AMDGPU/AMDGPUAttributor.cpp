@@ -1459,6 +1459,140 @@ struct MinUnsignedState {
   }
 };
 
+struct AAAMDGPUMaxAGPRAlloc
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUMaxAGPRAlloc(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  static AAAMDGPUMaxAGPRAlloc &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return *new (A.Allocator) AAAMDGPUMaxAGPRAlloc(IRP, A);
+    llvm_unreachable(
+        "AAAMDGPUMaxAGPRAlloc is only valid for function position");
+  }
+
+  void initialize(Attributor &A) override {}
+
+  const std::string getAsStr(Attributor *A) const override {
+    if (AGPRMax.Unknown)
+      return "amdgpu-agpr-alloc_max=unknown";
+    std::string Str = "amdgpu-agpr-alloc=";
+    raw_string_ostream OS(Str);
+    OS << AGPRMax.Value;
+    return OS.str();
+  }
+
+  void trackStatistics() const override {}
+
+  unsigned computePessimisticValue(Attributor &A) const {
+    Function *F = getAssociatedFunction();
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
+    unsigned MaxWG = ST.getMaxFlatWorkGroupSize();
+    unsigned Occ = std::clamp(ST.getWavesPerEUForWorkGroup(MaxWG), 1u,
+                              ST.getMaxWavesPerEU());
+    unsigned Budget =
+        ST.getMaxNumVGPRs(Occ, AMDGPU::getDynamicVGPRBlockSize(*F));
+    return Budget / 2; // 128/2 == 64 on gfx90a at the max work-group size
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    MinUnsignedState OldState = AGPRMax;
+    MinUnsignedState Merged;
+    
+    auto CheckUse = [&](const Use &U, bool &Follow) {
+      if (auto *CE = dyn_cast<ConstantExpr>(U.getUser())) {
+        if (CE->isCast() && CE->getType()->isPointerTy()) {
+          Follow = true;
+          return true;
+        }
+      }
+      if (isa<SelectInst>(U.getUser()) || isa<PHINode>(U.getUser())) {
+        Follow = true;
+        return true;
+      }
+      AbstractCallSite ACS(&U);
+      const Use *EffectiveUse =
+          ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
+      if (!ACS || !ACS.isCallee(EffectiveUse))
+        return true;
+
+      Function *Caller = ACS.getInstruction()->getFunction();
+      if (AMDGPU::isEntryFunctionCC(Caller->getCallingConv())) {
+        const auto *CallerMinAA = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if (!CallerMinAA || !CallerMinAA->isValidState())
+          return true;
+        unsigned CallerMin = CallerMinAA->getAssumed();
+        if (CallerMin != ~0u)
+          Merged.merge({CallerMin, /*Unknown=*/false});
+      } else {
+        const auto *CallerAA = A.getAAFor<AAAMDGPUMaxAGPRAlloc>(
+            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if (!CallerAA || !CallerAA->isValidState())
+          return true;
+        const MinUnsignedState &CallerAGPRMax = CallerAA->getAGPRMax();
+        if (!CallerAGPRMax.Unknown)
+          Merged.merge(CallerAGPRMax);
+      }
+      return true;
+    };
+
+    A.checkForAllUses(CheckUse, *this, *F);
+
+    // Checks for unknown call sites.
+    bool DummyUAI = false;
+    bool AllCallsitesKnown = A.checkForAllCallSites(
+        [](AbstractCallSite) { return true; }, *this, true, DummyUAI);
+    if (!AllCallsitesKnown && !Merged.Unknown)
+      Merged.merge({computePessimisticValue(A), /*Unknown=*/false});
+    AGPRMax = Merged;
+
+    return OldState == AGPRMax ? ChangeStatus::UNCHANGED
+                               : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (AGPRMax.Unknown)
+      return ChangeStatus::UNCHANGED;
+
+    const auto *MinAA = A.getAAFor<AAAMDGPUMinAGPRAlloc>(*this, getIRPosition(),
+                                                         DepClassTy::OPTIONAL);
+    unsigned Min = MinAA && MinAA->isValidState() ? MinAA->getAssumed() : ~0u;
+    if (Min == ~0u)
+      return ChangeStatus::UNCHANGED;
+
+    SmallString<10> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << Min << ',' << AGPRMax.Value;
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(getAssociatedFunction()->getContext(),
+                        "amdgpu-agpr-alloc", OS.str())},
+        /*ForceReplace=*/true);
+  }
+
+  StringRef getName() const override { return "AAAMDGPUMaxAGPRAlloc"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUMaxAGPRAlloc
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  const MinUnsignedState &getAGPRMax() const { return AGPRMax; }
+
+  static const char ID;
+
+private:
+  MinUnsignedState AGPRMax;
+};
+
+const char AAAMDGPUMaxAGPRAlloc::ID = 0;
+
 /// An abstract attribute to propagate the accum_offset a kernel was compiled
 /// with down the call graph to its device functions, emitted as
 /// "amdgpu-accum-offset". Entry functions seed the boundary from their own
@@ -1782,10 +1916,11 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPUAccumOffset::ID, &AACallEdges::ID,
-       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
-       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPUMaxAGPRAlloc::ID,
+       &AAAMDGPUAccumOffset::ID, &AACallEdges::ID, &AAPointerInfo::ID,
+       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
+       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
+       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1829,6 +1964,9 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
 
     if (ST.hasGFX90AInsts()) {
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
+      if (AMDGPU::isEntryFunctionCC(CC)) {
+        A.getOrCreateAAFor<AAAMDGPUMaxAGPRAlloc>(IRPosition::function(*F));
+      }
       A.getOrCreateAAFor<AAAMDGPUAccumOffset>(IRPosition::function(*F));
     }
 
