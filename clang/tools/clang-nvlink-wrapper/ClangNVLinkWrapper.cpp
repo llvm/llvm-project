@@ -16,6 +16,8 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -255,6 +257,44 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
+Error executeProgram(StringRef Executable, ArrayRef<StringRef> Args,
+                     const ArgList &WrapperArgs) {
+  if (WrapperArgs.hasArg(OPT_dry_run) || WrapperArgs.hasArg(OPT_verbose))
+    printCommands(Args);
+  if (WrapperArgs.hasArg(OPT_dry_run))
+    return Error::success();
+
+  if (sys::commandLineFitsWithinSystemLimits(Executable, Args)) {
+    if (sys::ExecuteAndWait(Executable, Args))
+      return createStringError("'%s' failed",
+                               sys::path::filename(Executable).str().c_str());
+    return Error::success();
+  }
+
+  auto TempFileOrErr = createTempFile(WrapperArgs, "response", "txt");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  SmallString<256> Contents;
+  raw_svector_ostream OS(Contents);
+  for (StringRef Arg : llvm::drop_begin(Args)) {
+    sys::printArg(OS, Arg, /*Quote=*/true);
+    OS << " ";
+  }
+
+  if (std::error_code EC = sys::writeFileWithEncoding(*TempFileOrErr, Contents))
+    return createStringError("failed to write response file: %s",
+                             EC.message().c_str());
+
+  // How nvlink spells its response file support.
+  std::string ResponseFile = ("--options-file=" + *TempFileOrErr).str();
+  SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
+  if (sys::ExecuteAndWait(Executable, NewArgs))
+    return createStringError("'%s' failed",
+                             sys::path::filename(Executable).str().c_str());
+  return Error::success();
+}
+
 /// A minimum symbol interface that provides the necessary information to
 /// extract archive members and resolve LTO symbols.
 struct Symbol {
@@ -336,13 +376,8 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(AssemblerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Args.MakeArgString(*TempFileOrErr);
-  if (sys::ExecuteAndWait(*PTXAsPath, AssemblerArgs))
-    return createStringError("'" + sys::path::filename(*PTXAsPath) + "'" +
-                             " failed");
+  if (Error Err = executeProgram(*PTXAsPath, AssemblerArgs, Args))
+    return Err;
   return Args.MakeArgString(*TempFileOrErr);
 }
 
@@ -753,14 +788,7 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   for (StringRef Arg : NewLinkerArgs)
     LinkerArgs.push_back(Arg);
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(LinkerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Error::success();
-  if (sys::ExecuteAndWait(*NVLinkPath, LinkerArgs))
-    return createStringError("'" + sys::path::filename(*NVLinkPath) + "'" +
-                             " failed");
-  return Error::success();
+  return executeProgram(*NVLinkPath, LinkerArgs, Args);
 }
 
 } // namespace
