@@ -153,8 +153,9 @@ public:
                          BumpPtrAllocator &Allocator,
                          SetVector<Function *> *CGSCC, TargetMachine &TM)
       : InformationCache(M, AG, Allocator, CGSCC), TM(TM),
-        Features(AMDGPU::getFeatureBitset(
-            AMDGPU::getGPUKindFromSubArch(M.getTargetTriple().getSubArch()))),
+        SubArch(M.getTargetTriple().getSubArch()),
+        Features(
+            AMDGPU::getFeatureBitset(AMDGPU::getGPUKindFromSubArch(SubArch))),
         CodeObjectVersion(AMDGPU::getAMDHSACodeObjectVersion(M)) {}
 
   TargetMachine &TM;
@@ -183,10 +184,9 @@ public:
     return ST.getDefaultFlatWorkGroupSize(F.getCallingConv());
   }
 
-  std::pair<unsigned, unsigned>
-  getMaximumFlatWorkGroupRange(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
+  std::pair<unsigned, unsigned> getMaximumFlatWorkGroupRange() const {
+    return {AMDGPU::getMinFlatWorkGroupSize(),
+            AMDGPU::getMaxFlatWorkGroupSize()};
   }
 
   /// Get code object version.
@@ -201,16 +201,13 @@ public:
                                                /*OnlyFirstRequired=*/true);
     if (!Val)
       return std::nullopt;
-    if (!Val->second) {
-      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-      Val->second = ST.getMaxWavesPerEU();
-    }
+    if (!Val->second)
+      Val->second = AMDGPU::getMaxWavesPerEU(SubArch);
     return std::make_pair(Val->first, *(Val->second));
   }
 
-  unsigned getMaxWavesPerEU(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getMaxWavesPerEU();
+  unsigned getMaxWavesPerEU() const {
+    return AMDGPU::getMaxWavesPerEU(SubArch);
   }
 
   unsigned getMaxAddrSpace() const override {
@@ -304,6 +301,7 @@ public:
 private:
   /// Used to determine if the Constant needs the queue pointer.
   DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
+  const Triple::SubArchType SubArch;
   const AMDGPU::AMDGPUFeatureBitset Features;
   const unsigned CodeObjectVersion;
 };
@@ -879,7 +877,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
 
     bool HasAttr = false;
     auto Range = InfoCache.getDefaultFlatWorkGroupSize(*F);
-    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange(*F);
+    auto MaxRange = InfoCache.getMaximumFlatWorkGroupRange();
 
     if (auto Attr = InfoCache.getFlatWorkGroupSizeAttr(*F)) {
       // We only consider an attribute that is not max range because the front
@@ -914,10 +912,9 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
                                                    Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, InfoCache.getMaximumFlatWorkGroupRange(*F));
+        A, InfoCache.getMaximumFlatWorkGroupRange());
   }
 
   /// See AbstractAttribute::getName()
@@ -1097,7 +1094,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     // If the attribute exists, we will honor it if it is not the default.
     if (auto Attr = InfoCache.getWavesPerEUAttr(*F)) {
       std::pair<unsigned, unsigned> MaxWavesPerEURange{
-          1U, InfoCache.getMaxWavesPerEU(*F)};
+          1U, InfoCache.getMaxWavesPerEU()};
       if (*Attr != MaxWavesPerEURange) {
         auto [Min, Max] = *Attr;
         ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
@@ -1153,10 +1150,9 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
                                             Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
-    Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
-        A, {1U, InfoCache.getMaxWavesPerEU(*F)});
+        A, {1U, InfoCache.getMaxWavesPerEU()});
   }
 
   /// See AbstractAttribute::getName()
