@@ -1,8 +1,10 @@
-; ACE v1 Outer Product Operations Test
-; Tests all ACE outer product variants: BF16, INT8 (signed/unsigned combinations)
-; Note: ACE v1 uses TILEMOVROW to extract tile data (not TILESTORED)
-;
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx512f,+avx512bf16 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx10.1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+amx-tile -verify-machineinstrs | FileCheck %s
+
+; Test all ACE outer product variants: BF16 and INT8 signed/unsigned
+; combinations. ACE v1 alone, and composed with AMX-TILE, must both work. ACE v1
+; extracts tile data with TILEMOVROW rather than TILESTORED.
 
 ; Test BF16 outer product (TOP2BF16PS)
 define void @test_top2bf16ps(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b) {

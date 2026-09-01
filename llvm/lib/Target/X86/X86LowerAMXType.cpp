@@ -122,8 +122,8 @@ static bool isACEOnlyIntrinsic(Instruction *I) {
   case Intrinsic::x86_top4mxbf8ps_internal:
   case Intrinsic::x86_top4mxbssps_internal:
   // ACE tile movement intrinsics
-  case Intrinsic::x86_tilesetcol_internal:
-  case Intrinsic::x86_tilesetrow_internal:
+  case Intrinsic::x86_tilemovcol_set_internal:
+  case Intrinsic::x86_tilemovrow_set_internal:
     return true;
   default:
     return false;
@@ -298,8 +298,8 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // ACE TILEMOV intrinsics - move ZMM to tile row/column
   // Pattern: (m, n, zmm_src, idx) -> tile
-  case Intrinsic::x86_tilesetcol_internal:
-  case Intrinsic::x86_tilesetrow_internal: {
+  case Intrinsic::x86_tilemovcol_set_internal:
+  case Intrinsic::x86_tilemovrow_set_internal: {
     // Output tile shape
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
@@ -836,16 +836,17 @@ namespace {
 class X86LowerAMXCast {
   Function &Func;
   std::unique_ptr<DominatorTree> DT;
-  bool IsACEOnly; // ACE v1 without AMX TILELOADD/TILESTORED
+  bool IsACE; // ACE configures palette 2, which has no TILELOADD/TILESTORED
 
 public:
   X86LowerAMXCast(Function &F, const TargetMachine *TM = nullptr)
-      : Func(F), DT(nullptr), IsACEOnly(false) {
+      : Func(F), DT(nullptr), IsACE(false) {
     if (TM) {
-      // Check if we're ACE-only (no AMX TILELOADD/TILESTORED available)
+      // ACE implies AMX-TILE, but ACE code runs under palette 2 where
+      // TILELOADD/TILESTORED are unavailable, so key off ACE itself.
       const X86Subtarget *ST =
           static_cast<const X86Subtarget *>(TM->getSubtargetImpl(F));
-      IsACEOnly = ST && ST->hasACEV1() && !ST->hasAMXTILE();
+      IsACE = ST && ST->hasACEV1();
     }
   }
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
@@ -1075,7 +1076,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   auto *II = cast<IntrinsicInst>(Tile);
   // ACE v1 doesn't have TILESTORED instruction - skip combining for ACE targets
   // or ACE intrinsics. ACE uses struct-based API with vector load/store.
-  if (IsACEOnly || isACEOnlyIntrinsic(II))
+  if (IsACE || isACEOnlyIntrinsic(II))
     return false;
   // Tile is output from AMX intrinsic. The first operand of the
   // intrinsic is row, the second operand of the intrinsic is column.
@@ -1109,7 +1110,7 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
     return false;
   // ACE v1 doesn't have TILELOADD instruction - skip combining for ACE targets
   // or ACE intrinsics. ACE uses struct-based API with vector load/store.
-  if (IsACEOnly || isACEOnlyIntrinsic(II))
+  if (IsACE || isACEOnlyIntrinsic(II))
     return false;
   std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
@@ -1347,7 +1348,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     // ACE v1 doesn't have TILELOADD - for ACE targets or ACE intrinsics,
     // use tilezero since ACE tiles are typically zero-initialized in struct
     // API.
-    if (IsACEOnly || isACEOnlyIntrinsic(II)) {
+    if (IsACE || isACEOnlyIntrinsic(II)) {
       Value *Row = nullptr, *Col = nullptr;
       std::tie(Row, Col) = getShape(II, OpNo);
       Value *NewInst = Builder.CreateIntrinsic(Intrinsic::x86_tilezero_internal,
@@ -1381,7 +1382,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     // ACE v1 doesn't have TILESTORED - for ACE targets or ACE intrinsics,
     // just create a poison value since the tile result is typically not read
     // back.
-    if (IsACEOnly || isACEOnlyIntrinsic(II)) {
+    if (IsACE || isACEOnlyIntrinsic(II)) {
       Value *Poison = PoisonValue::get(AMXCast->getType());
       AMXCast->replaceAllUsesWith(Poison);
       AMXCast->eraseFromParent();
@@ -1447,7 +1448,12 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
     // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
     // sure the amx data is volatile, that is necessary for AMX fast
     // register allocation.
-    if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
+    // This spills tiles with TILESTORED and reloads them with TILELOADD, which
+    // ACE cannot do under palette 2. ACE tile data is left non-volatile, so the
+    // tile registers stay live and X86FastPreTileConfig spills them instead.
+    const X86Subtarget *ST =
+        static_cast<const X86Subtarget *>(TM->getSubtargetImpl(F));
+    if (!F.hasFnAttribute(Attribute::OptimizeNone) && !(ST && ST->hasACEV1())) {
       X86VolatileTileData VTD(F);
       C = VTD.volatileTileData() || C;
     }

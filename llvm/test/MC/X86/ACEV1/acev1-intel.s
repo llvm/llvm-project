@@ -12,6 +12,10 @@
 // CHECK: encoding: [0x62,0xf6,0xf4,0x48,0x95,0x00]
           bsrmovf bsr0, zmm1, zmmword ptr [rax]
 
+// CHECK: bsrmovf bsr0, zmm10, zmmword ptr [rdx + 4*rax + 64]
+// CHECK: encoding: [0x62,0xf6,0xac,0x48,0x95,0x44,0x82,0x01]
+          bsrmovf bsr0, zmm10, zmmword ptr [rdx + 4*rax + 64]
+
 // CHECK: bsrmovf bsr0, zmm1, zmmword ptr [rbp + 8*r14 + 268435456]
 // CHECK: encoding: [0x62,0xb6,0xf4,0x48,0x95,0x84,0xf5,0x00,0x00,0x00,0x10]
           bsrmovf bsr0, zmm1, zmmword ptr [rbp + 8*r14 + 268435456]
@@ -105,5 +109,37 @@
           top4mxbssps tmm4, zmm8, zmm9, 15
 
 // CHECK: top4buud tmm7, zmm30, zmm31
-// CHECK: encoding: [0x62,0xd2,0x04,0x40,0x5e,0xfe]
+// CHECK: encoding: [0x62,0x92,0x04,0x40,0x5e,0xfe]
           top4buud tmm7, zmm30, zmm31
+
+// CHECK: tilemovrow tmm1, zmm31, edx
+// CHECK: encoding: [0x62,0x92,0xed,0x48,0x4a,0xcf]
+          tilemovrow tmm1, zmm31, edx
+
+// CHECK: tilemovrow tmm1, zmm16, edx
+// CHECK: encoding: [0x62,0xb2,0xed,0x48,0x4a,0xc8]
+          tilemovrow tmm1, zmm16, edx
+
+// CHECK: tilemovcol tmm1, zmm31, edx
+// CHECK: encoding: [0x62,0x92,0xed,0x48,0x4b,0xcf]
+          tilemovcol tmm1, zmm31, edx
+
+// CHECK: tilemovcol tmm1, zmm16, edx
+// CHECK: encoding: [0x62,0xb2,0xed,0x48,0x4b,0xc8]
+          tilemovcol tmm1, zmm16, edx
+
+// CHECK: top2bf16ps tmm7, zmm30, zmm31
+// CHECK: encoding: [0x62,0x92,0x06,0x40,0x5c,0xfe]
+          top2bf16ps tmm7, zmm30, zmm31
+
+// CHECK: top4busd tmm1, zmm31, zmm15
+// CHECK: encoding: [0x62,0x92,0x05,0x48,0x5e,0xcf]
+          top4busd tmm1, zmm31, zmm15
+
+// CHECK: top4bssd tmm1, zmm15, zmm31
+// CHECK: encoding: [0x62,0xd2,0x07,0x40,0x5e,0xcf]
+          top4bssd tmm1, zmm15, zmm31
+
+// CHECK: top4bsud tmm1, zmm16, zmm0
+// CHECK: encoding: [0x62,0xb2,0x7e,0x48,0x5e,0xc8]
+          top4bsud tmm1, zmm16, zmm0

@@ -28660,8 +28660,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     // ACE Tile Movement Intrinsics - handle both immediate and register index
     // forms using a single intrinsic. Check if index is constant to select
     // the appropriate instruction form.
-    case Intrinsic::x86_tilesetrow:
-    case Intrinsic::x86_tilesetcol: {
+    case Intrinsic::x86_tilemovrow_set:
+    case Intrinsic::x86_tilemovcol_set: {
       SDLoc DL(Op);
       SDValue Chain = Op.getOperand(0);
       unsigned TileID = Op.getConstantOperandVal(2);
@@ -28669,7 +28669,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       SDValue Idx = Op.getOperand(4);
 
       unsigned PseudoImm, PseudoReg;
-      if (IntNo == Intrinsic::x86_tilesetrow) {
+      if (IntNo == Intrinsic::x86_tilemovrow_set) {
         PseudoImm = X86::PTILEMOVROW;
         PseudoReg = X86::PTILEMOVROW_REG;
       } else {
@@ -39516,17 +39516,12 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       break;
     }
     // These instructions: TILE dst (rw), ZMM src1, ZMM src2
-    // The pseudo has: u8imm dst, u8imm src1, u8imm src2
-    // src1 and src2 are ZMM register indices (0-31)
+    // The pseudo has: u8imm dst, VR512 src1, VR512 src2
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
-    unsigned Src1Imm = MI.getOperand(1).getImm();
-    unsigned Src2Imm = MI.getOperand(2).getImm();
-    assert(Src1Imm < 32 && "Illegal ZMM register index");
-    assert(Src2Imm < 32 && "Illegal ZMM register index");
     BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
         .addReg(DstReg, RegState::Undef)
-        .addReg(X86::ZMM0 + Src1Imm)
-        .addReg(X86::ZMM0 + Src2Imm);
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(MI.getOperand(2).getReg());
     MI.eraseFromParent();
     return BB;
   }
@@ -39557,15 +39552,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     }
     // These instructions: TILE dst (rw), ZMM src1, ZMM src2, imm8
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
-    unsigned Src1Imm = MI.getOperand(1).getImm();
-    unsigned Src2Imm = MI.getOperand(2).getImm();
     unsigned Imm = MI.getOperand(3).getImm();
-    assert(Src1Imm < 32 && "Illegal ZMM register index");
-    assert(Src2Imm < 32 && "Illegal ZMM register index");
     BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
         .addReg(DstReg, RegState::Undef)
-        .addReg(X86::ZMM0 + Src1Imm)
-        .addReg(X86::ZMM0 + Src2Imm)
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(MI.getOperand(2).getReg())
         .addImm(Imm);
     MI.eraseFromParent();
     return BB;

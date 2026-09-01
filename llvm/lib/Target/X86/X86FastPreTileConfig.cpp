@@ -226,8 +226,12 @@ void X86FastPreTileConfigImpl::spill(MachineBasicBlock::iterator Before,
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
 
-  // ACE v1 doesn't have TILESTORED - use TILEMOVROW row-by-row
-  if (ST->hasACEV1() && !ST->hasAMXTILE()) {
+  // ACE configures palette 2, which has no TILESTORED - use TILEMOVROW
+  // row-by-row through a scratch ZMM.
+  // FIXME: This defines the tile and the scratch register once per row, which
+  // is not valid SSA. X86VolatileTileData also still emits the AMX load/store
+  // intrinsics at -O0, so the ACE -O0 path needs both fixed together.
+  if (ST->hasACEV1()) {
     const DebugLoc &DL = Before->getDebugLoc();
     Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
 
@@ -235,14 +239,14 @@ void X86FastPreTileConfigImpl::spill(MachineBasicBlock::iterator Before,
     const unsigned RowSize = 64;
 
     for (unsigned Row = 0; Row < NumRows; ++Row) {
-      // TILEMOVROW zmm, tmm, imm8 (read from tile)
-      // Only kill src on the last row read
+      // tilemovrow $row, %tmm, %zmm
+      // Only kill src on the last row read.
       bool KillSrcNow = (Row == NumRows - 1) && Kill;
       BuildMI(*MBB, Before, DL, TII->get(X86::TILEMOVROWrti), ScratchZMM)
           .addReg(VirtReg, getKillRegState(KillSrcNow))
           .addImm(Row);
 
-      // VMOVUPS [stack + row*64], zmm
+      // vmovups %zmm, row*64(%sp)
       MachineInstrBuilder MIB =
           BuildMI(*MBB, Before, DL, TII->get(X86::VMOVUPSZmr));
       addFrameReference(MIB, FI, Row * RowSize);
@@ -280,8 +284,10 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
   else
     TileReg = MRI->createVirtualRegister(&RC);
 
-  // ACE v1 doesn't have TILELOADD - use TILEMOVROW row-by-row
-  if (ST->hasACEV1() && !ST->hasAMXTILE()) {
+  // ACE configures palette 2, which has no TILELOADD - use TILEMOVROW
+  // row-by-row through a scratch ZMM.
+  // FIXME: See the corresponding comment in spill().
+  if (ST->hasACEV1()) {
     const DebugLoc &DL = UseMI->getDebugLoc();
     Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
 
@@ -289,12 +295,12 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
     const unsigned RowSize = 64;
 
     for (unsigned Row = 0; Row < NumRows; ++Row) {
-      // VMOVUPS zmm, [stack + row*64]
+      // vmovups row*64(%sp), %zmm
       MachineInstrBuilder MIB = BuildMI(*UseMI->getParent(), UseMI, DL,
                                         TII->get(X86::VMOVUPSZrm), ScratchZMM);
       addFrameReference(MIB, FI, Row * RowSize);
 
-      // TILEMOVROW tmm, zmm, imm8 (write to tile)
+      // tilemovrow $row, %zmm, %tmm
       BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::TILEMOVROWri),
               TileReg)
           .addReg(ScratchZMM, RegState::Kill)
