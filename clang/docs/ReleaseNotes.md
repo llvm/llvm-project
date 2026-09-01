@@ -454,6 +454,12 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses more details when a constraint evaluates to false.
 
+- `-Wpointer-arith` no longer reports subtraction of pointers to a variably
+  modified type, such as `int[n]`, as a subtraction of pointers to a type of
+  zero size, unless the size is provably zero: a zero-sized base element or a
+  dimension that is a zero integer constant, as in `struct Empty vla[n]` or
+  `int vla[n][0]`. (#GH28328)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
