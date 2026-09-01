@@ -287,7 +287,7 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
                                                  ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
-      .addTextureLoadMethods(Dim, IsArray)
+      .addRWTextureLoadMethods(Dim, IsArray)
       .addArraySubscriptOperators(Dim, IsArray)
       .addGetDimensionsMethods(Dim)
       .addDefaultHandleConstructor()

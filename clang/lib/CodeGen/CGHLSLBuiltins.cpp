@@ -804,21 +804,30 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_resource_load_level: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *CoordLODOp = EmitScalarExpr(E->getArg(1));
-
-    auto *CoordLODVecTy = cast<llvm::FixedVectorType>(CoordLODOp->getType());
-    unsigned NumElts = CoordLODVecTy->getNumElements();
-    assert(NumElts >= 2 && "CoordLOD must have at least 2 elements");
-
-    // Split CoordLOD into Coord and LOD
-    SmallVector<int, 4> Mask;
-    for (unsigned I = 0; I < NumElts - 1; ++I)
-      Mask.push_back(I);
-
-    Value *CoordOp =
-        Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
-    Value *LODOp =
-        Builder.CreateExtractElement(CoordLODOp, NumElts - 1, "hlsl.load.lod");
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
+
+    Value *CoordOp = nullptr;
+    Value *LODOp = nullptr;
+    if (RT->getAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV) {
+      // A UAV descriptor binds a single mip slice, so a RWTexture location is
+      // all coordinate and there is no mip level to select.
+      CoordOp = CoordLODOp;
+      LODOp = llvm::PoisonValue::get(Int32Ty);
+    } else {
+      auto *CoordLODVecTy = cast<llvm::FixedVectorType>(CoordLODOp->getType());
+      unsigned NumElts = CoordLODVecTy->getNumElements();
+      assert(NumElts >= 2 && "CoordLOD must have at least 2 elements");
+
+      // Split CoordLOD into Coord and LOD
+      SmallVector<int, 4> Mask;
+      for (unsigned I = 0; I < NumElts - 1; ++I)
+        Mask.push_back(I);
+
+      CoordOp =
+          Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
+      LODOp = Builder.CreateExtractElement(CoordLODOp, NumElts - 1,
+                                           "hlsl.load.lod");
+    }
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
