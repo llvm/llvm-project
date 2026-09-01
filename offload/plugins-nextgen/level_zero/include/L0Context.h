@@ -49,8 +49,8 @@ public:
 
   [[nodiscard]]
   bool available() const {
-    if (UsesFuncPtr)
-      return FuncPtr != nullptr;
+    if (FuncPtr != nullptr)
+      return true;
 
     return api_helper::canCall<Fn>();
   }
@@ -61,13 +61,8 @@ public:
   decltype(auto) operator()(Args &&...ArgsList) const {
     // Need to cast the type to avoid mismatch of return type deduction
     using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
-    if (UsesFuncPtr) {
-      if (FuncPtr == nullptr)
-        return static_cast<ReturnTy>(UnsupportedValue);
-
-      auto Result = FuncPtr(std::forward<Args>(ArgsList)...);
-      return Result;
-    }
+    if (FuncPtr != nullptr)
+      return FuncPtr(std::forward<Args>(ArgsList)...);
 
     if (!api_helper::canCall<Fn>())
       return static_cast<ReturnTy>(UnsupportedValue);
@@ -89,12 +84,10 @@ public:
     if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
       return false;
 
-    UsesFuncPtr = true;
     return true;
   }
 
 private:
-  bool UsesFuncPtr = false;
   decltype(Fn) FuncPtr = nullptr;
 };
 
