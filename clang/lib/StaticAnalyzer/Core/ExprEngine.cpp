@@ -1135,7 +1135,7 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call PreVisit checkers
   // Currently the engine does not call PostVisit checkers when
-  // lambda inlining is disabled, so K == PostVisiKind
+  // lambda inlining is disabled, so K == PostVisitKind
   // cannot be returned here.
   case Stmt::LambdaExprClass:
     return false;
