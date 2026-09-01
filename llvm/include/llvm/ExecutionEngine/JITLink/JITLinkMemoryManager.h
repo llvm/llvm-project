@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINKMEMORYMANAGER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
@@ -376,17 +377,94 @@ private:
 };
 
 /// A JITLinkMemoryManager that allocates in-process memory.
+///
+/// All memory this manager ever hands out is carved from a single, fixed
+/// address-space reservation that it makes once, lazily, the first time it's
+/// needed. Slabs -- and the chunks and segments within them, see below -- are
+/// logical sub-ranges of that one reservation rather than separate OS
+/// mappings of their own. This matters beyond bookkeeping convenience: some
+/// platforms need every piece of code a process JITs, for the lifetime of the
+/// session, to stay within a fixed distance of a single early address (on
+/// Darwin, compact-unwind info can only encode addresses within 2^32 of a
+/// fixed base -- see CompactUnwindSupport.h and MachOPlatform's use of
+/// '__jitlink$libunwind_dso_base'). Carving everything out of one reservation
+/// guarantees that no matter how many slabs are created and released over a
+/// long-running session, nothing ever ends up further from the start of the
+/// reservation than the reservation is wide -- a guarantee that placement
+/// hints passed to individual OS mapping calls cannot provide, since such
+/// hints are advisory and may simply be ignored (as they typically are on
+/// Darwin for anonymous mappings).
+///
+/// Within the reservation, memory is handed out from slabs, which are in turn
+/// striped between AllocGroups at chunk granularity. Each chunk of a slab is
+/// only ever used by a single AllocGroup, so that segments with matching
+/// memory protections end up next to one another rather than interleaved with
+/// segments carrying other protections. This keeps the number of distinct
+/// memory mappings -- and hence the size of the OS page tables -- low: without
+/// striping, linking many objects produces a layout like
+///
+///   |R--|R-X|RW-|R--|R-X|RW-|R--|R-X|RW-|...
+///
+/// where every segment needs its own mapping, whereas striping produces
+///
+///   |R-X|R-X|R-X|...|R--|RW-|R--|R--|RW-|...
+///
+/// where adjacent segments with matching protections can share one.
+/// Executable segments are allocated from the bottom of each slab and
+/// non-executable ones from the top, so that (in the common case where a
+/// slab's chunks aren't exhausted) all executable memory is contiguous.
+///
+/// All segments for any one LinkGraph are allocated from a single slab, so the
+/// slab size bounds the distance between any two blocks in a graph. It must
+/// therefore be kept small enough to satisfy the range requirements of the
+/// relocations that JITLink applies without indirection (e.g. 32-bit
+/// PC-relative references from code to read-only data).
 class LLVM_ABI InProcessMemoryManager : public JITLinkMemoryManager {
 public:
   class IPInFlightAlloc;
 
+  /// Slab allocation parameters.
+  struct SlabOptions {
+    /// The size of each slab carved out of the reservation. Since all
+    /// segments for a single LinkGraph are allocated from one slab this also
+    /// bounds the distance between any two blocks in a graph.
+    ///
+    /// Slabs larger than this may still be created to hold graphs that don't
+    /// fit in a slab of this size.
+    uint64_t SlabSize = 0;
+
+    /// The granularity at which slabs are striped between AllocGroups. No
+    /// chunk is ever shared by two different AllocGroups.
+    uint64_t ChunkSize = 0;
+
+    /// The size of the single address-space reservation that all of this
+    /// manager's slabs are carved out of. This bounds the distance between
+    /// any two pieces of memory this manager ever hands out, for the whole
+    /// lifetime of the manager -- see the class comment for why that matters.
+    /// Allocations that would need more room than is left in the reservation
+    /// fail outright rather than falling back to a separate OS mapping.
+    uint64_t ReservationSize = 0;
+
+    /// Returns default slab options for the given page size.
+    static SlabOptions defaults(uint64_t PageSize);
+  };
+
   /// Attempts to auto-detect the host page size.
   static Expected<std::unique_ptr<InProcessMemoryManager>> Create();
 
-  /// Create an instance using the given page size.
-  InProcessMemoryManager(uint64_t PageSize) : PageSize(PageSize) {
-    assert(isPowerOf2_64(PageSize) && "PageSize must be a power of 2");
-  }
+  /// Attempts to auto-detect the host page size, and uses the given slab
+  /// options.
+  static Expected<std::unique_ptr<InProcessMemoryManager>>
+  Create(SlabOptions SO);
+
+  /// Create an instance using the given page size and default slab options.
+  InProcessMemoryManager(uint64_t PageSize)
+      : InProcessMemoryManager(PageSize, SlabOptions::defaults(PageSize)) {}
+
+  /// Create an instance using the given page size and slab options.
+  InProcessMemoryManager(uint64_t PageSize, SlabOptions SO);
+
+  ~InProcessMemoryManager() override;
 
   void allocate(const JITLinkDylib *JD, LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;
@@ -401,18 +479,50 @@ public:
   using JITLinkMemoryManager::deallocate;
 
 private:
+  struct Reservation;
+  struct Slab;
+
+  /// A range of memory allocated from a slab.
+  struct SlabRange {
+    Slab *S = nullptr;
+    uint64_t Offset = 0;
+    uint64_t Size = 0;
+    orc::AllocGroup AG;
+
+    char *base() const;
+  };
+
+  using SlabRangeList = SmallVector<SlabRange, 4>;
+
   // FIXME: Use an in-place array instead of a vector for DeallocActions.
   //        There shouldn't need to be a heap alloc for this.
   struct FinalizedAllocInfo {
-    sys::MemoryBlock StandardSegments;
+    SlabRangeList StandardSegments;
     std::vector<orc::shared::WrapperFunctionCall> DeallocActions;
   };
 
+  /// Reserve a new slab of at least MinSize bytes from the reservation,
+  /// creating the reservation itself first if this is the first slab it's
+  /// ever been asked for. Must be called with SlabsMutex held.
+  Expected<Slab *> createSlab(uint64_t MinSize);
+
+  /// Allocate one range per segment in BL, all from the same slab.
+  Expected<SlabRangeList> allocateSegments(BasicLayout &BL);
+
+  /// Return the given ranges to their slabs. If ResetProtections is true then
+  /// read/write protections are restored before the memory is made available
+  /// for reuse; ranges whose protections can't be reset are left allocated.
+  Error freeSegments(MutableArrayRef<SlabRange> Ranges, bool ResetProtections);
+
   FinalizedAlloc createFinalizedAlloc(
-      sys::MemoryBlock StandardSegments,
+      SlabRangeList StandardSegments,
       std::vector<orc::shared::WrapperFunctionCall> DeallocActions);
 
   uint64_t PageSize;
+  SlabOptions SlabOpts;
+  std::mutex SlabsMutex;
+  std::unique_ptr<Reservation> TheReservation;
+  std::vector<std::unique_ptr<Slab>> Slabs;
   std::mutex FinalizedAllocsMutex;
   RecyclingAllocator<BumpPtrAllocator, FinalizedAllocInfo> FinalizedAllocInfos;
 };
