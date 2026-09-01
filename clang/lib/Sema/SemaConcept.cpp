@@ -521,7 +521,7 @@ public:
           static_cast<const FoldExpandedConstraint &>(Constraint).getPattern());
       break;
     case NormalizedConstraint::ConstraintKind::Compound:
-      llvm_unreachable("huh?");
+      llvm_unreachable("Cannot hash a compound constraint");
     }
 
     if (!Constraint.hasParameterMapping()) {
