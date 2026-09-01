@@ -4518,52 +4518,43 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
-    MachineOperand ImmOp = MachineOperand::CreateImm(0);
-    unsigned FMAMKOpc = getNewFMAMKInst(ST, Opc);
-    unsigned FMAAKOpc = getNewFMAAKInst(ST, Opc);
-
-    struct CandidateInfo {
-      const MachineOperand *ImmSrc; // Operand to check for immediate
-      unsigned Opc;                 // Target opcode (FMAMK or FMAAK)
-      const MachineOperand *Src0;   // src0 for the new instruction
-      const MachineOperand *Src1;   // src1 for the new instruction
-      const MachineOperand *Src2;   // src2 for the new instruction
-    };
-
-    CandidateInfo AllCandidates[] = {
-        {Src2, FMAAKOpc, Src0, Src1, &ImmOp},
-        {Src1, FMAMKOpc, Src0, &ImmOp, Src2},
-        {Src0, FMAMKOpc, Src1, &ImmOp, Src2},
-    };
-
-    ArrayRef<CandidateInfo> Candidates = AllCandidates;
-    if (Src0Literal)
-      Candidates = Candidates.drop_front(2);
-    if (!isOperandLegal(
-            MI, AMDGPU::getNamedOperandIdx(FMAMKOpc, AMDGPU::OpName::src0),
-            Src1))
-      Candidates = Candidates.drop_back();
-
-    MachineInstr *DefMI = nullptr;
     const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-    std::optional<int64_t> ImmOpt;
 
-    for (auto &Cand : Candidates) {
-      if (pseudoToMCOpcode(Cand.Opc) == -1)
+    for (const MachineOperand **SrcX : {&Src2, &Src1, &Src0}) {
+      unsigned NewOpc =
+          (*SrcX == Src2) ? getNewFMAAKInst(ST, Opc) : getNewFMAMKInst(ST, Opc);
+      if (pseudoToMCOpcode(NewOpc) == -1)
         continue;
 
-      DefMI = nullptr;
-      ImmOpt = getImmOrMaterializedImm(MRI, *Cand.ImmSrc, &DefMI);
+      MachineInstr *DefMI = nullptr;
+      std::optional<int64_t> ImmOpt =
+          getImmOrMaterializedImm(MRI, **SrcX, &DefMI);
       if (!ImmOpt)
         continue;
 
-      ImmOp.setImm(*ImmOpt);
-      MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(Cand.Opc))
+      MachineOperand ImmOp = MachineOperand::CreateImm(*ImmOpt);
+      if (*SrcX == Src0) {
+        // Src0 has an immediate value, but an immediate cannot be in position
+        // src0. Swap Src0 and Src1's positions.
+        if (!isOperandLegal(
+                MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
+                Src1))
+          continue;
+        Src0 = Src1;
+        Src1 = &ImmOp;
+      } else {
+        if (Src0Literal)
+          continue;
+        *SrcX = &ImmOp;
+      }
+
+      MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                 .add(*Dst)
-                .add(*Cand.Src0)
-                .add(*Cand.Src1)
-                .add(*Cand.Src2)
+                .add(*Src0)
+                .add(*Src1)
+                .add(*Src2)
                 .setMIFlags(MI.getFlags());
+
       U.RemoveMIUse = DefMI;
       return MIB;
     }
