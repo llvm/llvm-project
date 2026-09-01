@@ -80,7 +80,7 @@ namespace {
 // bit-field access unit, a record holding an empty-for-ABI member that
 // occupies bytes or a zero-sized one off its own alignment, a union no member
 // of which spans its declared size, and a union with an empty-record member
-// are reported NYI by classifyX86_64Function so an unsupported signature
+// are reported NYI by classifyAbiSignature so an unsupported signature
 // fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
@@ -142,7 +142,7 @@ static bool reachesNamedBitFieldUnit(mlir::Type ty) {
 /// whose members are all themselves supported, or an array of a supported
 /// element type.  Also a `_Complex`, or a fixed-width vector, of a supported
 /// element type.  Everything else is reported NYI at the reject() choke point
-/// in classifyX86_64Function.
+/// in classifyAbiSignature.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -314,7 +314,7 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
 
-/// Map a CIR type to an llvm::abi::Type.  classifyX86_64Function pre-filters
+/// Map a CIR type to an llvm::abi::Type.  classifyAbiSignature pre-filters
 /// the signature, so only the scalar and struct/array types handled here can
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
@@ -442,7 +442,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
-            "mapCIRType: type not pre-filtered by classifyX86_64Function");
+            "mapCIRType: type not pre-filtered by classifyAbiSignature");
       });
 }
 
@@ -535,20 +535,31 @@ static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
   return llvm::abi::RequiredArgs(fnTy.getNumInputs());
 }
 
-/// Classify an x86_64 SysV signature (return type + argument types) using the
-/// LLVM ABI library.  Shared by the cir.func path, the variadic-call path and
-/// the indirect-call path (the latter classifies from the callee function
+/// Map a cir.func calling convention to the llvm::CallingConv the ABI
+/// classifier keys on.  Only the AMDGPU kernel convention changes
+/// classification today; every other convention is classified as C.
+static llvm::CallingConv::ID abiCallingConv(cir::CallingConv cc) {
+  if (cc == cir::CallingConv::AMDGPUKernel)
+    return llvm::CallingConv::AMDGPU_KERNEL;
+  return llvm::CallingConv::C;
+}
+
+/// Classify a signature (return type + argument types) for \p targetInfo using
+/// the LLVM ABI library.  Shared by the cir.func path, the variadic-call path
+/// and the indirect-call path (the latter classifies from the callee function
 /// pointer's pointee FuncType).  \p required marks where the declared
 /// parameters in \p inputs end.  The classifier treats every argument past that
-/// point as passed through an ellipsis.  Returns std::nullopt and emits an NYI
-/// error via \p emitError if the signature uses a type the bridge does not
-/// handle yet.
-static std::optional<FunctionClassification> classifyX86_64Signature(
-    mlir::Type retCIR, mlir::TypeRange inputs, llvm::abi::RequiredArgs required,
-    MLIRContext *ctx, const DataLayout &dl,
-    mlir::abi::ABITypeMapper &typeMapper,
-    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+/// point as passed through an ellipsis.  \p callConv selects the ABI convention
+/// (e.g. AMDGPU_KERNEL), which some targets classify differently.  Returns
+/// std::nullopt and emits an NYI error via \p emitError if the signature uses a
+/// type the bridge does not handle yet.
+static std::optional<FunctionClassification>
+classifyAbiSignature(mlir::Type retCIR, mlir::TypeRange inputs,
+                     llvm::abi::RequiredArgs required, MLIRContext *ctx,
+                     const DataLayout &dl, mlir::abi::ABITypeMapper &typeMapper,
+                     const llvm::abi::TargetInfo &targetInfo,
+                     llvm::CallingConv::ID callConv, ModuleOp modOp,
+                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(retCIR && "signature return type must be non-null");
   assert((!required.allowsOptionalArgs() ||
           required.getNumRequiredArgs() <= inputs.size()) &&
@@ -558,9 +569,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   auto reject = [&](mlir::Type t) -> bool {
     if (isSupportedType(t, dl))
       return false;
-    emitError()
-        << "x86_64 calling-convention lowering not yet implemented for type "
-        << t;
+    emitError() << "calling-convention lowering not yet implemented for type "
+                << t;
     return true;
   };
   if (!voidRet && reject(retCIR))
@@ -576,15 +586,15 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
-  std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
-      llvm::CallingConv::C, retAbi, argAbi, required);
+  std::unique_ptr<llvm::abi::FunctionInfo> fi =
+      llvm::abi::FunctionInfo::create(callConv, retAbi, argAbi, required);
   targetInfo.computeInfo(*fi);
 
   // convertABIArgInfo returns nullopt when the classifier picks a coercion this
   // bridge cannot represent.
   auto nyiCoercion = [&](mlir::Type t) {
-    emitError() << "x86_64 calling-convention lowering not yet "
-                   "implemented for the ABI coercion of type "
+    emitError() << "calling-convention lowering not yet implemented for the "
+                   "ABI coercion of type "
                 << t;
   };
 
@@ -636,19 +646,19 @@ static llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
   return avx ? std::max(base, llvm::abi::X86AVXABILevel::AVX) : base;
 }
 
-/// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
+/// Classify a cir.func for \p targetInfo using the LLVM ABI library.  Returns
 /// std::nullopt and emits an NYI error if the signature uses a type the bridge
 /// does not handle yet.
 static std::optional<FunctionClassification>
-classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
-                       mlir::abi::ABITypeMapper &typeMapper,
-                       const llvm::abi::TargetInfo &targetInfo,
-                       ModuleOp modOp) {
+classifyAbiFunction(cir::FuncOp func, const DataLayout &dl,
+                    mlir::abi::ABITypeMapper &typeMapper,
+                    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp) {
   cir::FuncType fnTy = func.getFunctionType();
-  return classifyX86_64Signature(fnTy.getReturnType(), fnTy.getInputs(),
-                                 requiredArgs(fnTy), func->getContext(), dl,
-                                 typeMapper, targetInfo, modOp,
-                                 [&]() { return func.emitOpError(); });
+  return classifyAbiSignature(fnTy.getReturnType(), fnTy.getInputs(),
+                              requiredArgs(fnTy), func->getContext(), dl,
+                              typeMapper, targetInfo,
+                              abiCallingConv(func.getCallingConv()), modOp,
+                              [&]() { return func.emitOpError(); });
 }
 
 /// Classify a call that passes arguments through an ellipsis.  The callee's
@@ -658,17 +668,19 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
 /// small struct is passed in registers early in the list and in memory once
 /// the integer registers are gone.  Classifying from the call's operands
 /// rather than the callee's signature is what makes that accounting right.
-static std::optional<FunctionClassification> classifyX86_64VariadicCall(
-    cir::CIRCallOpInterface call, cir::FuncType calleeTy, const DataLayout &dl,
-    mlir::abi::ABITypeMapper &typeMapper,
-    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp) {
+static std::optional<FunctionClassification>
+classifyAbiVariadicCall(cir::CIRCallOpInterface call, cir::FuncType calleeTy,
+                        const DataLayout &dl,
+                        mlir::abi::ABITypeMapper &typeMapper,
+                        const llvm::abi::TargetInfo &targetInfo,
+                        llvm::CallingConv::ID callConv, ModuleOp modOp) {
   assert(calleeTy.isVarArg() &&
          "only a variadic callee can take more operands than it declares");
   Operation *op = call.getOperation();
-  return classifyX86_64Signature(
+  return classifyAbiSignature(
       calleeTy.getReturnType(), call.getArgOperands().getTypes(),
       requiredArgs(calleeTy), op->getContext(), dl, typeMapper, targetInfo,
-      modOp, [&]() { return op->emitOpError(); });
+      callConv, modOp, [&]() { return op->emitOpError(); });
 }
 
 #ifndef NDEBUG
@@ -810,10 +822,18 @@ void CallConvLoweringPass::runOnOperation() {
   static constexpr unsigned numAvxLevels =
       static_cast<unsigned>(llvm::abi::X86AVXABILevel::Last) + 1;
   bool isX86 = target == cir::CallConvTarget::X86_64;
-  std::optional<mlir::abi::ABITypeMapper> x86TypeMapper;
+  bool isAMDGPU = target == cir::CallConvTarget::AMDGPU;
+  // The x86_64 and AMDGPU drivers classify with the LLVM ABI library and share
+  // the type mapper; the test and classification-attr drivers do neither.
+  bool useAbiClassifier = isX86 || isAMDGPU;
+  std::optional<mlir::abi::ABITypeMapper> abiTypeMapper;
   std::array<std::unique_ptr<llvm::abi::TargetInfo>, numAvxLevels> x86Targets;
-  if (isX86)
-    x86TypeMapper.emplace(dl);
+  std::unique_ptr<llvm::abi::TargetInfo> amdgpuTarget;
+  if (useAbiClassifier)
+    abiTypeMapper.emplace(dl);
+  if (isAMDGPU)
+    amdgpuTarget =
+        llvm::abi::createAMDGPUTargetInfo(abiTypeMapper->getTypeBuilder());
   auto x86TargetFor =
       [&](llvm::abi::X86AVXABILevel level) -> const llvm::abi::TargetInfo & {
     assert(static_cast<unsigned>(level) < numAvxLevels &&
@@ -822,7 +842,7 @@ void CallConvLoweringPass::runOnOperation() {
         x86Targets[static_cast<unsigned>(level)];
     if (!slot)
       slot = llvm::abi::createX86_64TargetInfo(
-          x86TypeMapper->getTypeBuilder(), level,
+          abiTypeMapper->getTypeBuilder(), level,
           /*Has64BitPointers=*/true, x86AbiCompat);
     return *slot;
   };
@@ -832,6 +852,13 @@ void CallConvLoweringPass::runOnOperation() {
       return baseAvxLevel;
     return funcAvxLevel(func, baseAvxLevel);
   };
+  // The classifier to use for a function/call reached from \p func.  AMDGPU has
+  // a single classifier; x86_64 picks the one matching func's AVX level.
+  auto targetInfoFor = [&](cir::FuncOp func) -> const llvm::abi::TargetInfo & {
+    if (isAMDGPU)
+      return *amdgpuTarget;
+    return x86TargetFor(avxLevelFor(func));
+  };
 
   // Classify every cir.func up front.  No IR mutation happens here, so
   // later walks can consult any function's classification regardless of
@@ -840,9 +867,9 @@ void CallConvLoweringPass::runOnOperation() {
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
     std::optional<FunctionClassification> fc;
-    if (isX86)
-      fc = classifyX86_64Function(f, dl, *x86TypeMapper,
-                                  x86TargetFor(avxLevelFor(f)), moduleOp);
+    if (useAbiClassifier)
+      fc = classifyAbiFunction(f, dl, *abiTypeMapper, targetInfoFor(f),
+                               moduleOp);
     else
       fc = classifyFunction(f, dl, target, classificationAttr);
     if (!fc) {
@@ -879,11 +906,12 @@ void CallConvLoweringPass::runOnOperation() {
       return;
     callers[callee].push_back(op);
 
-    // Only the x86_64 driver classifies per call site.  Under the other
+    // Only the ABI-library drivers classify per call site.  Under the other
     // drivers the classification comes from a fixed per-function source, so
     // such a call stays short a classification and rewriteCallSite reports it.
     cir::FuncType calleeTy = callee.getFunctionType();
-    if (!isX86 || call.getNumArgOperands() <= calleeTy.getNumInputs())
+    if (!useAbiClassifier ||
+        call.getNumArgOperands() <= calleeTy.getNumInputs())
       return;
     // A callee declared without a prototype also takes more operands than it
     // declares, and the verifier allows it.  Those extra arguments are named
@@ -900,9 +928,9 @@ void CallConvLoweringPass::runOnOperation() {
     // Classic instead arranges every call site from the caller and reports a
     // caller whose level disagrees with its callee in checkFunctionCallABI,
     // which has no equivalent here yet.
-    std::optional<FunctionClassification> fc =
-        classifyX86_64VariadicCall(call, calleeTy, dl, *x86TypeMapper,
-                                   x86TargetFor(avxLevelFor(callee)), moduleOp);
+    std::optional<FunctionClassification> fc = classifyAbiVariadicCall(
+        call, calleeTy, dl, *abiTypeMapper, targetInfoFor(callee),
+        abiCallingConv(callee.getCallingConv()), moduleOp);
     if (!fc) {
       anyFailed = true;
       return;
@@ -995,13 +1023,13 @@ void CallConvLoweringPass::runOnOperation() {
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       // A callee resolved at run time carries no features of its own, so the
       // level comes from the function containing the call, which is the
-      // declaration classic arranges every call site from.
-      if (isX86)
-        return classifyX86_64Signature(
+      // declaration classic arranges every call site from.  An indirect callee
+      // is an ordinary function pointer, so it uses the C convention.
+      if (useAbiClassifier)
+        return classifyAbiSignature(
             funcTy.getReturnType(), argTypes, requiredArgs(funcTy), ctx, dl,
-            *x86TypeMapper,
-            x86TargetFor(avxLevelFor(c->getParentOfType<cir::FuncOp>())),
-            moduleOp, [&]() { return c->emitOpError(); });
+            *abiTypeMapper, targetInfoFor(c->getParentOfType<cir::FuncOp>()),
+            llvm::CallingConv::C, moduleOp, [&]() { return c->emitOpError(); });
       return withReturnVoidness(
           mlir::abi::test::classify(argTypes, funcTy.getReturnType(), dl),
           funcTy.getReturnType());
