@@ -40,10 +40,10 @@ public:
 // directly - either through dlopen or directly linked (see L0DynWrapper.cpp).
 // It is also possible to call through an internal function pointer, which
 // can be populated using `tryLoadingExperimental` using
-// `zeDriverGetExtensionFunctionAddress` or simple set method
+// `zeDriverGetExtensionFunctionAddress`.
 // `addFallbackFunction`. It was implemented in order to support different
 // versions of level zero software stack and different kinds of drivers.
-template <auto Fn, auto UnsupportedValue> class ZeDispatcher {
+template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE> class ZeDispatcher {
 public:
   constexpr ZeDispatcher() = default;
 
@@ -206,13 +206,11 @@ public:
 
   std::atomic<bool> AppendLaunchKernelSupported = true;
 
-  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments,
-               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;
-  ZeDispatcher<zexKernelGetArgumentSize, ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zexKernelGetArgumentSize>
       KernelGetArgumentSize;
-  ZeDispatcher<zeCommandListAppendHostFunction,
-               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zeCommandListAppendHostFunction>
       CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
 };
