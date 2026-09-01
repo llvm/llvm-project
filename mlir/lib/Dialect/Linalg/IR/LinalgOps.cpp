@@ -2112,6 +2112,9 @@ struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
     if (reduceOp.getNumResults() != 1 || !reduceOp.hasPureTensorSemantics())
       return failure();
 
+    assert(reduceOp.getInputs().size() == 1 &&
+        "expected one input for a single-result tensor reduce");
+
     auto broadcastOp =
         reduceOp.getInputs().front().getDefiningOp<linalg::BroadcastOp>();
     if (!broadcastOp || !broadcastOp.hasPureTensorSemantics())
