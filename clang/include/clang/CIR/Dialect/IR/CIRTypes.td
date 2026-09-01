@@ -93,6 +93,17 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// Returns a maximum bitwidth of cir::IntType.
     /// Matches llvm::IntegerType::MAX_INT_BITS (1 << 23).
     static unsigned maxBitwidth() { return (1 << 23); }
+
+    /// The bit-width of this integer type when stored via LLVM-IR. This
+    /// is just sizeof(ty)*CHAR_BIT for all but _BitInt, which is represented as
+    /// widened for layout.
+    unsigned getStorageTypeWidth(const mlir::DataLayout &dataLayout) const;
+
+    /// Like getStorageTypeWidth, this gets the alignment of the type when
+    /// lowered to LLVM-IR for the purposes of ensuring we get layout correct
+    /// for record types (particularly around _BitInt, which has a different
+    /// alignment in LLVM-IR vs the FE).
+    uint64_t getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const;
   }];
   let genVerifyDecl = 1;
 }
@@ -387,6 +398,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     the base object offset value from the vtable, or the type information
     entry for an object.
     TODO: We should have special operations to do that too.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CUDADeviceTextureType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceTextureType :
+    CIR_Type<"CUDADeviceTexture", "cuda_texture"> {
+  let summary = "CUDA device texture reference type";
+  let description = [{
+    `!cir.cuda_texture` represents a CUDA built-in texture reference in CIR.
+    The type preserves texture semantics at the CIR level and is lowered to
+    the target device representation during lowering to LLVM IR.
   }];
 }
 
@@ -1037,7 +1062,8 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 

@@ -255,6 +255,19 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  // MOVUPS/MOVAPS takes 1 less byte of code size. Only replace when
+  // there is no move domain-delay penalty on the target, or -Oz is set.
+  auto ProcessMOVPDToMOVPS = [&](unsigned NewOpc) -> bool {
+    assert(NewOpcPreferable(NewOpc) &&
+           "MOVUPS/MOVAPS should be preferred over MOVUPD/MOVAPD");
+    if (!ST->hasNoDomainDelayMov() && !MF.getFunction().hasMinSize())
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    MI.setDesc(TII->get(NewOpc));
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   // If we're permuting the lower halves of the 256-bit registers, use a
   // subvector insertion instead.
   auto ProcessVPERM2x128ToVINSERT128 = [&](unsigned InsertOpc) -> bool {
@@ -697,6 +710,18 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessShiftLeftToAdd(X86::VPADDQZ256rr);
   case X86::VPSLLQZri:
     return ProcessShiftLeftToAdd(X86::VPADDQZrr);
+  case X86::MOVUPDrr:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrr);
+  case X86::MOVUPDrm:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrm);
+  case X86::MOVUPDmr:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSmr);
+  case X86::MOVAPDrr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrr);
+  case X86::MOVAPDrm:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrm);
+  case X86::MOVAPDmr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSmr);
 
   default:
     return false;

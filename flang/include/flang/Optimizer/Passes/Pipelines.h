@@ -136,6 +136,16 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 /// e.g. --mlir-print-ir-before=<pass> and similar.
 void registerFlangPipelinePasses();
 
+/// Create a pass pipeline for default FIR optimizations that run before CFG
+/// conversion.
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
+/// Create a pass pipeline for default FIR optimizations that run after CFG
+/// conversion.
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
