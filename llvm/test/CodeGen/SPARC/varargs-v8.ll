@@ -22,3 +22,39 @@ entry:
   %add3 = add nsw i32 %1, %conv1
   ret i32 %add3
 }
+
+;; The 32-bit ABI passes a quad-precision value by invisible reference, so the
+;; slot holds a pointer: advance the list by a word, load the pointer, then load
+;; the value through it.
+define fp128 @test_f128(ptr %va) nounwind {
+; CHECK-LABEL: test_f128:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    save %sp, -120, %sp
+; CHECK-NEXT:    add %i0, 4, %i1
+; CHECK-NEXT:    st %i1, [%fp+-4]
+; CHECK-NEXT:    ld [%i0], %i0
+; CHECK-NEXT:    ld [%i0+4], %i1
+; CHECK-NEXT:    add %fp, -24, %i2
+; CHECK-NEXT:    or %i2, 4, %i2
+; CHECK-NEXT:    st %i1, [%i2]
+; CHECK-NEXT:    ld [%i0+12], %i1
+; CHECK-NEXT:    add %fp, -16, %i2
+; CHECK-NEXT:    or %i2, 4, %i2
+; CHECK-NEXT:    st %i1, [%i2]
+; CHECK-NEXT:    ld [%i0], %i1
+; CHECK-NEXT:    st %i1, [%fp+-24]
+; CHECK-NEXT:    ld [%i0+8], %i0
+; CHECK-NEXT:    ld [%fp+64], %i1
+; CHECK-NEXT:    st %i0, [%fp+-16]
+; CHECK-NEXT:    ldd [%fp+-24], %f0
+; CHECK-NEXT:    ldd [%fp+-16], %f2
+; CHECK-NEXT:    std %f0, [%i1]
+; CHECK-NEXT:    std %f2, [%i1+8]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    restore
+entry:
+  %va.addr = alloca ptr, align 4
+  store ptr %va, ptr %va.addr, align 4
+  %0 = va_arg ptr %va.addr, fp128
+  ret fp128 %0
+}

@@ -2738,7 +2738,8 @@ static SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG,
                       MachinePointerInfo(SV));
 }
 
-static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG,
+                          const SparcSubtarget &Subtarget) {
   SDNode *Node = Op.getNode();
   EVT VT = Node->getValueType(0);
   SDValue InChain = Node->getOperand(0);
@@ -2748,18 +2749,29 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Node);
   SDValue VAList =
       DAG.getLoad(PtrVT, DL, InChain, VAListPtr, MachinePointerInfo(SV));
+  // The 32-bit ABI passes a quad-precision value by invisible reference, so its
+  // slot holds a pointer to the value rather than the value itself. V9 passes
+  // it directly.
+  bool Indirect = !Subtarget.is64Bit() && VT == MVT::f128;
   // Increment the pointer, VAList, to the next vaarg.
+  unsigned ArgSize =
+      (Indirect ? PtrVT.getFixedSizeInBits() : VT.getFixedSizeInBits()) / 8;
   SDValue NextPtr = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
-                                DAG.getIntPtrConstant(VT.getSizeInBits()/8,
-                                                      DL));
+                                DAG.getIntPtrConstant(ArgSize, DL));
   // Store the incremented VAList to the legalized pointer.
   InChain = DAG.getStore(VAList.getValue(1), DL, NextPtr, VAListPtr,
                          MachinePointerInfo(SV));
-  // Load the actual argument out of the pointer VAList.
   // We can't count on greater alignment than the word size.
-  return DAG.getLoad(
-      VT, DL, InChain, VAList, MachinePointerInfo(),
-      Align(std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8));
+  Align Alignment =
+      Align(std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8);
+  if (Indirect) {
+    // Load the pointer out of the slot, then the value it addresses.
+    SDValue Ptr = DAG.getLoad(PtrVT, DL, InChain, VAList, MachinePointerInfo());
+    return DAG.getLoad(VT, DL, Ptr.getValue(1), Ptr, MachinePointerInfo(),
+                       Alignment);
+  }
+  // Load the actual argument out of the pointer VAList.
+  return DAG.getLoad(VT, DL, InChain, VAList, MachinePointerInfo(), Alignment);
 }
 
 static SDValue LowerSTACKADDRESS(SDValue Op, SelectionDAG &DAG,
@@ -3212,7 +3224,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG, *this, hasHardQuad, isV9, is64Bit);
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
-  case ISD::VAARG:              return LowerVAARG(Op, DAG);
+  case ISD::VAARG:
+    return LowerVAARG(Op, DAG, *Subtarget);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
                                                                Subtarget);
   case ISD::STACKADDRESS:
