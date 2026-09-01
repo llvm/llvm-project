@@ -23,8 +23,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <unordered_map>
+#include <utility>
 
 namespace llvm {
 
@@ -241,10 +243,15 @@ private:
   /// Used by non-relocation mode and for patched functions.
   void rewriteFunctionsInPlace(raw_fd_ostream &OS);
 
-  /// When --use-old-text reuses input file regions, zero the alignment
-  /// padding after BOLT-written text sections so the output does not retain
-  /// stale bytes from the input binary.
-  void zeroPaddingForReusedSections(raw_fd_ostream &OS);
+  /// Return the input file range [Start, End) that BOLT reuses for new
+  /// content (like with --use-old-text). Return std::nullopt when no input
+  /// region is being reused.
+  std::optional<std::pair<uint64_t, uint64_t>> getReusedInputFileRange() const;
+
+  /// When certain input file region is reused (like with --use-old-text),
+  /// overwrite every byte of that region not covered by newly written content
+  /// so the output does not retain stale bytes from the input binary.
+  void zeroStaleBytesInReusedRegion(raw_fd_ostream &OS);
 
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.

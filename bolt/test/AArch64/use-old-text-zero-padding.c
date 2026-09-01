@@ -30,6 +30,50 @@
 
 // PADDING: {{[0-9a-f]+}} 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
+// The new .text is aligned to --align-text, which can push it past the start
+// of the old .text and leave unused space in front of the new code. That space
+// is what is left of .bolt.org.text in the output, and it has to be zeroed.
+
+// Build a second copy that starts .text at an address which is not a multiple
+// of the --align-text used below, so BOLT has to skip past it. Functions are
+// padded to 256 bytes on input, which leaves enough room for the more compact
+// output plus the skipped bytes.
+
+// RUN: %clang %cflags -falign-functions=256 -fasynchronous-unwind-tables \
+// RUN:   -Wl,--section-start=.text=0x10100 %t/test.c -o %t/test.misaligned \
+// RUN:   -Wl,-q
+// RUN: llvm-bolt %t/test.misaligned -o %t/test.misaligned.bolt --use-old-text \
+// RUN:   --align-text=512
+
+// RUN: llvm-readelf -S %t/test.misaligned.bolt | sed 's/\[ *[0-9]*\]//' \
+// RUN:   | awk '$1==".bolt.org.text"{print $4, $5}' > %t/lead-loc
+// RUN: bash -c "read O S < %t/lead-loc; \
+// RUN:   od -A n -v -t x1 -N \$((0x\$S)) -j \$((0x\$O)) \
+// RUN:     %t/test.misaligned.bolt" \
+// RUN:   > %t/lead-bytes
+// RUN: FileCheck %s --check-prefix=LEADING-NONEMPTY --input-file=%t/lead-bytes
+// RUN: FileCheck %s --check-prefix=LEADING --input-file=%t/lead-bytes
+
+// LEADING-NONEMPTY: 00 00 00 00
+// LEADING-NOT: {{[^ 0]}}
+
+// --hot-functions-at-end packs the new code against the end of the old .text,
+// leaving the whole front of the reused region unused. Same requirement.
+
+// RUN: llvm-bolt %t/test -o %t/test.hfe --use-old-text --align-text=4 \
+// RUN:   --hot-functions-at-end
+
+// RUN: llvm-readelf -S %t/test.hfe | sed 's/\[ *[0-9]*\]//' \
+// RUN:   | awk '$1==".bolt.org.text"{print $4, $5}' > %t/hfe-loc
+// RUN: bash -c "read O S < %t/hfe-loc; \
+// RUN:   od -A n -v -t x1 -N \$((0x\$S)) -j \$((0x\$O)) %t/test.hfe" \
+// RUN:   > %t/hfe-bytes
+// RUN: FileCheck %s --check-prefix=HOTEND-NONEMPTY --input-file=%t/hfe-bytes
+// RUN: FileCheck %s --check-prefix=HOTEND --input-file=%t/hfe-bytes
+
+// HOTEND-NONEMPTY: 00 00 00 00
+// HOTEND-NOT: {{[^ 0]}}
+
 //--- script.ld
 SECTIONS {
   .rodata : { *(.rodata) *(.rodata.*) }

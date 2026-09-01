@@ -6762,45 +6762,84 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   }
 }
 
-void RewriteInstance::zeroPaddingForReusedSections(raw_fd_ostream &OS) {
-  // The output starts as a byte-for-byte copy of the input, so alignment
-  // padding after BOLT-written sections could retain stale data from the
-  // original binary. Zero the padding as if we were writing sections onto
-  // new file offset (i.e., not reusing old existing sections).
+std::optional<std::pair<uint64_t, uint64_t>>
+RewriteInstance::getReusedInputFileRange() const {
+  auto makeRange =
+      [this](uint64_t Start,
+             uint64_t Size) -> std::optional<std::pair<uint64_t, uint64_t>> {
+    const uint64_t End = std::min(Start + Size, FirstNonAllocatableOffset);
+    if (End <= Start)
+      return std::nullopt;
+    return std::make_pair(Start, End);
+  };
 
-  // Collect file offsets of all sections (allocatable and non-allocatable)
-  // that occupy file bytes.
-  SmallVector<uint64_t, 16> SectionStarts;
-  for (BinarySection &Section : BC->sections()) {
-    if (Section.isVirtual())
-      continue;
-    uint64_t Offset = Section.getOutputFileOffset();
-    if (!Offset)
-      Offset = Section.getInputFileOffset();
-    if (Offset)
-      SectionStarts.push_back(Offset);
-  }
-  llvm::sort(SectionStarts);
+  if (opts::UseOldText)
+    return makeRange(BC->OldTextSectionOffset, BC->OldTextSectionSize);
 
-  uint64_t SavedPos = OS.tell();
+  return std::nullopt;
+}
+
+void RewriteInstance::zeroStaleBytesInReusedRegion(raw_fd_ostream &OS) {
+  // The output starts as a byte-for-byte copy of the input, so every byte of a
+  // reused input region that the new layout does not cover would otherwise
+  // retain stale data from the original binary. Holes could appear on both
+  // sides of the new content:
+  //
+  //   * trailing - the new content is more compact than the input it replaces;
+  //
+  //   * leading  - the region does not start at the alignment boundary
+  //                required by the new code (--align-text), or the code was
+  //                packed against the end of the region
+  //                (--hot-functions-at-end).
+  //
+  // Overwrite all of them, as if the content had been written to a fresh file
+  // offset instead of onto existing sections.
+  std::optional<std::pair<uint64_t, uint64_t>> Range =
+      getReusedInputFileRange();
+  if (!Range)
+    return;
+  const uint64_t RegionStart = Range->first;
+  const uint64_t RegionEnd = Range->second;
+
+  // Collect the file extents holding content that has to be preserved, i.e.
+  // every section that occupies bytes in the output.
+  SmallVector<std::pair<uint64_t, uint64_t>, 16> Preserved;
   for (BinarySection &Section : BC->allocatableSections()) {
-    if (!Section.isFinalized() || !Section.getOutputData())
+    if (Section.isLinkOnly() || Section.isVirtual() || !Section.getOutputSize())
       continue;
-    if (Section.isLinkOnly() || !Section.getOutputSize())
+    const uint64_t Start = Section.getOutputFileOffset();
+    const uint64_t End = Start + Section.getOutputSize();
+    if (End <= RegionStart || Start >= RegionEnd)
       continue;
-    if (!(Section.getELFFlags() & ELF::SHF_EXECINSTR))
-      continue;
-    uint64_t SecEnd = Section.getOutputFileOffset() + Section.getOutputSize();
-    auto It = llvm::upper_bound(SectionStarts, SecEnd - 1);
-    if (It != SectionStarts.end()) {
-      uint64_t NextStart = *It;
-      if (NextStart > SecEnd) {
-        OS.seek(SecEnd);
-        OS.write_zeros(NextStart - SecEnd);
-      }
-    }
+    Preserved.emplace_back(std::max(Start, RegionStart),
+                           std::min(End, RegionEnd));
   }
+  llvm::sort(Preserved);
+
+  const uint64_t SavedPos = OS.tell();
+  uint64_t Cursor = RegionStart;
+  uint64_t NumBytesZeroed = 0;
+  auto zeroUpTo = [&](uint64_t To) {
+    if (To <= Cursor)
+      return;
+    NumBytesZeroed += To - Cursor;
+    OS.seek(Cursor);
+    OS.write_zeros(To - Cursor);
+    Cursor = To;
+  };
+
+  for (const std::pair<uint64_t, uint64_t> &Extent : Preserved) {
+    zeroUpTo(Extent.first);
+    Cursor = std::max(Cursor, Extent.second);
+  }
+  zeroUpTo(RegionEnd);
   OS.seek(SavedPos);
+
+  if (opts::Verbosity >= 1 && NumBytesZeroed)
+    BC->outs() << "BOLT-INFO: zeroed " << NumBytesZeroed
+               << " stale bytes in reused input region (file offset) [0x"
+               << Twine::utohexstr(RegionStart) << ", 0x"
+               << Twine::utohexstr(RegionEnd) << ")\n";
 }
 
 void RewriteInstance::rewriteFile() {
@@ -6893,7 +6932,7 @@ void RewriteInstance::rewriteFile() {
   rewriteNoteSections();
 
   if (opts::UseOldText)
-    zeroPaddingForReusedSections(OS);
+    zeroStaleBytesInReusedRegion(OS);
 
   if (BC->HasRelocations) {
     patchELFAllocatableRelaSections();
