@@ -949,6 +949,7 @@ public:
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     ExternalUsesWithNonUsers.clear();
+    ExternalUseReplacements.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
     HasNonCheckableMemBlocker = false;
@@ -2504,6 +2505,7 @@ public:
         if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
+            !ExternalUseReplacements.contains(OpI) &&
             (Entries.empty() || none_of(Entries, [&](const TreeEntry *Entry) {
                return Entry->VectorizedValue == OpI;
              })))
@@ -2553,6 +2555,7 @@ public:
         // loop iteration.
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
+              !ExternalUseReplacements.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(
                    VectorValuesAndScales,
@@ -2991,8 +2994,7 @@ private:
         return VL.size() == Mask.size() &&
                std::equal(VL.begin(), VL.end(), Mask.begin(),
                           [Scalars](Value *V, int Idx) {
-                            return (isa<UndefValue>(V) &&
-                                    Idx == PoisonMaskElem) ||
+                            return isa<PoisonValue>(V) ||
                                    (Idx != PoisonMaskElem && V == Scalars[Idx]);
                           });
       };
@@ -3304,9 +3306,14 @@ private:
       if (!Res.second)
         return Res.first->second;
       unsigned &FoundLane = Res.first->getSecond();
-      for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
-           std::advance(It, 1)) {
-        if (*It != V)
+      // Poison can take any lane, match it to the lane of the first non-poison
+      // scalar.
+      auto IsMatch = [V](Value *S) {
+        return isa<PoisonValue>(V) ? !isa<PoisonValue>(S) : S == V;
+      };
+      for (auto *It = find_if(Scalars, IsMatch), *End = Scalars.end();
+           It != End; std::advance(It, 1)) {
+        if (!IsMatch(*It))
           continue;
         FoundLane = std::distance(Scalars.begin(), It);
         assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
@@ -3959,6 +3966,11 @@ private:
   /// A list of scalar to be extracted without specific user necause of too many
   /// uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
+
+  /// Replacements emitted for the external uses without users, consumed after
+  /// the tree vectorization; must not be collected as dead operands of the
+  /// erased scalars.
+  SmallPtrSet<Value *, 4> ExternalUseReplacements;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -10393,7 +10405,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (isa<PoisonValue>(V))
         continue;
       auto *Cmp = cast<CmpInst>(V);
-      if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0) ||
+      if ((Cmp->getPredicate() != P0 && Cmp->getPredicate() != SwapP0 &&
+           !CmpSamePredicateHelper::canConvertTo(Cmp, P0)) ||
           Cmp->getOperand(0)->getType() != ComparedTy) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering cmp with different predicate.\n");
         return TreeEntry::NeedToGather;
@@ -12769,6 +12782,30 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   if (S.isAltShuffle() && TrySplitNode(S))
     return;
 
+  // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
+  // try the split by the original predicates, like the alternate nodes.
+  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle()) {
+    auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
+      return CI->getPredicate() == P ||
+             CI->getPredicate() == CmpInst::getSwappedPredicate(P);
+    };
+    ICmpInst *MainI = cast<ICmpInst>(*find_if(VL, IsaPred<ICmpInst>));
+    auto *AltIt = find_if(VL, [&](Value *V) {
+      auto *CI = dyn_cast<ICmpInst>(V);
+      return CI && !SameOrSwapped(CI, MainI->getPredicate());
+    });
+    ICmpInst *AltI = AltIt == VL.end() ? nullptr : cast<ICmpInst>(*AltIt);
+    if (AltI &&
+        all_of(VL,
+               [&](Value *V) {
+                 auto *CI = dyn_cast<ICmpInst>(V);
+                 return !CI || SameOrSwapped(CI, MainI->getPredicate()) ||
+                        SameOrSwapped(CI, AltI->getPredicate());
+               }) &&
+        TrySplitNode(InstructionsState(MainI, AltI)))
+      return;
+  }
+
   // Check that every instruction appears once in this bundle.
   if (!tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx,
                            *this, /*BuildGatherOnly=*/false)) {
@@ -13283,11 +13320,14 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands.back() = Ops.getVL(1);
       } else {
         // Collect operands - commute if it uses the swapped predicate.
+        // Lanes interchangeable with P0 (e.g. x == 0 in an x <u C bundle)
+        // already have their operands adjusted, no need to commute them.
         for (auto [Idx, V] : enumerate(VL)) {
           if (isa<PoisonValue>(V))
             continue;
           auto *Cmp = cast<CmpInst>(V);
-          if (Cmp->getPredicate() != P0)
+          if (Cmp->getPredicate() != P0 &&
+              !CmpSamePredicateHelper::canConvertTo(Cmp, P0))
             std::swap(Operands.front()[Idx], Operands.back()[Idx]);
         }
       }
@@ -19517,10 +19557,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
-    // Combined subnodes are not costed on their own, only as a whole combined
-    // node, so only the root nodes are considered.
-    if (TE.State == TreeEntry::CombinedVectorize)
-      continue;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -22856,10 +22895,22 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // process to keep correct order.
         return *Delayed;
       }
+      // Match against the expanded vector of the gather node, so that poison
+      // lanes of the matched entry cannot wildcard-match its real scalars.
+      auto IsFullVectorMatch = [&](const TreeEntry *FrontTE) {
+        SmallVector<int> CommonMask = E->getCommonMask();
+        SmallVector<Value *> Expanded(E->getVectorFactor());
+        for (unsigned I : seq<unsigned>(E->getVectorFactor()))
+          Expanded[I] = CommonMask.empty() ? E->Scalars[I]
+                        : CommonMask[I] == PoisonMaskElem
+                            ? PoisonValue::get(OrigScalarTy)
+                            : E->Scalars[CommonMask[I]];
+        return FrontTE->isSame(Expanded);
+      };
       if (GatherShuffles.size() == 1 &&
           *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
           (Entries.front().front()->isSame(E->Scalars) ||
-           E->isSame(Entries.front().front()->Scalars))) {
+           IsFullVectorMatch(Entries.front().front()))) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
         LLVM_DEBUG(dbgs() << "SLP: perfect diamond match for gather bundle "
@@ -22885,7 +22936,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // nodes.
         ShuffleBuilder.resetForSameNode();
         // Full matched entry found, no need to insert subvectors.
-        if ((E->isSame(FrontTE->Scalars) &&
+        if ((IsFullVectorMatch(FrontTE) &&
              FrontTE->ReuseShuffleIndices.empty() &&
              FrontTE->ReorderIndices.empty() &&
              E->getVectorFactor() == FrontTE->getVectorFactor()) ||
@@ -23581,8 +23632,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return CI && CI->getValue() == CI->getBitWidth() - 1;
         }))
       I->setHasNoSignedWrap(/*b=*/false);
-    if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
-      ICmp->setSameSign(/*B=*/false);
+    // Keep the intersected samesign unless the compared operands were
+    // narrowed (the sign relation may change in the narrower type) or a
+    // converted lane's adjusted constant flips the sign.
+    if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
+      bool Narrowed = MinBWs.contains(getOperandEntry(E, 0)) ||
+                      MinBWs.contains(getOperandEntry(E, 1));
+      CmpInst::Predicate P0 = cast<CmpInst>(E->getMainOp())->getPredicate();
+      bool SignFlip = !Narrowed && any_of(E->Scalars, [&](Value *Scalar) {
+        auto *LaneCI = dyn_cast<ICmpInst>(Scalar);
+        if (!LaneCI)
+          return false;
+        auto *OrigC = dyn_cast<ConstantInt>(LaneCI->getOperand(1));
+        if (!OrigC)
+          return false;
+        ConstantInt *AdjC =
+            CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
+        return AdjC && AdjC->isNegative() != OrigC->isNegative();
+      });
+      if (Narrowed || SignFlip)
+        ICmp->setSameSign(/*B=*/false);
+    }
     return I;
   };
   switch (ShuffleOrOp) {
@@ -25892,7 +25962,17 @@ Value *BoUpSLP::vectorizeTree(
         assert((!isa<ExtractElementInst>(Scalar) ||
                 !IgnoredExtracts.contains(cast<ExtractElementInst>(Scalar))) &&
                "Extractelements should not be replaced.");
+        // Reduced values that are not operands of the reduction ops (e.g.
+        // narrowed reduction leaves) lose all users once the tree scalars are
+        // erased; keep the replacement alive for the reduction epilogue.
+        bool NeedsProtection =
+            UserIgnoreList && none_of(Scalar->users(), [&](llvm::User *U) {
+              return UserIgnoreList->contains(U);
+            });
         Scalar->replaceAllUsesWith(NewInst);
+        if (NeedsProtection)
+          if (auto *I = dyn_cast<Instruction>(NewInst))
+            ExternalUseReplacements.insert(I);
       }
       continue;
     }

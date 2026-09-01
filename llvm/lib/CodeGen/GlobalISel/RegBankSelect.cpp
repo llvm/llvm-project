@@ -615,16 +615,15 @@ protected:
                  function_ref<MachineBranchProbabilityInfo *()> GetCachedMBPI,
                  const MappingCost *BestCost = nullptr);
 
-  /// When \p RepairPt involves splitting to repair \p MO for the
-  /// given \p ValMapping, try to change the way we repair such that
-  /// the splitting is not required anymore.
+  /// When \p RepairPt involves splitting to repair the operand of \p MI it
+  /// refers to for the given \p ValMapping, try to change the way we repair
+  /// such that the splitting is not required anymore.
   ///
   /// \pre \p RepairPt.hasSplit()
-  /// \pre \p MO == MO.getParent()->getOperand(\p RepairPt.getOpIdx())
-  /// \pre \p ValMapping is the mapping of \p MO for MO.getParent()
+  /// \pre \p ValMapping is the mapping of \p MI.getOperand(RepairPt.getOpIdx())
   ///      that implied \p RepairPt.
   void tryAvoidingSplit(RegBankSelectImpl::RepairingPlacement &RepairPt,
-                        const MachineOperand &MO,
+                        const MachineInstr &MI,
                         const RegisterBankInfo::ValueMapping &ValMapping) const;
 
   /// Apply \p Mapping to \p MI. \p RepairPts represents the different
@@ -936,16 +935,13 @@ const RegisterBankInfo::InstructionMapping &RegBankSelectImpl::findBestMapping(
 }
 
 void RegBankSelectImpl::tryAvoidingSplit(
-    RegBankSelectImpl::RepairingPlacement &RepairPt, const MachineOperand &MO,
+    RegBankSelectImpl::RepairingPlacement &RepairPt, const MachineInstr &MI,
     const RegisterBankInfo::ValueMapping &ValMapping) const {
-  const MachineInstr &MI = *MO.getParent();
+  const MachineOperand &MO = MI.getOperand(RepairPt.getOpIdx());
   assert(RepairPt.hasSplit() && "We should not have to adjust for split");
   // Splitting should only occur for PHIs or between terminators,
   // because we only do local repairing.
   assert((MI.isPHI() || MI.isTerminator()) && "Why do we split?");
-
-  assert(&MI.getOperand(RepairPt.getOpIdx()) == &MO &&
-         "Repairing placement does not match operand");
 
   // If we need splitting for phis, that means it is because we
   // could not find an insertion point before the terminators of
@@ -1121,7 +1117,7 @@ RegBankSelectImpl::MappingCost RegBankSelectImpl::computeMapping(
     // we may give a higher cost to this mapping.
     // Nevertheless, we may get away with the split, so try that first.
     if (RepairPt.hasSplit())
-      tryAvoidingSplit(RepairPt, MO, ValMapping);
+      tryAvoidingSplit(RepairPt, MI, ValMapping);
 
     // Check that the materialization of the repairing is possible.
     if (!RepairPt.canMaterialize()) {
