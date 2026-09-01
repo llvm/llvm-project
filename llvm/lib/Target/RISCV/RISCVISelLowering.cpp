@@ -21008,12 +21008,12 @@ static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
   MVT ExtVT;
   auto IsCombinableABD = [&](SDValue Op) {
     unsigned Opc = Op.getOpcode();
-    if (Opc != ISD::ABDS && Opc != ISD::ABDU && Opc != RISCVISD::ABDS_VL &&
-        Opc != RISCVISD::ABDU_VL)
+    if (Opc == ISD::ABDS || Opc == ISD::ABDU)
+      return true;
+    if (Opc != RISCVISD::ABDS_VL && Opc != RISCVISD::ABDU_VL)
       return false;
-    return (Opc == ISD::ABDS || Opc == ISD::ABDU) ||
-           (Op.getOperand(2).isUndef() && Op.getOperand(3) == Mask &&
-            Op.getOperand(4) == VL);
+    return Op.getOperand(2).isUndef() && Op.getOperand(3) == Mask &&
+           Op.getOperand(4) == VL;
   };
   auto GetDiff = [&](SDValue Op) {
     unsigned Opc = Op.getOpcode();
