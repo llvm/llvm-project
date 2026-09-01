@@ -113,13 +113,16 @@ public:
     // of the subgroup takes lane_data elements along the FCD, so the smallest
     // legal FCD is lane_layout * lane_data rather than the subgroup size alone.
     // Ignoring lane_data would produce a descriptor its own layout can no
-    // longer distribute.
+    // longer distribute. The FCD is the innermost dimension, so the trailing
+    // entries are the relevant ones. lane_layout and lane_data are verified to
+    // appear together and to have equal rank, so one emptiness check covers
+    // both.
     int64_t fcdUnit = subgroupSize;
     if (auto layout = tdescType.getLayoutAttr()) {
       SmallVector<int64_t> laneLayout = layout.getEffectiveLaneLayoutAsInt();
       SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
-      if (laneLayout.size() == 2 && laneData.size() == 2)
-        fcdUnit = laneLayout[1] * laneData[1];
+      if (!laneLayout.empty() && !laneData.empty())
+        fcdUnit = laneLayout.back() * laneData.back();
     }
     if (!needsOptimization(tdescType, fcdUnit))
       return failure();
