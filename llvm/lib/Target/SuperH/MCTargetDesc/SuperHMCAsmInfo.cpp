@@ -22,8 +22,7 @@ SuperHMCAsmInfo::SuperHMCAsmInfo(const Triple &TheTriple,
                                  const MCTargetOptions &Options)
     : MCAsmInfoELF(Options) {
   this->IsLittleEndian = TheTriple.isLittleEndian();
-  this->CommentString = ";";
-  this->SeparatorString = "\n";
+  this->CommentString = "!";
   this->InternalSymbolPrefix = ".L";
   this->PrivateLabelPrefix = ".L";
 }
