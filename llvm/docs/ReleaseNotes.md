@@ -227,6 +227,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Windows Target
 
+* The project has migrated to MSI installers. Previous installations of LLVM,
+  prior (and including) 23.1.0, must be manually uninstalled first, before
+  installing this new release.
+
 ### Changes to the X86 Backend
 
 ### Changes to the OCaml bindings
