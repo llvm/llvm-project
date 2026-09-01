@@ -198,6 +198,9 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
+// Keep the default in sync with -stencil-merge-check-threshold in
+// LoopAccessAnalysis.cpp, which starts merging stencil runtime checks once
+// the count goes above this limit.
 static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
