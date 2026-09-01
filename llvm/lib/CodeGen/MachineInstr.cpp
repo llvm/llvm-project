@@ -2740,9 +2740,11 @@ void MachineInstr::insert(mop_iterator InsertBefore,
   SmallVector<MachineOperand> MovingOps;
   MovingOps.reserve(OpsToMove);
 
-  for (unsigned I = 0; I < OpsToMove; ++I) {
-    MovingOps.emplace_back(getOperand(OpIdx));
-    removeOperand(OpIdx);
+  for (unsigned I = OpIdx; I < NumOperands; ++I) {
+    MovingOps.emplace_back(getOperand(I));
+  }
+  while (getNumOperands() != OpIdx) {
+    removeOperand(getNumOperands() - 1);
   }
   for (const MachineOperand &MO : Ops)
     addOperand(MO);
