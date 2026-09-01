@@ -560,6 +560,9 @@ features cannot lower the translation-unit ABI level;
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
 
+- Fixed an assertion when instantiating the body of a C++26 expansion
+  statement after a fatal error had occurred. (#GH214917)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
