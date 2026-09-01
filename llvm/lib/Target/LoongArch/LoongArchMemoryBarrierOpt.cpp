@@ -36,6 +36,11 @@ static cl::opt<bool> RequireNoPathBypass(
     cl::desc("Optimize only when no paths bypass either memory barrier"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> MergeAMOWithMB(
+    "loongarch-merge-amo-with-dbar",
+    cl::desc("Merge AMOs with DBARs into AMO_DB during optimization"),
+    cl::init(true), cl::Hidden);
+
 static cl::opt<bool> DisableInlineAsm(
     "loongarch-disable-inline-asm-barrier-opt",
     cl::desc("Disable optimization of memory barriers in InlineAsm"),
@@ -101,7 +106,7 @@ isAsmMB(const MachineInstr &MI) {
 
 static StringRef getAMDB(StringRef Name) {
 #define CASE(Name, Suffix)                                                     \
-  .Case(#Name "." #Suffix, #Name "_DB." #Suffix)                               \
+  .Case(#Name "." #Suffix, MergeAMOWithMB ? #Name "_DB." #Suffix : "")         \
       .Case(#Name "_DB." #Suffix, #Name "_DB." #Suffix)
   return StringSwitch<StringRef>(Name.upper()) AMO_CASES.Default({});
 #undef CASE
@@ -168,6 +173,9 @@ static bool isSC(const MachineInstr &MI) {
 static std::optional<unsigned> isAM(const MachineInstr &MI) {
 #define CASE(Name, Suffix)                                                     \
   case LoongArch::Name##_##Suffix:                                             \
+    if (!MergeAMOWithMB)                                                       \
+      return std::nullopt;                                                     \
+    [[fallthrough]];                                                           \
   case LoongArch::Name##__DB_##Suffix:                                         \
     return LoongArch::Name##__DB_##Suffix;
   switch (MI.getOpcode()) {

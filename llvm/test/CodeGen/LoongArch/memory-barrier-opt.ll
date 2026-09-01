@@ -2,6 +2,8 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d < %s | FileCheck %s --check-prefixes=CHECK,NORMAL
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --loongarch-require-no-path-bypass=false < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,BYPASS
+; RUN: llc --mtriple=loongarch64 -mattr=+d --loongarch-merge-amo-with-dbar=false < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,NOMAMO
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --loongarch-disable-inline-asm-barrier-opt=true < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,NOIASM
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --loongarch-replace-eliminated-dbar-to-nop=true < %s \
@@ -19,6 +21,11 @@ define void @dbar_acquire_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 20
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -46,6 +53,11 @@ define void @dbar_acquire_release() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_release:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 16
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_release:
 ; NOIASM:       # %bb.0: # %entry
@@ -75,6 +87,12 @@ define i32 @dbar_acquire_add_acquire(i32 %a) nounwind {
 ; BYPASS-NEXT:    addi.w $a0, $a0, 1
 ; BYPASS-NEXT:    dbar 20
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_add_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    addi.w $a0, $a0, 1
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_add_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -106,6 +124,11 @@ define void @dbar_release_acquire() nounwind {
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_release_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 16
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_release_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 16
@@ -132,6 +155,11 @@ define void @dbar_seq_cst_acq_rel_seq_cst() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_seq_cst_acq_rel_seq_cst:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 16
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_seq_cst_acq_rel_seq_cst:
 ; NOIASM:       # %bb.0: # %entry
@@ -161,6 +189,11 @@ define void @dbar_acquire_asm_dbar_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 20
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -195,6 +228,11 @@ define void @dbar_acquire_asm_space_dbar_acquire() nounwind {
 ; BYPASS-NEXT:    dbar 20
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_acquire_asm_space_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_acquire_asm_space_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 20
@@ -227,6 +265,11 @@ define void @dbar_acquire_asm_comment_dbar_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 20
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_comment_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_comment_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -261,6 +304,11 @@ define void @dbar_acquire_asm_arg0_dbar_acquire() nounwind {
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_acquire_asm_arg0_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 16
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_acquire_asm_arg0_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 20
@@ -293,6 +341,11 @@ define void @dbar_acquire_asm_arg1_dbar_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_arg1_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 16
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_arg1_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -327,6 +380,11 @@ define void @dbar_completion_acquire() nounwind {
 ; BYPASS-NEXT:    dbar 0
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_completion_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 0
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_completion_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 0
@@ -353,6 +411,11 @@ define void @dbar_release_completion() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    dbar 0
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_release_completion:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 0
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_release_completion:
 ; NOIASM:       # %bb.0: # %entry
@@ -383,6 +446,12 @@ define void @dbar_release_amswap_i8_acquire() nounwind {
 ; BYPASS-NEXT:    amand_db.w $a1, $a0, $zero
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_release_amswap_i8_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    addi.w $a0, $zero, -256
+; NOMAMO-NEXT:    amand_db.w $a1, $a0, $zero
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_release_amswap_i8_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    addi.w $a0, $zero, -256
@@ -412,6 +481,11 @@ define void @dbar_release_amswap_i32_acquire() nounwind {
 ; BYPASS-NEXT:    amswap_db.w $a0, $zero, $zero
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_release_amswap_i32_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    amswap_db.w $a0, $zero, $zero
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_release_amswap_i32_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    amswap_db.w $a0, $zero, $zero
@@ -438,6 +512,12 @@ define void @dbar_release_amswap_i32_monotonic() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    amswap_db.w $a0, $zero, $zero
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_release_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 18
+; NOMAMO-NEXT:    amswap.w $a0, $zero, $zero
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_release_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
@@ -480,6 +560,12 @@ define void @amswap_i8_release_dbar_acquire() nounwind {
 ; BYPASS-NEXT:    amand_db.w $a1, $a0, $zero
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: amswap_i8_release_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    addi.w $a0, $zero, -256
+; NOMAMO-NEXT:    amand_db.w $a1, $a0, $zero
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: amswap_i8_release_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    addi.w $a0, $zero, -256
@@ -508,6 +594,11 @@ define void @amswap_i32_release_dbar_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    amswap_db.w $a0, $zero, $zero
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: amswap_i32_release_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    amswap_db.w $a0, $zero, $zero
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: amswap_i32_release_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -550,6 +641,12 @@ define void @dbar_release_amswap_i8_release_dbar_acquire() nounwind {
 ; BYPASS-NEXT:    amand_db.w $a1, $a0, $zero
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_release_amswap_i8_release_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    addi.w $a0, $zero, -256
+; NOMAMO-NEXT:    amand_db.w $a1, $a0, $zero
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_release_amswap_i8_release_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    addi.w $a0, $zero, -256
@@ -580,6 +677,11 @@ define void @dbar_acquire_amswap_i32_release_dbar_acquire() nounwind {
 ; BYPASS:       # %bb.0: # %entry
 ; BYPASS-NEXT:    amswap_db.w $a0, $zero, $zero
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_amswap_i32_release_dbar_acquire:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    amswap_db.w $a0, $zero, $zero
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_amswap_i32_release_dbar_acquire:
 ; NOIASM:       # %bb.0: # %entry
@@ -628,6 +730,13 @@ define void @dbar_acquire_asm_amswap_i32_release() nounwind {
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_acquire_asm_amswap_i32_release:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap_db.w $a0, $a1, $a2
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_acquire_asm_amswap_i32_release:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 20
@@ -663,6 +772,14 @@ define void @dbar_acquire_asm_amswap_i32_monotonic() nounwind {
 ; BYPASS-NEXT:    amswap_db.w $a0, $a1, $a2
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap.w $a0, $a1, $a2
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
@@ -700,6 +817,14 @@ define void @dbar_acquire_asm_space_amswap_i32_monotonic() nounwind {
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_acquire_asm_space_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap.w $a0, $a1, $a2
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_acquire_asm_space_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 20
@@ -735,6 +860,14 @@ define void @dbar_acquire_asm_comment_amswap_i32_monotonic() nounwind {
 ; BYPASS-NEXT:    amswap_db.w $a0, $a1, $a2 # atomic
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_comment_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap.w $a0, $a1, $a2 # atomic
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_comment_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
@@ -772,6 +905,14 @@ define void @dbar_acquire_asm_args_amswap_i32_monotonic() nounwind {
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: dbar_acquire_asm_args_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap.w $a0, $zero, $zero
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: dbar_acquire_asm_args_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    dbar 20
@@ -807,6 +948,13 @@ define void @dbar_acquire_asm_reg_args_amswap_i32_monotonic() nounwind {
 ; BYPASS-NEXT:    amswap_db.w $ra, $zero, $zero
 ; BYPASS-NEXT:    #NO_APP
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_asm_reg_args_amswap_i32_monotonic:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    #APP
+; NOMAMO-NEXT:    amswap_db.w $ra, $zero, $zero
+; NOMAMO-NEXT:    #NO_APP
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_asm_reg_args_amswap_i32_monotonic:
 ; NOIASM:       # %bb.0: # %entry
@@ -866,6 +1014,25 @@ define void @dbar_acquire_cmpxchg_i32_dbar_release() nounwind {
 ; BYPASS-NEXT:  .LBB28_4: # %entry
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: dbar_acquire_cmpxchg_i32_dbar_release:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    ori $a0, $zero, 1
+; NOMAMO-NEXT:  .LBB28_1: # %entry
+; NOMAMO-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOMAMO-NEXT:    ll.w $a1, $zero, 0
+; NOMAMO-NEXT:    bne $a1, $zero, .LBB28_3
+; NOMAMO-NEXT:  # %bb.2: # %entry
+; NOMAMO-NEXT:    # in Loop: Header=BB28_1 Depth=1
+; NOMAMO-NEXT:    move $a2, $a0
+; NOMAMO-NEXT:    sc.w $a2, $zero, 0
+; NOMAMO-NEXT:    beq $a2, $zero, .LBB28_1
+; NOMAMO-NEXT:    b .LBB28_4
+; NOMAMO-NEXT:  .LBB28_3: # %entry
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:  .LBB28_4: # %entry
+; NOMAMO-NEXT:    dbar 18
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: dbar_acquire_cmpxchg_i32_dbar_release:
 ; NOIASM:       # %bb.0: # %entry
@@ -934,6 +1101,17 @@ define void @cfg_dominate(i1 %a) {
 ; BYPASS-NEXT:  .LBB29_2:
 ; BYPASS-NEXT:    ret
 ;
+; NOMAMO-LABEL: cfg_dominate:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    andi $a0, $a0, 1
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    beqz $a0, .LBB29_2
+; NOMAMO-NEXT:  # %bb.1:
+; NOMAMO-NEXT:    ret
+; NOMAMO-NEXT:  .LBB29_2:
+; NOMAMO-NEXT:    dbar 18
+; NOMAMO-NEXT:    ret
+;
 ; NOIASM-LABEL: cfg_dominate:
 ; NOIASM:       # %bb.0: # %entry
 ; NOIASM-NEXT:    andi $a0, $a0, 1
@@ -996,6 +1174,21 @@ define void @cfg_postdominate(i1 %a, i1 %b, i1 %c) {
 ; BYPASS-NEXT:  .LBB30_3:
 ; BYPASS-NEXT:    dbar 16
 ; BYPASS-NEXT:    ret
+;
+; NOMAMO-LABEL: cfg_postdominate:
+; NOMAMO:       # %bb.0: # %entry
+; NOMAMO-NEXT:    andi $a0, $a0, 1
+; NOMAMO-NEXT:    beqz $a0, .LBB30_2
+; NOMAMO-NEXT:  .LBB30_1:
+; NOMAMO-NEXT:    andi $a0, $a1, 1
+; NOMAMO-NEXT:    dbar 20
+; NOMAMO-NEXT:    beqz $a0, .LBB30_3
+; NOMAMO-NEXT:  .LBB30_2:
+; NOMAMO-NEXT:    andi $a0, $a2, 1
+; NOMAMO-NEXT:    bnez $a0, .LBB30_1
+; NOMAMO-NEXT:  .LBB30_3:
+; NOMAMO-NEXT:    dbar 18
+; NOMAMO-NEXT:    ret
 ;
 ; NOIASM-LABEL: cfg_postdominate:
 ; NOIASM:       # %bb.0: # %entry
