@@ -708,6 +708,7 @@ namespace llvm {
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSADDO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;

@@ -197,6 +197,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the PowerPC Backend
 
+* Fixed a crash when lowering `llvm.prefetch` with an instruction-cache hint
+  combination the subtarget cannot encode; such prefetches now select `icbt`
+  where available and are otherwise dropped.
+
 ### Changes to the RISC-V Backend
 
 * Added experimental MC support for the `Smcsps` and `Sscsps`
