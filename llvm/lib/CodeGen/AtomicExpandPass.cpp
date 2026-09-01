@@ -230,20 +230,19 @@ static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
-static unsigned getAtomicOpElementSize(LoadInst *LI) {
-  if (!LI->isElementwise())
-    return getAtomicOpSize(LI);
-  return LI->getDataLayout().getTypeStoreSize(LI->getType()->getScalarType());
+static unsigned getAtomicOpElementSize(const DataLayout &DL, LoadInst *LI) {
+  Type *Ty = LI->getType();
+  return DL.getTypeStoreSize(LI->isElementwise() ? Ty->getScalarType() : Ty);
 }
 
-static unsigned getAtomicOpElementSize(StoreInst *SI) {
-  if (!SI->isElementwise())
-    return getAtomicOpSize(SI);
-  return SI->getDataLayout().getTypeStoreSize(
-      SI->getValueOperand()->getType()->getScalarType());
+static unsigned getAtomicOpElementSize(const DataLayout &DL, StoreInst *SI) {
+  Type *Ty = SI->getValueOperand()->getType();
+  return DL.getTypeStoreSize(SI->isElementwise() ? Ty->getScalarType() : Ty);
 }
 
-template <typename Inst> static unsigned getAtomicOpElementSize(Inst *I) {
+// TODO: atomicrmw can be elementwise too, cmpxchg has no elementwise form.
+template <typename Inst>
+static unsigned getAtomicOpElementSize(const DataLayout &, Inst *I) {
   return getAtomicOpSize(I);
 }
 
@@ -251,9 +250,10 @@ template <typename Inst> static unsigned getAtomicOpElementSize(Inst *I) {
 /// the whole access only for elementwise atomics, and only counts if the target
 /// can issue them at element alignment.
 template <typename Inst>
-static unsigned getRequiredAtomicSize(const TargetLowering *TLI, Inst *I) {
+static unsigned getRequiredAtomicSize(const TargetLowering *TLI,
+                                      const DataLayout &DL, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
-  unsigned ElementSize = getAtomicOpElementSize(I);
+  unsigned ElementSize = getAtomicOpElementSize(DL, I);
   if (ElementSize != Size &&
       TLI->isAtomicAlignmentSupported(I->getAlign(), Size, ElementSize,
                                       I->getPointerAddressSpace()))
@@ -295,16 +295,18 @@ static void copyMetadataForAtomic(Instruction &Dest,
 }
 
 template <typename Inst>
-static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
+static bool atomicSizeSupported(const TargetLowering *TLI, const DataLayout &DL,
+                                Inst *I) {
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return I->getAlign() >= getRequiredAtomicSize(TLI, I) &&
+  return I->getAlign() >= getRequiredAtomicSize(TLI, DL, I) &&
          getAtomicOpSize(I) <= MaxSize;
 }
 
 template <typename Inst>
-static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
+static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI,
+                                             const DataLayout &DL, Inst *I,
                                              raw_ostream &OS) {
-  unsigned RequiredSize = getRequiredAtomicSize(TLI, I);
+  unsigned RequiredSize = getRequiredAtomicSize(TLI, DL, I);
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
@@ -328,10 +330,11 @@ static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
 template <typename Inst>
 void AtomicExpandImpl::handleUnsupportedAtomicSize(
     Inst *I, const Twine &AtomicOpName, Instruction *DiagnosticInst) const {
-  assert(!atomicSizeSupported(TLI, I) && "expected unsupported atomic size");
+  assert(!atomicSizeSupported(TLI, *DL, I) &&
+         "expected unsupported atomic size");
   SmallString<128> FailureReason;
   raw_svector_ostream OS(FailureReason);
-  writeUnsupportedAtomicSizeReason(TLI, I, OS);
+  writeUnsupportedAtomicSizeReason(TLI, *DL, I, OS);
   handleFailure(*I, Twine("unsupported ") + AtomicOpName + ": " + FailureReason,
                 DiagnosticInst);
 }
@@ -369,7 +372,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (!LI->isAtomic())
       return false;
 
-    if (!atomicSizeSupported(TLI, LI)) {
+    if (!atomicSizeSupported(TLI, *DL, LI)) {
       expandAtomicLoadToLibcall(LI);
       return true;
     }
@@ -392,7 +395,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (!SI->isAtomic())
       return false;
 
-    if (!atomicSizeSupported(TLI, SI)) {
+    if (!atomicSizeSupported(TLI, *DL, SI)) {
       expandAtomicStoreToLibcall(SI);
       return true;
     }
@@ -412,7 +415,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    if (!atomicSizeSupported(TLI, RMWI)) {
+    if (!atomicSizeSupported(TLI, *DL, RMWI)) {
       expandAtomicRMWToLibcall(RMWI);
       return true;
     }
@@ -440,7 +443,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!atomicSizeSupported(TLI, CASI)) {
+    if (!atomicSizeSupported(TLI, *DL, CASI)) {
       expandAtomicCASToLibcall(CASI);
       return true;
     }
