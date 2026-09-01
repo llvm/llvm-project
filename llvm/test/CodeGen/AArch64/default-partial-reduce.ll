@@ -502,22 +502,50 @@ define <vscale x 4 x i64> @pr_nx4xi64(<vscale x 4 x i64> %in, <vscale x 4 x i64>
 define <2 x half> @pr_2xhalf(<2 x half> %in, <2 x half> %acc) {
 ; NEON-NOBF16-LABEL: pr_2xhalf:
 ; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    movi d2, #0000000000000000
+; NEON-NOBF16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-NOBF16-NEXT:    adrp x8, .LCPI24_0
+; NEON-NOBF16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; NEON-NOBF16-NEXT:    ldr q3, [x8, :lo12:.LCPI24_0]
+; NEON-NOBF16-NEXT:    mov v0.s[1], v2.s[0]
+; NEON-NOBF16-NEXT:    mov v1.s[1], v2.s[0]
 ; NEON-NOBF16-NEXT:    fcvtl v0.4s, v0.4h
 ; NEON-NOBF16-NEXT:    fcvtl v1.4s, v1.4h
+; NEON-NOBF16-NEXT:    fmul v0.4s, v0.4s, v3.4s
+; NEON-NOBF16-NEXT:    fcvtn v0.4h, v0.4s
+; NEON-NOBF16-NEXT:    fcvtl v0.4s, v0.4h
 ; NEON-NOBF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; NEON-NOBF16-NEXT:    fcvtn v0.4h, v0.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_2xhalf:
 ; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    movi d2, #0000000000000000
+; NEON-BF16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-BF16-NEXT:    adrp x8, .LCPI24_0
+; NEON-BF16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; NEON-BF16-NEXT:    ldr q3, [x8, :lo12:.LCPI24_0]
+; NEON-BF16-NEXT:    mov v0.s[1], v2.s[0]
+; NEON-BF16-NEXT:    mov v1.s[1], v2.s[0]
 ; NEON-BF16-NEXT:    fcvtl v0.4s, v0.4h
 ; NEON-BF16-NEXT:    fcvtl v1.4s, v1.4h
+; NEON-BF16-NEXT:    fmul v0.4s, v0.4s, v3.4s
+; NEON-BF16-NEXT:    fcvtn v0.4h, v0.4s
+; NEON-BF16-NEXT:    fcvtl v0.4s, v0.4h
 ; NEON-BF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; NEON-BF16-NEXT:    fcvtn v0.4h, v0.4s
 ; NEON-BF16-NEXT:    ret
 ;
 ; SVE-LABEL: pr_2xhalf:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    movi d2, #0000000000000000
+; SVE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; SVE-NEXT:    mov w8, #1006648320 // =0x3c003c00
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SVE-NEXT:    fmov d3, x8
+; SVE-NEXT:    mov v0.s[1], v2.s[0]
+; SVE-NEXT:    mov v1.s[1], v2.s[0]
+; SVE-NEXT:    fmul v0.4h, v0.4h, v3.4h
 ; SVE-NEXT:    fadd v0.4h, v1.4h, v0.4h
 ; SVE-NEXT:    ret
   %res = call <2 x half> @llvm.vector.partial.reduce.fadd(<2 x half> %acc, <2 x half> %in)
@@ -635,30 +663,59 @@ define <16 x half> @pr_16xhalf(<16 x half> %in, <16 x half> %acc) {
 define <2 x bfloat> @pr_2xbfloat(<2 x bfloat> %in, <2 x bfloat> %acc) {
 ; NEON-NOBF16-LABEL: pr_2xbfloat:
 ; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    movi d2, #0000000000000000
+; NEON-NOBF16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-NOBF16-NEXT:    adrp x8, .LCPI28_0
+; NEON-NOBF16-NEXT:    movi v5.4s, #127, msl #8
+; NEON-NOBF16-NEXT:    ldr q3, [x8, :lo12:.LCPI28_0]
+; NEON-NOBF16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; NEON-NOBF16-NEXT:    mov v0.s[1], v2.s[0]
+; NEON-NOBF16-NEXT:    mov v1.s[1], v2.s[0]
 ; NEON-NOBF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-NOBF16-NEXT:    shll v1.4s, v1.4h, #16
+; NEON-NOBF16-NEXT:    fmul v0.4s, v0.4s, v3.4s
+; NEON-NOBF16-NEXT:    movi v3.4s, #1
+; NEON-NOBF16-NEXT:    ushr v4.4s, v0.4s, #16
+; NEON-NOBF16-NEXT:    and v4.16b, v4.16b, v3.16b
+; NEON-NOBF16-NEXT:    add v0.4s, v4.4s, v0.4s
+; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v5.4s
+; NEON-NOBF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-NOBF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; NEON-NOBF16-NEXT:    movi v1.4s, #1
-; NEON-NOBF16-NEXT:    ushr v2.4s, v0.4s, #16
-; NEON-NOBF16-NEXT:    and v1.16b, v2.16b, v1.16b
-; NEON-NOBF16-NEXT:    movi v2.4s, #127, msl #8
+; NEON-NOBF16-NEXT:    ushr v1.4s, v0.4s, #16
+; NEON-NOBF16-NEXT:    and v1.16b, v1.16b, v3.16b
 ; NEON-NOBF16-NEXT:    add v0.4s, v1.4s, v0.4s
-; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v5.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_2xbfloat:
 ; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    movi d2, #0000000000000000
+; NEON-BF16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-BF16-NEXT:    adrp x8, .LCPI28_0
+; NEON-BF16-NEXT:    // kill: def $d1 killed $d1 def $q1
+; NEON-BF16-NEXT:    ldr q3, [x8, :lo12:.LCPI28_0]
+; NEON-BF16-NEXT:    mov v0.s[1], v2.s[0]
+; NEON-BF16-NEXT:    mov v1.s[1], v2.s[0]
 ; NEON-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-BF16-NEXT:    shll v1.4s, v1.4h, #16
+; NEON-BF16-NEXT:    fmul v0.4s, v0.4s, v3.4s
+; NEON-BF16-NEXT:    bfcvtn v0.4h, v0.4s
+; NEON-BF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-BF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; NEON-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; NEON-BF16-NEXT:    ret
 ;
 ; SVE-LABEL: pr_2xbfloat:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    movi d2, #0000000000000000
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-NEXT:    mov w8, #1065369472 // =0x3f803f80
+; SVE-NEXT:    ptrue p0.h, vl4
+; SVE-NEXT:    mov v0.s[1], v2.s[0]
+; SVE-NEXT:    mov v1.s[1], v2.s[0]
+; SVE-NEXT:    fmov d2, x8
+; SVE-NEXT:    bfmul z0.h, p0/m, z0.h, z2.h
 ; SVE-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-NEXT:    ret

@@ -7616,16 +7616,19 @@ SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
   if (ElementCount::isKnownLT(I1VT.getVectorElementCount(),
                               WideVT.getVectorElementCount())) {
     I1VT = TLI.getTypeToTransformTo(*DAG.getContext(), I1VT);
-    Input1 = DAG.getInsertSubvector(DL, DAG.getPOISON(I1VT), Input1, 0);
+    Input1 =
+        DAG.getInsertSubvector(DL, DAG.getConstantFP(0.0, DL, I1VT), Input1, 0);
   }
 
   if (ElementCount::isKnownLT(I2VT.getVectorElementCount(),
                               WideVT.getVectorElementCount())) {
     I2VT = TLI.getTypeToTransformTo(*DAG.getContext(), I2VT);
-    Input2 = DAG.getInsertSubvector(DL, DAG.getPOISON(I2VT), Input2, 0);
+    Input2 =
+        DAG.getInsertSubvector(DL, DAG.getConstantFP(0.0, DL, I2VT), Input2, 0);
   }
 
-  SDValue WideAcc = DAG.getInsertSubvector(DL, DAG.getPOISON(WideVT), Acc, 0);
+  SDValue WideAcc =
+      DAG.getInsertSubvector(DL, DAG.getConstantFP(0.0, DL, WideVT), Acc, 0);
   return DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, DL, WideVT, WideAcc, Input1,
                      Input2);
 }
