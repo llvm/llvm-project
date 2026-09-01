@@ -15,6 +15,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 
+class TypeConverter;
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // PDL Patterns

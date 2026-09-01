@@ -1413,3 +1413,9 @@ private:
   Expr *typeExpr;
 };
 
+
+} // namespace ast
+} // namespace pdll
+} // namespace mlir
+
+#endif // MLIR_TOOLS_PDLL_AST_NODES_H_
