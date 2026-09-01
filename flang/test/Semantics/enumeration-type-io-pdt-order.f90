@@ -84,7 +84,7 @@ contains
   subroutine test_unshielded(u)
     integer, intent(in) :: u
     type(branch(2)) :: y
-    !ERROR: Enumeration type may not be used in unformatted I/O
+    !ERROR: Enumeration type is not supported in unformatted I/O
     write(u) y
   end subroutine
 
@@ -92,7 +92,7 @@ contains
   subroutine test_order_bug(u)
     integer, intent(in) :: u
     type(container) :: z
-    !ERROR: Enumeration type may not be used in unformatted I/O
+    !ERROR: Enumeration type is not supported in unformatted I/O
     write(u) z
   end subroutine
 
@@ -101,7 +101,7 @@ contains
   subroutine test_order_bug_rev(u)
     integer, intent(in) :: u
     type(container_rev) :: z
-    !ERROR: Enumeration type may not be used in unformatted I/O
+    !ERROR: Enumeration type is not supported in unformatted I/O
     write(u) z
   end subroutine
 
@@ -111,7 +111,7 @@ contains
   subroutine test_order_bug_rev_decl(u)
     integer, intent(in) :: u
     type(container_rev_decl) :: z
-    !ERROR: Enumeration type may not be used in unformatted I/O
+    !ERROR: Enumeration type is not supported in unformatted I/O
     write(u) z
   end subroutine
 end module

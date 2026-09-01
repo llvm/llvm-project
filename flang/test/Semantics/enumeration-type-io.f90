@@ -56,9 +56,9 @@ subroutine test_unformatted()
   use enum_io_mod
   type(color) :: c
   c = red
-  !ERROR: Enumeration type may not be used in unformatted I/O
+  !ERROR: Enumeration type is not supported in unformatted I/O
   write(10) c
-  !ERROR: Enumeration type may not be used in unformatted I/O
+  !ERROR: Enumeration type is not supported in unformatted I/O
   read(10) c
 end subroutine
 
@@ -72,9 +72,9 @@ subroutine test_component_io()
   print *, d
   !ERROR: List-directed input item has a component 'c' of enumeration type
   read *, d
-  !ERROR: Enumeration type may not be used in unformatted I/O
+  !ERROR: Enumeration type is not supported in unformatted I/O
   write(10) d
-  !ERROR: Enumeration type may not be used in unformatted I/O
+  !ERROR: Enumeration type is not supported in unformatted I/O
   read(10) d
 end subroutine
 
@@ -126,9 +126,64 @@ subroutine test_namelist_enum_component()
     integer :: n
   end type
   type(has_color) :: d
+  ! F2023 C8109: caught at the namelist declaration, regardless of I/O.
+  !ERROR: Namelist group object 'd' may not have a direct component '%clr' of enumeration type
   namelist /nml2/ d
-  !ERROR: Namelist group object 'd' has a component 'clr' of enumeration type
   write(*, nml=nml2)
+end subroutine
+
+subroutine test_namelist_enum_component_no_io()
+  ! F2023 C8109 is a declaration-time constraint: it must be diagnosed even
+  ! when the namelist is never used in an I/O statement.
+  use enum_io_mod
+  type :: has_color
+    type(color) :: clr
+  end type
+  type(has_color) :: d
+  !ERROR: Namelist group object 'd' may not have a direct component '%clr' of enumeration type
+  namelist /nml2b/ d
+end subroutine
+
+subroutine test_namelist_enum_buried()
+  ! A direct component reached through non-pointer/non-allocatable derived
+  ! components is still a direct component (F2023 C8109).
+  use enum_io_mod
+  type :: inner
+    type(color) :: clr
+  end type
+  type :: outer
+    type(inner) :: i
+  end type
+  type(outer) :: o
+  !ERROR: Namelist group object 'o' may not have a direct component '%i%clr' of enumeration type
+  namelist /nml2c/ o
+end subroutine
+
+subroutine test_namelist_enum_behind_pointer()
+  ! An enumeration type reached only through a POINTER (or allocatable)
+  ! component is NOT a direct component, so C8109 does not apply and this is
+  ! accepted (the pointer breaks the direct-component chain).
+  use enum_io_mod
+  type :: inner
+    type(color) :: clr
+  end type
+  type :: outer
+    type(inner), pointer :: i
+  end type
+  type(outer) :: o
+  namelist /nml2d/ o
+end subroutine
+
+subroutine test_namelist_enum_defined_io_not_shielded()
+  ! Defined I/O on an intermediate NON-pointer component does not shield its
+  ! enumeration subcomponent from C8109: the enum is still a direct component.
+  ! (Contrast with list-directed I/O, where 12.6.3 treats a defined-I/O
+  ! component as a single value -- see test_shielded_component.)
+  use enum_io_mod
+  type(has_color_io) :: d
+  !ERROR: Namelist group object 'd' may not have a direct component '%c' of enumeration type
+  namelist /nml2e/ d
+  write(*, nml=nml2e)
 end subroutine
 
 subroutine test_namelist_valid()

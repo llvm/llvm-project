@@ -1377,24 +1377,24 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
         if (which == common::DefinedIo::ReadUnformatted ||
             which == common::DefinedIo::WriteUnformatted) {
           return &context_.Say(where,
-              "Enumeration type may not be used in unformatted I/O"_err_en_US);
+              "Enumeration type is not supported in unformatted I/O"_err_en_US);
         }
         return nullptr; // formatted I/O is allowed
       }
     }
     const Scope &scope{context_.FindScope(where)};
-    // An enumeration type may not be used in unformatted I/O.  A derived type
-    // that is not processed by defined I/O expands into its components
-    // (12.6.3), so reject one that reaches an enumeration effective item.
-    // This is intentional flang policy: the standard treats an unformatted
-    // derived-type item as a single value, but flang keeps enumeration values
-    // out of unformatted I/O for consistency with the bare-enum rejection.
+    // Enumeration type is not supported in unformatted I/O.  This is a flang
+    // limitation, not a standard requirement: F2023 12.6.3 restricts
+    // enumeration types only in list-directed and formatted I/O, and treats an
+    // unformatted derived-type item as a single value.  A derived type that is
+    // not processed by defined I/O expands into its components (12.6.3), so
+    // reject one that reaches an enumeration effective item.
     if ((which == common::DefinedIo::ReadUnformatted ||
             which == common::DefinedIo::WriteUnformatted) &&
         !HasDefinedIo(which, derived, &scope)) {
       if (FindEnumerationTypeComponent(which, derived, scope)) {
         return &context_.Say(where,
-            "Enumeration type may not be used in unformatted I/O"_err_en_US);
+            "Enumeration type is not supported in unformatted I/O"_err_en_US);
       }
     }
     if (const Symbol *
@@ -1461,24 +1461,6 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
     const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
     for (const Symbol &object : details.objects()) {
       context_.CheckIndexVarRedefine(namelistLocation, object);
-      if (auto type{evaluate::DynamicType::From(object)};
-          type && type->category() == TypeCategory::Derived) {
-        const auto &derived{type->GetDerivedTypeSpec()};
-        // A bare enumeration-type namelist group object is rejected earlier at
-        // declaration time (F2023 C8109) in NamelistChecker.
-        // A namelist group object of derived type that is not processed by
-        // defined I/O expands into its components (F2023 12.6.3), so reject one
-        // that reaches an enumeration effective item.
-        const Scope &scope{context_.FindScope(namelistLocation)};
-        if (!HasDefinedIo(which, derived, &scope)) {
-          if (const Symbol *bad{
-                  FindEnumerationTypeComponent(which, derived, scope)}) {
-            context_.Say(namelistLocation,
-                "Namelist group object '%s' has a component '%s' of enumeration type"_err_en_US,
-                object.name(), bad->name());
-          }
-        }
-      }
       if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
         evaluate::AttachDeclaration(*msg, namelist);
       } else if (which == common::DefinedIo::ReadFormatted) {
