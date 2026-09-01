@@ -270,9 +270,9 @@ bool isTracingEnabled() {
 bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
 bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
-// Temporary helpers to be able to transitions from the liboffload API to the plugin API.
-// Only to be used to assist in the libomptarget transition. These will be removed once
-// the transition is complete.
+// Temporary helpers to be able to transitions from the liboffload API to the
+// plugin API. Only to be used to assist in the libomptarget transition. These
+// will be removed once the transition is complete.
 extern "C" size_t olGetInitializedPluginCount() {
   if (!isOffloadInitialized())
     return 0;
