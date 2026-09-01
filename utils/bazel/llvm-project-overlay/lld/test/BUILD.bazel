@@ -22,8 +22,9 @@ lit_expand_template(
         "@SHLIBDIR@": "//llvm:BUILD.bazel",
     },
     substitutions = {
-        # Lit needs a writable execution root inside the test sandbox.
-        "r\"@LLD_BINARY_DIR@\"": "os.environ[\"TEST_UNDECLARED_OUTPUTS_DIR\"]",
+        # Lit needs a writable execution root inside the test sandbox. Keep
+        # temporary test outputs out of Bazel's collected undeclared outputs.
+        "r\"@LLD_BINARY_DIR@\"": "os.environ[\"TEST_TMPDIR\"]",
         "@CMAKE_SIZEOF_VOID_P@": "8",
         "@ENABLE_BACKTRACES@": "1",
         "@LLD_DEFAULT_LD_LLD_IS_MINGW@": "0",
