@@ -45,7 +45,7 @@ void test5(void) {
   (void)&(thread_local int){1}; // expected-error {{compound literal with 'thread_local' storage duration at block scope must also specify 'static'}}
 }
 
-int *a1 = &(register int){42}; // expected-error {{file-scope compound literal specifies 'register'}}
+int *a1 = &(register int){42}; // expected-error {{file scope compound literal specifies 'register'}}
 
 void test6(void) {
   (void)(constexpr volatile int){1}; // expected-error {{constexpr compound literal cannot have type 'const volatile int'}}
@@ -263,7 +263,7 @@ inline int f19(int (*a(void))[sizeof((static int){1})]) { // expected-warning {{
 inline typeof((static int){1}) f20(void) {
   return 0;
 }
-typeof((register int){1}) f21(void); // expected-error {{file-scope compound literal specifies 'register'}}
+typeof((register int){1}) f21(void); // expected-error {{file scope compound literal specifies 'register'}}
 
 inline int f22(int a) __attribute__((enable_if((static int){1}, "enabled"))) { // expected-warning {{non-constant static local variable in inline function may be different in different files}} \
                                                                                // expected-note {{use 'static' to give inline function 'f22' internal linkage}}

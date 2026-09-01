@@ -3179,7 +3179,7 @@ def err_c23_constexpr_init_type_mismatch : Error<
 def err_c23_constexpr_pointer_not_null : Error<
   "constexpr pointer initializer is not null">;
 def err_register_compound_literal_file_scope : Error<
-  "file-scope compound literal specifies 'register'">;
+  "file scope compound literal specifies 'register'">;
 def err_thread_local_compound_literal_without_static : Error<
   "compound literal with 'thread_local' storage duration at block scope must "
   "also specify 'static'">;
