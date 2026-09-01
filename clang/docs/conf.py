@@ -206,8 +206,8 @@ man_page_authors = "Maintained by the Clang / LLVM Team (<http://clang.llvm.org>
 command_guide_subpath = "CommandGuide"
 command_guide_path = os.path.join(basedir, command_guide_subpath)
 for name in os.listdir(command_guide_path):
-    # Ignore non-ReST files and the index page.
-    if not name.endswith(".rst") or name in ("index.rst",):
+    # Ignore non-Markdown files and the index page.
+    if not name.endswith(".md") or name in ("index.md",):
         continue
 
     # Otherwise, automatically extract the description.
@@ -239,7 +239,7 @@ for name in os.listdir(command_guide_path):
         # Split the name out of the title.
         name, description = title.split(" - ", 1)
         man_pages.append(
-            (file_subpath.replace(".rst", ""), name, description, man_page_authors, 1)
+            (file_subpath.removesuffix(".md"), name, description, man_page_authors, 1)
         )
 
 
