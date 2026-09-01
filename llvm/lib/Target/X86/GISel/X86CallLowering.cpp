@@ -15,6 +15,7 @@
 #include "X86CallLowering.h"
 #include "X86CallingConv.h"
 #include "X86ISelLowering.h"
+#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
@@ -131,6 +132,11 @@ protected:
   MachineInstrBuilder &MIB;
   const DataLayout &DL;
   const X86Subtarget &STI;
+};
+
+struct X86IncomingValueAssigner : public CallLowering::IncomingValueAssigner {
+  X86IncomingValueAssigner(CCAssignFn *AssignFn_, CCAssignFn *AssignFnVarArg_)
+      : IncomingValueAssigner(AssignFn_, AssignFnVarArg_) {}
 };
 
 } // end anonymous namespace
@@ -267,17 +273,23 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   auto DL = MF.getDataLayout();
-  auto FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  auto *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+
+  // Handle only Linux SysV for varargs for now.
+  if (F.isVarArg() && !(STI.isTargetLinux() && STI.is64Bit() &&
+                        F.getCallingConv() == CallingConv::C))
+    return false;
 
   SmallVector<ArgInfo, 8> SplitArgs;
-
   if (!FLI.CanLowerReturn)
     insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
 
-  // TODO: handle variadic function
-  if (F.isVarArg())
-    return false;
+  // Offset in bytes from reg_save_area for general purpose args in varags.
+  unsigned GPOffset = 0;
+  // Offset in bytes from reg_save_area for floating point args in varargs.
+  unsigned FPOffset = 48;
 
   unsigned Idx = 0;
   for (const auto &Arg : F.args()) {
@@ -294,24 +306,60 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       FuncInfo->setSRetReturnReg(VRegs[Idx][0]);
     }
 
+    // Scalars under or equal to 64 are considered INTEGER class.
+    if (GPOffset < 48 && Arg.getType()->isIntegerTy() &&
+        Arg.getType()->getIntegerBitWidth() <= 64) {
+      GPOffset += 8;
+    } else if (const Type *Ty = Arg.getType();
+               (Ty->isFloatTy() || Ty->isDoubleTy()) && FPOffset < 176) {
+      FPOffset += 16;
+    }
+
     ArgInfo OrigArg(VRegs[Idx], Arg.getType(), Idx);
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     Idx++;
   }
 
-  if (SplitArgs.empty())
-    return true;
-
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   if (!MBB.empty())
     MIRBuilder.setInstr(*MBB.begin());
 
-  X86OutgoingValueAssigner Assigner(CC_X86);
+  X86IncomingValueAssigner Assigner(CC_X86, CC_X86);
   FormalArgHandler Handler(MIRBuilder, MRI);
+
   if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
                                      F.getCallingConv(), F.isVarArg()))
     return false;
+
+  if (F.isVarArg()) {
+    // In the x86_64 SystemV ABI the va_list struct requires a regsave area.
+    // FIXME: Test %al instead of allocating for all registers from the get go.
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    int RegSaveIndex = MFI.CreateStackObject(
+        /* GP Registers */ 6 * 8 + /* XMM Registers */ 8 * 16, Align(8), false);
+
+    for (Register PhysReg :
+         {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9, X86::XMM0,
+          X86::XMM1, X86::XMM2, X86::XMM3, X86::XMM4, X86::XMM5, X86::XMM6,
+          X86::XMM7}) {
+      MBB.addLiveIn(PhysReg);
+    }
+
+    // Put the registers into their slots as seen in Figure 3.33.
+    // %rdi - 0
+    // %rsi - 8
+    // %rdx - 16
+    // And so on.
+    saveVarArgRegistersSysV(MIRBuilder, RegSaveIndex);
+
+    // Store the variables into the machine function info.
+    FuncInfo->setVarArgsGPOffset(GPOffset);
+    FuncInfo->setVarArgsFPOffset(FPOffset);
+    FuncInfo->setVarArgsFrameIndex(
+        MFI.CreateFixedObject(1, alignTo(Assigner.StackSize, 8), true));
+    FuncInfo->setRegSaveFrameIndex(RegSaveIndex);
+  }
 
   // Move back to the end of the basic block.
   MIRBuilder.setMBB(MBB);
@@ -433,4 +481,22 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                     Info.DemoteRegister, Info.DemoteStackIndex);
 
   return true;
+}
+
+void X86CallLowering::saveVarArgRegistersSysV(MachineIRBuilder &MIRBuilder,
+                                              int FrameIdx) const {
+  int Offset = 0;
+  for (Register GPReg :
+       {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9}) {
+    addFrameReference(MIRBuilder.buildInstr(X86::MOV64mr), FrameIdx, Offset)
+        .addReg(GPReg);
+    Offset += 8;
+  }
+
+  for (Register FPReg : {X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3, X86::XMM4,
+                         X86::XMM5, X86::XMM6, X86::XMM7}) {
+    addFrameReference(MIRBuilder.buildInstr(X86::MOVAPSmr), FrameIdx, Offset)
+        .addReg(FPReg);
+    Offset += 16;
+  }
 }
