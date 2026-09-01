@@ -1171,3 +1171,195 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// Tests for hoisting through `memref.subview` views, guarded by a static
+/// footprint disjointness check.
+///----------------------------------------------------------------------------------------
+
+// Disjoint static subviews of one buffer: both transfer pairs are hoisted.
+
+// CHECK-LABEL:   func.func @hoist_disjoint_static_subviews(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<4xf32>,
+// CHECK:           %[[SV0:.*]] = memref.subview %[[MEM]][0] [2] [1]
+// CHECK-NEXT:      %[[SV1:.*]] = memref.subview %[[MEM]][2] [2] [1]
+// CHECK-NEXT:      %[[R0:.*]] = vector.transfer_read %[[SV0]]
+// CHECK-NEXT:      %[[R1:.*]] = vector.transfer_read %[[SV1]]
+// CHECK-NEXT:      %[[FOR:.*]]:2 = scf.for {{.*}} iter_args(%[[I0:.*]] = %[[R0]], %[[I1:.*]] = %[[R1]]) -> (vector<2xf32>, vector<2xf32>) {
+// CHECK-NEXT:        %[[U0:.*]] = "val_use"(%[[I0]])
+// CHECK-NEXT:        %[[U1:.*]] = "val_use"(%[[I1]])
+// CHECK-NEXT:        scf.yield %[[U0]], %[[U1]]
+// CHECK-NEXT:      }
+// CHECK-NEXT:      vector.transfer_write %[[FOR]]#1, %[[SV1]]
+// CHECK-NEXT:      vector.transfer_write %[[FOR]]#0, %[[SV0]]
+func.func @hoist_disjoint_static_subviews(
+    %mem: memref<4xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv0 = memref.subview %mem[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
+  %sv1 = memref.subview %mem[2][2][1] : memref<4xf32> to memref<2xf32, strided<[1], offset: 2>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
+    %u0 = "val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+
+    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: 2>>, vector<2xf32>
+    %u1 = "val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: 2>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Overlapping static subviews are not provably disjoint: hoisting is blocked.
+
+// CHECK-LABEL:   func.func @negative_hoist_overlapping_static_subviews(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:           }
+
+func.func @negative_hoist_overlapping_static_subviews(
+    %mem: memref<4xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv0 = memref.subview %mem[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
+  %sv1 = memref.subview %mem[1][2][1] : memref<4xf32> to memref<2xf32, strided<[1], offset: 1>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
+    %u0 = "val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+
+    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: 1>>, vector<2xf32>
+    %u1 = "val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: 1>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A dynamic subview offset yields no static footprint: hoisting is blocked.
+
+// CHECK-LABEL:   func.func @negative_hoist_dynamic_offset_subview(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:           }
+
+func.func @negative_hoist_dynamic_offset_subview(
+    %mem: memref<4xf32>, %off: index, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv = memref.subview %mem[%off][2][1] : memref<4xf32> to memref<2xf32, strided<[1], offset: ?>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv[%c0], %pad : memref<2xf32, strided<[1], offset: ?>>, vector<2xf32>
+    %u0 = "val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: ?>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Subview rooted at a collapse_shape (not a genuine buffer): hoisting blocked.
+
+// CHECK-LABEL:   func.func @negative_hoist_subview_of_collapse_shape(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:           }
+
+func.func @negative_hoist_subview_of_collapse_shape(
+    %mem: memref<2x2xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %collapse = memref.collapse_shape %mem [[0, 1]] : memref<2x2xf32> into memref<4xf32>
+  %sv = memref.subview %collapse[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
+    %u0 = "val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A non-transfer op touching the buffer may alias: hoisting is blocked.
+
+// CHECK-LABEL:   func.func @negative_hoist_subview_extra_memory_effect(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:             "prevent_hoisting"
+// CHECK:           }
+
+func.func @negative_hoist_subview_extra_memory_effect(
+    %mem: memref<4xf32>, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv0 = memref.subview %mem[0][2][1] : memref<4xf32> to memref<2xf32, strided<[1]>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1]>>, vector<2xf32>
+    %u0 = "val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1]>>
+    "prevent_hoisting"(%mem) : (memref<4xf32>) -> ()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
