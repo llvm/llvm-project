@@ -2064,6 +2064,59 @@ define nofpclass(snan) float @known_nsub__maximum__known_ninf() {
   ret float %result
 }
 
+; A subnormal input is treated as zero in a non-IEEE input denormal mode,
+; so the intrinsic cannot be replaced with the original subnormal operand.
+define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_ieee_positivezero(float nofpclass(nan inf zero nsub norm) %psub) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_ieee_positivezero(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[PSUB:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.maximum.f32(float [[PSUB]], float -1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.maximum.f32(float %psub, float -1.000000e+00)
+  ret float %result
+}
+
+define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_ieee_preservesign(float nofpclass(nan inf zero nsub norm) %psub) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_ieee_preservesign(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[PSUB:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.maximum.f32(float [[PSUB]], float -1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.maximum.f32(float %psub, float -1.000000e+00)
+  ret float %result
+}
+
+; A subnormal result may be flushed to zero in a non-IEEE output denormal mode,
+; so the intrinsic cannot be replaced with the original subnormal operand.
+define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_positivezero_ieee(float nofpclass(nan inf zero nsub norm) %psub) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @known_psub__maximum__known_nnorm__mode_positivezero_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[PSUB:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.maximum.f32(float [[PSUB]], float -1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.maximum.f32(float %psub, float -1.000000e+00)
+  ret float %result
+}
+
+; The operand fold remains valid when neither operand can be subnormal.
+define nofpclass(snan) float @known_pnorm__maximum__known_nnorm__mode_ieee_positivezero(float nofpclass(nan inf zero sub nnorm) %pnorm) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @known_pnorm__maximum__known_nnorm__mode_ieee_positivezero(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[PNORM:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float [[PNORM]]
+;
+  %result = call float @llvm.maximum.f32(float %pnorm, float -1.000000e+00)
+  ret float %result
+}
+
+define nofpclass(snan) float @known_pnorm__maximum__known_nnorm__mode_ieee_preservesign(float nofpclass(nan inf zero sub nnorm) %pnorm) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @known_pnorm__maximum__known_nnorm__mode_ieee_preservesign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[PNORM:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[PNORM]]
+;
+  %result = call float @llvm.maximum.f32(float %pnorm, float -1.000000e+00)
+  ret float %result
+}
+
 define nofpclass(snan) float @simplify_multiple_use_maximum(ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(snan) float @simplify_multiple_use_maximum(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
@@ -2192,3 +2245,6 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(ieee|positivezero) }
+attributes #3 = { denormal_fpenv(ieee|preservesign) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
