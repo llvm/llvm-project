@@ -11,6 +11,10 @@
 // the result of rematerialization, while the addresses are redundant frame
 // addressing anchor points created during Frame Indices elimination.
 //
+// Reloads of spill slots are handled as well: these slots do not alias IR
+// values, so an earlier reload can be reused as long as nothing in between may
+// have written to that same slot.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
@@ -18,10 +22,13 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -168,15 +175,61 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
   ++NumRemoved;
 }
 
+// Return true if MI accesses a register-allocation spill slot through a single
+// memory operand, and if so also the frame index of that slot in FI.
+static bool isSingleSpillSlotAccess(const MachineInstr &MI,
+                                    const MachineFrameInfo &MFI, int &FI) {
+  if (!MI.hasOneMemOperand())
+    return false;
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  const auto *PSV =
+      dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
+  if (!PSV)
+    return false;
+  FI = PSV->getFrameIndex();
+  return MFI.isSpillSlotObjectIndex(FI);
+}
+
+// Return true if MI may write the memory read by Reload, so that Reload can no
+// longer be reused. The only tracked loads are invariant ones and spill-slot
+// reloads, so a store to a different spill slot cannot change the loaded value.
+static bool mayOverwriteReload(const MachineInstr &MI,
+                               const MachineInstr &Reload,
+                               const MachineFrameInfo &MFI) {
+  // Invariant loads, such as constant pool entries and immutable frame
+  // objects, keep reading the same value whatever memory MI writes.
+  if (!Reload.mayLoad() || Reload.isDereferenceableInvariantLoad())
+    return false;
+  if (!MI.mayStore() && !MI.isCall() && !MI.hasUnmodeledSideEffects())
+    return false;
+  int StoreFI, ReloadFI;
+  if (isSingleSpillSlotAccess(MI, MFI, StoreFI) &&
+      isSingleSpillSlotAccess(Reload, MFI, ReloadFI))
+    return StoreFI == ReloadFI;
+  // Anything else may reach the slot, e.g. a call or a store through a
+  // pointer to an escaped stack object.
+  return true;
+}
+
 // Return true if MI is a potential candidate for reuse/removal and if so
 // also the register it defines in DefedReg.  A candidate is a simple
-// instruction that does not touch memory, has only one register definition
-// and the only reg it may use is FrameReg. Typically this is an immediate
-// load or a load-address instruction.
+// instruction that has only one register definition and the only reg it may
+// use is FrameReg. Typically this is an immediate load or a load-address
+// instruction. The only memory it may read is invariant memory or a spill slot
+// it reloads, since processBlock() keeps track of stores that may write the
+// slot.
 static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
-                        Register FrameReg) {
+                        Register FrameReg, const MachineFrameInfo &MFI) {
   DefedReg = MCRegister::NoRegister;
-  bool SawStore = true;
+  // SawStore makes isSafeToMove() reject every load that is not invariant, on
+  // the grounds that a store may have changed what it reads. That is too blunt
+  // for a spill-slot reload, where only a write to the same slot matters and
+  // processBlock() already drops the reload as soon as it sees one. Clear
+  // SawStore for those reloads to defer to that finer check; every other load
+  // is left to isSafeToMove(), which admits the invariant ones and rejects the
+  // volatile and atomic accesses whatever SawStore says.
+  int FI;
+  bool SawStore = !(MI->mayLoad() && isSingleSpillSlotAccess(*MI, MFI, FI));
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -220,6 +273,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
   // Process MBB.
   MachineFunction *MF = MBB->getParent();
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   Register FrameReg = TRI->getFrameRegister(*MF);
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     // If FrameReg is modified, no previous load-address instructions (using
@@ -231,7 +285,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     Register DefedReg;
-    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg);
+    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, MFI);
 
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
@@ -242,10 +296,12 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
       continue;
     }
 
-    // Clear any entries in map that MI clobbers.
+    // Clear any entries in map that MI clobbers, either by redefining the
+    // register or by writing the stack slot a reload reads.
     MBBDefs.remove_if([&](const auto &Entry) {
       Register Reg = Entry.first;
-      if (MI.modifiesRegister(Reg, TRI)) {
+      if (MI.modifiesRegister(Reg, TRI) ||
+          mayOverwriteReload(MI, *Entry.second, MFI)) {
         MBBKills.erase(Reg);
         return true;
       }
