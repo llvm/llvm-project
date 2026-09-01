@@ -6706,6 +6706,44 @@ alias(
     actual = "//llvm/utils/lit:lit_bin",
 )
 
+write_file(
+    name = "llvm_config_lit_py_gen",
+    testonly = True,
+    out = "utils/bazel/llvm_config_lit.py",
+    content = [
+        "import sys",
+        "",
+        "VALUES = {",
+        "    '--assertion-mode': 'ON',",
+        "    '--targets-built': '{}',".format(" ".join(llvm_targets)),
+        "}",
+        "",
+        "for argument in sys.argv[1:]:",
+        "    if argument not in VALUES:",
+        "        print('unsupported llvm-config argument: {}'.format(argument), file=sys.stderr)",
+        "        sys.exit(1)",
+        "    print(VALUES[argument])",
+    ],
+)
+
+py_binary(
+    name = "llvm-config",
+    testonly = True,
+    srcs = [":llvm_config_lit_py_gen"],
+    main = "utils/bazel/llvm_config_lit.py",
+    visibility = ["//lld/test:__pkg__"],
+)
+
+filegroup(
+    name = "dtlto_test_scripts",
+    testonly = True,
+    srcs = [
+        "utils/dtlto/mock.py",
+        "utils/dtlto/validate.py",
+    ],
+    visibility = ["//lld/test:__pkg__"],
+)
+
 py_binary(
     name = "extract_ir",
     srcs = [

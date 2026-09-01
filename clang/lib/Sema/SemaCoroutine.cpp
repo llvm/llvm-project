@@ -186,7 +186,7 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   // appear in a default argument." But the diagnostic QoI here could be
   // improved to inform the user that default arguments specifically are not
   // allowed.
-  auto *FD = dyn_cast<FunctionDecl>(S.CurContext);
+  auto FD = S.CurContext->getEnclosingFunction();
   if (!FD) {
     S.Diag(Loc, isa<ObjCMethodDecl>(S.CurContext)
                     ? diag::err_coroutine_objc_method
@@ -470,8 +470,7 @@ static void markCoroutineParametersReferenced(FunctionDecl &FD) {
 }
 
 VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
-  assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
-  auto *FD = cast<FunctionDecl>(CurContext);
+  auto *FD = CurContext->castEnclosingFunction();
   bool IsThisDependentType = [&] {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD))
       return MD->isImplicitObjectMemberFunction() &&
@@ -583,7 +582,7 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
   if (!isValidCoroutineContext(S, Loc, Keyword))
     return nullptr;
 
-  assert(isa<FunctionDecl>(S.CurContext) && "not in a function scope");
+  assert(S.CurContext->getEnclosingFunction() && "not in a function scope");
 
   auto *ScopeInfo = S.getCurFunction();
   assert(ScopeInfo && "missing function scope for function");
@@ -630,7 +629,7 @@ static void checkNoThrow(Sema &S, const Stmt *E,
         //   potentially-throwing ([except.spec]).
         //
         // First time seeing an error, emit the error message.
-        S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(),
+        S.Diag(S.CurContext->castEnclosingFunction()->getLocation(),
                diag::err_coroutine_promise_final_suspend_requires_nothrow);
       }
       ThrowingDecls.insert(D);
@@ -701,7 +700,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   // Ignore previous expr evaluation contexts.
   EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-      dyn_cast_or_null<FunctionDecl>(CurContext));
+      CurContext->getEnclosingFunction());
 
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
@@ -726,7 +725,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
 
   ScopeInfo->setNeedsCoroutineSuspends(false);
 
-  auto *Fn = cast<FunctionDecl>(CurContext);
+  auto *Fn = CurContext->castEnclosingFunction();
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
@@ -2002,8 +2001,7 @@ static VarDecl *buildVarDecl(Sema &S, SourceLocation Loc, QualType Type,
 // Build statements that move coroutine function parameters to the coroutine
 // frame, and store them on the function scope info.
 bool Sema::buildCoroutineParameterMoves(SourceLocation Loc) {
-  assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
-  auto *FD = cast<FunctionDecl>(CurContext);
+  auto *FD = CurContext->castEnclosingFunction();
 
   auto *ScopeInfo = getCurFunction();
   if (!ScopeInfo->CoroutineParameterMoves.empty())

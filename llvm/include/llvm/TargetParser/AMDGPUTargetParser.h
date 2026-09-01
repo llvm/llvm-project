@@ -113,6 +113,11 @@ LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
 
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+
+/// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
+/// unrecognized.
+LLVM_ABI Triple::SubArchType getSubArchFromGPUName(StringRef CPU);
+
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
 /// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
@@ -226,6 +231,15 @@ constexpr unsigned getMinWavesPerEU() { return 1; }
 /// limitation.
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
 LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
+/// \returns Minimum flat work group size.
+constexpr unsigned getMinFlatWorkGroupSize() { return 1; }
+
+/// \returns Maximum flat work group size.
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns

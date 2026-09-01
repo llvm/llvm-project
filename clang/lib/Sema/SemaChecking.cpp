@@ -6181,7 +6181,8 @@ static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
   // and get its parameter list.
   bool IsVariadic = false;
   ArrayRef<ParmVarDecl *> Params;
-  DeclContext *Caller = S.CurContext;
+  DeclContext *Caller =
+      S.CurContext->getEnclosingNonExpansionStatementContext();
   if (auto *Block = dyn_cast<BlockDecl>(Caller)) {
     IsVariadic = Block->isVariadic();
     Params = Block->parameters();
@@ -7836,7 +7837,7 @@ static bool CheckMissingFormatAttribute(
   if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute, Loc))
     return false;
 
-  DeclContext *DC = S->CurContext;
+  DeclContext *DC = S->CurContext->getEnclosingNonExpansionStatementContext();
   if (!isa<ObjCMethodDecl>(DC) && !isa<FunctionDecl>(DC) && !isa<BlockDecl>(DC))
     return false;
   Decl *Caller = cast<Decl>(DC)->getCanonicalDecl();
