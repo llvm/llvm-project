@@ -39,18 +39,18 @@ public:
 // It provides two interfaces - by default it tries to call the function
 // directly - either through dlopen or directly linked (see L0DynWrapper.cpp).
 // It is also possible to call through an internal function pointer, which
-// can be populated using `tryLoadingExperimental` using
-// `zeDriverGetExtensionFunctionAddress` or simple set method
+// can be populated using `loadExperimental` using
+// `zeDriverGetExtensionFunctionAddress`.
 // `addFallbackFunction`. It was implemented in order to support different
 // versions of level zero software stack and different kinds of drivers.
-template <auto Fn, auto UnsupportedValue> class ZeDispatcher {
+template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE> class ZeDispatcher {
 public:
   constexpr ZeDispatcher() = default;
 
   [[nodiscard]]
   bool available() const {
-    if (UsesFuncPtr)
-      return FuncPtr != nullptr;
+    if (FuncPtr != nullptr)
+      return true;
 
     return api_helper::canCall<Fn>();
   }
@@ -61,47 +61,32 @@ public:
   decltype(auto) operator()(Args &&...ArgsList) const {
     // Need to cast the type to avoid mismatch of return type deduction
     using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
-    if (UsesFuncPtr) {
-      if (FuncPtr == nullptr) {
-        return static_cast<ReturnTy>(UnsupportedValue);
-      }
-      auto Result = FuncPtr(std::forward<Args>(ArgsList)...);
-      return Result;
-    }
+    if (FuncPtr != nullptr)
+      return FuncPtr(std::forward<Args>(ArgsList)...);
 
-    if (!api_helper::canCall<Fn>()) {
+    if (!api_helper::canCall<Fn>())
       return static_cast<ReturnTy>(UnsupportedValue);
-    }
-    auto Result = Fn(std::forward<Args>(ArgsList)...);
 
-    return Result;
+    return Fn(std::forward<Args>(ArgsList)...);
   }
 
-  bool tryLoadingExperimental(ze_driver_handle_t zeDriver,
+  bool loadExperimental(ze_driver_handle_t zeDriver,
                               const char *FuncName) {
-    if (api_helper::canCall<Fn>()) {
-      return true; // Function is already available, no need to load it using
-                   // experimental API.
-    }
+    assert(!api_helper::canCall<Fn>() &&
+           "ZeDispatcher::loadExperimental called without "
+           "ZeDispatcher::available check!");
 
-    auto Result = zeDriverGetExtensionFunctionAddress(
-        zeDriver, FuncName, reinterpret_cast<void **>(&FuncPtr));
+    ze_result_t Result = ZE_RESULT_SUCCESS;
+    CALL_ZE_RET(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
+                reinterpret_cast<void **>(&FuncPtr));
 
-    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr) {
+    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
       return false;
-    }
 
-    UsesFuncPtr = true;
     return true;
   }
 
-  void setFallbackFunction(decltype(Fn) FallbackFunc) {
-    UsesFuncPtr = true;
-    FuncPtr = FallbackFunc;
-  }
-
 private:
-  bool UsesFuncPtr = false;
   decltype(Fn) FuncPtr = nullptr;
 };
 
@@ -228,18 +213,14 @@ public:
 
   std::atomic<bool> AppendLaunchKernelSupported = true;
 
-  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments,
-               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;
-  ZeDispatcher<zexKernelGetArgumentSize, ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zexKernelGetArgumentSize>
       KernelGetArgumentSize;
-  ZeDispatcher<zeCommandListAppendHostFunction,
-               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+  ZeDispatcher<zeCommandListAppendHostFunction>
       CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
-  ZeDispatcher<zeIntelGetDriverVersionString,
-               ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
-      IntelGetDriverVersionString;
+  ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
 };
 
 } // namespace llvm::omp::target::plugin

@@ -14,6 +14,7 @@
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
+#include "L0Trace.h"
 #include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
@@ -61,40 +62,49 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   if (AppendLaunchKernelWithArgsAvailable &&
       Device.getL0Context().AppendLaunchKernelSupported.load(
           std::memory_order_acquire)) {
-    auto Result = CmdList->appendLaunchKernelWithArgs(
+    auto Err = CmdList->appendLaunchKernelWithArgs(
         Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
         NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
-    // Can a context have multiple users?
-    if (!Device.getL0Context().AppendLaunchKernelSupported.load(
-            std::memory_order_acquire)) {
-      // Commandlist failed to launch kernel with arguments, fallback to older
-      // API.
-      consumeError(std::move(Result));
-    } else {
-      return Result;
-    }
+    if (!Err)
+      return Plugin::success();
+
+    // Check if Err is ErrorCode::UNSUPPORTED, if so consume it
+    Err = llvm::handleErrors(
+        std::move(Err),
+        [&](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
+          if (E->convertToErrorCode() ==
+              error::make_error_code(error::ErrorCode::UNSUPPORTED))
+            return llvm::Error::success(); // Swallow error
+          return llvm::Error(std::move(E));
+        });
+
+    if (Err)
+      // Err is still here, so it was not ErrorCode::UNSUPPORTED
+      return Err;
+
+    // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
+
+  if (KEnv.ArgPtrs == nullptr)
+    return error::createOffloadError(
+        ErrorCode::UNSUPPORTED,
+        "zeCommandListAppendLaunchKernelWithArguments is not supported on this "
+        "platform and fallback is not possible!");
 
   // Submit kernel using older set of APIs - zeKernelSetArgumentValue
   auto &GroupSizes = KEnv.GroupSizes;
-  auto Res = zeKernelSetGroupSize(Kernel, GroupSizes.groupSizeX,
-                                  GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
-  if (Res != ZE_RESULT_SUCCESS)
-    return error::createOffloadError(ErrorCode::UNKNOWN,
-                                     "Could not set group size!");
+  CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
+                    GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
 
   auto &KernelProperties = KEnv.KernelPR;
 
   for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
        KernelArg++) {
-    uint32_t ArgSize = KernelProperties.ArgSizes[KernelArg];
+    uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
 
-    Res = zeKernelSetArgumentValue(Kernel, KernelArg, ArgSize,
-                                   KEnv.ArgPtrs[KernelArg]);
-    if (Res != ZE_RESULT_SUCCESS)
-      return error::createOffloadError(ErrorCode::UNKNOWN,
-                                       "Could not set argument to a kernel!");
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg, ArgSize,
+                      KEnv.ArgPtrs[KernelArg]);
   }
 
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,

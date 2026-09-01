@@ -13,40 +13,20 @@
 #include "L0Context.h"
 #include "L0Plugin.h"
 
-#include <cstring>
-
 namespace llvm::omp::target::plugin {
 
-static ze_result_t ZE_APICALL getDriverVersionFromProperties(
-    ze_driver_handle_t zeDriver, char *DriverVersion, size_t *VersionSize) {
-  if (!VersionSize)
-    return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
-
+/// Compose a driver version string from the packed value reported by
+/// zeDriverGetProperties. Used when zeIntelGetDriverVersionString is missing.
+static Expected<std::string>
+getDriverVersionFromProperties(ze_driver_handle_t zeDriver) {
   ze_driver_properties_t DriverProperties{};
   DriverProperties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
-  ze_result_t Result = zeDriverGetProperties(zeDriver, &DriverProperties);
-  if (Result != ZE_RESULT_SUCCESS)
-    return Result;
+  CALL_ZE_RET_ERROR(zeDriverGetProperties, zeDriver, &DriverProperties);
 
-  uint32_t PackedVersion = DriverProperties.driverVersion;
-  std::string Version = std::to_string((PackedVersion & 0xFF000000) >> 24) +
-                        "." +
-                        std::to_string((PackedVersion & 0x00FF0000) >> 16) +
-                        "." + std::to_string(PackedVersion & 0x0000FFFF);
-
-  if (!DriverVersion) {
-    *VersionSize = Version.size();
-    return ZE_RESULT_SUCCESS;
-  }
-
-  if (*VersionSize < Version.size()) {
-    *VersionSize = Version.size();
-    return ZE_RESULT_ERROR_INVALID_SIZE;
-  }
-
-  std::memcpy(DriverVersion, Version.data(), Version.size());
-  *VersionSize = Version.size();
-  return ZE_RESULT_SUCCESS;
+  const uint32_t PackedVersion = DriverProperties.driverVersion;
+  return std::to_string((PackedVersion & 0xFF000000) >> 24) + "." +
+         std::to_string((PackedVersion & 0x00FF0000) >> 16) + "." +
+         std::to_string(PackedVersion & 0x0000FFFF);
 }
 
 L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
@@ -113,19 +93,29 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  LaunchKernelWithArguments.tryLoadingExperimental(
-      zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
-  KernelGetArgumentSize.tryLoadingExperimental(zeDriver,
-                                               "zexKernelGetArgumentSize");
-  CommandListAppendHostFunction.tryLoadingExperimental(
-      zeDriver, "zeCommandListAppendHostFunction");
-  DriverGetDefaultContext.tryLoadingExperimental(zeDriver,
-                                                 "zeDriverGetDefaultContext");
-  if (!IntelGetDriverVersionString.tryLoadingExperimental(
-          zeDriver, "zeIntelGetDriverVersionString")) {
-    IntelGetDriverVersionString.setFallbackFunction(
-        getDriverVersionFromProperties);
-  }
+  if (!LaunchKernelWithArguments)
+    LaunchKernelWithArguments.loadExperimental(
+        zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
+
+  if (!KernelGetArgumentSize)
+    KernelGetArgumentSize.loadExperimental(zeDriver,
+                                           "zexKernelGetArgumentSize");
+
+  if (!CommandListAppendHostFunction)
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zeCommandListAppendHostFunction");
+  if (!CommandListAppendHostFunction)
+    // Try again with a name used in compute runtime 25.35 to 25.48
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zexCommandListAppendHostFunction");
+
+  if (!DriverGetDefaultContext)
+    DriverGetDefaultContext.loadExperimental(zeDriver,
+                                             "zeDriverGetDefaultContext");
+
+  if (!IntelGetDriverVersionString)
+    IntelGetDriverVersionString.loadExperimental(
+        zeDriver, "zeIntelGetDriverVersionString");
 
   ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
@@ -137,20 +127,9 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  if (!LaunchKernelWithArguments.available() &&
-      KernelGetArgumentSize.available()) {
-    // Launch kernel was not available, both through dlopen and experimental API
-    // use fallback with KernelGetArgumentSize
-    // LaunchKernelWithArguments.addFallbackFunction(zeCommandListAppendLaunchKernelWithArgumentsFallback);
-  }
-
-  if (!CommandListAppendHostFunction.available()) {
-    // Try again with a name used in compute runtime 25.35 to 25.48
-    CommandListAppendHostFunction.tryLoadingExperimental(
-        zeDriver, "zexCommandListAppendHostFunction");
-  }
-
-  auto DriverVersionOrErr = tryGetIntelDriverVersion();
+  auto DriverVersionOrErr = IntelGetDriverVersionString.available()
+                                ? tryGetIntelDriverVersion()
+                                : getDriverVersionFromProperties(zeDriver);
   if (!DriverVersionOrErr)
     return DriverVersionOrErr.takeError();
   DriverVersion = std::move(*DriverVersionOrErr);
