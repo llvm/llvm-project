@@ -1,0 +1,154 @@
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify -Wno-unused-value %s
+// expected-no-diagnostics
+
+void discarded_value() {
+  constexpr bool b = true;
+  [] { b; };
+  [] { static_cast<void>(b); };
+  [] { +b; };
+  [] { static_cast<bool>(b); };
+
+  int i;
+  [] { i; };
+
+  enum E {};
+  const auto e = static_cast<E>(42);
+  [] { e; };
+}
+
+enum NonConstantE {};
+NonConstantE make_enum();
+
+void discarded_nonconstant_enum() {
+  const auto e = make_enum();
+  [] { e; };
+}
+
+struct PotentialResults {
+  int x;
+  mutable int y;
+};
+
+void side_effect();
+
+void discarded_potential_results() {
+  PotentialResults object{};
+  int array[1]{};
+  int i = 0;
+
+  [] { (object); };
+  [] { object.x; };
+  [] { object.*&PotentialResults::x; };
+  [] { true ? object.x : object.y; };
+  [] { static_cast<void>(object.x); };
+  [] { array[0]; };
+  [] { (side_effect(), i); };
+}
+
+template <int>
+void templ() {}
+
+template <typename>
+void template_argument() {
+  constexpr bool b = true;
+  [] {
+    b, templ<0>();
+  };
+}
+
+template <typename T>
+void dependent_initializer() {
+  constexpr bool b = T::b;
+  [] { b; };
+}
+
+template <typename T>
+void dependent_parameter(T t) {
+  [] { t; };
+}
+
+void generic_lambda_parameter() {
+  [](auto t) {
+    [] { t; };
+  }(0);
+}
+
+void capture_default(int i) {
+  auto by_copy = [=] { i; };
+  static_assert(sizeof(by_copy) >= sizeof(i));
+
+  constexpr int constant = 42;
+  auto without_capture = [=] { constant; };
+  static_assert(sizeof(without_capture) == 1);
+}
+
+template <typename T>
+void dependent_capture_default(T t) {
+  auto l = [=](auto) { t; };
+  static_assert(sizeof(l) >= sizeof(T));
+  l(0);
+}
+
+struct Noncopyable {
+  constexpr Noncopyable() = default;
+  Noncopyable(const Noncopyable &) = delete;
+};
+
+template <typename T>
+void dependent_discarded_constant() {
+  constexpr Noncopyable n;
+  [=](auto) { n; }(T());
+}
+
+template <typename... T>
+void discarded_fold(T... t) {
+  [] { (t, ...); };
+}
+
+template <typename... T>
+void nested_discarded_fold(T... t) {
+  [](auto... u) {
+    [] { (u, ...); };
+  }(t...);
+}
+
+int global;
+
+void discarded_binary_conditional(int i) {
+  [] { global ?: i; };
+}
+
+template <char...>
+int operator""_literal() {
+  return 0;
+}
+
+template <typename T>
+void literal_template_argument() {
+  constexpr bool b = T::b;
+  [] {
+    b, 0_literal;
+  };
+}
+
+template <typename T>
+void dependent_conditional() {
+  constexpr bool b = T::b;
+  [] {
+    b ? 0_literal : 0;
+  };
+}
+
+struct S {
+  static constexpr bool b = true;
+};
+
+template void template_argument<void>();
+template void dependent_initializer<S>();
+template void dependent_parameter<int>(int);
+template void dependent_capture_default<int>(int);
+template void dependent_discarded_constant<int>();
+template void discarded_fold<int, int>(int, int);
+template void nested_discarded_fold<int, int>(int, int);
+template void literal_template_argument<S>();
+template void dependent_conditional<S>();

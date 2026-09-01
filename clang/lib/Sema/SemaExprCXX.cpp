@@ -7656,6 +7656,11 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
         return E;
       E = Res.get();
     } else {
+      ExprResult Res = CheckDiscardedValueExpression(E);
+      if (Res.isInvalid())
+        return E;
+      E = Res.get();
+
       // Per C++2a [expr.ass]p5, a volatile assignment is not deprecated if
       // it occurs as a discarded-value expression.
       CheckUnusedVolatileAssignment(E);
@@ -7763,7 +7768,9 @@ static inline bool VariableCanNeverBeAConstantExpression(VarDecl *Var,
 /// need to be captured.
 
 static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
-    Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
+    Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S,
+    unsigned FirstVariableCapture, unsigned FirstThisCapture,
+    SourceLocation SavedThisCaptureLocation) {
 
   assert(!S.isUnevaluatedContext());
 #ifndef NDEBUG
@@ -7780,7 +7787,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   // All the potentially captureable variables in the current nested
   // lambda (within a generic outer lambda), must be captured by an
   // outer lambda that is enclosed within a non-dependent context.
-  CurrentLSI->visitPotentialCaptures([&](ValueDecl *Var, Expr *VarExpr) {
+  auto CheckCapture = [&](ValueDecl *Var, Expr *VarExpr) {
     // If the variable is clearly identified as non-odr-used and the full
     // expression is not instantiation dependent, only then do we not
     // need to check enclosing lambda's for speculative captures.
@@ -7792,13 +7799,30 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     //     (void) +x + a;
     //   };
     // }
-    if (CurrentLSI->isVariableExprMarkedAsNonODRUsed(VarExpr) &&
-        !IsFullExprInstantiationDependent)
-      return;
-
     VarDecl *UnderlyingVar = Var->getPotentiallyDecomposedVarDecl();
     if (!UnderlyingVar)
       return;
+
+    if (CurrentLSI->isVariableExprMarkedAsNonODRUsed(VarExpr) &&
+        (!IsFullExprInstantiationDependent ||
+         CurrentLSI->isVariableExprMarkedAsDiscarded(VarExpr))) {
+      // Preserve Clang's existing implicit-capture behavior for lambdas with
+      // a capture-default. The discarded-use exception suppresses a capture
+      // diagnostic for [], but does not make [=] or [&] closures empty.
+      if (!CurrentLSI->isVariableExprMarkedAsDiscarded(VarExpr))
+        return;
+      if (CurrentLSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_None)
+        return;
+      if (UnderlyingVar->isUsableInConstantExpressions(S.Context))
+        return;
+
+      QualType CaptureType, DeclRefType;
+      S.tryCaptureVariable(Var, VarExpr->getExprLoc(), TryCaptureKind::Implicit,
+                           /*EllipsisLoc=*/SourceLocation(),
+                           /*BuildAndDiagnose=*/true, CaptureType, DeclRefType,
+                           nullptr);
+      return;
+    }
 
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
@@ -7829,10 +7853,11 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
                              DeclRefType, nullptr);
       }
     }
-  });
+  };
+  CurrentLSI->visitPotentialCaptures(CheckCapture, FirstVariableCapture);
 
   // Check if 'this' needs to be captured.
-  if (CurrentLSI->hasPotentialThisCapture()) {
+  if (CurrentLSI->getNumPotentialThisCaptures() != FirstThisCapture) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
     if (const UnsignedOrNone Index =
@@ -7846,7 +7871,8 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   }
 
   // Reset all the potential captures at the end of each full-expression.
-  CurrentLSI->clearPotentialCaptures();
+  CurrentLSI->clearPotentialCaptures(FirstVariableCapture, FirstThisCapture,
+                                     SavedThisCaptureLocation);
 }
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
@@ -7935,10 +7961,22 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
-  if (IsInLambdaDeclContext && CurrentLSI &&
-      CurrentLSI->hasPotentialCaptures() && !FullExpr.isInvalid())
-    CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(FE, CurrentLSI,
-                                                              *this);
+  if (IsInLambdaDeclContext && CurrentLSI && !FullExpr.isInvalid()) {
+    const ExpressionEvaluationContextRecord &Rec = currentEvaluationContext();
+    const bool IsSameCaptureContext = Rec.PotentialCaptureContext == CurrentLSI;
+    const unsigned FirstVariableCapture =
+        IsSameCaptureContext ? Rec.NumPotentialVariableCaptures : 0;
+    const unsigned FirstThisCapture =
+        IsSameCaptureContext ? Rec.NumPotentialThisCaptures : 0;
+    const SourceLocation SavedThisCaptureLocation =
+        IsSameCaptureContext ? Rec.PotentialThisCaptureLocation
+                             : SourceLocation();
+    if (CurrentLSI->hasPotentialCaptures(FirstVariableCapture,
+                                         FirstThisCapture))
+      CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
+          FE, CurrentLSI, *this, FirstVariableCapture, FirstThisCapture,
+          SavedThisCaptureLocation);
+  }
   return MaybeCreateExprWithCleanups(FullExpr);
 }
 

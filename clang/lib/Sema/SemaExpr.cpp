@@ -18295,6 +18295,16 @@ Sema::PushExpressionEvaluationContext(
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
       Prev.InImmediateEscalatingFunctionContext;
 
+  if (LambdaScopeInfo *LSI = getCurLambda(/*IgnoreCapturedRegions=*/true)) {
+    ExprEvalContexts.back().PotentialCaptureContext = LSI;
+    ExprEvalContexts.back().NumPotentialVariableCaptures =
+        LSI->getNumPotentialVariableCaptures();
+    ExprEvalContexts.back().NumPotentialThisCaptures =
+        LSI->getNumPotentialThisCaptures();
+    ExprEvalContexts.back().PotentialThisCaptureLocation =
+        LSI->PotentialThisCaptureLocation;
+  }
+
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
     std::swap(MaybeODRUseExprs, ExprEvalContexts.back().SavedMaybeODRUseExprs);
@@ -20341,9 +20351,26 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   // Mark that this expression does not constitute an odr-use.
   auto MarkNotOdrUsed = [&] {
     if (!MaybeCUDAODRUsed()) {
-      S.MaybeODRUseExprs.remove(E);
-      if (LambdaScopeInfo *LSI = S.getCurLambda())
-        LSI->markVariableExprAsNonODRUsed(E);
+      LambdaScopeInfo *LSI = S.getCurLambda();
+      bool PreserveCaptureDefault = false;
+      if (NOUR == NOUR_Discarded && LSI &&
+          LSI->ImpCaptureStyle != CapturingScopeInfo::ImpCap_None &&
+          S.MaybeODRUseExprs.count(E)) {
+        if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+          PreserveCaptureDefault =
+              !cast<VarDecl>(DRE->getDecl())
+                   ->isUsableInConstantExpressions(S.Context);
+        else if (auto *ME = dyn_cast<MemberExpr>(E))
+          PreserveCaptureDefault =
+              !cast<VarDecl>(ME->getMemberDecl())
+                   ->isUsableInConstantExpressions(S.Context);
+        else
+          PreserveCaptureDefault = isa<FunctionParmPackExpr>(E);
+      }
+      if (!PreserveCaptureDefault)
+        S.MaybeODRUseExprs.remove(E);
+      if (LSI)
+        LSI->markVariableExprAsNonODRUsed(E, NOUR);
     }
   };
 
@@ -20481,6 +20508,44 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   }
 
   // [Clang extension]
+  //   -- If e is a GNU binary conditional expression, its false operand is a
+  //      potential result. The common operand is also used as the condition,
+  //      so it remains an odr-use.
+  case Expr::BinaryConditionalOperatorClass: {
+    auto *BCO = cast<BinaryConditionalOperator>(E);
+    ExprResult RHS = Rebuild(BCO->getFalseExpr());
+    if (!RHS.isUsable())
+      return RHS;
+    return new (S.Context) BinaryConditionalOperator(
+        BCO->getCommon(), BCO->getOpaqueValue(), BCO->getCond(),
+        BCO->getTrueExpr(), RHS.get(), BCO->getQuestionLoc(),
+        BCO->getColonLoc(), BCO->getType(), BCO->getValueKind(),
+        BCO->getObjectKind());
+  }
+
+  // [Clang extension]
+  //   -- If e is a comma fold-expression, its rightmost operand is a
+  //      potential result.
+  case Expr::CXXFoldExprClass: {
+    auto *FE = cast<CXXFoldExpr>(E);
+    if (FE->getOperator() != BO_Comma)
+      break;
+
+    Expr *LHS = FE->getLHS();
+    Expr *RHS = FE->getRHS();
+    ExprResult Sub = Rebuild(RHS ? RHS : LHS);
+    if (!Sub.isUsable())
+      return Sub;
+    if (RHS)
+      RHS = Sub.get();
+    else
+      LHS = Sub.get();
+    return S.BuildCXXFoldExpr(FE->getCallee(), FE->getLParenLoc(), LHS,
+                              FE->getOperator(), FE->getEllipsisLoc(), RHS,
+                              FE->getRParenLoc(), FE->getNumExpansions());
+  }
+
+  // [Clang extension]
   //   -- If e has the form __extension__ e1...
   case Expr::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(E);
@@ -20537,7 +20602,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     if (LHS.isInvalid())
       return ExprError();
 
-    ExprResult RHS = Rebuild(CE->getLHS());
+    ExprResult RHS = Rebuild(CE->getRHS());
     if (RHS.isInvalid())
       return ExprError();
 
@@ -20617,6 +20682,14 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
   return Result.get() ? Result : E;
 }
 
+ExprResult Sema::CheckDiscardedValueExpression(Expr *E) {
+  ExprResult Result =
+      rebuildPotentialResultsAsNonOdrUsed(*this, E, NOUR_Discarded);
+  if (Result.isInvalid())
+    return ExprError();
+  return Result.get() ? Result : E;
+}
+
 ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
   if (!Res.isUsable())
     return Res;
@@ -20653,35 +20726,43 @@ void Sema::CleanupVarDeclMarking() {
          "MarkVarDeclODRUsed failed to cleanup MaybeODRUseExprs?");
 }
 
-static void DoMarkPotentialCapture(Sema &SemaRef, SourceLocation Loc,
-                                   ValueDecl *Var, Expr *E) {
+static LambdaScopeInfo *getLambdaForPotentialCapture(Sema &SemaRef,
+                                                     ValueDecl *Var) {
   VarDecl *VD = Var->getPotentiallyDecomposedVarDecl();
   if (!VD)
-    return;
+    return nullptr;
 
   const bool RefersToEnclosingScope =
       (SemaRef.CurContext != VD->getDeclContext() &&
        VD->getDeclContext()->isFunctionOrMethod() && VD->hasLocalStorage());
-  if (RefersToEnclosingScope) {
-    LambdaScopeInfo *const LSI =
-        SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
-    if (LSI && (!LSI->CallOperator ||
-                !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
-      // If a variable could potentially be odr-used, defer marking it so
-      // until we finish analyzing the full expression for any
-      // lvalue-to-rvalue
-      // or discarded value conversions that would obviate odr-use.
-      // Add it to the list of potential captures that will be analyzed
-      // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
-      // unless the variable is a reference that was initialized by a constant
-      // expression (this will never need to be captured or odr-used).
-      //
-      // FIXME: We can simplify this a lot after implementing P0588R1.
-      assert(E && "Capture variable should be used in an expression.");
-      if (!Var->getType()->isReferenceType() ||
-          !VD->isUsableInConstantExpressions(SemaRef.Context))
-        LSI->addPotentialCapture(E->IgnoreParens());
-    }
+  if (!RefersToEnclosingScope)
+    return nullptr;
+
+  LambdaScopeInfo *LSI =
+      SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
+  if (LSI && (!LSI->CallOperator ||
+              !LSI->CallOperator->Encloses(Var->getDeclContext())))
+    return LSI;
+  return nullptr;
+}
+
+static void DoMarkPotentialCapture(Sema &SemaRef, SourceLocation Loc,
+                                   ValueDecl *Var, Expr *E) {
+  if (LambdaScopeInfo *LSI = getLambdaForPotentialCapture(SemaRef, Var)) {
+    // If a variable could potentially be odr-used, defer marking it so
+    // until we finish analyzing the full expression for any lvalue-to-rvalue
+    // or discarded value conversions that would obviate odr-use.
+    // Add it to the list of potential captures that will be analyzed
+    // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
+    // unless the variable is a reference that was initialized by a constant
+    // expression (this will never need to be captured or odr-used).
+    //
+    // FIXME: We can simplify this a lot after implementing P0588R1.
+    assert(E && "Capture variable should be used in an expression.");
+    VarDecl *VD = Var->getPotentiallyDecomposedVarDecl();
+    if (!Var->getType()->isReferenceType() ||
+        !VD->isUsableInConstantExpressions(SemaRef.Context))
+      LSI->addPotentialCapture(E->IgnoreParens());
   }
 }
 
@@ -20824,12 +20905,14 @@ static void DoMarkVarDeclReferenced(
   //      conversion is applied
   //   -- x is a variable of non-reference type, and e is an element of the set
   //      of potential results of a discarded-value expression to which the
-  //      lvalue-to-rvalue conversion is not applied [FIXME]
+  //      lvalue-to-rvalue conversion is not applied
   //
-  // We check the first part of the second bullet here, and
-  // Sema::CheckLValueToRValueConversionOperand deals with the second part.
-  // FIXME: To get the third bullet right, we need to delay this even for
-  // variables that are not usable in constant expressions.
+  // Delay marking variables usable in constant expressions until the
+  // enclosing full-expression determines whether an lvalue-to-rvalue
+  // conversion is applied. Also delay non-reference variables that are
+  // potential lambda captures so a discarded-value expression can obviate
+  // their capture.
+  // FIXME: Implement the third bullet for non-capturing contexts too.
 
   // If we already know this isn't an odr-use, there's nothing more to do.
   if (DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E))
@@ -20853,14 +20936,19 @@ static void DoMarkVarDeclReferenced(
     // behavior.
     break;
 
-  case OdrUseContext::Used:
+  case OdrUseContext::Used: {
     // If we might later find that this expression isn't actually an odr-use,
     // delay the marking.
-    if (E && Var->isUsableInConstantExpressions(SemaRef.Context))
+    LambdaScopeInfo *PotentialCaptureLSI =
+        getLambdaForPotentialCapture(SemaRef, Var);
+    if (E && (Var->isUsableInConstantExpressions(SemaRef.Context) ||
+              (!Var->getType()->isReferenceType() && PotentialCaptureLSI &&
+               PotentialCaptureLSI->AfterParameterList)))
       SemaRef.MaybeODRUseExprs.insert(E);
     else
       MarkVarDeclODRUsed(Var, Loc, SemaRef);
     break;
+  }
 
   case OdrUseContext::Dependent:
     // If this is a dependent context, we don't need to mark variables as

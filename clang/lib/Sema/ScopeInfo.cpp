@@ -233,8 +233,9 @@ bool CapturingScopeInfo::isVLATypeCaptured(const VariableArrayType *VAT) const {
 }
 
 void LambdaScopeInfo::visitPotentialCaptures(
-    llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const {
-  for (Expr *E : PotentiallyCapturingExprs) {
+    llvm::function_ref<void(ValueDecl *, Expr *)> Callback,
+    unsigned FirstCapture) const {
+  for (Expr *E : llvm::drop_begin(PotentiallyCapturingExprs, FirstCapture)) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       Callback(cast<ValueDecl>(DRE->getFoundDecl()), E);
     } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
