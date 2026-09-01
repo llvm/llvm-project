@@ -2212,6 +2212,15 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> mappedCommonBlocks;
+  findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause, const parser::CharBlock &) {
+        for (const Object &object : std::get<ObjectList>(clause.t)) {
+          if (object.sym()->has<semantics::CommonBlockDetails>())
+            mappedCommonBlocks.insert(&object.sym()->GetUltimate());
+        }
+      });
+
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2219,7 +2228,21 @@ bool ClauseProcessor::processUseDeviceAddr(
         mlir::Location location = converter.genLocation(source);
         mlir::omp::ClauseMapFlags mapTypeBits =
             mlir::omp::ClauseMapFlags::return_param;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+        ObjectList objects;
+        // Keep the aggregate only when it pairs with a whole-COMMON map on
+        // this directive; otherwise preserve named-COMMON member equivalence.
+        for (const Object &object : clause.v) {
+          auto *details =
+              object.sym()->detailsIf<semantics::CommonBlockDetails>();
+          if (!details ||
+              mappedCommonBlocks.contains(&object.sym()->GetUltimate())) {
+            objects.push_back(object);
+            continue;
+          }
+          for (const auto &member : details->objects())
+            objects.push_back(Object{&*member, std::nullopt});
+        }
+        processMapObjects(stmtCtx, location, objects, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceObjects);
       });
