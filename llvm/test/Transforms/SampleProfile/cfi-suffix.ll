@@ -19,7 +19,7 @@ entry:
 ; CHECK: ![[FOO]] = !{!"function_entry_count", i64 1001}
 ; CHECK: ![[BAR]] = !{!"function_entry_count", i64 2001}
 
-attributes #0 = {"use-sample-profile"}
+attributes #0 = {"use-sample-profile" "sample-profile-suffix-elision-policy"="selected"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}
