@@ -172,8 +172,6 @@ let Latency = 6, NumMicroOps = 2 in
 def V1Write_6c_1B_1M0    : SchedWriteRes<[V1UnitB, V1UnitM0]>;
 let Latency = 3, NumMicroOps = 2 in
 def V1Write_3c_1I_1M     : SchedWriteRes<[V1UnitI, V1UnitM]>;
-let Latency = 5, NumMicroOps = 2 in
-def V1Write_5c_1I_1L     : SchedWriteRes<[V1UnitI, V1UnitL]>;
 let Latency = 7, NumMicroOps = 2 in
 def V1Write_7c_1I_1L     : SchedWriteRes<[V1UnitI, V1UnitL]>;
 let Latency = 6, NumMicroOps = 2 in
@@ -250,8 +248,12 @@ let Latency = 7, NumMicroOps = 3 in
 def V1Write_7c_2M0_1V01     : SchedWriteRes<[V1UnitM0, V1UnitM0, V1UnitV01]>;
 let Latency = 8, NumMicroOps = 3 in
 def V1Write_8c_1L_2V        : SchedWriteRes<[V1UnitL, V1UnitV, V1UnitV]>;
+let Latency = 4, NumMicroOps = 3 in
+def V1Write_4c_3L        : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
 let Latency = 6, NumMicroOps = 3 in
 def V1Write_6c_3L           : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
+let Latency = 5, NumMicroOps = 3 in
+def V1Write_5c_2I_1L     : SchedWriteRes<[V1UnitI, V1UnitI, V1UnitL]>;
 let Latency = 2, NumMicroOps = 3 in
 def V1Write_2c_1L01_1S_1V   : SchedWriteRes<[V1UnitL01, V1UnitS, V1UnitV]>;
 let Latency = 4, NumMicroOps = 3 in
@@ -725,14 +727,17 @@ def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 // Load pair, immed offset
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
+def : InstRW<[V1Write_4c_3L, V1Write_0c_0Z], (instrs LDPXi, LDNPXi)>;
 def : InstRW<[WriteAdr, V1Write_4c_1L, V1Write_0c_0Z],
              (instrs LDPWpost, LDPWpre)>;
+def : InstRW<[WriteAdr, V1Write_4c_3L, V1Write_0c_0Z],
+             (instrs LDPXpost, LDPXpre)>;
 
 // Load pair, signed immed offset, signed words
-def : InstRW<[V1Write_5c_1I_1L, V1Write_0c_0Z], (instrs LDPSWi)>;
+def : InstRW<[V1Write_5c_2I_1L, V1Write_0c_0Z], (instrs LDPSWi)>;
 
 // Load pair, immed post or pre-index, signed words
-def : InstRW<[WriteAdr, V1Write_5c_1I_1L, V1Write_0c_0Z],
+def : InstRW<[WriteAdr, V1Write_5c_2I_1L, V1Write_0c_0Z],
              (instrs LDPSWpost, LDPSWpre)>;
 
 
