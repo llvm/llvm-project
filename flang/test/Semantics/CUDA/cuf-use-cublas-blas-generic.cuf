@@ -4,6 +4,8 @@
 ! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/external-first.cuf 2>&1 | FileCheck --check-prefix=UNPREFIXED %s
 ! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/cublas-first.cuf 2>&1 | FileCheck --check-prefix=UNPREFIXED %s
 ! RUN: not %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/cublas-prefixed.cuf 2>&1 | FileCheck --check-prefix=CUBLAS-PREFIXED %s
+! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/blas-first-disjoint-only.cuf 2>&1 | FileCheck --allow-empty --check-prefix=DISJOINT-ONLY %s
+! RUN: %flang_fc1 -fsyntax-only -x cuda -I %t -fintrinsic-modules-path %t %t/cublas-first-disjoint-only.cuf 2>&1 | FileCheck --allow-empty --check-prefix=DISJOINT-ONLY %s
 
 ! Unprefixed generics in the intrinsic CUBLAS module model the legacy BLAS
 ! interface.  Compatible external interfaces may not override those generics.
@@ -82,5 +84,33 @@ module cublas_prefixed
   procedure(cublasaxpy), pointer :: p
 end module
 
+! The ONLY lists below are disjoint even though both used modules define both
+! names, so no intrinsic-module preference rule should be needed.
+
+!--- blas-first-disjoint-only.cuf
+module blas_first_disjoint_only
+  use blas, only: saxpy
+  use, intrinsic :: cublas, only: cublasaxpy
+  procedure(saxpy), pointer :: p
+contains
+  subroutine test_cuda_specific()
+    real, device :: x(1)
+    call cublasaxpy(1, x)
+  end subroutine
+end module
+
+!--- cublas-first-disjoint-only.cuf
+module cublas_first_disjoint_only
+  use, intrinsic :: cublas, only: cublasaxpy
+  use blas, only: saxpy
+  procedure(saxpy), pointer :: p
+contains
+  subroutine test_cuda_specific()
+    real, device :: x(1)
+    call cublasaxpy(1, x)
+  end subroutine
+end module
+
 ! UNPREFIXED: warning: USE association selects intrinsic 'cublas' generic 'saxpy' over an equivalent external interface [-Wprefer-intrinsic-module-use-association]
 ! CUBLAS-PREFIXED: error: 'cublasaxpy' must be an abstract interface or a procedure with an explicit interface
+! DISJOINT-ONLY-NOT: {{warning:|error:}}
