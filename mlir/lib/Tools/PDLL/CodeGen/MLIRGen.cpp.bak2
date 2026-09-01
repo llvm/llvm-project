@@ -640,18 +640,17 @@ Value CodeGen::genExprImpl(const ast::TypeConversionExpr *expr) {
   // Generate the type expression to be converted
   Value typeValue = genSingleExpr(expr->getTypeExpr());
   
-  // Create a StringAttr for the converter name and wrap it in a PDL attribute
-  Attribute converterNameAttr = builder.getStringAttr(expr->getConverterName());
-  Value converterNameValue = pdl::AttributeOp::create(
-      builder, loc, converterNameAttr);
-  
   // Create a native rewrite that will call the type converter at runtime
-  // Pass both the type and the converter name as arguments
+  // The converter name is stored as an attribute for runtime lookup
   auto rewriteOp = pdl::ApplyNativeRewriteOp::create(
       builder, loc,
       pdl::TypeType::get(builder.getContext()),
-      "__pdll_convert_type__",
-      ValueRange{typeValue, converterNameValue});
+      __pdll_convert_type__,
+      typeValue);
+  
+  // Attach the converter name as metadata
+  rewriteOp->setAttr(converter_name,
+                     builder.getStringAttr(expr->getConverterName()));
   
   return rewriteOp.getResult(0);
 }
@@ -668,7 +667,7 @@ Value CodeGen::genExprImpl(const ast::ConvertedOperandExpr *expr) {
   auto rewriteOp = pdl::ApplyNativeRewriteOp::create(
       builder, loc,
       pdl::ValueType::get(builder.getContext()),
-      "__pdll_converted_operand__",
+      __pdll_converted_operand__,
       ValueRange{operandValue, targetType});
   
   return rewriteOp.getResult(0);
