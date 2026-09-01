@@ -229,7 +229,8 @@ void Test19(void)
 				    // expected-warning {{'strlcpy' will always overflow; destination buffer has size 20, but size argument is 40}}
 
         strlcat(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} \
-                                    // expected-note {{change size argument to be the size of the destination}}
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcat' size argument is too large; destination buffer has size 20, but size argument is 40}}
 
         __builtin___strlcat_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcat_chk' call appears to be size of the source; expected the size of the destination}} \
                                                                                    // expected-note {{change size argument to be the size of the destination}} \
