@@ -88,10 +88,20 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       if (!uint_bit_size)
         return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
-          (in_type.IsSigned() && bitfield_size == *int_bit_size))
-        return valobj->CastToBasicType(int_type);
-      if (bitfield_size <= *uint_bit_size)
-        return valobj->CastToBasicType(uint_type);
+          (in_type.IsSigned() && bitfield_size == *int_bit_size)) {
+        auto result = valobj->CastToBasicType(int_type);
+        if (result->GetError().Fail())
+          return llvm::make_error<DILDiagnosticError>(
+              m_expr, result->GetError().AsCString(), location);
+        return result;
+      }
+      if (bitfield_size <= *uint_bit_size) {
+        auto result = valobj->CastToBasicType(uint_type);
+        if (result->GetError().Fail())
+          return llvm::make_error<DILDiagnosticError>(
+              m_expr, result->GetError().AsCString(), location);
+        return result;
+      }
       // Re-create as a const value with the same underlying type
       Scalar scalar;
       bool resolved = valobj->ResolveValue(scalar);
@@ -107,8 +117,13 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
 
   CompilerType promoted_type =
       valobj->GetCompilerType().GetPromotedIntegerType();
-  if (promoted_type)
-    return valobj->CastToBasicType(promoted_type);
+  if (promoted_type) {
+    auto result = valobj->CastToBasicType(promoted_type);
+    if (result->GetError().Fail())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, result->GetError().AsCString(), location);
+    return result;
+  }
 
   return valobj;
 }
@@ -1933,18 +1948,19 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                                   node.GetLocation());
   }
 
+  lldb::ValueObjectSP result;
   switch (cast_kind) {
   case CastKind::eEnumeration: {
     // FIXME: is this correct for float vector types?
     if (op_type.GetTypeInfo() & lldb::eTypeIsFloat || op_type.IsInteger() ||
         op_type.IsEnumerationType())
-      return operand->CastToEnumType(target_type);
+      result = operand->CastToEnumType(target_type);
     break;
   }
   case CastKind::eArithmetic: {
     if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
         op_type.IsScalarType() || op_type.IsEnumerationType())
-      return operand->CastToBasicType(target_type);
+      result = operand->CastToBasicType(target_type);
     break;
   }
   case CastKind::ePointer: {
@@ -1954,14 +1970,23 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                               : operand->GetValueAsUnsigned(0));
     llvm::StringRef name = "result";
     ExecutionContext exe_ctx(m_target.get(), false);
-    return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                     target_type,
-                                                     /* do_deref */ false);
+    result = ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                       target_type,
+                                                       /* do_deref */ false);
+    break;
   }
   case CastKind::eNone: {
     return lldb::ValueObjectSP();
   }
   } // switch
+
+  if (result) {
+    // If cast failed, retrieve the error message from the result.
+    if (result->GetError().Fail())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, result->GetError().AsCString(), node.GetLocation());
+    return result;
+  }
 
   std::string errMsg =
       llvm::formatv("unable to cast from '{0}' to '{1}'",

@@ -3686,7 +3686,7 @@ llvm.func @bar(i32, i32, !llvm.ptr) -> ()
 
 llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   omp.taskgroup {
-    %c1 = llvm.mlir.constant(1) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
     %ptr1 = llvm.alloca %c1 x i8 : (i32) -> !llvm.ptr
     omp.task {
       llvm.call @foo() : () -> ()

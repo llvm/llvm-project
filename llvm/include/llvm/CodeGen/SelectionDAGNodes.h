@@ -757,6 +757,11 @@ public:
   /// corresponding to a MachineInstr opcode.
   bool isMachineOpcode() const { return NodeType < 0; }
 
+  /// As above, for an opcode not held by a node.
+  static bool isMachineOpcode(unsigned Opc) {
+    return static_cast<int32_t>(Opc) < 0;
+  }
+
   /// This may only be called if isMachineOpcode returns
   /// true. It returns the MachineInstr opcode value that the node's opcode
   /// corresponds to.
@@ -1639,6 +1644,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_FMAXIMUM:
     case ISD::ATOMIC_LOAD_FMINIMUM:
+    case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+    case ISD::ATOMIC_LOAD_FMINIMUMNUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1727,6 +1734,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||

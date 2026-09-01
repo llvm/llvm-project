@@ -1,5 +1,6 @@
 add_lldb_unittest(APITests
   SBCommandInterpreterTest.cpp
+  SBEnvironmentTest.cpp
   SBLineEntryTest.cpp
   SBMutexTest.cpp
   SBBreakpointClearConditionTest.cpp
@@ -9,6 +10,7 @@ add_lldb_unittest(APITests
 
   LINK_LIBS
     liblldb
+    lldbSBUtilityHelpers
   )
 
 # Build with -Wdocumentation. This relies on the tests including all the API

@@ -2995,6 +2995,33 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
     EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Mapping.SubArch), Mapping.Kind);
 }
 
+TEST(TargetParserTest, testAMDGPUgetSubArchFromGPUName) {
+  // Concrete GPU names map to their subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx600"), Triple::AMDGPUSubArch600);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx900"), Triple::AMDGPUSubArch900);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx90a"), Triple::AMDGPUSubArch90A);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1030"),
+            Triple::AMDGPUSubArch1030);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1250"),
+            Triple::AMDGPUSubArch1250);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1250-strict"),
+            Triple::AMDGPUSubArch1250S);
+
+  // A legacy alias resolves to the same subarch as its canonical name.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("tahiti"),
+            AMDGPU::getSubArchFromGPUName("gfx600"));
+
+  // Generic/family names map to their family subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx9-generic"),
+            Triple::AMDGPUSubArch9);
+
+  // Pseudo targets and unrecognized names have no subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("generic"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("generic-hsa"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("not-a-gpu"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName(""), Triple::NoSubArch);
+}
+
 TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
   // Concrete subarches map to their exact ISA version.
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch600),
@@ -3105,6 +3132,20 @@ TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch702), 16u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1030), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1200), 32u);
+  // gfx12.5 doubled the bank count.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1250), 64u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1250), 64u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1251), 64u);
 }
 
 TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {

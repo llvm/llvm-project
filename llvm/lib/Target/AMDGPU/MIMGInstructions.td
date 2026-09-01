@@ -1643,6 +1643,8 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
       Gather4 = 1 in {
     let VDataDwords = 2 in
     defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, AVLdSt_64, /*enableDisasm*/ true>; /* for packed D16 only */
+    let VDataDwords = 3 in
+    defm _V3 : MIMG_Sampler_Src_Helper<op, asm, sample, AVLdSt_96>; /* packed D16 + tfe */
     let VDataDwords = 4 in
     defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, AVLdSt_128>;
     let VDataDwords = 5 in

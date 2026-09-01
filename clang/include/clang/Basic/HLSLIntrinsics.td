@@ -694,15 +694,15 @@ prevision partial derivative of the input value.
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
+def hlsl_degrees : HLSLOneArgInlineBuiltin<"degrees"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
 \param x The specified input value.
 }];
   let ParamNames = ["x"];
+  let Body = "return x * (__detail::elem_type_t<decltype(x)>)(180.L / __detail::Pi);";
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 // Returns the cross product of two floating-point, 3D vectors.
 def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
@@ -1319,7 +1319,7 @@ The return value is the \a I parameter.
 }
 
 // Returns the normalized unit vector of the specified floating-point vector.
-def hlsl_normalize : HLSLOneArgBuiltin<"normalize", "__builtin_hlsl_normalize"> {
+def hlsl_normalize : HLSLOneArgInlineBuiltin<"normalize"> {
   let Doc = [{
 \fn T normalize(T x)
 \brief Returns the normalized unit vector of the specified floating-point
@@ -1328,6 +1328,8 @@ vector.
 
 Normalize is based on the following formula: x / length(x).
 }];
+  let ParamNames = ["x"];
+  let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1392,14 +1394,14 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
+def hlsl_radians : HLSLOneArgInlineBuiltin<"radians"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
   let ParamNames = ["Val"];
+  let Body = "return Val * (__detail::elem_type_t<decltype(Val)>)(__detail::Pi / 180.L);";
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Calculates a fast, approximate, per-component reciprocal ie 1 / x.

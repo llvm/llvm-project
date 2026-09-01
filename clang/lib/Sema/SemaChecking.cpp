@@ -2314,7 +2314,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgpu:
-    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32be:
@@ -6181,7 +6181,8 @@ static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
   // and get its parameter list.
   bool IsVariadic = false;
   ArrayRef<ParmVarDecl *> Params;
-  DeclContext *Caller = S.CurContext;
+  DeclContext *Caller =
+      S.CurContext->getEnclosingNonExpansionStatementContext();
   if (auto *Block = dyn_cast<BlockDecl>(Caller)) {
     IsVariadic = Block->isVariadic();
     Params = Block->parameters();
@@ -7836,7 +7837,7 @@ static bool CheckMissingFormatAttribute(
   if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute, Loc))
     return false;
 
-  DeclContext *DC = S->CurContext;
+  DeclContext *DC = S->CurContext->getEnclosingNonExpansionStatementContext();
   if (!isa<ObjCMethodDecl>(DC) && !isa<FunctionDecl>(DC) && !isa<BlockDecl>(DC))
     return false;
   Decl *Caller = cast<Decl>(DC)->getCanonicalDecl();
@@ -16592,19 +16593,13 @@ static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                                           RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
-    auto I = UnmatchedFields.begin();
-    auto E = UnmatchedFields.end();
-
-    for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
-        bool Result = UnmatchedFields.erase(*I);
-        (void) Result;
-        assert(Result);
-        break;
-      }
-    }
-    if (I == E)
+    auto It = llvm::find_if(UnmatchedFields, [&](const FieldDecl *Field2) {
+      return isLayoutCompatible(C, Field1, Field2, /*IsUnionMember=*/true);
+    });
+    if (It == UnmatchedFields.end())
       return false;
+    [[maybe_unused]] bool Result = UnmatchedFields.erase(*It);
+    assert(Result);
   }
 
   return UnmatchedFields.empty();
