@@ -506,7 +506,9 @@ let TargetPrefix = "s390" in {
 
 let TargetPrefix = "s390" in {
   def int_s390_translate : Intrinsic<[],
-                                [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
-                                [NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>,
+                                [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, 
+                                 llvm_ptr_ty, llvm_i32_ty],
+                                [IntrArgMemOnly, 
+                                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<3>>]>,
                                 ClangBuiltin<"__builtin_s390_tr">;
 }

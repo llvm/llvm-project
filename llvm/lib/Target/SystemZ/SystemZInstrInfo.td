@@ -1924,25 +1924,6 @@ let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
 }
 
 //===----------------------------------------------------------------------===//
-// Translate
-//===----------------------------------------------------------------------===//
-
-// Handle variable length data via pseudo
-def TR_VAR 
-  : Pseudo<(outs), (ins GR64:$src, GR64:$tbl, GR32:$len),
-           [(int_s390_translate GR64:$src, GR64:$tbl, GR32:$len)]> {
-  let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
-  let Uses = [CC];
-  let Defs = [CC];
-}
-
-// Handle constant length data by pattern matching directly to TR opcode
-def : Pat<(z_tr GR64:$src, imm:$len, GR64:$tbl),
-          (TR GR64:$src, imm:$len, GR64:$tbl)>;
-
-//===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
 
@@ -2289,6 +2270,36 @@ let hasSideEffects = 1 in {
                                           bdaddr12only:$bdl1, bdaddr12only:$bd2),
                                           []>;
 }
+
+// Translate
+let hasSideEffects = 1, usesCustomInserter = 1,
+    hasNoSchedulingInfo = 1, mayLoad = 1, 
+    mayStore = 1, Defs = [CC] in {
+  def TR_Pseudo : Pseudo<(outs), (ins GR64:$src, i32imm:$D1, GR32:$len, 
+                                    GR64:$tbl, i32imm:$D2), []>;
+                                  // [(z_tr GR64:$src, i32imm:$D1, GR32:$len, 
+                                  //   GR64:$tbl, i32imm:$D2)]>;
+}
+
+// Transform constant length N (1..256) into N - 1 for SS-format
+def tr_len : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() - 1, SDLoc(N), MVT::i32);
+}]>;
+
+def tr_len_leaf : ImmLeaf<i32,
+  [{ return N->getZExtValue() >= 1 && N->getZExtValue() <= 256; }],
+  tr_len
+>;
+
+// Match TR invocation w/ a static constant provided as the length
+def : Pat<(int_s390_translate ADDR64:$src, i32:$D1, tr_len_leaf:$len, 
+                                ADDR64:$tbl, i32:$D2),
+          (TR (bdladdr12onlylen8 ADDR64:$src, i32:$D1, tr_len_leaf:$len), 
+               (bdaddr12only ADDR64:$tbl, i32:$D2))>;
+
+// Match TR invocation w/ a variable provided as the length
+def : Pat<(int_s390_translate ADDR64:$src, i32:$D1, GR32:$len, GR64:$tbl, i32:$D2),
+          (TR_Pseudo ADDR64:$src, i32:$D1, GR32:$len, ADDR64:$tbl, i32:$D2)>;
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
