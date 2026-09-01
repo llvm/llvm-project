@@ -957,6 +957,80 @@ end:
   ret ptr %ret
 }
 
+define ptr @postinc_not_iv_backedge_value_ptr_runtime_tc(ptr %p.init, i64 %n)  {
+; NOTAILFOLD-LABEL: define ptr @postinc_not_iv_backedge_value_ptr_runtime_tc(
+; NOTAILFOLD-SAME: ptr [[P_INIT:%.*]], i64 [[N:%.*]]) {
+; NOTAILFOLD-NEXT:  [[ENTRY:.*]]:
+; NOTAILFOLD-NEXT:    [[P_END:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 [[N]]
+; NOTAILFOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; NOTAILFOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NOTAILFOLD:       [[VECTOR_PH]]:
+; NOTAILFOLD-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; NOTAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; NOTAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 [[N_VEC]]
+; NOTAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
+; NOTAILFOLD:       [[VECTOR_BODY]]:
+; NOTAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NOTAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; NOTAILFOLD-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOTAILFOLD-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; NOTAILFOLD:       [[MIDDLE_BLOCK]]:
+; NOTAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 2
+; NOTAILFOLD-NEXT:    [[TMP4:%.*]] = sub nuw i64 [[N_VEC]], 1
+; NOTAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP4]]
+; NOTAILFOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; NOTAILFOLD-NEXT:    br i1 [[CMP_N]], label %[[END:.*]], label %[[SCALAR_PH]]
+; NOTAILFOLD:       [[SCALAR_PH]]:
+; NOTAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[P_INIT]], %[[ENTRY]] ]
+; NOTAILFOLD-NEXT:    br label %[[LOOP:.*]]
+; NOTAILFOLD:       [[LOOP]]:
+; NOTAILFOLD-NEXT:    [[P_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
+; NOTAILFOLD-NEXT:    [[P_NEXT]] = getelementptr nuw i8, ptr [[P_IV]], i64 1
+; NOTAILFOLD-NEXT:    [[RET:%.*]] = getelementptr i8, ptr [[P_IV]], i64 2
+; NOTAILFOLD-NEXT:    [[EC:%.*]] = icmp eq ptr [[P_NEXT]], [[P_END]]
+; NOTAILFOLD-NEXT:    br i1 [[EC]], label %[[END]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; NOTAILFOLD:       [[END]]:
+; NOTAILFOLD-NEXT:    [[RET_LCSSA:%.*]] = phi ptr [ [[RET]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; NOTAILFOLD-NEXT:    ret ptr [[RET_LCSSA]]
+;
+; TAILFOLD-LABEL: define ptr @postinc_not_iv_backedge_value_ptr_runtime_tc(
+; TAILFOLD-SAME: ptr [[P_INIT:%.*]], i64 [[N:%.*]]) {
+; TAILFOLD-NEXT:  [[ENTRY:.*:]]
+; TAILFOLD-NEXT:    [[P_END:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 [[N]]
+; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
+; TAILFOLD:       [[VECTOR_PH]]:
+; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = and i64 [[N_RND_UP]], 1
+; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP0]]
+; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
+; TAILFOLD:       [[VECTOR_BODY]]:
+; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; TAILFOLD-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; TAILFOLD:       [[MIDDLE_BLOCK]]:
+; TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 2
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = sub nuw i64 [[N]], 1
+; TAILFOLD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP3]]
+; TAILFOLD-NEXT:    br label %[[END:.*]]
+; TAILFOLD:       [[END]]:
+; TAILFOLD-NEXT:    ret ptr [[TMP4]]
+;
+entry:
+  %p.end = getelementptr i8, ptr %p.init, i64 %n
+  br label %loop
+
+loop:
+  %p.iv = phi ptr [ %p.init, %entry ], [ %p.next, %loop ]
+  %p.next = getelementptr nuw i8, ptr %p.iv, i64 1
+  %ret = getelementptr i8, ptr %p.iv, i64 2
+  %ec = icmp eq ptr %p.next, %p.end
+  br i1 %ec, label %end, label %loop
+
+end:
+  ret ptr %ret
+}
+
 define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
 ; VEC-LABEL: define float @fp_postinc_use_fadd(
 ; VEC-SAME: float [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
