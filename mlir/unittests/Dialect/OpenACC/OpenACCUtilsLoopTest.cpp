@@ -1127,8 +1127,7 @@ TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesDenormalizesIV) {
 }
 
 TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesCastsBoundsToIndex) {
-  SmallVector<Type> argTypes{b.getIndexType(), b.getI32Type(),
-                             b.getI32Type()};
+  SmallVector<Type> argTypes{b.getIndexType(), b.getI32Type(), b.getI32Type()};
   auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
   Block *entry = &funcOp.getBody().front();
   Value iv = entry->getArgument(0);
