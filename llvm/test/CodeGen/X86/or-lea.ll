@@ -845,3 +845,21 @@ define i32 @or_shift1_disjoint(i32 %x, i32 %y) {
   ret i32 %or
 }
 
+
+define i16 @disjoint_or_i16_lea(i16 %a) {
+; X86-LABEL: disjoint_or_i16_lea:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $16, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: disjoint_or_i16_lea:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    orw $16, %di
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+  %or = or disjoint i16 %a, 16
+  ret i16 %or
+}
