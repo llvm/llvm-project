@@ -672,6 +672,23 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   bool ShouldAllowWarningInSystemHeader =
       InstantiationLoc != Loc &&
       !S.getSourceManager().isInSystemHeader(InstantiationLoc);
+  // A warning shown in a system header only because the instantiation was
+  // requested from user code must still honor the diagnostic state (e.g. a
+  // pragma) at that point of instantiation (GH219685).
+  if (ShouldAllowWarningInSystemHeader &&
+      S.getSourceManager().isInSystemHeader(Loc)) {
+    unsigned UsedDiag = !Message.empty()    ? diag_message
+                        : !UnknownObjCClass ? diag
+                                            : diag_fwdclass_message;
+    for (const Sema::CodeSynthesisContext &CSC : S.CodeSynthesisContexts) {
+      if (!CSC.isInstantiationRecord() || CSC.PointOfInstantiation.isInvalid())
+        continue;
+      if (!S.getSourceManager().isInSystemHeader(CSC.PointOfInstantiation) &&
+          S.getDiagnostics().isIgnored(UsedDiag, CSC.PointOfInstantiation))
+        ShouldAllowWarningInSystemHeader = false;
+      break;
+    }
+  }
   struct AllowWarningInSystemHeaders {
     AllowWarningInSystemHeaders(DiagnosticsEngine &E,
                                 bool AllowWarningInSystemHeaders)

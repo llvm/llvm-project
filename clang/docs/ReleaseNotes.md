@@ -254,6 +254,11 @@ features cannot lower the translation-unit ABI level;
   initialization, while not diagnosing parameters passed to the selected
   allocation function or promise constructor. (#GH217501)
 
+- Fixed a Clang 23 regression where `#pragma clang diagnostic ignored
+  "-Wdeprecated-declarations"` at the point of instantiation no longer
+  silenced deprecation warnings emitted from a template defined in a system
+  header. (#GH219685)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
