@@ -436,7 +436,7 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) !prof !0 {
 ; CHECK-NEXT:    call void @use32(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0, !prof [[PROF1]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -567,8 +567,7 @@ define i32 @mul_bool_zext_one_extra_user(i1 %x) {
 ; CHECK-LABEL: @mul_bool_zext_one_extra_user(
 ; CHECK-NEXT:    [[SX:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SX]])
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SX]]
 ;
   %sx = zext i1 %x to i32
   call void @use32(i32 %sx)
