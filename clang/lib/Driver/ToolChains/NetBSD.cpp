@@ -507,7 +507,7 @@ llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
   if (TArch == llvm::Triple::arm || TArch == llvm::Triple::armeb ||
       TArch == llvm::Triple::thumb || TArch == llvm::Triple::thumbeb)
     return llvm::ExceptionHandling::DwarfCFI;
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
 SanitizerMask

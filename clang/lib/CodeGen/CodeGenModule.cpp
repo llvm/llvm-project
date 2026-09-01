@@ -1451,12 +1451,13 @@ void CodeGenModule::Release() {
       getModule().setLongDoubleFormat(*Format);
   }
 
-  // Record the exception model as a module flag when it differs from the
-  // target default.
+  // Record the exception model as a module flag whenever it was specified, so
+  // that the flag's absence unambiguously means unspecified regardless of the
+  // target default. In the absence of a custom module flag merging behavior, an
+  // explicit non-default model could silently merge with a defaulted module.
   llvm::ExceptionHandling ExceptionModel =
       CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
-  if (ExceptionModel != llvm::ExceptionHandling::None &&
-      ExceptionModel != getTriple().getDefaultExceptionHandling()) {
+  if (ExceptionModel != llvm::ExceptionHandling::Default) {
     getModule().addModuleFlag(
         llvm::Module::Error, "exception-model",
         llvm::MDString::get(getLLVMContext(),

@@ -199,13 +199,22 @@ public:
   }
 
   /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+  enum class ExceptionHandlingKind {
+    Default,
+    None,
+    SjLj,
+    WinEH,
+    DwarfCFI,
+    Wasm
+  };
 
   /// Translate a clang ExceptionHandlingKind into the corresponding LLVM
   /// ExceptionHandling model.
   static llvm::ExceptionHandling
   toExceptionHandling(ExceptionHandlingKind Kind) {
     switch (Kind) {
+    case ExceptionHandlingKind::Default:
+      return llvm::ExceptionHandling::Default;
     case ExceptionHandlingKind::None:
       return llvm::ExceptionHandling::None;
     case ExceptionHandlingKind::SjLj:

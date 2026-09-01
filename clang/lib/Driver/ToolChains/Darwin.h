@@ -290,7 +290,7 @@ public:
 
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override {
-    return llvm::ExceptionHandling::None;
+    return llvm::ExceptionHandling::Default;
   }
 
   virtual StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const {
