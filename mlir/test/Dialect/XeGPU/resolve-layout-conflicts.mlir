@@ -279,25 +279,30 @@ func.func @conflict_nested_loop_carried() {
   return
 }
 
-// TODO: this scf.condition conflict is not resolved yet. The "after" region
-// argument is tied to no init operand, so it carries no layout for this pass to
-// read, and the [16, 16] value is left unconverted. Recording current behavior so
-// a fix surfaces as a test change.
-// CHECK-LABEL: func.func @negative_while_condition_operand
-// CHECK:         %[[V:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
-// CHECK-NEXT:    scf.condition(%{{.*}}) %[[V]] : vector<16x16xf16>
-// CHECK-NOT:     xegpu.convert_layout
-func.func @negative_while_condition_operand(%cond: i1) {
+// scf.while's "after" region argument is tied to no init operand, but the before
+// region forwards %before unchanged, so %after carries the init operand's layout
+// [8, 16] (layout_operand_0). math.exp wants [16, 16], so the argument is
+// converted on the way in and converted back before the yield.
+// CHECK-LABEL: func.func @conflict_while_pass_through
+// CHECK:         scf.while (%[[BEFORE:.*]] = %{{.*}})
+// CHECK:           scf.condition(%{{.*}}) %[[BEFORE]] : vector<16x16xf16>
+// CHECK:         ^bb0(%[[AFTER:.*]]: vector<16x16xf16>):
+// CHECK-NEXT:      %[[CVT_IN:.*]] = xegpu.convert_layout %[[AFTER]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK-NEXT:      %[[EXP:.*]] = math.exp %[[CVT_IN]] {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16x16xf16>
+// CHECK-NEXT:      %[[CVT_OUT:.*]] = xegpu.convert_layout %[[EXP]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:      scf.yield %[[CVT_OUT]] : vector<16x16xf16>
+func.func @conflict_while_pass_through(%cond: i1) {
   %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
   %0 = scf.while (%before = %cst) : (vector<16x16xf16>) -> vector<16x16xf16> {
-    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
-    scf.condition(%cond) %1 : vector<16x16xf16>
+    scf.condition(%cond) %before : vector<16x16xf16>
   } do {
   ^bb0(%after: vector<16x16xf16>):
-    %2 = math.exp %after {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
-    scf.yield %2 : vector<16x16xf16>
+    %1 = math.exp %after {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+    scf.yield %1 : vector<16x16xf16>
   } attributes {layout_operand_0 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
-  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  %2 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }
 

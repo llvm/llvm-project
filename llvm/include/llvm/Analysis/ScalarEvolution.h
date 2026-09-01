@@ -1257,9 +1257,9 @@ public:
   /// a multiple of \p M if \p S starts with a multiple of \p M and at every
   /// iteration step \p S only adds multiples of \p M. \p Assumptions records
   /// the runtime predicates under which \p S is a multiple of \p M.
-  LLVM_ABI bool
-  isKnownMultipleOf(const SCEV *S, uint64_t M,
-                    SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+  LLVM_ABI bool isKnownMultipleOf(
+      const SCEV *S, uint64_t M,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
   /// Return true if we know that S1 and S2 must have the same sign.
   LLVM_ABI bool haveSameSign(const SCEV *S1, const SCEV *S2);
@@ -2094,6 +2094,11 @@ private:
   /// necessary in order to return an exact answer.
   BackedgeTakenInfo computeBackedgeTakenCount(const Loop *L,
                                               bool AllowPredicates = false);
+
+  /// Variant of getSmallConstantTripMultiple taking pre-collected loop
+  /// \p Guards. \p ExitCount must be computable.
+  unsigned getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                        const LoopGuards &Guards);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if it exits via the specified block. If AllowPredicates is set,

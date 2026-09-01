@@ -1205,7 +1205,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     case GFConstant::GFConstantKind::Scalar: {
       auto APF = Cst->getScalarValue();
       Known.KnownFPClasses = APF.classify();
-      Known.SignBit = APF.isNegative();
+      Known.setSignBit(APF.isNegative());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
@@ -1222,7 +1222,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       }
 
       if (SignBitAllOne != SignBitAllZero)
-        Known.SignBit = SignBitAllOne;
+        Known.setSignBit(SignBitAllOne);
 
       break;
     }
@@ -1579,7 +1579,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         computeKnownFPClass(Val, MI.getFlags(), InterestedClasses, Depth + 1);
     // Can only propagate sign if output is never NaN.
     if (!Known.isKnownNeverNaN())
-      Known.SignBit.reset();
+      Known.setSignBit(std::nullopt);
     break;
   }
   case TargetOpcode::G_FFLOOR:
@@ -2376,7 +2376,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_SEXT: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
-    unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
+    unsigned Tmp = TyBits - SrcTy.getScalarSizeInBits();
     return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
   }
   case TargetOpcode::G_ASSERT_SEXT:
@@ -2515,11 +2515,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     LLT SrcTy = MRI.getType(Src);
 
     // Check if the sign bits of source go down as far as the truncated value.
-    unsigned DstTyBits = DstTy.getScalarSizeInBits();
     unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
     unsigned NumSrcSignBits = computeNumSignBits(Src, DemandedElts, Depth + 1);
-    if (NumSrcSignBits > (NumSrcBits - DstTyBits))
-      return NumSrcSignBits - (NumSrcBits - DstTyBits);
+    if (NumSrcSignBits > (NumSrcBits - TyBits))
+      return NumSrcSignBits - (NumSrcBits - TyBits);
     break;
   }
   case TargetOpcode::G_SELECT: {
