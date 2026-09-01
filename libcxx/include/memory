@@ -613,7 +613,7 @@ public:
     shared_ptr& operator=(const shared_ptr& r) noexcept;
     template<class Y> shared_ptr& operator=(const shared_ptr<Y>& r) noexcept;
     shared_ptr& operator=(shared_ptr&& r) noexcept;
-    template<class Y> shared_ptr& operator=(shared_ptr<Y>&& r);
+    template<class Y> shared_ptr& operator=(shared_ptr<Y>&& r) noexcept;
     template<class Y> shared_ptr& operator=(auto_ptr<Y>&& r); // removed in C++17
     template <class Y, class D> shared_ptr& operator=(unique_ptr<Y, D>&& r);
 

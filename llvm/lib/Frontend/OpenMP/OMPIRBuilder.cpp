@@ -5418,6 +5418,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB, Value *Filter) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -5553,15 +5554,15 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
   Builder.SetInsertPoint(ScanRedInfo->OMPScanInit->getTerminator());
   llvm::Value *FilterVal = Builder.getInt32(0);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+      createMasked(Builder, BodyGenCB, FiniCB, FilterVal);
 
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
   if (InputBB->hasTerminator())
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
-  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+    Builder.SetInsertPoint(InputBB->getTerminator());
+  AfterIP = createBarrier(Builder, llvm::omp::OMPD_barrier);
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
@@ -5601,15 +5602,15 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
 
   llvm::Value *FilterVal = Builder.getInt32(0);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+      createMasked(Builder, BodyGenCB, FiniCB, FilterVal);
 
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
   BasicBlock *InputBB = Builder.GetInsertBlock();
   if (InputBB->hasTerminator())
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
-  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+    Builder.SetInsertPoint(InputBB->getTerminator());
+  AfterIP = createBarrier(Builder, llvm::omp::OMPD_barrier);
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
@@ -5715,12 +5716,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
 
   llvm::Value *FilterVal = Builder.getInt32(0);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+      createMasked(Builder, BodyGenCB, FiniCB, FilterVal);
 
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
-  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+  AfterIP = createBarrier(Builder, llvm::omp::OMPD_barrier);
 
   if (!AfterIP)
     return AfterIP.takeError();
@@ -5755,7 +5756,7 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveIR(
     //   <scan phase>;
     // }
     ScanRedInfo->OMPFirstScanLoop = false;
-    Error Err = ScanLoopGen(Builder.saveIP());
+    Error Err = ScanLoopGen(Builder);
     if (Err)
       return Err;
   }
@@ -5935,9 +5936,9 @@ OpenMPIRBuilder::createCanonicalScanLoops(
   };
 
   const auto &&InputLoopGen = [&]() -> Error {
-    Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
-        Builder.saveIP(), BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
-        ComputeIP, Name, true, ScanRedInfo);
+    Expected<CanonicalLoopInfo *> LoopInfo =
+        createCanonicalLoop(Builder, BodyGen, Start, Stop, Step, IsSigned,
+                            InclusiveStop, ComputeIP, Name, true, ScanRedInfo);
     if (!LoopInfo)
       return LoopInfo.takeError();
     Result.push_back(*LoopInfo);

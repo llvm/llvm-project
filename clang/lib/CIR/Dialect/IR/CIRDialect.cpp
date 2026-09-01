@@ -4453,15 +4453,43 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    // A catch handler region must start with cir.begin_catch, optionally
-    // preceded by a single cir.construct_catch_param that performs any
-    // pre-begin_catch initialization for the catch parameter.
+    // Nothing may run in a catch handler before cir.begin_catch, so it has to
+    // be the handler region's first operation, with two exceptions.
+    //
+    // When lifetime markers are enabled, the catch parameter's storage can be
+    // marked by a cir.lifetime.start. That parameter is the only variable
+    // whose lifetime begins before the catch is entered, so there is at most
+    // one such marker. Its lifetime-end cleanup has to run after the catch
+    // handler is finished (or exited by an exception unwind), so if there is a
+    // lifetime begin marker, it is followed by a cir.cleanup.scope that
+    // encloses the the rest of the handler with a cir.lifetime.end in its
+    // cleanup region.
+    //
+    // A cir.construct_catch_param may also precede cir.begin_catch, to
+    // perform any pre-begin_catch initialization of the catch parameter.
     if (entryBlock.empty())
       return emitOpError("catch handler region must not be empty");
+
     mlir::Operation *firstOp = &entryBlock.front();
+    if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
+      mlir::Operation *next = firstOp->getNextNode();
+      auto lifetimeScope = mlir::dyn_cast_if_present<cir::CleanupScopeOp>(next);
+      if (!lifetimeScope)
+        return emitOpError("'cir.lifetime.start' in a catch handler region "
+                           "must be followed by the 'cir.cleanup.scope' of "
+                           "its lifetime-end cleanup");
+      if (lifetimeScope.getBodyRegion().empty())
+        return emitOpError(
+            "'cir.lifetime.start' in a catch handler region must be "
+            "followed by the 'cir.cleanup.scope' of its lifetime-end "
+            "cleanup");
+      mlir::Block &scopeBody = lifetimeScope.getBodyRegion().front();
+      firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
+    }
+
     if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
       firstOp = firstOp->getNextNode();
-    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
+    if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }

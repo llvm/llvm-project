@@ -57,6 +57,13 @@ page](https://llvm.org/releases/).
   `-mmlir -disable-fir-licm`. The `-mmlir -enable-fir-licm` option that
   previously opted into the pass has been removed.
 
+- Named constants (`PARAMETER`) now appear in the debug information, so a
+  debugger can print them by name. A constant is described only in the
+  compilation unit that defines it: one declared in a module is described
+  where that module is compiled, and one declared in a procedure is local to
+  that unit. Constants of an intrinsic module such as `iso_fortran_env` are
+  not described yet, because no compilation unit defines them.
+
 ## New Compiler Flags
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
   floating-point exception halting mode of the main program. It takes a

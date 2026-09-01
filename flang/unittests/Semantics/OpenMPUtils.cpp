@@ -201,7 +201,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthNoClauses) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 1);
@@ -245,7 +246,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthCollapse) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 2);
@@ -293,7 +295,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthCollapseOrdered) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 3);

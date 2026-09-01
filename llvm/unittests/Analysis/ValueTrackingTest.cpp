@@ -127,7 +127,7 @@ protected:
 
     KnownFPClass Known = computeKnownFPClass(TestVal, M->getDataLayout());
     EXPECT_EQ(KnownTrue, Known.KnownFPClasses);
-    EXPECT_EQ(SignBitKnown, Known.SignBit);
+    EXPECT_EQ(SignBitKnown, Known.getSignBit());
   }
 };
 }
@@ -2359,13 +2359,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(SqrtMask, UseInstrInfo.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfo.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfo.getSignBit());
 
     KnownFPClass NoUseInstrInfo =
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(SqrtMask, NoUseInstrInfo.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfo.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfo.getSignBit());
   }
 
   {
@@ -2373,13 +2373,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.getSignBit());
   }
 
   {
@@ -2388,14 +2388,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               UseInstrInfoNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNoNan =
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosNormal | fcPosInf | fcZero | fcQNan,
               NoUseInstrInfoNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.getSignBit());
   }
 
   {
@@ -2404,14 +2404,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
               UseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               NoUseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.getSignBit());
   }
 }
 
@@ -2430,23 +2430,23 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags);
 
     EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
-    ASSERT_TRUE(ConstAggZero.SignBit);
-    EXPECT_FALSE(*ConstAggZero.SignBit);
+    ASSERT_TRUE(ConstAggZero.getSignBit());
+    EXPECT_FALSE(*ConstAggZero.getSignBit());
   }
 
   {
     KnownFPClass Undef = computeKnownFPClass(UndefValue::get(F32),
                                              M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
-    EXPECT_FALSE(Undef.SignBit);
+    EXPECT_FALSE(Undef.getSignBit());
   }
 
   {
     KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(F32),
                                               M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNone, Poison.KnownFPClasses);
-    ASSERT_TRUE(Poison.SignBit);
-    EXPECT_FALSE(*Poison.SignBit);
+    ASSERT_TRUE(Poison.getSignBit());
+    EXPECT_FALSE(*Poison.getSignBit());
   }
 
   {
@@ -2458,8 +2458,8 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({ZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
-    ASSERT_TRUE(PartiallyPoison.SignBit);
-    EXPECT_FALSE(*PartiallyPoison.SignBit);
+    ASSERT_TRUE(PartiallyPoison.getSignBit());
+    EXPECT_FALSE(*PartiallyPoison.getSignBit());
   }
 
   {
@@ -2471,8 +2471,8 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({NegZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
-    ASSERT_TRUE(PartiallyPoison.SignBit);
-    EXPECT_TRUE(*PartiallyPoison.SignBit);
+    ASSERT_TRUE(PartiallyPoison.getSignBit());
+    EXPECT_TRUE(*PartiallyPoison.getSignBit());
   }
 
   {
@@ -2484,7 +2484,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({PoisonF32, NegZeroF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
-    EXPECT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_TRUE(PartiallyPoison.getSignBit());
   }
 }
 

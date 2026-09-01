@@ -616,6 +616,20 @@ protected:
     RHS.resetToSmall();
   }
 
+  void moveConstructFrom(SmallVectorImpl &&RHS) {
+    assert(this->empty() && "move construction requires an empty vector");
+    if (!RHS.isSmall()) {
+      assignRemote(std::move(RHS));
+      return;
+    }
+
+    // Construct inline elements directly instead of requiring T to be move
+    // assignable through the general move-assignment implementation.
+    append(std::make_move_iterator(RHS.begin()),
+           std::make_move_iterator(RHS.end()));
+    RHS.clear();
+  }
+
   ~SmallVectorImpl() {
     // Subclass has already destructed this vector's elements.
     // If this wasn't grown from the inline copy, deallocate the old space.
@@ -1283,12 +1297,12 @@ public:
 
   SmallVector(SmallVector &&RHS) : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+      this->moveConstructFrom(::std::move(RHS));
   }
 
   SmallVector(SmallVectorImpl<T> &&RHS) : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+      this->moveConstructFrom(::std::move(RHS));
   }
 
   SmallVector &operator=(SmallVector &&RHS) {

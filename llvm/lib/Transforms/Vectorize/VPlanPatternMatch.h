@@ -566,6 +566,12 @@ m_BitCast(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline AllRecipe_match<Instruction::PtrToAddr, Op0_t>
+m_PtrToAddr(const Op0_t &Op0) {
+  return m_Unary<Instruction::PtrToAddr, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
   return m_Unary<Instruction::FNeg, Op0_t>(Op0);
 }

@@ -16,7 +16,9 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -1148,6 +1150,44 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
+/// SPIR-V, and so the OpenCL builtins the float conversions call into, only
+/// provides vector types of 2, 3, 4, 8 and 16 elements.
+static bool isSupportedSPIRVVectorLength(int64_t numElements) {
+  return llvm::is_contained({2, 3, 4, 8, 16}, numElements);
+}
+
+/// Bitcasts `val` to `ty` unless it already has that type.
+static Value castIfNeeded(ConversionPatternRewriter &rewriter, Location loc,
+                          Type ty, Value val) {
+  if (val.getType() == ty)
+    return val;
+  return LLVM::BitcastOp::create(rewriter, loc, ty, val);
+}
+
+/// Selects `numElements` leading elements of the vector `val`. Used to drop the
+/// padding the 3 element case needs, as the hardware conversions work on whole
+/// pairs of elements.
+static Value takeLeadingElements(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value val, int64_t numElements) {
+  auto vecTy = cast<VectorType>(val.getType());
+  if (vecTy.getNumElements() == numElements)
+    return val;
+  SmallVector<int32_t> mask =
+      llvm::to_vector(llvm::seq<int32_t>(0, static_cast<int32_t>(numElements)));
+  return LLVM::ShuffleVectorOp::create(rewriter, loc, val, val, mask);
+}
+
+//
+// Note: TruncfToOCLPattern and ExtfToOCLPattern does not lower to OpenCL API
+// calls as there are not official ones yet. They are lowered directly to Intel
+// graphics compiler built in functions.
+// See
+// https://github.com/intel/intel-graphics-compiler/tree/master/IGC/BiFModule/Implementation/SPV_INTEL_fp_conversions
+// for builtin function usage. The folder contains implementation of
+// experimental SPIR-V extension for truncf and extf using builtin functions.
+// TODO: Move to OpenCL API call once they are available.
+//
+
 class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -1156,34 +1196,23 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     // Supported source and result types are resticted for now.
     auto srcEtype = op.getSrcEtype().getEtype();
     auto dstEtype = op.getDstEtype().getEtype();
-    // Currently only 16 input elements are supported as
-    //  - Any vector beyond 16 elements not a valid OpenCL vector.
-    //  - 2D block load can only load up to 16 16bit elements per lane.
-    //      Widest load is 8x16xi32 with 16 lanes, which is 16 16bit
-    //      elements per lane.
-    //  - mma_mx A and B operands need more than 16 elements per lane
+    // The conversions are provided as OpenCL builtins, one per vector length,
+    // so only the SPIR-V vector lengths can be lowered. A wider conversion has
+    // to be split into several ops before reaching this pattern.
     //
-    // Conversion is done in batches depending on the dst type.
-    // batch_size =
-    //   16 if dst type == fp8
-    //   8  if dst type == fp4
-    // For num_elem > batch_size
-    //   convert batch of batch_size
-    //   cast batch to i32 elem type vector
-    //   concat batches by shufflevector
-    // For num_elem = batch_size
-    //   use API for conversion
     // Scalar case is not supported until usage case become clear.
     auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
     if (!vecSrcTy) {
       return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
     }
-    if (vecSrcTy.getNumElements() != 16)
+    int64_t numElements = vecSrcTy.getNumElements();
+    if (!isSupportedSPIRVVectorLength(numElements))
       return rewriter.notifyMatchFailure(
-          op, "Only vector src of 16 elements is supported");
-    auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
-    if (!vecDstTy)
-      return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+          op, "src vector length must be 2, 3, 4, 8 or 16");
+    // The destination is scalar only where the packed values fit in one byte,
+    // which SPIR-V spells as a scalar rather than a one element vector.
+    Type dstTy = op.getDst().getType();
+    Location loc = op.getLoc();
     Value src = op.getSrc();
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
@@ -1197,84 +1226,130 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
 
     // Handle the case where dst type is fp4 first.
     if (dstEtype == TruncfDstElemTypes::E2M1) {
-      // Convert 8 elements at a time.
-      // To convert 8 elements, vector<8xf16>:
-      // Use:
-      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 0)
-      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 3)
-      // llvm.or
-      Value cast = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(), VectorType::get(8, rewriter.getI32Type()),
-          src);
+      // `__builtin_IB_dnscl_{hf16,bf16}(uint a, uint b, convert_to, mode)`
+      // takes two dwords, each holding two source elements, and packs each pair
+      // into one byte of the result dword. `mode` picks which bytes of that
+      // dword are written: mode 0 writes bytes 0 and 2, mode 2 writes bytes 1
+      // and 3. Two calls with complementary modes therefore OR together into
+      // one fully packed dword covering eight source elements.
+      //
+      // A pair of elements is the conversion granularity, so an odd length is
+      // padded up and the spare nibble left undefined.
+      constexpr int kDnsclConvertToE2M1 = 1;
+      constexpr int kDnsclModeBytes02 = 0;
+      constexpr int kDnsclModeBytes13 = 2;
+      // One dword lane per element pair, and one result byte per lane. The op
+      // verifier has already checked that the destination is exactly that wide.
+      int64_t numLanes = llvm::divideCeil(numElements, 2);
+
+      Type i32Ty = rewriter.getI32Type();
+      Type i8Ty = rewriter.getI8Type();
+      // Pad an odd length up to a whole number of pairs, then view the source
+      // as dword lanes.
+      Value padded = src;
+      if (numElements != numLanes * 2) {
+        SmallVector<int32_t> mask = llvm::to_vector(
+            llvm::seq<int32_t>(0, static_cast<int32_t>(numElements)));
+        // The padding element is never read back, so any valid index will do.
+        mask.append(static_cast<size_t>(numLanes * 2 - numElements), 0);
+        padded = LLVM::ShuffleVectorOp::create(rewriter, loc, src, src, mask);
+      }
+      // A single lane is passed as a bare i32 rather than a one element vector,
+      // which SPIR-V has no type for.
+      Value laneVec;
+      if (numLanes > 1)
+        laneVec = LLVM::BitcastOp::create(
+            rewriter, loc, VectorType::get(numLanes, i32Ty), padded);
+      else
+        laneVec = LLVM::BitcastOp::create(rewriter, loc, i32Ty, padded);
+      auto getLane = [&](int64_t idx) -> Value {
+        if (numLanes == 1)
+          return laneVec;
+        Value pos =
+            LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), idx);
+        return LLVM::ExtractElementOp::create(rewriter, loc, laneVec, pos)
+            ->getResult(0);
+      };
 
       std::string fnName = "__builtin_IB_dnscl_";
       fnName += (srcEtype == TruncfSrcElemTypes::F16) ? "hf16" : "bf16";
-      auto genDnscl = [&](Value input, Value idx0, Value idx1, Value dstTy,
-                          Value mode) -> Value {
-        Value arg1 =
-            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx0)
-                ->getResult(0);
-        Value arg2 =
-            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx1)
-                ->getResult(0);
-        SmallVector<Type> argTypes{arg1.getType(), arg2.getType(),
-                                   dstTy.getType(), mode.getType()};
-        SmallVector<Value> args{arg1, arg2, dstTy, mode};
-        Value dnscl = createDeviceFunctionCall(
-                          rewriter, fnName, rewriter.getI32Type(), argTypes,
-                          args, {}, funcAttrs, op.getOperation())
-                          ->getResult(0);
-        return dnscl;
+      Value convertTo =
+          LLVM::ConstantOp::create(rewriter, loc, i32Ty, kDnsclConvertToE2M1);
+      auto genDnscl = [&](Value lo, Value hi, int mode) -> Value {
+        Value modeVal = LLVM::ConstantOp::create(rewriter, loc, i32Ty, mode);
+        SmallVector<Type> argTypes{lo.getType(), hi.getType(),
+                                   convertTo.getType(), modeVal.getType()};
+        SmallVector<Value> args{lo, hi, convertTo, modeVal};
+        return createDeviceFunctionCall(rewriter, fnName, i32Ty, argTypes, args,
+                                        {}, funcAttrs, op.getOperation())
+            ->getResult(0);
       };
 
-      Value zero = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                            rewriter.getI32Type(), 0);
-      Value one = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                           rewriter.getI32Type(), 1);
-      Value two = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                           rewriter.getI32Type(), 2);
-      Value three = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI32Type(), 3);
-      Value even = genDnscl(cast, zero, two, one, zero);
-      Value odd = genDnscl(cast, one, three, one, two);
-      Value firstHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
-      Value four = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                            rewriter.getI32Type(), 4);
-      Value five = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                            rewriter.getI32Type(), 5);
-      Value six = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                           rewriter.getI32Type(), 6);
-      Value seven = LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI32Type(), 7);
-      even = genDnscl(cast, four, six, one, zero);
-      odd = genDnscl(cast, five, seven, one, two);
-      Value secondHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
-      // Create vector<2xi32> from two i32 values and then bitcast to
-      // vector<8xi8> to match the dst type.
-      Value combined = LLVM::UndefOp::create(
-          rewriter, op.getLoc(), VectorType::get(2, rewriter.getI32Type()));
-      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
-                                               firstHalf, zero)
-                     ->getResult(0);
-      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
-                                               secondHalf, one)
-                     ->getResult(0);
-      Value result =
-          LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, combined);
-      rewriter.replaceOp(op, result);
+      Value result;
+      if (numLanes <= 2) {
+        // Fewer than four lanes cannot fill a dword, so a single call is made
+        // and the written bytes, 0 and 2, are compacted afterwards.
+        Value lo = getLane(0);
+        Value hi =
+            numLanes == 2
+                ? getLane(1)
+                : LLVM::UndefOp::create(rewriter, loc, i32Ty)->getResult(0);
+        Value dword = genDnscl(lo, hi, kDnsclModeBytes02);
+        if (numLanes == 1) {
+          // A single byte, so the low one, is all that is kept.
+          result = LLVM::TruncOp::create(rewriter, loc, i8Ty, dword);
+        } else {
+          Value bytes = LLVM::BitcastOp::create(
+              rewriter, loc, VectorType::get(4, i8Ty), dword);
+          result = LLVM::ShuffleVectorOp::create(rewriter, loc, bytes, bytes,
+                                                 ArrayRef<int32_t>{0, 2});
+        }
+      } else {
+        // Four lanes, eight source elements, per fully packed dword.
+        SmallVector<Value> dwords;
+        for (int64_t base = 0; base < numLanes; base += 4) {
+          // Each lane is bound to a name first: `getLane` builds ops, and the
+          // order of evaluation within an argument list is unspecified, which
+          // would otherwise leave the order of the emitted ops up to the host
+          // compiler.
+          Value lane0 = getLane(base);
+          Value lane2 = getLane(base + 2);
+          Value even = genDnscl(lane0, lane2, kDnsclModeBytes02);
+          Value lane1 = getLane(base + 1);
+          Value lane3 = getLane(base + 3);
+          Value odd = genDnscl(lane1, lane3, kDnsclModeBytes13);
+          dwords.push_back(LLVM::OrOp::create(rewriter, loc, even, odd));
+        }
+        if (dwords.size() == 1) {
+          result = dwords.front();
+        } else {
+          Type packedTy = VectorType::get(dwords.size(), i32Ty);
+          result = LLVM::UndefOp::create(rewriter, loc, packedTy);
+          for (auto [idx, dword] : llvm::enumerate(dwords)) {
+            Value pos = LLVM::ConstantOp::create(rewriter, loc, i32Ty, idx);
+            result =
+                LLVM::InsertElementOp::create(rewriter, loc, result, dword, pos)
+                    ->getResult(0);
+          }
+        }
+      }
+      rewriter.replaceOp(op, castIfNeeded(rewriter, loc, dstTy, result));
       return success();
     }
 
     // Handle the case where dst type is fp8.
+    // The fp8 conversions come as one builtin per vector length, so the length
+    // is simply appended to the builtin name.
+    std::string lenSuffix = std::to_string(numElements);
     // BF16 type needs some preprocessing before conversion,
     // First extended to F32 and then truncated to F16.
     if (srcEtype == TruncfSrcElemTypes::BF16) {
       // Step 1: Extend to F32
-      // Use float16 __builtin_IB_bftof_16(short16)
+      // Use floatN __builtin_IB_bftof_N(shortN)
       src = LLVM::BitcastOp::create(
           rewriter, op.getLoc(),
           VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
-      std::string fnName = "__builtin_IB_bftof_16";
+      std::string fnName = "__builtin_IB_bftof_" + lenSuffix;
       SmallVector<Type> argTypes{src.getType()};
       SmallVector<Value> args{src};
       Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
@@ -1282,8 +1357,8 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
                                      {}, funcAttrs, op.getOperation())
                 ->getResult(0);
       // Step 2: Truncf to F16
-      // Use half16 convert_half16(float16)
-      std::string truncFnName = "convert_half16";
+      // Use halfN convert_halfN(floatN)
+      std::string truncFnName = "convert_half" + lenSuffix;
       SmallVector<Type> truncArgTypes{src.getType()};
       SmallVector<Value> truncArgs{src};
       truncFnName = mangle(truncFnName, truncArgTypes);
@@ -1294,24 +1369,24 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
               ->getResult(0);
     }
     if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
-      // Use char16 __builtin_IB_hftobf8_16(half16)
-      std::string fnName = "__builtin_IB_hftobf8_16";
+      // Use charN __builtin_IB_hftobf8_N(halfN)
+      std::string fnName = "__builtin_IB_hftobf8_" + lenSuffix;
       SmallVector<Type> argTypes{src.getType()};
       SmallVector<Value> args{src};
       Value result =
-          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
-                                   {}, funcAttrs, op.getOperation())
+          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
+                                   funcAttrs, op.getOperation())
               ->getResult(0);
 
       rewriter.replaceOp(op, result);
     } else if (dstEtype == TruncfDstElemTypes::F8) { // Float8E4M3FNType
-      // Use char16 __builtin_IB_hftohf8_16(half16)
-      std::string fnName = "__builtin_IB_hftohf8_16";
+      // Use charN __builtin_IB_hftohf8_N(halfN)
+      std::string fnName = "__builtin_IB_hftohf8_" + lenSuffix;
       SmallVector<Type> argTypes{src.getType()};
       SmallVector<Value> args{src};
       Value result =
-          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
-                                   {}, funcAttrs, op.getOperation())
+          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
+                                   funcAttrs, op.getOperation())
               ->getResult(0);
 
       rewriter.replaceOp(op, result);
@@ -1332,13 +1407,19 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
     // types are restricted for now, mirroring the truncf lowering.
     auto srcEtype = op.getSrcEtype().getEtype();
     auto dstEtype = op.getDstEtype().getEtype();
-    // Scalar case is not supported until usage case become clear.
-    auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
-    if (!vecSrcTy)
-      return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
+    // The source is scalar only where the packed values fit in one byte, which
+    // SPIR-V spells as a scalar rather than a one element vector.
+    Type srcTy = op.getSrc().getType();
+    // Scalar dst is not supported until usage case become clear.
     auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
     if (!vecDstTy)
       return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    // As for truncf, one builtin exists per SPIR-V vector length.
+    int64_t numElements = vecDstTy.getNumElements();
+    if (!isSupportedSPIRVVectorLength(numElements))
+      return rewriter.notifyMatchFailure(
+          op, "dst vector length must be 2, 3, 4, 8 or 16");
+    Location loc = op.getLoc();
     Value src = op.getSrc();
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
@@ -1352,22 +1433,24 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
 
     // Handle the case where src type is fp4 (e2m1) first.
     if (srcEtype == ExtfSrcElemTypes::E2M1) {
-      // 16 fp4 values are packed into vector<8xi8>, the result is a
-      // vector<16xf16> or vector<16xbf16>.
-      // Use:
+      // Two fp4 values are packed per source byte, and one builtin exists per
+      // source byte count:
       //   uint16 __builtin_IB_shfl_idx4_lut(int lut_index)
-      //   uint8  __builtin_IB_shfl_idx4_to_fp16_8_packed(uint16 lut,
-      //                                                  char8 source)
+      //   uint   __builtin_IB_shfl_idx4_to_fp16_packed(uint16 lut, char src)
+      //   uintN  __builtin_IB_shfl_idx4_to_fp16_N_packed(uint16 lut, charN src)
+      // Each returns one dword, holding two f16/bf16 values, per source byte.
       // The lookup table selects the target format:
       //   7 = e2m1 -> f16, 5 = e2m1 -> bf16.
-      if (vecSrcTy.getNumElements() != 8 || vecDstTy.getNumElements() != 16)
-        return rewriter.notifyMatchFailure(
-            op, "fp4 src expects a vector<8xi8> src and a 16 element dst");
+      //
+      // A byte is the conversion granularity, so an odd length reads one spare
+      // value that is dropped afterwards. The op verifier has already checked
+      // that the source is exactly as wide as those bytes.
+      int64_t numBytes = llvm::divideCeil(numElements, 2);
       constexpr int kLutE2M1ToF16 = 7;
       constexpr int kLutE2M1ToBF16 = 5;
       int lutIndex =
           (dstEtype == ExtfDstElemTypes::F16) ? kLutE2M1ToF16 : kLutE2M1ToBF16;
-      Value lutIdx = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+      Value lutIdx = LLVM::ConstantOp::create(rewriter, loc,
                                               rewriter.getI32Type(), lutIndex);
       Type lutTy = VectorType::get(16, rewriter.getI32Type());
       Value lut =
@@ -1375,33 +1458,51 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
                                    lutTy, {lutIdx.getType()}, {lutIdx}, {},
                                    funcAttrs, op.getOperation())
               ->getResult(0);
-      Type packedResTy = VectorType::get(8, rewriter.getI32Type());
-      SmallVector<Type> convArgTypes{lut.getType(), src.getType()};
-      SmallVector<Value> convArgs{lut, src};
+      // A single byte is passed as a bare i8, and one dword returned as a bare
+      // i32, rather than as one element vectors SPIR-V has no type for.
+      Type i8Ty = rewriter.getI8Type();
+      Type i32Ty = rewriter.getI32Type();
+      std::string fnName = "__builtin_IB_shfl_idx4_to_fp16_";
+      Type argTy, packedResTy;
+      if (numBytes == 1) {
+        argTy = i8Ty;
+        packedResTy = i32Ty;
+      } else {
+        fnName += std::to_string(numBytes) + "_";
+        argTy = VectorType::get(numBytes, i8Ty);
+        packedResTy = VectorType::get(numBytes, i32Ty);
+      }
+      fnName += "packed";
+      SmallVector<Type> convArgTypes{lut.getType(), argTy};
+      SmallVector<Value> convArgs{lut, castIfNeeded(rewriter, loc, argTy, src)};
       Value result =
-          createDeviceFunctionCall(
-              rewriter, "__builtin_IB_shfl_idx4_to_fp16_8_packed", packedResTy,
-              convArgTypes, convArgs, {}, funcAttrs, op.getOperation())
+          createDeviceFunctionCall(rewriter, fnName, packedResTy, convArgTypes,
+                                   convArgs, {}, funcAttrs, op.getOperation())
               ->getResult(0);
       // The builtin returns the f16/bf16 bits packed as i32, bitcast to the
-      // f16/bf16 dst type.
-      result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
+      // f16/bf16 dst type and drop the padding an odd length produced.
+      Type wideTy = VectorType::get(numBytes * 2, vecDstTy.getElementType());
+      result = LLVM::BitcastOp::create(rewriter, loc, wideTy, result);
+      result = takeLeadingElements(rewriter, loc, result, numElements);
       rewriter.replaceOp(op, result);
       return success();
     }
 
-    // Handle the case where src type is fp8 (bf8/hf8).
-    // Only 16 input elements are supported, see TruncfToOCLPattern for details.
-    if (vecSrcTy.getNumElements() != 16)
+    // Handle the case where src type is fp8 (bf8/hf8). One fp8 value per source
+    // byte, so source and destination lengths match.
+    auto vecSrcTy = dyn_cast<VectorType>(srcTy);
+    if (!vecSrcTy || vecSrcTy.getNumElements() != numElements)
       return rewriter.notifyMatchFailure(
-          op, "Only vector src of 16 elements is supported");
+          op, "fp8 src and dst must have the same number of elements");
+    std::string lenSuffix = std::to_string(numElements);
 
     // Step 1: Extend fp8 (bf8/hf8) to F16.
-    //   bf8 -> half: half16 __builtin_IB_bf8tohf_16(char16)
-    //   hf8 -> half: half16 __builtin_IB_hf8tohf_16(char16)
+    //   bf8 -> half: halfN __builtin_IB_bf8tohf_N(charN)
+    //   hf8 -> half: halfN __builtin_IB_hf8tohf_N(charN)
     std::string fnName = (srcEtype == ExtfSrcElemTypes::BF8)
-                             ? "__builtin_IB_bf8tohf_16"
-                             : "__builtin_IB_hf8tohf_16";
+                             ? "__builtin_IB_bf8tohf_"
+                             : "__builtin_IB_hf8tohf_";
+    fnName += lenSuffix;
     Type f16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
     SmallVector<Type> argTypes{src.getType()};
     SmallVector<Value> args{src};
@@ -1419,8 +1520,8 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
     // BF16 destination needs some postprocessing.
     // First extend F16 to F32 and then truncate to BF16.
     // Step 2: Extend to F32.
-    // Use float16 convert_float16(half16)
-    std::string convFnName = "convert_float16";
+    // Use floatN convert_floatN(halfN)
+    std::string convFnName = "convert_float" + lenSuffix;
     SmallVector<Type> convArgTypes{result.getType()};
     SmallVector<Value> convArgs{result};
     convFnName = mangle(convFnName, convArgTypes);
@@ -1430,8 +1531,8 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
                                  convArgs, {}, funcAttrs, op.getOperation())
             ->getResult(0);
     // Step 3: Truncate F32 to BF16.
-    // Use short16 __builtin_IB_ftobf_16(float16)
-    constexpr StringRef ftobfFnName = "__builtin_IB_ftobf_16";
+    // Use shortN __builtin_IB_ftobf_N(floatN)
+    std::string ftobfFnName = "__builtin_IB_ftobf_" + lenSuffix;
     SmallVector<Type> ftobfArgTypes{result.getType()};
     SmallVector<Value> ftobfArgs{result};
     Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
@@ -1675,6 +1776,8 @@ class HandleVectorExtractPattern
         Value srcInput = srcOp->getOperand(0);
         // Create new shuffle vector op with unary input as source.
         auto srcVecTy = dyn_cast<VectorType>(srcInput.getType());
+        if (!srcVecTy)
+          return failure();
         auto newShuffleVecTy =
             VectorType::get(mask.size(), srcVecTy.getElementType());
         auto newShuffle = LLVM::ShuffleVectorOp::create(
@@ -1689,10 +1792,13 @@ class HandleVectorExtractPattern
         rewriter.replaceOp(op, newUnaryOp);
       } else if (isa<LLVM::BitcastOp>(srcOp)) {
         Value srcInput = srcOp->getOperand(0);
-        // Create new shuffle vector op with unary input as source.
+        // Create new shuffle vector op with unary input as source. A bitcast
+        // from a scalar has no slice to rewrite in terms of.
         auto srcInputVecTy = dyn_cast<VectorType>(srcInput.getType());
-        auto srcInputSize = srcInputVecTy.getNumElements();
         auto srcResVecTy = dyn_cast<VectorType>(srcOp->getResult(0).getType());
+        if (!srcInputVecTy || !srcResVecTy)
+          return failure();
+        auto srcInputSize = srcInputVecTy.getNumElements();
         auto srcResSize = srcResVecTy.getNumElements();
         auto maskSize = static_cast<int32_t>(mask.size());
         if (srcInputSize > srcResSize) {
@@ -1703,7 +1809,9 @@ class HandleVectorExtractPattern
         }
         auto maskScale = srcResSize / srcInputSize;
         if (maskScale != 1) {
-          if (mask[0] % maskScale != 0) {
+          // The slice has to start at, and cover, whole source elements to be
+          // expressible in terms of the bitcast source.
+          if (mask[0] % maskScale != 0 || maskSize % maskScale != 0) {
             return failure();
           }
           // Create a new mask that maps to the source vector
@@ -1715,8 +1823,8 @@ class HandleVectorExtractPattern
           }
           mask = newMask;
         }
-        auto newShuffleVecTy =
-            VectorType::get(srcInputSize, srcInputVecTy.getElementType());
+        auto newShuffleVecTy = VectorType::get(
+            static_cast<int64_t>(mask.size()), srcInputVecTy.getElementType());
         auto newShuffle = LLVM::ShuffleVectorOp::create(
             rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
         // Create new unary op with new shuffle as input.
@@ -1748,6 +1856,8 @@ class HandleVectorExtractPattern
         if (loadAddrSpace != 0)
           return failure();
         auto loadTy = dyn_cast<VectorType>(loadOp.getType());
+        if (!loadTy)
+          return failure();
         auto elemTy = loadTy.getElementType();
         auto firstIndex = mask[0];
         auto newVecTy = VectorType::get(mask.size(), elemTy);

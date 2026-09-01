@@ -1186,15 +1186,19 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       break;
     }
 
-    if (IsImm)
+    if (IsImm) {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
       BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addImm(Cond[4].getImm())
           .addImm(0);
-    else
+    } else {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
+      MRI.constrainRegClass(Cond[4].getReg(), getRegClass(get(SubsOpc), 2));
       BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
           .addReg(Cond[3].getReg())
           .addReg(Cond[4].getReg());
+    }
   } break;
   case 7: { // cb[b,h]
     // We must insert a cmp, that is a subs, but also zero- or sign-extensions

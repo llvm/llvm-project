@@ -162,7 +162,7 @@ static DeclarationName parseOpenMPReductionId(Parser &P) {
 
 Parser::DeclGroupPtrTy
 Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   // Parse '('.
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
   if (T.expectAndConsume(
@@ -407,7 +407,7 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
 Parser::DeclGroupPtrTy
 Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   bool IsCorrect = true;
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   // Parse '('
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
   if (T.expectAndConsume(
@@ -686,7 +686,8 @@ static bool parseDeclareSimdClauses(
       P.ConsumeToken();
     } else if (ClauseName == "simdlen") {
       if (SimdLen.isUsable()) {
-        unsigned OMPVersion = P.getActions().getLangOpts().OpenMP;
+        llvm::omp::Version OMPVersion =
+            P.getActions().getLangOpts().getOpenMPVersion();
         P.Diag(Tok, diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(OMPD_declare_simd, OMPVersion)
             << ClauseName << 0;
@@ -1335,7 +1336,7 @@ bool Parser::parseOMPContextSelectors(SourceLocation Loc, OMPTraitInfo &TI) {
 void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
                                            CachedTokens &Toks,
                                            SourceLocation Loc) {
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   PP.EnterToken(Tok, /*IsReinject*/ true);
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
                       /*IsReinject*/ true);
@@ -1388,10 +1389,9 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
     OpenMPClauseKind CKind = Tok.isAnnotation()
                                  ? OMPC_unknown
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
-    if (!isAllowedClauseForDirective(OMPD_declare_variant, CKind,
-                                     getLangOpts().OpenMP)) {
+    if (!isAllowedClauseForDirective(OMPD_declare_variant, CKind, OMPVersion)) {
       Diag(Tok.getLocation(), diag::err_omp_declare_variant_wrong_clause)
-          << (getLangOpts().OpenMP < 51 ? 0 : 1);
+          << (OMPVersion < 51 ? 0 : 1);
       IsError = true;
     }
     if (!IsError) {
@@ -1665,7 +1665,7 @@ void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
     bool NextIsLPar = Tok.is(tok::l_paren);
     // Handle unknown clauses by skipping them.
     if (Idx == -1) {
-      unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+      llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
       Diag(StartLoc, diag::warn_omp_unknown_assumption_clause_missing_id)
           << llvm::omp::getOpenMPDirectiveName(DKind, OMPVersion)
           << llvm::omp::getAllAssumeClauseOptions() << NextIsLPar;
@@ -1781,7 +1781,8 @@ void Parser::ParseOMPDeclareTargetClauses(
                               getOpenMPClauseKind(ClauseName) == OMPC_indirect;
 
       if (DTCI.Indirect && IsIndirectClause) {
-        unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+        llvm::omp::Version OMPVersion =
+            Actions.getLangOpts().getOpenMPVersion();
         Diag(Tok, diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(OMPD_declare_target, OMPVersion)
             << getOpenMPClauseName(OMPC_indirect) << 0;
@@ -1933,7 +1934,7 @@ void Parser::skipUntilPragmaOpenMPEnd(OpenMPDirectiveKind DKind) {
   if (Tok.is(tok::annot_pragma_openmp_end))
     return;
 
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
       << getOpenMPDirectiveName(DKind, OMPVersion);
   while (Tok.isNot(tok::annot_pragma_openmp_end))
@@ -1954,7 +1955,7 @@ void Parser::parseOMPEndDirective(OpenMPDirectiveKind BeginKind,
     return;
   }
 
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   Diag(FoundLoc, diag::err_expected_end_declare_target_or_variant)
       << DiagSelection;
   Diag(BeginLoc, diag::note_matching)
@@ -1982,7 +1983,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
          "Not an OpenMP directive!");
   ParsingOpenMPDirectiveRAII DirScope(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
 
   SourceLocation Loc;
   OpenMPDirectiveKind DKind;
@@ -2303,7 +2304,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
     bool ReadDirectiveWithinMetadirective) {
   assert(isOpenMPExecutableDirective(DKind) && "Unexpected directive category");
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
 
   bool HasAssociatedStatement = true;
   Association Assoc = getDirectiveAssociation(DKind);
@@ -2573,7 +2574,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   SourceLocation Loc = ReadDirectiveWithinMetadirective
                            ? Tok.getLocation()
                            : ConsumeAnnotationToken();
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   OpenMPDirectiveKind DKind = parseOpenMPDirectiveKind(*this);
   if (ReadDirectiveWithinMetadirective && DKind == OMPD_unknown) {
     Diag(Tok, diag::err_omp_unknown_directive);
@@ -2953,7 +2954,7 @@ bool Parser::ParseOpenMPSimpleVarList(
     const llvm::function_ref<void(CXXScopeSpec &, DeclarationNameInfo)>
         &Callback,
     bool AllowScopeSpecifier) {
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
   // Parse '('.
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
   if (T.expectAndConsume(diag::err_expected_lparen_after,
@@ -3239,7 +3240,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   OMPClause *Clause = nullptr;
   bool ErrorFound = false;
   bool WrongDirective = false;
-  unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
 
   auto CheckClauseValid = [&](OpenMPDirectiveKind D, OpenMPClauseKind C) {
     if (!isAllowedClauseForDirective(D, C, OMPVersion)) {
@@ -5490,7 +5491,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     else if (Tok.isNot(tok::r_paren) &&
              Tok.isNot(tok::annot_pragma_openmp_end) &&
              (!MayHaveTail || Tok.isNot(tok::colon))) {
-      unsigned OMPVersion = Actions.getLangOpts().OpenMP;
+      llvm::omp::Version OMPVersion = Actions.getLangOpts().getOpenMPVersion();
       Diag(Tok, diag::err_omp_expected_punc)
           << ((Kind == OMPC_flush)
                   ? getOpenMPDirectiveName(OMPD_flush, OMPVersion)

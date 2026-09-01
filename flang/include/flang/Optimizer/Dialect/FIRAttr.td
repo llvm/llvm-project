@@ -15,9 +15,56 @@
 
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
+include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/EnumAttr.td"
 
 class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
+
+//===----------------------------------------------------------------------===//
+// Linkage
+//===----------------------------------------------------------------------===//
+
+// Linkage attribute used on fir.global. This is a subset of LLVM linkage
+// types currently supported by FIR. The names match the keywords in the
+// custom assembly form of fir.global. External is the default when omitted.
+def FIR_LinkageExternal
+    : I64EnumAttrCase<"External", 0, "external">;
+def FIR_LinkageInternal
+    : I64EnumAttrCase<"Internal", 1, "internal">;
+def FIR_LinkageLinkonce
+    : I64EnumAttrCase<"Linkonce", 2, "linkonce">;
+def FIR_LinkageLinkonceODR
+    : I64EnumAttrCase<"LinkonceODR", 3, "linkonce_odr">;
+def FIR_LinkageWeak
+    : I64EnumAttrCase<"Weak", 4, "weak">;
+def FIR_LinkageCommon
+    : I64EnumAttrCase<"Common", 5, "common">;
+
+def fir_LinkageEnum : I64EnumAttr<
+    "LinkageEnum",
+    "FIR linkage types",
+    [FIR_LinkageExternal, FIR_LinkageInternal, FIR_LinkageLinkonce,
+     FIR_LinkageLinkonceODR, FIR_LinkageWeak, FIR_LinkageCommon]> {
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+}
+
+def fir_LinkageAttr : fir_Attr<"Linkage"> {
+  let mnemonic = "linkage";
+  let parameters = (ins "LinkageEnum":$linkage);
+  let assemblyFormat = "`<` $linkage `>`";
+}
+
+def fir_Linkage : DialectAttr<
+    FIROpsDialect,
+    CPred<"::llvm::isa<::fir::LinkageAttr>($_self)">,
+    "FIR linkage specification"> {
+  let storageType = "::fir::LinkageAttr";
+  let returnType = "::fir::LinkageEnum";
+  let convertFromStorage = "$_self.getLinkage()";
+  let constBuilderCall =
+          "::fir::LinkageAttr::get($_builder.getContext(), $0)";
+}
 
 def FIRnoAttributes  : I32BitEnumAttrCaseNone<"None">;
 def FIRallocatable  : I32BitEnumAttrCaseBit<"allocatable", 0>;

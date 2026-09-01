@@ -1205,7 +1205,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     case GFConstant::GFConstantKind::Scalar: {
       auto APF = Cst->getScalarValue();
       Known.KnownFPClasses = APF.classify();
-      Known.SignBit = APF.isNegative();
+      Known.setSignBit(APF.isNegative());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
@@ -1222,7 +1222,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       }
 
       if (SignBitAllOne != SignBitAllZero)
-        Known.SignBit = SignBitAllOne;
+        Known.setSignBit(SignBitAllOne);
 
       break;
     }
@@ -1579,7 +1579,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         computeKnownFPClass(Val, MI.getFlags(), InterestedClasses, Depth + 1);
     // Can only propagate sign if output is never NaN.
     if (!Known.isKnownNeverNaN())
-      Known.SignBit.reset();
+      Known.setSignBit(std::nullopt);
     break;
   }
   case TargetOpcode::G_FFLOOR:

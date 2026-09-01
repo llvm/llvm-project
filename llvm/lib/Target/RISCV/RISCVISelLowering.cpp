@@ -12328,6 +12328,107 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   }
 }
 
+static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed horizontal multiply intrinsic");
+  case Intrinsic::riscv_pm4add:
+    return RISCVISD::PM4ADD;
+  case Intrinsic::riscv_pm2add:
+    return RISCVISD::PM2ADD;
+  case Intrinsic::riscv_pm2add_x:
+    return RISCVISD::PM2ADD_X;
+  case Intrinsic::riscv_pm4addu:
+    return RISCVISD::PM4ADDU;
+  case Intrinsic::riscv_pm2addu:
+    return RISCVISD::PM2ADDU;
+  case Intrinsic::riscv_pmq2add:
+    return RISCVISD::PMQ2ADD;
+  case Intrinsic::riscv_pmqr2add:
+    return RISCVISD::PMQR2ADD;
+  case Intrinsic::riscv_pm2sadd:
+    return RISCVISD::PM2SADD;
+  case Intrinsic::riscv_pm2sadd_x:
+    return RISCVISD::PM2SADD_X;
+  case Intrinsic::riscv_pm2sub:
+    return RISCVISD::PM2SUB;
+  case Intrinsic::riscv_pm2sub_x:
+    return RISCVISD::PM2SUB_X;
+  case Intrinsic::riscv_pm4addsu:
+    return RISCVISD::PM4ADDSU;
+  case Intrinsic::riscv_pm2addsu:
+    return RISCVISD::PM2ADDSU;
+  }
+}
+
+static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
+                                        SDValue Rs2, const SDLoc &DL,
+                                        SelectionDAG &DAG) {
+  auto Extract = [&](SDValue V, unsigned Idx) {
+    return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+  };
+
+  if (Rs1.getSimpleValueType() == MVT::v4i16) {
+    auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+    auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+    unsigned MulOpc, AccOpc;
+    switch (IntNo) {
+    default:
+      llvm_unreachable("Unexpected RV32 horizontal multiply intrinsic");
+    case Intrinsic::riscv_pm4add:
+      MulOpc = RISCVISD::PM2WADD;
+      AccOpc = RISCVISD::PM2WADDA;
+      break;
+    case Intrinsic::riscv_pm4addu:
+      MulOpc = RISCVISD::PM2WADDU;
+      AccOpc = RISCVISD::PM2WADDAU;
+      break;
+    case Intrinsic::riscv_pm4addsu:
+      MulOpc = RISCVISD::PM2WADDSU;
+      AccOpc = RISCVISD::PM2WADDASU;
+      break;
+    }
+    SDValue Acc = DAG.getNode(MulOpc, DL, MVT::v2i32, Rs1Lo, Rs2Lo);
+    Acc = DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Hi, Rs2Hi);
+    return DAG.getBitcast(MVT::i64, Acc);
+  }
+
+  assert(Rs1.getSimpleValueType() == MVT::v2i32 &&
+         "Unexpected RV32 horizontal multiply source type");
+  SDValue Rs1Lo = Extract(Rs1, 0);
+  SDValue Rs1Hi = Extract(Rs1, 1);
+  SDValue Rs2Lo = Extract(Rs2, 0);
+  SDValue Rs2Hi = Extract(Rs2, 1);
+
+  if (IntNo == Intrinsic::riscv_pmq2add || IntNo == Intrinsic::riscv_pmqr2add) {
+    unsigned AccOpc = IntNo == Intrinsic::riscv_pmq2add ? RISCVISD::MQWACC
+                                                        : RISCVISD::MQRWACC;
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+    SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+    SDValue Acc = DAG.getNode(AccOpc, DL, VTs, {Zero, Zero, Rs1Lo, Rs2Lo});
+    Acc = DAG.getNode(AccOpc, DL, VTs, {Acc, Acc.getValue(1), Rs1Hi, Rs2Hi});
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Acc, Acc.getValue(1));
+  }
+
+  unsigned MulOpc = ISD::SMUL_LOHI;
+  if (IntNo == Intrinsic::riscv_pm2addu)
+    MulOpc = ISD::UMUL_LOHI;
+  else if (IntNo == Intrinsic::riscv_pm2addsu)
+    MulOpc = RISCVISD::WMULSU;
+  bool IsSub =
+      IntNo == Intrinsic::riscv_pm2sub || IntNo == Intrinsic::riscv_pm2sub_x;
+  if (IntNo == Intrinsic::riscv_pm2add_x || IntNo == Intrinsic::riscv_pm2sub_x)
+    std::swap(Rs2Lo, Rs2Hi);
+
+  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+  SDValue LoMul = DAG.getNode(MulOpc, DL, VTs, Rs1Lo, Rs2Lo);
+  SDValue HiMul = DAG.getNode(MulOpc, DL, VTs, Rs1Hi, Rs2Hi);
+  unsigned Opc = IsSub ? RISCVISD::SUBD : RISCVISD::ADDD;
+  SDValue Res = DAG.getNode(Opc, DL, VTs, LoMul, LoMul.getValue(1), HiMul,
+                            HiMul.getValue(1));
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1));
+}
+
 /// Return the packed multiply-halves node for a multiply-parts intrinsic. The
 /// scalar spelling maps to the same node; its product is the first element.
 static unsigned getRVPMulHalvesOpcode(unsigned IntNo) {
@@ -12883,6 +12984,36 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pm4add:
+  case Intrinsic::riscv_pm2add:
+  case Intrinsic::riscv_pm2add_x:
+  case Intrinsic::riscv_pm4addu:
+  case Intrinsic::riscv_pm2addu:
+  case Intrinsic::riscv_pmq2add:
+  case Intrinsic::riscv_pmqr2add:
+  case Intrinsic::riscv_pm2sadd:
+  case Intrinsic::riscv_pm2sadd_x:
+  case Intrinsic::riscv_pm2sub:
+  case Intrinsic::riscv_pm2sub_x:
+  case Intrinsic::riscv_pm4addsu:
+  case Intrinsic::riscv_pm2addsu: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPHorizontalMulOpcode(IntNo);
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+
+    // RV32 applies the 32-bit instruction independently to both halves of a
+    // 64-bit packed input.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
@@ -16975,6 +17106,43 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
+    case Intrinsic::riscv_pm4add:
+    case Intrinsic::riscv_pm2add:
+    case Intrinsic::riscv_pm2add_x:
+    case Intrinsic::riscv_pm4addu:
+    case Intrinsic::riscv_pm2addu:
+    case Intrinsic::riscv_pmq2add:
+    case Intrinsic::riscv_pmqr2add:
+    case Intrinsic::riscv_pm2sadd:
+    case Intrinsic::riscv_pm2sadd_x:
+    case Intrinsic::riscv_pm2sub:
+    case Intrinsic::riscv_pm2sub_x:
+    case Intrinsic::riscv_pm4addsu:
+    case Intrinsic::riscv_pm2addsu: {
+      MVT VT = N->getSimpleValueType(0);
+      unsigned Opc = getRVPHorizontalMulOpcode(IntNo);
+      SDValue Rs1 = N->getOperand(1);
+      SDValue Rs2 = N->getOperand(2);
+
+      if (!Subtarget.is64Bit() && VT == MVT::i64) {
+        SDValue Res = lowerRV32HorizontalMul64(IntNo, Rs1, Rs2, DL, DAG);
+        Results.push_back(Res);
+        return;
+      }
+
+      assert(Subtarget.is64Bit() && VT == MVT::i32 &&
+             "Unexpected horizontal multiply legalization");
+      MVT SrcVT = Rs1.getSimpleValueType();
+      MVT WideSrcVT = SrcVT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+      Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, Rs1,
+                        DAG.getUNDEF(SrcVT));
+      Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, Rs2,
+                        DAG.getUNDEF(SrcVT));
+      SDValue Wide = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Wide, 0));
+      return;
+    }
+
     case Intrinsic::riscv_pmul_00:
     case Intrinsic::riscv_pmul_01:
     case Intrinsic::riscv_pmul_11:

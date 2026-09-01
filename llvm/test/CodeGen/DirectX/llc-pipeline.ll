@@ -9,10 +9,11 @@
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT: Runtime Library Function Analysis
+; CHECK-NEXT: Target Pass Configuration
+; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-O1-NEXT: Assumption Cache Tracker
-; CHECK-OBJ-NEXT: Machine Module Information
 ; CHECK-OBJ-NEXT: Machine Branch Probability Analysis
 ; CHECK-OBJ-NEXT: Create Garbage Collector Module Metadata
 

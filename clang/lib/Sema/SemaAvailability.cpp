@@ -212,6 +212,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
     } else if (K == AR_Deprecated) {
       if (C->isDeprecated())
         return true;
+      // Don't emit deprecated warnings when defining special member functions.
+      if (const auto *FD = dyn_cast<FunctionDecl>(C); FD && FD->isDefaulted())
+        return true;
     } else if (K == AR_Unavailable) {
       // It is perfectly fine to refer to an 'unavailable' Objective-C method
       // when it is referenced from within the @implementation itself. In this
@@ -548,12 +551,6 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
-    // Suppress -Wdeprecated-declarations in implicit
-    // functions.
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
-        FD && FD->isImplicit())
-      return;
-
     if (ObjCPropertyAccess)
       diag = diag::warn_property_method_deprecated;
     else if (S.currentEvaluationContext().IsCaseExpr)

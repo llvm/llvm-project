@@ -1571,7 +1571,7 @@ static void checkIncompatibleMemoryOrderClause(SemanticsContext &context,
   llvm::omp::Clause kind{x.GetKind()};
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
 
-  unsigned version{context.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context.langOptions().getOpenMPVersion()};
   if (version < 50)
     return;
 

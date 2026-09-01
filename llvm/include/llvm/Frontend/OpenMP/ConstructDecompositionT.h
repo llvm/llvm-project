@@ -97,7 +97,7 @@ struct ConstructDecompositionT {
 
   using ClauseSet = std::unordered_set<const ClauseTy *>;
 
-  ConstructDecompositionT(uint32_t ver, HelperType &helper,
+  ConstructDecompositionT(llvm::omp::Version ver, HelperType &helper,
                           llvm::omp::Directive dir,
                           llvm::ArrayRef<ClauseTy> clauses)
       : version(ver), helper(helper), inputDirective(dir) {
@@ -263,7 +263,7 @@ private:
   applyClause(const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
               const ClauseTy *);
 
-  uint32_t version;
+  llvm::omp::Version version;
   HelperType &helper;
   llvm::omp::Directive inputDirective;
   tomp::ListT<const ClauseTy *> inputClauses;
@@ -277,7 +277,7 @@ private:
 
 // Deduction guide
 template <typename ClauseType, typename HelperType>
-ConstructDecompositionT(uint32_t, HelperType &, llvm::omp::Directive,
+ConstructDecompositionT(llvm::omp::Version, HelperType &, llvm::omp::Directive,
                         llvm::ArrayRef<ClauseType>)
     -> ConstructDecompositionT<ClauseType, HelperType>;
 

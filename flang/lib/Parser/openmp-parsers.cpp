@@ -266,7 +266,7 @@ void OmpDirectiveNameParser::initTokens(std::vector<NameWithId> table[]) const {
   for (size_t i{0}, e{llvm::omp::Directive_enumSize}; i != e; ++i) {
     llvm::StringSet spellings;
     auto id{static_cast<llvm::omp::Directive>(i)};
-    for (unsigned version : llvm::omp::getOpenMPVersions()) {
+    for (llvm::omp::Version version : llvm::omp::getOpenMPVersions()) {
       spellings.insert(llvm::omp::getOpenMPDirectiveName(id, version));
     }
     for (auto &[name, _] : spellings) {
@@ -969,7 +969,8 @@ struct OmpMapTypeParser {
   using resultType = OmpMapType::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
@@ -999,7 +1000,8 @@ struct OmpMapTypeModifierParser {
   using resultType = OmpMapTypeModifier::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
@@ -1133,7 +1135,8 @@ template <typename MotionClause> struct OmpMotionClauseModifierParser {
   using resultType = typename MotionClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version <= 51) {
       auto motion{sourced(construct<resultType>(Parser<OmpMotionModifier>{}))};
       if (auto &&result{attempt(motion).Parse(state)}) {
@@ -1178,7 +1181,8 @@ struct OmpLinearClauseModifierParser {
   using resultType = OmpLinearClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 52) {
       auto parser{sourced( //
           construct<resultType>(Parser<OmpLinearModifier>{}) ||

@@ -1067,6 +1067,7 @@ module std {
     module strong_order                     { header "__compare/strong_order.h" }
     module synth_three_way                  { header "__compare/synth_three_way.h" }
     module three_way_comparable             { header "__compare/three_way_comparable.h" }
+    module type_order                       { header "__compare/type_order.h" }
     module weak_order                       { header "__compare/weak_order.h" }
 
     header "compare"
