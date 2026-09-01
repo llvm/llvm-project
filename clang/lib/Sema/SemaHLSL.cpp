@@ -3599,6 +3599,35 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
+static bool CheckAnyScalarOrVectorOrMatrix(Sema *S, CallExpr *TheCall,
+                                           unsigned ArgIndex, bool AllowBool) {
+  assert(TheCall->getNumArgs() > ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  if (ArgType->isDependentType())
+    return false;
+
+  QualType ElementType = ArgType;
+  if (const auto *VectorTy = ArgType->getAs<VectorType>())
+    ElementType = VectorTy->getElementType();
+  else if (const auto *MatrixTy = ArgType->getAs<MatrixType>())
+    ElementType = MatrixTy->getElementType();
+
+  if (ElementType->isBooleanType()) {
+    if (AllowBool)
+      return false;
+  } else if ((ElementType->isIntegerType() && !ElementType->isEnumeralType()) ||
+             ElementType->isRealFloatingType()) {
+    unsigned BitWidth = S->Context.getTypeSize(ElementType);
+    if (BitWidth == 16 || BitWidth == 32 || BitWidth == 64)
+      return false;
+  }
+
+  S->Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+          diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
+      << ArgType;
+  return true;
+}
+
 // Check that the argument is not a bool or vector<bool>
 // Returns true on error
 static bool CheckNotBoolScalarOrVector(Sema *S, CallExpr *TheCall,
@@ -4833,7 +4862,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
-    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+    if (CheckAnyScalarOrVectorOrMatrix(&SemaRef, TheCall, 0,
+                                       /*AllowBool=*/true))
       return true;
 
     TheCall->setType(TheCall->getArg(0)->getType());

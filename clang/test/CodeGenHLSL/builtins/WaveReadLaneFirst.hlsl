@@ -106,4 +106,13 @@ float4 test_floatv4(float4 expr) {
   return WaveReadLaneFirst(expr);
 }
 
+// CHECK-LABEL: test_float2x2
+float2x2 test_float2x2(float2x2 expr) {
+  // CHECK-SPIRV: %[[#entry_tok7:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK-SPIRV: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.spv.wave.readlane.first.v4f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok7]]) ]
+  // CHECK-DXIL: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.dx.wave.readlane.first.v4f32([[TY]] %[[#]])
+  // CHECK: ret [[TY]] %[[RET]]
+  return WaveReadLaneFirst(expr);
+}
+
 // CHECK: attributes #[[#attr]] = {{{.*}} convergent {{.*}}}

@@ -72,6 +72,18 @@ entry:
   ret <3 x i32> %ret
 }
 
+define noundef <4 x float> @wave_readlane_first_v4float(
+    <4 x float> noundef %expr) {
+entry:
+; CHECK: call float @dx.op.waveReadLaneFirst.f32(i32 118, float %expr.i0)
+; CHECK: call float @dx.op.waveReadLaneFirst.f32(i32 118, float %expr.i1)
+; CHECK: call float @dx.op.waveReadLaneFirst.f32(i32 118, float %expr.i2)
+; CHECK: call float @dx.op.waveReadLaneFirst.f32(i32 118, float %expr.i3)
+  %ret = call <4 x float> @llvm.dx.wave.readlane.first.v4f32(
+      <4 x float> %expr)
+  ret <4 x float> %ret
+}
+
 declare half @llvm.dx.wave.readlane.first.f16(half)
 declare float @llvm.dx.wave.readlane.first.f32(float)
 declare double @llvm.dx.wave.readlane.first.f64(double)
@@ -81,3 +93,4 @@ declare i32 @llvm.dx.wave.readlane.first.i32(i32)
 declare i64 @llvm.dx.wave.readlane.first.i64(i64)
 declare <2 x half> @llvm.dx.wave.readlane.first.v2f16(<2 x half>)
 declare <3 x i32> @llvm.dx.wave.readlane.first.v3i32(<3 x i32>)
+declare <4 x float> @llvm.dx.wave.readlane.first.v4f32(<4 x float>)

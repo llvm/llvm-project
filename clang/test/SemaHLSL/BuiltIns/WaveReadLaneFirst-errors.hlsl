@@ -14,5 +14,12 @@ struct S { float f; };
 
 S test_expr_struct_type_check(S p0) {
   return __builtin_hlsl_wave_read_lane_first(p0);
-  // expected-error@-1 {{invalid operand of type 'S' where a scalar or vector is required}}
+  // expected-error@-1 {{invalid operand of type 'S' where a scalar, vector, or matrix is required}}
+}
+
+enum E { A };
+
+E test_expr_enum_type_check(E p0) {
+  return __builtin_hlsl_wave_read_lane_first(p0);
+  // expected-error@-1 {{invalid operand of type 'E' where a scalar, vector, or matrix is required}}
 }

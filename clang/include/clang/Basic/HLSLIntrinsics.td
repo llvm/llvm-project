@@ -1948,5 +1948,4 @@ def hlsl_wave_read_lane_first :
   let VaryingTypes = AllTypesWithBool;
   let IsConvergent = 1;
   let Availability = SM6_0;
-  let VaryingMatDims = [];
 }
