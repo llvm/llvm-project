@@ -291,13 +291,18 @@ InFlightDiagnostic Operation::emitRemark(const Twine &message) {
 
 /// Emit a remark about this operation for each message, reporting up to
 /// any diagnostic handlers that may be listening.
-std::vector<InFlightDiagnostic>
+SmallVector<InFlightDiagnostic>
 Operation::emitRemark(const ArrayRef<Twine> messages) {
-  std::vector<InFlightDiagnostic> diags;
+  SmallVector<InFlightDiagnostic> diags;
+  diags.reserve(messages.size());
   for (size_t i = 0, e = messages.size(); i < e; ++i) {
     InFlightDiagnostic diag = mlir::emitRemark(getLoc(), messages[i]);
     if (i == e - 1 && getContext()->shouldPrintOpOnDiagnostic())
       diag.attachNote(getLoc()) << "see current operation: " << *this;
+
+    // Explicitly report to flush immediately in order, preventing reverse-order
+    // emission during vector destruction.
+    diag.report();
     diags.push_back(std::move(diag));
   }
   return diags;
@@ -871,7 +876,7 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 
 /// Emit a remark about this operation for each message, reporting up to
 /// any diagnostic handlers that may be listening.
-std::vector<InFlightDiagnostic>
+SmallVector<InFlightDiagnostic>
 OpState::emitRemark(const ArrayRef<Twine> messages) {
   return getOperation()->emitRemark(messages);
 }

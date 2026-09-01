@@ -152,7 +152,7 @@ public:
 
   /// Emit a remark about this operation for each message, reporting up to any
   /// diagnostic handlers that may be listening.
-  std::vector<InFlightDiagnostic> emitRemark(const ArrayRef<Twine> messages);
+  SmallVector<InFlightDiagnostic> emitRemark(const ArrayRef<Twine> messages);
 
   /// Walk the operation by calling the callback for each nested operation
   /// (including this one), block or region, depending on the callback provided.
