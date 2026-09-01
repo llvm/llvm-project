@@ -20958,7 +20958,8 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
     if (Op->getOpcode() != RISCVISD::ABDS_VL &&
         Op->getOpcode() != RISCVISD::ABDU_VL)
       return SDValue();
-    // The combine is only valid when both instructions share the same mask and VL.
+    // The combine is only valid when both instructions share the same mask and
+    // VL.
     if (!Op.getOperand(2).isUndef() || Op.getOperand(3) != Mask ||
         Op.getOperand(4) != VL)
       return SDValue();

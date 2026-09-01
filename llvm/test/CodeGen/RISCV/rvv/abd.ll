@@ -628,9 +628,7 @@ define <vscale x 4 x i32> @wide_abd_is_not_narrow_operand(<vscale x 4 x i32> %a,
 ; ZVABD-LABEL: wide_abd_is_not_narrow_operand:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; ZVABD-NEXT:    vmin.vv v14, v8, v10
-; ZVABD-NEXT:    vmax.vv v8, v8, v10
-; ZVABD-NEXT:    vsub.vv v8, v8, v14
+; ZVABD-NEXT:    vabd.vv v8, v8, v10
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVABD-NEXT:    vwaddu.wv v8, v8, v12
 ; ZVABD-NEXT:    ret
@@ -658,7 +656,7 @@ define <vscale x 4 x i32> @vwabda_mask_mismatch(<vscale x 4 x i32> %acc, <vscale
 ; ZVABD-NEXT:    vabd.vv v10, v10, v11, v0.t
 ; ZVABD-NEXT:    vwaddu.wv v8, v8, v10
 ; ZVABD-NEXT:    ret
-  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd.mask(<vscale x 4 x i16> undef, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i1> %mask, iXLen -1, iXLen 3)
+  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd.mask(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i1> %mask, iXLen -1, iXLen 3)
   %diff.ext = zext <vscale x 4 x i16> %diff to <vscale x 4 x i32>
   %ret = add <vscale x 4 x i32> %acc, %diff.ext
   ret <vscale x 4 x i32> %ret
@@ -680,7 +678,7 @@ define <vscale x 4 x i32> @vwabda_vl_mismatch(<vscale x 4 x i32> %acc, <vscale x
 ; ZVABD-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVABD-NEXT:    vwaddu.wv v8, v8, v10
 ; ZVABD-NEXT:    ret
-  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd(<vscale x 4 x i16> undef, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, iXLen %vl)
+  %diff = call <vscale x 4 x i16> @llvm.riscv.vabd(<vscale x 4 x i16> poison, <vscale x 4 x i16> %a, <vscale x 4 x i16> %b, iXLen %vl)
   %diff.ext = zext <vscale x 4 x i16> %diff to <vscale x 4 x i32>
   %ret = add <vscale x 4 x i32> %acc, %diff.ext
   ret <vscale x 4 x i32> %ret
