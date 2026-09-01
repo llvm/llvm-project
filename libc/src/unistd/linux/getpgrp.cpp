@@ -16,18 +16,16 @@
 #include "hdr/types/pid_t.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getpgid.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, getpgrp, ()) {
   auto ret = linux_syscalls::getpgid(0);
-  if (!ret) {
-    libc_errno = ret.error();
-    return -1;
-  }
-  return *ret;
+  // getpgrp() cannot fail, so we can assume getpgid(0) syscall always
+  // succeeds (which is true on Linux in "normal execution", when simulation
+  // or SECCOMP is not in the picture).
+  return ret.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

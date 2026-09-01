@@ -310,7 +310,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.getpgid
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
