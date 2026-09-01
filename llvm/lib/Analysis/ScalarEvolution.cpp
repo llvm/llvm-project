@@ -8414,23 +8414,29 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  std::optional<unsigned> Res;
-  for (auto *ExitingBB : ExitingBlocks) {
-    unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
-    if (!Res)
-      Res = Multiple;
-    Res = std::gcd(*Res, Multiple);
-  }
-  return Res.value_or(1);
-}
-
-unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
-                                                       const SCEV *ExitCount) {
-  if (isa<SCEVCouldNotCompute>(ExitCount))
+  // An exit with an uncomputable exit count makes the result 1.
+  if (ExitingBlocks.empty() ||
+      any_of(ExitingBlocks, [this, L](BasicBlock *ExitingBB) {
+        return isa<SCEVCouldNotCompute>(getExitCount(L, ExitingBB));
+      }))
     return 1;
 
+  LoopGuards Guards = LoopGuards::collect(L, *this);
+  unsigned Res = 0;
+  for (BasicBlock *ExitingBB : ExitingBlocks)
+    Res = std::gcd(
+        Res, getSmallConstantTripMultiple(getExitCount(L, ExitingBB), Guards));
+  return Res;
+}
+
+unsigned
+ScalarEvolution::getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                              const LoopGuards &Guards) {
+  assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Must be computable!");
+
   // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
+  const SCEV *TCExpr =
+      getTripCountFromExitCount(applyLoopGuards(ExitCount, Guards));
 
   APInt Multiple = getNonZeroConstantMultiple(TCExpr);
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
@@ -8438,6 +8444,14 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   return Multiple.getActiveBits() > 32
              ? 1U << std::min(31U, Multiple.countTrailingZeros())
              : (unsigned)Multiple.getZExtValue();
+}
+
+unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
+                                                       const SCEV *ExitCount) {
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return 1;
+
+  return getSmallConstantTripMultiple(ExitCount, LoopGuards::collect(L, *this));
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a

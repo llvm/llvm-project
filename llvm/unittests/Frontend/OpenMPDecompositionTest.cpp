@@ -332,7 +332,7 @@ protected:
   void TearDown() override {}
 
   omp::Helper Helper;
-  uint32_t AnyVersion = 999;
+  llvm::omp::Version AnyVersion = llvm::omp::Version(999);
 };
 
 // PRIVATE

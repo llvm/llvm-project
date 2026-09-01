@@ -37,6 +37,12 @@ enum class Frontend { LLVM, Flang, Clang };
 static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
                                         raw_ostream &OS);
 
+static StringRef getVersionType(const DirectiveLanguage &DirLang) {
+  if (DirLang.getName() == "OpenMP")
+    return "Version";
+  return "unsigned";
+}
+
 static StringRef getFESpelling(Frontend FE) {
   switch (FE) {
   case Frontend::LLVM:
@@ -275,6 +281,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include \"llvm/ADT/STLExtras.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
+  if (DirLang.getName() == "OpenMP")
+    OS << "#include \"llvm/Frontend/OpenMP/OMPVersion.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
   OS << "#include <cstddef>\n"; // for size_t
   OS << "#include <utility>\n"; // for std::pair
@@ -324,6 +332,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     emitDirectivesConstexprImpl(DirLang, OS);
 
     // Generic function signatures
+    StringRef VersionType = getVersionType(DirLang);
+
     OS << "\n";
     OS << "// Enumeration helper functions\n";
 
@@ -335,8 +345,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "}\n";
     OS << "\n";
 
-    OS << "LLVM_ABI StringRef get" << Lang
-       << "DirectiveName(Directive D, unsigned Ver = 0);\n";
+    OS << "LLVM_ABI StringRef get" << Lang << "DirectiveName(Directive D, "
+       << VersionType << " V = " << VersionType << "(0));\n";
     OS << "\n";
 
     OS << "LLVM_ABI std::pair<Clause, directive::VersionRange> get" << Lang
@@ -348,21 +358,21 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "}\n";
     OS << "\n";
 
-    OS << "LLVM_ABI StringRef get" << Lang
-       << "ClauseName(Clause C, unsigned Ver = 0);\n";
+    OS << "LLVM_ABI StringRef get" << Lang << "ClauseName(Clause C, "
+       << VersionType << " V = " << VersionType << "(0));\n";
     OS << "\n";
 
     OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
-       << "Version.\n";
+       << "V.\n";
     OS << "LLVM_ABI bool isAllowedClauseForDirective(Directive D, "
-       << "Clause C, unsigned Version);\n";
+       << "Clause C, " << VersionType << " V);\n";
     OS << "\n";
     OS << "constexpr std::size_t getMaxLeafCount() { return "
        << getMaxLeafCount(DirLang) << "; }\n";
     OS << "LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier "
           "LM);\n";
-    OS << "LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned "
-          "Ver = 0);\n";
+    OS << "LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, "
+       << VersionType << " V = " << VersionType << "(0));\n";
     OS << EnumHelperFuncs;
   } // close DirLangNS
 
@@ -398,7 +408,7 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
   std::string Qual = getQualifier(DirLang);
   OS << "\n";
   OS << "llvm::StringRef " << Qual << "get" << LangName << Enum << "Name("
-     << Qual << Enum << " Kind, unsigned Version) {\n";
+     << Qual << Enum << " Kind, " << getVersionType(DirLang) << " V) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
     BaseRecord Rec(R);
@@ -420,7 +430,7 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
       }
       OS << "      };\n";
       OS << "      return llvm::directive::FindName(" << SpellingsName
-         << ", Version);\n";
+         << ", static_cast<unsigned>(V));\n";
       OS << "    }\n";
     }
   }
@@ -555,8 +565,8 @@ static void generateCaseForVersionedClauses(ArrayRef<const Record *> VerClauses,
         getIdentifierName(VerClause.getClause().getRecord(), Prefix);
     if (Cases.insert(Name).second) {
       OS << "        case " << Name << ":\n";
-      OS << "          return " << VerClause.getMinVersion()
-         << " <= Version && " << VerClause.getMaxVersion() << " >= Version;\n";
+      OS << "          return V >= " << VerClause.getMinVersion()
+         << " && V <= " << VerClause.getMaxVersion() << ";\n";
     }
   }
 }
@@ -568,7 +578,8 @@ static void generateIsAllowedClause(const DirectiveLanguage &DirLang,
 
   OS << "\n";
   OS << "bool " << Qual << "isAllowedClauseForDirective(" << Qual
-     << "Directive D, " << Qual << "Clause C, unsigned Version) {\n";
+     << "Directive D, " << Qual << "Clause C, " << getVersionType(DirLang)
+     << " V) {\n";
   OS << "  assert(unsigned(D) <= Directive_enumSize);\n";
   OS << "  assert(unsigned(C) <= Clause_enumSize);\n";
 
@@ -904,7 +915,9 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
   // Must match the sentinel in DirectiveBase.td and in
   // OmpStructureChecker::CheckDirectiveInPureProcedure.
   constexpr int NeverPure = 0x7FFFFFFF;
-  OS << "constexpr unsigned getDirectivePureSince(Directive Dir) {\n";
+  StringRef VersionType = getVersionType(DirLang);
+  OS << "constexpr " << VersionType
+     << " getDirectivePureSince(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
@@ -915,10 +928,10 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
     if (PureSince == NeverPure)
       continue;
     OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
-    OS << "    return " << PureSince << ";\n";
+    OS << "    return " << VersionType << "(" << PureSince << ");\n";
   }
   OS << "  default:\n";
-  OS << "    return 0x7FFFFFFF;\n";
+  OS << "    return " << VersionType << "(0x7FFFFFFF);\n";
   OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
@@ -1445,7 +1458,7 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   // StringRef get<enumClauseValue>Name(<enumClauseValue>) ; value -> string
   generateGetClauseVal(DirLang, OS);
 
-  // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
+  // isAllowedClauseForDirective(Directive D, Clause C, Version V)
   generateIsAllowedClause(DirLang, OS);
 
   // isAllowedLoopModifier(Directive D, LoopModifier LM)

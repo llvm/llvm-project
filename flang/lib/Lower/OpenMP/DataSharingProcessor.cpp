@@ -287,7 +287,7 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
         // versions semantics only warns and ignores it, so fall back to a
         // regular lastprivate here to keep lowering consistent and avoid the
         // conditional path for entities it cannot handle (e.g. characters).
-        if (semaCtx.langOptions().OpenMPVersion >= 50) {
+        if (semaCtx.langOptions().getOpenMPVersion() >= 50) {
           collectOmpObjectListSymbol(objects, conditionalLastPrivatizedSymbols);
         } else {
           collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
@@ -456,14 +456,14 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
-    const parser::OpenMPConstruct &omp, unsigned version) {
+    const parser::OpenMPConstruct &omp, llvm::omp::Version version) {
   return llvm::omp::isPrivatizingConstruct(
       parser::omp::GetOmpDirectiveName(omp).v, version);
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
     const pft::Evaluation &eval) const {
-  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   return eval.visit([=](auto &&s) {
     using BareS = llvm::remove_cvref_t<decltype(s)>;
     if constexpr (std::is_same_v<BareS, parser::OpenMPConstruct>) {

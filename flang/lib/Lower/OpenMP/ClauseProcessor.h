@@ -236,7 +236,7 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
     bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
                                .upper()
                                .find("SIMD") != llvm::StringRef::npos;

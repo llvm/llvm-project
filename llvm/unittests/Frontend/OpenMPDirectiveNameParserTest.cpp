@@ -98,7 +98,7 @@ INSTANTIATE_TEST_SUITE_P(DirectiveNameParserTest, Tokenize,
 
 // Test parsing of valid names.
 
-using ValueType = std::tuple<omp::Directive, unsigned>;
+using ValueType = std::tuple<omp::Directive, omp::Version>;
 
 class ParseValid : public testing::TestWithParam<ValueType> {};
 
@@ -126,8 +126,9 @@ TEST_P(ParseValid, T) {
 static std::string
 getParamName2(const testing::TestParamInfo<ParseValid::ParamType> &Info) {
   auto [DirId, Version] = Info.param;
-  std::string Name = omp::getOpenMPDirectiveName(DirId, Version).str() + "v" +
-                     std::to_string(Version);
+  std::string Name =
+      omp::getOpenMPDirectiveName(DirId, Version).str() + "v" +
+      std::to_string(static_cast<omp::Version::value_type>(Version));
   return prepareParamName(Name);
 }
 
