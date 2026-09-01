@@ -629,7 +629,7 @@ public:
   void VisitPseudoObjectExpr(const PseudoObjectExpr *PE, ExplodedNode *Pred,
                              ExplodedNodeSet &Dst);
 
-  void VisitObjCIndirectCopyRestoreClass(const ObjCIndirectCopyRestoreExpr *OIE,
+  void VisitObjCIndirectCopyRestoreExpr(const ObjCIndirectCopyRestoreExpr *OIE,
                                          ExplodedNode *Pred,
                                          ExplodedNodeSet &Dst);
 

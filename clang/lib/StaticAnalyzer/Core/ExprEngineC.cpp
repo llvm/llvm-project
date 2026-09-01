@@ -993,7 +993,7 @@ void ExprEngine::VisitPseudoObjectExpr(const PseudoObjectExpr *PE,
   Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
 }
 
-void ExprEngine::VisitObjCIndirectCopyRestoreClass(
+void ExprEngine::VisitObjCIndirectCopyRestoreExpr(
     const ObjCIndirectCopyRestoreExpr *OIE, ExplodedNode *Pred,
     ExplodedNodeSet &Dst) {
   // ObjCIndirectCopyRestoreExpr implies passing a temporary for
