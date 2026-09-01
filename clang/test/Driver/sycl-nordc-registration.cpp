@@ -1,4 +1,4 @@
-// Check what a -fno-sycl-rdc object carries and when it is registered: build a
+// Check what a -fno-gpu-rdc object carries and when it is registered: build a
 // two translation unit program, check that each object holds its own finalized
 // device binary, then link and run the program to verify that both binaries
 // reach the SYCL runtime.
@@ -9,8 +9,8 @@
 // REQUIRES: spirv-registered-target, system-linux, native
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clangxx -fsycl -fno-sycl-rdc -c %s -o %t/main.o
-// RUN: %clangxx -fsycl -fno-sycl-rdc -DSECOND_TU -c %s -o %t/second.o
+// RUN: %clangxx -fsycl -fno-gpu-rdc -c %s -o %t/main.o
+// RUN: %clangxx -fsycl -fno-gpu-rdc -DSECOND_TU -c %s -o %t/second.o
 
 // The section holds an offload binary (magic 0x10FF10AD) whose image is a
 // finalized SPIR-V module (magic 0x07230203), both shown little endian by the
@@ -41,7 +41,7 @@
 
 // Splitting a translation unit by kernel gives it an image
 // per kernel, but they are merged into a single offload binary.
-// RUN: %clangxx -fsycl -fno-sycl-rdc -fsycl-device-image-split=kernel -c %s \
+// RUN: %clangxx -fsycl -fno-gpu-rdc -fsycl-device-image-split=kernel -c %s \
 // RUN:   -o %t/main.split.o
 // RUN: llvm-objcopy --dump-section=.sycl_fatbin=%t/main.split.bin \
 // RUN:   %t/main.split.o /dev/null
@@ -70,8 +70,8 @@
 
 // An RDC build of the same sources links the device code together, so a single
 // binary is registered instead of one per translation unit.
-// RUN: %clangxx -fsycl -fsycl-rdc -c %s -o %t/main.rdc.o
-// RUN: %clangxx -fsycl -fsycl-rdc -DSECOND_TU -c %s -o %t/second.rdc.o
+// RUN: %clangxx -fsycl -fgpu-rdc -c %s -o %t/main.rdc.o
+// RUN: %clangxx -fsycl -fgpu-rdc -DSECOND_TU -c %s -o %t/second.rdc.o
 // RUN: %clangxx -fsycl -nolibsycl %t/main.rdc.o %t/second.rdc.o -o %t/rdc
 // RUN: %t/rdc | FileCheck %s --check-prefix=RDC-OUT
 // RDC-OUT: registered binary 1

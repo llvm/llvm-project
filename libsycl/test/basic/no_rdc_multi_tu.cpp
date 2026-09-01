@@ -1,12 +1,12 @@
 // REQUIRES: any-device
 
 // Run a program whose kernels come from two translation units. With
-// -fno-sycl-rdc each translation unit is finalized into a device binary of its
+// -fno-gpu-rdc each translation unit is finalized into a device binary of its
 // own, so both binaries have to be registered and both kernels have to be found
 // at run time.
 // The second translation unit is this same source compiled with -DSECOND_TU.
-// RUN: %clangxx -fsycl -fno-sycl-rdc -c %s -o %t.nordc.main.o
-// RUN: %clangxx -fsycl -fno-sycl-rdc -DSECOND_TU -c %s -o %t.nordc.second.o
+// RUN: %clangxx -fsycl -fno-gpu-rdc -c %s -o %t.nordc.main.o
+// RUN: %clangxx -fsycl -fno-gpu-rdc -DSECOND_TU -c %s -o %t.nordc.second.o
 // RUN: %clangxx -fsycl %t.nordc.main.o %t.nordc.second.o -o %t.nordc.out
 // RUN: %t.nordc.out
 
@@ -14,16 +14,16 @@
 // one device image, all of which end up in the fat binary of that translation
 // unit. The runtime is handed one binary and has to find the kernels across all
 // of its images.
-// RUN: %clangxx -fsycl -fno-sycl-rdc -fsycl-device-image-split=kernel -c %s \
+// RUN: %clangxx -fsycl -fno-gpu-rdc -fsycl-device-image-split=kernel -c %s \
 // RUN:   -o %t.split.main.o
-// RUN: %clangxx -fsycl -fno-sycl-rdc -fsycl-device-image-split=kernel \
+// RUN: %clangxx -fsycl -fno-gpu-rdc -fsycl-device-image-split=kernel \
 // RUN:   -DSECOND_TU -c %s -o %t.split.second.o
 // RUN: %clangxx -fsycl %t.split.main.o %t.split.second.o -o %t.split.out
 // RUN: %t.split.out
 
 // An RDC build of the same sources has to give the same result.
-// RUN: %clangxx -fsycl -fsycl-rdc -c %s -o %t.rdc.main.o
-// RUN: %clangxx -fsycl -fsycl-rdc -DSECOND_TU -c %s -o %t.rdc.second.o
+// RUN: %clangxx -fsycl -fgpu-rdc -c %s -o %t.rdc.main.o
+// RUN: %clangxx -fsycl -fgpu-rdc -DSECOND_TU -c %s -o %t.rdc.second.o
 // RUN: %clangxx -fsycl %t.rdc.main.o %t.rdc.second.o -o %t.rdc.out
 // RUN: %t.rdc.out
 
