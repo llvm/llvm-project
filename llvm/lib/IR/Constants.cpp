@@ -2135,6 +2135,8 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   if (isa<ConstantPointerNull>(To))
     return To;
 
+  // The replacement could be a bitcast to another GlobalValue. We can
+  // replace it with a bitcast to the dso_local_equivalent of that GV.
   GlobalValue *GV = cast<GlobalValue>(To->stripPointerCasts());
   if (DSOLocalEquivalent *NewEquiv =
           getContext().pImpl->DSOLocalEquivalents.lookup(GV))

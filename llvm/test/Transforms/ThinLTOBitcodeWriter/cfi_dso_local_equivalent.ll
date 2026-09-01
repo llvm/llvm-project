@@ -1,4 +1,8 @@
 ; REQUIRES: x86-registered-target
+
+; Verify that the dso_local_equivalent use of f becomes a dso_local_equivalent
+; use of the alias to f that is introduced for CFI.
+
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=M1 %s
