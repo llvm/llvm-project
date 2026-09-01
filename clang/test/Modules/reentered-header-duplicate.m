@@ -19,6 +19,9 @@
 // RUN: %clang_cc1 -fsyntax-only -I %t/headers-unguarded -I %t/headers-unguarded/sub %t/unguarded.c -verify \
 // RUN:   -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
 
+// RUN: %clang_cc1 -fsyntax-only -I %t/headers-mismatched -I %t/headers-mismatched/sub %t/mismatched.c -verify \
+// RUN:   -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
+
 //--- headers-c/top.h
 #ifndef TOP_H
 #define TOP_H
@@ -178,3 +181,38 @@ module top_unguarded {
 #if __has_feature(modules)
 // expected-note@module.modulemap:* {{top_unguarded defined here}}
 #endif
+
+
+//--- headers-mismatched/top.h
+#ifndef TOP_H
+#define TOP_H
+#include <sub/sub.h>
+#endif
+
+//--- headers-mismatched/sub/sub.h
+#ifndef SUB_H
+#define SUB_H
+
+#include <top.h>
+
+struct MismatchedStruct {
+  int x;
+#ifdef EXTRA_FIELD
+  char z;
+#endif
+};
+
+#endif
+
+//--- headers-mismatched/module.modulemap
+module top_mismatched {
+  header "top.h"
+  export *
+}
+
+//--- mismatched.c
+#define EXTRA_FIELD 1
+#include <sub.h>
+// expected-error@sub.h:* {{type 'struct MismatchedStruct' has incompatible definitions}}
+// expected-note@sub.h:* {{field 'z' has type 'char' here}}
+// expected-note@sub.h:* {{no corresponding field here}}
