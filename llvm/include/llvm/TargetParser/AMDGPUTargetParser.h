@@ -232,6 +232,15 @@ constexpr unsigned getMinWavesPerEU() { return 1; }
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
 LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
 
+/// \returns Minimum flat work group size.
+constexpr unsigned getMinFlatWorkGroupSize() { return 1; }
+
+/// \returns Maximum flat work group size.
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
+
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
 /// default target features with entries overridden by \p Features.
