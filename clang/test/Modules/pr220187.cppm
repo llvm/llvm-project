@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -fmodule-file=runner=%t/runner.pcm -fsyntax-only -verify %t/main.cpp
 //
 // Test again with reduced BMI.
-// RUN: %clang_cc1 -std=c++23 -emit-module-interface %t/runner.cppm -o %t/runner.pcm
+// RUN: %clang_cc1 -std=c++23 -emit-reduced-module-interface %t/runner.cppm -o %t/runner.pcm
 // RUN: %clang_cc1 -std=c++23 -fmodule-file=runner=%t/runner.pcm -fsyntax-only -verify %t/main.cpp
 
 //--- shared.hpp
