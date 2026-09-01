@@ -181,7 +181,8 @@ void *void_pointer_dereference(void) {
 int *atomic_pointer_declref(void) {
   int value;
   _Atomic(int *) p = &value; // expected-warning {{stack memory associated with local variable 'value' is returned}}
-  return p;                  // expected-note {{returned here}}
+  return p;                  // expected-note {{returned here}} \
+                             // expected-note {{local variable 'p' aliases the storage of local variable 'value'}}
 }
 
 int *atomic_pointer_static(void) {
@@ -193,7 +194,8 @@ int *atomic_pointer_static(void) {
 int **atomic_pointer_multilevel(void) {
   int *inner;
   _Atomic(int **) p = &inner; // expected-warning {{stack memory associated with local variable 'inner' is returned}}
-  return p;                   // expected-note {{returned here}}
+  return p;                   // expected-note {{returned here}} \
+                              // expected-note {{local variable 'p' aliases the storage of local variable 'inner'}}
 }
 
 // In C, a pointer compound assignment is a prvalue; its result still carries

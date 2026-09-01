@@ -196,7 +196,7 @@ void temporary_pointer_lifetimebound_capture() {
 }
 
 void temporary_nested_lifetimebound_capture() {
-  capturePointer(getLifetimeBoundPointer(*getLifetimeBoundPointer(
+  capturePointer(getLifetimeBoundPointer(*getLifetimeBoundPointer( // cfg-note 2 {{result of call to 'getLifetimeBoundPointer' aliases the storage of temporary object because parameter 's' is lifetimebound}}
     std::string())), x);  // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
                           // cfg-warning {{stack memory associated with temporary object escapes to the global variable 'x' which will dangle}}
 }
