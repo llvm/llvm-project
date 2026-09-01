@@ -39,6 +39,7 @@
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
+; CHECK-NEXT:   merge-allocas
 ; CHECK-NEXT:   verify
 ; CHECK-NEXT: riscv-asm-printer-begin
 ; CHECK-NEXT: function

@@ -163,12 +163,15 @@
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
-; SPIRV-Opt-NEXT:      Analysis containing CSE Info
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
+; SPIRV-Opt-NEXT:      Function Alias Analysis Results
+; SPIRV-Opt-NEXT:      Merge adjacent fixed-size allocas
+; SPIRV-Opt-NEXT:      Analysis containing CSE Info
+; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Function Alias Analysis Results
 ; SPIRV-Opt-NEXT:      IRTranslator
 ; SPIRV-Opt-NEXT:      Analysis for ComputingKnownBits
