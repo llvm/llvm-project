@@ -5705,8 +5705,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    // The split into power-of-2 pieces does not depend on the alignment.
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.

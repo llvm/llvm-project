@@ -491,65 +491,63 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 ;
 ; AVX1-LABEL: @sdiv_v8i32_undefs(
 ; AVX1-NEXT:    [[A0:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 0
-; AVX1-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A]], i32 1
 ; AVX1-NEXT:    [[A4:%.*]] = extractelement <8 x i32> [[A]], i32 4
+; AVX1-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
 ; AVX1-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
 ; AVX1-NEXT:    [[AB0:%.*]] = sdiv i32 [[A0]], undef
-; AVX1-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX1-NEXT:    [[AB4:%.*]] = sdiv i32 [[A4]], undef
-; AVX1-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 2, i32 3, i32 5, i32 6>
-; AVX1-NEXT:    [[TMP2:%.*]] = sdiv <4 x i32> [[TMP1]], <i32 8, i32 16, i32 4, i32 8>
+; AVX1-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 5>
+; AVX1-NEXT:    [[TMP2:%.*]] = sdiv <4 x i32> [[TMP1]], <i32 4, i32 8, i32 16, i32 4>
+; AVX1-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; AVX1-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
 ; AVX1-NEXT:    [[R0:%.*]] = insertelement <8 x i32> poison, i32 [[AB0]], i32 0
-; AVX1-NEXT:    [[R1:%.*]] = insertelement <8 x i32> [[R0]], i32 [[AB1]], i32 1
 ; AVX1-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX1-NEXT:    [[R3:%.*]] = shufflevector <8 x i32> [[R1]], <8 x i32> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 10, i32 11, i32 poison>
+; AVX1-NEXT:    [[R3:%.*]] = shufflevector <8 x i32> [[R0]], <8 x i32> [[TMP3]], <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 poison, i32 11, i32 poison, i32 poison>
 ; AVX1-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB4]], i32 4
-; AVX1-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB7]], i32 7
+; AVX1-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB6]], i32 6
+; AVX1-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
 ; AVX1-NEXT:    ret <8 x i32> [[R7]]
 ;
 ; AVX2-LABEL: @sdiv_v8i32_undefs(
 ; AVX2-NEXT:    [[A0:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 0
-; AVX2-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A]], i32 1
 ; AVX2-NEXT:    [[A4:%.*]] = extractelement <8 x i32> [[A]], i32 4
-; AVX2-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
 ; AVX2-NEXT:    [[AB0:%.*]] = sdiv i32 [[A0]], undef
-; AVX2-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[TMP1]], <i32 8, i32 16>
 ; AVX2-NEXT:    [[AB4:%.*]] = sdiv i32 [[A4]], undef
-; AVX2-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
+; AVX2-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 1, i32 5>
+; AVX2-NEXT:    [[TMP9:%.*]] = sdiv <2 x i32> [[TMP8]], splat (i32 4)
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
 ; AVX2-NEXT:    [[TMP4:%.*]] = sdiv <2 x i32> [[TMP3]], <i32 8, i32 16>
 ; AVX2-NEXT:    [[R0:%.*]] = insertelement <8 x i32> poison, i32 [[AB0]], i32 0
-; AVX2-NEXT:    [[R1:%.*]] = insertelement <8 x i32> [[R0]], i32 [[AB1]], i32 1
+; AVX2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[R1:%.*]] = shufflevector <8 x i32> [[R0]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R32:%.*]] = shufflevector <8 x i32> [[R1]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB4]], i32 4
-; AVX2-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
+; AVX2-NEXT:    [[R5:%.*]] = shufflevector <8 x i32> [[R4]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 9, i32 6, i32 7>
 ; AVX2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[R71:%.*]] = shufflevector <8 x i32> [[R5]], <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; AVX2-NEXT:    ret <8 x i32> [[R71]]
 ;
 ; AVX512-LABEL: @sdiv_v8i32_undefs(
 ; AVX512-NEXT:    [[A0:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 0
-; AVX512-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A]], i32 1
 ; AVX512-NEXT:    [[A4:%.*]] = extractelement <8 x i32> [[A]], i32 4
-; AVX512-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
 ; AVX512-NEXT:    [[AB0:%.*]] = sdiv i32 [[A0]], undef
-; AVX512-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
 ; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; AVX512-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[TMP1]], <i32 8, i32 16>
 ; AVX512-NEXT:    [[AB4:%.*]] = sdiv i32 [[A4]], undef
-; AVX512-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
+; AVX512-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 1, i32 5>
+; AVX512-NEXT:    [[TMP9:%.*]] = sdiv <2 x i32> [[TMP8]], splat (i32 4)
 ; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
 ; AVX512-NEXT:    [[TMP4:%.*]] = sdiv <2 x i32> [[TMP3]], <i32 8, i32 16>
 ; AVX512-NEXT:    [[R0:%.*]] = insertelement <8 x i32> poison, i32 [[AB0]], i32 0
-; AVX512-NEXT:    [[R1:%.*]] = insertelement <8 x i32> [[R0]], i32 [[AB1]], i32 1
+; AVX512-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX512-NEXT:    [[R1:%.*]] = shufflevector <8 x i32> [[R0]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[R32:%.*]] = shufflevector <8 x i32> [[R1]], <8 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R32]], i32 [[AB4]], i32 4
-; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
+; AVX512-NEXT:    [[R5:%.*]] = shufflevector <8 x i32> [[R4]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 9, i32 6, i32 7>
 ; AVX512-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX512-NEXT:    [[R71:%.*]] = shufflevector <8 x i32> [[R5]], <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; AVX512-NEXT:    ret <8 x i32> [[R71]]

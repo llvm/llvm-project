@@ -418,27 +418,19 @@ define void @runtime_stride_unit_stride(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr i8, ptr [[PL]], i64 1
 ; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr i8, ptr [[PL]], i64 2
 ; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr i8, ptr [[PL]], i64 3
-; CHECK-NEXT:    [[GEP_L7:%.*]] = getelementptr i8, ptr [[PL]], i64 7
-; CHECK-NEXT:    [[LOAD7:%.*]] = load i8, ptr [[GEP_L7]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr align 1 [[GEP_L0]], <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_L2]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr i8, ptr [[GEP_S0]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr i8, ptr [[GEP_S1]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr i8, ptr [[GEP_S2]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[GEP_S4:%.*]] = getelementptr i8, ptr [[GEP_S3]], i64 1
-; CHECK-NEXT:    [[GEP_S5:%.*]] = getelementptr i8, ptr [[GEP_S4]], i64 1
-; CHECK-NEXT:    [[GEP_S6:%.*]] = getelementptr i8, ptr [[GEP_S5]], i64 1
-; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr i8, ptr [[GEP_S6]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[GEP_L3]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[TMP2]], i64 0
-; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S0]], align 1
-; CHECK-NEXT:    store i8 [[TMP5]], ptr [[GEP_S1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <5 x i8>, ptr [[GEP_L3]], align 1
+; CHECK-NEXT:    store i8 [[TMP3]], ptr [[GEP_S0]], align 1
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S1]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD2]], ptr [[GEP_S2]], align 1
-; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[GEP_S3]], align 1
-; CHECK-NEXT:    store i8 [[LOAD7]], ptr [[GEP_S7]], align 1
+; CHECK-NEXT:    store <5 x i8> [[TMP2]], ptr [[GEP_S3]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %gep_l0 = getelementptr i8, ptr %pl, i64 0
@@ -484,12 +476,11 @@ define void @unit_stride_runtime_stride(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-LABEL: define void @unit_stride_runtime_stride(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
-; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr i8, ptr [[PL]], i64 4
 ; CHECK-NEXT:    [[GEP_L5:%.*]] = getelementptr i8, ptr [[PL]], i64 5
 ; CHECK-NEXT:    [[GEP_L6:%.*]] = getelementptr i8, ptr [[PL]], i64 6
 ; CHECK-NEXT:    [[GEP_L7:%.*]] = getelementptr i8, ptr [[PL]], i64 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[GEP_L7]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[GEP_L4]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[GEP_L5]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP_L6]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L5]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
@@ -500,10 +491,8 @@ define void @unit_stride_runtime_stride(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_S5:%.*]] = getelementptr i8, ptr [[GEP_S4]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S6:%.*]] = getelementptr i8, ptr [[GEP_S5]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr i8, ptr [[GEP_S6]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[GEP_L0]], align 1
-; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[GEP_S0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i64 0
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[GEP_S4]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <5 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    store <5 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S5]], align 1
 ; CHECK-NEXT:    store i8 [[TMP5]], ptr [[GEP_S6]], align 1
 ; CHECK-NEXT:    store i8 [[TMP6]], ptr [[GEP_S7]], align 1
@@ -688,15 +677,15 @@ define void @overlap(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr i8, ptr [[PL]], i64 1
 ; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr i8, ptr [[PL]], i64 2
 ; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr i8, ptr [[PL]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_L2]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr i8, ptr [[GEP_S0]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr i8, ptr [[GEP_S1]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr i8, ptr [[GEP_S2]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[GEP_L3]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S1]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD2]], ptr [[GEP_S2]], align 1
@@ -745,15 +734,15 @@ define void @overlap_constant_stride(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr i8, ptr [[PL]], i64 1
 ; CHECK-NEXT:    [[GEP_L2:%.*]] = getelementptr i8, ptr [[PL]], i64 2
 ; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr i8, ptr [[PL]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_L2]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr i8, ptr [[GEP_S0]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S2:%.*]] = getelementptr i8, ptr [[GEP_S1]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr i8, ptr [[GEP_S2]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[GEP_L3]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S1]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD2]], ptr [[GEP_S2]], align 1
@@ -987,13 +976,14 @@ define void @runtime_stride_diff_types(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr i8, ptr [[PL]], i64 4
 ; CHECK-NEXT:    [[GEP_L6:%.*]] = getelementptr i8, ptr [[PL]], i64 6
 ; CHECK-NEXT:    [[GEP_L7:%.*]] = getelementptr i8, ptr [[PL]], i64 7
+; CHECK-NEXT:    [[LOAD7:%.*]] = load i8, ptr [[GEP_L7]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr align 1 [[GEP_L0]], <8 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true>, <8 x i8> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <6 x i32> <i32 0, i32 2, i32 3, i32 4, i32 6, i32 7>
+; CHECK-NEXT:    [[LOAD6:%.*]] = load i8, ptr [[GEP_L6]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[GEP_L4]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <5 x i8> @llvm.masked.load.v5i8.p0(ptr align 1 [[GEP_L0]], <5 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true>, <5 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <5 x i8> [[TMP1]], <5 x i8> poison, <4 x i32> <i32 0, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[GEP_L3]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[GEP_L2]], align 1
-; CHECK-NEXT:    [[LOAD6:%.*]] = load i8, ptr [[GEP_L6]], align 1
-; CHECK-NEXT:    [[LOAD7:%.*]] = load i8, ptr [[GEP_L7]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[GEP_L0]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 [[GEP_L1]], i64 4, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[GEP_S1:%.*]] = getelementptr i8, ptr [[GEP_S0]], i64 [[STRIDE]]
@@ -1003,7 +993,6 @@ define void @runtime_stride_diff_types(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_S5:%.*]] = getelementptr i8, ptr [[GEP_S4]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S6:%.*]] = getelementptr i8, ptr [[GEP_S5]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr i8, ptr [[GEP_S6]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i16

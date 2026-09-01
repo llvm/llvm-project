@@ -92,8 +92,8 @@ define <vscale x 4 x i32> @build_vec_v4i32_reuse_0(<vscale x 2 x i32> %v0) {
 ; CHECK-LABEL: @build_vec_v4i32_reuse_0(
 ; CHECK-NEXT:    [[V0_0:%.*]] = extractelement <vscale x 2 x i32> [[V0:%.*]], i32 0
 ; CHECK-NEXT:    [[V0_1:%.*]] = extractelement <vscale x 2 x i32> [[V0]], i32 1
-; CHECK-NEXT:    [[TMP0_0:%.*]] = add i32 [[V0_0]], [[V0_0]]
 ; CHECK-NEXT:    [[TMP1_0:%.*]] = sub i32 [[V0_0]], [[V0_1]]
+; CHECK-NEXT:    [[TMP0_0:%.*]] = mul i32 [[V0_0]], 2
 ; CHECK-NEXT:    [[TMP2_0:%.*]] = add i32 [[TMP0_0]], [[TMP1_0]]
 ; CHECK-NEXT:    [[TMP3_0:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[TMP2_0]], i32 0
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3_0]]

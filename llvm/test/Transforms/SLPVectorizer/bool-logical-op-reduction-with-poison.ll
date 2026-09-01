@@ -16,9 +16,8 @@ define i1 @test(i32 %0, i32 %1, i32 %p) {
 ; X86-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; X86-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; X86-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 true, i1 [[CMP6]]
-; X86-NEXT:    [[OP_RDX1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP1]]
 ; X86-NEXT:    [[TMP8:%.*]] = freeze i1 [[OP_RDX]]
-; X86-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP8]], i1 true, i1 [[OP_RDX1]]
+; X86-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP8]], i1 true, i1 [[CMP1]]
 ; X86-NEXT:    ret i1 [[OP_RDX2]]
 ;
 ; AARCH64-LABEL: define i1 @test(
@@ -35,9 +34,8 @@ define i1 @test(i32 %0, i32 %1, i32 %p) {
 ; AARCH64-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP6]]
 ; AARCH64-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
 ; AARCH64-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP8]], i1 true, i1 [[CMP5]]
-; AARCH64-NEXT:    [[OP_RDX1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP1]]
 ; AARCH64-NEXT:    [[TMP9:%.*]] = freeze i1 [[OP_RDX]]
-; AARCH64-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP9]], i1 true, i1 [[OP_RDX1]]
+; AARCH64-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP9]], i1 true, i1 [[CMP1]]
 ; AARCH64-NEXT:    ret i1 [[OP_RDX2]]
 ;
 entry:

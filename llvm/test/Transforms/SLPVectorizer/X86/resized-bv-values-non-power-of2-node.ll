@@ -15,10 +15,6 @@ define <16 x half> @test(i32 %0, float %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast float 0.000000e+00 to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ult i32 0, 0
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult i32 0, 0
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp ult i32 0, 0
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 0, 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <16 x i32> [[TMP5]], i64 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[TMP22]], 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[TMP0]], [[TMP0]]

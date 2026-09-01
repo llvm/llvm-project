@@ -599,7 +599,7 @@ bool InstructionsState::isExpandedBinOp(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (isCopyableElement(V))
     return false;
-  auto *ExpandingOp = dyn_cast<Instruction>(V);
+  auto *ExpandingOp = dyn_cast<BinaryOperator>(V);
   if (!ExpandingOp)
     return false;
   auto CheckForTransformedOpcode = [](const Instruction *RefOp,

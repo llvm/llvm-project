@@ -247,7 +247,7 @@ static cl::opt<bool>
                 cl::desc("Display the SLP trees with Graphviz"));
 
 static cl::opt<bool> VectorizeNonPowerOf2(
-    "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
+    "slp-vectorize-non-power-of-2", cl::init(true), cl::Hidden,
     cl::desc("Try to vectorize with non-power-of-2 number of elements."));
 
 static cl::opt<bool> ForcePostProcessStoresOperands(
@@ -269,11 +269,24 @@ static cl::opt<bool> VectorizeOnceUsed(
     cl::desc("Use instructions with the single user as standalone "
              "vectorization seeds."));
 
+static cl::opt<bool> SkipTrivialSeeds(
+    "slp-skip-trivial-seeds", cl::init(true), cl::Hidden,
+    cl::desc("Do not seed vectorization with a repeated operand or with "
+             "load/extractvalue operands."));
+
+static constexpr unsigned SmallProfitableNonPowerOf2 = 5;
+static constexpr unsigned SmallestNonPowerOf2 = 3;
+
 /// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
-/// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
-/// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
-static bool isAllowedNonPowerOf2VF(unsigned NumElts) {
-  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
+/// supported non-power-of-2 width: a small width (3 or 5 lanes), a width whose
+/// predecessor is also not a power of two (6, 7, 10..15 lanes), or any width
+/// for vector elements (REVEC).
+static bool isAllowedNonPowerOf2VF(unsigned NumElts, bool IsVectorElement) {
+  return VectorizeNonPowerOf2 && NumElts >= SmallestNonPowerOf2 &&
+         !has_single_bit(NumElts) &&
+         ((SLPReVec && IsVectorElement) ||
+          NumElts <= SmallProfitableNonPowerOf2 ||
+          !has_single_bit(NumElts - 1));
 }
 
 /// Enables vectorization of copyable elements.
@@ -459,8 +472,9 @@ static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
-/// cheaper than the direct vector op. Returns the cost of the masked
-/// alternative, or an invalid cost if it is not applicable or not cheaper.
+/// cheaper than the full register ops with the scalar tail. Returns the cost of
+/// the masked alternative, or an invalid cost if it is not applicable or not
+/// cheaper.
 static InstructionCost
 getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
                     Type *ScalarTy, unsigned NumElts,
@@ -474,8 +488,17 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
   auto *MaskTy =
       FixedVectorType::get(IntegerType::getInt1Ty(ScalarTy->getContext()),
                            PaddedVecTy->getNumElements());
-  InstructionCost DirectCost = TTI.getArithmeticInstrCost(
-      Opcode, getWidenedType(ScalarTy, NumElts), CostKind);
+  // Division is scalarized on many targets, so the odd-width vector op is not a
+  // meaningful baseline. Compare against the sequence actually emitted without
+  // the mask - the full register ops plus the scalar tail.
+  InstructionCost DirectCost = 0;
+  for (unsigned Rem = NumElts; Rem > 0;) {
+    unsigned VF =
+        std::max(1u, getFloorFullVectorNumberOfElements(TTI, ScalarTy, Rem));
+    DirectCost += TTI.getArithmeticInstrCost(
+        Opcode, VF > 1 ? getWidenedType(ScalarTy, VF) : ScalarTy, CostKind);
+    Rem -= VF;
+  }
   IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(Opcode), PaddedVecTy,
                               {PaddedVecTy, PaddedVecTy, MaskTy});
   InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
@@ -2610,6 +2633,23 @@ public:
     AnalyzedReductionVals.clear();
     AnalyzedBundles.clear();
     AnalyzedMinBWVals.clear();
+  }
+  /// Returns the subset of \p VL already analyzed for the minimal bitwidth.
+  SmallVector<Value *, 4> getAnalyzedMinBWVals(ArrayRef<Value *> VL) const {
+    SmallVector<Value *, 4> Res;
+    copy_if(VL, std::back_inserter(Res),
+            [&](Value *V) { return AnalyzedMinBWVals.contains(V); });
+    return Res;
+  }
+  /// Drops the minimal bitwidth analysis results for \p VL, except for \p Keep.
+  /// A rejected vectorization attempt must not prevent the analysis of the same
+  /// values by the next attempt with a different shape, while the results
+  /// gathered before the attempt stay valid.
+  void restrictAnalyzedMinBWVals(ArrayRef<Value *> VL, ArrayRef<Value *> Keep) {
+    SmallPtrSet<Value *, 8> KeepSet(llvm::from_range, Keep);
+    for (Value *V : VL)
+      if (!KeepSet.contains(V))
+        AnalyzedMinBWVals.erase(V);
   }
   /// Checks if the given value is gathered in one of the nodes.
   bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
@@ -6222,6 +6262,19 @@ static InstructionCost getScalarizationOverhead(
                                       CostKind, ForPoisonSrc, VL, VIC);
 }
 
+/// Returns the type a \p NumElts-wide reduction of \p ScalarTy is padded to
+/// before the reduction, or nullptr if no padding is needed.
+static VectorType *getReductionPaddedType(const TargetTransformInfo &TTI,
+                                          Type *ScalarTy, unsigned NumElts) {
+  if (isa<FixedVectorType>(ScalarTy))
+    return nullptr;
+  const unsigned PaddedElts =
+      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
+  if (PaddedElts <= NumElts)
+    return nullptr;
+  return cast<VectorType>(getWidenedType(ScalarTy, PaddedElts));
+}
+
 /// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
 static InstructionCost getVectorInstrCost(
@@ -6382,6 +6435,13 @@ static bool isMaskedLoadCompress(
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
   LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
+  // The masked load covers the whole span between the outermost loads. When
+  // the span is much wider than the loaded data, the load is split into extra
+  // registers with no active lanes and the compress becomes a multi-register
+  // gather that costs more than the scalar loads it replaces.
+  if (getNumberOfParts(TTI, LoadVecTy, ScalarTy) >
+      2 * getNumberOfParts(TTI, VecTy, ScalarTy))
+    return false;
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
   SimplifyQuery SQ(
@@ -7858,6 +7918,12 @@ bool BoUpSLP::isProfitableToReorder() const {
   constexpr unsigned TinyTree = 10;
   constexpr unsigned PhiOpsLimit = 12;
   constexpr unsigned GatherLoadsLimit = 2;
+  // Do not reorder splat stores.
+  if (VectorizableTree.size() == 2 && VectorizableTree.front()->hasState() &&
+      VectorizableTree.front()->State == TreeEntry::Vectorize &&
+      VectorizableTree.front()->getOpcode() == Instruction::Store &&
+      isSplat(VectorizableTree.back()->Scalars))
+    return false;
   if (VectorizableTree.size() <= TinyTree)
     return true;
   if (getRootNode().hasState() && !getRootNode().isGather() &&
@@ -9372,14 +9438,18 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(MaxVF))
+    const bool IsVectorElement = isa<FixedVectorType>(Loads.front()->getType());
+    // A width just past a full vector wastes a whole register, skip it.
+    if (isAllowedNonPowerOf2VF(MaxVF, IsVectorElement) &&
+        getFullVectorNumberOfElements(*TTI, Loads.front()->getType(),
+                                      MaxVF - 1) != MaxVF - 1)
       CandidateVFs.push_back(MaxVF);
     for (int NumElts = getFloorFullVectorNumberOfElements(
              *TTI, Loads.front()->getType(), MaxVF);
          NumElts > 1; NumElts = getFloorFullVectorNumberOfElements(
                           *TTI, Loads.front()->getType(), NumElts - 1)) {
       CandidateVFs.push_back(NumElts);
-      if (VectorizeNonPowerOf2 && NumElts > 2)
+      if (isAllowedNonPowerOf2VF(NumElts - 1, IsVectorElement))
         CandidateVFs.push_back(NumElts - 1);
     }
 
@@ -15393,6 +15463,37 @@ void BoUpSLP::transformNodes() {
       auto *VecTy =
           cast<FixedVectorType>(getWidenedType(ScalarTy, E.Scalars.size()));
       Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
+      // A masked div/rem already produces the value padded to the full
+      // register, so it can be stored with a masked store instead of being
+      // narrowed back to the odd width first.
+      if (EnableMaskedStores && E.ReuseShuffleIndices.empty()) {
+        TreeEntry *Op = getOperandEntry(&E, 0);
+        FixedVectorType *PaddedVecTy = nullptr;
+        if (Op && Op->State == TreeEntry::Vectorize &&
+            Op->Scalars.size() == E.Scalars.size() &&
+            getMaskedDivRemCost(*TTI, Op->getOpcode(), ScalarTy,
+                                E.Scalars.size(), CostKind, &PaddedVecTy)
+                .isValid() &&
+            isMaskedStoreExpandProfitable(
+                *TTI, VecTy, PaddedVecTy,
+                cast<StoreInst>(E.getMainOp())->getPointerAddressSpace(),
+                CommonAlignment)) {
+          // Keep each stored value at its lane, poison in the padding. The mask
+          // counts lanes, which are whole vectors for revectorization, while
+          // the store type counts elements.
+          E.ReuseShuffleIndices.assign(PaddedVecTy->getNumElements() /
+                                           getNumElements(ScalarTy),
+                                       PoisonMaskElem);
+          std::iota(E.ReuseShuffleIndices.begin(),
+                    std::next(E.ReuseShuffleIndices.begin(), E.Scalars.size()),
+                    0);
+          StridedPtrInfo SPtrInfo;
+          SPtrInfo.Ty = PaddedVecTy;
+          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+          E.State = TreeEntry::ExpandVectorize;
+          break;
+        }
+      }
       // Check if profitable to represent consecutive load + reverse as strided
       // load with stride -1.
       if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
@@ -24750,15 +24851,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         unsigned VecNumElts = getNumElements(StridedStoreTy);
         assert(VecValue->getType() == StridedStoreTy &&
                "FinalShuffle must expand the value to the masked store type.");
-        assert(ExpandMask.size() == VecNumElts &&
+        // The mask counts lanes, which are whole vectors for revectorization,
+        // so every lane enables all of its elements.
+        assert(!ExpandMask.empty() && VecNumElts % ExpandMask.size() == 0 &&
                "Reuse mask must match the masked store type.");
+        const unsigned LaneElts = VecNumElts / ExpandMask.size();
         Value *BasePtr =
             cast<StoreInst>(E->Scalars.front())->getPointerOperand();
         SmallVector<Constant *> MaskValues(
             VecNumElts, ConstantInt::getFalse(VecTy->getContext()));
-        for (unsigned I : seq<unsigned>(VecNumElts))
-          if (ExpandMask[I] != PoisonMaskElem)
-            MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
+        for (auto [Lane, Idx] : enumerate(ExpandMask))
+          if (Idx != PoisonMaskElem)
+            std::fill_n(std::next(MaskValues.begin(), Lane * LaneElts),
+                        LaneElts, ConstantInt::getTrue(VecTy->getContext()));
         ST = Builder.CreateMaskedStore(VecValue, BasePtr, CommonAlignment,
                                        ConstantVector::get(MaskValues));
       } else {
@@ -29064,8 +29169,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
-                                       unsigned &Size) {
-  std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+                                       unsigned &Size, unsigned &NumVec) {
+  std::optional<bool> Res =
+      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size, NumVec);
   assert(!R.isTryingRuntimeAliasChecks() &&
          "Unexpected nested runtime alias check attempt");
   // Retry once with runtime alias checks, but only when the normal attempt
@@ -29108,11 +29214,13 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   }
   R.setTryRuntimeAliasChecks(true);
   unsigned RTSize = Size;
+  unsigned RTNumVec = 0;
   std::optional<bool> RTRes =
-      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, RTSize);
+      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, RTSize, RTNumVec);
   R.setTryRuntimeAliasChecks(false);
   if (RTRes && *RTRes) {
     Size = RTSize;
+    NumVec = RTNumVec;
     return RTRes;
   }
   // The versioning attempt failed for this block, skip the (expensive) retry.
@@ -29123,8 +29231,9 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
                                            unsigned Idx, unsigned MinVF,
-                                           unsigned &Size) {
+                                           unsigned &Size, unsigned &NumVec) {
   Size = 0;
+  NumVec = 0;
   R.resetRuntimeAliasCheckState();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
@@ -29136,8 +29245,8 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
           *TTI, cast<StoreInst>(Chain.front())->getValueOperand()->getType(),
           VF) ||
       VF < 2 || VF < MinVF) {
-    // Check if vectorizing with a non-power-of-2 VF should be considered; see
-    // isAllowedNonPowerOf2VF for supported widths.
+    // Non-power-of-2 VFs are still worth a try, including a chain one element
+    // short of the minimal VF.
     if (!VectorizeNonPowerOf2 || (VF < MinVF && VF + 1 != MinVF))
       return false;
   }
@@ -29154,9 +29263,11 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
       Analysis.buildInstructionsState(ValOps.getArrayRef(), R);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
-    bool IsAllowedSize = hasFullVectorsOrPowerOf2(
-                             *TTI, ValOps.front()->getType(), ValOps.size()) ||
-                         isAllowedNonPowerOf2VF(ValOps.size());
+    bool IsAllowedSize =
+        hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(),
+                                 ValOps.size()) ||
+        isAllowedNonPowerOf2VF(ValOps.size(),
+                               isa<FixedVectorType>(ValOps.front()->getType()));
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -29216,31 +29327,43 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
       return false;
     }
   }
-  R.buildTree(Chain);
-  // Check if tree tiny and store itself or its value is not vectorized.
-  if (R.isTreeTinyAndNotFullyVectorizable()) {
-    if (R.isGathered(Chain.front()) ||
-        R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
-      return std::nullopt;
+  // Builds the tree for the chain and computes its cost, keeping the tree
+  // loaded. Returns nullopt if the chain cannot be scheduled and false for a
+  // tiny, not fully vectorizable tree.
+  auto AnalyzeChain = [&](ArrayRef<Value *> Chain,
+                          InstructionCost &Cost) -> std::optional<bool> {
+    R.buildTree(Chain);
+    // Check if tree tiny and store itself or its value is not vectorized.
+    if (R.isTreeTinyAndNotFullyVectorizable()) {
+      if (R.isGathered(Chain.front()) ||
+          R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
+        return std::nullopt;
+      Size = R.getCanonicalGraphSize();
+      return false;
+    }
+    if (R.isProfitableToReorder()) {
+      R.reorderTopToBottom();
+      R.reorderBottomToTop();
+    }
+    if (R.isTryingRuntimeAliasChecks())
+      R.captureRuntimeCheckBodySnapshot();
+    R.transformNodes();
+    R.computeMinimumValueSizes();
+
+    InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+    R.buildExternalUses();
+
     Size = R.getCanonicalGraphSize();
-    return false;
-  }
-  if (R.isProfitableToReorder()) {
-    R.reorderTopToBottom();
-    R.reorderBottomToTop();
-  }
-  if (R.isTryingRuntimeAliasChecks())
-    R.captureRuntimeCheckBodySnapshot();
-  R.transformNodes();
-  R.computeMinimumValueSizes();
+    if (S && S.getOpcode() == Instruction::Load)
+      Size = 2; // cut off masked gather small trees
+    Cost = R.getTreeCost(TreeCost);
+    return true;
+  };
 
-  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-  R.buildExternalUses();
-
-  Size = R.getCanonicalGraphSize();
-  if (S && S.getOpcode() == Instruction::Load)
-    Size = 2; // cut off masked gather small trees
-  InstructionCost Cost = R.getTreeCost(TreeCost);
+  InstructionCost Cost;
+  std::optional<bool> Res = AnalyzeChain(Chain, Cost);
+  if (!Res || !*Res)
+    return Res;
 
   // When the tree was scheduled by dropping may-alias dependencies, account
   // for the runtime alias checks in the cost and make sure the region can
@@ -29270,6 +29393,33 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
+    NumVec = VF;
+    // The full-width non-power-of-2 chain covers all the stores at once, but
+    // the largest power-of-2 prefix may still be more profitable: the extra
+    // lanes may duplicate work or need an extra register. Compare the costs
+    // before committing.
+    if (!R.isTryingRuntimeAliasChecks() &&
+        !hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), VF)) {
+      const unsigned Pow2VF = getFloorFullVectorNumberOfElements(
+          *TTI, ValOps.front()->getType(), VF);
+      if (Pow2VF >= std::max(MinVF, 2u)) {
+        R.deleteTree();
+        InstructionCost Pow2Cost;
+        std::optional<bool> Pow2Res =
+            AnalyzeChain(Chain.take_front(Pow2VF), Pow2Cost);
+        if (Pow2Res && *Pow2Res && Pow2Cost.isValid() && Pow2Cost < Cost) {
+          NumVec = Pow2VF;
+          Cost = Pow2Cost;
+          LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
+                            << " for VF=" << Pow2VF << "\n");
+        } else {
+          R.deleteTree();
+          // Rebuild the winning non-power-of-2 tree.
+          std::optional<bool> ReRes = AnalyzeChain(Chain, Cost);
+          assert(ReRes && *ReRes && Cost.isValid() && "Must be vectorizable");
+        }
+      }
+    }
     LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
     using namespace ore;
@@ -29307,7 +29457,8 @@ public:
   bool initializeContext(
       BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool SingleContext);
   /// Get the current VF
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
@@ -29316,11 +29467,12 @@ public:
   unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
-  bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
-                      BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
-                      llvm::function_ref<std::optional<bool>(
-                          ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
-                          VectorizeStoreChain);
+  bool vectorizeOneVF(
+      const TargetTransformInfo &TTI, unsigned VF,
+      BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
+      llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
+                                             unsigned, unsigned &, unsigned &)>
+          VectorizeStoreChain);
   /// Add an additional store to the chain
   /// \p Store store too append to Operands
   /// \p Idx position within VectorizeStores::Stores
@@ -29459,8 +29611,8 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
 
 bool StoreChainContext::initializeContext(
     BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
-    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-        &Visited) {
+    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> &Visited,
+    bool SingleContext) {
   if (!Visited
            .insert({Operands.front(),
                     cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -29506,13 +29658,44 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
-  // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
+  // First try a supported non-power-of-2 VF. A VF equal to MaxVF is left to the
+  // descending loop below, to avoid a duplicate candidate.
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-  if (isAllowedNonPowerOf2VF(CandVF)) {
-    NonPowerOf2VF = CandVF;
-    assert(NonPowerOf2VF != MaxVF &&
-           "Non-power-of-2 VF should not be equal to MaxVF");
+  if (CandVF < MaxVF && ::isValidElementType(StoreTy) &&
+      isAllowedNonPowerOf2VF(CandVF, isa<FixedVectorType>(StoreTy))) {
+    auto GetStoreCost = [&](Type *Ty) {
+      return TTI.getMemoryOpCost(Instruction::Store, Ty, Store->getAlign(),
+                                 Store->getPointerAddressSpace(),
+                                 R.getCostKind());
+    };
+    // The stored values must not be computed from operands that also feed
+    // stores of another chain: vectorizing the smallest chain steals the
+    // operands from a potentially larger chain and leaves the other stores
+    // scalar.
+    auto SharesOpsWithOtherChains = [&]() {
+      SmallPtrSet<Value *, 4> ChainStores(Operands.begin(), Operands.end());
+      return any_of(Operands, [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(cast<StoreInst>(V)->getValueOperand());
+        return I && any_of(I->operand_values(), [&](Value *Op) {
+                 auto *OpI = dyn_cast<Instruction>(Op);
+                 // To save compilation time, bail out if the use list is huge.
+                 return OpI && (OpI->hasNUsesOrMore(UsesLimit) ||
+                                any_of(OpI->users(), [&](User *U) {
+                                  auto *SI = dyn_cast<StoreInst>(U);
+                                  return SI && !ChainStores.contains(SI);
+                                }));
+               });
+      });
+    };
+    // The smallest tree pays off only if the wide store itself is cheaper than
+    // the scalar ones; with several chains in the function the extra shuffles
+    // eat the gain.
+    if (CandVF != SmallestNonPowerOf2 ||
+        ((SingleContext || GetStoreCost(::getWidenedType(StoreTy, CandVF)) <
+                               CandVF * GetStoreCost(StoreTy)) &&
+         !SharesOpsWithOtherChains()))
+      NonPowerOf2VF = CandVF;
   }
 
   MaxRegVF = MaxVF;
@@ -29525,8 +29708,9 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
-  for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
-       VF = divideCeil(VF, 2))
+  if (NonPowerOf2VF > 0)
+    CandidateVFs.push(NonPowerOf2VF);
+  for (unsigned VF = MaxVF; VF >= MinVF; VF = divideCeil(VF, 2))
     CandidateVFs.push(VF);
 
   End = Operands.size();
@@ -29657,7 +29841,7 @@ bool StoreChainContext::vectorizeOneVF(
     const TargetTransformInfo &TTI, unsigned VF,
     BoUpSLP::ValueSet &VectorizedStores, bool &Changed,
     llvm::function_ref<std::optional<bool>(ArrayRef<Value *>, unsigned,
-                                           unsigned, unsigned &)>
+                                           unsigned, unsigned &, unsigned &)>
         VectorizeStoreChain) {
   bool AnyProfitableGraph = false;
   unsigned FirstUnvecStore = getFirstUnvecStore();
@@ -29693,8 +29877,9 @@ bool StoreChainContext::vectorizeOneVF(
         }
       }
       unsigned TreeSize;
+      unsigned NumVec = VF;
       std::optional<bool> Res =
-          VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize);
+          VectorizeStoreChain(Slice, SliceStartIdx, MinVF, TreeSize, NumVec);
       if (!Res) {
         // Update the range of non schedulable VFs for slices starting
         // at SliceStartIdx.
@@ -29704,16 +29889,17 @@ bool StoreChainContext::vectorizeOneVF(
       } else if (*Res) {
         // Mark the vectorized stores so that we don't vectorize them
         // again.
-        VectorizedStores.insert_range(Slice);
+        VectorizedStores.insert_range(Slice.take_front(NumVec));
         AnyProfitableGraph = RepeatChanged = Changed = true;
         // If we vectorized initial block, no need to try to vectorize
         // it again.
-        markRangeVectorized(SliceStartIdx, VF, FirstUnvecStore, MaxSliceEnd);
-        SliceStartIdx += VF;
+        markRangeVectorized(SliceStartIdx, NumVec, FirstUnvecStore,
+                            MaxSliceEnd);
+        SliceStartIdx += NumVec;
         ++NumStoreChains;
         if (Stride > 1)
           ++NumStridedStoreChains;
-        NumVectorizedStores += VF;
+        NumVectorizedStores += NumVec;
         continue;
       }
       if (VF > 2 && Res && !allOfRangeProfitable(SliceStartIdx, VF, TreeSize)) {
@@ -29931,7 +30117,8 @@ bool SLPVectorizerPass::vectorizeStores(
   auto ActuallyVectorizeContexts = [&]() {
     unsigned GlobalMaxVF = 0;
     for (auto &CtxPtr : AllContexts)
-      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
+      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited,
+                                    AllContexts.size() == 1))
         GlobalMaxVF = std::max(GlobalMaxVF, CtxPtr->getMaxVF());
       else
         CtxPtr.reset();
@@ -29955,8 +30142,9 @@ bool SLPVectorizerPass::vectorizeStores(
           if (!Context.vectorizeOneVF(
                   *TTI, VF, VectorizedStores, Changed,
                   [this, &R](ArrayRef<Value *> Chain, unsigned Idx,
-                             unsigned MinVF, unsigned &Size) {
-                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size);
+                             unsigned MinVF, unsigned &Size, unsigned &NumVec) {
+                    return vectorizeStoreChain(Chain, R, Idx, MinVF, Size,
+                                               NumVec);
                   })) {
             CtxPtr.reset();
             break;
@@ -30091,9 +30279,10 @@ bool SLPVectorizerPass::vectorizeStores(
     return Changed;
 
   unsigned Size = 0;
-  if (vectorizeStoreChain(Sorted, R, /*Idx=*/0, /*MinVF=*/2, Size)
+  unsigned NumVec = 0;
+  if (vectorizeStoreChain(Sorted, R, /*Idx=*/0, /*MinVF=*/2, Size, NumVec)
           .value_or(false)) {
-    VectorizedStores.insert_range(Sorted);
+    VectorizedStores.insert_range(ArrayRef(Sorted).take_front(NumVec));
     Changed = true;
   }
   return Changed;
@@ -30175,8 +30364,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   Type *ScalarTy = getValueType(VL[0], /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
+  const bool IsVectorElement = isa<FixedVectorType>(ScalarTy);
   unsigned MaxVF = std::max<unsigned>(
-      isAllowedNonPowerOf2VF(VL.size())
+      isAllowedNonPowerOf2VF(VL.size(), IsVectorElement)
           ? VL.size()
           : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()),
       MinVF);
@@ -30197,6 +30387,62 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool CandidateFound = false;
   InstructionCost MinCost = SLPCostThreshold.getValue();
 
+  // Collects ActualVF lanes for the window starting at index StartIdx.
+  // Standalone seeds skip the lanes that depend on the already taken ones.
+  auto CollectWindowOps = [&](unsigned StartIdx, unsigned ActualVF,
+                              SmallVectorImpl<Value *> &Ops) {
+    Ops.assign(ActualVF, nullptr);
+    unsigned Idx = 0;
+    SmallPtrSet<const Value *, 8> Taken;
+    for (Value *V : VL.drop_front(StartIdx)) {
+      // Check that a previous iteration of this loop did not delete the
+      // Value.
+      auto *Inst = dyn_cast<Instruction>(V);
+      if (Inst && R.isDeleted(Inst))
+        continue;
+      // The lanes cannot depend on each other, so the seed, fed by the
+      // already taken one, is left for the next window.
+      if (StandaloneSeeds && Inst &&
+          any_of(Inst->operand_values(),
+                 [&](const Value *Op) { return Taken.contains(Op); }))
+        continue;
+      Ops[Idx] = V;
+      if (StandaloneSeeds)
+        Taken.insert(V);
+      ++Idx;
+      if (Idx == ActualVF)
+        break;
+    }
+    return Idx == ActualVF;
+  };
+  // The identical lanes compute the very same value, so the vector node only
+  // duplicates it, and the window, rejected by another attempt in the block,
+  // is not analyzed again.
+  auto IsDuplicateOrAnalyzedWindow = [&](ArrayRef<Value *> Ops) {
+    return R.isAnalyzedBundle(Ops) ||
+           (StandaloneSeeds && all_of(drop_begin(Ops), [&](Value *V) {
+              return cast<Instruction>(Ops.front())
+                  ->isIdenticalTo(cast<Instruction>(V));
+            }));
+  };
+  // Builds the tree for the window and returns its cost, keeping the tree
+  // loaded. Tiny, not fully vectorizable trees are reported as invalid cost.
+  auto AnalyzeWindow = [&](ArrayRef<Value *> Ops) -> InstructionCost {
+    R.buildTree(Ops);
+    if (R.isTreeTinyAndNotFullyVectorizable())
+      return InstructionCost::getInvalid();
+    if (R.isProfitableToReorder()) {
+      R.reorderTopToBottom();
+      R.reorderBottomToTop(
+          !isa<InsertElementInst, InsertValueInst>(Ops.front()));
+    }
+    R.transformNodes();
+    R.computeMinimumValueSizes();
+    InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+    R.buildExternalUses();
+    return R.getTreeCost(TreeCost);
+  };
+
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
        VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1)) {
@@ -30210,7 +30456,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
-          (ActualVF != VL.size() || !isAllowedNonPowerOf2VF(ActualVF)))
+          (ActualVF != VL.size() ||
+           !isAllowedNonPowerOf2VF(ActualVF, IsVectorElement)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
@@ -30218,40 +30465,18 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if ((VF > MinVF && ActualVF < VF) || (VF == MinVF && ActualVF < 2))
         break;
 
-      SmallVector<Value *> Ops(ActualVF, nullptr);
-      unsigned Idx = 0;
-      SmallPtrSet<const Value *, 8> Taken;
-      for (Value *V : VL.drop_front(I)) {
-        // Check that a previous iteration of this loop did not delete the
-        // Value.
-        auto *Inst = dyn_cast<Instruction>(V);
-        if (Inst && R.isDeleted(Inst))
-          continue;
-        // The lanes cannot depend on each other, so the seed, fed by the
-        // already taken one, is left for the next window.
-        if (StandaloneSeeds && Inst &&
-            any_of(Inst->operand_values(),
-                   [&](const Value *Op) { return Taken.contains(Op); }))
-          continue;
-        Ops[Idx] = V;
-        if (StandaloneSeeds)
-          Taken.insert(V);
-        ++Idx;
-        if (Idx == ActualVF)
-          break;
-      }
+      // The full-width non-power-of-2 attempt is an extra attempt on top of
+      // the regular power-of-2 windows; if it is rejected, the smaller windows
+      // must still be tried, so it must not skip them.
+      bool NonPow2FullWidth =
+          !hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF);
+
+      SmallVector<Value *> Ops;
       // Not enough vectorizable instructions - exit.
-      if (Idx != ActualVF)
+      if (!CollectWindowOps(I, ActualVF, Ops))
         break;
 
-      // The identical lanes compute the very same value, so the vector node
-      // only duplicates it, and the window, rejected by another attempt in the
-      // block, is not analyzed again.
-      if (R.isAnalyzedBundle(Ops) ||
-          (StandaloneSeeds && all_of(drop_begin(Ops), [&](Value *V) {
-             return cast<Instruction>(Ops.front())
-                 ->isIdenticalTo(cast<Instruction>(V));
-           }))) {
+      if (IsDuplicateOrAnalyzedWindow(Ops)) {
         if (StandaloneSeeds)
           I += ActualVF - 1;
         continue;
@@ -30260,45 +30485,74 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
 
-      R.buildTree(Ops);
-      if (R.isTreeTinyAndNotFullyVectorizable()) {
+      InstructionCost Cost = AnalyzeWindow(Ops);
+      if (!Cost.isValid()) {
         R.analyzedBundle(Ops);
+        // Rejected trees must not leak their nodes into the seed filtering of
+        // the later attempts.
+        R.deleteTree();
         if (StandaloneSeeds)
           I += ActualVF - 1;
         continue;
       }
-      if (R.isProfitableToReorder()) {
-        R.reorderTopToBottom();
-        R.reorderBottomToTop(
-            !isa<InsertElementInst, InsertValueInst>(Ops.front()));
-      }
-      R.transformNodes();
-      R.computeMinimumValueSizes();
-      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-      R.buildExternalUses();
-
-      InstructionCost Cost = R.getTreeCost(TreeCost);
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
 
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for VF=" << ActualVF << "\n");
       if (Cost < -SLPCostThreshold) {
+        ArrayRef<Value *> WinOps = Ops;
+        unsigned WinVF = ActualVF;
+        // The full-width non-power-of-2 window covers the whole list at once,
+        // but the largest power-of-2 window may still be more profitable: the
+        // extra lanes may duplicate work or need an extra register. Compare
+        // the costs before committing.
+        SmallVector<Value *> Pow2Ops;
+        if (NonPow2FullWidth && !MaxVFOnly) {
+          const unsigned Pow2VF =
+              getFloorFullVectorNumberOfElements(*TTI, ScalarTy, ActualVF);
+          if (Pow2VF >= std::max(MinVF, 2u) &&
+              CollectWindowOps(I, Pow2VF, Pow2Ops) &&
+              !IsDuplicateOrAnalyzedWindow(Pow2Ops)) {
+            InstructionCost Pow2Cost = AnalyzeWindow(Pow2Ops);
+            if (Pow2Cost.isValid()) {
+              CandidateFound = true;
+              MinCost = std::min(MinCost, Pow2Cost);
+              LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Pow2Cost
+                                << " for VF=" << Pow2VF << "\n");
+            }
+            if (Pow2Cost.isValid() && Pow2Cost < Cost) {
+              R.analyzedBundle(Ops);
+              WinOps = Pow2Ops;
+              WinVF = Pow2VF;
+              Cost = Pow2Cost;
+            } else {
+              R.analyzedBundle(Pow2Ops);
+              R.deleteTree();
+              // Rebuild the winning non-power-of-2 tree.
+              Cost = AnalyzeWindow(Ops);
+              assert(Cost.isValid() && "Must be vectorizable");
+            }
+          }
+        }
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
-                                            cast<Instruction>(Ops[0]))
+                                            cast<Instruction>(WinOps[0]))
                          << "SLP vectorized with cost " << ore::NV("Cost", Cost)
                          << " and with tree size "
                          << ore::NV("TreeSize", R.getTreeSize()));
 
         R.vectorizeTree();
         // Move to the next bundle.
-        I += VF - 1;
+        I += WinVF - 1;
         NextInst = I + 1;
         Changed = true;
       } else {
         R.analyzedBundle(Ops);
-        if (StandaloneSeeds)
+        // Rejected trees must not leak their nodes into the seed filtering of
+        // the later attempts.
+        R.deleteTree();
+        if (StandaloneSeeds && !NonPow2FullWidth)
           I += ActualVF - 1;
       }
     }
@@ -31197,14 +31451,13 @@ public:
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
-    if (unsigned NumReducedVals =
-            accumulate(ReducedVals, 0,
-                       [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
-                         if (!isGoodForReduction(Vals))
-                           return Num;
-                         return Num + Vals.size();
-                       });
-        NumReducedVals < ReductionLimit &&
+    unsigned NumReducedVals = accumulate(
+        ReducedVals, 0, [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
+          if (!isGoodForReduction(Vals))
+            return Num;
+          return Num + Vals.size();
+        });
+    if (NumReducedVals < ReductionLimit &&
         all_of(
             ReducedVals,
             [](ArrayRef<Value *> RedV) {
@@ -31223,6 +31476,17 @@ public:
       }
       return nullptr;
     }
+    // The smallest reduction of the free extends of loads is not vectorizable,
+    // the extends are already part of the loads.
+    if (VectorizeNonPowerOf2 && NumReducedVals == SmallestNonPowerOf2 &&
+        any_of(ReducedVals, [TTI](ArrayRef<Value *> Vals) {
+          return Vals.size() > 2 && all_of(Vals, [TTI](Value *V) {
+                   return match(V, m_ZExtOrSExt(m_Load(m_Value()))) &&
+                          TTI->getInstructionCost(
+                              cast<User>(V), TTI::TCK_RecipThroughput) == 0;
+                 });
+        }))
+      return nullptr;
 
     IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
                                     TargetFolder(DL));
@@ -31328,6 +31592,8 @@ public:
     // Try merge consecutive reduced values into a single vectorizable group and
     // check, if they can be vectorized as copyables.
     const bool TwoGroupsOnly = ReducedVals.size() == 2;
+    const bool LastOfTwoGroupsIsSingle =
+        TwoGroupsOnly && ReducedVals.back().size() == 1;
     const bool TwoGroupsOfSameSmallSize =
         TwoGroupsOnly &&
         ReducedVals.front().size() == ReducedVals.back().size() &&
@@ -31566,8 +31832,69 @@ public:
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
-      if (!isAllowedNonPowerOf2VF(ReduxWidth))
-        ReduxWidth = GetVectorFactor(ReduxWidth);
+      const unsigned FullRegReduxWidth = GetVectorFactor(ReduxWidth);
+      bool AllowNoPowerOf2 = false;
+      if (isAllowedNonPowerOf2VF(
+              ReduxWidth,
+              isa<FixedVectorType>(Candidates.front()->getType()))) {
+        // The extra lane of a copyable-merged reduction (a full register plus a
+        // trailing value) pays off only if the trailing value repeats the
+        // operand pattern of the full-register part, otherwise a full-register
+        // vector plus a scalar tail is cheaper. Copyable members may differ
+        // structurally, so check all candidates, not just the main op.
+        auto LoneValueMatchesOperands = [&]() {
+          auto AnyOperand = [&](function_ref<bool(Value *)> Pred) {
+            return any_of(ArrayRef(Candidates).take_front(FullRegReduxWidth),
+                          [&](Value *Cand) {
+                            auto *I = dyn_cast<Instruction>(Cand);
+                            return I && any_of(I->operand_values(), Pred);
+                          });
+          };
+          auto *LastI = dyn_cast<Instruction>(ReducedVals.back().back());
+          if (!LastI)
+            return !AnyOperand(IsaPred<Instruction>);
+          return AnyOperand([&](Value *Op) {
+            auto *OpI = dyn_cast<Instruction>(Op);
+            return OpI && OpI->getOpcode() == LastI->getOpcode();
+          });
+        };
+        if (ReduxWidth == ReductionLimit) {
+          AllowNoPowerOf2 = true;
+        } else if (ReduxWidth == SmallProfitableNonPowerOf2 && TwoGroupsOnly &&
+                   LastOfTwoGroupsIsSingle && S &&
+                   S.areInstructionsWithCopyableElements() &&
+                   !LoneValueMatchesOperands()) {
+          AllowNoPowerOf2 = false;
+        } else if (S && !S.isAltShuffle()) {
+          AllowNoPowerOf2 = true;
+        } else {
+          InstructionsState OpS =
+              getSameOpcode(ArrayRef(Candidates).slice(FullRegReduxWidth), TLI);
+          if (!OpS || OpS.isAltShuffle())
+            AllowNoPowerOf2 = true;
+        }
+        // The extra lanes are not free, keep the full register width if the
+        // reduction over it plus the scalar tail is not more expensive. The
+        // width is picked before the tree is built, so only the reduction
+        // operations themselves can be compared here.
+        if (AllowNoPowerOf2 && FullRegReduxWidth != ReduxWidth &&
+            FullRegReduxWidth >= ReductionLimit) {
+          Type *ScalarTy = Candidates.front()->getType();
+          InstructionCost NoPowerOf2Cost = getReductionWidthCost(
+              *TTI, RdxKind, ScalarTy, ReduxWidth,
+              getReductionPaddedType(*TTI, ScalarTy, ReduxWidth),
+              /*NumTail=*/0, RdxFMF);
+          InstructionCost FullRegCost = getReductionWidthCost(
+              *TTI, RdxKind, ScalarTy, FullRegReduxWidth,
+              getReductionPaddedType(*TTI, ScalarTy, FullRegReduxWidth),
+              ReduxWidth - FullRegReduxWidth, RdxFMF);
+          if (NoPowerOf2Cost.isValid() && FullRegCost.isValid() &&
+              NoPowerOf2Cost >= FullRegCost)
+            AllowNoPowerOf2 = false;
+        }
+      }
+      if (!AllowNoPowerOf2)
+        ReduxWidth = FullRegReduxWidth;
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
       unsigned Start = 0;
@@ -31625,6 +31952,22 @@ public:
               return RedValI && V.isDeleted(RedValI);
             }))
           break;
+        // Odd-width reductions over values still used outside the reduction
+        // keep the scalar computations, so the vector form only adds shuffles
+        // and dead lanes.
+        if (ReduxWidth == SmallestNonPowerOf2 &&
+            any_of(ArrayRef(TrackedToOrig).slice(Pos, ReduxWidth),
+                   [&](Value *OrigV) {
+                     auto It = ReducedValsToOps.find(OrigV);
+                     return isa<Instruction>(OrigV) &&
+                            It != ReducedValsToOps.end() &&
+                            any_of(OrigV->users(), [&](User *U) {
+                              return !is_contained(It->second, U);
+                            });
+                   })) {
+          (void)AdjustReducedVals(/*IgnoreVL=*/true);
+          continue;
+        }
         if (RK == ReductionOrdering::Ordered) {
           V.buildTree(VL);
         } else {
@@ -31672,6 +32015,10 @@ public:
           }
         }
         V.transformNodes();
+        // The width/position is speculative and may be rejected below on cost,
+        // remember the already analyzed values to restore the state.
+        SmallVector<Value *, 4> AnalyzedMinBWValsInVL =
+            V.getAnalyzedMinBWVals(VL);
         V.computeMinimumValueSizes();
         InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
 
@@ -31725,9 +32072,12 @@ public:
             V.getTreeCost(TreeCost, VL, ReductionCost, InsertPt);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
-        if (!Cost.isValid())
+        if (!Cost.isValid()) {
+          V.restrictAnalyzedMinBWVals(VL, AnalyzedMinBWValsInVL);
           break;
+        }
         if (Cost >= -SLPCostThreshold) {
+          V.restrictAnalyzedMinBWVals(VL, AnalyzedMinBWValsInVL);
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",
                                             ReducedValsToOps.at(VL[0]).front())
@@ -32180,6 +32530,10 @@ public:
       }
 
       V.transformNodes();
+      // The window is speculative and may be rejected below on cost, remember
+      // the already analyzed values to restore the state.
+      SmallVector<Value *, 4> AnalyzedMinBWValsInVL =
+          V.getAnalyzedMinBWVals(VL);
       V.computeMinimumValueSizes();
       InstructionCost TreeCost =
           V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
@@ -32194,6 +32548,7 @@ public:
                         << " for ordered reduction\n");
       if (Cost > -SLPCostThreshold ||
           (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
+        V.restrictAnalyzedMinBWVals(VL, AnalyzedMinBWValsInVL);
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",
@@ -32229,7 +32584,10 @@ public:
     // try front-anchored [0, W) then back-anchored [N-W, N).
     unsigned N = Candidates.size();
     ReduxWidth = N;
-    if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
+    // Use the same width policy as the associative reductions, ordered ones
+    // must not floor the widths kept by the associative path.
+    if (!isAllowedNonPowerOf2VF(
+            ReduxWidth, isa<FixedVectorType>(Candidates.front()->getType())))
       ReduxWidth = GetVectorFactor(ReduxWidth);
     ReduxWidth = std::min(ReduxWidth, MaxElts);
 
@@ -32664,6 +33022,11 @@ private:
     default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
+
+    if (DoesRequireReductionOp)
+      VectorCost += getReductionPaddingCost(
+          *TTI, getReductionPaddedType(*TTI, ScalarTy, ReduxWidth), ReduxWidth,
+          CostKind);
 
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << VectorCost - ScalarCost
                       << " for reduction of " << shortBundleName(ReducedVals)
@@ -33402,8 +33765,14 @@ bool SLPVectorizerPass::tryToVectorize(
   // Vectorize in current basic block only.
   auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
+  // A repeated or load/extractvalue operand rarely makes a profitable pair,
+  // skip it unless a negative cost threshold forces non-profitable
+  // vectorization.
   if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
-      R.isDeleted(Op0) || R.isDeleted(Op1))
+      R.isDeleted(Op0) || R.isDeleted(Op1) ||
+      (SkipTrivialSeeds && SLPCostThreshold >= 0 &&
+       (Op0 == Op1 || isa<LoadInst, ExtractValueInst>(Op0) ||
+        isa<LoadInst, ExtractValueInst>(Op1))))
     return false;
 
   // First collect all possible candidates

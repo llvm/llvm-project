@@ -127,7 +127,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK:       [[BB72:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB142:.*]], label %[[BB79:.*]]
 ; CHECK:       [[BB73]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr addrspace(1)> <ptr addrspace(1) poison, ptr addrspace(1) null>, ptr addrspace(1) [[GETELEMENTPTR3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x ptr addrspace(1)> <ptr addrspace(1) poison, ptr addrspace(1) null, ptr addrspace(1) null>, ptr addrspace(1) [[GETELEMENTPTR3]], i64 0
 ; CHECK-NEXT:    br i1 false, label %[[BB146:.*]], label %[[BB74:.*]]
 ; CHECK:       [[BB74]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB75:.*]], label %[[BB76:.*]]
@@ -245,8 +245,7 @@ define i32 @test(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    [[PHI145:%.*]] = phi ptr addrspace(1) [ null, %[[BB138]] ], [ [[GETELEMENTPTR3]], %[[BB72]] ], [ null, %[[BB84]] ], [ null, %[[BB90]] ]
 ; CHECK-NEXT:    br label %[[BB146]]
 ; CHECK:       [[BB146]]:
-; CHECK-NEXT:    [[PHI147:%.*]] = phi ptr addrspace(1) [ null, %[[BB142]] ], [ null, %[[BB73]] ], [ null, %[[BB79]] ], [ [[GETELEMENTPTR3]], %[[BB85]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x ptr addrspace(1)> [ poison, %[[BB142]] ], [ [[TMP4]], %[[BB73]] ], [ poison, %[[BB79]] ], [ poison, %[[BB85]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <3 x ptr addrspace(1)> [ poison, %[[BB142]] ], [ [[TMP4]], %[[BB73]] ], [ poison, %[[BB79]] ], [ poison, %[[BB85]] ]
 ; CHECK-NEXT:    br label %[[BB150]]
 ; CHECK:       [[BB150]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP2]], %[[BB75]] ], [ poison, %[[BB80]] ], [ splat (ptr addrspace(1) null), %[[BB146]] ], [ [[TMP3]], %[[BB1]] ]

@@ -15,31 +15,26 @@ define void @test(ptr %p, ptr %dst, float %alpha, ptr %mattep, i32 %n) {
 ; NONPOW2-NEXT:    [[DST_ADDR_020:%.*]] = phi ptr [ [[ADD_PTR16:%.*]], [[IF_END]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; NONPOW2-NEXT:    tail call void @CallMe(ptr noundef [[DST_ADDR_020]])
 ; NONPOW2-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_021]], i64 2
-; NONPOW2-NEXT:    [[TMP0:%.*]] = load <3 x i16>, ptr [[P_ADDR_021]], align 2
-; NONPOW2-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
-; NONPOW2-NEXT:    [[TMP2:%.*]] = uitofp <3 x i16> [[TMP0]] to <3 x float>
-; NONPOW2-NEXT:    [[CONV2:%.*]] = uitofp i16 [[TMP1]] to float
-; NONPOW2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_021]], i64 6
-; NONPOW2-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX5]], align 2
-; NONPOW2-NEXT:    [[CONV6:%.*]] = uitofp i16 [[TMP3]] to float
-; NONPOW2-NEXT:    [[TMP4:%.*]] = extractelement <3 x float> [[TMP2]], i64 2
-; NONPOW2-NEXT:    store float [[TMP4]], ptr [[DST_ADDR_020]], align 4
 ; NONPOW2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_020]], i64 4
-; NONPOW2-NEXT:    store float [[CONV2]], ptr [[ARRAYIDX8]], align 4
 ; NONPOW2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_020]], i64 8
-; NONPOW2-NEXT:    [[TMP5:%.*]] = extractelement <3 x float> [[TMP2]], i64 0
-; NONPOW2-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX9]], align 4
-; NONPOW2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_020]], i64 12
-; NONPOW2-NEXT:    store float [[CONV6]], ptr [[ARRAYIDX10]], align 4
+; NONPOW2-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P_ADDR_021]], align 2
+; NONPOW2-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
+; NONPOW2-NEXT:    [[TMP2:%.*]] = uitofp <4 x i16> [[TMP0]] to <4 x float>
+; NONPOW2-NEXT:    [[CONV2:%.*]] = uitofp i16 [[TMP1]] to float
+; NONPOW2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; NONPOW2-NEXT:    store <4 x float> [[TMP3]], ptr [[DST_ADDR_020]], align 4
 ; NONPOW2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[MATTEP:%.*]], align 4
 ; NONPOW2-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP6]], 0
 ; NONPOW2-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
 ; NONPOW2:       if.then:
-; NONPOW2-NEXT:    [[TMP7:%.*]] = insertelement <3 x float> poison, float [[ALPHA:%.*]], i64 0
-; NONPOW2-NEXT:    [[TMP8:%.*]] = shufflevector <3 x float> [[TMP7]], <3 x float> poison, <3 x i32> zeroinitializer
-; NONPOW2-NEXT:    [[TMP9:%.*]] = fmul <3 x float> [[TMP8]], [[TMP2]]
-; NONPOW2-NEXT:    [[TMP10:%.*]] = shufflevector <3 x float> [[TMP9]], <3 x float> poison, <3 x i32> <i32 2, i32 1, i32 0>
-; NONPOW2-NEXT:    store <3 x float> [[TMP10]], ptr [[DST_ADDR_020]], align 4
+; NONPOW2-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i64 2
+; NONPOW2-NEXT:    [[MUL:%.*]] = fmul float [[ALPHA:%.*]], [[TMP5]]
+; NONPOW2-NEXT:    store float [[MUL]], ptr [[DST_ADDR_020]], align 4
+; NONPOW2-NEXT:    [[MUL12:%.*]] = fmul float [[ALPHA]], [[CONV2]]
+; NONPOW2-NEXT:    store float [[MUL12]], ptr [[ARRAYIDX8]], align 4
+; NONPOW2-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
+; NONPOW2-NEXT:    [[MUL14:%.*]] = fmul float [[ALPHA]], [[TMP7]]
+; NONPOW2-NEXT:    store float [[MUL14]], ptr [[ARRAYIDX9]], align 4
 ; NONPOW2-NEXT:    br label [[IF_END]]
 ; NONPOW2:       if.end:
 ; NONPOW2-NEXT:    [[ADD_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_021]], i64 8

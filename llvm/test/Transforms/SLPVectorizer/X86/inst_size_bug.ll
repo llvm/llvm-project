@@ -9,16 +9,15 @@ define void @inst_size(ptr %a, <2 x i64> %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[TMPL4:%.*]] = load i64, ptr [[PTR4]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[B:%.*]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMPL1]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i64 0, [[TMPL4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[B:%.*]], <2 x i64> poison, <5 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x i64> [[TMP1]], i64 [[TMPL1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <5 x i64> [[TMP2]], i64 [[TMPL4]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <5 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <5 x i64> [[TMP3]], <5 x i64> [[TMP4]], <5 x i32> <i32 0, i32 1, i32 5, i32 6, i32 4>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <5 x i64> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
-; CHECK-NEXT:    [[PHI5:%.*]] = phi i1 [ [[T45]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i1> [ [[TMP4]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <5 x i1> [ [[TMP6]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

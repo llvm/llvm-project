@@ -69,10 +69,10 @@ define i64 @test_i32_pack(ptr %src) {
 ; CHECK-LABEL: @test_i32_pack(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and <8 x i8> [[TMP0]], splat (i8 15)
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i64> [[TMP1]], <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], splat (i8 15)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <8 x i64> [[TMP2]], <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
 entry:

@@ -737,22 +737,84 @@ define i32 @maxi8_mutiple_uses(i32 %0) {
 }
 
 define i32 @maxi8_mutiple_uses2(i32 %0) {
-; CHECK-LABEL: @maxi8_mutiple_uses2(
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @arr, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 4), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP9]], i32 [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP11]], i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP8]], i32 3, i32 4
-; CHECK-NEXT:    store i32 [[TMP14]], ptr @var, align 8
-; CHECK-NEXT:    ret i32 [[TMP13]]
+; SSE2-LABEL: @maxi8_mutiple_uses2(
+; SSE2-NEXT:    [[TMP2:%.*]] = load i32, ptr @arr, align 16
+; SSE2-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 4), align 4
+; SSE2-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[TMP3]])
+; SSE2-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8), align 8
+; SSE2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 [[TMP5]])
+; SSE2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
+; SSE2-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; SSE2-NEXT:    [[TMP9:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
+; SSE2-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
+; SSE2-NEXT:    [[TMP11:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP9]], i32 [[TMP10]])
+; SSE2-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
+; SSE2-NEXT:    [[TMP13:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP11]], i32 [[TMP12]])
+; SSE2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP8]], i32 3, i32 4
+; SSE2-NEXT:    store i32 [[TMP14]], ptr @var, align 8
+; SSE2-NEXT:    ret i32 [[TMP13]]
+;
+; SSE4-LABEL: @maxi8_mutiple_uses2(
+; SSE4-NEXT:    [[TMP2:%.*]] = load i32, ptr @arr, align 16
+; SSE4-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 4), align 4
+; SSE4-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[TMP3]])
+; SSE4-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8), align 8
+; SSE4-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 [[TMP5]])
+; SSE4-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
+; SSE4-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; SSE4-NEXT:    [[TMP9:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
+; SSE4-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
+; SSE4-NEXT:    [[TMP11:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP9]], i32 [[TMP10]])
+; SSE4-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
+; SSE4-NEXT:    [[TMP13:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP11]], i32 [[TMP12]])
+; SSE4-NEXT:    [[TMP14:%.*]] = select i1 [[TMP8]], i32 3, i32 4
+; SSE4-NEXT:    store i32 [[TMP14]], ptr @var, align 8
+; SSE4-NEXT:    ret i32 [[TMP13]]
+;
+; AVX1-LABEL: @maxi8_mutiple_uses2(
+; AVX1-NEXT:    [[TMP2:%.*]] = load i32, ptr @arr, align 16
+; AVX1-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 4), align 4
+; AVX1-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[TMP3]])
+; AVX1-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8), align 8
+; AVX1-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 [[TMP5]])
+; AVX1-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
+; AVX1-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; AVX1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
+; AVX1-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
+; AVX1-NEXT:    [[TMP11:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP9]], i32 [[TMP10]])
+; AVX1-NEXT:    [[TMP12:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
+; AVX1-NEXT:    [[TMP13:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP11]], i32 [[TMP12]])
+; AVX1-NEXT:    [[TMP14:%.*]] = select i1 [[TMP8]], i32 3, i32 4
+; AVX1-NEXT:    store i32 [[TMP14]], ptr @var, align 8
+; AVX1-NEXT:    ret i32 [[TMP13]]
+;
+; AVX2-LABEL: @maxi8_mutiple_uses2(
+; AVX2-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr @arr, align 16
+; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v3i32(<3 x i32> [[TMP2]])
+; AVX2-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
+; AVX2-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
+; AVX2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP3]], i32 [[TMP4]])
+; AVX2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
+; AVX2-NEXT:    [[TMP8:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
+; AVX2-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
+; AVX2-NEXT:    [[TMP10:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP8]], i32 [[TMP9]])
+; AVX2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP5]], i32 3, i32 4
+; AVX2-NEXT:    store i32 [[TMP11]], ptr @var, align 8
+; AVX2-NEXT:    ret i32 [[TMP10]]
+;
+; THRESH-LABEL: @maxi8_mutiple_uses2(
+; THRESH-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr @arr, align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v3i32(<3 x i32> [[TMP2]])
+; THRESH-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), align 4
+; THRESH-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
+; THRESH-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP3]], i32 [[TMP4]])
+; THRESH-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16), align 16
+; THRESH-NEXT:    [[TMP8:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[TMP7]])
+; THRESH-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 20), align 4
+; THRESH-NEXT:    [[TMP10:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP8]], i32 [[TMP9]])
+; THRESH-NEXT:    [[TMP11:%.*]] = select i1 [[TMP5]], i32 3, i32 4
+; THRESH-NEXT:    store i32 [[TMP11]], ptr @var, align 8
+; THRESH-NEXT:    ret i32 [[TMP10]]
 ;
   %2 = load i32, ptr @arr, align 16
   %3 = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 4), align 4

@@ -8,6 +8,7 @@
 
 #include "SLPCostAnalysis.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 #include <utility>
 
@@ -139,6 +141,82 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
          TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
          TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
+InstructionCost getReductionPaddingCost(const TargetTransformInfo &TTI,
+                                        VectorType *PaddedVecTy,
+                                        unsigned NumElts,
+                                        TTI::TargetCostKind CostKind) {
+  if (!PaddedVecTy || TTI.hasActiveVectorLength())
+    return 0;
+  unsigned PaddedElts = cast<FixedVectorType>(PaddedVecTy)->getNumElements();
+  assert(PaddedElts > NumElts && "Expected a padded type.");
+  return TTI.getScalarizationOverhead(
+      PaddedVecTy, APInt::getBitsSetFrom(PaddedElts, NumElts), /*Insert=*/true,
+      /*Extract=*/false, CostKind, /*ForPoisonSrc=*/false);
+}
+
+InstructionCost getReductionWidthCost(const TargetTransformInfo &TTI,
+                                      RecurKind RdxKind, Type *ScalarTy,
+                                      unsigned NumElts, VectorType *PaddedVecTy,
+                                      unsigned NumTail, FastMathFlags FMF) {
+  if (isa<FixedVectorType>(ScalarTy))
+    return InstructionCost::getInvalid();
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *VecTy = FixedVectorType::get(ScalarTy, NumElts);
+  InstructionCost Cost =
+      getReductionPaddingCost(TTI, PaddedVecTy, NumElts, CostKind);
+  switch (RdxKind) {
+  case RecurKind::Add:
+  case RecurKind::Mul:
+  case RecurKind::Or:
+  case RecurKind::And:
+  case RecurKind::Xor:
+  case RecurKind::FAdd:
+  case RecurKind::FMul: {
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
+    return Cost + TTI.getArithmeticReductionCost(Opcode, VecTy, FMF, CostKind) +
+           TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind) * NumTail;
+  }
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMaximum:
+  case RecurKind::FMinimum:
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin: {
+    Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+    IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
+    return Cost + TTI.getMinMaxReductionCost(Id, VecTy, FMF, CostKind) +
+           TTI.getIntrinsicInstrCost(ICA, CostKind) * NumTail;
+  }
+  default:
+    return InstructionCost::getInvalid();
+  }
+}
+
+bool isMaskedStoreExpandProfitable(const TargetTransformInfo &TTI,
+                                   FixedVectorType *VecTy,
+                                   FixedVectorType *PaddedVecTy, unsigned AS,
+                                   Align CommonAlignment) {
+  Type *ScalarTy = VecTy->getElementType();
+  if (!ScalarTy->isIntOrPtrTy() && !ScalarTy->isFloatingPointTy())
+    return false;
+  if (!TTI.isLegalMaskedStore(PaddedVecTy, CommonAlignment, AS,
+                              TTI::ConstantMask))
+    return false;
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost DirectCost =
+      TTI.getMemoryOpCost(Instruction::Store, VecTy, CommonAlignment, AS,
+                          CostKind) +
+      getShuffleCost(TTI, TTI::SK_ExtractSubvector, PaddedVecTy, {}, CostKind,
+                     /*Index=*/0, VecTy);
+  InstructionCost ExpandCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::masked_store, PaddedVecTy,
+                                 CommonAlignment, AS),
+      CostKind);
+  return ExpandCost < DirectCost;
 }
 
 } // namespace llvm::slpvectorizer
