@@ -12546,8 +12546,7 @@ public:
     NonSFINAEContext(Sema &S) : SFINAEContextBase(S, nullptr) {}
 
     NonSFINAEContext(Sema &S, const CXXRecordDecl *Record)
-        : SFINAEContextBase(S, nullptr),
-          Record(Record->getCanonicalDecl()) {
+        : SFINAEContextBase(S, nullptr), Record(Record->getCanonicalDecl()) {
       S.ClassInstantiationSFINAEContexts.push_back(
           {this->Record, hadPreviousSFINAEContext()});
     }
