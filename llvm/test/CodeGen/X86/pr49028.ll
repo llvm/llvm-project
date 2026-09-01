@@ -7,15 +7,14 @@ define zeroext i16 @PR49028(i16 zeroext %0, ptr %1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    shrw %ax
 ; X86-NEXT:    sete (%ecx)
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR49028:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl %eax
+; X64-NEXT:    shrw %ax
 ; X64-NEXT:    sete (%rsi)
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq

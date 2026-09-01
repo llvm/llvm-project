@@ -38,6 +38,10 @@ def SDTBinaryArithWithFlags : SDTypeProfile<2, 2,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisInt<0>, SDTCisVT<1, i32>]>;
 
+def SDTIntShiftOpWithFlags : SDTypeProfile<2, 2,
+                                           [SDTCisInt<0>, SDTCisVT<1, i32>,
+                                            SDTCisSameAs<0, 2>, SDTCisInt<3>]>;
+
 // SDTBinaryArithWithFlagsInOut - RES1, EFLAGS = op LHS, RHS, EFLAGS
 def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                             [SDTCisSameAs<0, 2>,
@@ -385,6 +389,9 @@ def X86tcret_globaladdr : SDNode<"X86ISD::TC_RETURN_GLOBALADDR", SDT_X86TCRET,
 def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86sub_flag  : SDNode<"X86ISD::SUB",  SDTBinaryArithWithFlags>;
+def X86shl_flag  : SDNode<"X86ISD::SHL",  SDTIntShiftOpWithFlags>;
+def X86srl_flag  : SDNode<"X86ISD::SRL",  SDTIntShiftOpWithFlags>;
+def X86sra_flag  : SDNode<"X86ISD::SRA",  SDTIntShiftOpWithFlags>;
 def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
