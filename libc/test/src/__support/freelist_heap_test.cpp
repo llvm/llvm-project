@@ -99,7 +99,7 @@ TEST_FOR_EACH_ALLOCATOR(CanFreeAndRealloc, 2048) {
   void *ptr2 = allocator.allocate(ALLOC_SIZE);
   // The freed block is quarantined in the inactive free store, so it cannot
   // be handed back out until the stores rotate.
-  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) 
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1)
     EXPECT_NE(ptr1, ptr2);
   else
     EXPECT_EQ(ptr1, ptr2);
