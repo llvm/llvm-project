@@ -164,9 +164,8 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // A SYCL fat binary is produced by clang-linker-wrapper, which drives the
   // device link itself by re-invoking the driver with --sycl-link once per
-  // device image. It discards this command apart from its executable, which it
-  // reports as its own --linker-path=, so all this job has to name is the tool
-  // that will finalize the images.
+  // device image. It discards this command apart from its executable, which is
+  // eventually also ignored.
   if (JA.getType() == types::TY_SYCL_FATBIN) {
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(),
