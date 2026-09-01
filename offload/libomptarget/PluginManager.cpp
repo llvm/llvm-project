@@ -41,7 +41,7 @@ void PluginManager::init() {
 
   ODBG(ODT_Init) << "Loading RTLs";
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
-  InitArgs.InitDevices = false;
+  InitArgs.LazyInit = true;
   if (ol_result_t Res = olInit(&InitArgs))
     REPORT() << "Failed to initialize liboffload: "
              << (Res->Details ? Res->Details : "(no details)");

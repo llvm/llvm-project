@@ -54,7 +54,7 @@ struct ol_platform_impl_t {
   llvm::Error destroy();
 
   /// Initialize the associated plugin and devices.
-  llvm::Error init(bool InitDevices);
+  llvm::Error init();
 
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
@@ -137,14 +137,12 @@ llvm::Error ol_platform_impl_t::destroy() {
   return Result;
 }
 
-llvm::Error ol_platform_impl_t::init(bool InitDevices) {
+llvm::Error ol_platform_impl_t::init() {
   if (!Plugin)
     return llvm::Error::success();
 
   if (llvm::Error Err = Plugin->init())
     return Err;
-  if (!InitDevices)
-    return llvm::Error::success();
 
   for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
     if (llvm::Error Err = Plugin->initDevice(Id))
@@ -328,9 +326,11 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   // Eagerly initialize all of the plugins and devices. We need to make sure
   // that the platform is initialized at a consistent point to maintain the
   // expected teardown order in the vendor libraries.
-  for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init(InitArgs ? InitArgs->InitDevices : true))
-      return Err;
+  if (!InitArgs || !InitArgs->LazyInit) {
+    for (auto &Platform : Context.Platforms) {
+      if (Error Err = Platform->init())
+        return Err;
+    }
   }
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
