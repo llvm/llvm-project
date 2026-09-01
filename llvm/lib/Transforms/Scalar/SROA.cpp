@@ -233,8 +233,6 @@ class SROA {
   /// We can do this to a select if its only uses are loads
   /// and if either the operand to the select can be loaded unconditionally,
   ///        or if we are allowed to perform CFG modifications.
-  /// If found an intervening bitcast with a single use of the load,
-  /// allow the promotion.
   static std::optional<RewriteableMemOps>
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
@@ -1723,9 +1721,6 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
-    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
-      U = *BC->user_begin();
-
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // Note that atomic stores can be transformed; atomic semantics do not
       // have any meaning for a local alloca. Stores are not speculatable,

@@ -40,7 +40,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     omp.target kernel_type(generic) map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
       %4 = llvm.mlir.constant(10 : i32) : i32
       %5 = llvm.load %arg2 : !llvm.ptr -> i32
-      %6 = llvm.mlir.constant(0 : i64) : i32
+      %6 = llvm.mlir.constant(0 : i32) : i32
       %7 = llvm.icmp "ne" %5, %6 : i32
       omp.parallel if(%7) {
         llvm.store %4, %arg1 : i32, !llvm.ptr
