@@ -1,26 +1,33 @@
-## Check call relaxation with function fragment clusters. This uses split
-## functions with calls from hot and cold fragments so call thunks are placed
-## around the clusters.
+## Relax direct calls using thunks across function fragment clusters. A/B/C/D
+## contain 56MiB islands. With --split-functions, BOLT places the cold blocks
+## of A/B/C/D in .text.cold. The test exercises forward and backward short
+## thunks for adjacent clusters, as well as long thunk reuse across remote
+## clusters. With the default 124MiB function-fragment cluster size, call
+## relaxation sees:
 ##
-## Input layout:
+##   A -> B             same cluster, direct
+##   B -> C             forward short thunk
+##   C -> A             backward short thunk
+##   D -> A             shares backward short thunk to A
 ##
-##   A  8MiB island, pad_hot_0 50MiB, B 8MiB island, pad_hot_1 50MiB,
-##   C  8MiB island, pad_hot_2 50MiB, D 8MiB island, pad_hot_3 50MiB
+##   B.cold -> B        normal: backward long thunk
+##   C.cold -> B        normal: shares backward long thunk to B
+##   D.cold -> B        normal: shares backward long thunk to B
 ##
-## With --split-functions, BOLT places the cold blocks of A/B/C/D in
-## .text.cold. With the default 124MiB function-fragment cluster size,
-## call relaxation sees:
+##   B.cold -> D        HFE: forward long thunk
+##   D.cold -> D        HFE: shares forward long thunk to D
 ##
 ##   normal layout:
-##     cluster 0, .text:      A, pad_hot_0, B, pad_hot_1
-##     cluster 1, .text:      C, pad_hot_2, D, pad_hot_3
-##     cluster 2, .text.cold: A.cold, B.cold, C.cold, D.cold
+##     cluster 0, .text:      A, B
+##     cluster 1, .text:      C, D
+##     cluster 2, .text.cold: A.cold, B.cold
+##     cluster 3, .text.cold: C.cold, D.cold
 ##
 ##   --hot-functions-at-end:
-##     cluster 0: .text.cold A.cold, B.cold, C.cold, D.cold
-##                .text A, pad_hot_0, B
-##     cluster 1: .text pad_hot_1, C, pad_hot_2, D
-##     cluster 2: .text pad_hot_3
+##     cluster 0: .text.cold A.cold, B.cold
+##     cluster 1: .text.cold C.cold, D.cold
+##     cluster 2: .text A, B
+##     cluster 3: .text C, D
 
 # REQUIRES: system-linux
 
@@ -35,24 +42,31 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C,__AArch64ADRPThunk_A \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C,__AArch64Thunk_D,__AArch64ADRPThunk_B,__AArch64ADRPThunk_D \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_B,__AArch64Thunk_C,__AArch64ADRPThunk_B,__AArch64ADRPThunk_D \
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
-# CHECK-BOLT: BOLT-INFO: built 3 function fragment cluster(s)
-# CHECK-BOLT: BOLT-INFO: relaxed 4 calls with thunks
+# CHECK-BOLT: BOLT-INFO: built 4 function fragment cluster(s)
+# CHECK-BOLT: BOLT-INFO: relaxed 4 adjacent cluster calls with thunks
+# CHECK-BOLT: BOLT-INFO: relaxed 4 remote cluster calls with thunks
 # CHECK-BOLT: BOLT-INFO: 3 short thunks created
-# CHECK-BOLT: BOLT-INFO: 1 long thunks created
+# CHECK-BOLT: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT: BOLT-INFO: 1 short thunks reused
+# CHECK-BOLT: BOLT-INFO: 2 long thunks reused
 # CHECK-BOLT: BOLT-INFO: relaxed 8 cross-cluster branches
-# CHECK-BOLT: BOLT-INFO: 12 branch thunks created
+# CHECK-BOLT: BOLT-INFO: 16 branch thunks created
 
-# CHECK-BOLT-HFE: BOLT-INFO: built 3 function fragment cluster(s)
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 calls with thunks
-# CHECK-BOLT-HFE: BOLT-INFO: 2 short thunks created
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 cross-cluster branches
-# CHECK-BOLT-HFE: BOLT-INFO: 4 branch thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: built 4 function fragment cluster(s)
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 5 adjacent cluster calls with thunks
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 remote cluster calls with thunks
+# CHECK-BOLT-HFE: BOLT-INFO: 3 short thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: 2 short thunks reused
+# CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks reused
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 8 cross-cluster branches
+# CHECK-BOLT-HFE: BOLT-INFO: 16 branch thunks created
 
 # CHECK-SECTIONS: .text
 # CHECK-SECTIONS: .text.cold
@@ -64,7 +78,6 @@ A:
 .A_entry:
 # FDATA: 1 A #.A_entry# 100
   bl B
-  bl C
   cbz x0, .A_ret
   b .A_cold
 .A_ret:
@@ -72,26 +85,16 @@ A:
   ret
 .A_cold:
   mov x0, #1
-  bl C
-  bl A
   b .A_ret
-  .space 0x800000
+  .space 0x3800000
   .size A, .-A
-
-  .globl pad_hot_0
-  .type pad_hot_0, %function
-pad_hot_0:
-.pad_hot_0_entry:
-# FDATA: 1 pad_hot_0 #.pad_hot_0_entry# 100
-  ret
-  .space 0x3200000
-  .size pad_hot_0, .-pad_hot_0
 
   .globl B
   .type B, %function
 B:
 .B_entry:
 # FDATA: 1 B #.B_entry# 100
+  bl C
   cbz x0, .B_ret
   b .B_cold
 .B_ret:
@@ -99,18 +102,11 @@ B:
   ret
 .B_cold:
   mov x0, #2
+  bl B
+  bl D
   b .B_ret
-  .space 0x800000
+  .space 0x3800000
   .size B, .-B
-
-  .globl pad_hot_1
-  .type pad_hot_1, %function
-pad_hot_1:
-.pad_hot_1_entry:
-# FDATA: 1 pad_hot_1 #.pad_hot_1_entry# 100
-  ret
-  .space 0x3200000
-  .size pad_hot_1, .-pad_hot_1
 
   .globl C
   .type C, %function
@@ -125,24 +121,17 @@ C:
   ret
 .C_cold:
   mov x0, #3
+  bl B
   b .C_ret
-  .space 0x800000
+  .space 0x3800000
   .size C, .-C
-
-  .globl pad_hot_2
-  .type pad_hot_2, %function
-pad_hot_2:
-.pad_hot_2_entry:
-# FDATA: 1 pad_hot_2 #.pad_hot_2_entry# 100
-  ret
-  .space 0x3200000
-  .size pad_hot_2, .-pad_hot_2
 
   .globl D
   .type D, %function
 D:
 .D_entry:
 # FDATA: 1 D #.D_entry# 100
+  bl A
   cbz x0, .D_ret
   b .D_cold
 .D_ret:
@@ -150,24 +139,19 @@ D:
   ret
 .D_cold:
   mov x0, #4
+  bl B
+  bl D
   b .D_ret
-  .space 0x800000
+  .space 0x3800000
   .size D, .-D
-
-  .globl pad_hot_3
-  .type pad_hot_3, %function
-pad_hot_3:
-.pad_hot_3_entry:
-# FDATA: 1 pad_hot_3 #.pad_hot_3_entry# 100
-  ret
-  .space 0x3200000
-  .size pad_hot_3, .-pad_hot_3
 
 ## Force relocation mode.
   .reloc 0, R_AARCH64_NONE
 
 # CHECK-OUTPUT:      <A>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
+
+# CHECK-OUTPUT:      <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_C>
 
 # CHECK-OUTPUT:      <__AArch64Thunk_C>:
@@ -179,23 +163,71 @@ pad_hot_3:
 # CHECK-OUTPUT:      <C>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_A>
 
-# CHECK-OUTPUT:      <__AArch64ADRPThunk_A>:
-# CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}} <A>
-# CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, #0x0
-# CHECK-OUTPUT-NEXT: {{.*}} br x16
+# CHECK-OUTPUT:      <D>:
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_A>
+
+# CHECK-OUTPUT:      <__AArch64Thunk_D>:
+# CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <D>
 
 # CHECK-OUTPUT:      <A.cold.0>:
-# CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x1
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_C>
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_A>
+
+# CHECK-OUTPUT:      <B.cold.0>:
+# CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x2
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_B>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_D>
+
+# CHECK-OUTPUT:      <__AArch64ADRPThunk_B>:
+# CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
+# CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
+# CHECK-OUTPUT-NEXT: {{.*}} br x16
+
+# CHECK-OUTPUT:      <__AArch64ADRPThunk_D>:
+# CHECK-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
+# CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
+# CHECK-OUTPUT-NEXT: {{.*}} br x16
+
+# CHECK-OUTPUT:      <C.cold.0>:
+# CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x3
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_B>
+
+# CHECK-OUTPUT:      <D.cold.0>:
+# CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x4
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_B>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_D>
 
 # CHECK-HFE-OUTPUT:      <A.cold.0>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x1
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_C>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
+
+# CHECK-HFE-OUTPUT:      <B.cold.0>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x2
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_B>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_D>
+
+# CHECK-HFE-OUTPUT:      <__AArch64ADRPThunk_D>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} br x16
+
+# CHECK-HFE-OUTPUT:      <__AArch64ADRPThunk_B>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} add x16, x16, {{.*}}
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} br x16
+
+# CHECK-HFE-OUTPUT:      <C.cold.0>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x3
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_B>
+
+# CHECK-HFE-OUTPUT:      <D.cold.0>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x4
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_B>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_D>
+
+# CHECK-HFE-OUTPUT:      <__AArch64Thunk_B>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <B>
 
 # CHECK-HFE-OUTPUT:      <A>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
+
+# CHECK-HFE-OUTPUT:      <B>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_C>
 
 # CHECK-HFE-OUTPUT:      <__AArch64Thunk_C>:
@@ -205,4 +237,7 @@ pad_hot_3:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <C>:
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_A>
+
+# CHECK-HFE-OUTPUT:      <D>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_A>

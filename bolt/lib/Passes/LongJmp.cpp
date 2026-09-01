@@ -1169,7 +1169,14 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
     unsigned TargetCluster;
   };
 
-  SmallVector<CrossClusterCall> CrossClusterCalls;
+  auto clusterDistance = [](const CrossClusterCall &Call) {
+    return Call.SourceCluster > Call.TargetCluster
+               ? Call.SourceCluster - Call.TargetCluster
+               : Call.TargetCluster - Call.SourceCluster;
+  };
+
+  SmallVector<CrossClusterCall> AdjacentClusterCalls;
+  SmallVector<CrossClusterCall> RemoteClusterCalls;
   for (BinaryFunction *BF : OutputFunctions) {
     if (!BC.shouldEmit(*BF) || BF->isPatch())
       continue;
@@ -1204,14 +1211,19 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
         if (TargetCluster == SourceCluster)
           continue;
 
-        CrossClusterCalls.push_back(
-            {&Inst, TargetSymbol, SourceCluster, TargetCluster});
+        CrossClusterCall Call{&Inst, TargetSymbol, SourceCluster,
+                              TargetCluster};
+        auto &Calls = clusterDistance(Call) == 1 ? AdjacentClusterCalls
+                                                 : RemoteClusterCalls;
+        Calls.push_back(Call);
       }
     }
   }
 
   size_t NumShortThunks = 0;
   size_t NumLongThunks = 0;
+  size_t NumShortThunksReused = 0;
+  size_t NumLongThunksReused = 0;
   auto createCallThunk = [&](const MCSymbol *TargetSymbol, bool IsShort) {
     BinaryFunction *Thunk = nullptr;
     if (IsShort) {
@@ -1248,8 +1260,37 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
                                   unsigned SourceCluster, bool IsShort,
                                   bool IsForward) {
     FragmentCluster &FC = Clusters[SourceCluster];
-    if (auto It = FC.CallThunks.find(TargetSymbol); It != FC.CallThunks.end())
+    if (auto It = FC.CallThunks.find(TargetSymbol); It != FC.CallThunks.end()) {
+      if (IsShort)
+        ++NumShortThunksReused;
+      else
+        ++NumLongThunksReused;
       return It->second;
+    }
+
+    // Reuse long thunks hosted at the adjacent cluster boundary.
+    if (!IsShort) {
+      FragmentCluster *ReuseCluster = nullptr;
+      BinaryFunctionListType *ReuseThunkList = nullptr;
+      if (IsForward && SourceCluster > 0) {
+        ReuseCluster = &Clusters[SourceCluster - 1];
+        ReuseThunkList = &ReuseCluster->ForwardThunkList;
+      } else if (!IsForward && SourceCluster + 1 < Clusters.size()) {
+        ReuseCluster = &Clusters[SourceCluster + 1];
+        ReuseThunkList = &ReuseCluster->BackwardThunkList;
+      }
+
+      if (ReuseCluster) {
+        auto It = ReuseCluster->CallThunks.find(TargetSymbol);
+        if (It != ReuseCluster->CallThunks.end() &&
+            llvm::is_contained(*ReuseThunkList, It->second)) {
+          BinaryFunction *Thunk = It->second;
+          ++NumLongThunksReused;
+          registerCallThunk(FC, TargetSymbol, Thunk);
+          return Thunk;
+        }
+      }
+    }
 
     BinaryFunction *Thunk = createCallThunk(TargetSymbol, IsShort);
 
@@ -1265,28 +1306,47 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
     return Thunk;
   };
 
-  auto areAdjacent = [](unsigned A, unsigned B) {
-    return A > B ? A - B == 1 : B - A == 1;
+  // Process farthest calls first so closer remote calls can reuse long thunks
+  // already placed at adjacent cluster boundaries.
+  llvm::stable_sort(RemoteClusterCalls,
+                    [&](const CrossClusterCall &A, const CrossClusterCall &B) {
+                      return clusterDistance(A) > clusterDistance(B);
+                    });
+
+  auto relaxCall = [&](CrossClusterCall &Call, bool IsShort) {
+    const bool IsForward = Call.SourceCluster < Call.TargetCluster;
+    BinaryFunction *Thunk = getOrCreateCallThunk(
+        Call.TargetSymbol, Call.SourceCluster, IsShort, IsForward);
+    BC.MIB->replaceBranchTarget(*Call.Inst, Thunk->getSymbol(), BC.Ctx.get());
   };
 
-  for (CrossClusterCall &Call : CrossClusterCalls) {
-    const bool IsForward = Call.SourceCluster < Call.TargetCluster;
-    const bool Adjacent = areAdjacent(Call.SourceCluster, Call.TargetCluster);
+  for (CrossClusterCall &Call : AdjacentClusterCalls)
+    relaxCall(Call, /*IsShort=*/true);
 
-    BinaryFunction *Thunk = getOrCreateCallThunk(
-        Call.TargetSymbol, Call.SourceCluster, Adjacent, IsForward);
-    BC.MIB->replaceBranchTarget(*Call.Inst, Thunk->getSymbol(), BC.Ctx.get());
-  }
+  for (CrossClusterCall &Call : RemoteClusterCalls)
+    relaxCall(Call, /*IsShort=*/false);
 
-  if (!CrossClusterCalls.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << CrossClusterCalls.size()
-              << " calls with thunks\n";
+  if (!AdjacentClusterCalls.empty())
+    BC.outs() << "BOLT-INFO: relaxed " << AdjacentClusterCalls.size()
+              << " adjacent cluster calls with thunks\n";
+
+  if (!RemoteClusterCalls.empty())
+    BC.outs() << "BOLT-INFO: relaxed " << RemoteClusterCalls.size()
+              << " remote cluster calls with thunks\n";
 
   if (NumShortThunks)
     BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
 
   if (NumLongThunks)
     BC.outs() << "BOLT-INFO: " << NumLongThunks << " long thunks created\n";
+
+  if (NumShortThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumShortThunksReused
+              << " short thunks reused\n";
+
+  if (NumLongThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumLongThunksReused
+              << " long thunks reused\n";
 }
 
 void LongJmpPass::relaxUnconditionalBranches(
@@ -1337,6 +1397,7 @@ void LongJmpPass::relaxUnconditionalBranches(
   }
 
   size_t NumBranchThunks = 0;
+  size_t NumBranchThunksReused = 0;
   auto createBranchThunk = [&](const MCSymbol *TargetSymbol,
                                const bool IsForward) {
     std::string ThunkName = IsForward ? "__AArch64BranchForwardThunk_"
@@ -1356,8 +1417,10 @@ void LongJmpPass::relaxUnconditionalBranches(
         auto &Thunks = IsForward ? Cluster.ForwardBranchThunks
                                  : Cluster.BackwardBranchThunks;
         auto It = Thunks.find(TargetSymbol);
-        if (It != Thunks.end())
+        if (It != Thunks.end()) {
+          ++NumBranchThunksReused;
           return It->second;
+        }
 
         BinaryFunction *Thunk = createBranchThunk(NextTarget, IsForward);
         Thunk->setCodeSectionName(Cluster.getThunkSectionName(IsForward));
@@ -1401,6 +1464,10 @@ void LongJmpPass::relaxUnconditionalBranches(
 
   if (NumBranchThunks)
     BC.outs() << "BOLT-INFO: " << NumBranchThunks << " branch thunks created\n";
+
+  if (NumBranchThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumBranchThunksReused
+              << " branch thunks reused\n";
 }
 
 void LongJmpPass::insertClusterThunks(BinaryFunctionListType &OutputFunctions,
