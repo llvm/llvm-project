@@ -995,9 +995,8 @@ void OmpStructureChecker::CheckDirectiveInPureProcedure(
   CheckDirectivePureSince(source, id, "a PURE procedure", spec);
 }
 
-void OmpStructureChecker::CheckDirectiveInDoConcurrent(
-    parser::CharBlock source, llvm::omp::Directive id,
-    const parser::OmpDirectiveSpecification &spec) {
+void OmpStructureChecker::CheckDirectiveInDoConcurrent(parser::CharBlock source,
+    llvm::omp::Directive id, const parser::OmpDirectiveSpecification &spec) {
   // Look for any enclosing DO CONCURRENT, not just the nearest DO, since a
   // plain DO nested inside DO CONCURRENT is still part of its body.
   for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {

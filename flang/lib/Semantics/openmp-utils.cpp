@@ -920,7 +920,8 @@ bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
   return false;
 }
 
-OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpDirectiveSpecification &spec) {
+OmpErrorArgs GetErrorDirectiveArgs(
+    const parser::OmpDirectiveSpecification &spec) {
   OmpErrorArgs args;
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
