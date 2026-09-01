@@ -15,7 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_GETEGID_H
 
 #include "hdr/types/gid_t.h"
-#include "src/__support/OSUtil/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers
