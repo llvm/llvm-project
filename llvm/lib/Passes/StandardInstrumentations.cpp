@@ -339,6 +339,14 @@ cloneFunctionsIntoNewModule(ArrayRef<const Function *> FunctionsToClone) {
     ValueToValueMapTy VMap;
     auto *NewF = cast<Function>(
         M->getOrInsertFunction(F->getName(), F->getFunctionType()).getCallee());
+
+    auto *NewFArgIt = NewF->arg_begin();
+    for (auto &Arg : F->args()) {
+      auto ArgName = Arg.getName();
+      NewFArgIt->setName(ArgName);
+      VMap[&Arg] = &(*NewFArgIt++);
+    }
+
     CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::DifferentModule,
                       Returns);
   }

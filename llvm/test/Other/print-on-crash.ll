@@ -32,13 +32,13 @@
 ; CHECK_MODULE: ; ModuleID = {{.*}}
 ; CHECK_FILTERED: *** Dump of Module IR Before Last Pass {{.*}} Filtered Out ***
 ; CHECK_FUNCTION: *** Dump of IR Before Last Pass {{.*}} Started ***
-; CHECK_FUNCTION: define i32 @main()
+; CHECK_FUNCTION: define i32 @main
 ; CHECK_CGSCC: *** Dump of IR Before Last Pass {{.*}} Started ***
-; CHECK_CGSCC: define i32 @main()
+; CHECK_CGSCC: define i32 @main
 ; CHECK_MACHINE_FUNCTION: *** Dump of IR Before Last Pass {{.*}} Started ***
 ; CHECK_MACHINE_FUNCTION: # Machine code for function main
 
-define i32 @main() {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
