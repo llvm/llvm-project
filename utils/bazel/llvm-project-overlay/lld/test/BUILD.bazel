@@ -56,6 +56,7 @@ filegroup(
         "//lld:wasm-ld",
         "//llvm:FileCheck",
         "//llvm:count",
+        "//llvm:dsymutil",
         "//llvm:dtlto_test_scripts",
         "//llvm:llc",
         "//llvm:llvm-ar",
