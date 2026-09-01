@@ -12,26 +12,18 @@
 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
-// CHECK-DAG: ![[DECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "declaredBacking"
-// CHECK-SAME:                                            attributes: 2316
-// CHECK-SAME:                                            type: ![[DECLARED_TY:[0-9]+]]
-// CHECK-DAG: ![[DECLARED_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_customDeclaredIvar"
-// CHECK-SAME:                                           extraData: ![[DECLARED_PROP]]
-// CHECK-DAG: !DIProperty(name: "declaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DECLARED_TY]], backing_storage: ![[DECLARED_IVAR]])
+// CHECK-DAG: ![[DECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "declaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, attributes: 2316, type: ![[INT_TY:[0-9]+]])
+// CHECK-DAG: ![[UNDECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "undeclaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, attributes: 2316, type: ![[INT_TY]])
+// CHECK-DAG: ![[IMPLICIT_PROP:[0-9]+]] = !DIObjCProperty(name: "implicitBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, attributes: 2316, type: ![[INT_TY]])
 //
-// CHECK-DAG: ![[UNDECLARED_PROP:[0-9]+]] = !DIObjCProperty(name: "undeclaredBacking"
-// CHECK-SAME:                                              attributes: 2316
-// CHECK-SAME:                                              type: ![[UNDECLARED_TY:[0-9]+]]
-// CHECK-DAG: ![[UNDECLARED_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_customUndeclaredIvar"
-// CHECK-SAME:                                             extraData: ![[UNDECLARED_PROP]]
-// CHECK-DAG: !DIProperty(name: "undeclaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[UNDECLARED_TY]], backing_storage: ![[UNDECLARED_IVAR]])
+// CHECK-DAG: ![[DECLARED_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_customDeclaredIvar", {{.*}}extraData: ![[DECLARED_PROP]])
+// CHECK-DAG: !DIProperty(name: "declaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[INT_TY]], backing_storage: ![[DECLARED_IVAR]])
 //
-// CHECK-DAG: ![[IMPLICIT_PROP:[0-9]+]] = !DIObjCProperty(name: "implicitBacking"
-// CHECK-SAME:                                            attributes: 2316
-// CHECK-SAME:                                            type: ![[IMPLICIT_TY:[0-9]+]]
-// CHECK-DAG: ![[IMPLICIT_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_implicitBacking"
-// CHECK-SAME:                                           extraData: ![[IMPLICIT_PROP]]
-// CHECK-DAG: !DIProperty(name: "implicitBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[IMPLICIT_TY]], backing_storage: ![[IMPLICIT_IVAR]])
+// CHECK-DAG: ![[UNDECLARED_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_customUndeclaredIvar", {{.*}}extraData: ![[UNDECLARED_PROP]])
+// CHECK-DAG: !DIProperty(name: "undeclaredBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[INT_TY]], backing_storage: ![[UNDECLARED_IVAR]])
+//
+// CHECK-DAG: ![[IMPLICIT_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_implicitBacking", {{.*}}extraData: ![[IMPLICIT_PROP]])
+// CHECK-DAG: !DIProperty(name: "implicitBacking", file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[INT_TY]], backing_storage: ![[IMPLICIT_IVAR]])
 
 @interface C {
   int _customDeclaredIvar;
