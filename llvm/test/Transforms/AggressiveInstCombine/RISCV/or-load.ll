@@ -47,25 +47,9 @@ define i16 @loadCombine_2consecutive_BE(ptr %p) {
 }
 
 define i32 @loadCombine_4consecutive(ptr %p) {
-; RV64LE-LABEL: @loadCombine_4consecutive(
-; RV64LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
-; RV64LE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
-; RV64LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; RV64LE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; RV64LE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
-; RV64LE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
-; RV64LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; RV64LE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; RV64LE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
-; RV64LE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
-; RV64LE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; RV64LE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
-; RV64LE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
-; RV64LE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
-; RV64LE-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
-; RV64LE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
-; RV64LE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
-; RV64LE-NEXT:    ret i32 [[O3]]
+; LE-LABEL: @loadCombine_4consecutive(
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; LE-NEXT:    ret i32 [[L1]]
 ;
 ; BE-LABEL: @loadCombine_4consecutive(
 ; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
@@ -86,10 +70,6 @@ define i32 @loadCombine_4consecutive(ptr %p) {
 ; BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
 ; BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
 ; BE-NEXT:    ret i32 [[O3]]
-;
-; RV32LE-LABEL: @loadCombine_4consecutive(
-; RV32LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
-; RV32LE-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -135,29 +115,9 @@ define i32 @loadCombine_4consecutive_BE(ptr %p) {
 ; LE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[E4]]
 ; LE-NEXT:    ret i32 [[O3]]
 ;
-; RV64BE-LABEL: @loadCombine_4consecutive_BE(
-; RV64BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
-; RV64BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
-; RV64BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
-; RV64BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; RV64BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
-; RV64BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
-; RV64BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; RV64BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; RV64BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
-; RV64BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
-; RV64BE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; RV64BE-NEXT:    [[S1:%.*]] = shl i32 [[E1]], 24
-; RV64BE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 16
-; RV64BE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 8
-; RV64BE-NEXT:    [[O1:%.*]] = or i32 [[S1]], [[S2]]
-; RV64BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
-; RV64BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[E4]]
-; RV64BE-NEXT:    ret i32 [[O3]]
-;
-; RV32BE-LABEL: @loadCombine_4consecutive_BE(
-; RV32BE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
-; RV32BE-NEXT:    ret i32 [[L1]]
+; BE-LABEL: @loadCombine_4consecutive_BE(
+; BE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; BE-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2

@@ -23,28 +23,10 @@ define void @test_i16(i16 %x, ptr %p) {
 }
 
 define void @test_i32_i8_parts(i32 %x, ptr %p) {
-; RV64-LABEL: define void @test_i32_i8_parts(
-; RV64-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    [[X_0:%.*]] = trunc i32 [[X]] to i8
-; RV64-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
-; RV64-NEXT:    [[SHR_1:%.*]] = lshr i32 [[X]], 8
-; RV64-NEXT:    [[X_1:%.*]] = trunc i32 [[SHR_1]] to i8
-; RV64-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; RV64-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
-; RV64-NEXT:    [[SHR_2:%.*]] = lshr i32 [[X]], 16
-; RV64-NEXT:    [[X_2:%.*]] = trunc i32 [[SHR_2]] to i8
-; RV64-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; RV64-NEXT:    store i8 [[X_2]], ptr [[GEP_2]], align 1
-; RV64-NEXT:    [[SHR_3:%.*]] = lshr i32 [[X]], 24
-; RV64-NEXT:    [[X_3:%.*]] = trunc i32 [[SHR_3]] to i8
-; RV64-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; RV64-NEXT:    store i8 [[X_3]], ptr [[GEP_3]], align 1
-; RV64-NEXT:    ret void
-;
-; RV32-LABEL: define void @test_i32_i8_parts(
-; RV32-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV32-NEXT:    store i32 [[X]], ptr [[P]], align 1
-; RV32-NEXT:    ret void
+; CHECK-LABEL: define void @test_i32_i8_parts(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i32 %x to i8
   store i8 %x.0, ptr %p
@@ -64,20 +46,10 @@ define void @test_i32_i8_parts(i32 %x, ptr %p) {
 }
 
 define void @test_i32_i16_parts(i32 %x, ptr %p) {
-; RV64-LABEL: define void @test_i32_i16_parts(
-; RV64-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    [[X_0:%.*]] = trunc i32 [[X]] to i16
-; RV64-NEXT:    store i16 [[X_0]], ptr [[P]], align 2
-; RV64-NEXT:    [[SHR_1:%.*]] = lshr i32 [[X]], 16
-; RV64-NEXT:    [[X_1:%.*]] = trunc i32 [[SHR_1]] to i16
-; RV64-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; RV64-NEXT:    store i16 [[X_1]], ptr [[GEP_1]], align 2
-; RV64-NEXT:    ret void
-;
-; RV32-LABEL: define void @test_i32_i16_parts(
-; RV32-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV32-NEXT:    store i32 [[X]], ptr [[P]], align 2
-; RV32-NEXT:    ret void
+; CHECK-LABEL: define void @test_i32_i16_parts(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 2
+; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i32 %x to i16
   store i16 %x.0, ptr %p
@@ -89,24 +61,10 @@ define void @test_i32_i16_parts(i32 %x, ptr %p) {
 }
 
 define void @test_i32_mixed_parts(i32 %x, ptr %p) {
-; RV64-LABEL: define void @test_i32_mixed_parts(
-; RV64-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:    [[X_0:%.*]] = trunc i32 [[X]] to i8
-; RV64-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
-; RV64-NEXT:    [[SHR_1:%.*]] = lshr i32 [[X]], 8
-; RV64-NEXT:    [[X_1:%.*]] = trunc i32 [[SHR_1]] to i16
-; RV64-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; RV64-NEXT:    store i16 [[X_1]], ptr [[GEP_1]], align 2
-; RV64-NEXT:    [[SHR_3:%.*]] = lshr i32 [[X]], 24
-; RV64-NEXT:    [[X_3:%.*]] = trunc i32 [[SHR_3]] to i8
-; RV64-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; RV64-NEXT:    store i8 [[X_3]], ptr [[GEP_3]], align 1
-; RV64-NEXT:    ret void
-;
-; RV32-LABEL: define void @test_i32_mixed_parts(
-; RV32-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; RV32-NEXT:    store i32 [[X]], ptr [[P]], align 1
-; RV32-NEXT:    ret void
+; CHECK-LABEL: define void @test_i32_mixed_parts(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i32 %x to i8
   store i8 %x.0, ptr %p
