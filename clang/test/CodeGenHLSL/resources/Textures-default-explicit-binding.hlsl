@@ -3,37 +3,49 @@
 // RUN:   -DCOORD_TYPE=float2 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
-// RUN:   --check-prefixes=CHECK
+// RUN:   --check-prefixes=CHECK,CHECK-TEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
 // RUN:   -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DDXIL_TY=5 \
-// RUN:   -DRW=0 --check-prefixes=CHECK
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 -DDXIL_TY=9 \
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DARRAYED=0 \
-// RUN:   --check-prefixes=SPIRV -DSPV_DIM=1
+// RUN:   --check-prefixes=SPIRV,SPIRV-TEXEL -DSPV_DIM=1
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
 // RUN:   -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 -DARRAYED=0 \
-// RUN:   --check-prefixes=SPIRV -DSPV_DIM=3
+// RUN:   --check-prefixes=SPIRV,SPIRV-NOTEXEL -DSPV_DIM=3
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 -DARRAYED=1 \
+// RUN:   --check-prefixes=SPIRV,SPIRV-NOTEXEL -DSPV_DIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 \
-// RUN:   -DRW=0 --check-prefixes=CHECK
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-TEXEL
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DARRAYED=1 \
-// RUN:   --check-prefixes=SPIRV -DSPV_DIM=1
+// RUN:   --check-prefixes=SPIRV,SPIRV-TEXEL -DSPV_DIM=1
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -46,6 +58,12 @@
 //   RW                 dx.Texture UAV operand
 //   ARRAYED            spirv.Image Arrayed operand
 //   SPV_DIM            spirv.Image Dim operand
+//
+// Check prefixes:
+//   TEXEL              the type has integer texel addressing (Load,
+//                      operator[], mips), and therefore a `mips` field in its
+//                      layout
+//   NOTEXEL            the type has no integer texel addressing
 
 TEXTURE<> default_template : register(t1, space2);
 TEXTURE implicit_template : register(t0, space1);
