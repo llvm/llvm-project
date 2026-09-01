@@ -86,6 +86,10 @@ enum class UncountableExitStyle {
   /// uncountable exit is taken, then all lanes before the exiting lane will
   /// complete, leaving just the final lane to execute in the scalar tail.
   MaskedHandleExitInScalarLoop,
+  /// Check-first semantics: exit conditions are evaluated at the start of each
+  /// vector iteration before any stores execute. On early exit, the scalar loop
+  /// resumes from the start of the current vector chunk.
+  CheckFirst,
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -4823,6 +4827,27 @@ class VPlan {
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
   VPIRBasicBlock *ScalarHeader;
 
+  /// Used for recording the state for check-first early-exit vectorization.
+  /// Everything else the strategy needs is derived from the plan: the cascade
+  /// header is the vector loop entry, the masked replay recipes live in
+  /// ExitBlock, guarded memory operations carry their guard as the recipe's
+  /// mask operand, and the early exit is the exit block left without
+  /// predecessors while the cascade is wired up.
+  struct CheckFirstEarlyExitState {
+    /// Block routing check-first early exits out of the vector loop. Its
+    /// presence also marks the plan as using the check-first strategy.
+    VPBasicBlock *ExitBlock = nullptr;
+
+    /// Whether the exiting chunk is replayed in vector form under a mask,
+    /// rather than being left to the scalar loop.
+    bool UsesMaskedReplay = false;
+
+    /// Stores that precede the exit condition in the original iteration and so
+    /// must also execute for the exiting lane during masked replay.
+    SmallPtrSet<const Instruction *, 4> InclusiveReplayStores;
+  };
+  CheckFirstEarlyExitState CheckFirst;
+
   /// Immutable list of VPIRBasicBlocks wrapping the exit blocks of the original
   /// scalar loop. Note that some exit blocks may be unreachable at the moment,
   /// e.g. if the scalar epilogue always executes.
@@ -4964,6 +4989,50 @@ public:
   VPBasicBlock *getScalarPreheader() const {
     return dyn_cast_or_null<VPBasicBlock>(
         getScalarHeader()->getSinglePredecessor());
+  }
+
+  /// Return the block routing check-first early exits out of the vector loop.
+  /// A non-null result means the plan uses check-first vectorization.
+  VPBasicBlock *getCheckFirstExitBlock() const { return CheckFirst.ExitBlock; }
+
+  void setCheckFirstExitBlock(VPBasicBlock *VPBB) {
+    assert((!CheckFirst.ExitBlock || CheckFirst.ExitBlock == VPBB) &&
+           "CheckFirstExitBlock already set");
+    CheckFirst.ExitBlock = VPBB;
+  }
+
+  /// Return the block holding the masked-replay recipes, which are placed in
+  /// the check-first exit block, or nullptr if the plan replays in the scalar
+  /// loop instead.
+  VPBasicBlock *getCheckFirstMaskedReplayBlock() const {
+    return CheckFirst.UsesMaskedReplay ? CheckFirst.ExitBlock : nullptr;
+  }
+
+  void setCheckFirstUsesMaskedReplay() { CheckFirst.UsesMaskedReplay = true; }
+
+  void addCheckFirstInclusiveReplayStore(const Instruction *I) {
+    CheckFirst.InclusiveReplayStores.insert(I);
+  }
+
+  bool isCheckFirstInclusiveReplayStore(const Instruction *I) const {
+    return CheckFirst.InclusiveReplayStores.contains(I);
+  }
+
+  /// Return the header of the check-first cascade, which is the entry of the
+  /// vector loop. Every cascade block branches to the check-first exit block
+  /// and only the header carries the canonical IV phi, so the header stays
+  /// identifiable once the loop region has been dissolved.
+  VPBasicBlock *getCheckFirstCheckHeaderBlock() const {
+    if (!CheckFirst.ExitBlock)
+      return nullptr;
+    if (const VPRegionBlock *R = getVectorLoopRegion())
+      return cast<VPBasicBlock>(const_cast<VPBlockBase *>(R->getEntry()));
+    for (VPBlockBase *Pred : CheckFirst.ExitBlock->getPredecessors()) {
+      auto *VPBB = cast<VPBasicBlock>(Pred);
+      if (!VPBB->empty() && isa<VPPhi>(&VPBB->front()))
+        return VPBB;
+    }
+    return nullptr;
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.

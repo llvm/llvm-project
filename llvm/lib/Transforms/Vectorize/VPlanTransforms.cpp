@@ -3203,7 +3203,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 
   // Dereferenceability is checked separately for uncountable exit loops with
   // stores, as only the loads contributing to the exit condition need to
-  // be checked.
+  // be checked. ReadOnly needs all loads dereferenceable, whereas CheckFirst
+  // checks only condition-slice loads below.
   if (Style == UncountableExitStyle::ReadOnly &&
       !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
     return false;
