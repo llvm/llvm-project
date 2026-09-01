@@ -38,6 +38,10 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
+namespace AMDGPU {
+class AsyncStages;
+} // namespace AMDGPU
+
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
 
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
@@ -858,6 +862,10 @@ public:
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d2 &&
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
+
+  /// \returns the asyncmark stage that the async operation initiated by \p MI
+  /// belongs to, or no stage if \p MI is not an LDS DMA instruction.
+  static AMDGPU::AsyncStages getAsyncStage(const MachineInstr &MI);
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
     return Opcode == AMDGPU::S_BARRIER_LEAVE ||

@@ -3014,16 +3014,21 @@ def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
+// The argument is a mask of the async stages to create a mark for.
+// A zero mask marks every stage.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
-                     IntrNoCallback, IntrNoFree]>;
+  Intrinsic<[], [llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 0, 2048>,
+             IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// Waits until the Nth previous marker is completed, if it exists.
+// Waits until the Nth previous marker is completed in each async stage's sequence,
+// if it exists. The second argument is a mask of the stages to wait on.
+// A zero mask waits on every stage.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty],
-              [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
-               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+    Intrinsic<[], [llvm_i16_ty, llvm_i32_ty],
+              [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2048>,
+               IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
