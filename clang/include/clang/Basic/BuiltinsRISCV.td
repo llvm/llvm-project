@@ -319,6 +319,50 @@ def pmulqr_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4,
 def pmulq_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 def pmulqr_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 
+// Packed Multiply Parts (32-bit)
+def pmul_b00_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pmul_b01_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pmul_b11_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pmulu_b00_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pmulu_b01_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pmulu_b11_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pmulsu_b00_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, unsigned char>)">;
+def pmulsu_b11_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<4, signed char>, _Vector<4, unsigned char>)">;
+def mul_h00_i32 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def mul_h01_i32 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def mul_h11_i32 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def mulu_h00_u32 : RISCVBuiltin<"unsigned int(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def mulu_h01_u32 : RISCVBuiltin<"unsigned int(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def mulu_h11_u32 : RISCVBuiltin<"unsigned int(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def mulsu_h00_i32 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, unsigned short>)">;
+def mulsu_h11_i32 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, unsigned short>)">;
+
+// Packed Multiply Parts (64-bit)
+def pmul_b00_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pmul_b01_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pmul_b11_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pmulu_b00_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pmulu_b01_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pmulu_b11_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pmulsu_b00_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<8, signed char>, _Vector<8, unsigned char>)">;
+def pmulsu_b11_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<8, signed char>, _Vector<8, unsigned char>)">;
+def pmul_h00_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pmul_h01_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pmul_h11_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pmulu_h00_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmulu_h01_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmulu_h11_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmulsu_h00_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, unsigned short>)">;
+def pmulsu_h11_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, unsigned short>)">;
+def mul_w00_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def mul_w01_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def mul_w11_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def mulu_w00_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def mulu_w01_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def mulu_w11_u64 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def mulsu_w00_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, unsigned int>)">;
+def mulsu_w11_i64 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, unsigned int>)">;
+
 // Packed "Q-format" Multiply Parts Accumulate (32-bit)
 def mqacc_h00_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
 def mqacc_h01_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
