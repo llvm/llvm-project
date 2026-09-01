@@ -481,7 +481,7 @@ static unsigned node_hash(GepNode *N) {
     FoldingSetNodeID ID;
     ID.AddPointer(N->Idx);
     ID.AddPointer(N->PTy);
-    return ID.ComputeHash();
+    return ID.computeHash();
 }
 
 static bool node_eq(GepNode *N1, GepNode *N2, NodePairSet &Eq,

@@ -1413,7 +1413,9 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
-    Key = "a_key";
+    // This spelling cannot express a key, and AArch64 Windows only supports
+    // B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
     IndirectBranches =
         (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;

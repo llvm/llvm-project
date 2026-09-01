@@ -80,12 +80,6 @@ bool requiresImplicitDefaultDeclareMapper(
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
       [&](const semantics::DerivedTypeSpec &spec) -> bool {
-    // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have
-    // implicit default mappers available so that OpenMP offloading can
-    // correctly map them.
-    if (semantics::IsIsoCType(&spec))
-      return true;
-
     if (!visited.insert(&spec).second)
       return false;
 

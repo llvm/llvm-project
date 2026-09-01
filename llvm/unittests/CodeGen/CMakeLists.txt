@@ -20,6 +20,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(CodeGenTests
+  AccelTableTest.cpp
   AllocationOrderTest.cpp
   AMDGPUMetadataTest.cpp
   AsmPrinterDwarfTest.cpp
@@ -47,6 +48,7 @@ add_llvm_unittest(CodeGenTests
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
   SelectionDAGAddressAnalysisTest.cpp
+  SelectionDAGCSETest.cpp
   SelectionDAGNodeConstructionTest.cpp
   SelectionDAGPatternMatchTest.cpp
   TypeTraitsTest.cpp

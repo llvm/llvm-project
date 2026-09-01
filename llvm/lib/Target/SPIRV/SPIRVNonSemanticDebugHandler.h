@@ -105,6 +105,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   DenseMap<const DIGlobalVariable *, GlobalVariableDebugInfo>
       GlobalVariableDebugInfoMap;
 
+  // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
+  // order, collected in beginModule() for DebugLexicalBlock emission.
+  SetVector<const DIScope *> LexicalBlocks;
+
   // DebugFunctionDeclaration result id per emitted declaration DISubprogram
   // (only entries where emission succeeded).
   DenseMap<const DISubprogram *, MCRegister> DebugFunctionDeclarationRegs;
@@ -112,6 +116,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DebugFunction result id per emitted definition DISubprogram (only entries
   // where emission succeeded).
   DenseMap<const DISubprogram *, MCRegister> DebugFunctionRegs;
+
+  // DebugLexicalBlock result id per emitted DILexicalBlock/DINamespace.
+  DenseMap<const DIScope *, MCRegister> DebugLexicalBlockRegs;
 
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
   // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
@@ -490,6 +497,30 @@ private:
   /// \returns \c std::nullopt when \p Scope is a \c DIType that has not been
   /// emitted, or when there is no compile unit.
   std::optional<MCRegister> resolveTypeScopeParent(const DIScope *Scope) const;
+
+  /// Resolve the \c Parent operand for \c DebugLexicalBlock, and for any other
+  /// instruction whose LLVM scope may be a \c DILexicalBlock or \c
+  /// DINamespace: an emitted \c DebugLexicalBlock id when \p Scope is a \c
+  /// DILexicalBlock or \c DINamespace already in \c DebugLexicalBlockRegs, an
+  /// emitted \c DebugFunction id when \p Scope is a defining \c DISubprogram,
+  /// otherwise the first module \c DebugCompilationUnit.
+  /// \returns \c std::nullopt when \p Scope requires a parent we cannot
+  /// supply, or the fallback CU has no emitted id.
+  std::optional<MCRegister>
+  resolveLexicalBlockParent(const DIScope *Scope) const;
+
+  /// Emit \c DebugLexicalBlock for \p S, which must be a \c DILexicalBlock or
+  /// a \c DINamespace. A \c DILexicalBlock supplies Line/Column
+  /// from \c getLine()/getColumn(); a \c DINamespace has neither, so both are
+  /// emitted as 0, and its Name is appended as an extra \c OpString operand.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \c resolveLexicalBlockParent returns no id for
+  /// \c S->getScope().
+  std::optional<MCRegister>
+  emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
+                        MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+                        SPIRV::ModuleAnalysisInfo &MAI);
 };
 
 } // namespace llvm

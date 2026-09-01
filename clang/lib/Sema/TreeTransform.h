@@ -8687,7 +8687,7 @@ TreeTransform<Derived>::TransformDoStmt(DoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
-  if (getSema().getLangOpts().OpenMP)
+  if (getSema().getLangOpts().getOpenMPVersion())
     getSema().OpenMP().startOpenMPLoop();
 
   // Transform the initialization statement
@@ -8697,7 +8697,7 @@ TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
 
   // In OpenMP loop region loop control variable must be captured and be
   // private. Perform analysis of first part (if any).
-  if (getSema().getLangOpts().OpenMP && Init.isUsable())
+  if (getSema().getLangOpts().getOpenMPVersion() && Init.isUsable())
     getSema().OpenMP().ActOnOpenMPLoopInitialization(S->getForLoc(),
                                                      Init.get());
 
@@ -10059,7 +10059,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
-  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
+  llvm::omp::Version OMPVersion =
+      getDerived().getSema().getLangOpts().getOpenMPVersion();
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
       << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();

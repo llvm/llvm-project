@@ -435,7 +435,8 @@ private:
   unsigned m_refCount { 0 };
 };
 
-template <typename T> T *downcast(T *t) { return t; }
+template <typename U, typename T> U [[clang::annotate_type("webkit.pointerconversion")]] *downcast(T *t) { return static_cast<U*>(t); }
+template <typename U, typename T> U [[clang::annotate_type("webkit.pointerconversion")]] &downcast(T &t) { return static_cast<U&>(t); }
 
 template <typename T> struct CheckedRef {
 private:

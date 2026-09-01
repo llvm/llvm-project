@@ -8414,23 +8414,29 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  std::optional<unsigned> Res;
-  for (auto *ExitingBB : ExitingBlocks) {
-    unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
-    if (!Res)
-      Res = Multiple;
-    Res = std::gcd(*Res, Multiple);
-  }
-  return Res.value_or(1);
-}
-
-unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
-                                                       const SCEV *ExitCount) {
-  if (isa<SCEVCouldNotCompute>(ExitCount))
+  // An exit with an uncomputable exit count makes the result 1.
+  if (ExitingBlocks.empty() ||
+      any_of(ExitingBlocks, [this, L](BasicBlock *ExitingBB) {
+        return isa<SCEVCouldNotCompute>(getExitCount(L, ExitingBB));
+      }))
     return 1;
 
+  LoopGuards Guards = LoopGuards::collect(L, *this);
+  unsigned Res = 0;
+  for (BasicBlock *ExitingBB : ExitingBlocks)
+    Res = std::gcd(
+        Res, getSmallConstantTripMultiple(getExitCount(L, ExitingBB), Guards));
+  return Res;
+}
+
+unsigned
+ScalarEvolution::getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                              const LoopGuards &Guards) {
+  assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Must be computable!");
+
   // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
+  const SCEV *TCExpr =
+      getTripCountFromExitCount(applyLoopGuards(ExitCount, Guards));
 
   APInt Multiple = getNonZeroConstantMultiple(TCExpr);
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
@@ -8438,6 +8444,14 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   return Multiple.getActiveBits() > 32
              ? 1U << std::min(31U, Multiple.countTrailingZeros())
              : (unsigned)Multiple.getZExtValue();
+}
+
+unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
+                                                       const SCEV *ExitCount) {
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return 1;
+
+  return getSmallConstantTripMultiple(ExitCount, LoopGuards::collect(L, *this));
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
@@ -8737,9 +8751,8 @@ void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
   // intrinsic), its users (e.g. extractvalue) may have stale SCEV
   // expressions referencing loop-internal values.
-  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
-        return isa<WithOverflowInst>(Inc);
-      }))
+  if (!isSCEVable(V->getType()) &&
+      any_of(V->incoming_values(), IsaPred<WithOverflowInst>))
     for (User *U : V->users())
       InvalidateValue(U);
   // Also perform the normal invalidation.
@@ -10799,9 +10812,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
     const SCEV *DistancePlusOne = getAddExpr(Distance, One);
     if (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, DistancePlusOne, Zero)) {
       // If Distance + 1 doesn't overflow, we can compute the maximum distance
-      // as "unsigned_max(Distance + 1) - 1".
-      ConstantRange CR = getUnsignedRange(DistancePlusOne);
-      MaxBECount = APIntOps::umin(MaxBECount, CR.getUnsignedMax() - 1);
+      // as "unsigned_max(Distance + 1) - 1". Also apply the loop guards to
+      // Distance + 1; the range of Distance itself may be a wrapped set even
+      // when the guards bound Distance + 1 tightly.
+      APInt Max = APIntOps::umin(
+          getUnsignedRangeMax(applyLoopGuards(DistancePlusOne, Guards)),
+          getUnsignedRangeMax(DistancePlusOne));
+      MaxBECount = APIntOps::umin(MaxBECount, Max - 1);
     }
     return ExitLimit(Distance, getConstant(MaxBECount), Distance, false,
                      Predicates);
@@ -11244,7 +11261,7 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
 
 bool ScalarEvolution::isKnownMultipleOf(
     const SCEV *S, uint64_t M,
-    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   if (M == 0)
     return false;
   if (M == 1)
@@ -11254,8 +11271,8 @@ bool ScalarEvolution::isKnownMultipleOf(
   // starts with a multiple of M and at every iteration step S only adds
   // multiples of M.
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
-           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+    return isKnownMultipleOf(AddRec->getStart(), M, Predicates) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Predicates);
 
   // For a constant, check that "S % M == 0".
   if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
@@ -11280,15 +11297,18 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
     return false;
 
+  if (!Predicates)
+    return false;
+
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
 
   // Detect redundant predicates.
-  for (auto *A : Assumptions)
+  for (auto *A : *Predicates)
     if (A->implies(P, *this))
       return true;
 
   // Only record non-redundant predicates.
-  Assumptions.push_back(P);
+  Predicates->push_back(P);
   return true;
 }
 
@@ -11364,14 +11384,9 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
-  if (isKnownViaInduction(Pred, LHS, RHS))
-    return true;
-
-  if (isKnownPredicateViaSplitting(Pred, LHS, RHS))
-    return true;
-
-  // Otherwise see what can be done with some simple reasoning.
-  return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+  return isKnownViaInduction(Pred, LHS, RHS) ||
+         isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
+         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
 std::optional<bool> ScalarEvolution::evaluatePredicate(CmpPredicate Pred,
@@ -12853,6 +12868,31 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
+/// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
+/// go below its own start value?
+static bool IsKnownPredicateViaAddRecMonotonicity(ScalarEvolution &SE,
+                                                  CmpPredicate Pred,
+                                                  const SCEV *LHS,
+                                                  const SCEV *RHS) {
+  // Normalize to (AddRec Pred Start).
+  if (!isa<SCEVAddRecExpr>(LHS) && isa<SCEVAddRecExpr>(RHS)) {
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+    std::swap(LHS, RHS);
+  }
+
+  // The recurrence is equal to Start in the first iteration, so only the
+  // non-strict predicate holds.
+  if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_SGE)
+    return false;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || AR->getStart() != RHS)
+    return false;
+
+  return SE.getMonotonicPredicateType(AR, Pred) ==
+         ScalarEvolution::MonotonicallyIncreasing;
+}
+
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
 /// expression?
 static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
@@ -13113,6 +13153,7 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
+         IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }
 
@@ -13889,7 +13930,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
 
   // The only time we can solve this is when we have all constant indices.
   // Otherwise, we cannot determine the overflow conditions.
-  if (any_of(operands(), [](const SCEV *Op) { return !isa<SCEVConstant>(Op); }))
+  if (!all_of(operands(), IsaPred<SCEVConstant>))
     return SE.getCouldNotCompute();
 
   // Okay at this point we know that all elements of the chrec are constants and

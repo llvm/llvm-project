@@ -438,12 +438,67 @@ define void @Foo2() {
       ASSERT_EQ(NMD.getParent(), &*M1);
   }
 
+  M1->renumberMetadataForAssembly();
   std::string M1Print;
   {
     llvm::raw_string_ostream Os(M1Print);
     Os << "\n" << *M1;
   }
   ASSERT_EQ(M2Str, M1Print);
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesContextWideUniqueIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  MDNode *Detached =
+      MDNode::getDistinct(Context, MDString::get(Context, "detached"));
+  MDNode *Attached =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(Attached);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(Detached);
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !2}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesUniqueTemporaryIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  TempMDTuple DetachedA =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-a"));
+  TempMDTuple DetachedB =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-b"));
+  MDNode *AttachedA =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-a"));
+  MDNode *AttachedB =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-b"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(AttachedA);
+  NMD->addOperand(AttachedB);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedA)));
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedB)));
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !1, !4, !5}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
 }
 
 TEST(ModuleTest, FunctionDefinitions) {

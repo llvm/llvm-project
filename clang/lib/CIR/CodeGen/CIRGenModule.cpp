@@ -733,7 +733,8 @@ void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
 
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
-  if (dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>())
+  if ((dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>()) ||
+      (langOpts.CUDA && !shouldEmitCUDAGlobalVar(vd)))
     return;
 
   TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
@@ -4396,7 +4397,7 @@ CIRGenModule::getOrCreateAnnotationArgs(const AnnotateAttr *attr) {
   for (Expr *e : exprs)
     id.Add(cast<clang::ConstantExpr>(e)->getAPValueResult());
 
-  mlir::ArrayAttr &lookup = annotationArgs[id.ComputeHash()];
+  mlir::ArrayAttr &lookup = annotationArgs[id.computeHash()];
   if (lookup)
     return lookup;
 

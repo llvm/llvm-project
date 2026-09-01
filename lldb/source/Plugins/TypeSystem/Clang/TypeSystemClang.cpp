@@ -313,6 +313,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;

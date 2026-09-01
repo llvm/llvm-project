@@ -116,14 +116,15 @@ SourcedActionStmt GetActionStmt(const parser::Block &block) {
   return SourcedActionStmt{};
 }
 
-std::string ThisVersion(unsigned version) {
-  std::string tv{
-      std::to_string(version / 10) + "." + std::to_string(version % 10)};
+std::string ThisVersion(llvm::omp::Version version) {
+  auto v{static_cast<unsigned>(version)};
+  std::string tv{std::to_string(v / 10) + "." + std::to_string(v % 10)};
   return "OpenMP v" + tv;
 }
 
-std::string TryVersion(unsigned version) {
-  return "try -fopenmp-version=" + std::to_string(version);
+std::string TryVersion(llvm::omp::Version version) {
+  return "try -fopenmp-version=" +
+      std::to_string(static_cast<unsigned>(version));
 }
 
 static const Symbol *GetFunctionReferenceSymbol(
@@ -686,7 +687,7 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
 /// For clauses that take argument lists, return the type of the argument
 /// list item. For other clauses return std::nullopt.
 std::optional<ListItemKind> GetArgumentListItemKind(
-    llvm::omp::Clause clause, unsigned version) {
+    llvm::omp::Clause clause, llvm::omp::Version version) {
   switch (clause) {
   case llvm::omp::Clause::OMPC_absent:
     if (version >= 51) {
@@ -1039,7 +1040,7 @@ static SymbolVector SelectUsedSymbols(
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx) {
+    llvm::omp::Version version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
       if (auto value{GetIntValueFromExpr(*expr, semaCtx)}) {
@@ -1071,7 +1072,7 @@ static WithReason<int64_t> GetNumArgumentsWithReasonForType(
 
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version, SemanticsContext *semaCtx) {
+    llvm::omp::Version version, SemanticsContext *semaCtx) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
     std::string name{GetUpperName(clauseId, version)};
     // Try the types used for list items.
@@ -1092,7 +1093,7 @@ WithReason<int64_t> GetNumArgumentsWithReason(
 }
 
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   bool isFullUnroll{IsFullUnroll(spec)};
 
@@ -1294,7 +1295,7 @@ WithReason<T> operator+(T a, const WithReason<T> &b) {
 /// Return the depth of the affected nest(s):
 ///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
   bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
@@ -1411,7 +1412,7 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
 /// Return the depth of the generated nest(s)
 ///   {generated-depth, is-perfect-nest}
 std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
   if (!IsLoopTransforming(dir)) {
@@ -1451,7 +1452,7 @@ std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
 /// Return the range of the affected nests in the sequence:
 ///   {first, count}
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
 
@@ -1490,7 +1491,7 @@ WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
 }
 
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   auto [depth, _]{GetAffectedNestDepthWithReason(spec, version, semaCtx)};
   if (!depth) {
@@ -1637,7 +1638,7 @@ bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x) {
 /// For the top-level DO COLLAPSE(5) construct, the k loop is the only
 /// directly affected loop.
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
-    const parser::OpenMPLoopConstruct &x, unsigned version,
+    const parser::OpenMPLoopConstruct &x, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   std::vector<const parser::DoConstruct *> result;
   const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
@@ -1770,7 +1771,7 @@ static_assert(HasSourceT<parser::ExecutionPartConstruct>::value);
 #endif // EXPENSIVE_CHECKS
 
 LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
-    unsigned version, bool allowAllLoops, SemanticsContext *semaCtx)
+    llvm::omp::Version version, bool allowAllLoops, SemanticsContext *semaCtx)
     : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
   entry_ = createConstructEntry(root);
   assert(entry_ && "Expecting loop like code");
@@ -1779,8 +1780,8 @@ LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
   precalculate();
 }
 
-LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
-    bool allowAllLoops, SemanticsContext *semaCtx)
+LoopSequence::LoopSequence(std::unique_ptr<Construct> entry,
+    llvm::omp::Version version, bool allowAllLoops, SemanticsContext *semaCtx)
     : version_(version), allowAllLoops_(allowAllLoops),
       entry_(std::move(entry)), semaCtx_(semaCtx) {
   createChildrenFromRange(entry_->location);

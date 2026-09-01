@@ -169,6 +169,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getegid
+)
+
+add_entrypoint_object(
   gethostname
   ALIAS
   DEPENDS
@@ -180,6 +187,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getpagesize
+)
+
+add_entrypoint_object(
+  getpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgid
+)
+
+add_entrypoint_object(
+  getpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgrp
 )
 
 add_entrypoint_object(
@@ -316,10 +337,45 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setgid
+)
+
+add_entrypoint_object(
+  setpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setpgid
+)
+
+add_entrypoint_object(
+  setregid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setregid
+)
+
+add_entrypoint_object(
+  setreuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
   setsid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setsid
+)
+
+add_entrypoint_object(
+  setuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setuid
 )
 
 add_entrypoint_object(
@@ -355,6 +411,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sysconf
+)
+
+add_entrypoint_object(
+  tcgetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetpgrp
+)
+
+add_entrypoint_object(
+  tcsetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcsetpgrp
 )
 
 add_entrypoint_object(

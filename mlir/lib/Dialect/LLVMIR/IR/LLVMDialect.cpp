@@ -3675,13 +3675,52 @@ LogicalResult LLVM::ConstantOp::verify() {
     return success();
   };
 
+  // Check that an integer attribute whose element type is `attributeIntType`
+  // is compatible with a type whose element type is `constantElementType`.
+  //
+  // Contrary to floats, integers must match exactly. An integer attribute
+  // carries no information that the corresponding LLVM type cannot represent,
+  // so any difference in width, signedness, or in `index` versus a fixed-width
+  // integer indicates a malformed constant. Note that `index` never reaches
+  // this check as a constant type, since it is not LLVM dialect-compatible.
+  auto verifyIntegerSemantics = [this](Type attributeIntType,
+                                       Type constantElementType,
+                                       StringRef description) -> LogicalResult {
+    if (attributeIntType != constantElementType)
+      return emitOpError() << "attribute and type have different integer "
+                           << description << "s: " << attributeIntType
+                           << " vs. " << constantElementType;
+    return success();
+  };
+
   // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
-  if (isa<IntegerAttr>(getValue())) {
+  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
+    return verifyIntegerSemantics(intAttr.getType(), getType(), "type");
   } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     return verifyFloatSemantics(floatAttr.getValue().getSemantics(), getType());
   } else if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
+    // Check that the element type of the attribute is compatible with the
+    // element type of the constant. Shared by the scalable and the fixed-size
+    // paths, since element types must agree either way.
+    auto verifyElementTypes = [&](ElementsAttr attr) -> LogicalResult {
+      Type attrElmType = LLVM::getConstantElementType(attr.getType());
+      Type resultElmType = LLVM::getConstantElementType(getType());
+      if (auto floatType = dyn_cast<FloatType>(attrElmType))
+        return verifyFloatSemantics(floatType.getFloatSemantics(),
+                                    resultElmType);
+
+      if (isa<IntegerType, IndexType>(attrElmType)) {
+        if (!isa<IntegerType>(resultElmType))
+          return emitOpError(
+              "expected integer element type for integer elements attribute");
+        return verifyIntegerSemantics(attrElmType, resultElmType,
+                                      "element type");
+      }
+      return success();
+    };
+
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3689,7 +3728,7 @@ LogicalResult LLVM::ConstantOp::verify() {
       if (!splatElementsAttr)
         return emitOpError()
                << "scalable vector type requires a splat attribute";
-      return success();
+      return verifyElementTypes(splatElementsAttr);
     }
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
@@ -3702,15 +3741,7 @@ LogicalResult LLVM::ConstantOp::verify() {
              << getNumElements(getType()) << " vs. " << attrNumElements;
     }
 
-    Type attrElmType = LLVM::getConstantElementType(elementsAttr.getType());
-    Type resultElmType = LLVM::getConstantElementType(getType());
-    if (auto floatType = dyn_cast<FloatType>(attrElmType))
-      return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
-
-    if (isa<IntegerType>(attrElmType) && !isa<IntegerType>(resultElmType)) {
-      return emitOpError(
-          "expected integer element type for integer elements attribute");
-    }
+    return verifyElementTypes(elementsAttr);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
 
     // The case where the constant is LLVMStructType has already been handled.

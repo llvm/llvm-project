@@ -48,6 +48,9 @@ Implemented Papers
 - P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
 - P0528R3: The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange (`Github <https://llvm.org/PR76180>`__)
 - P3798R1: The unexpected in ``std::expected`` (`Github <https://llvm.org/PR204394>`__)
+- P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
+- P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
+- P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
 
 Improvements and New Features
 -----------------------------

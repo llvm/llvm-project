@@ -892,17 +892,19 @@ static bool isCoalescable(const MachineInstr &MI) { return MI.isFullCopy(); }
 
 Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
   static const unsigned ChainLengthLimit = 3;
-  unsigned C = 0;
-  do {
+  for (unsigned C = 0; C <= ChainLengthLimit; ++C) {
     if (Reg.isPhysical())
       return Reg;
     assert(Reg.isVirtual());
 
-    MachineInstr *VRegDef = MRI->getUniqueVRegDef(Reg);
-    if (!VRegDef || !isCoalescable(*VRegDef))
+    const MachineOperand *DefMO = MRI->getOneDef(Reg);
+    if (!DefMO)
       return Register();
-    Reg = VRegDef->getOperand(1).getReg();
-  } while (++C <= ChainLengthLimit);
+    const MachineInstr *Def = DefMO->getParent();
+    if (!isCoalescable(*Def))
+      return Register();
+    Reg = Def->getOperand(1).getReg();
+  }
   return Register();
 }
 

@@ -357,10 +357,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   std::string className = safeGetName(calleeMethodsClass);
   std::string method = safeGetName(M);
 
-  if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
     return true;
 
-  if ((isRefType(className) && (method == "get" || method == "ptr")) ||
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
       ((className == "String" || className == "AtomString" ||
         className == "AtomStringImpl" || className == "UniqueString" ||
         className == "UniqueStringImpl" || className == "Identifier") &&

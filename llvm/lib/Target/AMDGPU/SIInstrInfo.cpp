@@ -281,11 +281,11 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   return false;
 }
 
-bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
+bool SIInstrInfo::isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
+  const MachineOperand &MO = MI.getOperand(OpIdx);
   // Any implicit use of exec by VALU is not a real register read.
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(*MO.getParent(), /*AllowLDSDMA=*/true) &&
-         !resultDependsOnExec(*MO.getParent());
+         isVALU(MI, /*AllowLDSDMA=*/true) && !resultDependsOnExec(MI);
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,

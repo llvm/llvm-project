@@ -163,7 +163,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 
@@ -230,8 +230,7 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        C->Caller->Func->getSource(C->getRetOpPC() - sizeof(uintptr_t))
-            .getRange();
+        C->Caller->Func->getSource(C->getRetOpPC()).getRange();
     if (CallRange.isValid())
       return CallRange;
   }

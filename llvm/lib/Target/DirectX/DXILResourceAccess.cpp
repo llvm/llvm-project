@@ -61,7 +61,7 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
   Value *Offset = nullptr;
 
   while (Ptr) {
-    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+    if ([[maybe_unused]] auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
       assert((II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
               II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) &&
              "Resource access through unexpected intrinsic");

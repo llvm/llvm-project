@@ -47394,8 +47394,14 @@ static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
     if (64 == BitWidth || 32 == BitWidth)
       MaskSrcVT = MVT::getVectorVT(MVT::getFloatingPointVT(BitWidth),
                                    MatchSizeInBits / BitWidth);
-    else
+    else {
+      // Lowering via parity is not valid when using pmovmskb for vectors
+      // with 16 bit elements. In that case we get two bits for every element,
+      // such that the parity is always zero.
+      if (BinOp == ISD::XOR && BitWidth != 8)
+        return SDValue();
       MaskSrcVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
+    }
 
     SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
     Movmsk = getMOVMSK(DL, BitcastLogicOp, DAG, Subtarget);
@@ -53508,7 +53514,8 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                                          SDValue X, SDValue Y,
                                          SelectionDAG &DAG,
-                                         bool ZeroSecondOpOnly = false) {
+                                         bool ZeroSecondOpOnly = false,
+                                         bool FlagsUsed = false) {
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
@@ -53569,7 +53576,7 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                        DAG.getVTList(VT, MVT::i32), X,
                        DAG.getConstant(0, DL, VT), EFLAGS);
   }
-  if (!IsSub && CC == X86::COND_O &&
+  if (!IsSub && CC == X86::COND_O && !FlagsUsed &&
       (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
       DAG.getSubtarget<X86Subtarget>().hasADX()) {
     // X + (overflow_from_OF ? 1 : 0) --> adox X, 0
@@ -59723,7 +59730,8 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
   // EFLAGS result doesn't change.
   return combineAddOrSubToADCOrSBB(IsSub, DL, VT, LHS, RHS, DAG,
-                                   /*ZeroSecondOpOnly*/ true);
+                                   /*ZeroSecondOpOnly*/ true,
+                                   /*FlagsUsed*/ true);
 }
 
 static SDValue combineX86XOR(SDNode *N, SelectionDAG &DAG,

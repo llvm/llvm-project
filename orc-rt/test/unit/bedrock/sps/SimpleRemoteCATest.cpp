@@ -22,6 +22,7 @@
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
+#include <deque>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -33,42 +34,81 @@ using namespace orc_rt;
 namespace {
 
 // A SimpleRemoteCA with no real transport. It exposes the protected protocol
-// operations for tests, records outgoing controller calls as pending results,
-// and records the wrapper results the executor produces.
+// operations for tests, records every message the base asks it to send, and
+// completes teardown as soon as the base begins it -- the shortest thing a real
+// transport could do.
 class TestSimpleRemoteCA : public SimpleRemoteCA {
 public:
-  TestSimpleRemoteCA(Session &S, TestSimpleRemoteCA **Self = nullptr)
-      : SimpleRemoteCA(S) {
+  using SimpleRemoteCA::Action;
+  using SimpleRemoteCA::encodeHangupPayload;
+  using SimpleRemoteCA::finishTeardown;
+  using SimpleRemoteCA::handleMessage;
+  using SimpleRemoteCA::Opcode;
+
+  // A message the base handed to the transport.
+  struct Sent {
+    Opcode Op;
+    uint64_t SeqNo;
+    orc_rt_ControllerHandlerTag Tag;
+    WrapperFunctionBuffer Payload;
+  };
+
+  /// Messages is owned by the caller so that it outlives a CA that teardown
+  /// destroys.
+  TestSimpleRemoteCA(Session &S, std::deque<Sent> &Messages,
+                     TestSimpleRemoteCA **Self = nullptr,
+                     bool DropOutDuringConnect = false)
+      : SimpleRemoteCA(S), Messages(Messages),
+        DropOutDuringConnect(DropOutDuringConnect) {
     if (Self)
       *Self = this;
   }
 
-  using SimpleRemoteCA::Action;
-  using SimpleRemoteCA::encodeHangupPayload;
-  using SimpleRemoteCA::encodeSetupMessage;
-  using SimpleRemoteCA::handleMessage;
-  using SimpleRemoteCA::Opcode;
-
-  void connect(BootstrapInfo) override {}
-  void disconnect() override {
-    // Mirror a real transport's teardown order: drain, then notify. A locally
-    // requested disconnect is orderly, so the mode is success.
-    failAllPendingCalls();
-    notifyDisconnected(Error::success());
-  }
-  void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag,
-                      WrapperFunctionBuffer) override {
-    LastCallSeqNo = registerPendingCall(std::move(OnComplete));
-  }
-  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
-                         uint64_t CallId) override {
-    WrapperResults.emplace_back(CallId, std::move(ResultBytes));
+  void connect(BootstrapInfo BI) override {
+    // Models a transport that enabled delivery and then dropped out before it
+    // got as far as accepting -- the sanctioned failed-connect path.
+    if (DropOutDuringConnect)
+      finishTeardown(make_error<StringError>("dropped during connect"));
+    beginAccepting(BI);
   }
 
-  uint64_t LastCallSeqNo = 0;
-  std::vector<std::pair<uint64_t, WrapperFunctionBuffer>> WrapperResults;
+  void sendMessage(Opcode Op, uint64_t SeqNo, orc_rt_ControllerHandlerTag Tag,
+                   WrapperFunctionBuffer Payload) override {
+    Messages.push_back(Sent{Op, SeqNo, Tag, std::move(Payload)});
+  }
+
+  void beginTeardown() override {
+    ++TeardownsBegun;
+    // What a transport owes for a local disconnect: an orderly reason, sent
+    // last.
+    sendMessage(Opcode::Hangup, 0, nullptr,
+                encodeHangupPayload(Error::success()));
+    if (FinishTeardownOnBegin)
+      finishTeardown(Error::success());
+  }
+
+  /// Clear to model a transport whose shutdown is asynchronous.
+  bool FinishTeardownOnBegin = true;
+  /// Set to tear down from inside connect, before beginAccepting runs.
+  bool DropOutDuringConnect;
+
+  unsigned TeardownsBegun = 0;
+  // A deque, not a vector: messages() returns pointers into this, and a later
+  // send must not invalidate them.
+  std::deque<Sent> &Messages;
 };
+
+using SentMessages = std::deque<TestSimpleRemoteCA::Sent>;
+
+// Messages of the given opcode, in send order.
+std::vector<const TestSimpleRemoteCA::Sent *>
+messages(const SentMessages &Msgs, TestSimpleRemoteCA::Opcode Op) {
+  std::vector<const TestSimpleRemoteCA::Sent *> Result;
+  for (auto &M : Msgs)
+    if (M.Op == Op)
+      Result.push_back(&M);
+  return Result;
+}
 
 constexpr uint64_t opc(TestSimpleRemoteCA::Opcode Op) {
   return static_cast<uint64_t>(Op);
@@ -98,7 +138,10 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
                             SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
                             SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
 
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
 
   int SomeSymbol = 0;
   SimpleSymbolTable Symbols;
@@ -108,7 +151,14 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
 
   BootstrapInfo BI(S, std::move(Symbols),
                    BootstrapInfo::ValueMap{{"key", "value"}});
-  auto Payload = TestSimpleRemoteCA::encodeSetupMessage(BI);
+
+  // connect sends setup; take the payload from the message the base produced.
+  TestSimpleRemoteCA *CA = nullptr;
+  S.attach<TestSimpleRemoteCA>(std::move(BI), Msgs, &CA);
+  ASSERT_TRUE(CA);
+  auto Setups = messages(Msgs, TestSimpleRemoteCA::Opcode::Setup);
+  ASSERT_EQ(Setups.size(), 1u);
+  auto &Payload = Setups[0]->Payload;
 
   std::string Triple;
   uint64_t PageSize = 0;
@@ -132,7 +182,8 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
 
 TEST(SimpleRemoteCATest, HandleMessageRejectsInvalidOpcode) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   expectError(CA.handleMessage(/*OpC=*/99, /*SeqNo=*/0, ExecutorAddr(),
                                WrapperFunctionBuffer()),
               "Invalid opcode 99");
@@ -140,7 +191,8 @@ TEST(SimpleRemoteCATest, HandleMessageRejectsInvalidOpcode) {
 
 TEST(SimpleRemoteCATest, HandleMessageRejectsUnexpectedSetup) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Setup), 0,
                                ExecutorAddr(), WrapperFunctionBuffer()),
               "Unexpected Setup message");
@@ -148,7 +200,8 @@ TEST(SimpleRemoteCATest, HandleMessageRejectsUnexpectedSetup) {
 
 TEST(SimpleRemoteCATest, HandleMessageAcceptsWellFormedHangup) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   auto R = CA.handleMessage(
       opc(TestSimpleRemoteCA::Opcode::Hangup), 0, ExecutorAddr(),
       TestSimpleRemoteCA::encodeHangupPayload(Error::success()));
@@ -162,7 +215,8 @@ TEST(SimpleRemoteCATest, HandleMessageReportsHangupReason) {
   // A hang-up carrying a reason ends the session with that reason, rather than
   // reporting a plain End: the reactor turns it into the disconnection error.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   expectError(CA.handleMessage(
                   opc(TestSimpleRemoteCA::Opcode::Hangup), 0, ExecutorAddr(),
                   TestSimpleRemoteCA::encodeHangupPayload(
@@ -172,7 +226,8 @@ TEST(SimpleRemoteCATest, HandleMessageReportsHangupReason) {
 
 TEST(SimpleRemoteCATest, HandleMessageRejectsMalformedHangup) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
 
   // A hang-up must carry no sequence number and no tag.
   expectError(CA.handleMessage(
@@ -195,7 +250,8 @@ TEST(SimpleRemoteCATest, HandleMessageRejectsMalformedHangup) {
 
 TEST(SimpleRemoteCATest, HandleMessageRejectsResultWithTag) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Result),
                                /*SeqNo=*/1, ExecutorAddr(0x1000),
                                WrapperFunctionBuffer()),
@@ -204,7 +260,8 @@ TEST(SimpleRemoteCATest, HandleMessageRejectsResultWithTag) {
 
 TEST(SimpleRemoteCATest, HandleMessageRejectsResultForUnknownSequenceNumber) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
+  SentMessages Msgs;
+  TestSimpleRemoteCA CA(S, Msgs);
   expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Result),
                                /*SeqNo=*/7, ExecutorAddr(),
                                WrapperFunctionBuffer::copyFrom("r", 1)),
@@ -212,9 +269,12 @@ TEST(SimpleRemoteCATest, HandleMessageRejectsResultForUnknownSequenceNumber) {
 }
 
 TEST(SimpleRemoteCATest, ResultCompletesPendingCall) {
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
   ASSERT_TRUE(CA);
 
   // Originate a controller call; the test double registers it as pending.
@@ -226,7 +286,9 @@ TEST(SimpleRemoteCATest, ResultCompletesPendingCall) {
       },
       nullptr, WrapperFunctionBuffer());
 
-  uint64_t SeqNo = CA->LastCallSeqNo;
+  auto Calls = messages(Msgs, TestSimpleRemoteCA::Opcode::Call);
+  ASSERT_EQ(Calls.size(), 1u);
+  uint64_t SeqNo = Calls[0]->SeqNo;
   ASSERT_NE(SeqNo, 0u);
   ASSERT_FALSE(Res) << "handler fired before the result arrived";
 
@@ -244,9 +306,12 @@ TEST(SimpleRemoteCATest, ResultCompletesPendingCall) {
 }
 
 TEST(SimpleRemoteCATest, CallDispatchesWrapperAndReturnsResult) {
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
   ASSERT_TRUE(CA);
 
   // A Call names echoWrapper via the tag; SeqNo is the call id.
@@ -259,16 +324,20 @@ TEST(SimpleRemoteCATest, CallDispatchesWrapperAndReturnsResult) {
   else
     EXPECT_EQ(*R, TestSimpleRemoteCA::Action::Continue);
 
-  ASSERT_EQ(CA->WrapperResults.size(), 1u);
-  EXPECT_EQ(CA->WrapperResults[0].first, 42u);
-  auto &Result = CA->WrapperResults[0].second;
+  auto Results = messages(Msgs, TestSimpleRemoteCA::Opcode::Result);
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_EQ(Results[0]->SeqNo, 42u);
+  auto &Result = Results[0]->Payload;
   EXPECT_EQ(std::string(Result.data(), Result.size()), "world");
 }
 
 TEST(SimpleRemoteCATest, DisconnectDrainsPendingCalls) {
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
   ASSERT_TRUE(CA);
 
   // A controller call is in flight (no result will arrive).
@@ -279,7 +348,7 @@ TEST(SimpleRemoteCATest, DisconnectDrainsPendingCalls) {
           Err = M;
       },
       nullptr, WrapperFunctionBuffer());
-  ASSERT_NE(CA->LastCallSeqNo, 0u);
+  ASSERT_EQ(messages(Msgs, TestSimpleRemoteCA::Opcode::Call).size(), 1u);
   ASSERT_FALSE(Err) << "handler fired before disconnect";
 
   // Detach drives disconnect, which drains the pending call with a
@@ -288,4 +357,109 @@ TEST(SimpleRemoteCATest, DisconnectDrainsPendingCalls) {
 
   ASSERT_TRUE(Err);
   EXPECT_EQ(*Err, "disconnected");
+}
+
+TEST(SimpleRemoteCATest, CallRacingTeardownFailsInline) {
+  // Teardown has begun but the transport hasn't finished, so the call reaches
+  // the CA and must be failed on the spot rather than left pending -- nothing
+  // will drain it if the drain has already run.
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  TestSimpleRemoteCA *CA = nullptr;
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
+  ASSERT_TRUE(CA);
+  CA->FinishTeardownOnBegin = false;
+
+  CA->disconnect();
+  ASSERT_EQ(CA->TeardownsBegun, 1u);
+
+  std::optional<std::string> Err;
+  S.callController(
+      [&](WrapperFunctionBuffer R) {
+        if (const char *M = R.getOutOfBandError())
+          Err = M;
+      },
+      nullptr, WrapperFunctionBuffer());
+
+  // The handler ran before callController returned, and nothing was sent.
+  ASSERT_TRUE(Err);
+  EXPECT_EQ(*Err, "disconnected");
+  EXPECT_TRUE(messages(Msgs, TestSimpleRemoteCA::Opcode::Call).empty());
+
+  CA->finishTeardown(Error::success());
+}
+
+TEST(SimpleRemoteCATest, DisconnectIsIdempotentAndDefersNotification) {
+  unsigned Notifications = 0;
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) {
+    ++Notifications;
+    cantFail(std::move(Err));
+  });
+
+  TestSimpleRemoteCA *CA = nullptr;
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
+  ASSERT_TRUE(CA);
+  CA->FinishTeardownOnBegin = false;
+
+  CA->disconnect();
+  CA->disconnect();
+  EXPECT_EQ(CA->TeardownsBegun, 1u) << "second disconnect was not a no-op";
+  EXPECT_EQ(Notifications, 0u) << "notified before the transport finished";
+
+  // finishTeardown may destroy *CA, so it is the last thing to touch it.
+  CA->finishTeardown(Error::success());
+  EXPECT_EQ(Notifications, 1u);
+}
+
+TEST(SimpleRemoteCATest, TransportInitiatedTeardownNotifiesWithoutHangup) {
+  // A hang-up from the controller, or a transport failure, goes straight to
+  // finishTeardown: the peer already knows, so nothing is sent.
+  unsigned Notifications = 0;
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) {
+    ++Notifications;
+    EXPECT_EQ(toString(std::move(Err)), "controller vanished");
+  });
+
+  TestSimpleRemoteCA *CA = nullptr;
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA);
+  ASSERT_TRUE(CA);
+
+  // Nothing sends a hang-up on this path, because beginTeardown never runs.
+  EXPECT_EQ(CA->TeardownsBegun, 0u);
+  CA->finishTeardown(make_error<StringError>("controller vanished"));
+
+  EXPECT_EQ(Notifications, 1u);
+}
+
+TEST(SimpleRemoteCATest, DropOutBeforeAcceptingIsANoOp) {
+  // A transport that enables delivery before calling beginAccepting can lose
+  // the connection first, so beginAccepting has to tolerate running after
+  // teardown has already completed: it accepts nothing and sends nothing.
+  unsigned Notifications = 0;
+  // Declared before the Session: its destructor drives teardown, which
+  // records a hang-up.
+  SentMessages Msgs;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.setOnDisconnect([&](Error Err) {
+    ++Notifications;
+    EXPECT_EQ(toString(std::move(Err)), "dropped during connect");
+  });
+
+  // Msgs outlives the CA, which is freed as attach returns.
+  TestSimpleRemoteCA *CA = nullptr;
+  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), Msgs, &CA,
+                               /*DropOutDuringConnect=*/true);
+
+  EXPECT_EQ(Notifications, 1u);
+  EXPECT_TRUE(Msgs.empty()) << "setup was sent after teardown completed";
 }

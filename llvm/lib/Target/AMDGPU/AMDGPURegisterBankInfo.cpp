@@ -70,7 +70,6 @@
 
 #include "AMDGPURegisterBankInfo.h"
 
-#include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"

@@ -230,10 +230,10 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
 }
 
 Function *Program::getFunction(const FunctionDecl *F) {
-  F = F->getCanonicalDecl();
+  F = F->getFirstDecl();
   assert(F);
   auto It = Funcs.find(F);
-  return It == Funcs.end() ? nullptr : It->second.get();
+  return It == Funcs.end() ? nullptr : It->second;
 }
 
 Record *Program::getOrCreateRecord(const RecordDecl *RD) {

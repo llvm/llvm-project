@@ -1551,6 +1551,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
     if (Subtarget->hasDotProd()) {
@@ -2218,17 +2226,32 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT :
          {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
+                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
+                    MVT::nxv4i32, MVT::nxv4f32}) {
+      // Use a custom lowering for masked stores that could be a supported
+      // compressing store. Note: These types still use the normal (Legal)
+      // lowering for non-compressing masked stores.
+      setOperationAction(ISD::MSTORE, VT, Custom);
+    }
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
     for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
+                    MVT::v2f64}) {
+      setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    }
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
-      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+      for (auto VT :
+           {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using
+        // VECTOR_COMPRESS).
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
 
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
@@ -2274,15 +2297,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
-                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
-                    MVT::nxv4i32, MVT::nxv4f32}) {
-      // Use a custom lowering for masked stores that could be a supported
-      // compressing store. Note: These types still use the normal (Legal)
-      // lowering for non-compressing masked stores.
-      setOperationAction(ISD::MSTORE, VT, Custom);
-    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -9688,13 +9702,15 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   unsigned StackArgSize = CCInfo.getStackSize();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (DoesCalleeRestoreStack(CallConv, TailCallOpt)) {
+    const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
+
     // This is a non-standard ABI so by fiat I say we're allowed to make full
-    // use of the stack area to be popped, which must be aligned to 16 bytes in
-    // any case:
-    StackArgSize = alignTo(StackArgSize, 16);
+    // use of the stack area to be popped, which must be aligned to the stack
+    // alignment in any case:
+    StackArgSize = alignTo(StackArgSize, StackAlign);
 
     // If we're expected to restore the stack (e.g. fastcc) then we'll be adding
-    // a multiple of 16.
+    // a multiple of the stack alignment.
     FuncInfo->setArgumentStackToRestore(StackArgSize);
 
     // This realignment carries over to the available bytes below. Our own
@@ -10532,18 +10548,23 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int FPDiff = 0;
+  const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
-
-    // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    NumBytes = alignTo(NumBytes, 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
+
+    // Since callee will pop the argument stack as a tail call, we must keep the
+    // popped size aligned to the stack alignment. Either or both of NumBytes
+    // and NumReusableBytes may not have been aligned, so we further increase by
+    // the amount needed to keep FPDiff aligned, and therefore preserve the
+    // required alignment going into the callee.
+    FPDiff -= offsetToAlignment(FPDiff, StackAlign);
+    NumBytes += offsetToAlignment(FPDiff, StackAlign);
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.
@@ -11102,8 +11123,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
     DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
-  uint64_t CalleePopBytes =
-      DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
+  uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
+                                ? alignTo(NumBytes, StackAlign)
+                                : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
@@ -35158,6 +35180,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();

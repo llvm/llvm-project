@@ -65,7 +65,7 @@ define void @access_group(ptr %arg1) {
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, i32 42}
+; CHECK-SAME: warning: unhandled metadata: ![[LOOP_ID:[0-9]+]] = distinct !{![[LOOP_ID]], i32 42}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -80,7 +80,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import empty loop property
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[EMPTY_LOOP:[0-9]+]] = distinct !{![[EMPTY_LOOP]], ![[EMPTY_PROP:[0-9]+]]}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -96,7 +96,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop property without a name
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[UNNAMED_LOOP:[0-9]+]] = distinct !{![[UNNAMED_LOOP]], ![[UNNAMED_PROP:[0-9]+]]}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -112,7 +112,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop properties with duplicated names llvm.loop.disable_nonforced
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[DUP_LOOP:[0-9]+]] = distinct !{![[DUP_LOOP]], ![[DUP_PROP:[0-9]+]], ![[DUP_PROP]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -128,7 +128,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.disable_nonforced to hold no value
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[VALUE_LOOP:[0-9]+]] = distinct !{![[VALUE_LOOP]], ![[VALUE_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -144,7 +144,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata nodes llvm.loop.unroll.enable and llvm.loop.unroll.disable to be mutually exclusive
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+; CHECK-SAME: warning: unhandled metadata: ![[EXCLUSIVE_LOOP:[0-9]+]] = distinct !{![[EXCLUSIVE_LOOP]], ![[ENABLE_PROP:[0-9]+]], ![[DISABLE_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -161,7 +161,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.width to hold an i32 value
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[WIDTH_LOOP:[0-9]+]] = distinct !{![[WIDTH_LOOP]], ![[WIDTH_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -177,7 +177,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[FOLLOWUP_LOOP:[0-9]+]] = distinct !{![[FOLLOWUP_LOOP]], ![[FOLLOWUP_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -193,7 +193,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.parallel_accesses to hold one or multiple MDNodes
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[PARALLEL_LOOP:[0-9]+]] = distinct !{![[PARALLEL_LOOP]], ![[PARALLEL_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -209,7 +209,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: unknown loop annotation llvm.loop.typo
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+; CHECK-SAME: warning: unhandled metadata: ![[UNKNOWN_LOOP:[0-9]+]] = distinct !{![[UNKNOWN_LOOP]], ![[KNOWN_PROP:[0-9]+]], ![[UNKNOWN_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -241,7 +241,7 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE_LIST:[0-9]+]])
 define void @unused_scope() {
   call void @llvm.experimental.noalias.scope.decl(metadata !0)
   ret void
@@ -320,7 +320,7 @@ bb1:
 !10 = !{ i32 1, !"foo", i32 1 }
 !11 = !{ i32 4, !"bar", i32 37 }
 !12 = !{ i32 2, !"qux", i32 42 }
-; CHECK: unsupported module flag value for key 'qux' : !4 = !{!"foo", i32 1}
+; CHECK: unsupported module flag value for key 'qux' : ![[FLAG_VALUE:[0-9]+]] = !{!"foo", i32 1}
 !13 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
 !llvm.module.flags = !{ !10, !11, !12, !13 }
 

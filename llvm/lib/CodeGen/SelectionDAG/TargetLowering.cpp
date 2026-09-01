@@ -13672,6 +13672,50 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     break;
   }
 
+  // A wide partial reduction is built from a ladder of narrower ones, a rung
+  // at a time, each halving the element count and doubling the width.
+  unsigned Opc = N->getOpcode();
+  ElementCount MulEC = MulOpVT.getVectorElementCount();
+  ElementCount AccEC = AccVT.getVectorElementCount();
+  unsigned CountRatio =
+      MulEC.hasKnownScalarFactor(AccEC) ? MulEC.getKnownScalarFactor(AccEC) : 0;
+  unsigned WidthRatio =
+      AccVT.getScalarSizeInBits() / MulOpVT.getScalarSizeInBits();
+  if (Opc != ISD::PARTIAL_REDUCE_FMLA && CountRatio > 2 && WidthRatio >= 2) {
+    LLVMContext &Ctx = *DAG.getContext();
+    EVT ProdVT = MulOpVT.widenIntegerVectorElementType(Ctx);
+
+    // A pure reduction peels one rung and re-enters.
+    if (llvm::isOneOrOneSplat(MulRHS)) {
+      EVT RungVT = ProdVT.getHalfNumVectorElementsVT(Ctx);
+      return DAG.getNode(Opc, DL, AccVT, Acc,
+                         DAG.getNode(Opc, DL, RungVT,
+                                     DAG.getConstant(0, DL, RungVT), MulLHS,
+                                     MulRHS),
+                         DAG.getConstant(1, DL, RungVT));
+    }
+
+    // A multiply widens the products by one rung, which legalizes back into a
+    // widening multiply per half, and the ladder re-enters as a plain sum.
+    SDValue Prod = DAG.getNode(ISD::MUL, DL, ProdVT,
+                               DAG.getNode(ExtOpcLHS, DL, ProdVT, MulLHS),
+                               DAG.getNode(ExtOpcRHS, DL, ProdVT, MulRHS));
+    auto [Lo, Hi] = DAG.SplitVector(Prod, DL);
+    SDValue One = DAG.getConstant(1, DL, Lo.getValueType());
+
+    // The halves meet at the narrowest rung, so the accumulator is added once.
+    EVT MidVT = Lo.getValueType()
+                    .widenIntegerVectorElementType(Ctx)
+                    .getHalfNumVectorElementsVT(Ctx);
+    if (ElementCount::isKnownLE(MidVT.getVectorElementCount(), AccEC))
+      return DAG.getNode(Opc, DL, AccVT,
+                         DAG.getNode(Opc, DL, AccVT, Acc, Lo, One), Hi, One);
+    SDValue Mid =
+        DAG.getNode(Opc, DL, MidVT, DAG.getConstant(0, DL, MidVT), Lo, One);
+    Mid = DAG.getNode(Opc, DL, MidVT, Mid, Hi, One);
+    return DAG.getNode(Opc, DL, AccVT, Acc, Mid, DAG.getConstant(1, DL, MidVT));
+  }
+
   if (ExtMulOpVT != MulOpVT) {
     MulLHS = DAG.getNode(ExtOpcLHS, DL, ExtMulOpVT, MulLHS);
     MulRHS = DAG.getNode(ExtOpcRHS, DL, ExtMulOpVT, MulRHS);

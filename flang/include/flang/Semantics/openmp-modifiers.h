@@ -295,7 +295,7 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers) {
     return true;
   }
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   bool result{true};
   for (auto &m : *modifiers) {
     const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor(m)};
@@ -304,8 +304,8 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
     }
     // Find the next higher version that allows this modifier on this clause.
     const auto &versions{desc.getVersions()};
-    unsigned since{~0u}, until{0u};
-    for (unsigned v : versions) {
+    llvm::omp::Version since(~0u), until(0u);
+    for (llvm::omp::Version v : versions) {
       if (desc.getClauses(v).test(id)) {
         if (v < version) {
           until = std::max(until, v);
@@ -314,20 +314,20 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
         }
       }
     }
-    if (since == ~0u && until == 0u) {
+    if (since == ~0 && until == 0) {
       // This shouldn't really happen, but have it just in case.
       semaCtx.Say(m.source,
           "'%s' modifier is not supported on %s clause"_err_en_US,
           desc.getName().str(),
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-    } else if (since != ~0u && version < since) {
+    } else if (since != ~0 && version < since) {
       semaCtx.Say(m.source,
           "'%s' modifier is not supported in %s on %s clause, %s"_warn_en_US,
           desc.getName().str(), omp::ThisVersion(version),
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)),
           omp::TryVersion(since));
       result = false;
-    } else if (until != 0u && version > until) {
+    } else if (until != 0 && version > until) {
       semaCtx.Say(m.source,
           "'%s' modifier is no longer supported in %s on %s clause"_warn_en_US,
           desc.getName().str(), omp::ThisVersion(version),
@@ -346,7 +346,7 @@ template <typename SpecificTy, typename UnionTy>
 bool verifyIfRequired(const SpecificTy *,
     const std::optional<std::list<UnionTy>> &modifiers,
     parser::CharBlock clauseSource, SemanticsContext &semaCtx) {
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
   if (!desc.getProperties(version).test(llvm::omp::Property::Required)) {
     // If the modifier is not required, there is nothing to do.
@@ -400,7 +400,7 @@ bool verifyIfUnique(const SpecificTy *,
   // `specific` is the location of the modifier of type SpecificTy.
   assert(specific != end && "`specific` must be a valid location");
 
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const llvm::omp::descriptor::Modifier &desc{OmpGetDescriptor<SpecificTy>()};
   // Ultimate implies Unique.
   if (!desc.getProperties(version).test(llvm::omp::Property::Unique) &&
@@ -449,7 +449,7 @@ bool verifyUltimate(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   bool result{true};
   auto first{modifiers->cbegin()};
   auto last{std::prev(modifiers->cend())};
@@ -498,7 +498,7 @@ bool verifyExclusive(const std::optional<std::list<UnionTy>> &modifiers,
   if (!modifiers || modifiers->size() <= 1) {
     return true;
   }
-  unsigned version{semaCtx.langOptions().OpenMPVersion};
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
   const UnionTy &front{modifiers->front()};
   const llvm::omp::descriptor::Modifier &frontDesc{OmpGetDescriptor(front)};
 

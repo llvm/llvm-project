@@ -3739,7 +3739,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
-    auto linkage = convertLinkage(global.getLinkName());
+    auto linkage = convertLinkage(global.getLinkage());
     auto isConst = global.getConstant().has_value();
     mlir::SymbolRefAttr comdat;
     llvm::ArrayRef<mlir::NamedAttribute> attrs;
@@ -3856,22 +3856,24 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     return mlir::success();
   }
 
-  // TODO: String comparisons should be avoided. Replace linkName with an
-  // enumeration.
   mlir::LLVM::Linkage
-  convertLinkage(std::optional<llvm::StringRef> optLinkage) const {
+  convertLinkage(std::optional<fir::LinkageEnum> optLinkage) const {
     if (optLinkage) {
-      auto name = *optLinkage;
-      if (name == "internal")
+      switch (*optLinkage) {
+      case fir::LinkageEnum::Internal:
         return mlir::LLVM::Linkage::Internal;
-      if (name == "linkonce")
+      case fir::LinkageEnum::Linkonce:
         return mlir::LLVM::Linkage::Linkonce;
-      if (name == "linkonce_odr")
+      case fir::LinkageEnum::LinkonceODR:
         return mlir::LLVM::Linkage::LinkonceODR;
-      if (name == "common")
+      case fir::LinkageEnum::Common:
         return mlir::LLVM::Linkage::Common;
-      if (name == "weak")
+      case fir::LinkageEnum::Weak:
         return mlir::LLVM::Linkage::Weak;
+      case fir::LinkageEnum::External:
+        return mlir::LLVM::Linkage::External;
+      }
+      return mlir::LLVM::Linkage::External;
     }
     return mlir::LLVM::Linkage::External;
   }

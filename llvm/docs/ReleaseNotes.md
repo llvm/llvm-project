@@ -146,6 +146,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* The DirectX backend is now an official target and has moved from
+  `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
+  default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
+
 ### Changes to TableGen
 
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
@@ -188,6 +192,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the AVR Backend
 
 ### Changes to the DirectX Backend
+
+* The DirectX backend has been promoted from experimental to an official,
+  fully supported LLVM target.
 
 ### Changes to the Hexagon Backend
 
