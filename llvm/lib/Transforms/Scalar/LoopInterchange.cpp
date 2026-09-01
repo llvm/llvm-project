@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -636,7 +637,6 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  void adjustLoopLinks();
   void adjustLoopBranches();
 
   Loop *OuterLoop;
@@ -815,7 +815,7 @@ bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
 
 static FreezeInst *findFreezeInReNestedBlocks(Loop *OuterLoop,
                                               Loop *InnerLoop) {
-  // adjustLoopLinks swaps the preheader bodies after changing their loop
+  // adjustLoopBranches swaps the preheader bodies after changing their loop
   // roles, so the original outer-preheader body remains outside the new outer
   // loop and retains its execution count.
   BasicBlock *Blocks[] = {
@@ -2281,7 +2281,7 @@ void LoopInterchangeTransform::transform(
       I.moveBeforePreserving(OuterLoopHeader->getTerminator()->getIterator());
   }
 
-  adjustLoopLinks();
+  adjustLoopBranches();
 
   // Finally, drop the nsw/nuw/ninf flags from the instructions for reduction
   // calculations.
@@ -2639,6 +2639,12 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
 
+  // Swap the preheader contents so each definition sits in the preheader of the
+  // loop it now belongs to. This runs before the LCSSA rebuild below so that
+  // any definition referenced across the interchanged levels dominates its uses
+  // when formLCSSAForInstructions runs.
+  swapBBContents(OuterLoop->getLoopPreheader(), InnerLoop->getLoopPreheader());
+
   // Values defined in the outer loop header could be used in the inner loop
   // latch. In that case, we need to create LCSSA phis for them, because after
   // interchanging they will be defined in the new inner loop and used in the
@@ -2647,19 +2653,13 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   for (Instruction &I :
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
+
+#ifndef NDEBUG
+  assert(!verifyFunction(*OuterLoopHeader->getParent(), &errs()) &&
+         "LoopInterchange handed dominance-broken IR to LCSSA rebuild");
+#endif
+
   formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
-}
-
-void LoopInterchangeTransform::adjustLoopLinks() {
-  // Adjust all branches in the inner and outer loop.
-  adjustLoopBranches();
-
-  // We have interchanged the preheaders so we need to interchange the data in
-  // the preheaders as well. This is because the content of the inner
-  // preheader was previously executed inside the outer loop.
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
 }
 
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,

@@ -452,10 +452,15 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           assert((!isUnnamedUnit || !memberIsEmptyRecord(countedTy)) &&
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
+          // A named access unit is a bit-field to the classifier as well.  Its
+          // eightbyte classes come from the bits it spans, and the rule that
+          // sends a record with an unaligned field to memory does not apply to
+          // a bit-field, which may sit at any offset.
+          bool isAccessUnit = isUnnamedUnit || cir::isBitFieldAccessUnit(kind);
           fields.push_back(llvm::abi::FieldInfo(
               mapCIRType(countedTy, typeMapper, dl, modOp),
               recTy.getElementOffset(dl, idx) * 8,
-              /*IsBitField=*/isUnnamedUnit, isUnnamedUnit ? widthBits : 0,
+              /*IsBitField=*/isAccessUnit, isAccessUnit ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamedUnit));
         }
 
