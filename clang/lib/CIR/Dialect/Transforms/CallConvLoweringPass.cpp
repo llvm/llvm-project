@@ -297,6 +297,12 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
         return cir::VectorType::get(elemCIR,
                                     vecTy->getNumElements().getFixedValue());
       })
+      .Case([&](const llvm::abi::ArrayType *arrTy) -> mlir::Type {
+        mlir::Type elemCIR = abiTypeToCIR(arrTy->getElementType(), ctx);
+        if (!elemCIR)
+          return nullptr;
+        return cir::ArrayType::get(elemCIR, arrTy->getNumElements());
+      })
       .Case([&](const llvm::abi::RecordType *recTy) -> mlir::Type {
         SmallVector<mlir::Type> fieldTypes;
         fieldTypes.reserve(recTy->getFields().size());
@@ -455,9 +461,11 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// split into a tuple of them, and a scalar the classifier widens to fill its
 /// eightbyte.  getDirect keeps canFlatten set so the rewriter can split a
 /// multi-field coerced struct into individual wire arguments.  Any other scalar
-/// passes in its natural CIR type, which a null coercion denotes.  A coercion
-/// this bridge cannot represent yields std::nullopt so the caller reports NYI
-/// rather than silently passing the value unchanged.
+/// passes in its natural CIR type, which a null coercion denotes. An aggregate
+/// with a null coercion is likewise passed directly in registers, which the
+/// target backend splits.  A coercion this bridge cannot represent yields
+/// std::nullopt so the caller reports NYI rather than silently passing the
+/// value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
@@ -480,6 +488,9 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
+    // A null coerce is always a pass-through.
+    if (!coerceAbi)
+      return ArgClassification::getDirect(nullptr);
     bool isAggregate = isa_and_present<cir::RecordType, cir::ArrayType>(origTy);
     // For a _Complex or a vector the classifier's coerce is only sometimes the
     // natural type, so it has to be read rather than assumed.
