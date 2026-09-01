@@ -351,14 +351,16 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
   // Signify a new run has begun.
   Closed = false;
 
-  json::Object Tool{
-      {"driver",
-       json::Object{{"name", ShortToolName},
-                    {"fullName", LongToolName},
-                    {"language", "en-US"},
-                    {"version", ToolVersion},
-                    {"informationUri",
-                     "https://clang.llvm.org/docs/UsersManual.html"}}}};
+  StringRef InformationUri = "https://clang.llvm.org/docs/UsersManual.html";
+  if (LongToolName == "clang-tidy")
+    InformationUri = "https://clang.llvm.org/extra/clang-tidy/";
+
+  json::Object Tool{{"driver", json::Object{{"name", ShortToolName},
+                                            {"fullName", LongToolName},
+                                            {"language", "en-US"},
+                                            {"version", ToolVersion},
+                                            {"informationUri", InformationUri},
+                                            {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},
                       {"artifacts", {}},
