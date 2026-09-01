@@ -1,0 +1,24 @@
+// Test filetag-based charset conversion with `-verify` and an early explicit
+// reference to a module.modulemap file.
+
+// REQUIRES: system-zos
+
+//
+// verify-modulemap.c:
+// ```
+// // expected-error@InputCharsetIBM1047/module.modulemap:2 {{expected '{'}}
+// #include "InputCharsetIBM1047/empty.h"
+// ```
+//
+// module.modulemap:
+// ```
+// module A
+// ```
+
+// RUN: rm -rf %t && mkdir -p %t/InputCharsetIBM1047
+// RUN: cp %S/Inputs/InputCharsetIBM1047/verify-modulemap.c %t/InputCharsetIBM1047/verify-modulemap.c
+// RUN: chtag -tc 1047 %t/InputCharsetIBM1047/verify-modulemap.c
+// RUN: cp %S/Inputs/InputCharsetIBM1047/module.modulemap %t/InputCharsetIBM1047/module.modulemap
+// RUN: chtag -tc 1047 %t/InputCharsetIBM1047/module.modulemap
+// RUN: cp %S/Inputs/InputCharsetIBM1047/empty.h %t/InputCharsetIBM1047/empty.h
+// RUN: %clang_cc1 -verify -fmodules -fimplicit-module-maps -I %t %t/InputCharsetIBM1047/verify-modulemap.c
