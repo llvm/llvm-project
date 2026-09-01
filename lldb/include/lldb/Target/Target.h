@@ -600,6 +600,7 @@ public:
     eBroadcastBitNewTargetCreated = (1 << 6),
   };
 
+
   // These two functions fill out the Broadcaster interface:
 
   static llvm::StringRef GetStaticBroadcasterClass();
@@ -2193,6 +2194,10 @@ public:
 
   TargetStats &GetStatistics() { return m_stats; }
 
+public:
+  SectionLoadList &GetSectionLoadListPublic() {
+    return GetSectionLoadList();
+  }
 protected:
   /// Construct with optional file and arch.
   ///

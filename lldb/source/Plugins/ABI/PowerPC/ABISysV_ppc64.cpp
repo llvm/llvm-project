@@ -156,6 +156,9 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
     return false;
 
+#if defined(_AIX)
+  assert(0);
+#else
   // Read TOC pointer value.
   reg_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
 
@@ -171,6 +174,132 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
             (uint64_t)reg_value);
   if (!process_sp->WritePointerToMemory(sp + stack_offset, reg_value, error))
     return false;
+#endif
+
+  // Read the current SP value.
+  reg_value = reg_ctx->ReadRegisterAsUnsigned(sp_reg_info, 0);
+
+  // Save current SP onto the stack.
+  LLDB_LOGF(log, "Writing SP at SP(0x%" PRIx64 ")+0: 0x%" PRIx64, (uint64_t)sp,
+            (uint64_t)reg_value);
+  if (!process_sp->WritePointerToMemory(sp, reg_value, error))
+    return false;
+
+  // %r1 is set to the actual stack value.
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+    return false;
+
+  // %pc is set to the address of the called function.
+
+  LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+    return false;
+
+  return true;
+}
+
+bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
+                                       addr_t func_addr, addr_t toc_addr,
+                                       addr_t return_addr,
+                                       llvm::ArrayRef<addr_t> args) const {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  if (log) {
+    StreamString s;
+    s.Printf("ABISysV_ppc64::PrepareTrivialCall (tid = 0x%" PRIx64
+             ", sp = 0x%" PRIx64 ", func_addr = 0x%" PRIx64
+             ", return_addr = 0x%" PRIx64,
+             thread.GetID(), (uint64_t)sp, (uint64_t)func_addr,
+             (uint64_t)return_addr);
+
+    for (size_t i = 0; i < args.size(); ++i)
+      s.Printf(", arg%" PRIu64 " = 0x%" PRIx64, static_cast<uint64_t>(i + 1),
+               args[i]);
+    s.PutCString(")");
+    log->PutString(s.GetString());
+  }
+
+  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  if (!reg_ctx)
+    return false;
+
+  const RegisterInfo *reg_info = nullptr;
+
+  if (args.size() > 8) // TODO handle more than 8 arguments
+    return false;
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+                                        LLDB_REGNUM_GENERIC_ARG1 + i);
+    LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
+    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+      return false;
+  }
+
+  // First, align the SP
+
+  LLDB_LOGF(log, "16-byte aligning SP: 0x%" PRIx64 " to 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)(sp & ~0xfull));
+
+  sp &= ~(0xfull); // 16-byte alignment
+
+  sp -= 544; // allocate frame to save TOC, RA and SP.
+
+  Status error;
+  uint64_t reg_value;
+  const RegisterInfo *pc_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterInfo *sp_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  ProcessSP process_sp(thread.GetProcess());
+  const RegisterInfo *lr_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+  const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoAtIndex(2);
+  const RegisterInfo *r12_reg_info = reg_ctx->GetRegisterInfoAtIndex(12);
+
+  // Save return address onto the stack.
+  LLDB_LOGF(log,
+            "Pushing the return address onto the stack: 0x%" PRIx64
+            "(+16): 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)return_addr);
+  if (!process_sp->WritePointerToMemory(sp + 16, return_addr, error))
+    return false;
+
+  // Write the return address to link register.
+  LLDB_LOGF(log, "Writing LR: 0x%" PRIx64, (uint64_t)return_addr);
+  if (!reg_ctx->WriteRegisterFromUnsigned(lr_reg_info, return_addr))
+    return false;
+
+  // Write target address to %r12 register.
+  LLDB_LOGF(log, "Writing R12: 0x%" PRIx64, (uint64_t)func_addr);
+  if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
+    return false;
+
+#if defined(_AIX)
+  LLDB_LOGF(log, "Writing R2: 0x%" PRIx64, (uint64_t)toc_addr);
+  if (!reg_ctx->WriteRegisterFromUnsigned(r2_reg_info, toc_addr))
+    return false;
+#else
+  // Read TOC pointer value.
+  reg_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
+
+  // Write TOC pointer onto the stack.
+  uint64_t stack_offset;
+  if (GetByteOrder() == lldb::eByteOrderLittle)
+    stack_offset = 24;
+  else
+    stack_offset = 40;
+
+  LLDB_LOGF(log, "Writing R2 (TOC) at SP(0x%" PRIx64 ")+%d: 0x%" PRIx64,
+            (uint64_t)(sp + stack_offset), (int)stack_offset,
+            (uint64_t)reg_value);
+  if (!process_sp->WritePointerToMemory(sp + stack_offset, reg_value, error))
+    return false;
+#endif
 
   // Read the current SP value.
   reg_value = reg_ctx->ReadRegisterAsUnsigned(sp_reg_info, 0);

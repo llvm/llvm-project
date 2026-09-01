@@ -61,6 +61,7 @@ public:
     eServerPacketType_qQueryGDBServer,
     eServerPacketType_qKillSpawnedProcess,
     eServerPacketType_qLaunchSuccess,
+    eServerPacketType_qLDXINFO,
     eServerPacketType_qModuleInfo,
     eServerPacketType_qProcessInfoPID,
     eServerPacketType_qSpeedTest,

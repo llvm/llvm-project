@@ -80,6 +80,7 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
+      lldbPluginInstructionPPC64
       ${LLDB_SYSTEM_LIBS}
 )
 

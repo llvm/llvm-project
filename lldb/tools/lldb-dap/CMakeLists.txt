@@ -1,3 +1,16 @@
+if (HAVE_LIBPTHREAD)
+  list(APPEND extra_libs pthread)
+endif ()
+
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
+# We need to include the llvm components we depend on manually, as liblldb does
+# not re-export those.
+set(LLVM_LINK_COMPONENTS Support)
+
 # lldbDAP is an OBJECT library: a collection of compiled object files that is
 # shared between the lldb-dap tool and the DAPTests unit test, with no declared
 # link dependencies of its own. Each consumer lists its own LINK_LIBS and

@@ -500,9 +500,9 @@ endfunction()
 # Mach-O uses two-level namespaces and PE/COFF does not export symbols by
 # default.
 function(lldb_prevent_liblldb_symbol_interposition name)
-  if(UNIX AND NOT APPLE)
-    target_link_options(${name} PRIVATE "LINKER:--exclude-libs,ALL")
-  endif()
+    if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "AIX")
+        target_link_options(${name} PRIVATE "LINKER:--exclude-libs,ALL")
+    endif()
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the

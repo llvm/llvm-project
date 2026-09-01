@@ -325,9 +325,15 @@ typedef struct _GPR_PPC64 {
   uint64_t r29;
   uint64_t r30;
   uint64_t r31;
+#ifdef _AIX
+  //CR and XER registers are 32 bits wide in AIX, for both 32-bit/64-bit modes.
+  uint32_t cr;
+  uint32_t xer;
+#else
   uint64_t cr;
-  uint64_t msr;
   uint64_t xer;
+#endif
+  uint64_t msr;
   uint64_t lr;
   uint64_t ctr;
   uint64_t pc;

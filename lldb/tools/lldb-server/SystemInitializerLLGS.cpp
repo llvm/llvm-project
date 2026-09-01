@@ -49,6 +49,10 @@ using HostObjectFile = ObjectFileELF;
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #endif
 
+#if defined(_AIX)
+#include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
+#endif
+
 #if defined(__riscv)
 #define LLDB_TARGET_RISCV
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
@@ -78,6 +82,10 @@ llvm::Error SystemInitializerLLGS::Initialize() {
   EmulateInstructionRISCV::Initialize();
 #endif
 
+#if defined(_AIX)
+  EmulateInstructionPPC64::Initialize();
+#endif
+
   return llvm::Error::success();
 }
 
@@ -98,6 +106,10 @@ void SystemInitializerLLGS::Terminate() {
 #endif
 #if defined(LLDB_TARGET_RISCV)
   EmulateInstructionRISCV::Terminate();
+#endif
+
+#if defined(_AIX)
+  EmulateInstructionPPC64::Terminate();
 #endif
 
   SystemInitializerCommon::Terminate();

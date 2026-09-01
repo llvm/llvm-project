@@ -660,10 +660,10 @@ void Driver::UpdateWindowSize() {
   }
 }
 
-#ifdef _WIN32
 void sigint_handler(int signo) {
-  // Restore handler as it is not persistent on Windows.
+#if defined(_WIN32) || defined(_AIX) // Restore handler as it is not persistent on Windows
   signal(SIGINT, sigint_handler);
+#endif
 
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
@@ -676,7 +676,6 @@ void sigint_handler(int signo) {
 
   _exit(signo);
 }
-#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -726,8 +725,11 @@ EXAMPLES:
 
 int main(int argc, char const *argv[]) {
   // Editline uses for example iswprint which is dependent on LC_CTYPE.
+  // FIXME: this caused unexpected SIGTRAP on AIX
+#ifndef _AIX
   std::setlocale(LC_ALL, "");
   std::setlocale(LC_CTYPE, "");
+#endif
 
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
