@@ -431,7 +431,7 @@ func.func @test_transpose_conv2d_mxfp_invalid_weight_zp(%arg0: tensor<1x4x4x32x!
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   // expected-error@+1 {{'tosa.transpose_conv2d' op expect block scaled weight to have fp32 zero point}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = bf16, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf32>, tensor<1xf16>) -> tensor<1x4x4x8xf16>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp out_pad([0, 0, 0, 0]) stride([1, 1]) acc_type(bf16) local_bound(true) : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf32>, tensor<1xf16>) -> tensor<1x4x4x8xf16>
   return %0 : tensor<1x4x4x8xf16>
 }
 
@@ -441,7 +441,7 @@ func.func @test_transpose_conv2d_mxfp_invalid_input_zp(%arg0: tensor<1x4x4x32x!t
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.transpose_conv2d' op expect block scaled input to have fp32 zero point}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = bf16, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x8xf16>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp out_pad([0, 0, 0, 0]) stride([1, 1]) acc_type(bf16) local_bound(true) : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x8xf16>
   return %0 : tensor<1x4x4x8xf16>
 }
 
@@ -2269,7 +2269,7 @@ func.func @test_reshape_block_scaled_rank0_scale_input(%arg0 : tensor<64xf8E4M3F
 // -----
 
 func.func @test_reshape_block_scaled_rank0_shape_unranked_inputs(%arg0 : tensor<*xf8E4M3FN>, %arg1 : tensor<*xf8E8M0FNU>) -> () {
-  %s = tosa.const_shape {values = dense<> : tensor<0xindex>} : () -> !tosa.shape<0>
+  %s = tosa.const_shape values(dense<> : tensor<0xindex>) : () -> !tosa.shape<0>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op requires new shape to have a rank greater than 0}}
   %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>, !tosa.shape<0>) -> (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>)
   return
@@ -2441,8 +2441,8 @@ func.func @test_transpose_block_scaled_illegal_perms(%input: tensor<29x12x32x96x
 // -----
 
 func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
-  %start = tosa.const_shape {values = dense<[0, 0, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %size = tosa.const_shape {values = dense<[1, 1, 32]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape values(dense<[0, 0, 1]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  %size = tosa.const_shape values(dense<[1, 1, 32]> : tensor<3xindex>) : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
   %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
   return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
