@@ -11,7 +11,7 @@ class TestOrderedSet(TestBase):
         self.build()
         self.run_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_ordered_set_no_const(self):
         disable_constant_classes = {
             "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "

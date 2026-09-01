@@ -1,0 +1,29 @@
+# Same conflicting inputs as two-input-conflict.test, but the user does
+# NOT pass --sarif-conflicts-out=. Stderr cluster line is still emitted
+# and drop-all still applies; no SARIF file is created at any path.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# No SARIF file at the path a paired test would have used.
+# RUN: ! test -e %t.dir/conflicts.sarif
+
+# Drop-all still applies even without the SARIF flag.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+# Stderr cluster line is still emitted (back-compat regression guard).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 2
+# CONFLICT-SAME: foo.cpp:10

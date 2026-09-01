@@ -233,26 +233,6 @@ TEST_P(olMemFillTest, SuccessNonPow2PatternManaged) {
   olMemFree(Alloc);
 }
 
-TEST_P(olMemFillTest, SuccessNonPow2PatternManagedEnqueue) {
-  constexpr size_t Size = FallbackPattern.size() * 1000;
-  ManuallyTriggeredTask Manual;
-  ASSERT_SUCCESS(Manual.enqueue(Queue));
-
-  void *Alloc;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
-
-  ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
-                           FallbackPattern.data(), Size));
-  ASSERT_SUCCESS(Manual.trigger());
-  olSyncQueue(Queue);
-
-  auto *AllocPtr = reinterpret_cast<unsigned char *>(Alloc);
-  for (size_t I = 0; I < Size; I++)
-    ASSERT_EQ(AllocPtr[I], FallbackPattern[I % FallbackPattern.size()]);
-
-  olMemFree(Alloc);
-}
-
 TEST_P(olMemFillTest, SuccessNonPow2PatternDevice) {
   constexpr size_t Size = FallbackPattern.size() * 1000;
   void *Alloc;

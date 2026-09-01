@@ -3,13 +3,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # Flang {{version}} {{in_progress}}Release Notes
 
-````{only} PreRelease
-```{warning}
+::::{only} PreRelease
+:::{warning}
 These are in-progress notes for the upcoming LLVM {{version}} release.
 Release notes for previous releases can be found on [the Download
 Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -33,6 +33,11 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- Added support for the OpenMP implementation-defined extension sentinels
+  (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
+  and `!$ompx` in free source form. These sentinels are recognized like their
+  `omp` counterparts when OpenMP is enabled.
+
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,
   `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
@@ -46,6 +51,11 @@ page](https://llvm.org/releases/).
 - Added support for compressed DWARF debug sections. Flang now supports
   compressing DWARF debug info in ELF object files using zlib or zstd,
   reducing debug information size in compiled binaries.
+
+- The FIR loop invariant code motion pass (`flang-licm`) is now enabled by
+  default at optimization levels above `-O0`. It can be turned off with
+  `-mmlir -disable-fir-licm`. The `-mmlir -enable-fir-licm` option that
+  previously opted into the pass has been removed.
 
 ## New Compiler Flags
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial

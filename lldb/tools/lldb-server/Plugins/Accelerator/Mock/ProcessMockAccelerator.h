@@ -40,10 +40,10 @@ public:
   Status Signal(int signo) override;
   Status Kill() override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
   size_t UpdateThreads() override;

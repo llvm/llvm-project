@@ -400,10 +400,12 @@ void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
   parser << " ";
   parser.printOperands(op->getOperands());
 
-  NamedAttrList toPrint(op->getAttrs());
+  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
   // remove default NanPropagate attribute
   const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : toPrint) {
     if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
       if (nanAttr.getValue() == kDefaultNanValue) {
         // elide from toPrint
@@ -430,12 +432,14 @@ void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
   parser << " ";
   parser.printOperands(op->getOperands());
 
-  if (!op->getAttrs().empty()) {
+  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
+  if (!toPrint.empty()) {
     parser << " {";
-    llvm::interleaveComma(op->getAttrs(), parser,
-                          [&](const NamedAttribute namedAttr) {
-                            printNamedAttr(parser, namedAttr);
-                          });
+    llvm::interleaveComma(toPrint, parser, [&](NamedAttribute attr) {
+      printNamedAttr(parser, attr);
+    });
     parser << "}";
   }
 
@@ -3583,6 +3587,12 @@ LogicalResult tosa::TransposeOp::verify() {
           constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
 
+  if (isa<BlockScaledType>(getInput1().getType().getElementType()) &&
+      constantPerms.back() != static_cast<int32_t>(constantPerms.size()) - 1) {
+    return emitOpError() << "expected no-op permutation on innermost dimension "
+                            "for block scaled input";
+  }
+
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
   if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&
       inputShape.getNumElements() != outputShape.getNumElements())
@@ -5375,6 +5385,16 @@ LogicalResult CastOp::verify() {
   const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
   const bool outputIsBlockScaled =
       llvm::isa<BlockScaledType>(outputElementType);
+
+  const bool isUnsigned = this->getInputUnsigned();
+  const Type inputDataType = getStorageElementTypeOrSelf(inputType);
+
+  if (isUnsigned)
+    if (!inputDataType.isInteger() || inputDataType.isInteger(1))
+      return emitOpError()
+             << "attribute input_unsigned requires integer type inputs. Got: "
+             << inputDataType;
+
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();
 
@@ -5752,7 +5772,7 @@ void IfOp::print(OpAsmPrinter &p) {
     p.printRegion(elseRegion);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult IfOp::verify() {
@@ -5961,7 +5981,8 @@ void WhileOp::print(OpAsmPrinter &parser) {
   parser.printRegion(getCondGraph(), /*printEntryBlockArgs=*/false);
   parser << " do ";
   parser.printRegion(getBodyGraph());
-  parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+  parser.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 // Create a rank-1 const tensor for zero point of the source tensor.

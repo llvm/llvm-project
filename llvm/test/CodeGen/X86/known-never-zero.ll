@@ -2229,7 +2229,7 @@ define i32 @bswap_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ;
 ; X64-LABEL: bswap_known_nonzero_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,u,u,u,u,11,10,9,8,15,14,13,12]
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-NEXT:    vmovd %xmm0, %eax
@@ -2360,7 +2360,7 @@ define i32 @bitreverse_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ;
 ; X64-LABEL: bitreverse_known_nonzero_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,u,u,u,u,11,10,9,8,15,14,13,12]
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm2

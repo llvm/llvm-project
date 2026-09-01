@@ -32,10 +32,10 @@ namespace passwd {
 void TESTONLY_set_passwd_path(const char *path);
 
 // Opens or rewinds the password file.
-ErrorOr<int> open();
+ErrorOr<void> open();
 
 // Closes the password file.
-ErrorOr<int> close();
+ErrorOr<void> close();
 
 // Reads the next entry from the password database.
 ErrorOr<struct passwd *> read_next();
