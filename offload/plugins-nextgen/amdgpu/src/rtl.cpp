@@ -529,21 +529,8 @@ struct AMDGPUSVMManagerTy {
     hsa_status_t Status = hsa_amd_svm_attributes_set(
         Block.base(), Block.allocatedSize(), Attrs.data(), Attrs.size());
     if (auto Err =
-            Plugin::check(Status, "error in hsa_amd_svm_attributes_set: %s")) {
-      // The driver rejected the allocation, e.g., because one of the agents
-      // does not support SVM. Stop creating SVM allocations, reporting the
-      // rejection once.
-      if (Supported.exchange(false))
-        REPORT() << "Serving shared allocations from host memory: "
-                 << toString(std::move(Err));
-      else
-        consumeError(std::move(Err));
-
-      // Ignore any error from undoing the allocation.
-      consumeError(llvm::errorCodeToError(
-          llvm::sys::Memory::releaseMappedMemory(Block)));
-      return nullptr;
-    }
+            Plugin::check(Status, "error in hsa_amd_svm_attributes_set: %s"))
+      return Err;
 
     std::lock_guard<std::mutex> Lock(Mutex);
     Allocations[reinterpret_cast<uintptr_t>(Block.base())] = Block;
@@ -2869,15 +2856,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
-    // Shared allocations are SVM allocations, or memory pool allocations when
-    // SVM cannot serve them. The kind is not checked here; the generic layer
-    // already diagnoses deallocations with a mismatching kind.
-    auto WasSVMAllocOrErr = getSVMManager().deallocate(TgtPtr);
-    if (!WasSVMAllocOrErr)
-      return WasSVMAllocOrErr.takeError();
-    if (*WasSVMAllocOrErr)
-      return Plugin::success();
-
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -2888,6 +2866,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     case TARGET_ALLOC_SHARED:
+      // Shared allocations are SVM allocations or memory pool allocations when
+      // SVM cannot serve them.
+      auto WasSVMAllocOrErr = getSVMManager().deallocate(TgtPtr);
+      if (!WasSVMAllocOrErr)
+        return WasSVMAllocOrErr.takeError();
+      if (*WasSVMAllocOrErr)
+        return Plugin::success();
+
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     }
@@ -3718,8 +3704,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override {
-    // SVM allocations are accessible by all the kernel agents but are unknown
-    // to the HSA runtime.
+    // SVM allocations are accessible by all the kernel agents but are not
+    // tracked by the HSA runtime since they're allocated via mmap.
     if (getSVMManager().contains(Ptr, Size))
       return true;
 
