@@ -16,13 +16,13 @@ COMPILER_RT_ABI NOINLINE float __extendhfsf2(src_t a) {
   return __extendXfYf2__(a);
 }
 
+#if defined(__ARM_EABI__)
 // arm32-gnueabi-only routine that uses integers in the signature. This should
 // be gnueabi-specific, but LLVM currently emits it on more eabi platforms.
 COMPILER_RT_ABI uint32_t __gnu_h2f_ieee(uint16_t a) {
   return dstToRep(__extendhfsf2(srcFromRep(a)));
 }
 
-#if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI float __aeabi_h2f(src_t a) { return __extendhfsf2(a); }
 #else
