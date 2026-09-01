@@ -542,7 +542,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
   LogicalResult matchAndRewrite(LoopLikeOpInterface loopLike,
                                 PatternRewriter &rewriter) const override {
     // Skip ops where bounds narrowing previously failed.
-    if (loopLike->hasAttr(boundsNarrowingFailedAttr))
+    if (loopLike->hasDiscardableAttr(boundsNarrowingFailedAttr))
       return rewriter.notifyMatchFailure(loopLike,
                                          "bounds narrowing previously failed");
 
@@ -669,7 +669,8 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
           failed(loopLike.setLoopSteps(newSteps))) {
         // Mark op to prevent future attempts. IR was modified (attribute
         // added), so we must return success() from the pattern.
-        loopLike->setAttr(boundsNarrowingFailedAttr, rewriter.getUnitAttr());
+        loopLike->setDiscardableAttr(boundsNarrowingFailedAttr,
+                                     rewriter.getUnitAttr());
         updateFailed = true;
         return;
       }

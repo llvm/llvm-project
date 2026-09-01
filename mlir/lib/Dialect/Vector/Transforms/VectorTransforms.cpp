@@ -41,6 +41,14 @@
 using namespace mlir;
 using namespace mlir::vector;
 
+static Operation *createWithProperties(OpBuilder &builder, Operation *op,
+                                       ValueRange operands, TypeRange types) {
+  OperationState state(op->getLoc(), op->getName(), operands, types,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return builder.create(state);
+}
+
 template <typename IntType>
 static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
   return llvm::to_vector<4>(llvm::map_range(
@@ -476,8 +484,7 @@ struct ReorderCastOpsOnBroadcast
     if (auto vecTy = dyn_cast<VectorType>(bcastOp.getSourceType()))
       castResTy = vecTy.clone(castResTy);
     auto *castOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                        bcastOp.getSource(), castResTy, op->getAttrs());
+        createWithProperties(rewriter, op, bcastOp.getSource(), castResTy);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, op->getResult(0).getType(), castOp->getResult(0));
     return success();
@@ -556,8 +563,7 @@ struct ReorderElementwiseOpsOnTranspose final
     auto vectorType = srcType.clone(
         cast<VectorType>(op->getResultTypes()[0]).getElementType());
     Operation *elementwiseOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        vectorType, op->getAttrs());
+        createWithProperties(rewriter, op, srcValues, vectorType);
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         op, op->getResultTypes()[0], elementwiseOp->getResult(0),
         transposeMaps.front());
@@ -1136,8 +1142,7 @@ struct ReorderElementwiseOpsOnBroadcast final
 
     // Create the "elementwise" Op
     Operation *elementwiseOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        unbroadcastResultType, op->getAttrs());
+        createWithProperties(rewriter, op, srcValues, unbroadcastResultType);
 
     // Replace the original Op with the elementwise Op
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
@@ -2058,8 +2063,7 @@ struct DropUnitDimFromElementwiseOps final
         dropNonScalableUnitDimFromType(resultVectorType);
     // Create an updated elementwise Op without unit dim.
     Operation *elementwiseOp =
-        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
-                        newResultVectorType, op->getAttrs());
+        createWithProperties(rewriter, op, newOperands, newResultVectorType);
 
     // Restore the unit dim by applying vector.shape_cast to the result.
     rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,

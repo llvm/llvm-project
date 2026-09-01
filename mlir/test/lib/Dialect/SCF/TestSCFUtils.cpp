@@ -152,15 +152,15 @@ struct TestSCFPipeliningPass
   static void
   getSchedule(scf::ForOp forOp,
               std::vector<std::pair<Operation *, unsigned>> &schedule) {
-    if (!forOp->hasAttr(kTestPipeliningLoopMarker))
+    if (!forOp->hasDiscardableAttr(kTestPipeliningLoopMarker))
       return;
 
     schedule.resize(forOp.getBody()->getOperations().size() - 1);
     WalkResult result = forOp.walk([&schedule](Operation *op) {
       auto attrStage =
-          op->getAttrOfType<IntegerAttr>(kTestPipeliningStageMarker);
-      auto attrCycle =
-          op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
+          op->getDiscardableAttrOfType<IntegerAttr>(kTestPipeliningStageMarker);
+      auto attrCycle = op->getDiscardableAttrOfType<IntegerAttr>(
+          kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
         const APInt &stage = attrStage.getValue();
         if (stage.isNegative() ||
@@ -230,17 +230,20 @@ struct TestSCFPipeliningPass
     OpBuilder b(op);
     switch (part) {
     case mlir::scf::PipeliningOption::PipelinerPart::Prologue:
-      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("prologue"));
+      op->setDiscardableAttr(kTestPipeliningAnnotationPart,
+                             b.getStringAttr("prologue"));
       break;
     case mlir::scf::PipeliningOption::PipelinerPart::Kernel:
-      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("kernel"));
+      op->setDiscardableAttr(kTestPipeliningAnnotationPart,
+                             b.getStringAttr("kernel"));
       break;
     case mlir::scf::PipeliningOption::PipelinerPart::Epilogue:
-      op->setAttr(kTestPipeliningAnnotationPart, b.getStringAttr("epilogue"));
+      op->setDiscardableAttr(kTestPipeliningAnnotationPart,
+                             b.getStringAttr("epilogue"));
       break;
     }
-    op->setAttr(kTestPipeliningAnnotationIteration,
-                b.getI32IntegerAttr(iteration));
+    op->setDiscardableAttr(kTestPipeliningAnnotationIteration,
+                           b.getI32IntegerAttr(iteration));
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -262,8 +265,8 @@ struct TestSCFPipeliningPass
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
     getOperation().walk([](Operation *op) {
       // Clean up the markers.
-      op->removeAttr(kTestPipeliningStageMarker);
-      op->removeAttr(kTestPipeliningOpOrderMarker);
+      op->removeDiscardableAttr(kTestPipeliningStageMarker);
+      op->removeDiscardableAttr(kTestPipeliningOpOrderMarker);
     });
   }
 };
@@ -291,21 +294,23 @@ struct TestSplitForOpAtPointPass
     func::FuncOp func = getOperation();
     SmallVector<scf::ForOp> loopsToSplit;
     func.walk([&](scf::ForOp forOp) {
-      if (forOp->hasAttr(kSplitAtAttr) || forOp->hasAttr(kSplitArgAttr))
+      if (forOp->hasDiscardableAttr(kSplitAtAttr) ||
+          forOp->hasDiscardableAttr(kSplitArgAttr))
         loopsToSplit.push_back(forOp);
     });
 
     IRRewriter rewriter(func.getContext());
     for (scf::ForOp forOp : loopsToSplit) {
       Value splitPoint;
-      if (auto splitAttr = forOp->getAttrOfType<IntegerAttr>(kSplitAtAttr)) {
+      if (auto splitAttr =
+              forOp->getDiscardableAttrOfType<IntegerAttr>(kSplitAtAttr)) {
         rewriter.setInsertionPoint(forOp);
         splitPoint =
             arith::ConstantOp::create(rewriter, forOp.getLoc(), splitAttr);
-        rewriter.modifyOpInPlace(forOp,
-                                 [&] { forOp->removeAttr(kSplitAtAttr); });
-      } else if (auto argAttr =
-                     forOp->getAttrOfType<IntegerAttr>(kSplitArgAttr)) {
+        rewriter.modifyOpInPlace(
+            forOp, [&] { forOp->removeDiscardableAttr(kSplitAtAttr); });
+      } else if (auto argAttr = forOp->getDiscardableAttrOfType<IntegerAttr>(
+                     kSplitArgAttr)) {
         int64_t argNo = argAttr.getInt();
         if (argNo < 0 ||
             static_cast<unsigned>(argNo) >= func.getNumArguments()) {
@@ -313,8 +318,8 @@ struct TestSplitForOpAtPointPass
           return signalPassFailure();
         }
         splitPoint = func.getArgument(argNo);
-        rewriter.modifyOpInPlace(forOp,
-                                 [&] { forOp->removeAttr(kSplitArgAttr); });
+        rewriter.modifyOpInPlace(
+            forOp, [&] { forOp->removeDiscardableAttr(kSplitArgAttr); });
       } else {
         continue;
       }

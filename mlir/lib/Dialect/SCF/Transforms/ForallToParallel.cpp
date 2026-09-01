@@ -51,7 +51,7 @@ LogicalResult mlir::scf::forallToParallelLoop(RewriterBase &rewriter,
 
   // If the mapping attribute is present, propagate to the new parallelOp.
   if (forallOp.getMapping())
-    parallelOp->setAttr("mapping", *forallOp.getMapping());
+    parallelOp->setDiscardableAttr("mapping", *forallOp.getMapping());
 
   // Erase the scf.forall op.
   rewriter.replaceOp(forallOp, parallelOp);

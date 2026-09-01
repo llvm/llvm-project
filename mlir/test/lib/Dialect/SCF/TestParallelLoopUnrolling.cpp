@@ -53,7 +53,7 @@ struct TestParallelLoopUnrollingPass
     });
     auto annotateFn = [this](unsigned i, Operation *op, OpBuilder b) {
       if (annotateLoop) {
-        op->setAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
+        op->setDiscardableAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
     PatternRewriter rewriter(getOperation()->getContext());

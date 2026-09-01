@@ -574,7 +574,8 @@ void AffineApplyOp::print(OpAsmPrinter &p) {
   p << " " << getMapAttr();
   printDimAndSymbolList(operand_begin(), operand_end(),
                         getAffineMap().getNumDims(), p);
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"map"});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          /*elidedAttrs=*/{"map"});
 }
 
 LogicalResult AffineApplyOp::verify() {
@@ -2507,7 +2508,7 @@ void AffineForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary().getValue(),
       /*elidedAttrs=*/{getLowerBoundMapAttrName(getOperation()->getName()),
                        getUpperBoundMapAttrName(getOperation()->getName()),
                        getStepAttrName(getOperation()->getName()),
@@ -3199,8 +3200,7 @@ ValueRange AffineIfOp::getSuccessorInputs(RegionSuccessor successor) {
 LogicalResult AffineIfOp::verify() {
   // Verify that we have a condition attribute.
   // FIXME: This should be specified in the arguments list in ODS.
-  auto conditionAttr =
-      (*this)->getAttrOfType<IntegerSetAttr>(getConditionAttrStrName());
+  auto conditionAttr = getConditionAttr();
   if (!conditionAttr)
     return emitOpError("requires an integer set attribute named 'condition'");
 
@@ -3270,8 +3270,7 @@ ParseResult AffineIfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void AffineIfOp::print(OpAsmPrinter &p) {
-  auto conditionAttr =
-      (*this)->getAttrOfType<IntegerSetAttr>(getConditionAttrStrName());
+  auto conditionAttr = getConditionAttr();
   p << " " << conditionAttr;
   printDimAndSymbolList(operand_begin(), operand_end(),
                         conditionAttr.getValue().getNumDims(), p);
@@ -3290,18 +3289,14 @@ void AffineIfOp::print(OpAsmPrinter &p) {
   }
 
   // Print the attribute list.
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
                           /*elidedAttrs=*/getConditionAttrStrName());
 }
 
-IntegerSet AffineIfOp::getIntegerSet() {
-  return (*this)
-      ->getAttrOfType<IntegerSetAttr>(getConditionAttrStrName())
-      .getValue();
-}
+IntegerSet AffineIfOp::getIntegerSet() { return getConditionAttr().getValue(); }
 
 void AffineIfOp::setIntegerSet(IntegerSet newSet) {
-  (*this)->setAttr(getConditionAttrStrName(), IntegerSetAttr::get(newSet));
+  setConditionAttr(IntegerSetAttr::get(newSet));
 }
 
 void AffineIfOp::setConditional(IntegerSet set, ValueRange operands) {
@@ -3451,12 +3446,13 @@ ParseResult AffineLoadOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void AffineLoadOp::print(OpAsmPrinter &p) {
   p << " " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr =
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()))
+  if (AffineMapAttr mapAttr = getMapAttr())
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << ']';
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStrName()});
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary());
+  if (IntegerAttr alignment = getAlignmentAttr())
+    attrs.append(getAlignmentAttrName(), alignment);
+  p.printOptionalAttrDict(attrs, /*elidedAttrs=*/{getMapAttrStrName()});
   p << " : " << getMemRefType();
 }
 
@@ -3488,10 +3484,9 @@ LogicalResult AffineLoadOp::verify() {
   if (getType() != memrefType.getElementType())
     return emitOpError("result type must match element type of memref");
 
-  if (failed(verifyMemoryOpIndexing(
-          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
-          getMapOperands(), memrefType,
-          /*numIndexOperands=*/getNumOperands() - 1)))
+  if (failed(verifyMemoryOpIndexing(*this, getMapAttr(), getMapOperands(),
+                                    memrefType,
+                                    /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();
 
   return success();
@@ -3587,12 +3582,13 @@ ParseResult AffineStoreOp::parse(OpAsmParser &parser, OperationState &result) {
 void AffineStoreOp::print(OpAsmPrinter &p) {
   p << " " << getValueToStore();
   p << ", " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr =
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()))
+  if (AffineMapAttr mapAttr = getMapAttr())
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << ']';
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStrName()});
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary());
+  if (IntegerAttr alignment = getAlignmentAttr())
+    attrs.append(getAlignmentAttrName(), alignment);
+  p.printOptionalAttrDict(attrs, /*elidedAttrs=*/{getMapAttrStrName()});
   p << " : " << getMemRefType();
 }
 
@@ -3603,10 +3599,9 @@ LogicalResult AffineStoreOp::verify() {
     return emitOpError(
         "value to store must have the same type as memref element type");
 
-  if (failed(verifyMemoryOpIndexing(
-          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
-          getMapOperands(), memrefType,
-          /*numIndexOperands=*/getNumOperands() - 2)))
+  if (failed(verifyMemoryOpIndexing(*this, getMapAttr(), getMapOperands(),
+                                    memrefType,
+                                    /*numIndexOperands=*/getNumOperands() - 2)))
     return failure();
 
   return success();
@@ -3642,14 +3637,14 @@ static LogicalResult verifyAffineMinMaxOp(T op) {
 
 template <typename T>
 static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
-  p << ' ' << op->getAttr(T::getMapAttrStrName());
+  p << ' ' << op.getMapAttr();
   auto operands = op.getOperands();
   unsigned numDims = op.getMap().getNumDims();
   p << '(' << operands.take_front(numDims) << ')';
 
   if (operands.size() != numDims)
     p << '[' << operands.drop_front(numDims) << ']';
-  p.printOptionalAttrDict(op->getAttrs(),
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue(),
                           /*elidedAttrs=*/{T::getMapAttrStrName()});
 }
 
@@ -3695,7 +3690,7 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
     // If the map is the same, report that folding did not happen.
     if (foldedMap == op.getMap())
       return {};
-    op->setAttr("map", AffineMapAttr::get(foldedMap));
+    op.setMapAttr(AffineMapAttr::get(foldedMap));
     return op.getResult();
   }
 
@@ -4033,21 +4028,20 @@ ParseResult AffinePrefetchOp::parse(OpAsmParser &parser,
 
 void AffinePrefetchOp::print(OpAsmPrinter &p) {
   p << " " << getMemref() << '[';
-  AffineMapAttr mapAttr =
-      (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName());
+  AffineMapAttr mapAttr = getMapAttr();
   if (mapAttr)
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", " << "locality<"
     << getLocalityHint() << ">, " << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary().getValue(),
       /*elidedAttrs=*/{getMapAttrStrName(), getLocalityHintAttrStrName(),
                        getIsDataCacheAttrStrName(), getIsWriteAttrStrName()});
   p << " : " << getMemRefType();
 }
 
 LogicalResult AffinePrefetchOp::verify() {
-  auto mapAttr = (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName());
+  auto mapAttr = getMapAttr();
   if (mapAttr) {
     AffineMap map = mapAttr.getValue();
     if (map.getNumResults() != getMemRefType().getRank())
@@ -4475,7 +4469,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/getNumResults());
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary().getValue(),
       /*elidedAttrs=*/{AffineParallelOp::getReductionsAttrStrName(),
                        AffineParallelOp::getLowerBoundsMapAttrStrName(),
                        AffineParallelOp::getLowerBoundsGroupsAttrStrName(),
@@ -4818,12 +4812,13 @@ ParseResult AffineVectorLoadOp::parse(OpAsmParser &parser,
 
 void AffineVectorLoadOp::print(OpAsmPrinter &p) {
   p << " " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr =
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()))
+  if (AffineMapAttr mapAttr = getMapAttr())
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << ']';
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStrName()});
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary());
+  if (IntegerAttr alignment = getAlignmentAttr())
+    attrs.append(getAlignmentAttrName(), alignment);
+  p.printOptionalAttrDict(attrs, /*elidedAttrs=*/{getMapAttrStrName()});
   p << " : " << getMemRefType() << ", " << getType();
 }
 
@@ -4839,10 +4834,9 @@ static LogicalResult verifyVectorMemoryOp(Operation *op, MemRefType memrefType,
 
 LogicalResult AffineVectorLoadOp::verify() {
   MemRefType memrefType = getMemRefType();
-  if (failed(verifyMemoryOpIndexing(
-          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
-          getMapOperands(), memrefType,
-          /*numIndexOperands=*/getNumOperands() - 1)))
+  if (failed(verifyMemoryOpIndexing(*this, getMapAttr(), getMapOperands(),
+                                    memrefType,
+                                    /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();
 
   if (failed(verifyVectorMemoryOp(getOperation(), memrefType, getVectorType())))
@@ -4913,21 +4907,21 @@ ParseResult AffineVectorStoreOp::parse(OpAsmParser &parser,
 void AffineVectorStoreOp::print(OpAsmPrinter &p) {
   p << " " << getValueToStore();
   p << ", " << getMemRef() << '[';
-  if (AffineMapAttr mapAttr =
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()))
+  if (AffineMapAttr mapAttr = getMapAttr())
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << ']';
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStrName()});
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary());
+  if (IntegerAttr alignment = getAlignmentAttr())
+    attrs.append(getAlignmentAttrName(), alignment);
+  p.printOptionalAttrDict(attrs, /*elidedAttrs=*/{getMapAttrStrName()});
   p << " : " << getMemRefType() << ", " << getValueToStore().getType();
 }
 
 LogicalResult AffineVectorStoreOp::verify() {
   MemRefType memrefType = getMemRefType();
-  if (failed(verifyMemoryOpIndexing(
-          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
-          getMapOperands(), memrefType,
-          /*numIndexOperands=*/getNumOperands() - 2)))
+  if (failed(verifyMemoryOpIndexing(*this, getMapAttr(), getMapOperands(),
+                                    memrefType,
+                                    /*numIndexOperands=*/getNumOperands() - 2)))
     return failure();
 
   if (failed(verifyVectorMemoryOp(*this, memrefType, getVectorType())))

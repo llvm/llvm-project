@@ -92,8 +92,29 @@ struct ConvertOpToUnsigned final : OpRewritePattern<Signed> {
             staticallyNonNegative(this->solver, static_cast<Operation *>(op))))
       return failure();
 
-    rw.replaceOpWithNewOp<Unsigned>(op, op->getResultTypes(), op->getOperands(),
-                                    op->getAttrs());
+    rw.replaceOpWithNewOp<Unsigned>(
+        op, op->getResultTypes(), op->getOperands(),
+        op->getDiscardableAttrDictionary().getValue());
+    return success();
+  }
+
+private:
+  DataFlowSolver &solver;
+};
+
+struct ConvertDivSIToUnsigned final : OpRewritePattern<DivSIOp> {
+  ConvertDivSIToUnsigned(MLIRContext *context, DataFlowSolver &s)
+      : OpRewritePattern<DivSIOp>(context), solver(s) {}
+
+  LogicalResult matchAndRewrite(DivSIOp op,
+                                PatternRewriter &rw) const override {
+    if (failed(staticallyNonNegative(solver, op.getOperation())))
+      return failure();
+
+    auto newOp = DivUIOp::create(rw, op.getLoc(), op.getType(), op.getLhs(),
+                                 op.getRhs(), op.getIsExactAttr());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+    rw.replaceOp(op, newOp);
     return success();
   }
 
@@ -144,7 +165,7 @@ struct ArithUnsignedWhenEquivalentPass
 
 void mlir::arith::populateUnsignedWhenEquivalentPatterns(
     RewritePatternSet &patterns, DataFlowSolver &solver) {
-  patterns.add<ConvertOpToUnsigned<DivSIOp, DivUIOp>,
+  patterns.add<ConvertDivSIToUnsigned,
                ConvertOpToUnsigned<CeilDivSIOp, CeilDivUIOp>,
                ConvertOpToUnsigned<FloorDivSIOp, DivUIOp>,
                ConvertOpToUnsigned<RemSIOp, RemUIOp>,
