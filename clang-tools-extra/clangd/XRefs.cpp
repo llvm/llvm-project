@@ -2335,23 +2335,41 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   return Results;
 }
 
+// Resolves Parents against the index and appends the results to Results.
+// Parents that cannot be found in the index (e.g. because they are implicit
+// template instantiations, which clangd never indexes) are skipped over:
+// their own already-known parents are resolved instead, so a single
+// unindexed link in the chain doesn't hide everything above it.
+static void
+resolveParents(llvm::ArrayRef<TypeHierarchyItem::ResolveParams> Parents,
+               llvm::StringRef TUPath, const SymbolIndex &Index,
+               std::vector<TypeHierarchyItem> &Results) {
+  LookupRequest Req;
+  llvm::DenseMap<SymbolID, const TypeHierarchyItem::ResolveParams *> IDToData;
+  for (const auto &Parent : Parents) {
+    Req.IDs.insert(Parent.symbolID);
+    IDToData[Parent.symbolID] = &Parent;
+  }
+  llvm::DenseSet<SymbolID> Found;
+  Index.lookup(Req, [&](const Symbol &S) {
+    if (auto THI = symbolToTypeHierarchyItem(S, TUPath)) {
+      THI->data = *IDToData.lookup(S.ID);
+      Results.emplace_back(std::move(*THI));
+      Found.insert(S.ID);
+    }
+  });
+  for (const auto &Parent : Parents) {
+    if (!Found.contains(Parent.symbolID) && Parent.parents)
+      resolveParents(*Parent.parents, TUPath, Index, Results);
+  }
+}
+
 std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
   if (!Index || !Item.data.parents)
     return std::nullopt;
-  LookupRequest Req;
-  llvm::DenseMap<SymbolID, const TypeHierarchyItem::ResolveParams *> IDToData;
-  for (const auto &Parent : *Item.data.parents) {
-    Req.IDs.insert(Parent.symbolID);
-    IDToData[Parent.symbolID] = &Parent;
-  }
   std::vector<TypeHierarchyItem> Results;
-  Index->lookup(Req, [&Item, &Results, &IDToData](const Symbol &S) {
-    if (auto THI = symbolToTypeHierarchyItem(S, Item.uri.file())) {
-      THI->data = *IDToData.lookup(S.ID);
-      Results.emplace_back(std::move(*THI));
-    }
-  });
+  resolveParents(*Item.data.parents, Item.uri.file(), *Index, Results);
   return Results.empty() ? std::nullopt
                          : std::make_optional(std::move(Results));
 }
