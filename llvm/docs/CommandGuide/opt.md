@@ -1,126 +1,123 @@
-opt - LLVM optimizer
-====================
+# opt - LLVM optimizer
 
-.. program:: opt
+:::{program} opt
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`opt` [*options*] [*filename*]
+{program}`opt` \[*options*\] \[*filename*\]
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-The :program:`opt` command is the modular LLVM optimizer and analyzer.  It takes
+The {program}`opt` command is the modular LLVM optimizer and analyzer. It takes
 LLVM source files as input, runs the specified optimizations or analyses on it,
 and then outputs the optimized file. The optimizations available via
-:program:`opt` depend upon what libraries were linked into it as well as any
-additional libraries that have been loaded with the :option:`-load` option.  Use
-the :option:`-help` option to determine what optimizations you can use.
+{program}`opt` depend upon what libraries were linked into it as well as any
+additional libraries that have been loaded with the {option}`-load` option. Use
+the {option}`-help` option to determine what optimizations you can use.
 
-If ``filename`` is omitted from the command line or is "``-``", :program:`opt`
-reads its input from standard input.  Inputs can be in either the LLVM assembly
-language format (``.ll``) or the LLVM bitcode format (``.bc``).
+If `filename` is omitted from the command line or is "`-`", {program}`opt`
+reads its input from standard input. Inputs can be in either the LLVM assembly
+language format (`.ll`) or the LLVM bitcode format (`.bc`).
 
-If an output filename is not specified with the :option:`-o` option,
-:program:`opt` writes its output to the standard output.
+If an output filename is not specified with the {option}`-o` option,
+{program}`opt` writes its output to the standard output.
 
-OPTIONS
--------
+## OPTIONS
 
-.. option:: -f
+:::{option} -f
+Enable binary output on terminals. Normally, {program}`opt` will refuse to
+write raw bitcode output if the output stream is a terminal. With this option,
+{program}`opt` will write raw bitcode regardless of the output device.
+:::
 
- Enable binary output on terminals.  Normally, :program:`opt` will refuse to
- write raw bitcode output if the output stream is a terminal.  With this option,
- :program:`opt` will write raw bitcode regardless of the output device.
+:::{option} -help
+Print a summary of command line options.
+:::
 
-.. option:: -help
+:::{option} -o <filename>
+Specify the output filename.
+:::
 
- Print a summary of command line options.
+:::{option} -S
+Write output in LLVM intermediate language (instead of bitcode).
+:::
 
-.. option:: -o <filename>
+:::{option} -passes=<string>
+A textual (comma-separated) description of the pass pipeline,
+e.g., `-passes="sroa,instcombine"`. See
+[invoking opt](../NewPassManager.md#invoking-opt) for more details on the
+pass pipeline syntax.
+:::
 
- Specify the output filename.
+:::{option} -mtriple=<target triple>
+Override the target triple specified in the input file with the specified
+string.
+:::
 
-.. option:: -S
+:::{option} -mtune=<cpuname>
+Specify a specific chip microarchitecture in the current architecture
+to tune code for. By default this is inferred from the target triple and
+autodetected to the current architecture. For a list of available tuning
+CPUs, use:
 
- Write output in LLVM intermediate language (instead of bitcode).
+```none
+llvm-as < /dev/null | opt -march=xyz -mtune=help
+```
+:::
 
-.. option:: -passes=<string>
+:::{option} -strip-debug
+This option causes opt to strip debug information from the module before
+applying other optimizations. It is essentially the same as `-strip`
+but it ensures that stripping of debug information is done first.
+:::
 
- A textual (comma-separated) description of the pass pipeline,
- e.g., ``-passes="sroa,instcombine"``. See
- `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
- pass pipeline syntax.
+:::{option} -verify-each
+This option causes opt to add a verify pass after every pass otherwise
+specified on the command line (including `-verify`). This is useful
+for cases where it is suspected that a pass is creating an invalid module but
+it is not clear which pass is doing it.
+:::
 
-.. option:: -mtriple=<target triple>
+:::{option} -stats
+Print statistics.
+:::
 
- Override the target triple specified in the input file with the specified
- string.
+:::{option} --save-stats, --save-stats=cwd, --save-stats=obj
+Save LLVM statistics to a file in the current directory
+({option}`--save-stats`/"--save-stats=cwd") or the directory
+of the output file ("--save-stats=obj") in JSON format.
+:::
 
-.. option:: -mtune=<cpuname>
+:::{option} -time-passes
+Record the amount of time needed for each pass and print it to standard
+error.
+:::
 
- Specify a specific chip microarchitecture in the current architecture
- to tune code for. By default this is inferred from the target triple and
- autodetected to the current architecture. For a list of available tuning
- CPUs, use:
+:::{option} -debug
+If this is a debug build, this option will enable debug printouts from passes
+which use the `LLVM_DEBUG()` macro. See {ref}`the LDBG and LLVM_DEBUG() macros
+and -debug option <debug>` for more
+information.
+:::
 
- .. code-block:: none
+:::{option} -load=<plugin>
+Load the dynamic object `plugin`. This object should register new
+optimization or analysis passes. Once loaded, the object will add new command
+line options to enable various optimizations or analyses. To see the new
+complete list of optimizations, use the {option}`-help` and {option}`-load`
+options together. For example:
 
-   llvm-as < /dev/null | opt -march=xyz -mtune=help
+```sh
+opt -load=plugin.so -help
+```
+:::
 
-.. option:: -strip-debug
+:::{option} -print-passes
+Print all available passes and exit.
+:::
 
- This option causes opt to strip debug information from the module before
- applying other optimizations.  It is essentially the same as `-strip`
- but it ensures that stripping of debug information is done first.
+## EXIT STATUS
 
-.. option:: -verify-each
-
- This option causes opt to add a verify pass after every pass otherwise
- specified on the command line (including `-verify`).  This is useful
- for cases where it is suspected that a pass is creating an invalid module but
- it is not clear which pass is doing it.
-
-.. option:: -stats
-
- Print statistics.
-
-.. option:: --save-stats, --save-stats=cwd, --save-stats=obj
-
- Save LLVM statistics to a file in the current directory
- (:option:`--save-stats`/"--save-stats=cwd") or the directory
- of the output file ("--save-stats=obj") in JSON format.
-
-.. option:: -time-passes
-
- Record the amount of time needed for each pass and print it to standard
- error.
-
-.. option:: -debug
-
- If this is a debug build, this option will enable debug printouts from passes
- which use the ``LLVM_DEBUG()`` macro.  See the `LLVM Programmer's Manual
- <../ProgrammersManual.html>`_, section ``#DEBUG`` for more information.
-
-.. option:: -load=<plugin>
-
- Load the dynamic object ``plugin``.  This object should register new
- optimization or analysis passes.  Once loaded, the object will add new command
- line options to enable various optimizations or analyses.  To see the new
- complete list of optimizations, use the :option:`-help` and :option:`-load`
- options together.  For example:
-
- .. code-block:: sh
-
-     opt -load=plugin.so -help
-
-.. option:: -print-passes
-
- Print all available passes and exit.
-
-EXIT STATUS
------------
-
-If :program:`opt` succeeds, it will exit with 0.  Otherwise, if an error
+If {program}`opt` succeeds, it will exit with 0. Otherwise, if an error
 occurs, it will exit with a non-zero value.

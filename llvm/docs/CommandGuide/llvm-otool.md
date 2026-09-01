@@ -1,156 +1,151 @@
-llvm-otool - Mach-O dumping tool
-================================
+# llvm-otool - Mach-O dumping tool
 
-.. program:: llvm-otool
+:::{program} llvm-otool
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`llvm-otool` [*option...*] *[file...]*
+{program}`llvm-otool` \[*option...*\] *[file...]*
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-:program:`llvm-otool` is a tool for dumping Mach-O files.
+{program}`llvm-otool` is a tool for dumping Mach-O files.
 
 It attempts to be command-line-compatible and output-compatible with macOS's
-:program:`otool`.
+{program}`otool`.
 
-OPTIONS
--------
+## OPTIONS
 
-.. option:: -a
+:::{option} -a
+Print archive header.
+:::
 
- Print archive header.
+:::{option} -arch <value>
+Select slice of universal Mach-O file.
+:::
 
-.. option:: -arch <value>
+:::{option} -chained_fixups
+Print chained fixup information.
+:::
 
- Select slice of universal Mach-O file.
+:::{option} -C
+Print linker optimization hints.
+:::
 
-.. option:: -chained_fixups
+:::{option} -dyld_info
+Print bind and rebase information.
+:::
 
- Print chained fixup information.
+:::{option} -D
+Print shared library id.
+:::
 
-.. option:: -C
+:::{option} -d
+Print data section.
+:::
 
- Print linker optimization hints.
+:::{option} -f
+Print universal headers.
+:::
 
-.. option:: -dyld_info
+:::{option} -G
+Print data-in-code table.
+:::
 
-  Print bind and rebase information.
+:::{option} --help-hidden
+Print help for hidden flags.
+:::
 
-.. option:: -D
+:::{option} --help
+Print help.
+:::
 
- Print shared library id.
+:::{option} -h
+Print mach header.
+:::
 
-.. option:: -d
+:::{option} -I
+Print indirect symbol table.
+:::
 
- Print data section.
+:::{option} -j
+Print opcode bytes.
+:::
 
-.. option:: -f
+:::{option} -L
+Print used shared libraries.
+:::
 
- Print universal headers.
+:::{option} -l
+Print load commands.
+:::
 
-.. option:: -G
+:::{option} -m
+Don't use archive(member) syntax.
+:::
 
- Print data-in-code table.
+:::{option} -mcpu=<value>
+Select cpu for disassembly.
+:::
 
-.. option:: --help-hidden
+:::{option} -o
+Print Objective-C segment.
+:::
 
- Print help for hidden flags.
+:::{option} -P
+Print \_\_TEXT,\_\_info_plist section as strings.
+:::
 
-.. option:: --help
+:::{option} -p <function name>
+Start disassembly at \<function name>.
+:::
 
- Print help.
+:::{option} -r
+Print relocation entries.
+:::
 
-.. option:: -h
+:::{option} -s <segname> <sectname>
+Print contents of section.
+:::
 
- Print mach header.
+:::{option} -t
+Print text section.
+:::
 
-.. option:: -I
+:::{option} --version
+Print version.
+:::
 
- Print indirect symbol table.
+:::{option} -V
+Symbolize disassembled operands (implies {option}`-v`).
+:::
 
-.. option:: -j
+:::{option} -v
+Verbose output / disassemble when printing text sections.
+:::
 
- Print opcode bytes.
+:::{option} -X
+Omit leading addresses or headers.
+:::
 
-.. option:: -L
+:::{option} -x
+Print all text sections.
+:::
 
- Print used shared libraries.
+:::{option} @<FILE>
+Read command-line options and commands from response file `<FILE>`.
+:::
 
-.. option:: -l
+## EXIT STATUS
 
- Print load commands.
-
-.. option:: -m
-
- Don't use archive(member) syntax.
-
-.. option:: -mcpu=<value>
-
- Select cpu for disassembly.
-
-.. option:: -o
-
- Print Objective-C segment.
-
-.. option:: -P
-
- Print __TEXT,__info_plist section as strings.
-
-.. option:: -p <function name>
-
- Start disassembly at <function name>.
-
-.. option:: -r
-
- Print relocation entries.
-
-.. option:: -s <segname> <sectname>
-
- Print contents of section.
-
-.. option:: -t
-
- Print text section.
-
-.. option:: --version
-
- Print version.
-
-.. option:: -V
-
- Symbolize disassembled operands (implies :option:`-v`).
-
-.. option:: -v
-
- Verbose output / disassemble when printing text sections.
-
-.. option:: -X
-
- Omit leading addresses or headers.
-
-.. option:: -x
-
- Print all text sections.
-
-.. option:: @<FILE>
-
- Read command-line options and commands from response file `<FILE>`.
-
-EXIT STATUS
------------
-
-:program:`llvm-otool` exits with a non-zero exit code if there is an error.
+{program}`llvm-otool` exits with a non-zero exit code if there is an error.
 Otherwise, it exits with code 0.
 
-BUGS
-----
+## BUGS
 
-To report bugs, please visit <https://github.com/llvm/llvm-project/labels/tools:llvm-objdump/>.
+To report bugs, please visit \<<https://github.com/llvm/llvm-project/labels/tools:llvm-objdump/>>.
 
-SEE ALSO
---------
+## SEE ALSO
 
-:manpage:`llvm-nm(1)`, :manpage:`llvm-objdump(1)`
+{manpage}`llvm-nm(1)`, {manpage}`llvm-objdump(1)`
+

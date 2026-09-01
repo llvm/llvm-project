@@ -1,751 +1,739 @@
-tblgen - Description to C++ Code
-================================
+# tblgen - Description to C++ Code
 
-.. program:: tblgen
+:::{program} tblgen
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`clang-tblgen` [*options*] [*filename*]
+{program}`clang-tblgen` \[*options*\] \[*filename*\]
 
-:program:`lldb-tblgen` [*options*] [*filename*]
+{program}`lldb-tblgen` \[*options*\] \[*filename*\]
 
-:program:`llvm-tblgen` [*options*] [*filename*]
+{program}`llvm-tblgen` \[*options*\] \[*filename*\]
 
-:program:`mlir-tblgen` [*options*] [*filename*]
+{program}`mlir-tblgen` \[*options*\] \[*filename*\]
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-:program:`*-tblgen` is a family of programs that translates target
-description (``.td``) files into C++ code and other output formats. Most
+{program}`*-tblgen` is a family of programs that translates target
+description (`.td`) files into C++ code and other output formats. Most
 users of LLVM will not need to use this program. It is used only for
 writing parts of the compiler, debugger, and LLVM target backends.
 
-The details of the input and output of the :program:`*-tblgen` programs is
-beyond the scope of this short introduction; please see the :doc:`TableGen
+The details of the input and output of the {program}`*-tblgen` programs is
+beyond the scope of this short introduction; please see the {doc}`TableGen
 Overview <../TableGen/index>` for an introduction and for references to
 additional TableGen documents.
 
-The *filename* argument specifies the name of the Target Description (``.td``)
+The *filename* argument specifies the name of the Target Description (`.td`)
 file that TableGen processes.
 
-OPTIONS
--------
+## OPTIONS
+
+### General Options
+
+:::{option} -help
+Print a description of the command line options.
+:::
+
+:::{option} -help-list
+Print a description of the command line options in a simple list format.
+:::
+
+:::{option} -D=macroname
+Specify the name of a macro to be defined. The name is defined, but it
+has no particular value.
+:::
+
+:::{option} -d=filename
+Specify the name of the dependency filename.
+:::
+
+:::{option} -debug
+Enable debug output.
+:::
+
+:::{option} -dump-json
+Print a JSON representation of all records, suitable for further
+automated processing.
+:::
+
+:::{option} -I directory
+Specify where to find other target description files for inclusion. The
+`directory` value should be a full or partial path to a directory that
+contains target description files.
+:::
+
+:::{option} -null-backend
+Parse the source files and build the records, but do not run any
+backend. This is useful for timing the frontend.
+:::
+
+:::{option} -o filename
+Specify the output file name. If `filename` is `-`, then
+{program}`*-tblgen` sends its output to standard output.
+:::
+
+:::{option} -print-records
+Print all classes and records to standard output (default backend option).
+:::
+
+:::{option} -print-detailed-records
+Print a detailed report of all global variables, classes, and records
+to standard output.
+:::
+
+:::{option} -stats
+Print a report with any statistics collected by the backend.
+:::
+
+:::{option} -time-phases
+Time the parser and backend phases and print a report.
+:::
+
+:::{option} -version
+Show the version number of the program.
+:::
+
+:::{option} -write-if-changed
+Write the output file only if it is new or has changed.
+:::
+
+### clang-tblgen Options
+
+:::{option} -gen-clang-attr-classes
+Generate Clang attribute classes.
+:::
+
+:::{option} -gen-clang-attr-parser-string-switches
+Generate all parser-related attribute string switches.
+:::
+
+:::{option} -gen-clang-attr-subject-match-rules-parser-string-switches
+Generate all parser-related attribute subject match rule string switches.
+:::
+
+:::{option} -gen-clang-attr-impl
+Generate Clang attribute implementations.
+:::
+
+:::{option} -gen-clang-attr-list"
+Generate a Clang attribute list.
+:::
+
+:::{option} -gen-clang-attr-subject-match-rule-list
+Generate a Clang attribute subject match rule list.
+:::
+
+:::{option} -gen-clang-attr-pch-read
+Generate Clang PCH attribute reader.
+:::
+
+:::{option} -gen-clang-attr-pch-write
+Generate Clang PCH attribute writer.
+:::
 
-General Options
-~~~~~~~~~~~~~~~
+:::{option} -gen-clang-attr-has-attribute-impl
+Generate a Clang attribute spelling list.
+:::
 
-.. option:: -help
+:::{option} -gen-clang-attr-spelling-index
+Generate a Clang attribute spelling index.
+:::
 
- Print a description of the command line options.
+:::{option} -gen-clang-attr-ast-visitor
+Generate a recursive AST visitor for Clang attributes.
+:::
 
-.. option:: -help-list
+:::{option} -gen-clang-attr-template-instantiate
+Generate a Clang template instantiate code.
+:::
 
-  Print a description of the command line options in a simple list format.
+:::{option} -gen-clang-attr-parsed-attr-list
+Generate a Clang parsed attribute list.
+:::
 
-.. option:: -D=macroname
+:::{option} -gen-clang-attr-parsed-attr-impl
+Generate the Clang parsed attribute helpers.
+:::
 
-  Specify the name of a macro to be defined. The name is defined, but it
-  has no particular value.
+:::{option} -gen-clang-attr-parsed-attr-kinds
+Generate a Clang parsed attribute kinds.
+:::
 
-.. option:: -d=filename
+:::{option} -gen-clang-attr-text-node-dump
+Generate Clang attribute text node dumper.
+:::
 
-  Specify the name of the dependency filename.
+:::{option} -gen-clang-attr-node-traverse
+Generate Clang attribute traverser.
+:::
 
-.. option:: -debug
+:::{option} -gen-clang-diags-defs
+Generate Clang diagnostics definitions.
+:::
 
-  Enable debug output.
+:::{option} -clang-component component
+Only use warnings from specified component.
+:::
 
-.. option:: -dump-json
+:::{option} -gen-clang-diag-groups
+Generate Clang diagnostic groups.
+:::
 
- Print a JSON representation of all records, suitable for further
- automated processing.
+:::{option} -gen-clang-diags-index-name
+Generate Clang diagnostic name index.
+:::
 
-.. option:: -I directory
+:::{option} -gen-clang-basic-reader
+Generate Clang BasicReader classes.
+:::
 
- Specify where to find other target description files for inclusion.  The
- ``directory`` value should be a full or partial path to a directory that
- contains target description files.
+:::{option} -gen-clang-basic-writer
+Generate Clang BasicWriter classes.
+:::
 
-.. option:: -null-backend
+:::{option} -gen-clang-comment-nodes
+Generate Clang AST comment nodes.
+:::
 
-  Parse the source files and build the records, but do not run any
-  backend. This is useful for timing the frontend.
+:::{option} -gen-clang-decl-nodes
+Generate Clang AST declaration nodes.
+:::
 
-.. option:: -o filename
+:::{option} -gen-clang-stmt-nodes
+Generate Clang AST statement nodes.
+:::
 
- Specify the output file name.  If ``filename`` is ``-``, then
- :program:`*-tblgen` sends its output to standard output.
+:::{option} -gen-clang-type-nodes
+Generate Clang AST type nodes.
+:::
 
-.. option:: -print-records
+:::{option} -gen-clang-type-reader
+Generate Clang AbstractTypeReader class.
+:::
 
- Print all classes and records to standard output (default backend option).
+:::{option} -gen-clang-type-writer
+Generate Clang AbstractTypeWriter class.
+:::
 
-.. option:: -print-detailed-records
+:::{option} -gen-clang-opcodes
+Generate Clang constexpr interpreter opcodes.
+:::
 
-  Print a detailed report of all global variables, classes, and records
-  to standard output.
+:::{option} -gen-clang-sa-checkers
+Generate Clang static analyzer checkers.
+:::
 
-.. option:: -stats
+:::{option} -gen-clang-comment-html-tags
+Generate efficient matchers for HTML tag names that are used in
+documentation comments.
+:::
+
+:::{option} -gen-clang-comment-html-tags-properties
+Generate efficient matchers for HTML tag properties.
+:::
+
+:::{option} -gen-clang-comment-html-named-character-references
+Generate function to translate named character references to UTF-8 sequences.
+:::
+
+:::{option} -gen-clang-comment-command-info
+Generate command properties for commands that are used in documentation comments.
+:::
+
+:::{option} -gen-clang-comment-command-list
+Generate list of commands that are used in documentation comments.
+:::
+
+:::{option} -gen-clang-opencl-builtins
+Generate OpenCL builtin declaration handlers.
+:::
+
+:::{option} -gen-arm-neon
+Generate `arm_neon.h` for Clang.
+:::
+
+:::{option} -gen-arm-fp16
+Generate `arm_fp16.h` for Clang.
+:::
+
+:::{option} -gen-arm-bf16
+Generate `arm_bf16.h` for Clang.
+:::
+
+:::{option} -gen-arm-neon-sema
+Generate ARM NEON sema support for Clang.
+:::
+
+:::{option} -gen-arm-neon-test
+Generate ARM NEON tests for Clang.
+:::
+
+:::{option} -gen-arm-immcheck-types
+Generate `arm_immcheck_types.inc` for Clang.
+:::
+
+:::{option} -gen-arm-sve-header
+Generate `arm_sve.h` for Clang.
+:::
 
-  Print a report with any statistics collected by the backend.
+:::{option} -gen-arm-sve-builtins
+Generate `arm_sve_builtins.inc` for Clang.
+:::
 
-.. option:: -time-phases
+:::{option} -gen-arm-sve-builtin-codegen
+Generate `arm_sve_builtin_cg_map.inc` for Clang.
+:::
 
-  Time the parser and backend phases and print a report.
+:::{option} -gen-arm-sve-typeflags
+Generate `arm_sve_typeflags.inc` for Clang.
+:::
 
-.. option:: -version
+:::{option} -gen-arm-sve-sema-rangechecks
+Generate `arm_sve_sema_rangechecks.inc` for Clang.
+:::
 
- Show the version number of the program.
+:::{option} -gen-arm-mve-header
+Generate `arm_mve.h` for Clang.
+:::
 
-.. option:: -write-if-changed
+:::{option} -gen-arm-mve-builtin-def
+Generate ARM MVE builtin definitions for Clang.
+:::
 
-  Write the output file only if it is new or has changed.
+:::{option} -gen-arm-mve-builtin-sema
+Generate ARM MVE builtin sema checks for Clang.
+:::
 
+:::{option} -gen-arm-mve-builtin-codegen
+Generate ARM MVE builtin code-generator for Clang.
+:::
 
-clang-tblgen Options
-~~~~~~~~~~~~~~~~~~~~
+:::{option} -gen-arm-mve-builtin-aliases
+Generate list of valid ARM MVE builtin aliases for Clang.
+:::
 
-.. option:: -gen-clang-attr-classes
+:::{option} -gen-arm-cde-header
+Generate `arm_cde.h` for Clang.
+:::
 
-  Generate Clang attribute classes.
+:::{option} -gen-arm-cde-builtin-def
+Generate ARM CDE builtin definitions for Clang.
+:::
 
-.. option:: -gen-clang-attr-parser-string-switches
+:::{option} -gen-arm-cde-builtin-sema
+Generate ARM CDE builtin sema checks for Clang.
+:::
 
-  Generate all parser-related attribute string switches.
+:::{option} -gen-arm-cde-builtin-codegen
+Generate ARM CDE builtin code-generator for Clang.
+:::
 
-.. option:: -gen-clang-attr-subject-match-rules-parser-string-switches
+:::{option} -gen-arm-cde-builtin-aliases
+Generate list of valid ARM CDE builtin aliases for Clang.
+:::
 
-  Generate all parser-related attribute subject match rule string switches.
+:::{option} -gen-riscv-vector-header
+Generate `riscv_vector.h` for Clang.
+:::
 
-.. option:: -gen-clang-attr-impl
+:::{option} -gen-riscv-vector-builtins
+Generate `riscv_vector_builtins.inc` for Clang.
+:::
 
-  Generate Clang attribute implementations.
+:::{option} -gen-riscv-vector-builtin-codegen
+Generate `riscv_vector_builtin_cg.inc` for Clang.
+:::
 
-.. option:: -gen-clang-attr-list"
+:::{option} -gen-riscv-sifive-vector-builtins
+Generate `riscv_sifive_vector_builtins.inc` for Clang.
+:::
 
-  Generate a Clang attribute list.
+:::{option} -gen-riscv-sifive-vector-builtin-codegen
+Generate `riscv_sifive_vector_builtin_cg.inc` for Clang.
+:::
 
-.. option:: -gen-clang-attr-subject-match-rule-list
+:::{option} -gen-attr-docs
+Generate attribute documentation.
+:::
 
-  Generate a Clang attribute subject match rule list.
+:::{option} -gen-diag-docs
+Generate diagnostic documentation.
+:::
 
-.. option:: -gen-clang-attr-pch-read
+:::{option} -gen-opt-docs
+Generate option documentation.
+:::
 
-  Generate Clang PCH attribute reader.
+:::{option} -gen-clang-data-collectors
+Generate data collectors for AST nodes.
+:::
 
-.. option:: -gen-clang-attr-pch-write
+:::{option} -gen-clang-test-pragma-attribute-supported-attributes
+Generate a list of attributes supported by `#pragma` Clang attribute for
+testing purposes.
+:::
 
-  Generate Clang PCH attribute writer.
+### lldb-tblgen Options
 
-.. option:: -gen-clang-attr-has-attribute-impl
+:::{option} gen-lldb-option-defs
+Generate lldb OptionDefinition values.
+:::
 
-  Generate a Clang attribute spelling list.
+:::{option} gen-lldb-property-defs
+Generate lldb PropertyDefinition values.
+:::
 
-.. option:: -gen-clang-attr-spelling-index
+:::{option} gen-lldb-property-enum-defs
+Generate lldb PropertyDefinition enum values.
+:::
 
-  Generate a Clang attribute spelling index.
+### llvm-tblgen Options
 
-.. option:: -gen-clang-attr-ast-visitor
+:::{option} -gen-asm-matcher
+Generate assembly instruction matcher.
+:::
 
-  Generate a recursive AST visitor for Clang attributes.
+:::{option} -match-prefix=prefix
+Make -gen-asm-matcher match only instructions with the given *prefix*.
+:::
 
-.. option:: -gen-clang-attr-template-instantiate
+:::{option} -gen-asm-parser
+Generate assembly instruction parser.
+:::
 
-  Generate a Clang template instantiate code.
+:::{option} -asmparsernum=n
+Make -gen-asm-parser emit assembly parser number *n*.
+:::
 
-.. option:: -gen-clang-attr-parsed-attr-list
+:::{option} -gen-asm-writer
+Generate assembly writer.
+:::
 
-  Generate a Clang parsed attribute list.
+:::{option} -asmwriternum=n
+Make -gen-asm-writer emit assembly writer number *n*.
+:::
 
-.. option:: -gen-clang-attr-parsed-attr-impl
+:::{option} -gen-attrs
+Generate attributes.
+:::
 
-  Generate the Clang parsed attribute helpers.
+:::{option} -gen-automata
+Generate generic automata.
+:::
 
-.. option:: -gen-clang-attr-parsed-attr-kinds
+:::{option} -gen-callingconv
+Generate calling convention descriptions.
+:::
 
-  Generate a Clang parsed attribute kinds.
+:::{option} -gen-compress-inst-emitter
+Generate RISC-V compressed instructions.
+:::
 
-.. option:: -gen-clang-attr-text-node-dump
+:::{option} -gen-ctags
+Generate ctags-compatible index.
+:::
 
-  Generate Clang attribute text node dumper.
+:::{option} -gen-dag-isel
+Generate a DAG (directed acyclic graph) instruction selector.
+:::
 
-.. option:: -gen-clang-attr-node-traverse
+:::{option} -instrument-coverage
+Make -gen-dag-isel generate tables to help identify the patterns matched.
+:::
 
-  Generate Clang attribute traverser.
+:::{option} -omit-comments
+Make -gen-dag-isel omit comments. The default is false.
+:::
 
-.. option:: -gen-clang-diags-defs
+:::{option} -gen-dfa-packetizer
+Generate DFA Packetizer for VLIW targets.
+:::
 
-  Generate Clang diagnostics definitions.
+:::{option} -gen-directive-decl
+Generate directive related declaration code (header file).
+:::
 
-.. option:: -clang-component component
+:::{option} -gen-directive-gen
+Generate directive related implementation code part.
+:::
 
-  Only use warnings from specified component.
+:::{option} -gen-directive-impl
+Generate directive related implementation code.
+:::
 
-.. option:: -gen-clang-diag-groups
+:::{option} -gen-disassembler
+Generate disassembler.
+:::
 
-  Generate Clang diagnostic groups.
+:::{option} -gen-emitter
+Generate machine code emitter.
+:::
 
-.. option:: -gen-clang-diags-index-name
+:::{option} -gen-exegesis
+Generate llvm-exegesis tables.
+:::
 
-  Generate Clang diagnostic name index.
+:::{option} -gen-fast-isel
+Generate a "fast" instruction selector.
+:::
 
-.. option:: -gen-clang-basic-reader
+:::{option} -gen-global-isel
+Generate GlobalISel selector.
+:::
 
-  Generate Clang BasicReader classes.
+:::{option} -gisel-coverage-file=filename
+Specify the file from which to retrieve coverage information.
+:::
 
-.. option:: -gen-clang-basic-writer
+:::{option} -instrument-gisel-coverage
+Make -gen-global-isel generate coverage instrumentation.
+:::
 
-  Generate Clang BasicWriter classes.
+:::{option} -optimize-match-table
+Make -gen-global-isel generate an optimized version of the match table.
+:::
 
-.. option:: -gen-clang-comment-nodes
+:::{option} -warn-on-skipped-patterns
+Make -gen-global-isel explain why a pattern was skipped for inclusion.
+:::
 
-  Generate Clang AST comment nodes.
+:::{option} -gen-global-isel-combiner
+Generate GlobalISel combiner.
+:::
 
-.. option:: -gen-clang-decl-nodes
+:::{option} -combiners=list
+Make -gen-global-isel-combiner emit the specified combiners.
+:::
 
-  Generate Clang AST declaration nodes.
+:::{option} -gicombiner-debug-cxxpreds
+Add debug comments to all C++ predicates emitted by -gen-global-isel-combiner
+:::
 
-.. option:: -gen-clang-stmt-nodes
+:::{option} -gicombiner-stop-after-parse
+Make -gen-global-isel-combiner stop processing after parsing rules and dump state.
+:::
 
-  Generate Clang AST statement nodes.
+:::{option} -gen-instr-info
+Generate instruction descriptions.
+:::
 
-.. option:: -gen-clang-type-nodes
+:::{option} -gen-instr-docs
+Generate instruction documentation.
+:::
 
-  Generate Clang AST type nodes.
+:::{option} -gen-intrinsic-enums
+Generate intrinsic enums.
+:::
 
-.. option:: -gen-clang-type-reader
+:::{option} -intrinsic-prefix=prefix
+Make -gen-intrinsic-enums generate intrinsics with this target *prefix*.
+:::
 
-  Generate Clang AbstractTypeReader class.
+:::{option} -gen-intrinsic-impl
+Generate intrinsic information.
+:::
 
-.. option:: -gen-clang-type-writer
+:::{option} -gen-opt-parser-defs
+Generate options definitions.
+:::
 
-  Generate Clang AbstractTypeWriter class.
+:::{option} -gen-opt-rst
+Generate option RST.
+:::
 
-.. option:: -gen-clang-opcodes
+:::{option} -gen-pseudo-lowering
+Generate pseudo instruction lowering.
+:::
 
-  Generate Clang constexpr interpreter opcodes.
+:::{option} -gen-register-bank
+Generate register bank descriptions.
+:::
 
-.. option:: -gen-clang-sa-checkers
+:::{option} -gen-register-info
+Generate registers and register classes info.
+:::
 
-  Generate Clang static analyzer checkers.
+:::{option} -register-info-debug
+Make -gen-register-info dump register information for debugging.
+:::
 
-.. option:: -gen-clang-comment-html-tags
+:::{option} -gen-searchable-tables
+Generate generic searchable tables. See {doc}`TableGen BackEnds <../TableGen/BackEnds>`
+for a detailed description.
+:::
 
-  Generate efficient matchers for HTML tag names that are used in
-  documentation comments.
+:::{option} -gen-subtarget
+Generate subtarget enumerations.
+:::
 
-.. option:: -gen-clang-comment-html-tags-properties
+:::{option} -gen-x86-EVEX2VEX-tables
+Generate X86 EVEX to VEX compress tables.
+:::
 
-  Generate efficient matchers for HTML tag properties.
+:::{option} -gen-x86-fold-tables
+Generate X86 fold tables.
+:::
 
-.. option:: -gen-clang-comment-html-named-character-references
+:::{option} -long-string-literals
+When emitting large string tables, prefer string literals over
+comma-separated char literals. This can be a readability and
+compile-time performance win, but upsets some compilers.
+:::
 
-  Generate function to translate named character references to UTF-8 sequences.
+:::{option} -print-enums
+Print enumeration values for a class.
+:::
 
-.. option:: -gen-clang-comment-command-info
+:::{option} -class=classname
+Make -print-enums print the enumeration list for the specified class.
+:::
 
-  Generate command properties for commands that are used in documentation comments.
+:::{option} -print-sets
+Print expanded sets for testing DAG exprs.
+:::
 
-.. option:: -gen-clang-comment-command-list
+### mlir-tblgen Options
 
-  Generate list of commands that are used in documentation comments.
+:::{option} -gen-avail-interface-decls
+Generate availability interface declarations.
+:::
 
-.. option:: -gen-clang-opencl-builtins
+:::{option} -gen-avail-interface-defs
+Generate op interface definitions.
+:::
 
-  Generate OpenCL builtin declaration handlers.
+:::{option} -gen-dialect-doc
+Generate dialect documentation.
+:::
 
-.. option:: -gen-arm-neon
+:::{option} -dialect
+The dialect to generate.
+:::
 
-  Generate ``arm_neon.h`` for Clang.
+:::{option} -gen-directive-decl
+Generate declarations for directives (OpenMP, etc.).
+:::
 
-.. option:: -gen-arm-fp16
+:::{option} -gen-enum-decls
+Generate enum utility declarations.
+:::
 
-  Generate ``arm_fp16.h`` for Clang.
+:::{option} -gen-enum-defs
+Generate enum utility definitions.
+:::
 
-.. option:: -gen-arm-bf16
+:::{option} -gen-enum-from-llvmir-conversions
+Generate conversions of EnumAttrs from LLVM IR.
+:::
 
-  Generate ``arm_bf16.h`` for Clang.
+:::{option} -gen-enum-to-llvmir-conversions
+Generate conversions of EnumAttrs to LLVM IR.
+:::
 
-.. option:: -gen-arm-neon-sema
+:::{option} -gen-llvmir-conversions
+Generate LLVM IR conversions.
+:::
 
-  Generate ARM NEON sema support for Clang.
+:::{option} -gen-llvmir-intrinsics
+Generate LLVM IR intrinsics.
+:::
 
-.. option:: -gen-arm-neon-test
+:::{option} -llvmir-intrinsics-filter
+Only keep the intrinsics with the specified substring in their record name.
+:::
 
-  Generate ARM NEON tests for Clang.
+:::{option} -dialect-opclass-base
+The base class for the ops in the dialect we are to emit.
+:::
 
-.. option:: -gen-arm-immcheck-types
+:::{option} -gen-op-decls
+Generate operation declarations.
+:::
 
-  Generate ``arm_immcheck_types.inc`` for Clang.
+:::{option} -gen-op-defs
+Generate operation definitions.
+:::
 
-.. option:: -gen-arm-sve-header
+:::{option} -asmformat-error-is-fatal
+Emit a fatal error if format parsing fails.
+:::
 
-  Generate ``arm_sve.h`` for Clang.
+:::{option} -op-exclude-regex
+Regular expression of name of ops to exclude (no filter if empty).
+:::
 
-.. option:: -gen-arm-sve-builtins
+:::{option} -op-include-regex
+Regular expression of name of ops to include (no filter if empty).
+:::
 
-  Generate ``arm_sve_builtins.inc`` for Clang.
+:::{option} -gen-op-doc
+Generate operation documentation.
+:::
 
-.. option:: -gen-arm-sve-builtin-codegen
+:::{option} -gen-pass-decls
+Generate operation documentation.
+:::
 
-  Generate ``arm_sve_builtin_cg_map.inc`` for Clang.
+:::{option} -name namestring
+The name of this group of passes.
+:::
 
-.. option:: -gen-arm-sve-typeflags
+:::{option} -gen-pass-doc
+Generate pass documentation.
+:::
 
-  Generate ``arm_sve_typeflags.inc`` for Clang.
+:::{option} -gen-rewriters
+Generate pattern rewriters.
+:::
 
-.. option:: -gen-arm-sve-sema-rangechecks
+:::{option} -gen-spirv-avail-impls
+Generate SPIR-V operation utility definitions.
+:::
 
-  Generate ``arm_sve_sema_rangechecks.inc`` for Clang.
+:::{option} -gen-spirv-capability-implication
+Generate utility function to return implied capabilities for a given capability.
+:::
 
-.. option:: -gen-arm-mve-header
+:::{option} -gen-spirv-enum-avail-decls
+Generate SPIR-V enum availability declarations.
+:::
 
-  Generate ``arm_mve.h`` for Clang.
+:::{option} -gen-spirv-enum-avail-defs
+Generate SPIR-V enum availability definitions.
+:::
 
-.. option:: -gen-arm-mve-builtin-def
+:::{option} -gen-spirv-op-utils
+Generate SPIR-V operation utility definitions.
+:::
 
-  Generate ARM MVE builtin definitions for Clang.
+:::{option} -gen-spirv-serialization
+Generate SPIR-V (de)serialization utilities and functions.
+:::
 
-.. option:: -gen-arm-mve-builtin-sema
+:::{option} -gen-struct-attr-decls
+Generate struct utility declarations.
+:::
 
-  Generate ARM MVE builtin sema checks for Clang.
+:::{option} -gen-struct-attr-defs
+Generate struct utility definitions.
+:::
 
-.. option:: -gen-arm-mve-builtin-codegen
+:::{option} -gen-typedef-decls
+Generate TypeDef declarations.
+:::
 
-  Generate ARM MVE builtin code-generator for Clang.
+:::{option} -gen-typedef-defs
+Generate TypeDef definitions.
+:::
 
-.. option:: -gen-arm-mve-builtin-aliases
+:::{option} -typedefs-dialect name
+Generate types for this dialect.
+:::
 
-  Generate list of valid ARM MVE builtin aliases for Clang.
+## EXIT STATUS
 
-.. option:: -gen-arm-cde-header
-
-  Generate ``arm_cde.h`` for Clang.
-
-.. option:: -gen-arm-cde-builtin-def
-
-  Generate ARM CDE builtin definitions for Clang.
-
-.. option:: -gen-arm-cde-builtin-sema
-
-  Generate ARM CDE builtin sema checks for Clang.
-
-.. option:: -gen-arm-cde-builtin-codegen
-
-  Generate ARM CDE builtin code-generator for Clang.
-
-.. option:: -gen-arm-cde-builtin-aliases
-
-  Generate list of valid ARM CDE builtin aliases for Clang.
-
-.. option:: -gen-riscv-vector-header
-
-  Generate ``riscv_vector.h`` for Clang.
-
-.. option:: -gen-riscv-vector-builtins
-
-  Generate ``riscv_vector_builtins.inc`` for Clang.
-
-.. option:: -gen-riscv-vector-builtin-codegen
-
-  Generate ``riscv_vector_builtin_cg.inc`` for Clang.
-
-.. option:: -gen-riscv-sifive-vector-builtins
-
-  Generate ``riscv_sifive_vector_builtins.inc`` for Clang.
-
-.. option:: -gen-riscv-sifive-vector-builtin-codegen
-
-  Generate ``riscv_sifive_vector_builtin_cg.inc`` for Clang.
-
-.. option:: -gen-attr-docs
-
-  Generate attribute documentation.
-
-.. option:: -gen-diag-docs
-
-  Generate diagnostic documentation.
-
-.. option:: -gen-opt-docs
-
-  Generate option documentation.
-
-.. option:: -gen-clang-data-collectors
-
-  Generate data collectors for AST nodes.
-
-.. option:: -gen-clang-test-pragma-attribute-supported-attributes
-
-  Generate a list of attributes supported by ``#pragma`` Clang attribute for
-  testing purposes.
-
-
-lldb-tblgen Options
-~~~~~~~~~~~~~~~~~~~
-
-.. option:: gen-lldb-option-defs
-
-  Generate lldb OptionDefinition values.
-
-.. option:: gen-lldb-property-defs
-
-  Generate lldb PropertyDefinition values.
-
-.. option:: gen-lldb-property-enum-defs
-
-  Generate lldb PropertyDefinition enum values.
-
-
-llvm-tblgen Options
-~~~~~~~~~~~~~~~~~~~
-
-.. option:: -gen-asm-matcher
-
- Generate assembly instruction matcher.
-
-.. option:: -match-prefix=prefix
-
-  Make -gen-asm-matcher match only instructions with the given *prefix*.
-
-.. option:: -gen-asm-parser
-
- Generate assembly instruction parser.
-
-.. option:: -asmparsernum=n
-
- Make -gen-asm-parser emit assembly parser number *n*.
-
-.. option:: -gen-asm-writer
-
- Generate assembly writer.
-
-.. option:: -asmwriternum=n
-
- Make -gen-asm-writer emit assembly writer number *n*.
-
-.. option:: -gen-attrs
-
-  Generate attributes.
-
-.. option:: -gen-automata
-
-  Generate generic automata.
-
-.. option:: -gen-callingconv
-
-  Generate calling convention descriptions.
-
-.. option:: -gen-compress-inst-emitter
-
-  Generate RISC-V compressed instructions.
-
-.. option:: -gen-ctags
-
-  Generate ctags-compatible index.
-
-.. option:: -gen-dag-isel
-
- Generate a DAG (directed acyclic graph) instruction selector.
-
-.. option:: -instrument-coverage
-
-  Make -gen-dag-isel generate tables to help identify the patterns matched.
-
-.. option:: -omit-comments
-
-  Make -gen-dag-isel omit comments. The default is false.
-
-.. option:: -gen-dfa-packetizer
-
- Generate DFA Packetizer for VLIW targets.
-
-.. option:: -gen-directive-decl
-
-  Generate directive related declaration code (header file).
-
-.. option:: -gen-directive-gen
-
-  Generate directive related implementation code part.
-
-.. option:: -gen-directive-impl
-
-  Generate directive related implementation code.
-
-.. option:: -gen-disassembler
-
-  Generate disassembler.
-
-.. option:: -gen-emitter
-
- Generate machine code emitter.
-
-.. option:: -gen-exegesis
-
-  Generate llvm-exegesis tables.
-
-.. option:: -gen-fast-isel
-
-  Generate a "fast" instruction selector.
-
-.. option:: -gen-global-isel
-
-  Generate GlobalISel selector.
-
-.. option:: -gisel-coverage-file=filename
-
-  Specify the file from which to retrieve coverage information.
-
-.. option:: -instrument-gisel-coverage
-
-  Make -gen-global-isel generate coverage instrumentation.
-
-.. option:: -optimize-match-table
-
-  Make -gen-global-isel generate an optimized version of the match table.
-
-.. option:: -warn-on-skipped-patterns
-
-  Make -gen-global-isel explain why a pattern was skipped for inclusion.
-
-.. option:: -gen-global-isel-combiner
-
-  Generate GlobalISel combiner.
-
-.. option:: -combiners=list
-
-  Make -gen-global-isel-combiner emit the specified combiners.
-
-.. option:: -gicombiner-debug-cxxpreds
-
-  Add debug comments to all C++ predicates emitted by -gen-global-isel-combiner
-
-.. option:: -gicombiner-stop-after-parse
-
-  Make -gen-global-isel-combiner stop processing after parsing rules and dump state.
-
-.. option:: -gen-instr-info
-
- Generate instruction descriptions.
-
-.. option:: -gen-instr-docs
-
- Generate instruction documentation.
-
-.. option:: -gen-intrinsic-enums
-
- Generate intrinsic enums.
-
-.. option:: -intrinsic-prefix=prefix
-
-  Make -gen-intrinsic-enums generate intrinsics with this target *prefix*.
-
-.. option:: -gen-intrinsic-impl
-
- Generate intrinsic information.
-
-.. option:: -gen-opt-parser-defs
-
-  Generate options definitions.
-
-.. option:: -gen-opt-rst
-
-  Generate option RST.
-
-.. option:: -gen-pseudo-lowering
-
- Generate pseudo instruction lowering.
-
-.. option:: -gen-register-bank
-
-  Generate register bank descriptions.
-
-.. option:: -gen-register-info
-
-  Generate registers and register classes info.
-
-.. option:: -register-info-debug
-
-  Make -gen-register-info dump register information for debugging.
-
-.. option:: -gen-searchable-tables
-
-  Generate generic searchable tables. See :doc:`TableGen BackEnds <../TableGen/BackEnds>`
-  for a detailed description.
-
-.. option:: -gen-subtarget
-
- Generate subtarget enumerations.
-
-.. option:: -gen-x86-EVEX2VEX-tables
-
-  Generate X86 EVEX to VEX compress tables.
-
-.. option:: -gen-x86-fold-tables
-
-  Generate X86 fold tables.
-
-.. option:: -long-string-literals
-
-  When emitting large string tables, prefer string literals over
-  comma-separated char literals. This can be a readability and
-  compile-time performance win, but upsets some compilers.
-
-.. option:: -print-enums
-
- Print enumeration values for a class.
-
-.. option:: -class=classname
-
- Make -print-enums print the enumeration list for the specified class.
-
-.. option:: -print-sets
-
- Print expanded sets for testing DAG exprs.
-
-
-mlir-tblgen Options
-~~~~~~~~~~~~~~~~~~~
-
-.. option:: -gen-avail-interface-decls
-
-  Generate availability interface declarations.
-
-.. option:: -gen-avail-interface-defs
-
-  Generate op interface definitions.
-
-.. option:: -gen-dialect-doc
-
-  Generate dialect documentation.
-
-.. option:: -dialect
-
-  The dialect to generate.
-
-.. option:: -gen-directive-decl
-
-  Generate declarations for directives (OpenMP, etc.).
-
-.. option:: -gen-enum-decls
-
-  Generate enum utility declarations.
-
-.. option:: -gen-enum-defs
-
-  Generate enum utility definitions.
-
-.. option:: -gen-enum-from-llvmir-conversions
-
-  Generate conversions of EnumAttrs from LLVM IR.
-
-.. option:: -gen-enum-to-llvmir-conversions
-
-  Generate conversions of EnumAttrs to LLVM IR.
-
-.. option:: -gen-llvmir-conversions
-
-  Generate LLVM IR conversions.
-
-.. option:: -gen-llvmir-intrinsics
-
-  Generate LLVM IR intrinsics.
-
-.. option:: -llvmir-intrinsics-filter
-
-  Only keep the intrinsics with the specified substring in their record name.
-
-.. option:: -dialect-opclass-base
-
-  The base class for the ops in the dialect we are to emit.
-
-.. option:: -gen-op-decls
-
-  Generate operation declarations.
-
-.. option:: -gen-op-defs
-
-  Generate operation definitions.
-
-.. option:: -asmformat-error-is-fatal
-
-  Emit a fatal error if format parsing fails.
-
-.. option:: -op-exclude-regex
-
-  Regular expression of name of ops to exclude (no filter if empty).
-
-.. option:: -op-include-regex
-
-  Regular expression of name of ops to include (no filter if empty).
-
-.. option:: -gen-op-doc
-
-  Generate operation documentation.
-
-.. option:: -gen-pass-decls
-
-  Generate operation documentation.
-
-.. option:: -name namestring
-
-  The name of this group of passes.
-
-.. option:: -gen-pass-doc
-
-  Generate pass documentation.
-
-.. option:: -gen-rewriters
-
-  Generate pattern rewriters.
-
-.. option:: -gen-spirv-avail-impls
-
-  Generate SPIR-V operation utility definitions.
-
-.. option:: -gen-spirv-capability-implication
-
-  Generate utility function to return implied capabilities for a given capability.
-
-.. option:: -gen-spirv-enum-avail-decls
-
-  Generate SPIR-V enum availability declarations.
-
-.. option:: -gen-spirv-enum-avail-defs
-
-  Generate SPIR-V enum availability definitions.
-
-.. option:: -gen-spirv-op-utils
-
-  Generate SPIR-V operation utility definitions.
-
-.. option:: -gen-spirv-serialization
-
-  Generate SPIR-V (de)serialization utilities and functions.
-
-.. option:: -gen-struct-attr-decls
-
-  Generate struct utility declarations.
-
-.. option:: -gen-struct-attr-defs
-
-  Generate struct utility definitions.
-
-.. option:: -gen-typedef-decls
-
-  Generate TypeDef declarations.
-
-.. option:: -gen-typedef-defs
-
-  Generate TypeDef definitions.
-
-.. option:: -typedefs-dialect name
-
-  Generate types for this dialect.
-
-EXIT STATUS
------------
-
-If :program:`*-tblgen` succeeds, it will exit with 0.  Otherwise, if an error
+If {program}`*-tblgen` succeeds, it will exit with 0. Otherwise, if an error
 occurs, it will exit with a non-zero value.
+
