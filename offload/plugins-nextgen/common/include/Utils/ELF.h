@@ -13,8 +13,17 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
+
+#include <cstdint>
+#include <optional>
+#include <string>
+
+namespace llvm {
+class DWARFContext;
+} // namespace llvm
 
 namespace utils {
 namespace elf {
@@ -38,6 +47,30 @@ getSymbolAddress(const llvm::object::ELFSymbolRef &Symbol);
 /// executable file without a hash table.
 llvm::Expected<std::optional<llvm::object::ELFSymbolRef>>
 getSymbol(const llvm::object::ObjectFile &ELFObj, llvm::StringRef Name);
+
+/// A resolved source location for a single DWARF frame.
+struct SourceLocation {
+  std::string FunctionName;
+  std::string FileName;
+  uint32_t Line = 0;
+  uint32_t Column = 0;
+};
+
+/// Resolves the code address \p Addr against \p DICtx into its source frames.
+/// Returns an empty vector if no symbols are present.
+llvm::SmallVector<SourceLocation> symbolize(llvm::DWARFContext &DICtx,
+                                            uint64_t Addr);
+
+/// Returns the data symbol covering \p Addr in the ELF object, or an empty
+/// string if none is found.
+llvm::StringRef findDataSymbol(const llvm::object::ObjectFile &ELFObj,
+                               uint64_t Addr);
+
+/// Returns the function symbol covering \p Addr in the ELF object, or an empty
+/// string if none is found. Unlike DWARF this only needs the symbol table, so
+/// it still resolves when the image lacks line tables.
+llvm::StringRef findFunctionSymbol(const llvm::object::ObjectFile &ELFObj,
+                                   uint64_t Addr);
 
 } // namespace elf
 } // namespace utils
