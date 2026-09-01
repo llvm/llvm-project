@@ -697,8 +697,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveTypeScopeParent(
 std::optional<MCRegister>
 SPIRVNonSemanticDebugHandler::resolveLexicalBlockParent(
     const DIScope *Scope) const {
-  if (isa_and_nonnull<DILexicalBlock>(Scope) ||
-      isa_and_nonnull<DINamespace>(Scope))
+  if (isa_and_nonnull<DILexicalBlock, DINamespace>(Scope))
     return lookupOptReg(DebugLexicalBlockRegs, Scope);
   if (const auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
     return lookupOptReg(DebugFunctionRegs, SP);
