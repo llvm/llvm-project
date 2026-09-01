@@ -63,7 +63,7 @@ Linker
 
 The Clang Static Analyzer is a tool that scans source code to try to find bugs
 through code analysis. This tool uses many parts of Clang and is built into
-the same driver. Please see \<<https://clang-analyzer.llvm.org>> for more details
+the same driver. Please see <https://clang-analyzer.llvm.org> for more details
 on how to use the static analyzer.
 
 ## OPTIONS
@@ -319,7 +319,7 @@ library function in namespace `std`. For example,
 {cpp:func}`std::move_if_noexcept` library function.
 
 For C standard library functions that the C++ standard library also provides
-in namespace `std`, use {option}`-fno-builtin-\<function\>` instead.
+in namespace `std`, use `-fno-builtin-<function>` instead.
 :::
 
 :::{option} -fmath-errno
@@ -350,7 +350,7 @@ strings and other optimizations.
 
 :::{option} -flax-vector-conversions, -flax-vector-conversions=<kind>, -fno-lax-vector-conversions
 Allow loose type checking rules for implicit vector conversions.
-Possible values of \<kind>:
+Possible values of `<kind>`:
 
 - `none`: allow no implicit conversions between vectors
 - `integer`: allow implicit bitcasts between integer vectors of the same
@@ -358,7 +358,7 @@ Possible values of \<kind>:
 - `all`: allow implicit bitcasts between any vectors of the same
   overall bit-width
 
-\<kind> defaults to `integer` if unspecified.
+`<kind>` defaults to `integer` if unspecified.
 :::
 
 :::{option} -fblocks
@@ -761,12 +761,10 @@ the preprocessed file by compiling it separately.
 
 ## ENVIRONMENT
 
-```{eval-rst}
-.. envvar:: TMPDIR, TEMP, TMP
-
-  These environment variables are checked, in order, for the location to write
-  temporary files used during the compilation process.
-```
+:::{envvar} TMPDIR, TEMP, TMP
+These environment variables are checked, in order, for the location to write
+temporary files used during the compilation process.
+:::
 
 ```{eval-rst}
 .. envvar:: CPATH
@@ -780,29 +778,24 @@ the preprocessed file by compiling it separately.
   treated as specifying the compiler's current working directory.
 ```
 
-```{eval-rst}
-.. envvar:: C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
+:::{envvar} C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
+These environment variables specify additional system header file search
+paths to be used when processing the corresponding language. Search paths are
+delimited as for the {envvar}`CPATH` environment variable.
+:::
 
-  These environment variables specify additional system header file search
-  paths to be used when processing the corresponding language. Search paths are
-  delimited as for the :envvar:`CPATH` environment variable.
-```
-
-```{eval-rst}
-.. envvar:: MACOSX_DEPLOYMENT_TARGET
-
-  If :option:`-mmacos-version-min` is unspecified, the default deployment
-  target is read from this environment variable. This option only affects
-  Darwin targets.
-```
+:::{envvar} MACOSX_DEPLOYMENT_TARGET
+If {option}`-mmacos-version-min` is unspecified, the default deployment
+target is read from this environment variable. This option only affects
+Darwin targets.
+:::
 
 ## BUGS
 
-To report bugs, please visit \<<https://github.com/llvm/llvm-project/issues/>>. Most bug reports should
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues/>. Most bug reports should
 include preprocessed source files (use the {option}`-E` option) and the full
 output of the compiler, along with information to reproduce.
 
 ## SEE ALSO
 
 {manpage}`as(1)`, {manpage}`ld(1)`
-

@@ -74,7 +74,7 @@ they are defined like this:
 
 The definition of `INT_MIN` is not a simple literal, but a
 parenthesized expression. Parenthesized expressions are supported using
-the [boxed expression](#objc_boxed_expressions) syntax, which is
+the [boxed expression](#boxed-expressions) syntax, which is
 described in the next section.
 
 Because `NSNumber` does not currently support wrapping `long double`
@@ -581,4 +581,3 @@ availability of numeric literals support. This checks for the new
 
 To check whether boxed expressions are supported, use
 `__has_feature(objc_boxed_expressions)` feature macro.
-

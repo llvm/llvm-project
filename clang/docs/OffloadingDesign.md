@@ -41,32 +41,32 @@ The compiler performs the following high-level actions to generate OpenMP
 offloading code:
 
 - Compile the input file for the host to produce a bitcode file. Lower `#pragma
-  omp target` declarations to {ref}`offloading entries <Generating Offloading
-  Entries>` and create metadata to indicate which entries are on the device.
+  omp target` declarations to [offloading entries](#generating-offloading-entries)
+  and create metadata to indicate which entries are on the device.
 
-- Compile the input file for the target {ref}`device <Device Compilation>` using
-  the {ref}`offloading entry <Generating Offloading Entries>` metadata created
+- Compile the input file for the target [device](#device-compilation) using
+  the [offloading entry](#generating-offloading-entries) metadata created
   by the host.
 
 - Link the OpenMP device runtime library and run the backend to create a device
   object file.
 
-- Run the backend on the host bitcode file and create a {ref}`fat object file
-  <Creating Fat Objects>` using the device object file.
+- Run the backend on the host bitcode file and create a [fat object file](#creating-fat-objects)
+  using the device object file.
 
-- Pass the fat object file to the {ref}`linker wrapper tool <Device Linking>`
+- Pass the fat object file to the [linker wrapper tool](#linking-target-device-code)
   and extract the device objects. Run the device linking action on the extracted
   objects.
 
-- {ref}`Wrap <Device Binary Wrapping>` the {ref}`device images <Device linking>`
-  and {ref}`offload entries <Generating Offloading Entries>` in a symbol that
+- [Wrap](#device-binary-wrapping) the [device images](#linking-target-device-code)
+  and [offload entries](#generating-offloading-entries) in a symbol that
   can be accessed by the host.
 
-- Add the {ref}`wrapped binary <Device Binary Wrapping>` to the linker input and
+- Add the [wrapped binary](#device-binary-wrapping) to the linker input and
   run the host linking action. Link with `libomptarget` to register and
   execute the images.
 
-  > (generating-offloading-entries)=
+(generating-offloading-entries)=
 
 ### Generating Offloading Entries
 
@@ -77,24 +77,29 @@ symbols inside a `#pragma omp declare target` directive will have offloading
 entries generated. The following table shows the {ref}`offload entry structure
 <table-tgt_offload_entry_structure>`.
 
-> ```{eval-rst}
-> .. table:: __tgt_offload_entry Structure
->   :name: table-tgt_offload_entry_structure
->
->   +---------+------------+------------------------------------------------------------------------+
->   |   Type  | Identifier | Description                                                            |
->   +=========+============+========================================================================+
->   |  void*  |    addr    | Address of global symbol within device image (function or global)      |
->   +---------+------------+------------------------------------------------------------------------+
->   |  char*  |    name    | Name of the symbol                                                     |
->   +---------+------------+------------------------------------------------------------------------+
->   |  size_t |    size    | Size of the entry info (0 if it is a function)                         |
->   +---------+------------+------------------------------------------------------------------------+
->   | int32_t |    flags   | Flags associated with the entry (see :ref:`table-offload_entry_flags`) |
->   +---------+------------+------------------------------------------------------------------------+
->   | int32_t |  reserved  | Reserved, to be used by the runtime library.                           |
->   +---------+------------+------------------------------------------------------------------------+
-> ```
+:::{list-table} __tgt_offload_entry Structure
+:name: table-tgt_offload_entry_structure
+:header-rows: 1
+
+* - Type
+  - Identifier
+  - Description
+* - `void*`
+  - `addr`
+  - Address of global symbol within device image (function or global)
+* - `char*`
+  - `name`
+  - Name of the symbol
+* - `size_t`
+  - `size`
+  - Size of the entry info (0 if it is a function)
+* - `int32_t`
+  - `flags`
+  - Flags associated with the entry (see {ref}`table-offload_entry_flags`)
+* - `int32_t`
+  - `reserved`
+  - Reserved, to be used by the runtime library.
+:::
 
 The address of the global symbol will be set to the device pointer value by the
 runtime once the device image is loaded. The flags are set to indicate the
@@ -102,44 +107,49 @@ handling required for the offloading entry. If the offloading entry is an entry
 to a target region it can have one of the following {ref}`entry flags
 <table-offload_entry_flags>`.
 
-> ```{eval-rst}
-> .. table:: Target Region Entry Flags
->   :name: table-offload_entry_flags
->
->   +----------------------------------+-------+-----------------------------------------+
->   |                Name              | Value | Description                             |
->   +==================================+=======+=========================================+
->   | OMPTargetRegionEntryTargetRegion | 0x00  | Mark the entry as generic target region |
->   +----------------------------------+-------+-----------------------------------------+
->   | OMPTargetRegionEntryCtor         | 0x02  | Mark the entry as a global constructor  |
->   +----------------------------------+-------+-----------------------------------------+
->   | OMPTargetRegionEntryDtor         | 0x04  | Mark the entry as a global destructor   |
->   +----------------------------------+-------+-----------------------------------------+
-> ```
+:::{list-table} Target Region Entry Flags
+:name: table-offload_entry_flags
+:header-rows: 1
+
+* - Name
+  - Value
+  - Description
+* - `OMPTargetRegionEntryTargetRegion`
+  - `0x00`
+  - Mark the entry as generic target region
+* - `OMPTargetRegionEntryCtor`
+  - `0x02`
+  - Mark the entry as a global constructor
+* - `OMPTargetRegionEntryDtor`
+  - `0x04`
+  - Mark the entry as a global destructor
+:::
 
 If the offloading entry is a global variable, indicated by a non-zero size, it
 will instead have one of the following {ref}`global
 <table-offload_global_flags>` flags.
 
-> ```{eval-rst}
-> .. table:: Target Region Global
->   :name: table-offload_global_flags
->
->   +-----------------------------+-------+---------------------------------------------------------------+
->   |          Name               | Value | Description                                                   |
->   +=============================+=======+===============================================================+
->   | OMPTargetGlobalVarEntryTo   | 0x00  | Mark the entry as a 'to' attribute (w.r.t. the to clause)     |
->   +-----------------------------+-------+---------------------------------------------------------------+
->   | OMPTargetGlobalVarEntryLink | 0x01  | Mark the entry as a 'link' attribute (w.r.t. the link clause) |
->   +-----------------------------+-------+---------------------------------------------------------------+
-> ```
+:::{list-table} Target Region Global
+:name: table-offload_global_flags
+:header-rows: 1
+
+* - Name
+  - Value
+  - Description
+* - `OMPTargetGlobalVarEntryTo`
+  - `0x00`
+  - Mark the entry as a 'to' attribute (w.r.t. the to clause)
+* - `OMPTargetGlobalVarEntryLink`
+  - `0x01`
+  - Mark the entry as a 'link' attribute (w.r.t. the link clause)
+:::
 
 The target offload entries are used by the runtime to access the device kernels
 and globals that will be provided by the final device image. Each offloading
 entry is set to use the `omp_offloading_entries` section. When the final
 application is created the linker will provide the
 `__start_omp_offloading_entries` and `__stop_omp_offloading_entries` symbols
-which are used to create the {ref}`final image <Device Binary Wrapping>`.
+which are used to create the [final image](#device-binary-wrapping).
 
 This information is used by the device compilation stage to determine which
 symbols need to be exported from the device. We use the `omp_offload.info`
@@ -166,24 +176,29 @@ standard {ref}`identifier structure <table-ident_t_structure>` used in
 `libomp` and `libomptarget`. This is used to pass information and source
 locations to the runtime.
 
-> ```{eval-rst}
-> .. table:: ident_t Structure
->   :name: table-ident_t_structure
->
->   +---------+------------+-----------------------------------------------------------------------------+
->   |   Type  | Identifier | Description                                                                 |
->   +=========+============+=============================================================================+
->   | int32_t |  reserved  | Reserved, to be used by the runtime library.                                |
->   +---------+------------+-----------------------------------------------------------------------------+
->   | int32_t |   flags    | Flags used to indicate some features, mostly unused.                        |
->   +---------+------------+-----------------------------------------------------------------------------+
->   | int32_t |  reserved  | Reserved, to be used by the runtime library.                                |
->   +---------+------------+-----------------------------------------------------------------------------+
->   | int32_t |  reserved  | Reserved, to be used by the runtime library.                                |
->   +---------+------------+-----------------------------------------------------------------------------+
->   |  char*  |  psource   | Program source information, stored as ";filename;function;line;column;;\\0" |
->   +---------+------------+-----------------------------------------------------------------------------+
-> ```
+:::{list-table} ident_t Structure
+:name: table-ident_t_structure
+:header-rows: 1
+
+* - Type
+  - Identifier
+  - Description
+* - `int32_t`
+  - `reserved`
+  - Reserved, to be used by the runtime library.
+* - `int32_t`
+  - `flags`
+  - Flags used to indicate some features, mostly unused.
+* - `int32_t`
+  - `reserved`
+  - Reserved, to be used by the runtime library.
+* - `int32_t`
+  - `reserved`
+  - Reserved, to be used by the runtime library.
+* - `char*`
+  - `psource`
+  - Program source information, stored as `;filename;function;line;column;;\\0`
+:::
 
 If debugging information is enabled, we will also create strings to indicate the
 names and declarations of variables mapped in target regions. These have the
@@ -239,20 +254,19 @@ The device code will then be placed in the corresponding section one the backend
 is run on the host, creating a fat object. Using fat objects allows us to treat
 offloading objects as standard host objects. The final object file should
 contain the following {ref}`offloading sections <table-offloading_sections>`. We
-will use this information when {ref}`Device Linking`.
+will use this information when [linking target device code](#linking-target-device-code).
 
-> ```{eval-rst}
-> .. table:: Offloading Sections
->   :name: table-offloading_sections
->
->   +----------------------------------+------------------------------------------------------------------------------+
->   |             Section              | Description                                                                  |
->   +==================================+==============================================================================+
->   | omp_offloading_entries           | Offloading entry information (see :ref:`table-tgt_offload_entry_structure`)  |
->   +----------------------------------+------------------------------------------------------------------------------+
->   | .llvm.offloading                 | Embedded device object file for the target device and architecture           |
->   +----------------------------------+------------------------------------------------------------------------------+
-> ```
+:::{list-table} Offloading Sections
+:name: table-offloading_sections
+:header-rows: 1
+
+* - Section
+  - Description
+* - `omp_offloading_entries`
+  - Offloading entry information (see {ref}`table-tgt_offload_entry_structure`)
+* - `.llvm.offloading`
+  - Embedded device object file for the target device and architecture
+:::
 
 (device-linking)=
 
@@ -264,7 +278,7 @@ create an executable device image. This is done using a Clang tool, see
 over the host linking job. It scans the input object files for the offloading
 section `.llvm.offloading`. The device files stored in this section are then
 extracted and passed to the appropriate linking job. The linked device image is
-then {ref}`wrapped <Device Binary Wrapping>` to create the symbols used to load
+then [wrapped](#device-binary-wrapping) to create the symbols used to load
 the device image and link it with the host.
 
 The linker wrapper tool supports linking bitcode files through link time
@@ -278,8 +292,8 @@ requested it using the `-foffload-lto` flag.
 ### Device Binary Wrapping
 
 Various structures and functions are used to create the information necessary to
-offload code on the device. We use the {ref}`linked device executable <Device
-Linking>` with the corresponding offloading entries to create the symbols
+offload code on the device. We use the [linked device executable](#linking-target-device-code)
+with the corresponding offloading entries to create the symbols
 necessary to load and execute the device image.
 
 #### Structure Types
@@ -291,42 +305,50 @@ entries are stored using the `__start_omp_offloading_entries` and
 `__stop_omp_offloading_entries` symbols generated by the linker using the
 {ref}`table-tgt_offload_entry_structure`.
 
-> ```{eval-rst}
-> .. table:: __tgt_device_image Structure
->   :name: table-device_image_structure
->
->   +----------------------+--------------+----------------------------------------+
->   |         Type         |  Identifier  | Description                            |
->   +======================+==============+========================================+
->   |         void*        |  ImageStart  | Pointer to the target code start       |
->   +----------------------+--------------+----------------------------------------+
->   |         void*        |   ImageEnd   | Pointer to the target code end         |
->   +----------------------+--------------+----------------------------------------+
->   | __tgt_offload_entry* | EntriesBegin | Begin of table with all target entries |
->   +----------------------+--------------+----------------------------------------+
->   | __tgt_offload_entry* |  EntriesEnd  | End of table (non inclusive)           |
->   +----------------------+--------------+----------------------------------------+
-> ```
+:::{list-table} __tgt_device_image Structure
+:name: table-device_image_structure
+:header-rows: 1
+
+* - Type
+  - Identifier
+  - Description
+* - `void*`
+  - `ImageStart`
+  - Pointer to the target code start
+* - `void*`
+  - `ImageEnd`
+  - Pointer to the target code end
+* - `__tgt_offload_entry*`
+  - `EntriesBegin`
+  - Begin of table with all target entries
+* - `__tgt_offload_entry*`
+  - `EntriesEnd`
+  - End of table (non inclusive)
+:::
 
 The target {ref}`target binary descriptor <table-target_binary_descriptor>` is
 used to store all binary images and offloading entries in an array.
 
-> ```{eval-rst}
-> .. table:: __tgt_bin_desc Structure
->   :name: table-target_binary_descriptor
->
->   +----------------------+------------------+------------------------------------------+
->   |         Type         |    Identifier    | Description                              |
->   +======================+==================+==========================================+
->   |        int32_t       |  NumDeviceImages | Number of device types supported         |
->   +----------------------+------------------+------------------------------------------+
->   |  __tgt_device_image* |   DeviceImages   | Array of device images (1 per dev. type) |
->   +----------------------+------------------+------------------------------------------+
->   | __tgt_offload_entry* | HostEntriesBegin | Begin of table with all host entries     |
->   +----------------------+------------------+------------------------------------------+
->   | __tgt_offload_entry* |  HostEntriesEnd  | End of table (non inclusive)             |
->   +----------------------+------------------+------------------------------------------+
-> ```
+:::{list-table} __tgt_bin_desc Structure
+:name: table-target_binary_descriptor
+:header-rows: 1
+
+* - Type
+  - Identifier
+  - Description
+* - `int32_t`
+  - `NumDeviceImages`
+  - Number of device types supported
+* - `__tgt_device_image*`
+  - `DeviceImages`
+  - Array of device images (1 per dev. type)
+* - `__tgt_offload_entry*`
+  - `HostEntriesBegin`
+  - Begin of table with all host entries
+* - `__tgt_offload_entry*`
+  - `HostEntriesEnd`
+  - End of table (non inclusive)
+:::
 
 ### Global Variables
 
@@ -334,30 +356,44 @@ used to store all binary images and offloading entries in an array.
 type and their explicit ELF sections, which are used to store device images and
 related symbols.
 
-> ```{eval-rst}
-> .. table:: Global Variables
->   :name: table-global_variables
->
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   |            Variable            |         Type        |       ELF Section       |                    Description                          |
->   +================================+=====================+=========================+=========================================================+
->   | __start_omp_offloading_entries | __tgt_offload_entry | .omp_offloading_entries | Begin symbol for the offload entries table.             |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | __stop_omp_offloading_entries  | __tgt_offload_entry | .omp_offloading_entries | End symbol for the offload entries table.               |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | __dummy.omp_offloading.entry   | __tgt_offload_entry | .omp_offloading_entries | Dummy zero-sized object in the offload entries          |
->   |                                |                     |                         | section to force linker to define begin/end             |
->   |                                |                     |                         | symbols defined above.                                  |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | .omp_offloading.device_image   |  __tgt_device_image | .omp_offloading_entries | ELF device code object of the first image.              |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | .omp_offloading.device_image.N |  __tgt_device_image | .omp_offloading_entries | ELF device code object of the (N+1)th image.            |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | .omp_offloading.device_images  |  __tgt_device_image | .omp_offloading_entries | Array of images.                                        |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
->   | .omp_offloading.descriptor     | __tgt_bin_desc      | .omp_offloading_entries | Binary descriptor object (see :ref:`binary_descriptor`) |
->   +--------------------------------+---------------------+-------------------------+---------------------------------------------------------+
-> ```
+:::{list-table} Global Variables
+:name: table-global_variables
+:header-rows: 1
+
+* - Variable
+  - Type
+  - ELF Section
+  - Description
+* - `__start_omp_offloading_entries`
+  - `__tgt_offload_entry`
+  - `.omp_offloading_entries`
+  - Begin symbol for the offload entries table.
+* - `__stop_omp_offloading_entries`
+  - `__tgt_offload_entry`
+  - `.omp_offloading_entries`
+  - End symbol for the offload entries table.
+* - `__dummy.omp_offloading.entry`
+  - `__tgt_offload_entry`
+  - `.omp_offloading_entries`
+  - Dummy zero-sized object in the offload entries section to force linker to
+    define begin/end symbols defined above.
+* - `.omp_offloading.device_image`
+  - `__tgt_device_image`
+  - `.omp_offloading_entries`
+  - ELF device code object of the first image.
+* - `.omp_offloading.device_image.N`
+  - `__tgt_device_image`
+  - `.omp_offloading_entries`
+  - ELF device code object of the (N+1)th image.
+* - `.omp_offloading.device_images`
+  - `__tgt_device_image`
+  - `.omp_offloading_entries`
+  - Array of images.
+* - `.omp_offloading.descriptor`
+  - `__tgt_bin_desc`
+  - `.omp_offloading_entries`
+  - Binary descriptor object (see {ref}`binary-descriptor`)
+:::
 
 (binary-descriptor)=
 
@@ -463,7 +499,7 @@ $ ./zaxpy
 
 We can see the steps created by clang to generate the offloading code using the
 `-ccc-print-phases` option in Clang. This matches the description in
-{ref}`Offloading Overview`.
+[Offloading Overview](#offloading-overview).
 
 ```console
 $ clang++ -fopenmp -fopenmp-targets=nvptx64 -ccc-print-phases zaxpy.cpp
@@ -505,4 +541,3 @@ $ clang++ -lomptarget.devicertl --offload-link -r foo.o -o merged.o
 $ llvm-ar rcs libfoo.a merged.o
 # g++ app.cpp -L. -lfoo
 ```
-
