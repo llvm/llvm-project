@@ -1627,13 +1627,13 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
-  SetVector<VPSingleDefRecipe *> Worklist;
+  SmallVector<VPSingleDefRecipe *, 256> Worklist;
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT))
     for (VPRecipeBase &R : reverse(*VPBB))
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        Worklist.insert(Def);
+        Worklist.push_back(Def);
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
@@ -1648,8 +1648,8 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
         Def->eraseFromParent();
         if (auto *NewR = dyn_cast_if_present<VPSingleDefRecipe>(
                 New->getDefiningRecipe()))
-          Worklist.insert(NewR);
-        // TODO: Append users to the worklist.
+          Worklist.push_back(NewR);
+        // TODO: Append users to the worklist (might need a setvector)
       } else if (vputils::isDeadRecipe(*Def)) {
         // Recipe was modified - it may be dead now.
         Def->eraseFromParent();
