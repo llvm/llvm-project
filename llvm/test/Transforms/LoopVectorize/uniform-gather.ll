@@ -2,8 +2,8 @@
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-target-supports-gather-scatter-ops=true -tail-folding-policy=must-fold-tail %s 2>&1 | FileCheck %s --check-prefix=FIXED
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-target-supports-gather-scatter-ops=true -tail-folding-policy=must-fold-tail -force-target-supports-scalable-vectors -scalable-vectorization=on %s 2>&1 | FileCheck %s --check-prefix=SCALABLE
 
-@log_table = internal constant [4 x i32] [i32 10, i32 20, i32 30, i32 40]
-@exp_table = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+@log_table = external global [4 x i32]
+@exp_table = external global [4 x i32]
 
 ; Uniform, dereferenceable global variable.
 define void @global_table_load(ptr noalias %out, ptr noalias %cond, i64 %n) {
@@ -406,6 +406,115 @@ for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 32
   br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; An IR-based analysis would consider the second load safe to execute unconditionally,
+; since a previous load was already performed at that address.
+; Ensure we don't unmask the second load here.
+define void @load_safe_only_via_predicated_load(ptr noalias %out, ptr noalias %cond, ptr %p, i64 %n) {
+; FIXED-LABEL: define void @load_safe_only_via_predicated_load(
+; FIXED-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]], ptr [[P:%.*]], i64 [[N:%.*]]) {
+; FIXED-NEXT:  [[ENTRY:.*:]]
+; FIXED-NEXT:    br label %[[VECTOR_PH:.*]]
+; FIXED:       [[VECTOR_PH]]:
+; FIXED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
+; FIXED-NEXT:    [[TMP0:%.*]] = and i64 [[N_RND_UP]], 1
+; FIXED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[TMP0]]
+; FIXED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i64 0
+; FIXED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT1]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FIXED:       [[VECTOR_BODY]]:
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; FIXED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP2]], <2 x i1> [[TMP1]], <2 x i32> poison)
+; FIXED-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
+; FIXED-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
+; FIXED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT2]], <2 x i1> [[TMP4]], <2 x i32> poison)
+; FIXED-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT2]], <2 x i1> [[TMP4]], <2 x i32> poison)
+; FIXED-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER3]]
+; FIXED-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
+; FIXED-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[TMP5]], ptr align 4 [[TMP6]], <2 x i1> [[TMP4]])
+; FIXED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; FIXED-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
+; FIXED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; FIXED-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FIXED:       [[MIDDLE_BLOCK]]:
+; FIXED-NEXT:    br label %[[EXIT:.*]]
+; FIXED:       [[EXIT]]:
+; FIXED-NEXT:    ret void
+;
+; SCALABLE-LABEL: define void @load_safe_only_via_predicated_load(
+; SCALABLE-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]], ptr [[P:%.*]], i64 [[N:%.*]]) {
+; SCALABLE-NEXT:  [[ENTRY:.*:]]
+; SCALABLE-NEXT:    br label %[[VECTOR_PH:.*]]
+; SCALABLE:       [[VECTOR_PH]]:
+; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; SCALABLE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; SCALABLE-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP2]]
+; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; SCALABLE-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[P]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; SCALABLE:       [[VECTOR_BODY]]:
+; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[TMP4:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP5]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
+; SCALABLE-NEXT:    [[TMP7:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER5]]
+; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
+; SCALABLE-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP8]], ptr align 4 [[TMP9]], <vscale x 2 x i1> [[TMP7]])
+; SCALABLE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; SCALABLE:       [[MIDDLE_BLOCK]]:
+; SCALABLE-NEXT:    br label %[[EXIT:.*]]
+; SCALABLE:       [[EXIT]]:
+; SCALABLE-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %cond.gep = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %c = load i32, ptr %cond.gep, align 4
+  %cmp = icmp ne i32 %c, 0
+  br i1 %cmp, label %if.then, label %latch
+
+if.then:
+  %a = load i32, ptr %p, align 4
+  %b = load i32, ptr %p, align 4
+  %sum = add i32 %a, %b
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %sum, ptr %out.gep, align 4
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
