@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
+#include "OffloadAPI.h"
 #include "OffloadPolicy.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
@@ -24,11 +25,12 @@ using namespace llvm;
 using namespace llvm::sys;
 using namespace llvm::omp::target::debug;
 
-PluginManager *PM = nullptr;
+// Temporary helpers from liboffload to allow to use both liboffoad and
+// the plugin interface at the same time.
+extern "C" size_t olGetInitializedPluginCount();
+extern "C" GenericPluginTy *olGetInitializedPlugin(size_t Index);
 
-// Every plugin exports this method to create an instance of the plugin type.
-#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -38,14 +40,17 @@ void PluginManager::init() {
   }
 
   ODBG(ODT_Init) << "Loading RTLs";
+  ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
+  InitArgs.InitDevices = false;
+  if (ol_result_t Res = olInit(&InitArgs))
+    REPORT() << "Failed to initialize liboffload: "
+             << (Res->Details ? Res->Details : "(no details)");
 
-  // Attempt to create an instance of each supported plugin.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    Plugins.emplace_back(                                                      \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
-  } while (false);
-#include "Shared/Targets.def"
+  for (size_t I = 0, End = olGetInitializedPluginCount(); I != End; ++I) {
+    GenericPluginTy *Plugin = olGetInitializedPlugin(I);
+    ODBG(ODT_Init) << "Adding plugin " << Plugin->getName() << " from liboffload";
+    Plugins.push_back(Plugin);
+  }
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -54,16 +59,10 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  for (auto &Plugin : Plugins) {
-    if (!Plugin->is_initialized())
-      continue;
-
-    if (auto Err = Plugin->deinit()) {
-      std::string InfoMsg = toString(std::move(Err));
-      ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
-    }
-    Plugin.release();
-  }
+  Plugins.clear();
+  if (ol_result_t Res = olShutDown())
+    REPORT() << "Failed to shut down liboffload: "
+             << (Res->Details ? Res->Details : "(no details)");
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }

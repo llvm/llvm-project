@@ -1,6 +1,12 @@
 VERS1.0 {
 global:
   ol*;
+  extern "C++" {
+    llvm::omp::target::plugin::*;
+    llvm::omp::target::RPCServerTy::*;
+    llvm::omp::target::ompt::*;
+    error::*;
+  };
 local:
   *;
 };

@@ -154,13 +154,14 @@ def ol_init_args_t : Struct {
   let members = [
     StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
     StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
-    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">,
+    StructMember<"bool", "InitDevices", "Initialize devices of the platform.">
   ];
 }
 
 def OL_INIT_ARGS_INIT : Macro {
   let desc = "Default initializer for ol_init_args_t. Sets Size to the correct value and all other fields to zero/NULL.";
-  let value = "{ sizeof(ol_init_args_t), 0, NULL }";
+  let value = "{ sizeof(ol_init_args_t), 0, NULL, true }";
 }
 
 def olInit : Function {

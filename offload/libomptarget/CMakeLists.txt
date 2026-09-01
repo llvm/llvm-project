@@ -24,11 +24,16 @@ add_library(omptarget SHARED
 if(LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
 else()
-  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object)
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object Offload)
 endif()
 target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
+target_link_libraries(omptarget PRIVATE LLVMOffload)
 target_include_directories(omptarget PRIVATE
-  ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+  ${LIBOMPTARGET_INCLUDE_DIR}
+  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/../liboffload/API
+  ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+  ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
@@ -40,10 +45,6 @@ target_compile_definitions(omptarget PRIVATE
   TARGET_NAME=omptarget
   DEBUG_PREFIX="omptarget"
 )
-
-foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
-  target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
-endforeach()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})

@@ -29,9 +29,9 @@
 #ifdef OMPT_SUPPORT
 namespace llvm::omp::target {
 namespace ompt {
-bool Initialized = false;
-ompt_get_callback_t lookupCallbackByCode = nullptr;
-ompt_function_lookup_t lookupCallbackByName = nullptr;
+LLVM_ATTRIBUTE_WEAK bool Initialized = false;
+LLVM_ATTRIBUTE_WEAK ompt_get_callback_t lookupCallbackByCode = nullptr;
+LLVM_ATTRIBUTE_WEAK ompt_function_lookup_t lookupCallbackByName = nullptr;
 } // namespace ompt
 } // namespace llvm::omp::target
 #endif
@@ -54,7 +54,7 @@ struct ol_platform_impl_t {
   llvm::Error destroy();
 
   /// Initialize the associated plugin and devices.
-  llvm::Error init();
+  llvm::Error init(bool InitDevices);
 
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
@@ -137,12 +137,14 @@ llvm::Error ol_platform_impl_t::destroy() {
   return Result;
 }
 
-llvm::Error ol_platform_impl_t::init() {
+llvm::Error ol_platform_impl_t::init(bool InitDevices) {
   if (!Plugin)
     return llvm::Error::success();
 
   if (llvm::Error Err = Plugin->init())
     return Err;
+  if (!InitDevices)
+    return llvm::Error::success();
 
   for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
     if (llvm::Error Err = Plugin->initDevice(Id))
@@ -268,6 +270,19 @@ bool isTracingEnabled() {
 bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
 bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
+// Temporary helpers to be able to transitions from the liboffload API to the plugin API.
+// Only to be used to assist in the libomptarget transition. These will be removed once
+// the transition is complete.
+extern "C" size_t olGetInitializedPluginCount() {
+  if (!isOffloadInitialized())
+    return 0;
+  return OffloadContext::get().Platforms.size();
+}
+extern "C" GenericPluginTy *olGetInitializedPlugin(size_t Index) {
+  return OffloadContext::get().Platforms[Index]->Plugin.get();
+}
+// End of temporary helpers
+
 template <typename HandleT> Error olDestroy(HandleT Handle) {
   delete Handle;
   return Error::success();
@@ -314,7 +329,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   // that the platform is initialized at a consistent point to maintain the
   // expected teardown order in the vendor libraries.
   for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init())
+    if (Error Err = Platform->init(InitArgs ? InitArgs->InitDevices : true))
       return Err;
   }
 

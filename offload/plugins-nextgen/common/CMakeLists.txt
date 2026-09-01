@@ -45,6 +45,10 @@ target_compile_definitions(PluginCommon PRIVATE
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 
+set_target_properties(PluginCommon PROPERTIES
+                      CXX_VISIBILITY_PRESET default
+                      C_VISIBILITY_PRESET default)
+
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include
