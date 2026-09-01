@@ -2135,6 +2135,16 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
 
+  // zext(X) & sext(X) --> zext(X)
+  // sext(X) & zext(X) --> zext(X)
+  {
+    Value *X = nullptr;
+    if (match(Op0, m_ZExt(m_Value(X))) && match(Op1, m_SExt(m_Specific(X))))
+      return Op0;
+    if (match(Op1, m_ZExt(m_Value(X))) && match(Op0, m_SExt(m_Specific(X))))
+      return Op1;
+  }
+
   // Try some generic simplifications for associative operations.
   if (Value *V =
           simplifyAssociativeBinOp(Instruction::And, Op0, Op1, Q, MaxRecurse))
@@ -2386,6 +2396,16 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
         C->ule(X->getType()->getScalarSizeInBits())) {
       return ConstantInt::getAllOnesValue(X->getType());
     }
+  }
+
+  // zext(X) | sext(X) --> sext(X)
+  // sext(X) | zext(X) --> sext(X)
+  {
+    Value *X = nullptr;
+    if (match(Op0, m_ZExt(m_Value(X))) && match(Op1, m_SExt(m_Specific(X))))
+      return Op1;
+    if (match(Op1, m_ZExt(m_Value(X))) && match(Op0, m_SExt(m_Specific(X))))
+      return Op0;
   }
 
   // A funnel shift (rotate) can be decomposed into simpler shifts. See if we
@@ -4067,7 +4087,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
         if (AnyEq->isNullValue()) {
-          switch (Pred) {
+          switch (Pred.getPreferredSignedPredicate()) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
@@ -6131,10 +6151,10 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       if (FMF.noSignedZeros())
         return ConstantFP::getZero(Op0->getType());
       // +normal number * (-)0.0 --> (-)0.0
-      if (Known.SignBit == false)
+      if (Known.getSignBit() == false)
         return Op1;
       // -normal number * (-)0.0 --> -(-)0.0
-      if (Known.SignBit == true)
+      if (Known.getSignBit() == true)
         return foldConstant(Instruction::FNeg, Op1, Q);
     }
   }
@@ -6589,7 +6609,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   switch (IID) {
   case Intrinsic::fabs: {
     KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
-    if (KnownClass.SignBit == false)
+    if (KnownClass.getSignBit() == false)
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
@@ -7327,6 +7347,13 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
     return PoisonValue::get(ReturnType);
+
+  // Defer to ConstantFolding if all args are constants.
+  if (all_of(Args, IsaPred<Constant>))
+    if (Constant *C = ConstantFoldIntrinsic(
+            IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
+            ReturnType, Q.DL, CxtF))
+      return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.

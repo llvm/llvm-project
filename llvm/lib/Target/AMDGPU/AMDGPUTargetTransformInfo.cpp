@@ -315,10 +315,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
-                                  ? 128
-                              : ST->hasPackedFP32Ops() ? 64
-                                                       : 32);
+    return TypeSize::getFixed(
+        (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()) ? 128
+        : ST->hasAnyPackedFP32Ops()                             ? 64
+                                                                : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -334,11 +334,11 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 32 * 4 / ElemWidth;
   // For a given width return the max 0number of elements that can be combined
   // into a wider bit value:
-  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
-         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+  return (ElemWidth == 8 && ST->has16BitInsts())          ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())       ? 2
+         : (ElemWidth == 32 && ST->hasAnyPackedFP32Ops()) ? 2
          : (ElemWidth == 64 &&
-            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+            (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()))
              ? 2
              : 1;
 }
@@ -554,7 +554,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     return getFullRateInstrCost() * LT.first * NElts;
   case ISD::ADD:
   case ISD::SUB:
-    if (SLT == MVT::i64 && ST->hasPackedU64Ops())
+    if (SLT == MVT::i64 && ST->hasAnyPackedU64Ops())
       NElts = (NElts + 1) / 2;
     [[fallthrough]];
   case ISD::AND:
@@ -605,12 +605,12 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64) {
-      if (ST->hasPackedFP64Ops())
+      if (ST->hasAnyPackedFP64Ops())
         NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
     }
@@ -876,11 +876,11 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
-      (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
+      (ST->hasAnyPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasAnyPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
   } else if (SLT == MVT::f32) {
-    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() &&
                         IID != Intrinsic::minimumnum &&
                         IID != Intrinsic::maximumnum;
     NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
@@ -1027,6 +1027,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Inserts of booleans are free.
+      // TODO: Extracts are free too.
+      if (EltSize == 1 && Opcode == Instruction::InsertElement)
+        return TargetTransformInfo::TCC_Free;
       // Extract element sequences of consecutive i8 values that match a
       // register size are free most likely. It is not possible to know
       // if this extract is part of a consecutive sequence so this may
@@ -1318,9 +1322,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Type *SrcTy = NewV->getType();
     Type *DstTy = II->getType();
+    Type *NumRecordsTy = II->getArgOperand(2)->getType();
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        M, II->getIntrinsicID(), {DstTy, SrcTy});
+        M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1332,13 +1337,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(SrcTy))
-    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
@@ -1467,7 +1472,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 
@@ -1570,7 +1575,14 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    return BBSize <= InlineMaxBB;
+    if (BBSize > InlineMaxBB) {
+      LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
+                        << Callee->getName() << " into " << Caller->getName()
+                        << ": caller BBs=" << Caller->size() << ", callee BBs="
+                        << Callee->size() << ", combined BBs=" << BBSize
+                        << ", max BBs=" << InlineMaxBB << '\n');
+      return false;
+    }
   }
 
   return true;
@@ -1744,6 +1756,12 @@ GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
 
   Cost.first += (Size + 255) / 256;
   return Cost;
+}
+
+unsigned GCNTTIImpl::getCacheLineSize() const {
+  if (ST->hasVmemPrefInsts() || ST->hasSmemPrefetchInsts())
+    return ST->getDataCacheLineSize();
+  return 0;
 }
 
 unsigned GCNTTIImpl::getPrefetchDistance() const {

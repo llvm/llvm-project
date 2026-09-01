@@ -199,6 +199,7 @@ public:
   bool isBitField() const { return lvType == BitField; }
   bool isExtVectorElt() const { return lvType == ExtVectorElt; }
   bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isMatrixElt() const { return lvType == MatrixElt; }
   bool isMatrixRow() const { return lvType == MatrixRow; }
   bool isVolatile() const { return quals.hasVolatile(); }
 

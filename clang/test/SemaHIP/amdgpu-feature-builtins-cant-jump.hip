@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: spirv-registered-target
-// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgcn -target-cpu gfx900 -Wno-unused-value %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgcn -target-cpu gfx1201 -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgpu9.00 -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgpu12.01 -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple spirv64-amd-amdhsa -Wno-unused-value %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple amdgcn -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple amdgpu -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple spirv64-amd-amdhsa -Wno-unused-value %s
 
 #define __device__ __attribute__((device))

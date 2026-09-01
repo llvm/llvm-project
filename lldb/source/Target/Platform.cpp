@@ -257,7 +257,7 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 }
 
 Status Platform::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   if (IsHost())
     // Note: module_search_paths_ptr functionality is now handled internally
@@ -293,7 +293,7 @@ Status Platform::GetSharedModule(
     return error;
   };
 
-  return GetRemoteSharedModule(module_spec, process, module_sp, resolver,
+  return GetRemoteSharedModule(module_spec, &target, module_sp, resolver,
                                did_create_ptr);
 }
 
@@ -345,7 +345,7 @@ void Platform::GetStatus(Stream &strm) {
   ArchSpec arch(GetSystemArchitecture());
   if (arch.IsValid()) {
     if (!arch.GetTriple().str().empty()) {
-      strm.Printf("    Triple: ");
+      strm.PutCString("    Triple: ");
       arch.DumpTriple(strm.AsRawOstream());
       strm.EOL();
     }
@@ -791,8 +791,8 @@ const char *Platform::GetHostname() {
   return m_hostname.c_str();
 }
 
-ConstString Platform::GetFullNameForDylib(ConstString basename) {
-  return basename;
+std::string Platform::GetFullNameForDylib(llvm::StringRef basename) {
+  return basename.str();
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
@@ -1542,7 +1542,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp) {
   FileSpec platform_spec = module_spec.GetFileSpec();
   Status error = GetRemoteSharedModule(
-      module_spec, nullptr, module_sp,
+      module_spec, /*target=*/nullptr, module_sp,
       [&](const ModuleSpec &spec) {
         return Platform::ResolveExecutable(spec, module_sp);
       },
@@ -1556,7 +1556,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
-                                       Process *process,
+                                       Target *target,
                                        lldb::ModuleSP &module_sp,
                                        const ModuleResolver &module_resolver,
                                        bool *did_create_ptr) {
@@ -1564,7 +1564,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   ModuleSpec resolved_module_spec;
   ArchSpec process_host_arch;
   bool got_module_spec = false;
-  if (process) {
+  if (Process *process = target ? target->GetProcessSP().get() : nullptr) {
     process_host_arch = process->GetSystemArchitecture();
     // Try to get module information from the process
     if (process->GetModuleSpec(module_spec.GetFileSpec(),

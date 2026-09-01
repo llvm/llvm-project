@@ -130,7 +130,7 @@ Register llvm::constrainOperandRegClass(
     // register types (E.g., AMDGPU's VGPR and AGPR). The regbank ambiguity
     // resolved by targets during regbankselect should not be overridden.
     if (const auto *SubRC = TRI.getCommonSubClass(
-            OpRC, TRI.getConstrainedRegClassForOperand(RegMO, MRI)))
+            OpRC, TRI.getConstrainedRegClassForReg(Reg, MRI)))
       OpRC = SubRC;
 
     OpRC = TRI.getAllocatableClass(OpRC);
@@ -657,19 +657,6 @@ MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
                                  const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
-}
-
-APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
-  if (Size == 32)
-    return APFloat(float(Val));
-  if (Size == 64)
-    return APFloat(Val);
-  if (Size != 16)
-    llvm_unreachable("Unsupported FPConstant size");
-  bool Ignored;
-  APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
-  return APF;
 }
 
 std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
@@ -1344,7 +1331,7 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
 
     // If AllowUndef, treat undef as value that will result in a constant splat.
     if (!ElementValAndReg) {
-      if (AllowUndef && isa<GImplicitDef>(MRI.getVRegDef(Element)))
+      if (AllowUndef && mi_match(Element, MRI, m_GImplicitDef()))
         continue;
       return std::nullopt;
     }
@@ -2234,13 +2221,10 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     const auto &SrcMMO = **std::next(MI.memoperands_begin());
     MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
-    // FIXME: SelectionDAG always passes true for 'IsVolatile', apparently
-    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
-    // the same thing here.
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
         MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
-                    SrcAlign, /*IsVolatile=*/true),
+                    SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
   }

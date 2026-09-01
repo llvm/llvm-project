@@ -6,9 +6,6 @@
 # GCN: {{^body}}
 
 --- |
-  target triple = "amdgcn--amdpal"
-
-  ; Function Attrs: nounwind
   define amdgpu_ps void @_amdgpu_ps_main(float %arg) #0 {
     ret void
   }

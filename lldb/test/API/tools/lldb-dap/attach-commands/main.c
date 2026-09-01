@@ -1,30 +1,21 @@
 #include "attach.h"
-#include <stdio.h>
+
 #ifdef _WIN32
-#include <process.h>
 #include <windows.h>
+#define sleep_ms(ms) Sleep(ms)
 #else
 #include <unistd.h>
+#define sleep_ms(ms) usleep((ms) * 1000)
 #endif
+
+static volatile int is_ready = 0;
 
 int main(int argc, char const *argv[]) {
   lldb_enable_attach();
 
-  if (argc >= 2) {
-    // Create the synchronization token.
-    FILE *f = fopen(argv[1], "wx");
-    if (!f)
-      return 1;
-    fputs("\n", f);
-    fflush(f);
-    fclose(f);
+  while (!is_ready) {
+    sleep_ms(50);
   }
 
-  printf("pid = %i\n", getpid());
-#ifdef _WIN32
-  Sleep(10 * 1000);
-#else
-  sleep(10);
-#endif
-  return 0; // breakpoint 1
+  return 0;
 }

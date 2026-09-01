@@ -124,6 +124,14 @@ Symbols:
     Value:           0x1004
     Size:            0x2
     Binding:         STB_GLOBAL
+  # A placeholder whose name *both* filtees define.  The search stops at the
+  # first filtee that provides it, so the second filtee's definition is never
+  # reached.
+  - Name:            in_both_filtees
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1005
+    Binding:         STB_GLOBAL
 ...
 )";
 
@@ -160,6 +168,12 @@ Symbols:
     Value:           0x1004
     Size:            0x2
     Binding:         STB_GLOBAL
+  - Name:            in_both_filtees
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1006
+    Size:            0x2
+    Binding:         STB_GLOBAL
 ...
 )";
 
@@ -179,7 +193,7 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x1000
     AddressAlign:    0x10
-    Content:         C3C3C3C3
+    Content:         C3C3C3C3C3C3
 Symbols:
   - Name:            foo
     Type:            STT_FUNC
@@ -191,6 +205,12 @@ Symbols:
     Type:            STT_FUNC
     Section:         .text
     Value:           0x1002
+    Size:            0x2
+    Binding:         STB_WEAK
+  - Name:            in_both_filtees
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1004
     Size:            0x2
     Binding:         STB_WEAK
 ...
@@ -342,6 +362,18 @@ TEST_F(ReExportedSymbolTest, ResolveThroughFilteesInOrder) {
   ASSERT_NE(nullptr, dup_def);
   EXPECT_EQ(ConstString("dup_impl"), dup_def->GetName());
   EXPECT_EQ(aux1_sp, dup_def->GetAddress().GetModule());
+
+  // Both filtees define "in_both_filtees".  They are searched in declaration
+  // order and the search stops at the first hit, so the definition must come
+  // from the first filtee, at its own address, and the second filtee's
+  // definition must be ignored.
+  const Symbol *in_both = FindFilterSymbol(filter_sp, "in_both_filtees");
+  ASSERT_NE(nullptr, in_both);
+  Symbol *in_both_def = in_both->ResolveReExportedSymbol(*target_sp, filter_sp);
+  ASSERT_NE(nullptr, in_both_def);
+  EXPECT_EQ(ConstString("in_both_filtees"), in_both_def->GetName());
+  EXPECT_EQ(aux1_sp, in_both_def->GetAddress().GetModule());
+  EXPECT_EQ(0x1006u, in_both_def->GetAddress().GetFileAddress());
 
   // Without the containing module nothing connects the symbol to the
   // filtees, so "foo" cannot be resolved.  This is why callers that have

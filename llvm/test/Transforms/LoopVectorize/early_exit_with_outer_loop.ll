@@ -46,7 +46,7 @@ loop.inner.end:
 ; loops at depths 1 and 2, respectively.
 define void @early_exit_in_outer_loop2() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop2':
-; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.found,%loop.inner.end,%loop.middle.end,%loop.outer.latch<latch>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit
+; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.end,%loop.inner.found,%loop.middle.end,%loop.outer.latch<latch>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit
 ; CHECK:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
 ; CHECK:        Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
 entry:
@@ -268,7 +268,7 @@ early.exit.leave:
 ; (one going to a middle loop, one going to the outer loop).
 define i32 @multi_early_exit_two_different_loops(i1 %c, ptr dereferenceable(1024) %src) nofree {
 ; CHECK-LABEL: Loop info for function 'multi_early_exit_two_different_loops':
-; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.outer,%early.exit.middle,%middle.latch,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
+; CHECK-NEXT: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.middle,%middle.latch,%early.exit.outer,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
 ; CHECK-NEXT:     Loop at depth 2 containing: %middle.header<header>,%early.exit.middle,%middle.latch<latch><exiting>,%middle.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.0
 ; CHECK-NEXT:         Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
 entry:

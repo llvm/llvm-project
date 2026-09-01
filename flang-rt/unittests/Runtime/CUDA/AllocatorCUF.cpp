@@ -72,3 +72,11 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   EXPECT_TRUE(desc != nullptr);
   RTNAME(CUFFreeDescriptor)(desc);
 }
+
+TEST(AllocatableCUFTest, DeviceIsActiveKeepsLastErrorClean) {
+  // CUFDeviceIsActive() probes primary-context state (including a version-
+  // skew fallback). It must not leave a sticky cudaGetLastError behind.
+  (void)cudaGetLastError(); // start from a clean error state
+  (void)RTNAME(CUFDeviceIsActive)();
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);
+}

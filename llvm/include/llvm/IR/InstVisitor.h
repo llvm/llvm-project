@@ -222,18 +222,11 @@ public:
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
   RetTy visitUncondBrInst(UncondBrInst &I) {
-    return static_cast<SubClass *>(this)->visitBranchInst(I);
-  }
-  RetTy visitCondBrInst(CondBrInst &I) {
-    return static_cast<SubClass *>(this)->visitBranchInst(I);
-  }
-  // Suppress warning for BranchInst. Replace with Instruction once BranchInst
-  // is removed.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  RetTy visitBranchInst(BranchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+  RetTy visitCondBrInst(CondBrInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
   RetTy visitSwitchInst(SwitchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }

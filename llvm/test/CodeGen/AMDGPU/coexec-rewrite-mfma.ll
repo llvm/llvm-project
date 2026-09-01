@@ -13,8 +13,6 @@
 ; CHECK-COUNT-28: v_mfma_f32_16x16x32_f16 a
 ; CHECK-NOT: v_mfma_f32_16x16x32_f16 v
 
-target triple = "amdgcn-amd-amdhsa"
-
 define amdgpu_kernel void @v5_local_prefetch() #0 {
 .lr.ph:
   %0 = load <8 x half>, ptr addrspace(3) null, align 16

@@ -47,6 +47,10 @@ define noundef i32 @identity_noundef(i32 noundef %x) {
   ret i32 %x
 }
 
+define noundef b7 @identity_noundef_byte(b7 noundef %x) {
+  ret b7 %x
+}
+
 define noundef {i32, <2 x i32>, [2 x i32]} @identity_noundef_agg({i32, <2 x i32>, [2 x i32]} noundef %x) {
   ret {i32, <2 x i32>, [2 x i32]} %x
 }
@@ -119,6 +123,8 @@ define void @main() {
   %fmt_n_out = alloca [6 x i8]
   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out
   %res = call range(i32 0, 15) noundef i32 (ptr, ...) @printf(ptr noundef nonnull %fmt_n_out, i32 noundef range(i32 0, 15) 6)
+
+  %noundef_byte = call b7 @identity_noundef_byte(b7 -1)
   ret void
 }
 ; CHECK: Entering function: main
@@ -324,5 +330,10 @@ define void @main() {
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
 ; CHECK-NEXT: N=6
 ; CHECK-NEXT:   %res = call noundef range(i32 0, 15) i32 (ptr, ...) @printf(ptr noundef nonnull %fmt_n_out, i32 noundef range(i32 0, 15) 6) => i32 4
+; CHECK-NEXT: Entering function: identity_noundef_byte
+; CHECK-NEXT:   b7 %x = b7 1111111 
+; CHECK-NEXT:   ret b7 %x
+; CHECK-NEXT: Exiting function: identity_noundef_byte
+; CHECK-NEXT:   %noundef_byte = call b7 @identity_noundef_byte(b7 -1) => b7 1111111 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

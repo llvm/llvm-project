@@ -128,7 +128,7 @@ void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   while ((rc = madvise(Addr, Size, MADV_DONTNEED)) == -1 && errno == EAGAIN) {
   }
   if (rc == -1) {
-    // If we can't madvies the memory, then we still need to zero it.
+    // If we can't madvise the memory, then we still need to zero it.
     memset(Addr, 0, Size);
   }
 }

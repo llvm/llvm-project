@@ -21,6 +21,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueString.h"
@@ -123,9 +124,9 @@ const char *FormatCategoryToString(FormatCategoryItem item, bool long_name) {
 class CommandObjectTypeSummaryAdd : public CommandObjectParsed,
                                     public IOHandlerDelegateMultiline {
 private:
-  class CommandOptions : public Options {
+  class CommandOptions : public OptionGroup {
   public:
-    CommandOptions(CommandInterpreter &interpreter) {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -151,11 +152,15 @@ private:
     uint32_t m_ptr_match_depth = 1;
   };
 
+  OptionGroupOptions m_option_group;
   CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_class_options;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_option_group; }
 
   bool Execute_ScriptSummary(Args &command, CommandReturnObject &result);
+
+  bool Execute_PythonClassSummary(Args &command, CommandReturnObject &result);
 
   bool Execute_StringSummary(Args &command, CommandReturnObject &result);
 
@@ -251,11 +256,12 @@ public:
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a function.\n");
+              locked_stream.PutCString(
+                  "error: unable to generate a function.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -485,18 +491,18 @@ protected:
                     }
                   } else {
                     LockedStreamFile locked_stream = error_sp->Lock();
-                    locked_stream.Printf("error: invalid type name.\n");
+                    locked_stream.PutCString("error: invalid type name.\n");
                     break;
                   }
                 }
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a class.\n");
+              locked_stream.PutCString("error: unable to generate a class.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -689,7 +695,7 @@ protected:
                       .SetSkipReferences(m_command_options.m_skip_references));
     else
       entry = std::make_shared<TypeFormatImpl_EnumType>(
-          ConstString(m_command_options.m_custom_type_name),
+          m_command_options.m_custom_type_name,
           TypeFormatImpl::Flags()
               .SetCascades(m_command_options.m_cascade)
               .SetSkipPointers(m_command_options.m_skip_pointers)
@@ -1163,7 +1169,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Status error;
-  const int short_option = m_getopt_table[option_idx].val;
+  const int short_option = g_type_summary_add_options[option_idx].short_option;
   bool success;
 
   switch (short_option) {
@@ -1374,6 +1380,48 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   return result.Succeeded();
 }
 
+bool CommandObjectTypeSummaryAdd::Execute_PythonClassSummary(
+    Args &command, CommandReturnObject &result) {
+  const size_t argc = command.GetArgumentCount();
+
+  if (argc < 1 && !m_options.m_name) {
+    result.AppendErrorWithFormat("%s takes one or more args",
+                                 m_cmd_name.c_str());
+    return false;
+  }
+
+  const std::string &class_name = m_class_options.GetName();
+  if (class_name.empty()) {
+    result.AppendError("must provide a Python class name");
+    return false;
+  }
+
+  TypeSummaryImplSP script_format = std::make_shared<ScriptedSummaryFormat>(
+      m_options.m_flags, class_name.c_str(), m_options.m_ptr_match_depth);
+
+  Status error;
+
+  for (auto &entry : command.entries()) {
+    AddSummary(ConstString(entry.ref()), script_format, m_options.m_match_type,
+               m_options.m_category, &error);
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      return false;
+    }
+  }
+
+  if (m_options.m_name) {
+    AddNamedSummary(m_options.m_name, script_format, &error);
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      result.AppendError("added to types, but not given a name");
+      return false;
+    }
+  }
+
+  return result.Succeeded();
+}
+
 #endif
 
 bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
@@ -1450,7 +1498,14 @@ CommandObjectTypeSummaryAdd::CommandObjectTypeSummaryAdd(
     CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "type summary add",
                           "Add a new summary style for a type.", nullptr),
-      IOHandlerDelegateMultiline("DONE"), m_options(interpreter) {
+      IOHandlerDelegateMultiline("DONE"),
+      m_class_options("scripted string summary", /*is_class=*/true, 'L', 'K',
+                      'V', /*required_options=*/0) {
+  m_option_group.Append(&m_options);
+  m_option_group.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                        LLDB_OPT_SET_ALL);
+  m_option_group.Finalize();
+
   AddSimpleArgumentList(eArgTypeName, eArgRepeatPlus);
 
   SetHelpLong(
@@ -1553,7 +1608,13 @@ void CommandObjectTypeSummaryAdd::DoExecute(Args &command,
                                             CommandReturnObject &result) {
   WarnOnPotentialUnquotedUnsignedType(command, result);
 
-  if (m_options.m_is_add_script) {
+  if (!m_class_options.GetName().empty()) {
+#if LLDB_ENABLE_PYTHON
+    Execute_PythonClassSummary(command, result);
+#else
+    result.AppendError("python is disabled");
+#endif
+  } else if (m_options.m_is_add_script) {
 #if LLDB_ENABLE_PYTHON
     Execute_ScriptSummary(command, result);
 #else

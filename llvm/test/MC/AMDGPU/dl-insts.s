@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx906 -show-encoding %s | FileCheck %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgpu9.06 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgpu9.08 -show-encoding %s | FileCheck %s
 
 //
 // VOP2 Instructions.

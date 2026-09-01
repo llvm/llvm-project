@@ -15,8 +15,6 @@
 #
 
 --- |
-  target triple = "amdgcn--amdpal"
-
   define amdgpu_ps void @main() {
     ret void
   }

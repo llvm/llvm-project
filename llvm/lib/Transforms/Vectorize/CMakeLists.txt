@@ -8,7 +8,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/InstrMaps.cpp
   SandboxVectorizer/Interval.cpp
   SandboxVectorizer/Legality.cpp
-  SandboxVectorizer/Passes/BottomUpVec.cpp
+  SandboxVectorizer/Passes/BundleVec.cpp
   SandboxVectorizer/Passes/LoadStoreVec.cpp
   SandboxVectorizer/Passes/PackReuse.cpp
   SandboxVectorizer/Passes/RegionsFromBBs.cpp
@@ -23,6 +23,8 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Scheduler.cpp
   SandboxVectorizer/SeedCollector.cpp
   SandboxVectorizer/VecUtils.cpp
+  SLPVectorizer/SLPCompatibilityAnalysis.cpp
+  SLPVectorizer/SLPCostAnalysis.cpp
   SLPVectorizer/SLPUtils.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
@@ -30,7 +32,9 @@ add_llvm_component_library(LLVMVectorize
   VPlan.cpp
   VPlanAnalysis.cpp
   VPlanConstruction.cpp
+  VPlanDominatorTree.cpp
   VPlanEVLTailFolding.cpp
+  VPlanLowering.cpp
   VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanTransforms.cpp

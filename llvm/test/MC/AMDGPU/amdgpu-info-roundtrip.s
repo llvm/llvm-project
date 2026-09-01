@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj %s | llvm-readobj -r --sections --section-data --string-dump=.amdgpu.strtab - | FileCheck --check-prefix=OBJ %s
+// RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -filetype=asm %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -filetype=obj %s | llvm-readobj -r --sections --section-data --string-dump=.amdgpu.strtab - | FileCheck --check-prefix=OBJ %s
 
 // Test that .amdgpu_info directives round-trip through the assembler (asm and
 // object emission) and produce the correct TLV-encoded .amdgpu.info section.

@@ -14,7 +14,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/core_structs.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"

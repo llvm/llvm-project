@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entries result in R_WASM_GLOBAL_INDEX_LEB against
-# against the corrsponding function or data symbol and that the corresponding
+# against the corresponding function or data symbol and that the corresponding
 # data symbols are imported as a wasm globals.
 
 .functype default_func () -> (i32)

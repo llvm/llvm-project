@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUAsanInstrumentation.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -31,7 +30,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
-#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
@@ -316,7 +314,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
 
     MDBuilder MDB(Ctx);
 
-    if (Arg.hasAttribute(Attribute::NoUndef))
+    if (Arg.hasAttribute(Attribute::NoUndef) && AdjustedArgTy == ArgTy)
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
     if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {

@@ -1,8 +1,4 @@
 # libFuzzer – a library for coverage-guided fuzz testing.
-```{contents}
-:local:
-:depth: 1
-```
 
 ## Introduction
 
@@ -32,10 +28,6 @@ LibFuzzer requires a matching version of Clang.
 
 ## Getting Started
 
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Fuzz Target
 
@@ -420,10 +412,6 @@ about the mutation operation that produced the new input:
 
 
 ## Examples
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Toy example
 
@@ -481,10 +469,6 @@ to detect [Heartbleed] in one second.
 
 
 ## Advanced features
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Dictionaries
 LibFuzzer supports user-supplied dictionaries with input language keywords

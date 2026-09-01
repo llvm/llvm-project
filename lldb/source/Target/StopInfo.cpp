@@ -250,7 +250,7 @@ public:
             }
           }
 
-          strm.Printf("breakpoint ");
+          strm.PutCString("breakpoint ");
           m_async_stopped_locs.GetDescription(&strm, eDescriptionLevelBrief);
           m_description = std::string(strm.GetString());
         } else {

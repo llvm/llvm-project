@@ -10,13 +10,16 @@
 // instructions do not lengthen the critical path or the resource depth.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -62,7 +65,7 @@ static cl::opt<bool> VerifyPatternOrder(
 #endif
 
 namespace {
-class MachineCombiner : public MachineFunctionPass {
+class MachineCombinerImpl {
   const TargetSubtargetInfo *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -73,16 +76,15 @@ class MachineCombiner : public MachineFunctionPass {
   MachineTraceMetrics::Ensemble *TraceEnsemble = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   TargetSchedModel TSchedModel;
 
 public:
-  static char ID;
-  MachineCombiner() : MachineFunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override { return "Machine InstCombiner"; }
+  MachineCombinerImpl() = default;
+  bool run(MachineFunction &MF, MachineLoopInfo *MLI,
+           MachineTraceMetrics *Traces, ProfileSummaryInfo *PSI,
+           MachineBlockFrequencyInfo *MBFI, RegisterClassInfo *RegClassInfo);
 
 private:
   bool combineInstructions(MachineBasicBlock *);
@@ -118,23 +120,32 @@ private:
 
   CombinerObjective getCombinerObjective(unsigned Pattern);
 };
-}
 
-char MachineCombiner::ID = 0;
-char &llvm::MachineCombinerID = MachineCombiner::ID;
+class MachineCombinerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  MachineCombinerLegacy() : MachineFunctionPass(ID) {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return "Machine InstCombiner"; }
+};
+} // namespace
 
-INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
-                      "Machine InstCombiner", false, false)
+char MachineCombinerLegacy::ID = 0;
+char &llvm::MachineCombinerID = MachineCombinerLegacy::ID;
+
+INITIALIZE_PASS_BEGIN(MachineCombinerLegacy, DEBUG_TYPE, "Machine InstCombiner",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
-INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
+INITIALIZE_PASS_END(MachineCombinerLegacy, DEBUG_TYPE, "Machine InstCombiner",
                     false, false)
 
-void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<MachineTraceMetricsWrapperPass>();
   AU.addPreserved<MachineTraceMetricsWrapperPass>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
@@ -142,8 +153,7 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineInstr *
-MachineCombiner::getOperandDef(const MachineOperand &MO) {
+MachineInstr *MachineCombinerImpl::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
@@ -152,7 +162,7 @@ MachineCombiner::getOperandDef(const MachineOperand &MO) {
 }
 
 /// Return true if MI is unlikely to generate an actual target instruction.
-bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
+bool MachineCombinerImpl::isTransientMI(const MachineInstr *MI) {
   if (!MI->isCopy())
     return MI->isTransient();
 
@@ -197,10 +207,10 @@ bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
 ///
 /// \returns Depth of last instruction in \InsInstrs ("NewRoot")
 unsigned
-MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
-                          DenseMap<Register, unsigned> &InstrIdxForVirtReg,
-                          MachineTraceMetrics::Trace BlockTrace,
-                          const MachineBasicBlock &MBB) {
+MachineCombinerImpl::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
+                              DenseMap<Register, unsigned> &InstrIdxForVirtReg,
+                              MachineTraceMetrics::Trace BlockTrace,
+                              const MachineBasicBlock &MBB) {
   SmallVector<unsigned, 16> InstrDepth;
   // For each instruction in the new sequence compute the depth based on the
   // operands. Use the trace information when possible. For new operands which
@@ -260,8 +270,9 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
 /// \param BlockTrace is a trace of machine instructions
 ///
 /// \returns Latency of \p NewRoot
-unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
-                                     MachineTraceMetrics::Trace BlockTrace) {
+unsigned
+MachineCombinerImpl::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
+                                MachineTraceMetrics::Trace BlockTrace) {
   // Check each definition in NewRoot and compute the latency
   unsigned NewRootLatency = 0;
 
@@ -290,7 +301,7 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
   return NewRootLatency;
 }
 
-CombinerObjective MachineCombiner::getCombinerObjective(unsigned Pattern) {
+CombinerObjective MachineCombinerImpl::getCombinerObjective(unsigned Pattern) {
   // TODO: If C++ ever gets a real enum class, make this part of the
   // MachineCombinerPattern class.
   switch (Pattern) {
@@ -308,7 +319,8 @@ CombinerObjective MachineCombiner::getCombinerObjective(unsigned Pattern) {
 /// up the latencies of the inserted and deleted instructions. This assumes
 /// that the inserted and deleted instructions are dependent instruction chains,
 /// which might not hold in all cases.
-std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
+std::pair<unsigned, unsigned>
+MachineCombinerImpl::getLatenciesForInstrSequences(
     MachineInstr &MI, SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     MachineTraceMetrics::Trace BlockTrace) {
@@ -327,7 +339,7 @@ std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
   return {NewRootLatency, RootLatency};
 }
 
-bool MachineCombiner::reduceRegisterPressure(
+bool MachineCombinerImpl::reduceRegisterPressure(
     MachineInstr &Root, MachineBasicBlock *MBB,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs, unsigned Pattern) {
@@ -343,7 +355,7 @@ bool MachineCombiner::reduceRegisterPressure(
 /// sequence to replace the old sequence is that it cannot lengthen the critical
 /// path. The definition of "improve" may be restricted by specifying that the
 /// new path improves the data dependency chain (MustReduceDepth).
-bool MachineCombiner::improvesCriticalPathLen(
+bool MachineCombinerImpl::improvesCriticalPathLen(
     MachineBasicBlock *MBB, MachineInstr *Root,
     MachineTraceMetrics::Trace BlockTrace,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -405,7 +417,7 @@ bool MachineCombiner::improvesCriticalPathLen(
 }
 
 /// helper routine to convert instructions into SC
-void MachineCombiner::instr2instrSC(
+void MachineCombinerImpl::instr2instrSC(
     SmallVectorImpl<MachineInstr *> &Instrs,
     SmallVectorImpl<const MCSchedClassDesc *> &InstrsSC) {
   for (auto *InstrPtr : Instrs) {
@@ -417,7 +429,7 @@ void MachineCombiner::instr2instrSC(
 }
 
 /// True when the new instructions do not increase resource length
-bool MachineCombiner::preservesResourceLen(
+bool MachineCombinerImpl::preservesResourceLen(
     MachineBasicBlock *MBB, MachineTraceMetrics::Trace BlockTrace,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs) {
@@ -426,8 +438,8 @@ bool MachineCombiner::preservesResourceLen(
 
   // Compute current resource length
 
-  //ArrayRef<const MachineBasicBlock *> MBBarr(MBB);
-  SmallVector <const MachineBasicBlock *, 1> MBBarr;
+  // ArrayRef<const MachineBasicBlock *> MBBarr(MBB);
+  SmallVector<const MachineBasicBlock *, 1> MBBarr;
   MBBarr.push_back(MBB);
   unsigned ResLenBeforeCombine = BlockTrace.getResourceLength(MBBarr);
 
@@ -450,7 +462,7 @@ bool MachineCombiner::preservesResourceLen(
                     << " and after: " << ResLenAfterCombine << "\n");
   LLVM_DEBUG(
       ResLenAfterCombine <=
-      ResLenBeforeCombine + TII->getExtendResourceLenLimit()
+              ResLenBeforeCombine + TII->getExtendResourceLenLimit()
           ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
           : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
                       "Length\n");
@@ -518,7 +530,7 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 /// instructions  when this neither lengthens the critical path nor increases
 /// resource pressure. When optimizing for codesize always combine when the new
 /// sequence is shorter.
-bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
+bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Combining MBB " << MBB->getName() << "\n");
 
@@ -536,7 +548,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
 
   bool DoRegPressureReduce =
-      TII->shouldReduceRegisterPressure(MBB, &RegClassInfo);
+      TII->shouldReduceRegisterPressure(MBB, RegClassInfo);
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
@@ -694,23 +706,25 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   return Changed;
 }
 
-bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool MachineCombinerImpl::run(MachineFunction &MF, MachineLoopInfo *MLI,
+                              MachineTraceMetrics *Traces,
+                              ProfileSummaryInfo *PSI,
+                              MachineBlockFrequencyInfo *MBFI,
+                              RegisterClassInfo *RegClassInfo) {
   STI = &MF.getSubtarget();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   SchedModel = STI->getSchedModel();
   TSchedModel.init(STI);
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  MBFI = (PSI && PSI->hasProfileSummary()) ?
-         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-         nullptr;
+  this->MLI = MLI;
+  this->Traces = Traces;
+  this->PSI = PSI;
+  this->MBFI = MBFI;
+  this->RegClassInfo = RegClassInfo;
   TraceEnsemble = nullptr;
-  RegClassInfo.runOnMachineFunction(MF);
 
-  LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Machine InstCombiner: " << MF.getName() << '\n');
   if (!TII->useMachineCombiner()) {
     LLVM_DEBUG(
         dbgs()
@@ -725,4 +739,38 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
     Changed |= combineInstructions(&MBB);
 
   return Changed;
+}
+
+bool MachineCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
+  auto &RegClassInfo =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  return MachineCombinerImpl().run(MF, MLI, Traces, PSI, MBFI, &RegClassInfo);
+}
+
+PreservedAnalyses
+MachineCombinerPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &Traces = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF)
+                   : nullptr;
+  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  if (!MachineCombinerImpl().run(MF, &MLI, &Traces, PSI, MBFI, &RegClassInfo))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineTraceMetricsAnalysis>();
+  return PA;
 }

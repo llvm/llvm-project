@@ -31,6 +31,25 @@ class NEONType<ValueType VT> {
     v4bf16: nxv8bf16,
     v8bf16: nxv8bf16,
     untyped);
+
+  SubRegIndex ZPRsubreg = !switch(VT,
+    v8i8: dsub,
+    v16i8: zsub,
+    v4i16: dsub,
+    v8i16: zsub,
+    v2i32: dsub,
+    v4i32: zsub,
+    v1i64: dsub,
+    v2i64: zsub,
+    v4f16: dsub,
+    v8f16: zsub,
+    v2f32: dsub,
+    v4f32: zsub,
+    v1f64: dsub,
+    v2f64: zsub,
+    v4bf16: dsub,
+    v8bf16: zsub,
+    ?);
 }
 
 // Helper class to hold conversions of legal scalable vector types.
@@ -307,6 +326,8 @@ class imm8_opt_lsl<int ElementWidth, string printType,
   let PrintMethod = "printImm8OptLsl<" # printType # ">";
   let ParserMatchClass = OpndClass;
   let MIOperandInfo = (ops i32imm, i32imm);
+  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
+  let OperandNamespace = "AArch64";
 }
 
 def cpy_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "int8_t",  SVECpyImmOperand8>;
@@ -406,6 +427,8 @@ class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
 class SVEExactFPImmOperand<string Suffix, string ValA, string ValB> : Operand<i32> {
   let PrintMethod = "printExactFPImm<" # ValA # ", " # ValB # ">";
   let ParserMatchClass = SVEExactFPImm<Suffix, ValA, ValB>;
+  let OperandType = "OPERAND_IMM_UINT1";
+  let OperandNamespace = "AArch64";
 }
 
 def sve_fpimm_half_one
@@ -424,6 +447,8 @@ def sve_incdec_imm : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm1_16Operand;
   let EncoderMethod = "getSVEIncDecImm";
   let DecoderMethod = "DecodeSVEIncDecImm";
+  let OperandType = "OPERAND_IMM_UINT4plus1";
+  let OperandNamespace = "AArch64";
 }
 
 // This allows i32 immediate extraction from i64 based arithmetic.
@@ -2339,20 +2364,10 @@ multiclass sve_fp_2op_p_zds<bits<4> opc, string asm, string Ps,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
   }
 
-  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
-}
-
-multiclass sve_fp_2op_p_zds_fscale<bits<4> opc, string asm,
-                                   SDPatternOperator op> {
-  def _H : sve_fp_2op_p_zds<0b01, opc, asm, ZPR16>;
-  def _S : sve_fp_2op_p_zds<0b10, opc, asm, ZPR32>;
-  def _D : sve_fp_2op_p_zds<0b11, opc, asm, ZPR64>;
-
-  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8i16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4i32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2i64, !cast<Instruction>(NAME # _D)>;
+  // FSCALE (opc == 0b1001) requires different operand types.
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, !if(!eq(opc, 0b1001), nxv8i16, nxv8f16), !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, !if(!eq(opc, 0b1001), nxv4i32, nxv4f32), !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, !if(!eq(opc, 0b1001), nxv2i64, nxv2f64), !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
@@ -2364,16 +2379,8 @@ multiclass sve_fp_2op_p_zds_bfloat<bits<4> opc, string asm, string Ps,
              SVEPseudo2Instr<Ps, 1>, SVEInstr2Rev<NAME , revname , isReverseInstr>;
   }
 
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
-}
-
-multiclass sve_fp_2op_p_zds_bfscale<bits<4> opc, string asm, SDPatternOperator op,
-                                    DestructiveInstTypeEnum flags> {
-  let DestructiveInstType = flags in {
-  def _H : sve_fp_2op_p_zds<0b00, opc, asm, ZPR16>;
-  }
-
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  // BFSCALE (opc == 0b1001) requires different operand types.
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, !if(!eq(opc, 0b1001), nxv8i16, nxv8bf16), !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_2op_p_zds_zeroing_hsd<SDPatternOperator op> {
@@ -6205,6 +6212,7 @@ class sve_fp_3op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{4}     = opc{0};
   let Inst{3-0}   = Pd;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
 }
@@ -6264,6 +6272,7 @@ class sve_fp_2op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{4}     = opc{0};
   let Inst{3-0}   = Pd;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayRaiseFPException = 1;
 }
@@ -6806,7 +6815,7 @@ multiclass sve_int_bin_cons_shift_imm_right<bits<2> opc, string asm,
 //===----------------------------------------------------------------------===//
 
 class sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
-                     RegisterOperand VecList>
+                     RegisterOperand VecList, ZPRRegOp zprty>
 : I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
   asm, "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
   "",
@@ -6825,6 +6834,7 @@ class sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayStore = 1;
 }
@@ -6832,7 +6842,7 @@ class sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
 multiclass sve_mem_cst_si<bits<2> msz, bits<2> esz, string asm,
                           RegisterOperand listty, ZPRRegOp zprty>
 {
-  def NAME : sve_mem_cst_si<msz, esz, asm, listty>;
+  def NAME : sve_mem_cst_si<msz, esz, asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
@@ -6956,7 +6966,8 @@ class sve_mem_128b_est_ss<bits<2> nregs, RegisterOperand VecList,
 
 
 class sve_mem_cst_ss_base<bits<4> dtype, string asm,
-                          RegisterOperand listty, RegisterOperand gprty>
+                          RegisterOperand listty, ZPRRegOp zprty,
+                          RegisterOperand gprty>
 : I<(outs), (ins listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
   asm, "\t$Zt, $Pg, [$Rn, $Rm]",
   "",
@@ -6973,6 +6984,7 @@ class sve_mem_cst_ss_base<bits<4> dtype, string asm,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayStore = 1;
 }
@@ -6980,13 +6992,14 @@ class sve_mem_cst_ss_base<bits<4> dtype, string asm,
 multiclass sve_mem_cst_ss<bits<4> dtype, string asm,
                           RegisterOperand listty, ZPRRegOp zprty,
                           RegisterOperand gprty> {
-  def NAME : sve_mem_cst_ss_base<dtype, asm, listty, gprty>;
+  def NAME : sve_mem_cst_ss_base<dtype, asm, listty, zprty, gprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Rn, $Rm]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
 }
 
-class sve_mem_cstnt_si<bits<2> msz, string asm, RegisterOperand VecList>
+class sve_mem_cstnt_si<bits<2> msz, string asm, RegisterOperand VecList,
+                       ZPRRegOp zprty>
 : I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
   asm, "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
   "",
@@ -7004,13 +7017,14 @@ class sve_mem_cstnt_si<bits<2> msz, string asm, RegisterOperand VecList>
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayStore = 1;
 }
 
 multiclass sve_mem_cstnt_si<bits<2> msz, string asm, RegisterOperand listty,
                             ZPRRegOp zprty> {
-  def NAME : sve_mem_cstnt_si<msz, asm, listty>;
+  def NAME : sve_mem_cstnt_si<msz, asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Rn]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
@@ -7021,7 +7035,7 @@ multiclass sve_mem_cstnt_si<bits<2> msz, string asm, RegisterOperand listty,
 }
 
 class sve_mem_cstnt_ss_base<bits<2> msz, string asm, RegisterOperand listty,
-                            RegisterOperand gprty>
+                            ZPRRegOp zprty, RegisterOperand gprty>
 : I<(outs), (ins listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
   asm, "\t$Zt, $Pg, [$Rn, $Rm]",
   "",
@@ -7039,13 +7053,14 @@ class sve_mem_cstnt_ss_base<bits<2> msz, string asm, RegisterOperand listty,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayStore = 1;
 }
 
 multiclass sve_mem_cstnt_ss<bits<2> msz, string asm, RegisterOperand listty,
                             ZPRRegOp zprty, RegisterOperand gprty> {
-  def NAME : sve_mem_cstnt_ss_base<msz, asm, listty, gprty>;
+  def NAME : sve_mem_cstnt_ss_base<msz, asm, listty, zprty, gprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Rn, $Rm]",
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
@@ -8099,7 +8114,7 @@ multiclass sve_int_perm_compact_bh<string asm, SDPatternOperator op> {
 //===----------------------------------------------------------------------===//
 
 class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
-                          RegisterOperand VecList>
+                          RegisterOperand VecList, ZPRRegOp zprty>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
   asm, "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
   "",
@@ -8118,6 +8133,7 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
   let Inst{4-0}   = Zt;
 
   let Defs = !if(nf, [FFR], []);
+  let ElementSize = zprty.ElementSize;
   let Uses = !if(nf, [FFR], []);
   let hasSideEffects = nf;
   let mayLoad = 1;
@@ -8125,7 +8141,7 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
 
 multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
                                RegisterOperand listty, ZPRRegOp zprty> {
-  def NAME : sve_mem_cld_si_base<dtype, nf, asm, listty>;
+  def NAME : sve_mem_cld_si_base<dtype, nf, asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
@@ -8143,7 +8159,8 @@ multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
                             ZPRRegOp zprty>
 : sve_mem_cld_si_base<dtype, 1, asm, listty, zprty>;
 
-class sve_mem_cldnt_si_base<bits<2> msz, string asm, RegisterOperand VecList>
+class sve_mem_cldnt_si_base<bits<2> msz, string asm, RegisterOperand VecList,
+                            ZPRRegOp zprty>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
   asm, "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
   "",
@@ -8161,13 +8178,14 @@ class sve_mem_cldnt_si_base<bits<2> msz, string asm, RegisterOperand VecList>
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayLoad = 1;
 }
 
 multiclass sve_mem_cldnt_si<bits<2> msz, string asm, RegisterOperand listty,
                             ZPRRegOp zprty> {
-  def NAME : sve_mem_cldnt_si_base<msz, asm, listty>;
+  def NAME : sve_mem_cldnt_si_base<msz, asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
@@ -8178,7 +8196,7 @@ multiclass sve_mem_cldnt_si<bits<2> msz, string asm, RegisterOperand listty,
 }
 
 class sve_mem_cldnt_ss_base<bits<2> msz, string asm, RegisterOperand VecList,
-                            RegisterOperand gprty>
+                            ZPRRegOp zprty, RegisterOperand gprty>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
   asm, "\t$Zt, $Pg/z, [$Rn, $Rm]",
   "",
@@ -8196,13 +8214,14 @@ class sve_mem_cldnt_ss_base<bits<2> msz, string asm, RegisterOperand VecList,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayLoad = 1;
 }
 
 multiclass sve_mem_cldnt_ss<bits<2> msz, string asm, RegisterOperand listty,
                             ZPRRegOp zprty, RegisterOperand gprty> {
-  def NAME : sve_mem_cldnt_ss_base<msz, asm, listty, gprty>;
+  def NAME : sve_mem_cldnt_ss_base<msz, asm, listty, zprty, gprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
@@ -8269,7 +8288,7 @@ multiclass sve_mem_ldqr_ss<bits<2> sz, string asm, RegisterOperand listty,
 }
 
 class sve_mem_ld_dup<bits<2> dtypeh, bits<2> dtypel, string asm,
-                     RegisterOperand VecList, Operand immtype>
+                     RegisterOperand VecList, ZPRRegOp zprty, Operand immtype>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm6),
   asm, "\t$Zt, $Pg/z, [$Rn, $imm6]",
   "",
@@ -8288,13 +8307,14 @@ class sve_mem_ld_dup<bits<2> dtypeh, bits<2> dtypel, string asm,
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
 
+  let ElementSize = zprty.ElementSize;
   let hasSideEffects = 0;
   let mayLoad = 1;
 }
 
 multiclass sve_mem_ld_dup<bits<2> dtypeh, bits<2> dtypel, string asm,
                           RegisterOperand zlistty, ZPRRegOp zprty, Operand immtype> {
-  def NAME : sve_mem_ld_dup<dtypeh, dtypel, asm, zlistty, immtype>;
+  def NAME : sve_mem_ld_dup<dtypeh, dtypel, asm, zlistty, zprty, immtype>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
                   (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
@@ -8305,7 +8325,7 @@ multiclass sve_mem_ld_dup<bits<2> dtypeh, bits<2> dtypel, string asm,
 }
 
 class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
-                          RegisterOperand VecList>
+                          RegisterOperand VecList, ZPRRegOp zprty>
 : I<(outs VecList:$Zt), iops,
   asm, "\t$Zt, $Pg/z, [$Rn, $Rm]",
   "",
@@ -8324,6 +8344,7 @@ class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
   let Inst{4-0}   = Zt;
 
   let Defs = !if(ff, [FFR], []);
+  let ElementSize = zprty.ElementSize;
   let Uses = !if(ff, [FFR], []);
   let hasSideEffects = ff;
   let mayLoad = 1;
@@ -8332,7 +8353,7 @@ class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
 multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
                           ZPRRegOp zprty, RegisterOperand gprty> {
   def NAME : sve_mem_cld_ss_base<dtype, 0, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
-                               asm, listty>;
+                               asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
@@ -8340,7 +8361,7 @@ multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
 
 multiclass sve_mem_cldff_ss<bits<4> dtype, string asm, RegisterOperand listty,
                             ZPRRegOp zprty, RegisterOperand gprty> {
-  def NAME : sve_mem_cld_ss_base<dtype, 1, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), asm, listty>;
+  def NAME : sve_mem_cld_ss_base<dtype, 1, (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), asm, listty, zprty>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $Rm]",
                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm), 0>;
@@ -9923,6 +9944,16 @@ multiclass sve_fp_bin_pred_hfd<SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D_UNDEF)>;
 }
 
+multiclass sve_fp_bin_pred_hfd_fscale<SDPatternOperator op> {
+  def _H_UNDEF : PredTwoOpPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredTwoOpPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredTwoOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
+
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8i16, !cast<Instruction>(NAME # _H_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4i32, !cast<Instruction>(NAME # _S_UNDEF)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2i64, !cast<Instruction>(NAME # _D_UNDEF)>;
+}
+
 // Predicated pseudo floating point (BFloat) two operand instructions.
 multiclass sve_fp_bin_pred_bfloat<SDPatternOperator op> {
   def _UNDEF : PredTwoOpPseudo<NAME, ZPR16, FalseLanesUndef>;
@@ -9930,6 +9961,12 @@ multiclass sve_fp_bin_pred_bfloat<SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8bf16, !cast<Instruction>(NAME # _UNDEF)>;
   def : SVE_3_Op_Pat<nxv4bf16, op, nxv4i1,  nxv4bf16, nxv4bf16, !cast<Instruction>(NAME # _UNDEF)>;
   def : SVE_3_Op_Pat<nxv2bf16, op, nxv2i1,  nxv2bf16, nxv2bf16, !cast<Instruction>(NAME # _UNDEF)>;
+}
+
+multiclass sve_fp_bin_pred_bfscale<SDPatternOperator op> {
+  def _UNDEF : PredTwoOpPseudo<NAME, ZPR16, FalseLanesUndef>;
+
+  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8i1,  nxv8bf16, nxv8i16, !cast<Instruction>(NAME # _UNDEF)>;
 }
 
 // Predicated pseudo floating point three operand instructions.
@@ -10399,11 +10436,16 @@ class sve2p1_mem_cst_si_2z<string mnemonic, bits<2> msz, bit n,
 
 
 multiclass sve2p1_mem_cst_si_2z<string mnemonic, bits<2> msz, bit n,
-                              RegisterOperand vector_ty> {
+                               RegisterOperand vector_ty,
+                               RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cst_si_2z<mnemonic, msz, n, vector_ty>;
 
   def : InstAlias<mnemonic # " $Zt, $PNg, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+
+  let hasSideEffects = 0, mayStore = 1 in
+  def NAME # _PSEUDO : Pseudo<(outs), (ins vector_pseudo_ty:$Zt,
+                         PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s2:$imm4), []>;
 }
 
 
@@ -10459,11 +10501,16 @@ class sve2p1_mem_cst_si_4z<string mnemonic, bits<2> msz, bit n,
 
 
 multiclass sve2p1_mem_cst_si_4z<string mnemonic, bits<2> msz, bit n,
-                                RegisterOperand vector_ty> {
+                                RegisterOperand vector_ty,
+                                RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cst_si_4z<mnemonic, msz, n, vector_ty>;
 
   def : InstAlias<mnemonic # " $Zt, $PNg, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn,0), 1>;
+
+  let hasSideEffects = 0, mayStore = 1 in
+  def NAME # _PSEUDO : Pseudo<(outs), (ins vector_pseudo_ty:$Zt,
+                         PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s4:$imm4), []>;
 }
 
 // SVE predicate count (predicate-as-counter)

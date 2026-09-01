@@ -41,7 +41,7 @@ void multiple_catches_wo_catch_all() {
 // CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
 // CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
 // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #7
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) {{.*}}
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
 
@@ -58,7 +58,7 @@ void multiple_catches_wo_catch_all() {
 // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
 
 // CHECK: [[CATCH_FALLTHROUGH_BB]]
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) #7
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) {{.*}}
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
 
@@ -386,6 +386,34 @@ void nested_try_catch_within_catch() {
 
 void noexcept_throw() noexcept {
   throw 3;
+}
+
+int get_val() { return 42; }
+thread_local int tls = get_val();
+
+// CHECK-LABEL: @_Z26tls_wrapper_within_funcletv()
+// CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
+
+// CHECK: [[CATCHSTART_BB]]:
+// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr null]
+// CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
+// CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
+// CHECK-NEXT:   {{.*}} call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
+// CHECK-NEXT:   br label %[[CATCH_ALL_BB:.*]]
+
+// CHECK: [[CATCH_ALL_BB]]:
+// CHECK-NEXT:   %[[EXN_LOAD:.*]] = load ptr, ptr %exn.slot
+// CHECK-NEXT:   call ptr @__cxa_begin_catch(ptr %[[EXN_LOAD]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
+// CHECK-NEXT:   call {{.*}} @_ZTW3tls() [ "funclet"(token %[[CATCHPAD]]) ]
+
+// Thread-local wrapper calls within a funclet should have a catchpad/cleanuppad
+// funclet bundle argument.
+int tls_wrapper_within_funclet() {
+  try {
+    throw 1;
+  } catch (...) {
+    return tls;
+  }
 }
 
 // CATCH-LABEL: define void @_Z14noexcept_throwv()

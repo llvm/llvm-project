@@ -325,28 +325,28 @@ define <6 x i32> @saddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ;
 ; AVX2-LABEL: saddo_v6i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vmovq %xmm2, 16(%rdi)
-; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpxor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdi)
+; AVX2-NEXT:    vmovdqa %xmm2, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: saddo_v6i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm2, %k0
-; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpcmpgtd %ymm2, %ymm0, %k0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
+; AVX512-NEXT:    kxorw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX512-NEXT:    vmovq %xmm2, 16(%rdi)
-; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX512-NEXT:    vmovq %xmm1, 16(%rdi)
+; AVX512-NEXT:    vmovdqa %xmm2, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<6 x i32>, <6 x i1>} @llvm.sadd.with.overflow.v6i32(<6 x i32> %a0, <6 x i32> %a1)
   %val = extractvalue {<6 x i32>, <6 x i1>} %t, 0
@@ -393,24 +393,24 @@ define <8 x i32> @saddo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ;
 ; AVX2-LABEL: saddo_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm1, (%rdi)
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpxor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm2, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: saddo_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm2, %k0
-; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpcmpgtd %ymm2, %ymm0, %k0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
+; AVX512-NEXT:    kxorw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    vmovdqa %ymm1, (%rdi)
+; AVX512-NEXT:    vmovdqa %ymm2, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<8 x i32>, <8 x i1>} @llvm.sadd.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0
@@ -492,33 +492,33 @@ define <16 x i32> @saddo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwin
 ;
 ; AVX2-LABEL: saddo_v16i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm4, %ymm5
-; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm3
-; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm5, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX2-NEXT:    vpackssdw %xmm5, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm4, %ymm4
-; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm4
+; AVX2-NEXT:    vpcmpgtd %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm5, %ymm3
+; AVX2-NEXT:    vpxor %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vpxor %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12,16,16,16,16,20,20,20,20,24,24,24,24,28,28,28,28]
-; AVX2-NEXT:    vmovdqa %ymm3, 32(%rdi)
-; AVX2-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX2-NEXT:    vmovdqa %ymm4, 32(%rdi)
+; AVX2-NEXT:    vmovdqa %ymm3, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: saddo_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %zmm1, %zmm2, %k0
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
+; AVX512-NEXT:    kxorw %k0, %k1, %k1
 ; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512-NEXT:    vmovdqa64 %zmm1, (%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<16 x i32>, <16 x i1>} @llvm.sadd.with.overflow.v16i32(<16 x i32> %a0, <16 x i32> %a1)
   %val = extractvalue {<16 x i32>, <16 x i1>} %t, 0

@@ -1120,7 +1120,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
-  L->getExitEdges(ExitEdges);
+  LI->getExitEdges(*L, ExitEdges);
 
   // Remember dominators of blocks we might reach through exits to change them
   // later. Immediate dominator of such block might change, because we add more

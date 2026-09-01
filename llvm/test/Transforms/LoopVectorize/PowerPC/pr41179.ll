@@ -4,17 +4,17 @@
 define void @foo(ptr %start, ptr %end) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[START:%.*]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[END1]], i64 [[TMP10]])
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[START2]] to i32
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[START2]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[END1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 0, [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

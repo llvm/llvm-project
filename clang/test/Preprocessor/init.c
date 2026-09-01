@@ -997,7 +997,7 @@
 // NVPTX64:#define __WINT_WIDTH__ 32
 //
 
-// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgcn < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
+// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgpu < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=r600 -target-cpu caicos < /dev/null | FileCheck -match-full-lines --check-prefix AMDGPU %s
 //
 // AMDGPU:#define __ENDIAN_LITTLE__ 1
@@ -1950,9 +1950,11 @@
 // WEBASSEMBLY-NEXT:#define __SHRT_WIDTH__ 16
 // WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_MAX__ 2147483647L
 // WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_TYPE__ long int
 // WEBASSEMBLY32-NEXT:#define __SIG_ATOMIC_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_TYPE__ long int
 // WEBASSEMBLY64-NEXT:#define __SIG_ATOMIC_WIDTH__ 64
 // WEBASSEMBLY-NEXT:#define __SIZEOF_DOUBLE__ 8
 // WEBASSEMBLY-NEXT:#define __SIZEOF_FLOAT__ 4

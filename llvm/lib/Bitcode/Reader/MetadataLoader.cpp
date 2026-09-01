@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +52,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -465,6 +463,10 @@ class MetadataLoader::MetadataLoaderImpl {
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
 
+  /// Map DIGlobalVariable to generated DIGlobalVariable, if any.
+  DenseMap<DIGlobalVariable *, DIGlobalVariableExpression *>
+      GlobalVariableExpression;
+
   /// Map DILocalScope to the enclosing DISubprogram, if any.
   DenseMap<DILocalScope *, DISubprogram *> ParentSubprogram;
 
@@ -506,8 +508,11 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *DGVE = DIGlobalVariableExpression::getDistinct(
-                  Context, GV, DIExpression::get(Context, {}));
+              DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[GV];
+              if (!DGVE) {
+                DGVE = DIGlobalVariableExpression::getDistinct(
+                    Context, GV, DIExpression::get(Context, {}));
+              }
               GVs->replaceOperandWith(I, DGVE);
             }
       }
@@ -519,8 +524,11 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast<DIGlobalVariable>(MD)) {
-          auto *DGVE = DIGlobalVariableExpression::getDistinct(
-              Context, DGV, DIExpression::get(Context, {}));
+          DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
+          if (!DGVE) {
+            DGVE = DIGlobalVariableExpression::getDistinct(
+                Context, DGV, DIExpression::get(Context, {}));
+          }
           GV.addMetadata(LLVMContext::MD_dbg, *DGVE);
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
@@ -986,6 +994,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
@@ -2268,10 +2277,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
            getMDOrNull(Record[10]), nullptr, AlignInBits, nullptr));
 
-      DIGlobalVariableExpression *DGVE = nullptr;
-      if (Attach || Expr)
-        DGVE = DIGlobalVariableExpression::getDistinct(
-            Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+      DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
+      if (Attach || Expr) {
+        if (!DGVE) {
+          DGVE = DIGlobalVariableExpression::getDistinct(
+              Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+        }
+      }
       if (Attach)
         Attach->addDebugInfo(DGVE);
 
@@ -2403,6 +2415,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_PROPERTY: {
+    if (Record.size() != 6)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIProperty, (Context, getMDString(Record[1]),
+                                     getMDOrNull(Record[2]), Record[3],
+                                     getDITypeRefOrNull(Record[4]),
+                                     getMDOrNull(Record[5]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_IMPORTED_ENTITY: {
     if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid DIImportedEntity record");
@@ -2434,6 +2460,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
   case bitc::METADATA_STRINGS: {
     auto CreateNextMDString = [&](StringRef Str) {
+      // Modern bitcode encodes MDStrings via this bulk record, so mirror the
+      // METADATA_STRING check above to arm the loop-attachment upgrader.
+      HasSeenOldLoopTags |= mayBeOldLoopAttachmentTag(Str);
       ++NumMDStringLoaded;
       MetadataList.assignValue(MDString::get(Context, Str), NextMetadataNo);
       NextMetadataNo++;

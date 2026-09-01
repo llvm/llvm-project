@@ -30,8 +30,7 @@ A *deact_simple() { return new A(makeB()); }
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
 // CIR:     cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:     %[[MAKEB:.*]] = cir.call @_Z5makeBv() : () -> !rec_B
-// CIR:     cir.store{{.*}} %[[MAKEB]], %[[TMP]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:     cir.call @_Z5makeBv(%[[TMP]]) : (!cir.ptr<!rec_B> {{.*}}llvm.sret = !rec_B{{.*}}) -> ()
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[CONV:.*]] = cir.call @_ZN1BcviEv(%[[TMP]])
 // CIR:       cir.call @_ZN1AC1Ei({{.*}})
@@ -52,7 +51,7 @@ A *deact_simple() { return new A(makeB()); }
 // LLVM:   %[[ACTIVE:.*]] = alloca i8
 // LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW:.*]]
 // LLVM:   store i8 1, ptr %[[ACTIVE]]
-// LLVM:   %[[MAKEB:.*]] = invoke %struct.B @_Z5makeBv()
+// LLVM:   invoke void @_Z5makeBv(ptr dead_on_unwind writable sret(%struct.B) align 4 %[[TMP]])
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND_OUTER:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})
@@ -122,7 +121,7 @@ A *deact_if(bool cond) {
 // CIR:     }
 // CIR:   }
 
-// LLVM-LABEL: define dso_local ptr @_Z8deact_ifb(i1 %0) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM-LABEL: define dso_local ptr @_Z8deact_ifb(i1 zeroext %0) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   br i1 %{{.*}}, label %[[THEN:.*]], label %[[END:.*]]
 // LLVM: [[THEN]]:
 // LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
@@ -177,7 +176,7 @@ A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr;
 // CIR:     }
 // CIR:   }
 
-// LLVM-LABEL: define dso_local ptr @_Z13deact_ternaryb(i1 %0) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM-LABEL: define dso_local ptr @_Z13deact_ternaryb(i1 zeroext %0) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE:.*]]
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})
@@ -243,7 +242,7 @@ A *deact_while_cond(int n) {
 // LLVM: [[WHILE_COND]]:
 // LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store i8 1, ptr %[[ACTIVE]]
-// LLVM:   invoke %struct.B @_Z5makeBv()
+// LLVM:   invoke void @_Z5makeBv(ptr dead_on_unwind writable sret(%struct.B) align 4 %[[TMP]])
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND_OUTER:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 {{.*}})

@@ -12,6 +12,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -77,6 +78,16 @@ void ThreadPlanStepThrough::DidPush() {
 
 void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
   Thread &thread = GetThread();
+
+  // Give the frame recognizers a chance to provide a step through:
+  StackFrameSP frame_zero_sp = thread.GetStackFrameAtIndex(0);
+  if (RecognizedStackFrameSP frame_recognizer_sp =
+          frame_zero_sp->GetRecognizedFrame()) {
+    m_sub_plan_sp = frame_recognizer_sp->GetStepThroughPlan();
+    if (m_sub_plan_sp)
+      return;
+  }
+
   DynamicLoader *loader = thread.GetProcess()->GetDynamicLoader();
   if (loader)
     m_sub_plan_sp = loader->GetStepThroughTrampolinePlan(thread, m_stop_others);
@@ -112,7 +123,7 @@ void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
 void ThreadPlanStepThrough::GetDescription(Stream *s,
                                            lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief)
-    s->Printf("Step through");
+    s->PutCString("Step through");
   else {
     s->PutCString("Stepping through trampoline code from: ");
     DumpAddress(s->AsRawOstream(), m_start_address, sizeof(addr_t));

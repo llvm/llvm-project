@@ -1,9 +1,6 @@
 (developer_policy)=
 # LLVM Developer Policy
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -359,9 +356,7 @@ Below are some guidelines about the format of the message itself:
   revert or reapply of a patch, include the git commit hash of the prior
   related commit. This could be as simple as "Revert commit NNNN because it
   caused issue #".
-- If the patch has been reviewed, add a link to its review page, as shown
-  [here](https://www.llvm.org/docs/Phabricator.html#committing-a-change). If
-  the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+- If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
   the issue being closed, as described
   [here](https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs).
 - It is also acceptable to add other metadata to the commit message to automate
@@ -1118,10 +1113,10 @@ disabled again, until the issues have been resolved.
 (copyright-license-patents)=
 ## Copyright, License, and Patents
 
-```{note}
+:::{note}
 
 This section deals with legal matters but does not provide legal advice. We are not lawyers \-\-- please seek legal counsel from a licensed attorney.
-```
+:::
 
 This section addresses the issues of copyright, license and patents for the LLVM
 project.  The copyright for the code is held by the contributors of the code.
@@ -1323,14 +1318,14 @@ holds though):
 (legacy)=
 ### Legacy License Structure
 
-```{note}
+:::{note}
 The code base was previously licensed under the Terms described here.
 We are in the middle of relicensing to a new approach (described above).
 More than 99% of all contributions made to LLVM are covered by the Apache-2.0
 WITH LLVM-exception license. A small portion of LLVM code remains exclusively
 covered by the legacy license. Contributions after 2024-06-01 are covered
 exclusively by the new license.
-```
+:::
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in

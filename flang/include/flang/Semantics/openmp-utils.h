@@ -56,28 +56,12 @@ template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
 
-template <typename T> struct WithSource {
-  template < //
-      typename U = std::remove_reference_t<T>,
-      typename = std::enable_if_t<std::is_default_constructible_v<U>>>
-  WithSource() : value(), source() {}
-  WithSource(const WithSource<T> &) = default;
-  WithSource(WithSource<T> &&) = default;
-  WithSource(const T &t, parser::CharBlock s) : value(t), source(s) {}
-  WithSource(T &&t, parser::CharBlock s) : value(std::move(t)), source(s) {}
-  WithSource &operator=(const WithSource<T> &) = default;
-  WithSource &operator=(WithSource<T> &&) = default;
-
-  using value_type = T;
-  T value;
-  parser::CharBlock source;
-};
-
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
-struct SourcedActionStmt : public WithSource<const parser::ActionStmt *> {
-  using WithSource<value_type>::WithSource;
+struct SourcedActionStmt
+    : public parser::omp::WithSource<const parser::ActionStmt *> {
+  using parser::omp::WithSource<value_type>::WithSource;
   value_type stmt() const { return value; }
   operator bool() const { return stmt() != nullptr; }
 };
@@ -298,6 +282,21 @@ bool HasDataEnvironment(llvm::omp::Directive dir);
 
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
+/// The AT, SEVERITY, and MESSAGE clause values of an `!$omp error` directive.
+/// `at` and `severity` default to AT(compilation)/SEVERITY(fatal) when absent;
+/// `message` is null when there is no MESSAGE clause.
+struct OmpErrorArgs {
+  parser::OmpAtClause::ActionTime at{
+      parser::OmpAtClause::ActionTime::Compilation};
+  parser::OmpSeverityClause::SevLevel severity{
+      parser::OmpSeverityClause::SevLevel::Fatal};
+  const parser::Expr *message{nullptr};
+};
+
+/// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
+/// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
+
 inline bool IsDoConcurrentLegal(unsigned version) {
   // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
   // in OpenMP 6.0+.
@@ -311,10 +310,11 @@ struct LoopControl {
   LoopControl(const parser::ConcurrentControl &x);
 
   const parser::Name &iv;
-  WithSource<MaybeExpr> lbound, ubound, step;
+  parser::omp::WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
-  static WithSource<MaybeExpr> fromParserExpr(const parser::Expr &x);
+  static parser::omp::WithSource<MaybeExpr> fromParserExpr(
+      const parser::Expr &x);
 };
 
 std::vector<LoopControl> GetLoopControls(const parser::DoConstruct &x);
@@ -403,6 +403,12 @@ std::optional<int64_t> GetMinimumSequenceCount(
 std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
     const parser::OpenMPLoopConstruct &x, unsigned version,
     SemanticsContext *semaCtx = nullptr);
+
+/// Returns whether the loop nest associated with `x` is a doacross loop nest,
+/// i.e. its body contains an `ordered` directive carrying a doacross
+/// dependence (the `doacross` clause, or the pre-5.2 `depend(sink/source)`
+/// equivalent) that binds to `x`. Such a nest must be perfectly nested.
+bool IsDoacrossAffected(const parser::OpenMPLoopConstruct &x);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

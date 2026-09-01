@@ -59,6 +59,14 @@ void test() {
     sPtr.owner_before(std::shared_ptr<int>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     sPtr.owner_before(std::weak_ptr<int>());
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_hash();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_equal(std::shared_ptr<int>());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sPtr.owner_equal(std::weak_ptr<int>());
+#endif
 #if TEST_STD_VER >= 17
     sPtr[0]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
@@ -138,7 +146,31 @@ void test() {
     wPtr.owner_before(std::weak_ptr<int>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     wPtr.owner_before(std::shared_ptr<int>());
+#if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_hash();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_equal(std::weak_ptr<int>());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    wPtr.owner_equal(std::shared_ptr<int>());
+#endif
   }
+#if TEST_STD_VER >= 26
+  { // [util.smartptr.owner.hash], [util.smartptr.owner.equal]
+    std::shared_ptr<int> sPtr;
+    std::weak_ptr<int> wPtr;
+
+    std::owner_hash oh;
+    oh(sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oh(wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    std::owner_equal oe;
+    oe(sPtr, sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(sPtr, wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(wPtr, sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    oe(wPtr, wPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
   { // [util.smartptr.enab]
     class EnableShared : public std::enable_shared_from_this<EnableShared> {};
     EnableShared es;

@@ -37,7 +37,7 @@ module attributes {transform.with_named_sequence} {
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 
 func.func @unsupported_broadcasting_elementwise(%arg0: tensor<1x2x1xi32>, %arg1: tensor<32x2x2xi32>) -> tensor<32x2x2xi32> {
-  // expected-error @below {{operators with broadcasting semantics are not supported}}
+  // expected-error @below {{broadcasting of non scalar operands is not supported}}
   %0 = linalg.generic {indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg0 : tensor<1x2x1xi32>) outs(%arg1 : tensor<32x2x2xi32>) {
     ^bb0(%in: i32, %out: i32):
       linalg.yield %in : i32
@@ -56,16 +56,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-#map1 = affine_map<(d0, d1, d2) -> (d1, 0)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-func.func @unsupported_rank_expanding_broadcasting_elementwise(%arg0: tensor<2x1xi32>, %arg1: tensor<32x2x2xi32>) -> tensor<32x2x2xi32> {
-  // expected-error @below {{operators with broadcasting semantics are not supported}}
-  %0 = linalg.generic {indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg0 : tensor<2x1xi32>) outs(%arg1 : tensor<32x2x2xi32>) {
-    ^bb0(%in: i32, %out: i32):
-      linalg.yield %in : i32
-  } -> tensor<32x2x2xi32>
-  return %0 : tensor<32x2x2xi32>
+func.func @unsupported_dim_expanding_broadcast(%arg0: tensor<64xi16>, %arg1: tensor<32x64xi16>) -> tensor<32x64xi16> {
+  // expected-error @below {{broadcasting of non scalar operands is not supported}}
+  %broadcasted = linalg.broadcast ins(%arg0 : tensor<64xi16>) outs(%arg1 : tensor<32x64xi16>) dimensions = [0] 
+  return %broadcasted : tensor<32x64xi16>
 }
 
 module attributes {transform.with_named_sequence} {

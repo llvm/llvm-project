@@ -72,11 +72,6 @@ class OImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"O", width, suffix> {
 }
 
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  auto FI = cast<FrameIndexSDNode>(N);
-  return CurDAG->getTargetFrameIndex(FI->getIndex(), TLI->getPointerTy(CurDAG->getDataLayout()));
-}]>;
-
 def to_tconstpool : SDNodeXForm<constpool, [{
   auto CP = cast<ConstantPoolSDNode>(N);
   return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),

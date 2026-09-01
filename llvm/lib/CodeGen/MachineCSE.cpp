@@ -143,11 +143,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addPreservedID(MachineLoopInfoID);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -259,7 +256,8 @@ bool MachineCSEImpl::isPhysDefTriviallyDead(
 }
 
 static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
-                                            const MachineOperand &MO,
+                                            const MachineInstr &MI,
+                                            unsigned OpIdx,
                                             const MachineFunction &MF,
                                             const TargetRegisterInfo &TRI,
                                             const TargetInstrInfo &TII) {
@@ -271,7 +269,8 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
   // It does cause issues mid-GlobalISel, however, hence the additional
   // reservedRegsFrozen check.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return TRI.isCallerPreservedPhysReg(Reg, MF) || TII.isIgnorableUse(MO) ||
+  return TRI.isCallerPreservedPhysReg(Reg, MF) ||
+         TII.isIgnorableUse(MI, OpIdx) ||
          (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
 }
 
@@ -292,8 +291,9 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Reg.isVirtual())
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), MO, *MI->getMF(), *TRI,
-                                         *TII))
+    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), *MI,
+                                         MI->getOperandNo(&MO), *MI->getMF(),
+                                         *TRI, *TII))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }
@@ -959,9 +959,6 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

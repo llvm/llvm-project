@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // Anonymous struct as a field.
 struct StructWithAnon {
@@ -22,8 +22,7 @@ struct StructWithAnonUnion g_anon_union = { {.f = 1.5f}, 42 };
 
 // CIR: cir.global external @g_anon_union = #cir.const_record<{#cir.const_record<{#cir.fp<1.500000e+00> : !cir.float}> : !rec_anon2E1, #cir.int<42> : !s32i}> : !rec_StructWithAnonUnion
 // Union lowering chooses to lower this as an int instead of a float since the storage type is 'int', but active type is 'float'.
-// LLVMCIR: @g_anon_union = global %struct.StructWithAnonUnion { %union{{.*}} { i32 1069547520 }, i32 42 }
-// OGCG:    @g_anon_union = global { { float }, i32 } { { float } { float 1.500000e+00 }, i32 42 }
+// LLVM:    @g_anon_union = global { { float }, i32 } { { float } { float 1.500000e+00 }, i32 42 }
 
 struct StructWithAnonBitfields {
   int leading;

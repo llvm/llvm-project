@@ -6,16 +6,16 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,DEFAULT %s
 
 // Check that we end up with fast math flags set on intrinsic calls
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
 // RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,FINITEONLY %s
 
@@ -23,16 +23,16 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -fgpu-approx-transcendentals -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -fgpu-approx-transcendentals -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,APPROX %s
 
 // Check that we end up with fpmath metadata set on sqrt calls
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -fno-hip-fp32-correctly-rounded-divide-sqrt -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -fno-hip-fp32-correctly-rounded-divide-sqrt -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,NCRDIV %s
 
 

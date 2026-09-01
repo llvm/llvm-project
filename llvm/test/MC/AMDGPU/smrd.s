@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=GCN %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck --check-prefixes=GCN,CI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck --check-prefix=GCN %s
+// RUN: llvm-mc -triple=amdgpu7.04 -show-encoding %s | FileCheck --check-prefixes=GCN,CI %s
+// RUN: not llvm-mc -triple=amdgpu8.03 -show-encoding %s | FileCheck --check-prefix=VI %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti  %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji  %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu6.00  %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu8.03  %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Offset Handling

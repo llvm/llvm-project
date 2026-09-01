@@ -22,10 +22,10 @@ add_header_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.error_mapper
-    libc.src.stdio.printf_core.core_structs
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.error_mapper
+    libc.src.__support.printf_core.core_structs
 )
 
 add_header_library(

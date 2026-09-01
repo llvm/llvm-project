@@ -114,7 +114,7 @@ public:
                   CompactPtrT *Array, u32 Size);
 
   void disable() NO_THREAD_SAFETY_ANALYSIS;
-  void enable() NO_THREAD_SAFETY_ANALYSIS;
+  void enable(bool IsChild) NO_THREAD_SAFETY_ANALYSIS;
 
   template <typename F> void iterateOverBlocks(F Callback);
 
@@ -131,17 +131,8 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const { return nullptr; }
-  static uptr getRegionInfoArraySize() { return 0; }
-
   // Not supported in SizeClassAllocator32.
   BlockInfo findNearestBlock(UNUSED uptr Ptr) { return {}; }
-
-  // Not supported in SizeClassAllocator32.
-  static BlockInfo findNearestBlock(UNUSED const char *RegionInfoData,
-                                    UNUSED uptr Ptr) {
-    return {};
-  }
 
   AtomicOptions Options;
 
@@ -280,11 +271,13 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
   uptr MinRegionIndex = NumRegions, MaxRegionIndex = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     SizeClassInfo *Sci = getSizeClassInfo(I);
-    ScopedLock L(Sci->Mutex);
-    if (Sci->MinRegionIndex < MinRegionIndex)
-      MinRegionIndex = Sci->MinRegionIndex;
-    if (Sci->MaxRegionIndex > MaxRegionIndex)
-      MaxRegionIndex = Sci->MaxRegionIndex;
+    {
+      ScopedLock L(Sci->Mutex);
+      if (Sci->MinRegionIndex < MinRegionIndex)
+        MinRegionIndex = Sci->MinRegionIndex;
+      if (Sci->MaxRegionIndex > MaxRegionIndex)
+        MaxRegionIndex = Sci->MaxRegionIndex;
+    }
     *Sci = {};
   }
 
@@ -412,7 +405,8 @@ void SizeClassAllocator32<Config>::disable() NO_THREAD_SAFETY_ANALYSIS {
 }
 
 template <typename Config>
-void SizeClassAllocator32<Config>::enable() NO_THREAD_SAFETY_ANALYSIS {
+void SizeClassAllocator32<Config>::enable(UNUSED bool IsChild)
+    NO_THREAD_SAFETY_ANALYSIS {
   ByteMapMutex.unlock();
   RegionsStashMutex.unlock();
   getSizeClassInfo(SizeClassMap::BatchClassId)->Mutex.unlock();

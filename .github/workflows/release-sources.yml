@@ -53,6 +53,12 @@ jobs:
       export-args: ${{ steps.inputs.outputs.export-args }}
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/validate-release-version
+          sparse-checkout-cone-mode: false
       - name: Validate Input
         if: inputs.release-version != ''
         uses: ./.github/workflows/validate-release-version
@@ -124,19 +130,10 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - name: Checkout Release Scripts
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            .github/workflows/upload-release-artifact
-            llvm/utils/release/github-upload-release.py
-            llvm/utils/git/requirements.txt
-          sparse-checkout-cone-mode: false
-
       - name: Upload Artifacts
-        uses: ./.github/workflows/upload-release-artifact
+        uses: $/.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ inputs.release-version }}
           artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
           attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
           digest: ${{ needs.release-sources.outputs.digest }}

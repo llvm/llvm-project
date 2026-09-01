@@ -14,6 +14,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/SetVector.h"
 #include <functional>
+#include <optional>
 
 namespace mlir {
 
@@ -209,14 +210,22 @@ template <typename T,
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
 
-/// Helper function to check if the layout is packed. Layout is packed if it is
-/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// Returns the innermost 2 entries of `vals` if it is at least 2D and all of
+/// its leading entries are unit; std::nullopt otherwise.
+std::optional<SmallVector<int64_t>>
+getInner2DIfUnitLeadingDims(ArrayRef<int64_t> vals);
+
+/// Helper function to check if the layout is packed. Layout is packed if
+/// lane_data[rank-2] != 1 (data packed from col dimension).
 /// TODO: Move to target info.
 bool requirePacked(const DistributeLayoutAttr layout);
 
 /// Helper function to check if the layout requires a transpose effect.
 bool requireTranspose(const DistributeLayoutAttr layout,
                       const uArch::uArch *uArch);
+
+/// Returns true if `type` has a static shape and static strides.
+bool hasStaticShapeAndStrides(MemRefType type);
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,

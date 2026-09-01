@@ -442,6 +442,28 @@ func.func @ctlz_vector2(%val: vector<2xi16>) -> vector<2xi16> {
   return %0 : vector<2xi16>
 }
 
+// CHECK-LABEL: @cttz_scalar_i64
+//  CHECK-SAME: (%[[VAL:.+]]: i64)
+func.func @cttz_scalar_i64(%val: i64) -> i64 {
+  // CHECK-DAG: %[[V0:.+]] = spirv.Constant 0 : i64
+  // CHECK-DAG: %[[V64:.+]] = spirv.Constant 64 : i64
+  // CHECK: %[[LSB:.+]] = spirv.GL.FindILsb %[[VAL]] : i64
+  // CHECK: %[[CMP:.+]] = spirv.IEqual %[[VAL]], %[[V0]] : i64
+  // CHECK: %[[R:.+]] = spirv.Select %[[CMP]], %[[V64]], %[[LSB]] : i1, i64
+  // CHECK: return %[[R]]
+  %0 = math.cttz %val : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: @cttz_vector_i16
+func.func @cttz_vector_i16(%val: vector<2xi16>) -> vector<2xi16> {
+  // CHECK: spirv.GL.FindILsb %{{.+}} : vector<2xi16>
+  // CHECK: spirv.IEqual
+  // CHECK: spirv.Select
+  %0 = math.cttz %val : vector<2xi16>
+  return %0 : vector<2xi16>
+}
+
 } // end module
 
 // -----

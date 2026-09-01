@@ -110,8 +110,7 @@ add_or_sub(InType x, InType y) {
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       }
 
-      if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>) {
+      if constexpr (cpp::is_same_v<InType, OutType>) {
         OutFPBits out_y_bits(y);
         if constexpr (IsSub)
           out_y_bits.set_sign(out_y_bits.sign().negate());
@@ -121,10 +120,13 @@ add_or_sub(InType x, InType y) {
 #ifdef LIBC_USE_CONSTEXPR
         InType tmp = y;
 #else
+        // This prevents it from declaring InType as volatile for emulated types
+        using InTypeTemp = cpp::conditional_t<cpp::is_class_v<InType>, InType,
+                                              volatile InType>;
+        InTypeTemp tmp = y;
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
         // rounding.
-        volatile InType tmp = y;
 #endif // LIBC_USE_CONSTEXPR
         if constexpr (IsSub)
           tmp = -tmp;

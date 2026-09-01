@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
@@ -31,6 +32,81 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Find the `cir.store` operation that stores to the given alloca and dominates
+/// the given load operation. Dominance calculation is done through the given
+/// DominanceInfo object.
+///
+/// Return nullptr if no such store operation exists or if multiple store
+/// operations satisfy the criteria.
+cir::StoreOp findDominatingInitOp(cir::AllocaOp alloca, cir::LoadOp load,
+                                  const DominanceInfo &domInfo) {
+  cir::StoreOp result;
+
+  // Walk through all uses of the alloca and visit the store operations that
+  // store to the alloca
+  for (const mlir::OpOperand &use : alloca->getUses()) {
+    auto store = mlir::dyn_cast<cir::StoreOp>(use.getOwner());
+    if (!store)
+      continue;
+
+    // `cir.store` has two operands, we're only interested if the store is
+    // storing into the alloca, not if the store is storing the address of the
+    // alloca slot into somewhere else
+    if (use.getOperandNumber() != cir::StoreOp::odsIndex_addr)
+      continue;
+
+    if (domInfo.dominates(store, load)) {
+      if (result) {
+        // If we have already found a dominating store, then there are multiple
+        // dominating stores, we intentionally don't simplify the load.
+        return nullptr;
+      }
+      result = store;
+    }
+  }
+
+  return result;
+}
+
+/// Simplify `cir.load` that loads from an alloca marked as "constant".
+///
+/// For example:
+///
+///   %0 = cir.alloca "x" align(4) const : !cir.ptr<!s32i>
+///   cir.store %init, %0 : !s32i, !cir.ptr<!s32i>
+///   %1 = cir.load %0 : !cir.ptr<!s32i>
+///
+/// All uses of the load above could be replaced with the SSA value `%init`.
+struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
+  using OpRewritePattern<LoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(LoadOp op,
+                                PatternRewriter &rewriter) const override {
+    // Volatile or atomic loads should not be simplified.
+    if (op.getIsVolatile() || op.getMemOrder())
+      return mlir::failure();
+
+    auto allocaOp = op.getAddr().getDefiningOp<cir::AllocaOp>();
+    if (!allocaOp || !allocaOp.getConstant())
+      return mlir::failure();
+
+    cir::StoreOp initStoreOp = findDominatingInitOp(allocaOp, op, domInfo);
+    if (!initStoreOp)
+      return mlir::failure();
+    if (initStoreOp.getIsVolatile() || initStoreOp.getMemOrder()) {
+      // We intentionally act conservatively here and we don't want to simplify
+      // the load if the corresponding store is either volatile or atomic.
+      return mlir::failure();
+    }
+
+    rewriter.replaceOp(op, initStoreOp.getValue());
+    return mlir::success();
+  }
+
+private:
+  mlir::DominanceInfo domInfo;
+};
 
 /// Simplify suitable ternary operations into select operations.
 ///
@@ -291,6 +367,9 @@ struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
+
+private:
+  void runSimplifyConstantLoad();
 };
 
 void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
@@ -317,6 +396,24 @@ void CIRSimplifyPass::runOnOperation() {
   });
 
   // Apply patterns.
+  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+    signalPassFailure();
+
+  // SimplifyConstantLoad needs to query dominance information, which could be
+  // invalidated by other rewrite patterns. Thus we run it separately after
+  // other patterns have been applied.
+  runSimplifyConstantLoad();
+}
+
+void CIRSimplifyPass::runSimplifyConstantLoad() {
+  RewritePatternSet patterns(&getContext());
+  patterns.add<SimplifyConstantLoad>(patterns.getContext());
+
+  llvm::SmallVector<Operation *, 16> ops;
+  getOperation()->walk([&](Operation *op) {
+    if (isa<LoadOp>(op))
+      ops.push_back(op);
+  });
   if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
     signalPassFailure();
 }

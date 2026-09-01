@@ -5,5 +5,5 @@ fcvt.l.q ft0, a0 # CHECK: :[[@LINE]]:10: error: register must be a GPR
 fcvt.lu.q ft1, a1 # CHECK: :[[@LINE]]:11: error: register must be a GPR
 
 # FP registers where integer regs are expected
-fcvt.q.l a3, ft3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
-fcvt.q.lu a4, ft4 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fcvt.q.l a3, ft3 # CHECK: :[[@LINE]]:10: error: register must be a FPR
+fcvt.q.lu a4, ft4 # CHECK: :[[@LINE]]:11: error: register must be a FPR

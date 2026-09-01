@@ -18,6 +18,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetVector.h"
@@ -161,6 +162,11 @@ class CUFDeviceFuncTransform
   static void createHostStub(mlir::func::FuncOp funcOp,
                              mlir::SymbolTable &symTab, mlir::ModuleOp mod) {
     mlir::Location loc = funcOp.getLoc();
+    // Host stub's line table needs to span the procedure body.
+    mlir::Location endLoc = loc;
+    if (!funcOp.getBody().empty())
+      if (mlir::Operation *terminator = funcOp.getBody().back().getTerminator())
+        endLoc = terminator->getLoc();
     mlir::OpBuilder modBuilder(mod.getBodyRegion());
     modBuilder.setInsertionPointToEnd(mod.getBody());
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
@@ -169,7 +175,9 @@ class CUFDeviceFuncTransform
     emptyStub->setAttrs(funcOp->getAttrs());
     auto entryBlock = emptyStub.addEntryBlock();
     modBuilder.setInsertionPointToEnd(entryBlock);
-    func::ReturnOp::create(modBuilder, loc);
+    // Add a return operation at the end of the stub with the location of the
+    // original procedure's terminator.
+    func::ReturnOp::create(modBuilder, endLoc);
 
     symTab.erase(funcOp);
     symTab.insert(emptyStub);
@@ -216,6 +224,10 @@ class CUFDeviceFuncTransform
       if (op.getCallee()) {
         auto func = symbolTable.lookup<mlir::func::FuncOp>(
             op.getCallee()->getLeafReference());
+        // ACCRoutineToGPUFunc moves the materialized specialized routine into
+        // the GPU module later in the pipeline.
+        if (mlir::acc::isAccRoutine(func))
+          return;
         if (deviceFuncs.count(func) == 0)
           funcsToClone.insert(func);
       }

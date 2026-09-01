@@ -16,6 +16,7 @@ static_library("Instrumentation") {
     "BoundsChecking.cpp",
     "CGProfile.cpp",
     "ControlHeightReduction.cpp",
+    "CopyProf.cpp",
     "DataFlowSanitizer.cpp",
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",

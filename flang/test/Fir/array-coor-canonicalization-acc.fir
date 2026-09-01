@@ -21,13 +21,13 @@
 func.func @test_acc_copyin_preserves_rebox(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) -> !fir.ref<f32> {
   %c1 = arith.constant 1 : index
   %0 = fir.rebox %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-  %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copy>, name = "array"}
+  %1 = acc.copyin var(%0 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) name("array") -> !fir.box<!fir.array<?xf32>>
   acc.parallel dataOperands(%1 : !fir.box<!fir.array<?xf32>>) {
     %2 = fir.array_coor %0 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
     fir.store %arg1 to %2 : !fir.ref<f32>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue none>}
-  acc.copyout accPtr(%1 : !fir.box<!fir.array<?xf32>>) to varPtr(%0 : !fir.box<!fir.array<?xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "array"}
+  } defaultAttr(none)
+  acc.copyout accPtr(%1 : !fir.box<!fir.array<?xf32>>) to varPtr(%0 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) name("array")
   %3 = fir.array_coor %0 %c1 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   return %3 : !fir.ref<f32>
 }
