@@ -1096,3 +1096,42 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return std::nullopt;
   }
 }
+
+// Emit AMDGPU printf CIR stand-in function call. This stand-in function call is
+// lowered to the appropriate call structure during LLVM IR lowering.
+mlir::Value
+CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
+  assert(cgm.getTriple().isAMDGCN() ||
+         (cgm.getTriple().isSPIRV() &&
+          cgm.getTriple().getVendor() == llvm::Triple::AMD));
+  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
+         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
+  assert(expr->getNumArgs() >= 1);
+
+  const FunctionProtoType *funcPrototype =
+      expr->getDirectCallee()->getType()->getAs<FunctionProtoType>();
+  CallArgList args;
+  emitCallArgs(args, funcPrototype, expr->arguments(), expr->getDirectCallee());
+
+  mlir::Location loc = getLoc(expr->getBeginLoc());
+
+  // We don't know how to emit non-scalar varargs.
+  bool hasNonScalar = llvm::any_of(args, [&](const CallArg &a) {
+    return a.hasLValue() || !a.getKnownRValue().isScalar();
+  });
+  if (hasNonScalar) {
+    cgm.errorUnsupported(expr, "non-scalar args to printf");
+    return builder.getConstInt(loc, builder.getSInt32Ty(), 0);
+  }
+
+  llvm::SmallVector<mlir::Value, 8> callArgs;
+  for (const CallArg &a : args)
+    callArgs.push_back(a.getKnownRValue().getValue());
+
+  // int __cir_amdgpu_printf(char *format, ...);
+  auto fnTy = cir::FuncType::get({cir::PointerType::get(builder.getSInt8Ty())},
+                                 builder.getSInt32Ty(),
+                                 /*isVarArg=*/true);
+  cir::FuncOp fn = cgm.createRuntimeFunction(fnTy, "__cir_amdgpu_printf");
+  return builder.createCallOp(loc, fn, callArgs).getResult();
+}

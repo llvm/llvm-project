@@ -49,12 +49,15 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace cir;
 using namespace llvm;
@@ -5912,6 +5915,49 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
   pm.addPass(createConvertCIRToLLVMPass());
   if (enableOpenMP)
     pm.addPass(mlir::omp::createHostOpFilteringPass());
+}
+
+// Expand calls to the internal __cir_amdgpu_printf marker CIRGen emits for a
+// device-side printf into the real AMDGPU sequence.
+void expandAMDGPUDevicePrintf(llvm::Module &module) {
+  llvm::Function *marker = module.getFunction("__cir_amdgpu_printf");
+  if (!marker)
+    return;
+
+  // CIR records the requested lowering as a module flag.
+  bool isBuffered = false;
+  if (llvm::Metadata *md =
+          module.getModuleFlag(cir::CIRDialect::getAMDGPUPrintfKindAttrName()))
+    if (auto *mdStr = llvm::dyn_cast<llvm::MDString>(md))
+      isBuffered = mdStr->getString() == "buffered";
+
+  // Snapshot marker's users before mutating anything.
+  llvm::SmallVector<llvm::User *, 8> users(marker->user_begin(),
+                                           marker->user_end());
+  for (llvm::User *u : users) {
+    auto *cb = llvm::cast<llvm::CallBase>(u);
+
+    // CIR emits an invoke rather than a call when the marker call site is
+    // inside a region that requires unwinding, even though the device printf
+    // sequence emitted below can never throw. Normalize those invokes to
+    // calls.
+    llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(cb);
+    if (!ci) {
+      assert(llvm::isa<llvm::InvokeInst>(cb) &&
+             "unexpected non-call user of printf marker");
+      ci = llvm::changeToCall(llvm::cast<llvm::InvokeInst>(cb));
+    }
+
+    llvm::IRBuilder<> irb(ci);
+    llvm::SmallVector<llvm::Value *, 8> args(ci->args());
+    llvm::Value *res = llvm::emitAMDGPUPrintfCall(irb, args, isBuffered);
+    if (res && !ci->use_empty())
+      ci->replaceAllUsesWith(res);
+    ci->eraseFromParent();
+  }
+
+  assert(marker->use_empty() && "printf marker should have no remaining uses");
+  marker->eraseFromParent();
 }
 
 std::unique_ptr<llvm::Module>

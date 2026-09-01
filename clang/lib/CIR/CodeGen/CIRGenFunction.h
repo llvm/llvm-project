@@ -2363,6 +2363,9 @@ public:
   /// Emit a device-side printf call for NVPTX targets.
   mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
 
+  /// Emit a device-side printf call for AMDGPU targets.
+  mlir::Value emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
