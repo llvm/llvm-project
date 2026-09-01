@@ -163,7 +163,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 

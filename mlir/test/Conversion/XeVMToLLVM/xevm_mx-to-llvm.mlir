@@ -84,15 +84,15 @@ llvm.func @truncf_bf16_to_hf8(%src: vector<16xbf16>) -> vector<16xi8> {
 // CHECK-LABEL: llvm.func @truncf_f16_to_e2m1
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xf16>
 llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
-  // CHECK: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
-  // CHECK: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
-  // CHECK: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
-  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK-DAG: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK-DAG: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
+  // CHECK-DAG: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK-DAG: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK-DAG: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[BC:.*]] = llvm.bitcast %[[ARG0]] : vector<16xf16> to vector<8xi32>
   // CHECK: %[[E0:.*]] = llvm.extractelement %[[BC]][%[[C0]] : i32] : vector<8xi32>
   // CHECK: %[[E2:.*]] = llvm.extractelement %[[BC]][%[[C2]] : i32] : vector<8xi32>
@@ -125,15 +125,15 @@ llvm.func @truncf_f16_to_e2m1(%src: vector<16xf16>) -> vector<8xi8> {
 // CHECK-LABEL: llvm.func @truncf_bf16_to_e2m1
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xbf16>
 llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
-  // CHECK: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
-  // CHECK: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
-  // CHECK: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
-  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[UNDEF:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK-DAG: %[[C7:.*]] = llvm.mlir.constant(7 : i32) : i32
+  // CHECK-DAG: %[[C6:.*]] = llvm.mlir.constant(6 : i32) : i32
+  // CHECK-DAG: %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK-DAG: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK-DAG: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[BC:.*]] = llvm.bitcast %[[ARG0]] : vector<16xbf16> to vector<8xi32>
   // CHECK: %[[E0:.*]] = llvm.extractelement %[[BC]][%[[C0]] : i32] : vector<8xi32>
   // CHECK: %[[E2:.*]] = llvm.extractelement %[[BC]][%[[C2]] : i32] : vector<8xi32>

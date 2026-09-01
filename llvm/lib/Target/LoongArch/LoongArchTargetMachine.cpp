@@ -15,7 +15,6 @@
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchTargetObjectFile.h"
 #include "LoongArchTargetTransformInfo.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"

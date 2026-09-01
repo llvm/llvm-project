@@ -217,6 +217,12 @@ functions:
     arguments:
       - type: char *
       - type: size_t
+  - name: getegid
+    standards:
+      - posix
+    return_type: gid_t
+    arguments:
+      - type: void
   - name: getentropy
     standards:
       - gnu
@@ -397,12 +403,38 @@ functions:
       - type: const void *__restrict
       - type: void *
       - type: ssize_t
+  - name: setgid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: gid_t
+  - name: setregid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: gid_t
+      - type: gid_t
+  - name: setreuid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: uid_t
+      - type: uid_t
   - name: setsid
     standards:
       - posix
     return_type: pid_t
     arguments:
       - type: void
+  - name: setuid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: uid_t
   - name: sleep
     standards:
       - posix
