@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/app.h"
 #include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "startup/linux/do_start.h"
 
 #include <asm/prctl.h>
 #include <sys/syscall.h>

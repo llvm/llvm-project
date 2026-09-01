@@ -9,8 +9,8 @@
 
 define void @test_D1D2_from_D0D1(ptr %addr) #0 {
 ; CHECK-LABEL: test_D1D2_from_D0D1:
-; CHECK: mov.8b v2, v1
-; CHECK: mov.8b v1, v0
+; CHECK: fmov d2, d1
+; CHECK: fmov d1, d0
 entry:
   %vec = tail call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr %addr)
   %vec0 = extractvalue { <8 x i8>, <8 x i8> } %vec, 0
@@ -25,8 +25,8 @@ entry:
 
 define void @test_D0D1_from_D1D2(ptr %addr) #0 {
 ; CHECK-LABEL: test_D0D1_from_D1D2:
-; CHECK: mov.8b v0, v1
-; CHECK: mov.8b v1, v2
+; CHECK: fmov d0, d1
+; CHECK: fmov d1, d2
 entry:
   %vec = tail call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr %addr)
   %vec0 = extractvalue { <8 x i8>, <8 x i8> } %vec, 0
@@ -41,8 +41,8 @@ entry:
 
 define void @test_D0D1_from_D31D0(ptr %addr) #0 {
 ; CHECK-LABEL: test_D0D1_from_D31D0:
-; CHECK: mov.8b v1, v0
-; CHECK: mov.8b v0, v31
+; CHECK: fmov d1, d0
+; CHECK: fmov d0, d31
 entry:
   %vec = tail call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr %addr)
   %vec0 = extractvalue { <8 x i8>, <8 x i8> } %vec, 0
@@ -57,8 +57,8 @@ entry:
 
 define void @test_D31D0_from_D0D1(ptr %addr) #0 {
 ; CHECK-LABEL: test_D31D0_from_D0D1:
-; CHECK: mov.8b v31, v0
-; CHECK: mov.8b v0, v1
+; CHECK: fmov d31, d0
+; CHECK: fmov d0, d1
 entry:
   %vec = tail call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr %addr)
   %vec0 = extractvalue { <8 x i8>, <8 x i8> } %vec, 0
@@ -73,9 +73,9 @@ entry:
 
 define void @test_D2D3D4_from_D0D1D2(ptr %addr) #0 {
 ; CHECK-LABEL: test_D2D3D4_from_D0D1D2:
-; CHECK: mov.8b v4, v2
-; CHECK: mov.8b v3, v1
-; CHECK: mov.8b v2, v0
+; CHECK: fmov d4, d2
+; CHECK: fmov d3, d1
+; CHECK: fmov d2, d0
 entry:
   %vec = tail call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr %addr)
   %vec0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } %vec, 0

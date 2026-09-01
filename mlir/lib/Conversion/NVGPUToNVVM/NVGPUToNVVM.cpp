@@ -1094,7 +1094,7 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
 
 static Value makeI64Const(ImplicitLocOpBuilder &b, int32_t index) {
   return LLVM::ConstantOp::create(b, b.getIntegerType(64),
-                                  b.getI32IntegerAttr(index));
+                                  b.getI64IntegerAttr(index));
 }
 
 /// Returns a Value that holds data type enum that is expected by CUDA driver.

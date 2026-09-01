@@ -912,7 +912,8 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
                                   const std::string &declareGlobalName,
                                   bool implicit, std::stringstream &asFortran) {
   GlobalCtorOrDtorOp declareGlobalOp =
-      GlobalCtorOrDtorOp::create(modBuilder, loc, declareGlobalName);
+      GlobalCtorOrDtorOp::create(modBuilder, loc, declareGlobalName,
+                                 /*sym_visibility=*/nullptr);
   builder.createBlock(&declareGlobalOp.getRegion(),
                       declareGlobalOp.getRegion().end(), {}, {});
   builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
@@ -4752,7 +4753,7 @@ void createOpenACCRoutineConstruct(
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::acc::RoutineOp::create(
-      modBuilder, loc, routineOpStr,
+      modBuilder, loc, routineOpStr, /*sym_visibility=*/nullptr,
       mlir::SymbolRefAttr::get(builder.getContext(), funcName),
       getArrayAttrOrNull(builder, bindIdNames),
       getArrayAttrOrNull(builder, bindStrNames),

@@ -17,8 +17,8 @@ gpu.module @test {
   gpu.func @test_load_store_matrix_1d(%src: memref<8192xi8, 3>) {
     %c0 = arith.constant 0 : index
     %mdesc = xegpu.create_mem_desc %src : memref<8192xi8, 3> -> !xegpu.mem_desc<4096xbf16>
-    %data = xegpu.load_matrix %mdesc[%c0] {layout = #layout_1d} : !xegpu.mem_desc<4096xbf16>, index -> vector<4096xbf16>
-    xegpu.store_matrix %data, %mdesc[%c0] {layout = #layout_1d} : vector<4096xbf16>, !xegpu.mem_desc<4096xbf16>, index
+    %data = xegpu.load_matrix %mdesc[%c0] <{layout = #layout_1d}> : !xegpu.mem_desc<4096xbf16>, index -> vector<4096xbf16>
+    xegpu.store_matrix %data, %mdesc[%c0] <{layout = #layout_1d}> : vector<4096xbf16>, !xegpu.mem_desc<4096xbf16>, index
     gpu.return
   }
 
@@ -33,8 +33,8 @@ gpu.module @test {
   gpu.func @test_load_store_matrix_2d(%src: memref<16384xi8, 3>) {
     %c0 = arith.constant 0 : index
     %mdesc = xegpu.create_mem_desc %src : memref<16384xi8, 3> -> !xegpu.mem_desc<64x128xbf16>
-    %data = xegpu.load_matrix %mdesc[%c0, %c0] {layout = #layout_2d} : !xegpu.mem_desc<64x128xbf16>, index, index -> vector<64x128xbf16>
-    xegpu.store_matrix %data, %mdesc[%c0, %c0] {layout = #layout_2d} : vector<64x128xbf16>, !xegpu.mem_desc<64x128xbf16>, index, index
+    %data = xegpu.load_matrix %mdesc[%c0, %c0] <{layout = #layout_2d}> : !xegpu.mem_desc<64x128xbf16>, index, index -> vector<64x128xbf16>
+    xegpu.store_matrix %data, %mdesc[%c0, %c0] <{layout = #layout_2d}> : vector<64x128xbf16>, !xegpu.mem_desc<64x128xbf16>, index, index
     gpu.return
   }
 }

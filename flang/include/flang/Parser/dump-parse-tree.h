@@ -693,6 +693,8 @@ public:
   NODE(parser, OmpMemSpace)
   NODE(parser, OmpMessageClause)
   NODE(parser, OmpMetadirectiveDirective)
+  NODE(parser, OmpMotionModifier)
+  NODE_ENUM(OmpMotionModifier, Value)
   NODE(parser, OmpNoOpenMPClause)
   NODE(parser, OmpNoOpenMPRoutinesClause)
   NODE(parser, OmpNoParallelismClause)

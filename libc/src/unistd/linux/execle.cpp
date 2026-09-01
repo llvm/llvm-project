@@ -33,7 +33,13 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
     ++argc;
   va_end(varargs);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
+#if __has_warning("-Wvla-cxx-extension")
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
+#endif
   char *argv[argc + 1];
+#pragma GCC diagnostic pop
   argv[0] = const_cast<char *>(arg0);
 
   for (size_t i = 1; i <= argc; ++i)

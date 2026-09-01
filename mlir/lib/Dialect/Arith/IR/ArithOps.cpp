@@ -1341,71 +1341,6 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 namespace {
 
-// A helper for the conversion:
-//
-//    trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
-//
-// To make sure that type conversion won't lose information.
-//
-// For floating point conversion, we can't allow conversion between
-// -0 and +0. More importantly, we can't allow a conversion from
-// sNaN to qNaN. That changes semantics.
-// When `ignoreNaNs` is set, differences between NaN representations
-// may be ignored, but source non-finite values must not become
-// finite.
-static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
-                                      const llvm::fltSemantics &to,
-                                      bool ignoreNaNs = false) {
-  if (!llvm::APFloatBase::isRepresentableBy(from, to))
-    return false;
-
-  if ((from.hasZero && !to.hasZero) ||
-      (from.hasSignedRepr && !to.hasSignedRepr))
-    return false;
-
-  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
-  // conversion to such a format cannot preserve a source negative zero.
-  bool fromHasSignedZero =
-      from.hasZero && from.hasSignedRepr &&
-      from.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  bool toHasSignedZero = to.hasZero && to.hasSignedRepr &&
-                         to.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  if (fromHasSignedZero && !toHasSignedZero)
-    return false;
-
-  // isRepresentableBy compares the normalized exponent ranges. Also ensure
-  // that the smallest source value, which may be denormal, is represented
-  // exactly by the destination semantics.
-  llvm::APFloat smallestFrom = llvm::APFloat::getSmallest(from);
-  bool losesInfo = false;
-  (void)smallestFrom.convert(to, llvm::APFloat::rmNearestTiesToEven,
-                             &losesInfo);
-  if (losesInfo)
-    return false;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::FiniteOnly)
-    return true;
-
-  // If we're ignoring NaNs, we can return early if the nonFiniteBehavior
-  // matches.
-  if (ignoreNaNs)
-    return to.nonFiniteBehavior != llvm::fltNonfiniteBehavior::FiniteOnly;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754) {
-    // Converting an IEEE signaling NaN to another semantics quiets it, so the
-    // original value cannot be recovered by converting it back.
-    return false;
-  }
-
-  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
-  // their quiet NaNs; conversions between NanOnly formats are conservatively
-  // accepted only when they use the same NaN encoding.
-  if (to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754)
-    return true;
-  return to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::NanOnly &&
-         from.nanEncoding == to.nanEncoding;
-}
-
 /// Narrow an extremum whose operands were extended from the result type:
 ///
 ///   trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
@@ -1456,8 +1391,8 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
       if constexpr (std::is_same_v<TruncOp, TruncFOp>)
         ignoreNaNs =
             bitEnumContainsAll(extremumOp.getFastmath(), FastMathFlags::nnan);
-      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics,
-                                     ignoreNaNs))
+      if (!llvm::APFloatBase::isLosslesslyConvertibleTo(
+              narrowSemantics, wideSemantics, ignoreNaNs))
         return failure();
     }
 
@@ -2011,8 +1946,9 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
         cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
     // Check whether every source value round-trips through the intermediate
     // type, including signaling NaNs and signed zero.
-    if (isLosslesslyConvertibleTo(srcType.getFloatSemantics(),
-                                  intermediateType.getFloatSemantics())) {
+    if (llvm::APFloatBase::isLosslesslyConvertibleTo(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
       // truncf(extf(a)) -> truncf(a)
       if (srcType.getWidth() > resElemType.getWidth()) {
         setOperand(src);

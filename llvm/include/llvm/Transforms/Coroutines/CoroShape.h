@@ -95,8 +95,6 @@ struct Shape {
   LLVM_ABI void
   invalidateCoroutine(Function &F,
                       SmallVectorImpl<CoroFrameInst *> &CoroFrames);
-  // Perform ABI related initial transformation
-  LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
   LLVM_ABI void
   cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,

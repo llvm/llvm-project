@@ -1658,18 +1658,20 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
     return success(); // uniform non-tensor-data vector does not require
                       // layout
   }
-  // Region branch ops (e.g. scf.for) and their terminators (e.g. scf.yield)
-  // forward their operands to successor region inputs / parent op results;
-  // their consumer layout is resolved through that forwarding, not at this
-  // use point.
-  if (isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(
-          consumerOp))
-    return success();
-
+  // getConsumerLayoutAt also covers region-carried operands (loop init and
+  // yield operands), so a layout conflict there is reconciled below rather than
+  // silently trusted to region forwarding.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
-  if (!consumerLayout)
+  if (!consumerLayout) {
+    // TODO: handle scf.while's "after" region arguments. They are tied to no
+    // init operand, so nothing records the layout they require, and the
+    // conflict on the scf.condition operand feeding them is left unresolved
+    // rather than converted.
+    if (isa<RegionBranchTerminatorOpInterface>(consumerOp))
+      return success();
     return consumerOp->emitError(
         "No consumer layout found for vector operand.");
+  }
 
   // If layouts are same, no conflict exists, return success.
   if (consumerLayout.isEqualTo(producerLayout))
@@ -1766,22 +1768,15 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
 
 using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
 
-/// Update an operation with the layout of its results. If the result type is
-/// a vector type, a temporary layout attribute is added to the operation. If
-/// the result type is a tensor descriptor type, the type is updated with the
-/// layout attribute. The users of the result are also updated with the layout
-/// attribute.
+/// Update an operation with the layout of its results. For a vector result a
+/// temporary layout attribute is added to the op; for a tensor descriptor
+/// result the layout is written into its type.
 ///
 /// If the global propagation left a result without a layout, forward-fill it
 /// locally from the operand layouts.
 static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
                                              mlir::Operation *op,
                                              GetLayoutFnTy getLayoutOfValue) {
-  // Region ops (like scf.for) are already handled by the
-  // updateControlFlowOps.
-  if (mlir::isa<mlir::RegionBranchOpInterface>(op))
-    return success();
-
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();

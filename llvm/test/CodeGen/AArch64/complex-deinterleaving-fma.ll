@@ -30,17 +30,17 @@ define <4 x float> @complex_mul_fmuladd(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @complex_mul_fmuladd_no_fmf(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: complex_mul_fmuladd_no_fmf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v0.d[1]
-; CHECK-NEXT:    mov d3, v1.d[1]
-; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v5.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    fmul v3.2s, v4.2s, v5.2s
-; CHECK-NEXT:    fneg v2.2s, v3.2s
-; CHECK-NEXT:    fmul v3.2s, v4.2s, v1.2s
-; CHECK-NEXT:    fmla v2.2s, v1.2s, v0.2s
-; CHECK-NEXT:    fmla v3.2s, v5.2s, v0.2s
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    mov d4, v1.d[1]
+; CHECK-NEXT:    movi v2.2s, #128, lsl #24
+; CHECK-NEXT:    zip2 v5.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip1 v6.2s, v1.2s, v4.2s
+; CHECK-NEXT:    zip2 v1.2s, v1.2s, v4.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v3.2s
+; CHECK-NEXT:    fmls v2.2s, v5.2s, v1.2s
+; CHECK-NEXT:    fmul v3.2s, v5.2s, v6.2s
+; CHECK-NEXT:    fmla v2.2s, v6.2s, v0.2s
+; CHECK-NEXT:    fmla v3.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    zip1 v0.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    ret
   %a.re = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

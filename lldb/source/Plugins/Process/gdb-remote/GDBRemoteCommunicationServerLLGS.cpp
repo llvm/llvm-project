@@ -3334,7 +3334,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
-  std::unordered_set<const RegisterType *> register_types_emitted;
+  std::unordered_set<std::string> register_types_emitted;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3369,7 +3369,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       response << "format=\"" << format << "\" ";
 
     if (reg_info->register_type)
-      response << "type=\"" << reg_info->register_type->GetID() << "\" ";
+      response << "type=\""
+               << XMLEncodeAttributeValue(reg_info->register_type->GetID())
+               << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
@@ -4455,6 +4457,9 @@ std::string GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
   std::string result;
   for (const char &c : value) {
     switch (c) {
+    case '&':
+      result += "&amp;";
+      break;
     case '\'':
       result += "&apos;";
       break;

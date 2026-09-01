@@ -733,6 +733,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_itimerspec",
+    hdrs = ["hdr/types/struct_itimerspec.h"],
+)
+
+libc_support_library(
     name = "types_time_t",
     hdrs = ["hdr/types/time_t.h"],
 )
@@ -1387,6 +1392,15 @@ libc_support_library(
         ":__support_math_extras",
         ":__support_number_pair",
         ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_frac64",
+    hdrs = ["src/__support/frac64.h"],
+    deps = [
+        ":__support_big_int",
+        ":__support_macros_config",
     ],
 )
 
@@ -3705,6 +3719,11 @@ libc_support_library(
 
 ########################## externally shared targets ###########################
 
+libc_support_library(
+    name = "shared_libc_common",
+    hdrs = ["shared/libc_common.h"],
+)
+
 libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
@@ -3724,18 +3743,13 @@ libc_header_library(
 # This target is only used by APFloat.cpp in the Support library.
 cc_library(
     name = "shared_math_headers_for_apfloat",
-    srcs = glob([
-        "src/__support/math/*.h",
-        "src/__support/math/check/*.h",
-    ]),
+    srcs = glob(["src/__support/math/**/*.h"]),
     hdrs = [
         "shared/libc_common.h",
         "shared/math.h",
         "shared/math_check_exceptions.h",
-    ] + glob([
-        "shared/math/*.h",
-        "shared/math/check/*.h",
-    ]),
+        "shared/static_rounding_math.h",
+    ] + glob(["shared/math/**/*.h"]),
     copts = libc_common_copts(),
     includes = ["."],
     deps = [
@@ -3768,6 +3782,7 @@ cc_library(
         ":__support_fputil_sqrt",
         ":__support_fputil_triple_double",
         ":__support_frac128",
+        ":__support_frac64",
         ":__support_integer_literals",
         ":__support_libc_errno",
         ":__support_macros_attributes",
@@ -7532,6 +7547,42 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_check_exp_exceptions",
+    hdrs = ["src/__support/math/check/exp_exceptions.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_expf_integer_eval",
+    hdrs = ["src/__support/math/expf_integer_eval.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_polyeval",
+        ":__support_frac64",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_check_exp_exceptions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_static_rounding_expf",
+    hdrs = ["shared/math/static_rounding/expf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_math_expf_integer_eval",
+        ":shared_libc_common",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_expf",
     hdrs = ["src/__support/math/expf.h"],
     deps = [
@@ -8269,6 +8320,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_gamma_util",
+    hdrs = ["src/__support/math/gamma_util.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_getpayload",
     hdrs = ["src/__support/math/getpayload.h"],
     deps = [
@@ -8683,10 +8746,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_lgammaf",
+    hdrs = ["src/__support/math/lgammaf.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_gamma_util",
+        ":__support_math_log",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_lgammaf16",
     hdrs = ["src/__support/math/lgammaf16.h"],
     deps = [
-        ":__support_cpp_bit",
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -8696,6 +8778,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_types",
+        ":__support_math_gamma_util",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -11296,6 +11379,7 @@ libc_math_function(
     name = "expf",
     additional_deps = [
         ":__support_math_expf",
+        ":__support_math_static_rounding_expf",
         ":errno",
     ],
 )
@@ -12475,6 +12559,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_ldexpf16",
     ],
+)
+
+libc_math_function(
+    name = "lgammaf",
+    additional_deps = [":__support_math_lgammaf"],
 )
 
 libc_math_function(

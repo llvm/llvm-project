@@ -23,10 +23,6 @@ static bool operator==(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
                      lhs.NumPlatforms * sizeof(ol_platform_backend_t)) == 0;
 }
 
-static bool operator!=(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
-  return !(lhs == rhs);
-}
-
 template <typename T> void assignAs(void *PropValue, T NewValue) {
   *(static_cast<T *>(PropValue)) = NewValue;
 }
@@ -186,9 +182,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateProgram)
-      .WillByDefault([](ol_device_handle_t Device, const void *ProgData,
-                        size_t ProgDataSize,
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        const void *ProgData, size_t ProgDataSize,
                         ol_program_handle_t *Program) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);
