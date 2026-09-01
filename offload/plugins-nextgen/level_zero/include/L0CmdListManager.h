@@ -202,7 +202,8 @@ public:
     std::lock_guard<std::mutex> Lock(Mtx);
 
     // Alias for better error reporting
-    auto zeCommandListAppendHostFunction = Context.CommandListAppendHostFunction;
+    auto zeCommandListAppendHostFunction =
+        Context.CommandListAppendHostFunction;
     CALL_ZE_RET_ERROR(zeCommandListAppendHostFunction, CmdList,
                       reinterpret_cast<void *>(Callback), UserData,
                       /*pReserved*/ nullptr, SignalEvent, NumWaitEvents,

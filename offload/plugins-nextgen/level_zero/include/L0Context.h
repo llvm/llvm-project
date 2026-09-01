@@ -43,7 +43,8 @@ public:
 // `zeDriverGetExtensionFunctionAddress`.
 // `addFallbackFunction`. It was implemented in order to support different
 // versions of level zero software stack and different kinds of drivers.
-template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE> class ZeDispatcher {
+template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+class ZeDispatcher {
 public:
   constexpr ZeDispatcher() = default;
 
@@ -70,8 +71,7 @@ public:
     return Fn(std::forward<Args>(ArgsList)...);
   }
 
-  bool loadExperimental(ze_driver_handle_t zeDriver,
-                              const char *FuncName) {
+  bool loadExperimental(ze_driver_handle_t zeDriver, const char *FuncName) {
     assert(!api_helper::canCall<Fn>() &&
            "ZeDispatcher::loadExperimental called without "
            "ZeDispatcher::available check!");
@@ -215,10 +215,8 @@ public:
 
   ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;
-  ZeDispatcher<zexKernelGetArgumentSize>
-      KernelGetArgumentSize;
-  ZeDispatcher<zeCommandListAppendHostFunction>
-      CommandListAppendHostFunction;
+  ZeDispatcher<zexKernelGetArgumentSize> KernelGetArgumentSize;
+  ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
   ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
 };
