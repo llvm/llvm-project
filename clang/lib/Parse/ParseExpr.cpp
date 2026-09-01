@@ -2660,21 +2660,19 @@ bool Parser::isCompoundLiteralStorageClassSpecifier() const {
   if (!getLangOpts().C23)
     return false;
   switch (Tok.getKind()) {
-  case tok::kw_auto:
   case tok::kw_constexpr:
-  case tok::kw_extern:
   case tok::kw_register:
   case tok::kw_static:
+  case tok::kw___thread:
   case tok::kw_thread_local:
   case tok::kw__Thread_local:
-  case tok::kw_typedef:
     return true;
   default:
     return false;
   }
 }
 
-bool Parser::isCompoundLiteralTypeName() {
+bool Parser::isTypeIdInParensWithStorageClassSpecifiers() {
   if (!isCompoundLiteralStorageClassSpecifier())
     return false;
 
@@ -2686,52 +2684,11 @@ bool Parser::isCompoundLiteralTypeName() {
 }
 
 void Parser::ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS) {
-  DS.SetRangeStart(Tok.getLocation());
-  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   while (isCompoundLiteralStorageClassSpecifier()) {
-    SourceLocation Loc = Tok.getLocation();
-    const char *PrevSpec = nullptr;
-    unsigned DiagID = 0;
-    bool IsInvalid = false;
-    switch (Tok.getKind()) {
-    case tok::kw_typedef:
-      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
-                                         PrevSpec, DiagID, Policy);
-      break;
-    case tok::kw_extern:
-      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_extern, Loc,
-                                         PrevSpec, DiagID, Policy);
-      break;
-    case tok::kw_static:
-      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_static, Loc,
-                                         PrevSpec, DiagID, Policy);
-      break;
-    case tok::kw_auto:
-      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                         PrevSpec, DiagID, Policy);
-      break;
-    case tok::kw_register:
-      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_register, Loc,
-                                         PrevSpec, DiagID, Policy);
-      break;
-    case tok::kw_thread_local:
-    case tok::kw__Thread_local:
-      IsInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS__Thread_local,
-                                               Loc, PrevSpec, DiagID);
-      break;
-    case tok::kw_constexpr:
-      IsInvalid = DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, Loc,
-                                      PrevSpec, DiagID);
-      break;
-    default:
-      llvm_unreachable("unexpected compound literal storage class specifier");
-    }
-
-    if (IsInvalid)
-      Diag(Loc, DiagID) << PrevSpec;
-
-    DS.SetRangeEnd(Loc);
-    ConsumeToken();
+    if (DS.getBeginLoc().isInvalid())
+      DS.SetRangeStart(Tok.getLocation());
+    ParseStorageClassSpecifier(DS,
+                               StorageClassSpecifierContext::CompoundLiteral);
   }
 }
 
@@ -2852,7 +2809,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                                                BridgeKeywordLoc, Ty.get(),
                                                RParenLoc, SubExpr.get());
   } else if (ExprType >= ParenParseOption::CompoundLiteral &&
-             (isCompoundLiteralTypeName() ||
+             (isTypeIdInParensWithStorageClassSpecifiers() ||
               isTypeIdInParens(isAmbiguousTypeId))) {
 
     // Otherwise, this is a compound literal expression or cast expression.
@@ -2870,10 +2827,8 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
     }
 
     DeclSpec CompoundDS(AttrFactory);
-    if (isCompoundLiteralStorageClassSpecifier()) {
-      ParseCompoundLiteralStorageClassSpecifiers(CompoundDS);
-      CompoundDS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
-    }
+    ParseCompoundLiteralStorageClassSpecifiers(CompoundDS);
+    CompoundDS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
 
     DeclSpec DS(AttrFactory);
     ParseSpecifierQualifierList(DS);

@@ -284,3 +284,11 @@ int f29(int a[f28(&(constexpr int){3})]) {
 struct S f30(void) {
   return (volatile struct S){19, 20};
 }
+
+// CHECK-LABEL: define dso_local i32 @f31()
+// CHECK: [[ADDR:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @.compoundliteral
+// CHECK-NEXT: %[[VALUE:.*]] = load i32, ptr [[ADDR]], align 4
+// CHECK-NEXT: ret i32 %[[VALUE]]
+int f31(void) {
+  return (static __thread int){21};
+}

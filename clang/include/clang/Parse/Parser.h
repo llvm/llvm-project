@@ -1884,6 +1884,11 @@ private:
   /// DeclaratorContext enumerator values.
   DeclSpecContext
   getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context);
+
+  enum class StorageClassSpecifierContext { Declaration, CompoundLiteral };
+  void ParseStorageClassSpecifier(DeclSpec &DS,
+                                  StorageClassSpecifierContext Context);
+
   void
   ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                              AccessSpecifier AS = AS_none,
@@ -5095,7 +5100,7 @@ private:
   }
 
   bool isCompoundLiteralStorageClassSpecifier() const;
-  bool isCompoundLiteralTypeName();
+  bool isTypeIdInParensWithStorageClassSpecifiers();
   void ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS);
 
   /// Finish parsing a C++ unqualified-id that is a template-id of

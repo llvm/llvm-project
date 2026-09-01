@@ -3,10 +3,10 @@
 // RUN: %clang_cc1 -std=c23 -include-pch %t -ast-print -x c /dev/null | FileCheck %s
 
 // CHECK-LABEL: int f1(void)
-// CHECK: return (constexpr int){1} + (static _Thread_local int){2} + (register int){3} + (constexpr const int){4};
+// CHECK: return (constexpr int){1} + (static _Thread_local int){2} + (register int){3} + (constexpr const int){4} + (static __thread int){5};
 int f1(void) {
   return (constexpr int){1} + (_Thread_local static int){2} + (register int){3} +
-         (constexpr const int){4};
+         (constexpr const int){4} + (static __thread int){5};
 }
 
 // CHECK-LABEL: int f2(void)

@@ -3696,8 +3696,8 @@ public:
   }
 
   void setTSCSpec(ThreadStorageClassSpecifier TSC) {
-    assert((TSC == TSCS_unspecified || TSC == TSCS_thread_local ||
-            TSC == TSCS__Thread_local) &&
+    assert((TSC == TSCS_unspecified || TSC == TSCS___thread ||
+            TSC == TSCS_thread_local || TSC == TSCS__Thread_local) &&
            "invalid compound literal thread storage class");
     CompoundLiteralExprBits.TSCSpec = TSC;
     assert(getTSCSpec() == TSC && "truncation");

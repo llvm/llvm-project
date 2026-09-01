@@ -11,6 +11,7 @@ void test1(void) {
   (void)&(static int){42};
   (void)(register int){0};
   (void)(static thread_local int){1};
+  (void)(static __thread int){2};
   (void)(constexpr struct S){1, 'a'};
   (void)(static struct S){2, 'b'};
   (void)(register struct S){3, 'c'};
@@ -315,11 +316,10 @@ void test21(void) {
 }
 
 void test22(void) {
-  (void)(auto int){1};        // expected-error {{storage class specifier 'auto' is not permitted in a compound literal}}
-  (void)(extern int){2};      // expected-error {{storage class specifier 'extern' is not permitted in a compound literal}}
-  (void)(typedef int){3};     // expected-error {{storage class specifier 'typedef' is not permitted in a compound literal}}
+  (void)(auto int){1};        // expected-error {{expected expression}}
+  (void)(extern int){2};      // expected-error {{expected expression}}
+  (void)(typedef int){3};     // expected-error {{expected expression}}
   (void)(__auto_type int){4}; // expected-error {{expected expression}}
-  (void)(__thread int){5};    // expected-error {{expected expression}}
   (void)(auto){1};            // expected-error {{expected expression}}
 }
 
