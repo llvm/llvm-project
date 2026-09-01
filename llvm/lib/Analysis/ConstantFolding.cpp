@@ -3739,6 +3739,17 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
+        // x87 unsupported encodings (pseudo-NaN/infinity, unnormal) are NaNs
+        // in APFloat, but expandIS_FPCLASS treats them as neither SNaN nor
+        // QNaN. Refuse to fold so we preserve
+        // is_fpclass(x, m1) | is_fpclass(x, m2) == is_fpclass(x, m1 | m2)
+        // and avoid incorrectly folding fcSNan to true via isSignaling().
+        if (Op1V.isNaN()) {
+          const fltSemantics &Sem = Op1V.getSemantics();
+          if (Sem.hasExplicitIntegerBit &&
+              !Op1V.bitcastToAPInt()[Sem.precision - 1])
+            return nullptr;
+        }
         bool Result =
           ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
           ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||

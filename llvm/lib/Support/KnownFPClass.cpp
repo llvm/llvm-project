@@ -19,7 +19,19 @@
 using namespace llvm;
 
 KnownFPClass::KnownFPClass(const APFloat &C)
-    : KnownFPClasses(C.classify()), SignBit(C.isNegative()) {}
+    : KnownFPClasses(C.classify()), SignBit(C.isNegative()) {
+  // x87 unsupported encodings (pseudo-NaN/infinity, unnormal) are NaNs in
+  // APFloat, but expandIS_FPCLASS treats them as neither SNaN nor QNaN.
+  // classify() picks one via isSignaling(), which would let InstCombine fold
+  // is.fpclass(..., fcSNan) to true. Report both NaN classes as possible
+  // instead so we only prove "is nan", preserving
+  // is_fpclass(x, m1) | is_fpclass(x, m2) == is_fpclass(x, m1 | m2).
+  if (C.isNaN()) {
+    const fltSemantics &Sem = C.getSemantics();
+    if (Sem.hasExplicitIntegerBit && !C.bitcastToAPInt()[Sem.precision - 1])
+      KnownFPClasses = fcNan;
+  }
+}
 
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
