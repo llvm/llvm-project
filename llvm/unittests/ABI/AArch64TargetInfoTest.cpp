@@ -35,7 +35,6 @@ using llvm::abi::TypeBuilder;
 static void expectUncoercedDirect(const ArgInfo &Info);
 static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
                                 bool IsSigned);
-static void expectIndirect(const ArgInfo &Info);
 
 class AArch64TargetInfoTest : public ::testing::Test {
 protected:
@@ -131,10 +130,6 @@ static void expectAlignedIndirect(const ArgInfo &Info, llvm::Align Align,
   EXPECT_TRUE(Info.isIndirect());
   EXPECT_EQ(Info.getIndirectAlign(), Align);
   EXPECT_EQ(Info.getIndirectByVal(), ByVal);
-}
-
-static void expectIndirect(const ArgInfo &Info) {
-  EXPECT_TRUE(Info.isIndirect());
 }
 
 TEST_F(AArch64TargetInfoTest, ClassifyReturnVoidIsIgnore) {
@@ -513,7 +508,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
       {FieldInfo(V4F32, 0), FieldInfo(V4F32, 128)}, 256, llvm::Align(16));
 
   // C++ records: empty bases are skipped and non-empty bases contribute
-  // members, whether inherited normally or as a direct virtual base.
+  // members.
   const ABIType *EmptyRecord = makeRecord({}, 0, llvm::Align(1), CXXFlags);
   const ABIType *HFAEmptyBase =
       makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
@@ -523,12 +518,6 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
   const ABIType *HFADerived =
       makeRecord({FieldInfo(F32, 32)}, 64, llvm::Align(4), CXXFlags,
                  {FieldInfo(FloatBase, 0)});
-  FieldInfo VirtualFloatBase(FloatBase, 0, /*IsBitField=*/false,
-                             /*BitFieldWidth=*/0, /*IsUnnamedBitfield=*/false,
-                             /*IsVirtualBase=*/true);
-  const ABIType *HFAVirtualBase =
-      makeRecord({}, 32, llvm::Align(4), CXXFlags, /*Bases=*/{VirtualFloatBase},
-                 /*VBases=*/{VirtualFloatBase});
 
   for (AArch64ABIKind Kind :
        {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS}) {
@@ -536,8 +525,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
         createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     for (const ABIType *RetTy :
          {ComplexFloat, HFA2f, HFA4d, HFA3arr, HFA2h, HFANested, HFAZeroBF,
-          HFAUnion, HVA2x64, HVA2x128, HFAEmptyBase, HFADerived,
-          HFAVirtualBase}) {
+          HFAUnion, HVA2x64, HVA2x128, HFAEmptyBase, HFADerived}) {
       std::unique_ptr<FunctionInfo> FI =
           FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
       FI->getReturnInfo() = ArgInfo::getIgnore();
@@ -557,12 +545,32 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
       makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
                  RecordFlags::IsCXXRecord);
 
-  std::unique_ptr<FunctionInfo> FI =
-      FunctionInfo::create(llvm::CallingConv::C, NonPassableHFA, {});
-  FI->getReturnInfo() = ArgInfo::getIgnore();
-  TI->computeInfo(*FI);
-  expectIndirect(FI->getReturnInfo());
-  EXPECT_FALSE(FI->getReturnInfo().getIndirectByVal());
+  // struct FloatBase { float f; };
+  // struct VirtualDerived : virtual FloatBase {};
+  // Virtual inheritance makes the copy constructor non-trivial, so the derived
+  // record cannot pass in registers even though its virtual base would
+  // otherwise supply a homogeneous float member. The vbase pointer at offset 0
+  // places the FloatBase subobject at offset 8, giving sizeof == 16.
+  const ABIType *FloatBase = makeRecord({FieldInfo(F32, 0)}, 32, llvm::Align(4),
+                                        passableRecordFlags(/*IsCXX=*/true));
+  const ABIType *VirtualDerived =
+      makeRecord({}, 128, llvm::Align(8), RecordFlags::IsCXXRecord,
+                 /*Bases=*/{}, /*VBases=*/{FieldInfo(FloatBase, 64)});
+
+  const struct {
+    const ABIType *RetTy;
+    llvm::Align ExpectedAlign;
+  } Cases[] = {{NonPassableHFA, llvm::Align(4)},
+               {VirtualDerived, llvm::Align(8)}};
+
+  for (const auto &Case : Cases) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Case.RetTy, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectNaturalAlignIndirect(FI->getReturnInfo(), Case.ExpectedAlign,
+                               /*ByVal=*/false);
+  }
 }
 
 } // namespace
