@@ -376,6 +376,28 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   ASSERT_EQ(GEP->getOperand(0), Alias);
 }
 
+TEST(ConstantsTest, DSOLocalEquivalentReplaceWithAlias) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  Type *VoidTy = Type::getVoidTy(Context);
+  FunctionType *FTy = FunctionType::get(VoidTy, false);
+  Function *F =
+      Function::Create(FTy, GlobalValue::InternalLinkage, "f", M.get());
+  auto *Equiv = DSOLocalEquivalent::get(F);
+
+  GlobalVariable *Ref = new GlobalVariable(*M, Equiv->getType(), false,
+                                           GlobalValue::ExternalLinkage, Equiv);
+  ASSERT_EQ(Equiv, Ref->getInitializer());
+
+  auto *Alias = GlobalAlias::create(FTy, 0, GlobalValue::ExternalLinkage,
+                                    "alias", F, M.get());
+  F->replaceAllUsesWith(Alias);
+
+  auto *NewEquiv = cast<DSOLocalEquivalent>(Ref->getInitializer());
+  ASSERT_EQ(NewEquiv->getGlobalValue(), Alias);
+}
+
 TEST(ConstantsTest, AliasCAPI) {
   LLVMContext Context;
   SMDiagnostic Error;
