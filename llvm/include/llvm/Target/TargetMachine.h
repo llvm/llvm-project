@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
@@ -23,6 +24,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -448,6 +451,12 @@ public:
                       MachineModuleInfoWrapperPass *MMIWP = nullptr) {
     return true;
   }
+
+  Error runCodeGenPipeline(
+      Module &M, raw_pwrite_stream &OS, std::unique_ptr<ToolOutputFile> &DwoOS,
+      CodeGenFileType CGFT, bool PrintPipelinePasses = false,
+      bool DisableVerify = true,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem());
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported. It
