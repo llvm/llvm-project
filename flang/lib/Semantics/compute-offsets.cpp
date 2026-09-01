@@ -27,6 +27,9 @@
 namespace Fortran::semantics {
 
 // Generated IR represents storage sizes and offsets as signed 64-bit integers.
+static_assert(sizeof(std::size_t) >= sizeof(std::int64_t),
+    "byte sizes and offsets are accumulated in std::size_t and must not be "
+    "narrowed");
 static constexpr std::size_t maxStorageSizeInBytes{
     static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())};
 
@@ -38,6 +41,23 @@ static bool IsTooBig(std::size_t bytes) {
 static std::size_t AddSizes(std::size_t x, std::size_t y, bool &tooBig) {
   tooBig |= IsTooBig(x) || IsTooBig(y) || x > maxStorageSizeInBytes - y;
   return x + y;
+}
+
+// A folded extent is (ub-lb+1) evaluated with signed 64-bit arithmetic, so it
+// comes out nonpositive both for an empty dimension and for one that wrapped
+// around, as in a(0:huge(0_8)). Tell those apart with the declared bounds.
+static bool IsEmptyDimension(const Symbol &symbol, int dimension) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    const ArraySpec &shape{object->shape()};
+    if (dimension < shape.Rank()) {
+      auto lb{evaluate::ToInt64(shape[dimension].lbound().GetExplicit())};
+      auto ub{evaluate::ToInt64(shape[dimension].ubound().GetExplicit())};
+      if (lb && ub) {
+        return *ub < *lb;
+      }
+    }
+  }
+  return true; // no constant bounds to contradict the folded extent
 }
 
 class ComputeOffsetsHelper {
@@ -204,7 +224,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
       // Each EQUIVALENCE block is lowered as one aggregate.
       if (blockInfo.overflow || IsTooBig(blockInfo.size)) {
         context_.Say(symbol->name(),
-            "The size of the storage sequence created by EQUIVALENCE with '%s' exceeds the maximum supported size of %zd bytes"_err_en_US,
+            "The size of the storage sequence created by EQUIVALENCE with '%s' exceeds the maximum supported size of %zu bytes"_err_en_US,
             symbol->name(), maxStorageSizeInBytes);
       }
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
@@ -240,7 +260,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // Only derived-type scope sizes are materialized in generated IR.
   if (sizeOverflow_ && scope.IsDerivedType() && scope.symbol()) {
     context_.Say(scope.symbol()->name(),
-        "The size of derived type '%s' exceeds the maximum supported size of %zd bytes"_err_en_US,
+        "The size of derived type '%s' exceeds the maximum supported size of %zu bytes"_err_en_US,
         scope.symbol()->name(), maxStorageSizeInBytes);
   }
   scope.set_size(offset_);
@@ -345,7 +365,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   std::size_t size{std::max(minSize, offset_)};
   if (sizeOverflow_) {
     context_.Say(details.sourceLocation(),
-        "The size of COMMON block /%s/ exceeds the maximum supported size of %zd bytes"_err_en_US,
+        "The size of COMMON block /%s/ exceeds the maximum supported size of %zu bytes"_err_en_US,
         commonBlock.name(), maxStorageSizeInBytes);
   }
   commonBlock.set_size(size);
@@ -535,9 +555,16 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     }
     if (auto extents{
             evaluate::AsConstantExtents(foldingContext, chars->shape())}) {
-      for (ConstantSubscript extent : *extents) {
-        if (extent <= 0) { // a zero-sized array occupies no storage
-          return {0, alignment};
+      if (size == 0) { // zero-sized elements occupy no storage
+        return {0, alignment};
+      }
+      for (int dimension{0}; dimension < static_cast<int>(extents->size());
+          ++dimension) {
+        if ((*extents)[dimension] <= 0) {
+          if (!IsEmptyDimension(symbol, dimension)) {
+            return {maxStorageSizeInBytes, alignment, /*tooBig=*/true};
+          }
+          return {0, alignment}; // a zero-sized array occupies no storage
         }
       }
       for (ConstantSubscript extent : *extents) {

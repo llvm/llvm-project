@@ -18,6 +18,22 @@ subroutine zero_sized_array
   real :: z(2305843009213693952_8, 0)
 end subroutine
 
+subroutine explicit_bounds_that_fit
+  ! extent = huge(0_8) in both cases, one byte per element
+  integer(1) :: a(0_8:9223372036854775806_8)
+  integer(1) :: b(-9223372036854775807_8:-1_8)
+  common /fits1/ a
+  common /fits2/ b
+end subroutine
+
+subroutine empty_explicit_bounds
+  ! an upper bound below the lower bound makes the whole array empty
+  integer(8) :: a(1_8:0_8)
+  integer(8) :: b(-5_8:-10_8)
+  integer(8) :: c(2305843009213693952_8, 1_8:0_8)
+  common /empty/ a, b, c
+end subroutine
+
 subroutine unassociated_objects
   ! A procedure scope is not laid out as one storage sequence.
   integer(8) :: a(576460752303423488_8), b(576460752303423488_8), &
@@ -50,6 +66,44 @@ subroutine element_size_wraps_positive
   character(kind=4, len=4611686018427387905_8) :: c
   !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
   common /blk/ c
+end subroutine
+
+subroutine zero_lower_bound_in_common
+  ! extent = huge(0_8) + 1 wraps around to a negative value, which must not be
+  ! taken for an empty dimension; without a diagnostic 'b' would overlap 'a'
+  integer(1) :: a(0_8:9223372036854775807_8)
+  integer(1) :: b(4)
+  !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
+  common /blk/ a, b
+end subroutine
+
+subroutine negative_bounds_in_common
+  ! extent = huge(0_8) fits, but there are two bytes per element
+  integer(2) :: a(-9223372036854775807_8:-1_8)
+  !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
+  common /blk/ a
+end subroutine
+
+subroutine negative_to_positive_bounds_in_common
+  ! extent = 2**63 wraps around to a negative value
+  integer(1) :: a(-4611686018427387904_8:4611686018427387903_8)
+  !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
+  common /blk/ a
+end subroutine
+
+subroutine multidimensional_in_common
+  ! 2**32 * 2**32 == 2**64 elements, so the size folds to exactly zero
+  integer(1) :: a(4294967296_8, 4294967296_8)
+  integer(1) :: b(4)
+  !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
+  common /blk/ a, b
+end subroutine
+
+subroutine multidimensional_bounds_in_common
+  ! same element count, spelled with explicit zero lower bounds
+  integer(1) :: a(0_8:4294967295_8, 0_8:4294967295_8)
+  !ERROR: The size of COMMON block /blk/ exceeds the maximum supported size of 9223372036854775807 bytes
+  common /blk/ a
 end subroutine
 
 module derived_type_size
