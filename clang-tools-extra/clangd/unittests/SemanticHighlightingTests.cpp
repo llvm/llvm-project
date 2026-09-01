@@ -1156,6 +1156,23 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
                      ~ScopeModifierMask, {"-isystemSystemSDK/"});
 }
 
+TEST(SemanticHighlighting, EmbedDirectives) {
+  checkHighlightings(
+      R"cpp(
+        /*error-ok*/
+        int $Variable_def[[data]][] = {
+        $Keyword[[#]]$Keyword[[embed]] "data.bin" suffix(,)
+        $Keyword[[#]] /**/ $Keyword[[embed]] "empty.bin"
+        $Keyword[[#]]$Keyword[[embed]] "missing.bin"
+        };
+#if 0
+$InactiveCode[[#embed "inactive.bin"]]
+#endif
+      )cpp",
+      {{"data.bin", "a"}, {"empty.bin", ""}}, ~ScopeModifierMask,
+      {"-std=c23", "-xc"});
+}
+
 TEST(SemanticHighlighting, NoCrash) {
   // Testcases where we are just testing that computation of the
   // semantic tokens does not trigger a crash.

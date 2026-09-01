@@ -4043,7 +4043,9 @@ void Preprocessor::HandleEmbedDirectiveImpl(
       size_t TokCount = Toks.size();
       auto NewToks = std::make_unique<Token[]>(TokCount);
       llvm::copy(Toks, NewToks.get());
-      EnterTokenStream(std::move(NewToks), TokCount, true, true);
+      EnterTokenStream(std::move(NewToks), TokCount,
+                       /*DisableMacroExpansion=*/true,
+                       /*IsReinject=*/false);
     }
     return;
   }
@@ -4076,7 +4078,9 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   }
 
   assert(CurIdx == TotalNumToks && "Calculated the incorrect number of tokens");
-  EnterTokenStream(std::move(Toks), TotalNumToks, true, true);
+  EnterTokenStream(std::move(Toks), TotalNumToks,
+                   /*DisableMacroExpansion=*/true,
+                   /*IsReinject=*/false);
 }
 
 void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
@@ -4132,7 +4136,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
       this->LookupEmbedFile(Filename, isAngled, /*OpenFile=*/true);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
+    bool SuppressDiagnostic =
+        Callbacks && Callbacks->EmbedFileNotFound(Filename);
+    if (Callbacks)
+      Callbacks->EmbedDirective(HashLoc, Filename, isAngled, std::nullopt,
+                                *Params);
+    if (SuppressDiagnostic) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
