@@ -1014,6 +1014,30 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
 
 namespace {
 
+/// Returns the locations of the spelled tokens overlapping [Range.getBegin(),
+/// Range.getEnd()], in order. Both ends of \p Range must be file locations
+/// in the same file.
+llvm::SmallVector<SourceLocation, 4>
+tokensSpelledInRange(const syntax::TokenBuffer &TB, const SourceManager &SM,
+                     SourceRange Range) {
+  llvm::SmallVector<SourceLocation, 4> Locs;
+  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
+    return Locs;
+  FileID FID = SM.getFileID(Range.getBegin());
+  if (FID != SM.getFileID(Range.getEnd()))
+    return Locs;
+  unsigned EndOffset = SM.getFileOffset(Range.getEnd());
+  llvm::ArrayRef<syntax::Token> Toks = TB.spelledTokens(FID);
+  auto It = llvm::partition_point(Toks, [&](const syntax::Token &Tok) {
+    return SM.getFileOffset(Tok.location()) <
+           SM.getFileOffset(Range.getBegin());
+  });
+  for (; It != Toks.end() && SM.getFileOffset(It->location()) <= EndOffset;
+       ++It)
+    Locs.push_back(It->location());
+  return Locs;
+}
+
 /// Collects references to symbols within the main file.
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
@@ -1091,6 +1115,19 @@ public:
       } else if (auto *OMD =
                      llvm::dyn_cast_or_null<ObjCMethodDecl>(ASTNode.OrigD)) {
         OMD->getSelectorLocs(Locs);
+      } else if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D);
+                 FD && FD->isOverloadedOperator() &&
+                 isInsideMainFile(FD->getNameInfo().getLoc(), SM)) {
+        // The operator name (e.g. `new`, `[]`, `<<`) is a separate token (or
+        // tokens) from the `operator` keyword itself; report both so the
+        // whole name gets highlighted, not just the keyword. Only do this
+        // when the declaration itself is in the main file: TB only has
+        // spelled tokens for the main file, and this is only useful anyway
+        // when we're looking at the occurrence at the declaration itself
+        // (checked below).
+        Locs.push_back(FD->getNameInfo().getLoc());
+        auto OpNameRange = FD->getNameInfo().getCXXOperatorNameRange();
+        llvm::append_range(Locs, tokensSpelledInRange(TB, SM, OpNameRange));
       }
       // Sanity check: we expect the *first* token to match the reported loc.
       // Otherwise, maybe it was e.g. some other kind of reference to a Decl.
