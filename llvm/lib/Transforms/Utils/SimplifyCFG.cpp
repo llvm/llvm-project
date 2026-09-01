@@ -5022,20 +5022,21 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
   }
 
   IRBuilder<> Builder(OldTerm);
-  Builder.SetCurrentDebugLocation(OldTerm->getDebugLoc());
 
   // Insert an appropriate new terminator.
+  Instruction *NewTerm = nullptr;
   if (!KeepEdge1 && !KeepEdge2) {
     if (TrueBB == FalseBB) {
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
-      Builder.CreateBr(TrueBB);
+      NewTerm = Builder.CreateBr(TrueBB);
     } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
       CondBrInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
       setBranchWeights(*NewBI, {TrueWeight, FalseWeight},
                        /*IsExpected=*/false, /*ElideAllZero=*/true);
+      NewTerm = NewBI;
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5047,12 +5048,15 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
     // the edge to the one that wasn't must be unreachable.
     if (!KeepEdge1) {
       // Only TrueBB was found.
-      Builder.CreateBr(TrueBB);
+      NewTerm = Builder.CreateBr(TrueBB);
     } else {
       // Only FalseBB was found.
-      Builder.CreateBr(FalseBB);
+      NewTerm = Builder.CreateBr(FalseBB);
     }
   }
+  if (NewTerm)
+    NewTerm->copyMetadata(*OldTerm, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                                     LLVMContext::MD_annotation});
 
   eraseTerminatorAndDCECond(OldTerm);
 
@@ -6168,6 +6172,9 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
     NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
   }
+
+  NewBI->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                            LLVMContext::MD_annotation});
 
   // Update weight for the newly-created conditional branch.
   if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {

@@ -273,7 +273,9 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
-      Builder.CreateBr(TheOnlyDest);
+      UncondBrInst *NewBI = Builder.CreateBr(TheOnlyDest);
+      NewBI->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                                LLVMContext::MD_annotation});
       BasicBlock *BB = SI->getParent();
 
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
@@ -316,6 +318,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Insert the new branch.
       CondBrInst *NewBr = Builder.CreateCondBr(
           Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
+      NewBr->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                                LLVMContext::MD_annotation});
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];
