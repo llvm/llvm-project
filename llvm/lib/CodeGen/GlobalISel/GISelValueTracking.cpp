@@ -2722,7 +2722,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     if (VecVT.isScalableVector())
       return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
     unsigned NumSrcElts = VecVT.getNumElements();
-    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
     APInt DemandedSrcElts =
         ConstEltNo && ConstEltNo->ult(NumSrcElts)
             ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
